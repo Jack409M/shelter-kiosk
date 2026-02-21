@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Transportation request</h1>
+
+<form method="post" class="card">
+  <label>Shelter</label>
+  {% if shelter %}
+    <input value="{{ shelter }}" readonly>
+    <input type="hidden" name="shelter" value="{{ shelter }}">
+  {% else %}
+    <select name="shelter" required>
+      <option value="">Select</option>
+      {% for s in shelters %}
+        <option value="{{ s }}">{{ s }}</option>
+      {% endfor %}
+    </select>
+  {% endif %}
+
+  <div class="grid">
+    <div>
+      <label>First name</label>
+      <input name="first_name" required>
+    </div>
+    <div>
+      <label>Last name</label>
+      <input name="last_name" required>
+    </div>
+    <div>
+      <label>Date of birth</label>
+      <input name="dob" type="date" required>
+    </div>
+  </div>
+
+  <label>Needed date and time</label>
+  <input name="needed_at" type="datetime-local" required>
+
+  <label>Pickup location</label>
+  <input name="pickup_location" required>
+
+  <label>Destination</label>
+  <input name="destination" required>
+
+  <label>Reason optional</label>
+  <select name="reason">
+    <option value="">Select</option>
+    <option>Medical</option>
+    <option>Work</option>
+    <option>Court</option>
+    <option>Housing</option>
+    <option>Other</option>
+  </select>
+
+  <label>Call back phone optional</label>
+  <input name="callback_phone">
+
+  <label>Notes optional</label>
+  <textarea name="resident_notes" rows="3"></textarea>
+
+  <button type="submit">Submit</button>
+</form>
+{% endblock %}

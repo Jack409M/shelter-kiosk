@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Transportation pending for {{ shelter }}</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>Name</th><th>DOB</th><th>Needed</th><th>Pickup</th><th>Destination</th><th>Schedule</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r["id"] }}</td>
+      <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+      <td>{{ r["dob"] }}</td>
+      <td>{{ fmt_dt(r["needed_at"]) }}</td>
+      <td>{{ r["pickup_location"] }}</td>
+      <td>{{ r["destination"] }}</td>
+      <td>
+        <form method="post" action="{{ url_for('staff_transport_schedule', req_id=r['id']) }}" class="inline">
+          <input name="driver_name" placeholder="Driver name" required>
+          <input name="staff_notes" placeholder="Optional note">
+          <button type="submit">Schedule</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

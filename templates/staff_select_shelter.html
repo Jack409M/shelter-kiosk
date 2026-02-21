@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Select shelter</h1>
+<form method="post" class="card">
+  <label>Shelter</label>
+  <select name="shelter" required>
+    <option value="">Select</option>
+    {% for s in shelters %}
+      <option value="{{ s }}">{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Continue</button>
+</form>
+{% endblock %}

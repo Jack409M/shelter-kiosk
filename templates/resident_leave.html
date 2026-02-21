@@ -1,0 +1,68 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Leave request</h1>
+
+<form method="post" class="card">
+  <label>Shelter</label>
+  {% if shelter %}
+    <input value="{{ shelter }}" readonly>
+    <input type="hidden" name="shelter" value="{{ shelter }}">
+  {% else %}
+    <select name="shelter" required>
+      <option value="">Select</option>
+      {% for s in shelters %}
+        <option value="{{ s }}">{{ s }}</option>
+      {% endfor %}
+    </select>
+  {% endif %}
+
+  <div class="grid">
+    <div>
+      <label>First name</label>
+      <input name="first_name" required>
+    </div>
+    <div>
+      <label>Last name</label>
+      <input name="last_name" required>
+    </div>
+    <div>
+      <label>Date of birth</label>
+      <input name="dob" type="date" required>
+    </div>
+  </div>
+
+  <label>Destination</label>
+  <input name="destination" required>
+
+  <div class="grid">
+    <div>
+      <label>Leave date and time</label>
+      <input name="leave_at" type="datetime-local" required>
+    </div>
+    <div>
+      <label>Return date and time</label>
+      <input name="return_at" type="datetime-local" required>
+    </div>
+  </div>
+
+  <label>Reason optional</label>
+  <select name="reason">
+    <option value="">Select</option>
+    <option>Medical</option>
+    <option>Work</option>
+    <option>Family</option>
+    <option>Legal</option>
+    <option>Other</option>
+  </select>
+
+  <label>Notes optional</label>
+  <textarea name="resident_notes" rows="3"></textarea>
+
+  <label class="check">
+    <input type="checkbox" name="agreed" required>
+    I understand maximum leave is {{ max_days }} days and I must return by the approved time.
+  </label>
+
+  <button type="submit">Submit</button>
+</form>
+{% endblock %}

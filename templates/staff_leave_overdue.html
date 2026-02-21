@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Leave overdue for {{ shelter }}</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>Name</th><th>DOB</th><th>Return</th><th>Destination</th><th>Check in</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r["id"] }}</td>
+      <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+      <td>{{ r["dob"] }}</td>
+      <td>{{ fmt_dt(r["return_at"]) }}</td>
+      <td>{{ r["destination"] }}</td>
+      <td>
+        <form method="post" action="{{ url_for('staff_leave_check_in', req_id=r['id']) }}" class="inline">
+          <input name="note" placeholder="Optional note">
+          <button type="submit">Check in</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

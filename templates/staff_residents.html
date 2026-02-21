@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>RESIDENTS for {{ shelter }}</h1>
+
+<div class="card">
+  <h2>Add resident</h2>
+  <form method="post">
+    <div class="grid">
+      <div>
+        <label>First name</label>
+        <input name="first_name" required>
+      </div>
+      <div>
+        <label>Last name</label>
+        <input name="last_name" required>
+      </div>
+      <div>
+        <label>Date of birth</label>
+        <input name="dob" type="date" required>
+      </div>
+    </div>
+    <button type="submit">Add</button>
+  </form>
+</div>
+
+<div class="card">
+  <strong>View:</strong>
+  <a href="{{ url_for('staff_residents', show='active') }}">Active only</a>
+|
+  <a href="{{ url_for('staff_residents', show='all') }}">All</a>
+</div>
+
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>DOB</th>
+      <th>Active</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+ {% for r in residents %}
+  <tr>
+    <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+    <td>{{ r["dob"] }}</td>
+
+    <td>
+      {% if r["is_active"]|int == 1 %}
+       <span class="badge in" style="background: yellow !important; border: 3px solid black !important;">Active</span>
+      {% else %}
+        <span class="badge out" style="background: orange !important; border: 3px solid black !important;">Inactive</span>
+      {% endif %}
+    </td>
+
+    <td>
+      {% if r["is_active"]|int == 1 %}
+        <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}" class="inline">
+          <input type="hidden" name="active" value="0">
+          <button type="submit">Deactivate</button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}" class="inline">
+          <input type="hidden" name="active" value="1">
+          <button type="submit">Reactivate</button>
+        </form>
+      {% endif %}
+    </td>
+  </tr>
+{% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

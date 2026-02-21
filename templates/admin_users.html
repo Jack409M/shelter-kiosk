@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Users</h1>
+
+<div class="card">
+  <h2>Create user</h2>
+  <form method="post">
+    <label>Username</label>
+    <input name="username" required>
+    <label>Temporary password</label>
+    <input name="password" type="password" required>
+    <label>Role</label>
+    <select name="role" required>
+      <option value="staff">staff</option>
+      <option value="desk">desk</option>
+      <option value="admin">admin</option>
+    </select>
+    <button type="submit">Create</button>
+  </form>
+</div>
+
+<h2>Existing users</h2>
+<table>
+  <thead>
+    <tr><th>Username</th><th>Role</th><th>Active</th><th>Created</th></tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{ u["username"] }}</td>
+        <td>{{ u["role"] }}</td>
+        <td>{{ u["is_active"] }}</td>
+        <td>{{ fmt_dt(u["created_at"]) }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

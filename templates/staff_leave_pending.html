@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Leave pending for {{ shelter }}</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>Name</th><th>DOB</th><th>Leave</th><th>Return</th><th>Destination</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r["id"] }}</td>
+      <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+      <td>{{ r["dob"] }}</td>
+      <td>{{ fmt_dt(r["leave_at"]) }}</td>
+      <td>{{ fmt_dt(r["return_at"]) }}</td>
+      <td>{{ r["destination"] }}</td>
+      <td>
+        <form method="post" action="{{ url_for('staff_leave_approve', req_id=r['id']) }}" class="inline">
+          <input name="note" placeholder="Optional note">
+          <button type="submit">Approve</button>
+        </form>
+        <form method="post" action="{{ url_for('staff_leave_deny', req_id=r['id']) }}" class="inline">
+          <input name="note" placeholder="Denial note" required>
+          <button type="submit">Deny</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

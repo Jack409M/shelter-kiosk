@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Attendance for {{ shelter }}</h1>
+
+<div class="card">
+  <p class="hint">Search your browser page to find a name fast. On iPad, use the search bar in Safari.</p>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th><th>DOB</th><th>Status</th><th>Last time</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in residents %}
+    {% set rid = r["id"] %}
+    {% set info = status_map[rid] %}
+    {% set status = info["status"] %}
+    <tr>
+      <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+      <td>{{ r["dob"] }}</td>
+      <td>
+        {% if status == "check_in" %}
+          <span class="badge in">IN</span>
+        {% else %}
+          <span class="badge out">OUT</span>
+        {% endif %}
+      </td>
+      <td>{{ fmt_dt(info["time"]) }}</td>
+      <td>
+        {% if status != "check_in" %}
+          <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=rid) }}" class="inline">
+            <input name="note" placeholder="Optional note">
+            <button type="submit">Check in</button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('staff_attendance_check_out', resident_id=rid) }}" class="inline">
+            <input name="note" placeholder="Optional note">
+            <button type="submit">Check out</button>
+          </form>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="card">
+  <p class="hint">You will need to add residents to the roster in the database. I will give you the simple admin screen for that next.</p>
+</div>
+{% endblock %}

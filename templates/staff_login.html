@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Staff login</h1>
+<form method="post" class="card">
+  <label>Username</label>
+  <input name="username" required>
+  <label>Password</label>
+  <input name="password" type="password" required>
+  <button type="submit">Login</button>
+</form>
+<p class="hint">Admin account is created only if ADMIN_USERNAME and ADMIN_PASSWORD are set in hosting settings.</p>
+{% endblock %}
