@@ -852,7 +852,9 @@ def staff_leave_approve(req_id: int):
 
         try:
             if phone:
+                print("SMS DEBUG: calling send_sms now")
                 send_sms(phone, msg)
+                print("SMS DEBUG: returned from send_sms")
         except Exception as e:
             log_action("leave", req_id, shelter, staff_id, "sms_failed", str(e))
     flash("Approved.", "ok")
@@ -1227,6 +1229,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
