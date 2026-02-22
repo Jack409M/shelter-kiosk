@@ -112,12 +112,13 @@ def db_fetchone(sql: str, params: tuple = ()) -> Optional[Any]:
         return None
     return rows[0]
 
-
 def init_db() -> None:
     """
     Creates tables if missing.
     Works on SQLite and Postgres.
     """
+    # IMPORTANT: establish DB connection first so g.db_kind is set
+    get_db()
     kind = g.get("db_kind")
 
     def create(sqlite_sql: str, pg_sql: str) -> None:
@@ -1078,4 +1079,5 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
