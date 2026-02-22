@@ -485,6 +485,7 @@ def resident_leave():
     last = (request.form.get("last_name") or "").strip()
     dob = (request.form.get("dob") or "").strip()
     resident_phone = (request.form.get("resident_phone") or "").strip()
+    resident_phone = (request.form.get("resident_phone") or "").strip()
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
     resident_notes = (request.form.get("resident_notes") or "").strip()
@@ -1172,6 +1173,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
