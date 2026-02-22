@@ -537,13 +537,13 @@ def resident_leave():
     if g.get("db_kind") == "pg":
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(sql, (shelter, first, last, dob, destination, reason or None, resident_notes or None, leave_iso, return_iso, submitted))
+        cur.execute(sql, (shelter, first, last, dob, resident_phone, destination, reason or None, resident_notes or None, leave_iso, return_iso, submitted))
         req_id = cur.fetchone()[0]
         cur.close()
     else:
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(sql, (shelter, first, last, dob, destination, reason or None, resident_notes or None, leave_iso, return_iso, submitted))
+        cur.execute(sql, (shelter, first, last, dob, resident_phone, destination, reason or None, resident_notes or None, leave_iso, return_iso, submitted))
         conn.commit()
         req_id = cur.lastrowid
 
@@ -1173,6 +1173,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
