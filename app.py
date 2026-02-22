@@ -383,10 +383,10 @@ def require_login(fn):
     def wrapper(*args, **kwargs):
         if "staff_user_id" not in session:
             return redirect(url_for("staff_login"))
+        get_db()  # ensures g.db_kind is set for this request
         return fn(*args, **kwargs)
     return wrapper
-
-
+    
 def require_shelter(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -1119,6 +1119,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
