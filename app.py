@@ -1011,7 +1011,23 @@ def admin_users():
 
     users = db_fetchall("SELECT id, username, role, is_active, created_at FROM staff_users ORDER BY created_at DESC")
     return render_template("admin_users.html", users=users, fmt_dt=fmt_dt)
+@app.route("/admin/delete-user/<username>", methods=["POST"])
+@require_login
+@require_admin
+def delete_user(username):
+    if username == session.get("username"):
+        flash("You cannot delete yourself.", "error")
+        return redirect(url_for("admin_users"))
 
+    db_execute(
+        "DELETE FROM staff_users WHERE username = %s"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM staff_users WHERE username = ?",
+        (username,),
+    )
+
+    flash(f"User '{username}' deleted.", "ok")
+    return redirect(url_for("admin_users"))
 @app.route("/staff/residents", methods=["GET", "POST"])
 @require_login
 @require_shelter
@@ -1102,6 +1118,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
