@@ -1118,7 +1118,9 @@ def staff_resident_set_active(resident_id: int):
 @require_login
 @require_admin
 def delete_admin_now():
-     get_db()
+    get_db()
+
+    db_execute( get_db()
     
     db_execute(
         "DELETE FROM staff_users WHERE username = %s"
@@ -1133,6 +1135,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
