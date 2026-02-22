@@ -847,6 +847,8 @@ def staff_leave_approve(req_id: int):
         phone = req["resident_phone"] if isinstance(req, dict) else req[4]
 
         msg = f"Leave approved for {first_name} {last_name}. Leave {fmt_dt(leave_at)}. Return {fmt_dt(return_at)}."
+        print("SMS DEBUG approve phone=", phone)
+print("SMS DEBUG env present=", bool(TWILIO_ACCOUNT_SID), bool(TWILIO_AUTH_TOKEN), bool(TWILIO_FROM_NUMBER))
 
         try:
             if phone:
@@ -1225,6 +1227,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
