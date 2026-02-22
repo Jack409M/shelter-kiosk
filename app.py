@@ -16,11 +16,9 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 def send_sms(to_number: str, message: str) -> None:
-        if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
-        print("SMS: missing Twilio env vars", bool(TWILIO_ACCOUNT_SID), bool(TWILIO_AUTH_TOKEN), bool(TWILIO_FROM_NUMBER))
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
         return
 
-    # normalize to E164 for US numbers
     raw = (to_number or "").strip()
     digits = "".join(ch for ch in raw if ch.isdigit())
 
@@ -31,20 +29,17 @@ def send_sms(to_number: str, message: str) -> None:
     elif len(digits) == 11 and digits.startswith("1"):
         to_e164 = "+" + digits
     else:
-        print("SMS error: invalid phone format:", to_number)
         return
 
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        print("SMS: sending", "from", TWILIO_FROM_NUMBER, "to", to_e164)
-                m = client.messages.create(
+        client.messages.create(
             body=message,
             from_=TWILIO_FROM_NUMBER,
             to=to_e164,
-        )        print("SMS: queued sid", m.sid)
+        )
     except Exception as e:
         print("SMS error:", e)
-
 SHELTERS = ["Abba", "Haven", "Gratitude"]
 MAX_LEAVE_DAYS = 7
 
@@ -1230,6 +1225,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
