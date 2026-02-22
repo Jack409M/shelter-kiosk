@@ -820,7 +820,7 @@ def staff_leave_approve(req_id: int):
     )
 
     log_action("leave", req_id, shelter, staff_id, "approve", note or "")
-           req = db_fetchone(
+    req = db_fetchone(
         "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = %s AND shelter = %s"
         if g.get("db_kind") == "pg"
         else "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = ? AND shelter = ?",
@@ -1213,6 +1213,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
