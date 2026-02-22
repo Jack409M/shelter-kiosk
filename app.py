@@ -9,6 +9,25 @@ from typing import Any, Optional
 from flask import Flask, g, redirect, render_template, request, session, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from twilio.rest import Client
+
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
+
+def send_sms(to_number: str, message: str) -> None:
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
+        return
+    try:
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        client.messages.create(
+            body=message,
+            from_=TWILIO_FROM_NUMBER,
+            to=to_number,
+        )
+    except Exception as e:
+        print("SMS error:", e)
+
 SHELTERS = ["Abba", "Haven", "Gratitude"]
 MAX_LEAVE_DAYS = 7
 
@@ -1173,6 +1192,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
