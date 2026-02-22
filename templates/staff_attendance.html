@@ -36,9 +36,10 @@
           </form>
         {% else %}
           <form method="post" action="{{ url_for('staff_attendance_check_out', resident_id=rid) }}" class="inline">
-            <input name="note" placeholder="Optional note">
-            <button type="submit">Check out</button>
-          </form>
+  <input name="expected_back_time" type="datetime-local">
+  <input name="note" placeholder="Optional note">
+  <button type="submit">Check out</button>
+</form>
         {% endif %}
       </td>
     </tr>
@@ -49,4 +50,5 @@
 <div class="card">
   <p class="hint">You will need to add residents to the roster in the database. I will give you the simple admin screen for that next.</p>
 </div>
+
 {% endblock %}
