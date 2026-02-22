@@ -484,6 +484,7 @@ def resident_leave():
     first = (request.form.get("first_name") or "").strip()
     last = (request.form.get("last_name") or "").strip()
     dob = (request.form.get("dob") or "").strip()
+    resident_phone = (request.form.get("resident_phone") or "").strip()
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
     resident_notes = (request.form.get("resident_notes") or "").strip()
@@ -494,7 +495,7 @@ def resident_leave():
     errors: list[str] = []
     if not agreed:
         errors.append("You must accept the agreement.")
-    if not first or not last or not dob or not destination or not leave_at_raw or not return_at_raw:
+    if not first or not last or not dob or not resident_phone or not destination or not leave_at_raw or not return_at_raw:
         errors.append("Complete all required fields.")
 
     try:
@@ -1171,6 +1172,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
