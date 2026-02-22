@@ -303,6 +303,16 @@ def init_db() -> None:
         """,
     )
 
+        # add expected_back_time column if missing
+    try:
+        if kind == "pg":
+            db_execute("ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS expected_back_time TEXT")
+        else:
+            db_execute("ALTER TABLE attendance_events ADD COLUMN expected_back_time TEXT")
+    except Exception:
+        # ok if it already exists
+        pass
+    
     # audit log
     create(
         """
@@ -1119,6 +1129,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
