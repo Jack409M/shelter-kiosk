@@ -973,6 +973,10 @@ def staff_attendance_check_in(resident_id: int):
 @require_login
 @require_shelter
 def staff_attendance_check_out(resident_id: int):
+    @app.route("/staff/attendance/<int:resident_id>/check-out", methods=["POST"])
+@require_login
+@require_shelter
+def staff_attendance_check_out(resident_id: int):
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
@@ -986,7 +990,6 @@ def staff_attendance_check_out(resident_id: int):
     db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None))
     log_action("attendance", resident_id, shelter, staff_id, "check_out", note or "")
     return redirect(url_for("staff_attendance"))
-
 
 @app.route("/staff/admin/users", methods=["GET", "POST"])
 @require_login
@@ -1129,6 +1132,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
