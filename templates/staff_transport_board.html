@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+  <h2>Transportation Board, {{ shelter }}</h2>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Name</th>
+        <th>Pickup</th>
+        <th>Destination</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ fmt_dt(r.needed_at) }}</td>
+        <td>{{ r.last_name }}, {{ r.first_name }}</td>
+        <td>{{ r.pickup_location }}</td>
+        <td>{{ r.destination }}</td>
+        <td>{{ r.status }}</td>
+      </tr>
+      {% endfor %}
+      {% if rows|length == 0 %}
+      <tr><td colspan="5">No rides found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
