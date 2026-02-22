@@ -943,7 +943,19 @@ def staff_attendance():
             et = last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
             tm = last_event["event_time"] if isinstance(last_event, dict) else last_event[1]
             eb = last_event["expected_back_time"] if isinstance(last_event, dict) else last_event[2]
-            status_map[rid] = {"status": et, "time": tm, "expected_back_time": eb or ""}
+            is_overdue = False
+if et == "check_out" and eb:
+    try:
+        is_overdue = parse_dt(eb) < datetime.utcnow()
+    except Exception:
+        is_overdue = False
+
+status_map[rid] = {
+    "status": et,
+    "time": tm,
+    "expected_back_time": eb or "",
+    "is_overdue": is_overdue,
+}
         else:
             status_map[rid] = {"status": "check_out", "time": "", "expected_back_time": ""}
 
@@ -1143,6 +1155,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
