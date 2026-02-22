@@ -919,12 +919,15 @@ def staff_attendance():
         (shelter,),
     )
 
-    status_map: dict[int, dict[str, str]] = {}
+    status_map: dict[int, dict[str, Any]] = {}
+
     for r in residents:
         rid = int(r["id"] if isinstance(r, dict) else r[0])
+
         last_event = db_fetchone(
             """
-            SELECT event_type, event_time, expected_back_time FROM attendance_events
+            SELECT event_type, event_time, expected_back_time
+            FROM attendance_events
             WHERE resident_id = %s AND shelter = %s
             ORDER BY event_time DESC
             LIMIT 1
@@ -932,32 +935,37 @@ def staff_attendance():
             if g.get("db_kind") == "pg"
             else
             """
-            SELECT event_type, event_time, expected_back_time FROM attendance_events
+            SELECT event_type, event_time, expected_back_time
+            FROM attendance_events
             WHERE resident_id = ? AND shelter = ?
             ORDER BY event_time DESC
             LIMIT 1
             """,
             (rid, shelter),
         )
+
         if last_event:
             et = last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
             tm = last_event["event_time"] if isinstance(last_event, dict) else last_event[1]
             eb = last_event["expected_back_time"] if isinstance(last_event, dict) else last_event[2]
-            is_overdue = False
-if et == "check_out" and eb:
-    try:
-        is_overdue = parse_dt(eb) < datetime.utcnow()
-    except Exception:
-        is_overdue = False
-
-status_map[rid] = {
-    "status": et,
-    "time": tm,
-    "expected_back_time": eb or "",
-    "is_overdue": is_overdue,
-}
         else:
-            status_map[rid] = {"status": "check_out", "time": "", "expected_back_time": "", "is_overdue": False}
+            et = "check_in"
+            tm = ""
+            eb = ""
+
+        is_overdue = False
+        if et == "check_out" and eb:
+            try:
+                is_overdue = parse_dt(eb) < datetime.utcnow()
+            except Exception:
+                is_overdue = False
+
+        status_map[rid] = {
+            "status": et,
+            "time": tm,
+            "expected_back_time": eb or "",
+            "is_overdue": is_overdue,
+        }
 
     return render_template(
         "staff_attendance.html",
@@ -966,8 +974,6 @@ status_map[rid] = {
         fmt_dt=fmt_dt,
         shelter=shelter,
     )
-
-
 @app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
@@ -1155,6 +1161,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
