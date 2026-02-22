@@ -968,6 +968,106 @@ def staff_transport_board():
         fmt_dt=fmt_dt,
     )
 
+@app.route("/staff/transport/print")
+@require_login
+@require_shelter
+def staff_transport_print():
+    import html as _html
+
+    shelter = session["shelter"]
+
+    rows = db_fetchall(
+        """
+        SELECT *
+        FROM transport_requests
+        WHERE shelter = %s
+          AND status IN (%s, %s)
+        ORDER BY needed_at ASC
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT *
+        FROM transport_requests
+        WHERE shelter = ?
+          AND status IN (?, ?)
+        ORDER BY needed_at ASC
+        """,
+        (shelter, "pending", "scheduled"),
+    )
+
+    def _cell(v):
+        return _html.escape("" if v is None else str(v))
+
+    trs = []
+    for r in rows:
+        # assumes your rows are dict like (your app uses dict rows in templates already)
+        needed_at = fmt_dt(r.get("needed_at"))
+        name = f'{r.get("last_name","")}, {r.get("first_name","")}'
+        pickup = r.get("pickup_location", "")
+        dest = r.get("destination", "")
+        status = r.get("status", "")
+
+        trs.append(
+            "<tr>"
+            f"<td>{_cell(needed_at)}</td>"
+            f"<td>{_cell(name)}</td>"
+            f"<td>{_cell(pickup)}</td>"
+            f"<td>{_cell(dest)}</td>"
+            f"<td>{_cell(status)}</td>"
+            "</tr>"
+        )
+
+    table_rows = "\n".join(trs) if trs else '<tr><td colspan="5">No rides found.</td></tr>'
+
+    html_doc = f"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Transportation Sheet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 16px; }}
+    h1 {{ margin: 0 0 10px 0; font-size: 20px; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ border: 1px solid #999; padding: 8px; font-size: 12px; vertical-align: top; }}
+    th {{ text-align: left; }}
+    .toolbar {{ margin-bottom: 12px; display:flex; gap:10px; }}
+    @media print {{
+      .toolbar {{ display:none; }}
+      body {{ margin: 0.5in; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button onclick="window.print()">Print</button>
+    <button onclick="window.close()">Close</button>
+  </div>
+
+  <h1>Transportation Sheet, {_html.escape(str(shelter))}</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Name</th>
+        <th>Pickup</th>
+        <th>Destination</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {table_rows}
+    </tbody>
+  </table>
+</body>
+</html>
+""".strip()
+
+    return html_doc
+
 @app.route("/staff/transport/<int:req_id>/schedule", methods=["POST"])
 @require_login
 @require_shelter
@@ -1346,6 +1446,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
