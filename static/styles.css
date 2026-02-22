@@ -20,3 +20,4 @@ th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; vertica
 .badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; border: 1px solid #ccc; display: inline-block; }
 .badge.in { background: #e9ffe7; border-color: #b9ffb6; }
 .badge.out { background: #f0f0f0; border-color: #d0d0d0; }
+tr.overdue td { font-weight: bold; }
