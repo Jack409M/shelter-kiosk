@@ -919,13 +919,12 @@ def staff_attendance():
         (shelter,),
     )
 
-    # Compute latest status for each resident
     status_map: dict[int, dict[str, str]] = {}
     for r in residents:
         rid = int(r["id"] if isinstance(r, dict) else r[0])
         last_event = db_fetchone(
             """
-            SELECT event_type, event_time FROM attendance_events
+            SELECT event_type, event_time, expected_back_time FROM attendance_events
             WHERE resident_id = %s AND shelter = %s
             ORDER BY event_time DESC
             LIMIT 1
@@ -933,7 +932,7 @@ def staff_attendance():
             if g.get("db_kind") == "pg"
             else
             """
-            SELECT event_type, event_time FROM attendance_events
+            SELECT event_type, event_time, expected_back_time FROM attendance_events
             WHERE resident_id = ? AND shelter = ?
             ORDER BY event_time DESC
             LIMIT 1
@@ -943,11 +942,18 @@ def staff_attendance():
         if last_event:
             et = last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
             tm = last_event["event_time"] if isinstance(last_event, dict) else last_event[1]
-            status_map[rid] = {"status": et, "time": tm}
+            eb = last_event["expected_back_time"] if isinstance(last_event, dict) else last_event[2]
+            status_map[rid] = {"status": et, "time": tm, "expected_back_time": eb or ""}
         else:
-            status_map[rid] = {"status": "check_out", "time": ""}
+            status_map[rid] = {"status": "check_out", "time": "", "expected_back_time": ""}
 
-    return render_template("staff_attendance.html", residents=residents, status_map=status_map, fmt_dt=fmt_dt, shelter=shelter)
+    return render_template(
+        "staff_attendance.html",
+        residents=residents,
+        status_map=status_map,
+        fmt_dt=fmt_dt,
+        shelter=shelter,
+    )
 
 
 @app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
@@ -973,22 +979,27 @@ def staff_attendance_check_in(resident_id: int):
 @require_login
 @require_shelter
 def staff_attendance_check_out(resident_id: int):
-    @app.route("/staff/attendance/<int:resident_id>/check-out", methods=["POST"])
-@require_login
-@require_shelter
-def staff_attendance_check_out(resident_id: int):
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
+
     note = (request.form.get("note") or "").strip()
+    expected_back = (request.form.get("expected_back_time") or "").strip()
+    expected_back_value = expected_back or None
 
     sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note) VALUES (%s, %s, %s, %s, %s, %s)"
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
         if g.get("db_kind") == "pg"
         else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
-    db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None))
-    log_action("attendance", resident_id, shelter, staff_id, "check_out", note or "")
+
+    db_execute(
+        sql,
+        (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None, expected_back_value),
+    )
+    log_action("attendance", resident_id, shelter, staff_id, "check_out", f"expected_back={expected_back_value or ''} {note or ''}".strip())
     return redirect(url_for("staff_attendance"))
 
 @app.route("/staff/admin/users", methods=["GET", "POST"])
@@ -1132,6 +1143,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
