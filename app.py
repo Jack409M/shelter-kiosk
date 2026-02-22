@@ -820,7 +820,7 @@ def staff_leave_approve(req_id: int):
     )
 
     log_action("leave", req_id, shelter, staff_id, "approve", note or "")
-        req = db_fetchone(
+           req = db_fetchone(
         "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = %s AND shelter = %s"
         if g.get("db_kind") == "pg"
         else "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = ? AND shelter = ?",
@@ -828,10 +828,19 @@ def staff_leave_approve(req_id: int):
     )
 
     if req:
+        first_name = req["first_name"] if isinstance(req, dict) else req[0]
+        last_name = req["last_name"] if isinstance(req, dict) else req[1]
+        leave_at = req["leave_at"] if isinstance(req, dict) else req[2]
+        return_at = req["return_at"] if isinstance(req, dict) else req[3]
         phone = req["resident_phone"] if isinstance(req, dict) else req[4]
-        msg = f"Leave approved for {req['first_name'] if isinstance(req, dict) else req[0]} {req['last_name'] if isinstance(req, dict) else req[1]}. Leave {fmt_dt(req['leave_at'] if isinstance(req, dict) else req[2])}. Return {fmt_dt(req['return_at'] if isinstance(req, dict) else req[3])}."
-        if phone:
-            send_sms(phone, msg)
+
+        msg = f"Leave approved for {first_name} {last_name}. Leave {fmt_dt(leave_at)}. Return {fmt_dt(return_at)}."
+
+        try:
+            if phone:
+                send_sms(phone, msg)
+        except Exception as e:
+            log_action("leave", req_id, shelter, staff_id, "sms_failed", str(e))
     flash("Approved.", "ok")
     return redirect(url_for("staff_leave_pending"))
 
@@ -1204,6 +1213,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
