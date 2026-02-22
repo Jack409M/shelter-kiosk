@@ -9,7 +9,7 @@
 <table>
   <thead>
     <tr>
-      <th>Name</th><th>DOB</th><th>Status</th><th>Last time</th><th>Actions</th>
+      <th>Name</th><th>DOB</th><th>Status</th><th>Last time</th><th>Expected back</th><th>Overdue</th><th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -28,6 +28,16 @@
         {% endif %}
       </td>
       <td>{{ fmt_dt(info["time"]) }}</td>
+      <td>{{ fmt_dt(info["expected_back_time"]) }}</td>
+<td>
+  {% if info["is_overdue"] %}
+    <span class="badge out">OVERDUE</span>
+  {% else %}
+    {% if status != "check_in" and info["expected_back_time"] %}
+      <span class="badge in">OK</span>
+    {% endif %}
+  {% endif %}
+</td>
       <td>
         {% if status != "check_in" %}
           <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=rid) }}" class="inline">
@@ -52,3 +62,4 @@
 </div>
 
 {% endblock %}
+
