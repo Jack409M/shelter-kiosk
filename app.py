@@ -36,11 +36,12 @@ def send_sms(to_number: str, message: str) -> None:
 
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        client.messages.create(
+        print("SMS: sending", "from", TWILIO_FROM_NUMBER, "to", to_e164)
+                m = client.messages.create(
             body=message,
             from_=TWILIO_FROM_NUMBER,
             to=to_e164,
-        )
+        )        print("SMS: queued sid", m.sid)
     except Exception as e:
         print("SMS error:", e)
 
@@ -1229,6 +1230,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
