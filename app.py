@@ -418,43 +418,28 @@ def public_home():
     return redirect(url_for("resident_leave"))
 @app.route("/debug/db")
 def debug_db():
-    # Force init so tables would be created if we are truly on Postgres
+    live_env = (os.environ.get("DATABASE_URL") or "").strip()
+
     try:
         init_db()
     except Exception as e:
-        return {"ok": False, "error": str(e)}, 500
-
-    kind = g.get("db_kind")
-
-    # For extra certainty, ask the DB what it is
-    if kind == "pg":
-        row = db_fetchone("SELECT current_database() AS db, current_schema() AS schema")
-        tables = db_fetchall(
-            """
-            SELECT table_name
-            FROM information_schema.tables
-            WHERE table_schema = 'public'
-            ORDER BY table_name
-            """
-        )
         return {
-            "ok": True,
-            "db_kind": kind,
-            "has_DATABASE_URL": bool(DATABASE_URL),
-            "current_database": row["db"] if isinstance(row, dict) else row[0],
-            "current_schema": row["schema"] if isinstance(row, dict) else row[1],
-            "tables": [t["table_name"] for t in tables],
-        }
+            "ok": False,
+            "error": str(e),
+            "db_kind": g.get("db_kind"),
+            "module_DATABASE_URL_set": bool(DATABASE_URL),
+            "live_env_DATABASE_URL_set": bool(live_env),
+            "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID"),
+        }, 500
 
-    # sqlite
-    tables = db_fetchall("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     return {
         "ok": True,
-        "db_kind": kind,
-        "has_DATABASE_URL": bool(DATABASE_URL),
-        "sqlite_path": SQLITE_PATH,
-        "tables": [t["name"] for t in tables],
+        "db_kind": g.get("db_kind"),
+        "module_DATABASE_URL_set": bool(DATABASE_URL),
+        "live_env_DATABASE_URL_set": bool(live_env),
+        "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID"),
     }
+
 
 @app.route("/leave", methods=["GET", "POST"])
 def resident_leave():
@@ -1117,6 +1102,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
