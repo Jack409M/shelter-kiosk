@@ -18,12 +18,27 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 def send_sms(to_number: str, message: str) -> None:
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
         return
+
+    # normalize to E164 for US numbers
+    raw = (to_number or "").strip()
+    digits = "".join(ch for ch in raw if ch.isdigit())
+
+    if raw.startswith("+"):
+        to_e164 = raw
+    elif len(digits) == 10:
+        to_e164 = "+1" + digits
+    elif len(digits) == 11 and digits.startswith("1"):
+        to_e164 = "+" + digits
+    else:
+        print("SMS error: invalid phone format:", to_number)
+        return
+
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         client.messages.create(
             body=message,
             from_=TWILIO_FROM_NUMBER,
-            to=to_number,
+            to=to_e164,
         )
     except Exception as e:
         print("SMS error:", e)
@@ -1213,6 +1228,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
