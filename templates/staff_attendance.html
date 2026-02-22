@@ -6,64 +6,78 @@
   <p class="hint">Search your browser page to find a name fast. On iPad, use the search bar in Safari.</p>
 </div>
 
+<h2>Attendance, {{ shelter }}</h2>
+
+<h3>Currently out</h3>
 <table>
   <thead>
     <tr>
-      <th>Name</th><th>DOB</th><th>Status</th><th>Last time</th><th>Expected back</th><th>Overdue</th><th>Actions</th>
+      <th>Date</th>
+      <th>Name</th>
+      <th>Time checked out</th>
+      <th>Time expected back</th>
+      <th>Time checked back in</th>
+      <th>Overdue</th>
+      <th>Actions</th>
     </tr>
   </thead>
   <tbody>
-  {% for r in residents %}
-    {% set rid = r["id"] %}
-    {% set info = status_map[rid] %}
-    {% set status = info["status"] %}
-    <tr>
-      <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
-      <td>{{ r["dob"] }}</td>
+    {% for r in out_rows %}
+    <tr class="{% if r.is_overdue %}overdue{% endif %}">
+      <td>{{ r.date }}</td>
+      <td>{{ r.name }}</td>
+      <td>{{ fmt_dt(r.checked_out_at) }}</td>
+      <td>{{ fmt_dt(r.expected_back_at) }}</td>
+      <td>{{ fmt_dt(r.checked_in_at) }}</td>
+      <td>{% if r.is_overdue %}YES{% else %}NO{% endif %}</td>
       <td>
-        {% if status == "check_in" %}
-          <span class="badge in">IN</span>
-        {% else %}
-          <span class="badge out">OUT</span>
-        {% endif %}
-      </td>
-      <td>{{ fmt_dt(info["time"]) }}</td>
-      <td>{{ fmt_dt(info["expected_back_time"]) }}</td>
-<td>
-  {% if info["is_overdue"] %}
-    <span class="badge out">OVERDUE</span>
-  {% else %}
-    {% if status != "check_in" and info["expected_back_time"] %}
-      <span class="badge in">OK</span>
-    {% endif %}
-  {% endif %}
-</td>
-      <td>{{ fmt_dt(info["expected_back_time"]) }}</td>
-<td>
-  {% if info["is_overdue"] %}
-    <span class="badge out">OVERDUE</span>
-  {% else %}
-    {% if status != "check_in" and info["expected_back_time"] %}
-      <span class="badge in">OK</span>
-    {% endif %}
-  {% endif %}
-</td>
-      <td>
-        {% if status != "check_in" %}
-          <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=rid) }}" class="inline">
-            <input name="note" placeholder="Optional note">
-            <button type="submit">Check in</button>
-          </form>
-        {% else %}
-          <form method="post" action="{{ url_for('staff_attendance_check_out', resident_id=rid) }}" class="inline">
-  <input name="expected_back_time" type="datetime-local">
-  <input name="note" placeholder="Optional note">
-  <button type="submit">Check out</button>
-</form>
-        {% endif %}
+        <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=r.resident_id) }}">
+          <input name="note" placeholder="Note (optional)">
+          <button type="submit">Check in</button>
+        </form>
       </td>
     </tr>
-  {% endfor %}
+    {% endfor %}
+    {% if out_rows|length == 0 %}
+    <tr><td colspan="7">No one is currently out.</td></tr>
+    {% endif %}
+  </tbody>
+</table>
+
+<h3>Currently present</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Name</th>
+      <th>Time checked out</th>
+      <th>Time expected back</th>
+      <th>Time checked back in</th>
+      <th>Overdue</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in in_rows %}
+    <tr>
+      <td>{{ r.date }}</td>
+      <td>{{ r.name }}</td>
+      <td>{{ fmt_dt(r.checked_out_at) }}</td>
+      <td>{{ fmt_dt(r.expected_back_at) }}</td>
+      <td>{{ fmt_dt(r.checked_in_at) }}</td>
+      <td>NO</td>
+      <td>
+        <form method="post" action="{{ url_for('staff_attendance_check_out', resident_id=r.resident_id) }}">
+          <input type="datetime-local" name="expected_back_time">
+          <input name="note" placeholder="Note (optional)">
+          <button type="submit">Check out</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    {% if in_rows|length == 0 %}
+    <tr><td colspan="7">No one is currently present.</td></tr>
+    {% endif %}
   </tbody>
 </table>
 
@@ -72,6 +86,7 @@
 </div>
 
 {% endblock %}
+
 
 
 
