@@ -1113,11 +1113,24 @@ def staff_resident_set_active(resident_id: int):
     log_action("resident", resident_id, shelter, staff_id, "set_active", f"active={active}")
     flash("Updated.", "ok")
     return redirect(url_for("staff_residents"))
-
+@app.route("/_admin/delete_admin_now", methods=["POST"])
+@require_login
+@require_admin
+def delete_admin_now():
+    db_execute(
+        "DELETE FROM staff_users WHERE username = %s"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM staff_users WHERE username = ?",
+        ("admin",),
+    )
+    flash("Deleted user: admin", "ok")
+    return redirect(url_for("admin_users"))
+    
 if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
