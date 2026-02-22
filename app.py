@@ -118,8 +118,13 @@ def init_db() -> None:
     Creates tables if missing.
     Works on SQLite and Postgres.
     """
+    kind = g.get("db_kind")
+
+    def create(sqlite_sql: str, pg_sql: str) -> None:
+        db_execute(pg_sql if kind == "pg" else sqlite_sql)
+
     # staff users
-    db_execute(
+    create(
         """
         CREATE TABLE IF NOT EXISTS staff_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,11 +134,21 @@ def init_db() -> None:
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS staff_users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'staff',
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL
+        )
+        """,
     )
 
     # leave requests
-    db_execute(
+    create(
         """
         CREATE TABLE IF NOT EXISTS leave_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -154,14 +169,35 @@ def init_db() -> None:
             check_in_at TEXT,
             check_in_by INTEGER
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS leave_requests (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            dob TEXT NOT NULL,
+            destination TEXT NOT NULL,
+            reason TEXT,
+            resident_notes TEXT,
+            leave_at TEXT NOT NULL,
+            return_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            submitted_at TEXT NOT NULL,
+            decided_at TEXT,
+            decided_by INTEGER,
+            decision_note TEXT,
+            check_in_at TEXT,
+            check_in_by INTEGER
+        )
+        """,
     )
 
-    # transportation requests
-    db_execute(
+    # transport requests
+    create(
         """
         CREATE TABLE IF NOT EXISTS transport_requests (
-           id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             shelter TEXT NOT NULL,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
@@ -184,11 +220,37 @@ def init_db() -> None:
             cancelled_by INTEGER,
             cancel_reason TEXT
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS transport_requests (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            dob TEXT NOT NULL,
+            needed_at TEXT NOT NULL,
+            pickup_location TEXT NOT NULL,
+            destination TEXT NOT NULL,
+            reason TEXT,
+            resident_notes TEXT,
+            callback_phone TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            submitted_at TEXT NOT NULL,
+            scheduled_at TEXT,
+            scheduled_by INTEGER,
+            driver_name TEXT,
+            staff_notes TEXT,
+            completed_at TEXT,
+            completed_by INTEGER,
+            cancelled_at TEXT,
+            cancelled_by INTEGER,
+            cancel_reason TEXT
+        )
+        """,
     )
 
-    # residents roster
-    db_execute(
+    # residents
+    create(
         """
         CREATE TABLE IF NOT EXISTS residents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -199,11 +261,22 @@ def init_db() -> None:
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS residents (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            dob TEXT NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL
+        )
+        """,
     )
 
     # attendance events
-    db_execute(
+    create(
         """
         CREATE TABLE IF NOT EXISTS attendance_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -214,11 +287,22 @@ def init_db() -> None:
             staff_user_id INTEGER,
             note TEXT
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS attendance_events (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL,
+            shelter TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            event_time TEXT NOT NULL,
+            staff_user_id INTEGER,
+            note TEXT
+        )
+        """,
     )
 
     # audit log
-    db_execute(
+    create(
         """
         CREATE TABLE IF NOT EXISTS audit_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -230,11 +314,22 @@ def init_db() -> None:
             action_details TEXT,
             created_at TEXT NOT NULL
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id SERIAL PRIMARY KEY,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER,
+            shelter TEXT,
+            staff_user_id INTEGER,
+            action_type TEXT NOT NULL,
+            action_details TEXT,
+            created_at TEXT NOT NULL
+        )
+        """,
     )
 
     ensure_admin_bootstrap()
-
 
 def ensure_admin_bootstrap() -> None:
     """
@@ -983,3 +1078,4 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
