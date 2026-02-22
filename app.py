@@ -957,7 +957,7 @@ status_map[rid] = {
     "is_overdue": is_overdue,
 }
         else:
-            status_map[rid] = {"status": "check_out", "time": "", "expected_back_time": ""}
+            status_map[rid] = {"status": "check_out", "time": "", "expected_back_time": "", "is_overdue": False}
 
     return render_template(
         "staff_attendance.html",
@@ -1155,6 +1155,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
