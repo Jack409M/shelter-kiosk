@@ -30,7 +30,14 @@
       <input name="dob" type="date" required>
     </div>
   </div>
-
+<label for="resident_phone">Phone number for text updates</label>
+<input
+  id="resident_phone"
+  name="resident_phone"
+  type="tel"
+  required
+  placeholder="8065551234"
+/>
   <label>Destination</label>
   <input name="destination" required>
 
@@ -65,4 +72,5 @@
 
   <button type="submit">Submit</button>
 </form>
+
 {% endblock %}
