@@ -312,6 +312,16 @@ def init_db() -> None:
     except Exception:
         # ok if it already exists
         pass
+        
+         # add resident_phone column to leave_requests if missing
+    try:
+        if kind == "pg":
+            db_execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS resident_phone TEXT")
+        else:
+            db_execute("ALTER TABLE leave_requests ADD COLUMN resident_phone TEXT")
+    except Exception:
+        # ok if it already exists
+        pass
     
     # audit log
     create(
@@ -1161,6 +1171,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
