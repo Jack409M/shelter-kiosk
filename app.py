@@ -16,8 +16,7 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 def send_sms(to_number: str, message: str) -> None:
-        if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
-        print("SMS DEBUG: missing env vars", bool(TWILIO_ACCOUNT_SID), bool(TWILIO_AUTH_TOKEN), bool(TWILIO_FROM_NUMBER))
+    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
         return
 
     raw = (to_number or "").strip()
@@ -1226,6 +1225,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
