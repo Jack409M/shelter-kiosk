@@ -935,6 +935,38 @@ def staff_transport_pending():
     )
     return render_template("staff_transport_pending.html", rows=rows, fmt_dt=fmt_dt, shelter=shelter)
 
+@app.route("/staff/transport/board")
+@require_login
+@require_shelter
+def staff_transport_board():
+    shelter = session["shelter"]
+
+    rows = db_fetchall(
+        """
+        SELECT *
+        FROM transport_requests
+        WHERE shelter = %s
+          AND status IN (%s, %s)
+        ORDER BY needed_at ASC
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT *
+        FROM transport_requests
+        WHERE shelter = ?
+          AND status IN (?, ?)
+        ORDER BY needed_at ASC
+        """,
+        (shelter, "pending", "scheduled"),
+    )
+
+    return render_template(
+        "staff_transport_board.html",
+        rows=rows,
+        shelter=shelter,
+        fmt_dt=fmt_dt,
+    )
 
 @app.route("/staff/transport/<int:req_id>/schedule", methods=["POST"])
 @require_login
@@ -1314,6 +1346,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
