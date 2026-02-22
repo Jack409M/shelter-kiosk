@@ -77,17 +77,14 @@ def close_db(_exc):
 
 
 def db_execute(sql: str, params: tuple = ()) -> None:
-    conn = get_db()
-    kind = g.get("db_kind")
+    conn = get_db()  # ensures g.db_kind is set for THIS request
+    kind = g.get("db_kind", "sqlite")
+
     if kind == "pg":
         cur = conn.cursor()
         cur.execute(sql, params)
         cur.close()
         return
-    cur = conn.cursor()
-    cur.execute(sql, params)
-    conn.commit()
-
 
 def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
     conn = get_db()
@@ -1130,6 +1127,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
