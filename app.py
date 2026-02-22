@@ -975,10 +975,17 @@ def staff_transport_schedule(req_id: int):
 @require_shelter
 def staff_attendance():
     """
-    Shows all active residents for the selected shelter.
-    Shows current in or out based on last attendance event.
+    Attendance board for the selected shelter.
+
+    Shows two groups:
+    1) Residents currently out, sorted by last name
+    2) Residents currently present, sorted by last name
+
+    Columns:
+    date, name, time checked out, time expected back, time checked back in, overdue
     """
     shelter = session["shelter"]
+    init_db()
 
     residents = db_fetchall(
         "SELECT * FROM residents WHERE shelter = %s AND is_active = TRUE ORDER BY last_name, first_name"
@@ -987,11 +994,15 @@ def staff_attendance():
         (shelter,),
     )
 
-    status_map: dict[int, dict[str, Any]] = {}
+    out_rows: list[dict[str, Any]] = []
+    in_rows: list[dict[str, Any]] = []
 
     for r in residents:
         rid = int(r["id"] if isinstance(r, dict) else r[0])
+        first = r["first_name"] if isinstance(r, dict) else r[2]
+        last = r["last_name"] if isinstance(r, dict) else r[3]
 
+        # Last event decides current status
         last_event = db_fetchone(
             """
             SELECT event_type, event_time, expected_back_time
@@ -1012,33 +1023,107 @@ def staff_attendance():
             (rid, shelter),
         )
 
+        last_event_type = ""
+        last_event_time = ""
         if last_event:
-            et = last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
-            tm = last_event["event_time"] if isinstance(last_event, dict) else last_event[1]
-            eb = last_event["expected_back_time"] if isinstance(last_event, dict) else last_event[2]
-        else:
-            et = "check_in"
-            tm = ""
-            eb = ""
+            last_event_type = last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
+            last_event_time = last_event["event_time"] if isinstance(last_event, dict) else last_event[1]
 
+        # Most recent checkout (for columns)
+        last_checkout = db_fetchone(
+            """
+            SELECT event_time, expected_back_time
+            FROM attendance_events
+            WHERE resident_id = %s AND shelter = %s AND event_type = %s
+            ORDER BY event_time DESC
+            LIMIT 1
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            SELECT event_time, expected_back_time
+            FROM attendance_events
+            WHERE resident_id = ? AND shelter = ? AND event_type = ?
+            ORDER BY event_time DESC
+            LIMIT 1
+            """,
+            (rid, shelter, "check_out"),
+        )
+
+        checkout_time = ""
+        expected_back_time = ""
+        if last_checkout:
+            checkout_time = last_checkout["event_time"] if isinstance(last_checkout, dict) else last_checkout[0]
+            expected_back_time = last_checkout["expected_back_time"] if isinstance(last_checkout, dict) else last_checkout[1] or ""
+
+        # Most recent check in that happened after the last checkout (if any)
+        checkin_after_checkout_time = ""
+        if checkout_time:
+            checkin_after = db_fetchone(
+                """
+                SELECT event_time
+                FROM attendance_events
+                WHERE resident_id = %s AND shelter = %s AND event_type = %s AND event_time > %s
+                ORDER BY event_time DESC
+                LIMIT 1
+                """
+                if g.get("db_kind") == "pg"
+                else
+                """
+                SELECT event_time
+                FROM attendance_events
+                WHERE resident_id = ? AND shelter = ? AND event_type = ? AND event_time > ?
+                ORDER BY event_time DESC
+                LIMIT 1
+                """,
+                (rid, shelter, "check_in", checkout_time),
+            )
+            if checkin_after:
+                checkin_after_checkout_time = checkin_after["event_time"] if isinstance(checkin_after, dict) else checkin_after[0]
+
+        # Determine current status
+        is_out = (last_event_type == "check_out")
         is_overdue = False
-        if et == "check_out" and eb:
+        if is_out and expected_back_time:
             try:
-                is_overdue = parse_dt(eb) < datetime.utcnow()
+                is_overdue = parse_dt(expected_back_time) < datetime.utcnow()
             except Exception:
                 is_overdue = False
 
-        status_map[rid] = {
-            "status": et,
-            "time": tm,
-            "expected_back_time": eb or "",
+        # Date column
+        date_source = checkout_time or (last_event_time or "")
+        date_value = ""
+        if date_source:
+            try:
+                date_value = parse_dt(date_source).strftime("%Y-%m-%d")
+            except Exception:
+                date_value = date_source[:10]
+
+        row = {
+            "resident_id": rid,
+            "first_name": first,
+            "last_name": last,
+            "name": f"{last}, {first}",
+            "date": date_value,
+            "checked_out_at": checkout_time,
+            "expected_back_at": expected_back_time,
+            "checked_in_at": checkin_after_checkout_time,
+            "is_out": is_out,
             "is_overdue": is_overdue,
         }
 
+        if is_out:
+            out_rows.append(row)
+        else:
+            in_rows.append(row)
+
+    out_rows.sort(key=lambda x: (x["last_name"].lower(), x["first_name"].lower()))
+    in_rows.sort(key=lambda x: (x["last_name"].lower(), x["first_name"].lower()))
+
     return render_template(
         "staff_attendance.html",
-        residents=residents,
-        status_map=status_map,
+        out_rows=out_rows,
+        in_rows=in_rows,
         fmt_dt=fmt_dt,
         shelter=shelter,
     )
@@ -1229,6 +1314,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
