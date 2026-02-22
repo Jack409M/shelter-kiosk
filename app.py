@@ -1114,13 +1114,12 @@ def staff_resident_set_active(resident_id: int):
     log_action("resident", resident_id, shelter, staff_id, "set_active", f"active={active}")
     flash("Updated.", "ok")
     return redirect(url_for("staff_residents"))
-
-  
-    
+     
 if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
