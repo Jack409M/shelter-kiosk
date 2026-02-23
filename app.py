@@ -1386,11 +1386,27 @@ def staff_attendance_check_out(resident_id: int):
     note = (request.form.get("note") or "").strip()
     expected_back = (request.form.get("expected_back_time") or "").strip()
     expected_back_value = None
-    expected_back_value = None
+
     if expected_back:
-        # browser sends local time (no tz). Treat as Chicago time, store as UTC ISO.
-        local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
-        expected_back_value = local_dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+        hh, mm = expected_back.split(":")
+        now_chi = datetime.now(ZoneInfo("America/Chicago"))
+
+        local_dt = now_chi.replace(
+            hour=int(hh),
+            minute=int(mm),
+            second=0,
+            microsecond=0,
+        )
+
+        if local_dt <= now_chi:
+            local_dt = local_dt + timedelta(days=1)
+
+        expected_back_value = (
+            local_dt.astimezone(timezone.utc)
+            .replace(tzinfo=None)
+            .isoformat(timespec="seconds")
+        )
+
     sql = (
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
         "VALUES (%s, %s, %s, %s, %s, %s, %s)"
@@ -1404,7 +1420,16 @@ def staff_attendance_check_out(resident_id: int):
         sql,
         (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None, expected_back_value),
     )
-    log_action("attendance", resident_id, shelter, staff_id, "check_out", f"expected_back={expected_back_value or ''} {note or ''}".strip())
+
+    log_action(
+        "attendance",
+        resident_id,
+        shelter,
+        staff_id,
+        "check_out",
+        f"expected_back={expected_back_value or ''} {note or ''}".strip(),
+    )
+
     return redirect(url_for("staff_attendance"))
 
 @app.route("/staff/admin/users", methods=["GET", "POST"])
@@ -1548,6 +1573,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
