@@ -45,6 +45,26 @@
 </table>
 
 <h3>Currently present</h3>
+<div class="card">
+  <h4>Check out resident</h4>
+
+  <form method="post" action="{{ url_for('staff_attendance_check_out_global') }}" class="checkout-form">
+    <label>Resident</label>
+    <select name="resident_id" required>
+      {% for r in in_rows %}
+        <option value="{{ r.resident_id }}">{{ r.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Expected back time</label>
+    <input type="time" name="expected_back_time" required>
+
+    <label>Note</label>
+    <input name="note">
+
+    <button type="submit">Check out</button>
+  </form>
+</div>
 <table>
   <thead>
     <tr>
@@ -90,6 +110,7 @@
 </div>
 
 {% endblock %}
+
 
 
 
