@@ -15,7 +15,9 @@
         <a href="{{ url_for('resident_leave') }}">Leave</a>
         <a href="{{ url_for('resident_transport') }}">Transport</a>
         <a href="{{ url_for('staff_login') }}">Staff</a>
-        <a href="{{ url_for('staff_transport_board') }}">Transport Board</a>
+        {% if session.get("staff_user_id") %}
+  <a href="{{ url_for('staff_transport_board') }}">Transport Board</a>
+{% endif %}
       </nav>
     </header>
 
@@ -33,3 +35,4 @@
   </body>
 
 </html>
+
