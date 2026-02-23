@@ -1447,23 +1447,7 @@ def staff_attendance_check_out_global():
     )
 
     return redirect(url_for("staff_attendance"))
-@app.route("/staff/attendance/<int:resident_id>/check-out", methods=["POST"], endpoint="staff_attendance_check_out")
-@require_login
-@require_shelter
-@app.route("/staff/attendance/check-out", methods=["POST"], endpoint="staff_attendance_check_out_global_v2")
-@require_login
-@require_shelter
-def staff_attendance_check_out_global():
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
 
-    rid_raw = (request.form.get("resident_id") or "").strip()
-    note = (request.form.get("note") or "").strip()
-    expected_back = (request.form.get("expected_back_time") or "").strip()
-
-    if not rid_raw.isdigit():
-        flash("Select a resident.", "error")
-        return redirect(url_for("staff_attendance"))
 
     resident_id = int(rid_raw)
 
@@ -1716,6 +1700,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
