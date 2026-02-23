@@ -1380,8 +1380,8 @@ def staff_attendance_check_out(resident_id: int):
     expected_back_value = None
     if expected_back:
     # browser sends local time (no tz). Treat as Chicago time, store as UTC ISO.
-    local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
-    expected_back_value = local_dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+        local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
+        expected_back_value = local_dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
     sql = (
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
         "VALUES (%s, %s, %s, %s, %s, %s, %s)"
@@ -1539,6 +1539,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
