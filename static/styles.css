@@ -22,13 +22,11 @@ th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; vertica
 .badge.in { background: #e9ffe7; border-color: #b9ffb6; }
 .badge.out { background: #f0f0f0; border-color: #d0d0d0; }
 tr.overdue td { font-weight: bold; }
-/* iPhone fix: force visible button text */
 button,
 input[type="submit"] {
-  color: #111 !important;
-  background-color: #2c3e50 !important;
-  -webkit-text-fill-color: #111 !important;
-  opacity: 1 !important;
+  color: #111;
+  -webkit-text-fill-color: #111;
+  background: #fff;
 }
 /* Leave agreement: prevent "skinny strip" on mobile */
 .agreement {
@@ -67,4 +65,5 @@ input[type="submit"] {
   color: #111;
   -webkit-text-fill-color: #111;
 }
+
 
