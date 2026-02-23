@@ -1347,8 +1347,12 @@ def kiosk_checkout_out(shelter: str, resident_id: int):
 
     init_db()
 
-    expected_back = (request.form.get("expected_back_time") or "").strip() or None
-    note = (request.form.get("note") or "").strip() or None
+expected_back = (request.form.get("expected_back_time") or "").strip()
+expected_back_value = None
+if expected_back:
+    # datetime-local posts local time with no timezone; treat as Chicago, store UTC
+    local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
+    expected_back_value = local_dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
 
     sql = (
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
@@ -1535,6 +1539,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
