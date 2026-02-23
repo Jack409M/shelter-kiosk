@@ -960,7 +960,19 @@ def staff_transport_board():
         """,
         (shelter, "pending", "scheduled"),
     )
-
+    # --- optional day filter from ?date=YYYY-MM-DD ---
+    day = (request.args.get("date") or "").strip()
+    if day:
+        filtered = []
+        for r in rows:
+            try:
+                dt = parse_dt(r.get("needed_at"))
+                if dt.strftime("%Y-%m-%d") == day:
+                    filtered.append(r)
+            except Exception:
+                pass
+        rows = filtered
+    
     return render_template(
         "staff_transport_board.html",
         rows=rows,
@@ -1462,6 +1474,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
