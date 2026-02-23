@@ -3,6 +3,13 @@
 
 <div class="card">
   <h2>Transportation Board, {{ shelter }}</h2>
+
+<form method="get" action="{{ url_for('staff_transport_board') }}" style="margin-bottom:12px;">
+  <label>Select date:</label>
+  <input type="date" name="date" value="{{ request.args.get('date', '') }}">
+  <button type="submit">View</button>
+  <a href="{{ url_for('staff_transport_print', date=request.args.get('date')) }}" target="_blank">Print sheet</a>
+</form>
   <p><a href="{{ url_for('staff_transport_print') }}" target="_blank">Print sheet</a></p>
 </div>
 
