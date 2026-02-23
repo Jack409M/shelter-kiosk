@@ -13,7 +13,9 @@
         <a href="{{ url_for('resident_leave') }}">Request Leave</a>
         <a href="{{ url_for('resident_transport') }}">Request Transport</a>
         <span class="sep"></span>
+        {% if session.get("staff_user_id") %}
         <a href="{{ url_for('staff_login') }}">Login</a>
+        {% endif %}
         {% if session.get("staff_user_id") %}
           <a href="{{ url_for('staff_select_shelter') }}">Select shelter</a>
           <a href="{{ url_for('staff_leave_pending') }}">Leave pending</a>
@@ -49,4 +51,5 @@
   </body>
 
 </html>
+
 
