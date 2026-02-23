@@ -1300,7 +1300,7 @@ def staff_attendance():
         "staff_attendance.html",
         out_rows=out_rows,
         in_rows=in_rows,
-        fmt_dt=fmt_dt,
+        fmt_time=fmt_time_only,
         shelter=shelter,
     )
 @app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
@@ -1532,6 +1532,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
