@@ -27,9 +27,18 @@
       <tbody>
         {% for r in residents %}
         <tr>
-          <td>{{ r.last_name }}, {{ r.first_name }}</td>
-          <td>{{ r.dob }}</td>
-        </tr>
+  <td>{{ r.last_name }}, {{ r.first_name }}</td>
+  <td>{{ r.dob }}</td>
+  <td>
+    <form method="post" action="{{ url_for('kiosk_checkout_out', shelter=shelter, resident_id=r.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <label style="font-size:12px;">Expected back</label>
+      <input type="datetime-local" name="expected_back_time">
+      <input type="text" name="note" placeholder="Note (optional)">
+      <button type="submit">Check out</button>
+    </form>
+  </td>
+</tr>
+     
         {% endfor %}
         {% if residents|length == 0 %}
         <tr><td colspan="2">No active residents found for this shelter.</td></tr>
