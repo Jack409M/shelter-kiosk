@@ -76,7 +76,16 @@ def fmt_dt(dt_iso: Optional[str]) -> str:
         return local_dt.strftime("%m/%d/%Y %I:%M %p")
     except Exception:
         return dt_iso
-
+def fmt_time_only(dt_iso: Optional[str]) -> str:
+    if not dt_iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(dt_iso)
+        dt = dt.replace(tzinfo=timezone.utc)
+        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
+        return local_dt.strftime("%I:%M %p")
+    except Exception:
+        return ""
 
 def get_db() -> Any:
     """
@@ -1523,6 +1532,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
