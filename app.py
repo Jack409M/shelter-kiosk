@@ -1271,13 +1271,12 @@ def staff_attendance():
         date_source = checkout_time or (last_event_time or "")
         date_value = ""
         if date_source:
-           try:
-        dt = parse_dt(date_source).replace(tzinfo=timezone.utc)
-        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-        date_value = local_dt.strftime("%Y-%m-%d")
-    except Exception:
-        date_value = date_source[:10]
-
+            try:
+                dt = parse_dt(date_source).replace(tzinfo=timezone.utc)
+                local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
+                date_value = local_dt.strftime("%Y-%m-%d")
+            except Exception:
+                date_value = date_source[:10]
         row = {
             "resident_id": rid,
             "first_name": first,
@@ -1549,6 +1548,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
