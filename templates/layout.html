@@ -20,6 +20,7 @@
           <a href="{{ url_for('staff_leave_away_now') }}">Leave away</a>
           <a href="{{ url_for('staff_leave_overdue') }}">Leave overdue</a>
           <a href="{{ url_for('staff_transport_pending') }}">Transport</a>
+          <a href="{{ url_for('staff_transport_board') }}">Transport Board</a>
           <a href="{{ url_for('staff_attendance') }}">Attendance</a>
 {% if session.get("role") in ["admin", "staff"] %}
   <a href="{{ url_for('staff_residents') }}">Residents</a>
@@ -46,4 +47,5 @@
       {% block content %}{% endblock %}
     </main>
   </body>
+
 </html>
