@@ -87,15 +87,7 @@
       <td>{{ fmt_time(r.checked_in_at) }}</td>
       <td>NO</td>
       <td>
-        <form method="post" action="{{ url_for('staff_attendance_check_out', resident_id=r.resident_id) }}">
-         <label>Expected back time</label>
-         <input type="time" name="expected_back_time" required>
-
-         <label>Note (optional)</label>
-         <input name="note" placeholder="Note (optional)">
-
-         <button type="submit">Check out</button>
-        </form>
+        <span class="hint">Use the check out panel above.</span>
       </td>
     </tr>
     {% endfor %}
@@ -110,6 +102,7 @@
 </div>
 
 {% endblock %}
+
 
 
 
