@@ -66,7 +66,7 @@ def fmt_dt(dt_iso: Optional[str]) -> str:
         return ""
     try:
         dt = datetime.fromisoformat(dt_iso)
-        return dt.strftime("%Y-%m-%d %H:%M")
+        return dt.strftime("%m/%d/%Y %I:%M %p")
     except Exception:
         return dt_iso
 
@@ -1462,6 +1462,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
