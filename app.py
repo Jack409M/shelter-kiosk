@@ -1384,8 +1384,9 @@ def staff_attendance_check_out(resident_id: int):
     note = (request.form.get("note") or "").strip()
     expected_back = (request.form.get("expected_back_time") or "").strip()
     expected_back_value = None
+    expected_back_value = None
     if expected_back:
-    # browser sends local time (no tz). Treat as Chicago time, store as UTC ISO.
+        # browser sends local time (no tz). Treat as Chicago time, store as UTC ISO.
         local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
         expected_back_value = local_dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
     sql = (
@@ -1545,6 +1546,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
