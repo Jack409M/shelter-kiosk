@@ -68,10 +68,13 @@
       <td>NO</td>
       <td>
         <form method="post" action="{{ url_for('staff_attendance_check_out', resident_id=r.resident_id) }}">
-          <input type="datetime-local" name="expected_back_time">
-          <input name="note" placeholder="Note (optional)">
-          <input type="datetime-local" name="expected_back_time" required>
-          <button type="submit">Check out</button>
+         <label>Expected back time</label>
+         <input type="datetime-local" name="expected_back_time" required>
+
+         <label>Note (optional)</label>
+         <input name="note" placeholder="Note (optional)">
+
+         <button type="submit">Check out</button>
         </form>
       </td>
     </tr>
@@ -87,6 +90,7 @@
 </div>
 
 {% endblock %}
+
 
 
 
