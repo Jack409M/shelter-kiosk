@@ -1450,7 +1450,7 @@ def staff_attendance_check_out_global():
 @app.route("/staff/attendance/<int:resident_id>/check-out", methods=["POST"], endpoint="staff_attendance_check_out")
 @require_login
 @require_shelter
-@app.route("/staff/attendance/check-out", methods=["POST"])
+@app.route("/staff/attendance/check-out", methods=["POST"], endpoint="staff_attendance_check_out_global_v2")
 @require_login
 @require_shelter
 def staff_attendance_check_out_global():
@@ -1716,6 +1716,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
