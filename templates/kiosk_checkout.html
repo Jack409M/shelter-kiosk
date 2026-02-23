@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Kiosk Checkout Log - {{ shelter }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <style>
+    .kiosk-wrap { padding: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 10px; font-size: 16px; }
+    th { text-align: left; background: #f7f7f7; }
+  </style>
+</head>
+<body>
+  <div class="kiosk-wrap">
+    <h2>Checkout Log (Kiosk) — {{ shelter }}</h2>
+    <p>This page is kiosk-only. Residents list is shown below.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Date of Birth</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in residents %}
+        <tr>
+          <td>{{ r.last_name }}, {{ r.first_name }}</td>
+          <td>{{ r.dob }}</td>
+        </tr>
+        {% endfor %}
+        {% if residents|length == 0 %}
+        <tr><td colspan="2">No active residents found for this shelter.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
