@@ -65,12 +65,18 @@
   <label>Notes optional</label>
   <textarea name="resident_notes" rows="3"></textarea>
 
-  <label class="check">
+  <div class="check">
+  <label>
     <input type="checkbox" name="agreed" required>
-    I understand maximum leave is {{ max_days }} days and I must return by the approved time.
+    <span class="check-text">
+      I understand maximum leave is {{ max_days }} days and I must return by the approved time.
+    </span>
   </label>
+</div>
+
 
   <button type="submit">Submit</button>
 </form>
 
 {% endblock %}
+
