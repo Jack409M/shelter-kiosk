@@ -1062,7 +1062,7 @@ def staff_transport_print():
     <button onclick="window.close()">Close</button>
   </div>
 
-  <h1>Transportation Sheet, {_html.escape(str(shelter))}</h1>
+  <h1>Transportation Sheet, {_html.escape(str(shelter))} | {_html.escape(day)}</h1>
 
   <table>
     <thead>
@@ -1462,6 +1462,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
