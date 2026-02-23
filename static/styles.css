@@ -28,20 +28,7 @@ input[type="submit"] {
   -webkit-text-fill-color: #111;
   background: #fff;
 }
-/* Leave agreement: prevent "skinny strip" on mobile */
-.agreement {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-}
 
-.agreement label {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  white-space: normal;
-  word-break: normal;
-}
 
 .agreement input[type="checkbox"] {
   margin-right: 10px;
@@ -65,5 +52,6 @@ input[type="submit"] {
   color: #111;
   -webkit-text-fill-color: #111;
 }
+
 
 
