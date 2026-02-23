@@ -71,7 +71,7 @@ def fmt_dt(dt_iso: Optional[str]) -> str:
         dt = dt.replace(tzinfo=timezone.utc)
 
         # Convert to local system time (Central Time on your server)
-        local_dt = dt.astimezone()
+        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
 
         return local_dt.strftime("%m/%d/%Y %I:%M %p")
     except Exception:
@@ -1523,6 +1523,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
