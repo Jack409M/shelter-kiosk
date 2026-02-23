@@ -995,7 +995,23 @@ def staff_transport_print():
         """,
         (shelter, "pending", "scheduled"),
     )
+    # --- day filter (YYYY-MM-DD), default today ---
+    day = (request.args.get("date") or "").strip()
+    if not day:
+        day = datetime.utcnow().strftime("%Y-%m-%d")
 
+    filtered = []
+    for r in rows:
+        try:
+            dt = parse_dt(r.get("needed_at"))
+            if dt.strftime("%Y-%m-%d") == day:
+                filtered.append(r)
+        except Exception:
+            # if needed_at is missing or unparsable, exclude it from the print sheet
+            pass
+
+    rows = filtered
+    
     def _cell(v):
         return _html.escape("" if v is None else str(v))
 
@@ -1446,6 +1462,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
