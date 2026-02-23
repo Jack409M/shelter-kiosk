@@ -15,7 +15,8 @@ th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; vertica
 .flash .msg { padding: 10px; border-radius: 8px; margin-bottom: 8px; }
 .flash .error { background: #ffe7e7; border: 1px solid #ffb6b6; }
 .flash .ok { background: #e9ffe7; border: 1px solid #b9ffb6; }
-.check { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
+.check { margin-top: 12px; }
+.check input[type="checkbox"] { width: auto; }
 .hint { color: #555; font-size: 13px; margin-top: 10px; }
 .badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; border: 1px solid #ccc; display: inline-block; }
 .badge.in { background: #e9ffe7; border-color: #b9ffb6; }
@@ -66,3 +67,4 @@ input[type="submit"] {
   color: #111;
   -webkit-text-fill-color: #111;
 }
+
