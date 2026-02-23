@@ -1305,6 +1305,25 @@ def staff_attendance_check_in(resident_id: int):
     log_action("attendance", resident_id, shelter, staff_id, "check_in", note or "")
     return redirect(url_for("staff_attendance"))
 
+@app.route("/kiosk/<shelter>/checkout", methods=["GET"])
+def kiosk_checkout(shelter: str):
+    if shelter not in SHELTERS:
+        return "Invalid shelter", 404
+
+    init_db()
+
+    residents = db_fetchall(
+        "SELECT * FROM residents WHERE shelter = %s AND is_active = TRUE ORDER BY last_name, first_name"
+        if g.get("db_kind") == "pg"
+        else "SELECT * FROM residents WHERE shelter = ? AND is_active = 1 ORDER BY last_name, first_name",
+        (shelter,),
+    )
+
+    return render_template(
+        "kiosk_checkout.html",
+        residents=residents,
+        shelter=shelter,
+    )
 
 @app.route("/staff/attendance/<int:resident_id>/check-out", methods=["POST"])
 @require_login
@@ -1474,6 +1493,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
