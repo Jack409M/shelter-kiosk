@@ -68,15 +68,16 @@
   <td>{% if event_type == "check_in" %}{{ fmt_dt(event_time) }}{% endif %}</td>
   <td>
   {% if event_type == "check_out" %}
-    {% if expected_back %}
-      {% set last_expected_back = expected_back %}
-    {% else %}
-      {% set last_expected_back = "" %}
-    {% endif %}
+    {% set last_expected_back = expected_back or "" %}
   {% endif %}
 
-  {% if event_type == "check_in" and last_expected_back %}
-    {% if event_time > last_expected_back %}YES{% else %}NO{% endif %}
+  {% if event_type == "check_in" %}
+    {% if last_expected_back %}
+      {% if event_time > last_expected_back %}YES{% else %}NO{% endif %}
+    {% else %}
+      NO
+    {% endif %}
+    {% set last_expected_back = "" %}
   {% endif %}
 </td>
   <td>{{ note or "" }}</td>
