@@ -1360,7 +1360,7 @@ def staff_attendance_resident_print(resident_id: int):
 
     events = db_fetchall(
             # Normalize rows to dicts and compute late on check_in events
-    normalized: list[dict[str, Any]] = []
+    normalized = []
     last_expected_back: Optional[str] = None
 
     for e in events:
@@ -1823,6 +1823,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
