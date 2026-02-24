@@ -1393,44 +1393,40 @@ def staff_attendance_resident_print(resident_id: int):
         """,
         (resident_id, shelter, start_utc, end_utc),
     )
-
-    normalized = []
-    last_expected_back = None
+    trip_rows = []
+    current_trip = None
 
     for e in events:
         et = e["event_type"] if isinstance(e, dict) else e["event_type"]
         tm = e["event_time"] if isinstance(e, dict) else e["event_time"]
         eb = e.get("expected_back_time") if isinstance(e, dict) else e["expected_back_time"]
         note_val = e.get("note") if isinstance(e, dict) else e["note"]
-        staff_user = e.get("staff_username") if isinstance(e, dict) else e["staff_username"]
-
-        late_val = None
 
         if et == "check_out":
-            last_expected_back = eb or None
-
-        if et == "check_in":
-            if last_expected_back:
-                try:
-                    late_val = parse_dt(tm) > parse_dt(last_expected_back)
-                    print("DEBUG LATE:", tm, last_expected_back, late_val)
-                except Exception:
-                    late_val = None
-            last_expected_back = None
-
-        normalized.append(
-            {
-                "event_type": et,
-                "event_time": tm,
-                "expected_back_time": eb,
+            current_trip = {
+                "date": tm,
+                "checked_out_at": tm,
+                "expected_back_at": eb,
+                "checked_in_at": "",
+                "late": None,
                 "note": note_val,
-                "staff_username": staff_user,
-                "late": late_val,
             }
-        )
 
-    events = normalized
+        elif et == "check_in" and current_trip:
+            current_trip["checked_in_at"] = tm
 
+            if current_trip["expected_back_at"]:
+                try:
+                    current_trip["late"] = parse_dt(tm) > parse_dt(current_trip["expected_back_at"])
+                except Exception:
+                    current_trip["late"] = None
+
+            trip_rows.append(current_trip)
+            current_trip = None
+
+    # Replace events with one row per out and in pair
+    events = trip_rows
+   
     first = resident["first_name"] if isinstance(resident, dict) else resident[2]
     last = resident["last_name"] if isinstance(resident, dict) else resident[3]
 
@@ -1821,6 +1817,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
