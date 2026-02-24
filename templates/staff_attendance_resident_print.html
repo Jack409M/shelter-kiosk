@@ -56,32 +56,20 @@
       {% if events and events|length > 0 %}
   
         {% for e in events %}
-          {% set event_time = (e.event_time if e.event_time is defined else e["event_time"]) %}
-          {% set event_type = (e.event_type if e.event_type is defined else e["event_type"]) %}
-          {% set expected_back = (e.expected_back_time if e.expected_back_time is defined else e["expected_back_time"]) %}
-          {% set note = (e.note if e.note is defined else e["note"]) %}
-
-<tr>
-  <td>{{ fmt_dt(event_time)[:10] }}</td>
-  <td>{% if event_type == "check_out" %}{{ fmt_dt(event_time) }}{% endif %}</td>
-  <td>{% if event_type == "check_in" %}{{ fmt_dt(event_time) }}{% endif %}</td>
-<td>
-  {% if event_type == "check_in" %}
-    {% if e is mapping %}
-  {% set late_val = e.get("late") %}
-  {% else %}
-  {% set late_val = (e.late if e.late is defined else None) %}
-  {% endif %}
-    {% if late_val is sameas true %}
+        <tr>
+  <td>{{ fmt_dt(e.date)[:10] }}</td>
+  <td>{{ fmt_dt(e.checked_out_at) }}</td>
+  <td>{{ fmt_dt(e.checked_in_at) }}</td>
+  <td>
+    {% if e.late is sameas true %}
       YES
-    {% elif late_val is sameas false %}
+    {% elif e.late is sameas false %}
       NO
     {% else %}
       
     {% endif %}
-  {% endif %}
-</td>
-  <td>{{ note or "" }}</td>
+  </td>
+  <td>{{ e.note or "" }}</td>
 </tr>
         {% endfor %}
       {% else %}
