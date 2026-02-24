@@ -54,6 +54,8 @@
 </thead>
     <tbody>
       {% if events and events|length > 0 %}
+      {% set last_expected_back = "" %}
+      {% set last_expected_back_fmt = "" %}
         {% for e in events %}
           {% set event_time = (e.event_time if e.event_time is defined else e["event_time"]) %}
           {% set event_type = (e.event_type if e.event_type is defined else e["event_type"]) %}
