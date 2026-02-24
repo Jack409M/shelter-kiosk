@@ -1322,7 +1322,91 @@ def staff_attendance_check_in(resident_id: int):
     db_execute(sql, (resident_id, shelter, "check_in", utcnow_iso(), staff_id, note or None))
     log_action("attendance", resident_id, shelter, staff_id, "check_in", note or "")
     return redirect(url_for("staff_attendance"))
+@app.route("/staff/attendance/resident/<int:resident_id>/print")
+@require_login
+@require_shelter
+def staff_attendance_resident_print(resident_id: int):
+    init_db()
+    shelter = session["shelter"]
 
+    resident = db_fetchone(
+        "SELECT * FROM residents WHERE id = %s AND shelter = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT * FROM residents WHERE id = ? AND shelter = ?",
+        (resident_id, shelter),
+    )
+    if not resident:
+        flash("Resident not found for this shelter.", "error")
+        return redirect(url_for("staff_attendance"))
+
+    start = (request.args.get("start") or "").strip()  # YYYY-MM-DD
+    end = (request.args.get("end") or "").strip()      # YYYY-MM-DD
+
+    if not end:
+        end = datetime.now(ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
+    if not start:
+        start_dt = datetime.now(ZoneInfo("America/Chicago")) - timedelta(days=30)
+        start = start_dt.strftime("%Y-%m-%d")
+
+    try:
+        start_local = datetime.fromisoformat(start + "T00:00:00").replace(tzinfo=ZoneInfo("America/Chicago"))
+        end_local = datetime.fromisoformat(end + "T23:59:59").replace(tzinfo=ZoneInfo("America/Chicago"))
+
+        start_utc = start_local.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+        end_utc = end_local.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+    except Exception:
+        flash("Invalid date range. Use YYYY-MM-DD.", "error")
+        return redirect(url_for("staff_attendance"))
+
+    events = db_fetchall(
+        """
+        SELECT
+            ae.event_type,
+            ae.event_time,
+            ae.expected_back_time,
+            ae.note,
+            su.username AS staff_username
+        FROM attendance_events ae
+        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
+        WHERE ae.resident_id = %s
+          AND ae.shelter = %s
+          AND ae.event_time >= %s
+          AND ae.event_time <= %s
+        ORDER BY ae.event_time ASC
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT
+            ae.event_type,
+            ae.event_time,
+            ae.expected_back_time,
+            ae.note,
+            su.username AS staff_username
+        FROM attendance_events ae
+        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
+        WHERE ae.resident_id = ?
+          AND ae.shelter = ?
+          AND ae.event_time >= ?
+          AND ae.event_time <= ?
+        ORDER BY ae.event_time ASC
+        """,
+        (resident_id, shelter, start_utc, end_utc),
+    )
+
+    first = resident["first_name"] if isinstance(resident, dict) else resident[2]
+    last = resident["last_name"] if isinstance(resident, dict) else resident[3]
+
+    return render_template(
+        "staff_attendance_resident_print.html",
+        shelter=shelter,
+        resident_id=resident_id,
+        resident_name=f"{first} {last}",
+        start=start,
+        end=end,
+        events=events,
+        fmt_dt=fmt_dt,
+    )
 @app.route("/kiosk/<shelter>/checkout", methods=["GET"])
 def kiosk_checkout(shelter: str):
     if shelter not in SHELTERS:
@@ -1700,6 +1784,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
