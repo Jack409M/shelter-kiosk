@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Resident Attendance Log</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; color:#111; }
+    h1 { margin: 0 0 6px 0; font-size: 20px; }
+    .meta { font-size: 13px; margin-bottom: 12px; }
+    .toolbar { margin: 0 0 14px 0; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; display:flex; gap:10px; flex-wrap: wrap; align-items: center; }
+    label { font-size: 13px; }
+    input { padding: 6px; font-size: 13px; }
+    button, a.btn { padding: 7px 10px; font-size: 13px; border: 1px solid #333; background: #fff; border-radius: 6px; cursor: pointer; text-decoration: none; color:#111; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { border: 1px solid #000; padding: 6px; text-align: left; vertical-align: top; }
+    th { background: #f0f0f0; }
+
+    @media print {
+      .toolbar { display:none; }
+      body { margin: 0.5in; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <form method="get" action="{{ url_for('staff_attendance_resident_print', resident_id=resident_id) }}">
+      <label>Start</label>
+      <input type="date" name="start" value="{{ start }}">
+      <label style="margin-left:10px;">End</label>
+      <input type="date" name="end" value="{{ end }}">
+      <button type="submit">Apply</button>
+      <button type="button" onclick="window.print()">Print</button>
+      <a class="btn" href="{{ url_for('staff_attendance') }}">Back</a>
+    </form>
+  </div>
+
+  <h1>{{ resident_name }} Attendance Log</h1>
+  <div class="meta">
+    Shelter: {{ shelter }}<br>
+    Range: {{ start }} to {{ end }}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Date Time</th>
+        <th>Event</th>
+        <th>Expected Back</th>
+        <th>Staff</th>
+        <th>Note</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if events and events|length > 0 %}
+        {% for e in events %}
+          <tr>
+            <td>{{ fmt_dt(e.event_time if e.event_time is defined else e["event_time"]) }}</td>
+            <td>
+              {% set et = (e.event_type if e.event_type is defined else e["event_type"]) %}
+              {{ "Check in" if et == "check_in" else "Check out" if et == "check_out" else et }}
+            </td>
+            <td>
+              {% set eb = (e.expected_back_time if e.expected_back_time is defined else e["expected_back_time"]) %}
+              {{ fmt_dt(eb) if eb else "" }}
+            </td>
+            <td>
+              {% set su = (e.staff_username if e.staff_username is defined else e["staff_username"]) %}
+              {{ su or "" }}
+            </td>
+            <td>
+              {% set n = (e.note if e.note is defined else e["note"]) %}
+              {{ n or "" }}
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="5">No attendance events found in this range.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+</body>
+</html>
