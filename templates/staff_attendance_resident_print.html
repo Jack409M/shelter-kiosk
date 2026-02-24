@@ -67,17 +67,15 @@
   <td>{% if event_type == "check_out" %}{{ fmt_dt(event_time) }}{% endif %}</td>
   <td>{% if event_type == "check_in" %}{{ fmt_dt(event_time) }}{% endif %}</td>
 <td>
-  {% if event_type == "check_out" %}
-    {% set last_expected_back = expected_back or "" %}
-  {% endif %}
-
   {% if event_type == "check_in" %}
-    {% if last_expected_back %}
-      {% if parse_dt(event_time) > parse_dt(last_expected_back) %}YES{% else %}NO{% endif %}
-    {% else %}
+    {% set late_val = (e.late if e.late is defined else e["late"]) %}
+    {% if late_val is sameas true %}
+      YES
+    {% elif late_val is sameas false %}
       NO
+    {% else %}
+      
     {% endif %}
-    {% set last_expected_back = "" %}
   {% endif %}
 </td>
   <td>{{ note or "" }}</td>
