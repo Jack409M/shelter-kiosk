@@ -1393,6 +1393,40 @@ def staff_attendance_resident_print(resident_id: int):
         ORDER BY ae.event_time ASC
         """,
         (resident_id, shelter, start_utc, end_utc),
+            normalized = []
+    last_expected_back = None
+
+    for e in events:
+        # e is a dict on Postgres (RealDictCursor), sqlite Row otherwise
+        et = e["event_type"] if isinstance(e, dict) else e["event_type"]
+        tm = e["event_time"] if isinstance(e, dict) else e["event_time"]
+        eb = e.get("expected_back_time") if isinstance(e, dict) else e["expected_back_time"]
+        note_val = e.get("note") if isinstance(e, dict) else e["note"]
+
+        late_val = None
+
+        if et == "check_out":
+            last_expected_back = eb or None
+
+        if et == "check_in":
+            if last_expected_back:
+                try:
+                    late_val = parse_dt(tm) > parse_dt(last_expected_back)
+                except Exception:
+                    late_val = None
+            last_expected_back = None
+
+        normalized.append(
+            {
+                "event_type": et,
+                "event_time": tm,
+                "expected_back_time": eb,
+                "note": note_val,
+                "late": late_val,
+            }
+        )
+
+    events = normalized
     )
 
     first = resident["first_name"] if isinstance(resident, dict) else resident[2]
@@ -1785,6 +1819,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
