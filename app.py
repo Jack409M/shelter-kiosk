@@ -1358,7 +1358,7 @@ def staff_attendance_resident_print(resident_id: int):
         flash("Invalid date range. Use YYYY-MM-DD.", "error")
         return redirect(url_for("staff_attendance"))
 
-        events = db_fetchall(
+    events = db_fetchall(
         """
         SELECT
             ae.event_type,
@@ -1820,6 +1820,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
