@@ -1358,8 +1358,7 @@ def staff_attendance_resident_print(resident_id: int):
         flash("Invalid date range. Use YYYY-MM-DD.", "error")
         return redirect(url_for("staff_attendance"))
 
-    events = db_fetchall(
-           
+        events = db_fetchall(
         """
         SELECT
             ae.event_type,
@@ -1393,15 +1392,17 @@ def staff_attendance_resident_print(resident_id: int):
         ORDER BY ae.event_time ASC
         """,
         (resident_id, shelter, start_utc, end_utc),
-            normalized = []
+    )
+
+    normalized = []
     last_expected_back = None
 
     for e in events:
-        # e is a dict on Postgres (RealDictCursor), sqlite Row otherwise
         et = e["event_type"] if isinstance(e, dict) else e["event_type"]
         tm = e["event_time"] if isinstance(e, dict) else e["event_time"]
         eb = e.get("expected_back_time") if isinstance(e, dict) else e["expected_back_time"]
         note_val = e.get("note") if isinstance(e, dict) else e["note"]
+        staff_user = e.get("staff_username") if isinstance(e, dict) else e["staff_username"]
 
         late_val = None
 
@@ -1422,12 +1423,12 @@ def staff_attendance_resident_print(resident_id: int):
                 "event_time": tm,
                 "expected_back_time": eb,
                 "note": note_val,
+                "staff_username": staff_user,
                 "late": late_val,
             }
         )
 
     events = normalized
-    )
 
     first = resident["first_name"] if isinstance(resident, dict) else resident[2]
     last = resident["last_name"] if isinstance(resident, dict) else resident[3]
@@ -1819,6 +1820,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
