@@ -1359,6 +1359,45 @@ def staff_attendance_resident_print(resident_id: int):
         return redirect(url_for("staff_attendance"))
 
     events = db_fetchall(
+            # Normalize rows to dicts and compute late on check_in events
+    normalized: list[dict[str, Any]] = []
+    last_expected_back: Optional[str] = None
+
+    for e in events:
+        et = e["event_type"] if isinstance(e, dict) else e["event_type"]
+        tm = e["event_time"] if isinstance(e, dict) else e["event_time"]
+        eb = e.get("expected_back_time") if isinstance(e, dict) else e["expected_back_time"]
+        note_val = e.get("note") if isinstance(e, dict) else e["note"]
+        staff_user = e.get("staff_username") if isinstance(e, dict) else e["staff_username"]
+
+        late_val: Optional[bool] = None
+
+        if et == "check_out":
+            last_expected_back = eb or None
+
+        if et == "check_in":
+            if last_expected_back:
+                try:
+                    late_val = parse_dt(tm) > parse_dt(last_expected_back)
+                except Exception:
+                    late_val = None
+            else:
+                late_val = None
+            # clear after first check in after a checkout
+            last_expected_back = None
+
+        normalized.append(
+            {
+                "event_type": et,
+                "event_time": tm,
+                "expected_back_time": eb,
+                "note": note_val,
+                "staff_username": staff_user,
+                "late": late_val,
+            }
+        )
+
+    events = normalized
         """
         SELECT
             ae.event_type,
@@ -1784,6 +1823,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
