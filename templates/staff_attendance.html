@@ -31,11 +31,16 @@
       <td>{{ fmt_time(r.checked_in_at) }}</td>
       <td>{% if r.is_overdue %}YES{% else %}NO{% endif %}</td>
       <td>
-        <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=r.resident_id) }}">
-          <input name="note" placeholder="Note (optional)">
-          <button type="submit">Check in</button>
-        </form>
-      </td>
+          <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=r.resident_id) }}">
+    <input name="note" placeholder="Note (optional)">
+    <button type="submit">Check in</button>
+  </form>
+
+  <a class="btn" target="_blank"
+     href="{{ url_for('staff_attendance_resident_print', resident_id=r.resident_id) }}">
+     Print log
+  </a>
+</td>
     </tr>
     {% endfor %}
     {% if out_rows|length == 0 %}
@@ -87,8 +92,13 @@
       <td>{{ fmt_time(r.checked_in_at) }}</td>
       <td>NO</td>
       <td>
-        <span class="hint">Use the check out panel above.</span>
-      </td>
+  <span class="hint">Use the check out panel above.</span>
+
+  <a class="btn" target="_blank"
+     href="{{ url_for('staff_attendance_resident_print', resident_id=r.resident_id) }}">
+     Print log
+  </a>
+</td>
     </tr>
     {% endfor %}
     {% if in_rows|length == 0 %}
@@ -102,6 +112,7 @@
 </div>
 
 {% endblock %}
+
 
 
 
