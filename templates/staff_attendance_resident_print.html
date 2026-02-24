@@ -57,7 +57,7 @@
   
         {% for e in events %}
         <tr>
-  <td>{{ fmt_dt(e.date)[:10] }}</td>
+  <td>{{ e.date }}</td>
   <td>{{ fmt_dt(e.checked_out_at) }}</td>
   <td>{{ fmt_dt(e.checked_in_at) }}</td>
   <td>
