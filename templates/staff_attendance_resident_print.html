@@ -68,7 +68,11 @@
   <td>{% if event_type == "check_in" %}{{ fmt_dt(event_time) }}{% endif %}</td>
 <td>
   {% if event_type == "check_in" %}
-    {% set late_val = (e.late if e.late is defined else e["late"]) %}
+    {% if e is mapping %}
+  {% set late_val = e.get("late") %}
+  {% else %}
+  {% set late_val = (e.late if e.late is defined else None) %}
+  {% endif %}
     {% if late_val is sameas true %}
       YES
     {% elif late_val is sameas false %}
