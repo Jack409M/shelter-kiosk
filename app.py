@@ -1413,6 +1413,7 @@ def staff_attendance_resident_print(resident_id: int):
             if last_expected_back:
                 try:
                     late_val = parse_dt(tm) > parse_dt(last_expected_back)
+                    print("DEBUG LATE:", tm, last_expected_back, late_val)
                 except Exception:
                     late_val = None
             last_expected_back = None
@@ -1820,6 +1821,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
