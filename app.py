@@ -548,7 +548,7 @@ def resident_leave():
     if not agreed:
         errors.append("You must accept the agreement.")
     if not resident_identifier or not first or not last or not resident_phone or not destination or not leave_at_raw or not return_at_raw:
-    errors.append("Complete all required fields.")
+        errors.append("Complete all required fields.")
 
     try:
         leave_dt = parse_dt(leave_at_raw)
@@ -1859,6 +1859,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
