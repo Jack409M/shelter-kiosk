@@ -584,7 +584,7 @@ def resident_leave():
     leave_iso = leave_dt.replace(microsecond=0).isoformat()
     return_iso = return_dt.replace(microsecond=0).isoformat()
     submitted = utcnow_iso()
-        params = (
+    params = (
         shelter,
         resident_identifier,
         first,
@@ -1872,6 +1872,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
