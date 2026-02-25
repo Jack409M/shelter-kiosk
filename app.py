@@ -1830,11 +1830,35 @@ def wipe_all_data():
 
     log_action("admin", None, None, session.get("staff_user_id"), "wipe_all_data", "Wiped attendance, leave, transport, residents, audit_log")
     return "All non-staff data wiped."
-     
+
+@app.route("/admin/recreate-schema", methods=["POST"])
+@require_login
+@require_admin
+def recreate_schema():
+    init_db()
+
+    if g.get("db_kind") == "pg":
+        db_execute("DROP TABLE IF EXISTS attendance_events CASCADE")
+        db_execute("DROP TABLE IF EXISTS leave_requests CASCADE")
+        db_execute("DROP TABLE IF EXISTS transport_requests CASCADE")
+        db_execute("DROP TABLE IF EXISTS residents CASCADE")
+        db_execute("DROP TABLE IF EXISTS audit_log CASCADE")
+    else:
+        db_execute("DROP TABLE IF EXISTS attendance_events")
+        db_execute("DROP TABLE IF EXISTS leave_requests")
+        db_execute("DROP TABLE IF EXISTS transport_requests")
+        db_execute("DROP TABLE IF EXISTS residents")
+        db_execute("DROP TABLE IF EXISTS audit_log")
+
+    init_db()
+    log_action("admin", None, None, session.get("staff_user_id"), "recreate_schema", "Dropped and recreated tables")
+    return "Schema recreated."
+    
 if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
