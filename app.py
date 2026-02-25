@@ -584,13 +584,44 @@ def resident_leave():
     leave_iso = leave_dt.replace(microsecond=0).isoformat()
     return_iso = return_dt.replace(microsecond=0).isoformat()
     submitted = utcnow_iso()
-
     if g.get("db_kind") == "pg":
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(sql, (shelter, resident_identifier, first, last, resident_phone, destination, reason or None, resident_notes or None, leave_iso, return_iso, submitted))
+        params = (
+            shelter,
+            resident_identifier,
+            first,
+            last,
+            resident_phone,
+            destination,
+            reason or None,
+            resident_notes or None,
+            leave_iso,
+            return_iso,
+            submitted,
+        )
+        cur.execute(sql, params)
         req_id = cur.fetchone()[0]
         cur.close()
+    else:
+        conn = get_db()
+        cur = conn.cursor()
+        params = (
+            shelter,
+            resident_identifier,
+            first,
+            last,
+            resident_phone,
+            destination,
+            reason or None,
+            resident_notes or None,
+            leave_iso,
+            return_iso,
+            submitted,
+        )
+        cur.execute(sql, params)
+        conn.commit()
+        req_id = cur.lastrowid
     else:
         conn = get_db()
         cur = conn.cursor()
@@ -1859,6 +1890,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
