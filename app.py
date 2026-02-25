@@ -568,7 +568,7 @@ def resident_leave():
     sql = (
         """
         INSERT INTO leave_requests
-        (shelter, first_name, last_name, dob, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
+        (shelter, resident_identifier, first_name, last_name, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', %s)
         RETURNING id
         """
@@ -576,7 +576,7 @@ def resident_leave():
         else
         """
                 INSERT INTO leave_requests
-                (shelter, first_name, last_name, dob, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
+                (shelter, resident_identifier, first_name, last_name, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
         """
     )
@@ -1859,6 +1859,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
