@@ -645,20 +645,20 @@ def resident_transport():
         errors.append("Complete all required fields.")
 
     try:
-        needed_local = parse_dt(needed_raw)  # from datetime-local, no timezone
+        needed_local = parse_dt(needed_raw)
 
         needed_dt = (
             needed_local
             .replace(tzinfo=ZoneInfo("America/Chicago"))
             .astimezone(timezone.utc)
             .replace(tzinfo=None)
-    )
+        )
 
-    if needed_dt < datetime.utcnow() - timedelta(minutes=1):
-        errors.append("Needed time cannot be in the past.")
-except Exception:
-    errors.append("Invalid needed date or time.")
+        if needed_dt < datetime.utcnow() - timedelta(minutes=1):
+            errors.append("Needed time cannot be in the past.")
 
+    except Exception:
+        errors.append("Invalid needed date or time.")
     if errors:
         for e in errors:
             flash(e, "error")
@@ -1894,6 +1894,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
