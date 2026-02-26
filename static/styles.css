@@ -4,7 +4,13 @@ body { font-family: Arial, sans-serif; margin: 0; background: #f6f6f6; }
 nav a { margin-right: 10px; text-decoration: none; color: #333; }
 nav .sep { margin-right: 10px; }
 .container { padding: 18px; }
-.card { background: #fff; padding: 14px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 16px; }
+.card {
+  background: #eaf3ff;
+  padding: 14px;
+  border: 1px solid #000;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 label { display: block; margin-top: 10px; font-size: 14px; }
 input, select, textarea { width: 100%; padding: 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
@@ -60,14 +66,14 @@ input[type="datetime-local"],
 input[type="tel"],
 select,
 textarea {
-    background-color: #f4f8ff;
-    border: 2px solid #3b82f6;
+    background-color: #ffffff;
+    color: #000000;
+    border: 2px solid #000000;
     border-radius: 6px;
     padding: 8px 10px;
     font-size: 14px;
     width: 100%;
     box-sizing: border-box;
-    transition: 0.2s ease-in-out;
 }
 
 input:focus,
@@ -85,6 +91,7 @@ input[type="checkbox"] {
     transform: scale(1.2);
     margin-right: 6px;
 }
+
 
 
 
