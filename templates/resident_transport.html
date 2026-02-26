@@ -16,6 +16,17 @@
     </select>
   {% endif %}
 
+  <div class="field">
+  <label for="resident_identifier">Resident ID</label>
+  <input
+    type="text"
+    id="resident_identifier"
+    name="resident_identifier"
+    autocomplete="off"
+    required
+  >
+</div>
+  
   <div class="grid">
     <div>
       <label>First name</label>
@@ -57,3 +68,4 @@
 </form>
 
 {% endblock %}
+
