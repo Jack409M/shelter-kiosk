@@ -87,37 +87,16 @@ textarea:focus {
 /* Checkbox styling */
 input[type="checkbox"] {
     accent-color: #000000;
-
-  /* Phone fields shorter width */
-input[type="tel"] {
-    width: 180px;
-    max-width: 100%;
-/* Override full-width for phone inputs */
-input[type="tel"] {
-    width: 180px !important;
-}
-/* Force phone fields to be short */
-input[type="tel"] {
-  width: 180px !important;
-}
-/* FINAL OVERRIDE: phone fields must not be full width */
+/* Phone fields shorter */
 form.card input[type="tel"] {
-  width: 180px !important;
-  display: inline-block !important;
+  width: 180px;
+  max-width: 180px;
+  display: inline-block;
+}
+form.card label[for="resident_phone"],
+form.card label[for="callback_phone"] {
+  display: inline-block;
+  margin-right: 12px;
+  margin-top: 10px;
 }  
-body { outline: 5px solid red; }
-body { border: 6px solid red !important; }
-
-form.card input[type="tel"] {
-  width: 180px !important;
-  max-width: 180px !important;
-  display: inline-block !important;
-}
-html { background: #ff00ff !important; }
-
-
-
-
-
-
-
+  
