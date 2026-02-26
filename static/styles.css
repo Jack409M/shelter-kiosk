@@ -52,6 +52,39 @@ input[type="submit"] {
   color: #111;
   -webkit-text-fill-color: #111;
 }
+/* Form Field Styling */
+
+input[type="text"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="tel"],
+select,
+textarea {
+    background-color: #f4f8ff;
+    border: 2px solid #3b82f6;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 14px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: 0.2s ease-in-out;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    background-color: #ffffff;
+    border-color: #1d4ed8;
+    outline: none;
+    box-shadow: 0 0 6px rgba(29, 78, 216, 0.3);
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+    accent-color: #2563eb;
+    transform: scale(1.2);
+    margin-right: 6px;
+}
 
 
 
