@@ -641,7 +641,7 @@ def resident_transport():
 
     errors: list[str] = []
     if not resident_identifier or not first or not last or not needed_raw or not pickup or not destination:
-    errors.append("Complete all required fields.")
+        errors.append("Complete all required fields.")
 
     try:
         needed_dt = parse_dt(needed_raw)
@@ -1885,6 +1885,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
