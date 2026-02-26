@@ -92,6 +92,10 @@ input[type="checkbox"] {
 input[type="tel"] {
     width: 180px;
     max-width: 100%;
+/* Override full-width for phone inputs */
+input[type="tel"] {
+    width: 180px !important;
+}
 
 
 
