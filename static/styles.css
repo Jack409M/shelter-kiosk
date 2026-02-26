@@ -100,7 +100,12 @@ input[type="tel"] {
 input[type="tel"] {
   width: 180px !important;
 }
-  
+/* FINAL OVERRIDE: phone fields must not be full width */
+form.card input[type="tel"] {
+  width: 180px !important;
+  display: inline-block !important;
+}  
+
 
 
 
