@@ -631,7 +631,7 @@ def resident_transport():
 
     first = (request.form.get("first_name") or "").strip()
     last = (request.form.get("last_name") or "").strip()
-    dob = (request.form.get("dob") or "").strip()
+    resident_identifier = (request.form.get("resident_identifier") or "").strip()
     needed_raw = (request.form.get("needed_at") or "").strip()
     pickup = (request.form.get("pickup_location") or "").strip()
     destination = (request.form.get("destination") or "").strip()
@@ -640,8 +640,8 @@ def resident_transport():
     callback_phone = (request.form.get("callback_phone") or "").strip()
 
     errors: list[str] = []
-    if not first or not last or not dob or not needed_raw or not pickup or not destination:
-        errors.append("Complete all required fields.")
+    if not resident_identifier or not first or not last or not needed_raw or not pickup or not destination:
+    errors.append("Complete all required fields.")
 
     try:
         needed_dt = parse_dt(needed_raw)
@@ -1885,6 +1885,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
