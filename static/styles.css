@@ -96,6 +96,11 @@ input[type="tel"] {
 input[type="tel"] {
     width: 180px !important;
 }
+/* Force phone fields to be short */
+input[type="tel"] {
+  width: 180px !important;
+}
+  
 
 
 
