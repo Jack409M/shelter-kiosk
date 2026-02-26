@@ -10,8 +10,7 @@ from flask import Flask, g, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from zoneinfo import ZoneInfo
 from twilio.rest import Client
-from datetime import timezone
-from zoneinfo import ZoneInfo
+
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
@@ -646,11 +645,19 @@ def resident_transport():
         errors.append("Complete all required fields.")
 
     try:
-        needed_dt = parse_dt(needed_raw)
-        if needed_dt < datetime.utcnow() - timedelta(minutes=1):
-            errors.append("Needed time cannot be in the past.")
-    except Exception:
-        errors.append("Invalid needed date or time.")
+    needed_local = parse_dt(needed_raw)  # from datetime-local, no timezone
+
+    needed_dt = (
+        needed_local
+        .replace(tzinfo=ZoneInfo("America/Chicago"))
+        .astimezone(timezone.utc)
+        .replace(tzinfo=None)
+    )
+
+    if needed_dt < datetime.utcnow() - timedelta(minutes=1):
+        errors.append("Needed time cannot be in the past.")
+except Exception:
+    errors.append("Invalid needed date or time.")
 
     if errors:
         for e in errors:
@@ -1887,6 +1894,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
