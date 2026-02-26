@@ -688,7 +688,7 @@ except Exception:
         cur = conn.cursor()
         cur.execute(
             sql,
-            (shelter, first, last, resident_identifier, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted),
+            (shelter, resident_identifier, first, last, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted)
         )
         req_id = cur.fetchone()[0]
         cur.close()
@@ -697,7 +697,7 @@ except Exception:
         cur = conn.cursor()
         cur.execute(
             sql,
-            (shelter, first, last, resident_identifier, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted),
+            (shelter, resident_identifier, first, last, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted)
         )
         conn.commit()
         req_id = cur.lastrowid
@@ -1894,6 +1894,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
