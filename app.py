@@ -658,7 +658,7 @@ def resident_transport():
     sql = (
         """
         INSERT INTO transport_requests
-        (shelter, first_name, last_name, dob, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
+        (shelter, resident_identifier, first_name, last_name, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', %s)
         RETURNING id
         """
@@ -666,7 +666,7 @@ def resident_transport():
         else
         """
         INSERT INTO transport_requests
-        (shelter, first_name, last_name, dob, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
+        (shelter, resident_identifier, first_name, last_name, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
         """
     )
@@ -679,7 +679,7 @@ def resident_transport():
         cur = conn.cursor()
         cur.execute(
             sql,
-            (shelter, first, last, dob, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted),
+            (shelter, first, last, resident_identifier, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted),
         )
         req_id = cur.fetchone()[0]
         cur.close()
@@ -688,7 +688,7 @@ def resident_transport():
         cur = conn.cursor()
         cur.execute(
             sql,
-            (shelter, first, last, dob, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted),
+            (shelter, first, last, resident_identifier, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted),
         )
         conn.commit()
         req_id = cur.lastrowid
@@ -1885,6 +1885,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
