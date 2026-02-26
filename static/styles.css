@@ -87,7 +87,12 @@ textarea:focus {
 /* Checkbox styling */
 input[type="checkbox"] {
     accent-color: #000000;
-  
+
+  /* Phone fields shorter width */
+input[type="tel"] {
+    width: 180px;
+    max-width: 100%;
+
 
 
 
