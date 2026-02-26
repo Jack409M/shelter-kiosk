@@ -15,9 +15,9 @@
         <input name="last_name" required>
       </div>
       <div>
-        <label>Date of birth</label>
-        <input name="dob" type="date" required>
-      </div>
+  <label>Resident ID</label>
+  <input name="resident_identifier" required>
+</div>
     </div>
     <button type="submit">Add</button>
   </form>
@@ -35,7 +35,6 @@
   <thead>
     <tr>
       <th>Name</th>
-      <th>DOB</th>
       <th>Active</th>
       <th>Action</th>
     </tr>
@@ -44,7 +43,6 @@
  {% for r in residents %}
   <tr>
     <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
-    <td>{{ r["dob"] }}</td>
 
     <td>
       {% if r["is_active"]|int == 1 %}
@@ -71,5 +69,6 @@
 {% endfor %}
   </tbody>
 </table>
+
 
 {% endblock %}
