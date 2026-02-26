@@ -1744,6 +1744,7 @@ def delete_user(username):
 
     flash(f"User '{username}' deleted.", "ok")
     return redirect(url_for("admin_users"))
+    
 @app.route("/staff/residents", methods=["GET", "POST"])
 @require_login
 @require_shelter
@@ -1753,24 +1754,36 @@ def staff_residents():
     shelter = session["shelter"]
 
     if request.method == "POST":
+        resident_identifier = (request.form.get("resident_identifier") or "").strip()
         first = (request.form.get("first_name") or "").strip()
         last = (request.form.get("last_name") or "").strip()
-        dob = (request.form.get("dob") or "").strip()
+        phone = (request.form.get("phone") or "").strip()
 
-        if not first or not last or not dob:
-            flash("First name, last name, and date of birth are required.", "error")
+        if not resident_identifier or not first or not last:
+            flash("Resident ID, first name, and last name are required.", "error")
+            return redirect(url_for("staff_residents"))
+
+        existing = db_fetchone(
+            "SELECT id FROM residents WHERE shelter = %s AND resident_identifier = %s"
+            if g.get("db_kind") == "pg"
+            else "SELECT id FROM residents WHERE shelter = ? AND resident_identifier = ?",
+            (shelter, resident_identifier),
+        )
+        if existing:
+            flash("That Resident ID is already in use for this shelter.", "error")
             return redirect(url_for("staff_residents"))
 
         sql = (
-            "INSERT INTO residents (shelter, first_name, last_name, dob, is_active, created_at) VALUES (%s, %s, %s, %s, TRUE, %s)"
+            "INSERT INTO residents (shelter, resident_identifier, first_name, last_name, phone, is_active, created_at) VALUES (%s, %s, %s, %s, %s, TRUE, %s)"
             if g.get("db_kind") == "pg"
             else
-            "INSERT INTO residents (shelter, first_name, last_name, dob, is_active, created_at) VALUES (?, ?, ?, ?, 1, ?)"
+            "INSERT INTO residents (shelter, resident_identifier, first_name, last_name, phone, is_active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)"
         )
-        db_execute(sql, (shelter, first, last, dob, utcnow_iso()))
-        log_action("resident", None, shelter, session["staff_user_id"], "create", f"{first} {last} {dob}")
+        db_execute(sql, (shelter, resident_identifier, first, last, phone or None, utcnow_iso()))
+        log_action("resident", None, shelter, session["staff_user_id"], "create", f"{resident_identifier} {first} {last}")
         flash("Resident added.", "ok")
         return redirect(url_for("staff_residents"))
+    
 
     show = (request.args.get("show") or "active").strip()
     only_active = show != "all"
@@ -1872,6 +1885,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
