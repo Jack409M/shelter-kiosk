@@ -10,14 +10,68 @@ from typing import Any, Optional
 from flask import Flask, g, redirect, render_template, request, session, url_for, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from zoneinfo import ZoneInfo
-from twilio.rest import Client
 
+try:
+    from twilio.rest import Client
+except Exception:
+    Client = None
+
+
+SHELTERS = ["Abba", "Haven", "Gratitude"]
+MAX_LEAVE_DAYS = 7
+
+APP_DIR = os.path.abspath(os.path.dirname(__file__))
+SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change_me")
+
+DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
+
+def utcnow_iso() -> str:
+    return datetime.utcnow().replace(microsecond=0).isoformat()
+
+
+def parse_dt(dt_str: str) -> datetime:
+    return datetime.fromisoformat(dt_str)
+
+
+def make_resident_code(length: int = 8) -> str:
+    return "".join(secrets.choice("0123456789") for _ in range(length))
+
+
+def fmt_dt(dt_iso: Optional[str]) -> str:
+    if not dt_iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(dt_iso)
+        dt = dt.replace(tzinfo=timezone.utc)
+        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
+        return local_dt.strftime("%m/%d/%Y %I:%M %p")
+    except Exception:
+        return dt_iso
+
+
+def fmt_time_only(dt_iso: Optional[str]) -> str:
+    if not dt_iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(dt_iso)
+        dt = dt.replace(tzinfo=timezone.utc)
+        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
+        return local_dt.strftime("%I:%M %p")
+    except Exception:
+        return ""
+
+
 def send_sms(to_number: str, message: str) -> None:
+    if not Client:
+        return
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
         return
 
@@ -35,68 +89,12 @@ def send_sms(to_number: str, message: str) -> None:
 
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        client.messages.create(
-            body=message,
-            from_=TWILIO_FROM_NUMBER,
-            to=to_e164,
-        )
+        client.messages.create(body=message, from_=TWILIO_FROM_NUMBER, to=to_e164)
     except Exception as e:
         print("SMS error:", e)
-SHELTERS = ["Abba", "Haven", "Gratitude"]
-MAX_LEAVE_DAYS = 7
 
-APP_DIR = os.path.abspath(os.path.dirname(__file__))
-SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
-
-app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change_me")
-
-# DATABASE_URL is present on Railway when you add Postgres
-DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
-
-
-def utcnow_iso() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat()
-
-def make_resident_code(length: int = 8) -> str:
-    return "".join(secrets.choice("0123456789") for _ in range(length))
-
-def parse_dt(dt_str: str) -> datetime:
-    return datetime.fromisoformat(dt_str)
-
-
-def fmt_dt(dt_iso: Optional[str]) -> str:
-    if not dt_iso:
-        return ""
-    try:
-        dt = datetime.fromisoformat(dt_iso)
-
-        # Treat stored values as UTC
-        dt = dt.replace(tzinfo=timezone.utc)
-
-        # Convert to local system time (Central Time on your server)
-        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-
-        return local_dt.strftime("%m/%d/%Y %I:%M %p")
-    except Exception:
-        return dt_iso
-def fmt_time_only(dt_iso: Optional[str]) -> str:
-    if not dt_iso:
-        return ""
-    try:
-        dt = datetime.fromisoformat(dt_iso)
-        dt = dt.replace(tzinfo=timezone.utc)
-        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-        return local_dt.strftime("%I:%M %p")
-    except Exception:
-        return ""
 
 def get_db() -> Any:
-    """
-    Uses SQLite locally.
-    Uses Postgres on Railway.
-    We keep the interface simple with execute and fetch helpers.
-    """
     if "db" in g:
         return g.db
 
@@ -128,7 +126,7 @@ def close_db(_exc):
 
 
 def db_execute(sql: str, params: tuple = ()) -> None:
-    conn = get_db()  # ensures g.db_kind is set for THIS request
+    conn = get_db()
     kind = g.get("db_kind", "sqlite")
 
     if kind == "pg":
@@ -141,9 +139,11 @@ def db_execute(sql: str, params: tuple = ()) -> None:
     cur.execute(sql, params)
     conn.commit()
 
+
 def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
     conn = get_db()
     kind = g.get("db_kind")
+
     if kind == "pg":
         import psycopg2.extras
 
@@ -152,6 +152,7 @@ def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
         rows = cur.fetchall()
         cur.close()
         return rows
+
     cur = conn.cursor()
     cur.execute(sql, params)
     rows = cur.fetchall()
@@ -164,19 +165,52 @@ def db_fetchone(sql: str, params: tuple = ()) -> Optional[Any]:
         return None
     return rows[0]
 
+
+def log_action(
+    entity_type: str,
+    entity_id: Optional[int],
+    shelter: Optional[str],
+    staff_user_id: Optional[int],
+    action_type: str,
+    details: str = "",
+) -> None:
+    sql = (
+        "INSERT INTO audit_log (entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        if g.get("db_kind") == "pg"
+        else
+        "INSERT INTO audit_log (entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)"
+    )
+    db_execute(sql, (entity_type, entity_id, shelter, staff_user_id, action_type, details, utcnow_iso()))
+
+
+def ensure_admin_bootstrap() -> None:
+    row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
+    count = int(row["c"] if isinstance(row, dict) else row[0])
+    if count > 0:
+        return
+
+    admin_user = (os.environ.get("ADMIN_USERNAME") or "").strip()
+    admin_pass = (os.environ.get("ADMIN_PASSWORD") or "").strip()
+    if not admin_user or not admin_pass:
+        return
+
+    db_execute(
+        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s, %s, %s, %s, %s)"
+        if g.get("db_kind") == "pg"
+        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
+        (admin_user, generate_password_hash(admin_pass), "admin", True, utcnow_iso()),
+    )
+
+
 def init_db() -> None:
-    """
-    Creates tables if missing.
-    Works on SQLite and Postgres.
-    """
-    # IMPORTANT: establish DB connection first so g.db_kind is set
     get_db()
     kind = g.get("db_kind")
 
     def create(sqlite_sql: str, pg_sql: str) -> None:
         db_execute(pg_sql if kind == "pg" else sqlite_sql)
 
-    # staff users
     create(
         """
         CREATE TABLE IF NOT EXISTS staff_users (
@@ -200,117 +234,13 @@ def init_db() -> None:
         """,
     )
 
-      # leave requests
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            resident_phone TEXT,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            leave_at TEXT NOT NULL,
-            return_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            decided_at TEXT,
-            decided_by INTEGER,
-            decision_note TEXT,
-            check_in_at TEXT,
-            check_in_by INTEGER
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id SERIAL PRIMARY KEY,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            resident_phone TEXT,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            leave_at TEXT NOT NULL,
-            return_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            decided_at TEXT,
-            decided_by INTEGER,
-            decision_note TEXT,
-            check_in_at TEXT,
-            check_in_by INTEGER
-        )
-        """,
-    )
-
-        # transport requests
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS transport_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            needed_at TEXT NOT NULL,
-            pickup_location TEXT NOT NULL,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            callback_phone TEXT,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            scheduled_at TEXT,
-            scheduled_by INTEGER,
-            driver_name TEXT,
-            staff_notes TEXT,
-            completed_at TEXT,
-            completed_by INTEGER,
-            cancelled_at TEXT,
-            cancelled_by INTEGER,
-            cancel_reason TEXT
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS transport_requests (
-            id SERIAL PRIMARY KEY,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            needed_at TEXT NOT NULL,
-            pickup_location TEXT NOT NULL,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            callback_phone TEXT,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            scheduled_at TEXT,
-            scheduled_by INTEGER,
-            driver_name TEXT,
-            staff_notes TEXT,
-            completed_at TEXT,
-            completed_by INTEGER,
-            cancelled_at TEXT,
-            cancelled_by INTEGER,
-            cancel_reason TEXT
-        )
-        """,
-    )
-
-        # residents
     create(
         """
         CREATE TABLE IF NOT EXISTS residents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             shelter TEXT NOT NULL,
             resident_identifier TEXT NOT NULL,
+            resident_code TEXT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             phone TEXT,
@@ -323,6 +253,7 @@ def init_db() -> None:
             id SERIAL PRIMARY KEY,
             shelter TEXT NOT NULL,
             resident_identifier TEXT NOT NULL,
+            resident_code TEXT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             phone TEXT,
@@ -331,7 +262,7 @@ def init_db() -> None:
         )
         """,
     )
-    # Add resident_code column if it does not exist
+
     try:
         if kind == "pg":
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS resident_code TEXT")
@@ -340,15 +271,11 @@ def init_db() -> None:
     except Exception:
         pass
 
-    # Create unique index on resident_code
     try:
-        if kind == "pg":
-            db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
-        else:
-            db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
+        db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
     except Exception:
-        pass   
-    # Backfill resident_code for existing rows that are missing it
+        pass
+
     rows = db_fetchall(
         "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
         if kind == "pg"
@@ -357,7 +284,6 @@ def init_db() -> None:
 
     for r in rows:
         rid = r["id"] if isinstance(r, dict) else r[0]
-
         code = make_resident_code()
         for _ in range(10):
             exists = db_fetchone(
@@ -376,7 +302,109 @@ def init_db() -> None:
             else "UPDATE residents SET resident_code = ? WHERE id = ?",
             (code, rid),
         )
-    # attendance events
+
+    create(
+        """
+        CREATE TABLE IF NOT EXISTS leave_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            resident_phone TEXT,
+            destination TEXT NOT NULL,
+            reason TEXT,
+            resident_notes TEXT,
+            leave_at TEXT NOT NULL,
+            return_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            submitted_at TEXT NOT NULL,
+            decided_at TEXT,
+            decided_by INTEGER,
+            decision_note TEXT,
+            check_in_at TEXT,
+            check_in_by INTEGER
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS leave_requests (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            resident_phone TEXT,
+            destination TEXT NOT NULL,
+            reason TEXT,
+            resident_notes TEXT,
+            leave_at TEXT NOT NULL,
+            return_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            submitted_at TEXT NOT NULL,
+            decided_at TEXT,
+            decided_by INTEGER,
+            decision_note TEXT,
+            check_in_at TEXT,
+            check_in_by INTEGER
+        )
+        """,
+    )
+
+    create(
+        """
+        CREATE TABLE IF NOT EXISTS transport_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            needed_at TEXT NOT NULL,
+            pickup_location TEXT NOT NULL,
+            destination TEXT NOT NULL,
+            reason TEXT,
+            resident_notes TEXT,
+            callback_phone TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            submitted_at TEXT NOT NULL,
+            scheduled_at TEXT,
+            scheduled_by INTEGER,
+            driver_name TEXT,
+            staff_notes TEXT,
+            completed_at TEXT,
+            completed_by INTEGER,
+            cancelled_at TEXT,
+            cancelled_by INTEGER,
+            cancel_reason TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS transport_requests (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            needed_at TEXT NOT NULL,
+            pickup_location TEXT NOT NULL,
+            destination TEXT NOT NULL,
+            reason TEXT,
+            resident_notes TEXT,
+            callback_phone TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            submitted_at TEXT NOT NULL,
+            scheduled_at TEXT,
+            scheduled_by INTEGER,
+            driver_name TEXT,
+            staff_notes TEXT,
+            completed_at TEXT,
+            completed_by INTEGER,
+            cancelled_at TEXT,
+            cancelled_by INTEGER,
+            cancel_reason TEXT
+        )
+        """,
+    )
+
     create(
         """
         CREATE TABLE IF NOT EXISTS attendance_events (
@@ -386,7 +414,8 @@ def init_db() -> None:
             event_type TEXT NOT NULL,
             event_time TEXT NOT NULL,
             staff_user_id INTEGER,
-            note TEXT
+            note TEXT,
+            expected_back_time TEXT
         )
         """,
         """
@@ -397,32 +426,12 @@ def init_db() -> None:
             event_type TEXT NOT NULL,
             event_time TEXT NOT NULL,
             staff_user_id INTEGER,
-            note TEXT
+            note TEXT,
+            expected_back_time TEXT
         )
         """,
     )
 
-        # add expected_back_time column if missing
-    try:
-        if kind == "pg":
-            db_execute("ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS expected_back_time TEXT")
-        else:
-            db_execute("ALTER TABLE attendance_events ADD COLUMN expected_back_time TEXT")
-    except Exception:
-        # ok if it already exists
-        pass
-        
-         # add resident_phone column to leave_requests if missing
-    try:
-        if kind == "pg":
-            db_execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS resident_phone TEXT")
-        else:
-            db_execute("ALTER TABLE leave_requests ADD COLUMN resident_phone TEXT")
-    except Exception:
-        # ok if it already exists
-        pass
-    
-    # audit log
     create(
         """
         CREATE TABLE IF NOT EXISTS audit_log (
@@ -452,66 +461,25 @@ def init_db() -> None:
 
     ensure_admin_bootstrap()
 
-def ensure_admin_bootstrap() -> None:
-    """
-    Creates an initial admin if none exists.
-    Uses environment variables on Railway.
-    Locally it will create admin if you set ADMIN_USERNAME and ADMIN_PASSWORD.
-    """
-    row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
-    count = int(row["c"] if isinstance(row, dict) else row[0])
-
-    if count > 0:
-        return
-
-    admin_user = os.environ.get("ADMIN_USERNAME", "").strip()
-    admin_pass = os.environ.get("ADMIN_PASSWORD", "").strip()
-
-    if not admin_user or not admin_pass:
-        # Do nothing if not configured
-        return
-
-    db_execute(
-        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
-        (
-            admin_user,
-            generate_password_hash(admin_pass),
-            "admin",
-            True,
-            utcnow_iso(),
-        ),
-    )
-
-
-def log_action(entity_type: str, entity_id: Optional[int], shelter: Optional[str], staff_user_id: Optional[int], action_type: str, details: str = "") -> None:
-    sql = (
-        "INSERT INTO audit_log (entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else
-        "INSERT INTO audit_log (entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-    db_execute(sql, (entity_type, entity_id, shelter, staff_user_id, action_type, details, utcnow_iso()))
-
 
 def require_login(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if "staff_user_id" not in session:
             return redirect(url_for("staff_login"))
-        get_db()  # ensures g.db_kind is set for this request
+        get_db()
         return fn(*args, **kwargs)
+
     return wrapper
-    
+
+
 def require_shelter(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if "shelter" not in session:
             return redirect(url_for("staff_select_shelter"))
         return fn(*args, **kwargs)
+
     return wrapper
 
 
@@ -522,7 +490,9 @@ def require_admin(fn):
             flash("Admin only.", "error")
             return redirect(url_for("staff_home"))
         return fn(*args, **kwargs)
+
     return wrapper
+
 
 def require_staff_or_admin(fn):
     @wraps(fn)
@@ -531,15 +501,18 @@ def require_staff_or_admin(fn):
             flash("Staff or admin only.", "error")
             return redirect(url_for("staff_home"))
         return fn(*args, **kwargs)
+
     return wrapper
+
 
 @app.route("/")
 def public_home():
     return redirect(url_for("resident_leave"))
+
+
 @app.route("/debug/db")
 def debug_db():
     live_env = (os.environ.get("DATABASE_URL") or "").strip()
-
     try:
         init_db()
     except Exception as e:
@@ -558,6 +531,32 @@ def debug_db():
         "module_DATABASE_URL_set": bool(DATABASE_URL),
         "live_env_DATABASE_URL_set": bool(live_env),
         "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID"),
+    }
+
+
+def _find_active_resident_by_code(shelter: str, resident_code: str) -> Optional[dict[str, Any]]:
+    res = db_fetchone(
+        "SELECT resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
+        if g.get("db_kind") == "pg"
+        else "SELECT resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
+        (shelter, resident_code),
+    )
+    if not res:
+        return None
+
+    if isinstance(res, dict):
+        return {
+            "resident_identifier": res.get("resident_identifier", ""),
+            "first_name": res.get("first_name", ""),
+            "last_name": res.get("last_name", ""),
+            "phone": res.get("phone", "") or "",
+        }
+
+    return {
+        "resident_identifier": res[0] or "",
+        "first_name": res[1] or "",
+        "last_name": res[2] or "",
+        "phone": res[3] or "",
     }
 
 
@@ -581,22 +580,16 @@ def resident_leave():
         return redirect(url_for("resident_leave"))
 
     resident_code = (request.form.get("resident_code") or "").strip()
+    r = _find_active_resident_by_code(shelter, resident_code)
+    if not r:
+        flash("Invalid Resident Code.", "error")
+        return redirect(url_for("resident_leave"))
 
-res = db_fetchone(
-    "SELECT resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
-    if g.get("db_kind") == "pg"
-    else "SELECT resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
-    (shelter, resident_code),
-)
+    resident_identifier = r["resident_identifier"]
+    first = r["first_name"]
+    last = r["last_name"]
+    resident_phone = r["phone"]
 
-if not res:
-    flash("Invalid Resident Code.", "error")
-    return redirect(url_for("resident_leave"))
-
-    resident_identifier = res["resident_identifier"] if isinstance(res, dict) else res[0]
-    first = res["first_name"] if isinstance(res, dict) else res[1]
-    last = res["last_name"] if isinstance(res, dict) else res[2]
-    resident_phone = res["phone"] if isinstance(res, dict) else res[3]
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
     resident_notes = (request.form.get("resident_notes") or "").strip()
@@ -607,8 +600,10 @@ if not res:
     errors: list[str] = []
     if not agreed:
         errors.append("You must accept the agreement.")
-    if not resident_identifier or not first or not last or not resident_phone or not destination or not leave_at_raw or not return_at_raw:
+    if not first or not last or not destination or not leave_at_raw or not return_at_raw:
         errors.append("Complete all required fields.")
+    if not resident_phone:
+        errors.append("A phone number is required for text updates.")
 
     try:
         leave_dt = parse_dt(leave_at_raw)
@@ -618,12 +613,17 @@ if not res:
         if return_dt > leave_dt + timedelta(days=MAX_LEAVE_DAYS):
             errors.append(f"Maximum leave is {MAX_LEAVE_DAYS} days.")
     except Exception:
-        errors.append("Invalid date or time.")
+        errors.append("Invalid date.")
 
     if errors:
         for e in errors:
             flash(e, "error")
-        return render_template("resident_leave.html", shelters=SHELTERS, shelter=shelter, max_days=MAX_LEAVE_DAYS), 400
+        return render_template(
+            "resident_leave.html",
+            shelters=SHELTERS,
+            shelter=shelter,
+            max_days=MAX_LEAVE_DAYS,
+        ), 400
 
     sql = (
         """
@@ -635,18 +635,19 @@ if not res:
         if g.get("db_kind") == "pg"
         else
         """
-                INSERT INTO leave_requests
-                (shelter, resident_identifier, first_name, last_name, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+        INSERT INTO leave_requests
+        (shelter, resident_identifier, first_name, last_name, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
         """
     )
 
     leave_iso = leave_dt.replace(microsecond=0).isoformat()
     return_iso = return_dt.replace(microsecond=0).isoformat()
     submitted = utcnow_iso()
+
     params = (
         shelter,
-        resident_identifier,
+        resident_identifier or "",
         first,
         last,
         resident_phone,
@@ -689,9 +690,16 @@ def resident_transport():
         flash("Select a valid shelter.", "error")
         return redirect(url_for("resident_transport"))
 
-    first = (request.form.get("first_name") or "").strip()
-    last = (request.form.get("last_name") or "").strip()
-    resident_identifier = (request.form.get("resident_identifier") or "").strip()
+    resident_code = (request.form.get("resident_code") or "").strip()
+    r = _find_active_resident_by_code(shelter, resident_code)
+    if not r:
+        flash("Invalid Resident Code.", "error")
+        return redirect(url_for("resident_transport"))
+
+    resident_identifier = r["resident_identifier"]
+    first = r["first_name"]
+    last = r["last_name"]
+
     needed_raw = (request.form.get("needed_at") or "").strip()
     pickup = (request.form.get("pickup_location") or "").strip()
     destination = (request.form.get("destination") or "").strip()
@@ -700,24 +708,22 @@ def resident_transport():
     callback_phone = (request.form.get("callback_phone") or "").strip()
 
     errors: list[str] = []
-    if not resident_identifier or not first or not last or not needed_raw or not pickup or not destination:
+    if not first or not last or not needed_raw or not pickup or not destination:
         errors.append("Complete all required fields.")
 
     try:
         needed_local = parse_dt(needed_raw)
-
         needed_dt = (
             needed_local
             .replace(tzinfo=ZoneInfo("America/Chicago"))
             .astimezone(timezone.utc)
             .replace(tzinfo=None)
         )
-
         if needed_dt < datetime.utcnow() - timedelta(minutes=1):
             errors.append("Needed time cannot be in the past.")
-
     except Exception:
         errors.append("Invalid needed date or time.")
+
     if errors:
         for e in errors:
             flash(e, "error")
@@ -742,26 +748,34 @@ def resident_transport():
     needed_iso = needed_dt.replace(microsecond=0).isoformat()
     submitted = utcnow_iso()
 
+    params = (
+        shelter,
+        resident_identifier or "",
+        first,
+        last,
+        needed_iso,
+        pickup,
+        destination,
+        reason or None,
+        resident_notes or None,
+        callback_phone or None,
+        submitted,
+    )
+
     if g.get("db_kind") == "pg":
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(
-            sql,
-            (shelter, resident_identifier, first, last, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted)
-        )
+        cur.execute(sql, params)
         req_id = cur.fetchone()[0]
         cur.close()
     else:
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(
-            sql,
-            (shelter, resident_identifier, first, last, needed_iso, pickup, destination, reason or None, resident_notes or None, callback_phone or None, submitted)
-        )
+        cur.execute(sql, params)
         conn.commit()
         req_id = cur.lastrowid
 
-    log_action("transport", req_id, shelter, None, "create", "Resident submitted transportation request")
+    log_action("transport", req_id, shelter, None, "create", "Resident submitted transport request")
     return render_template("resident_submitted.html", request_id=req_id, kind="Transportation request submitted")
 
 
@@ -933,6 +947,7 @@ def staff_leave_approve(req_id: int):
     )
 
     log_action("leave", req_id, shelter, staff_id, "approve", note or "")
+
     req = db_fetchone(
         "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = %s AND shelter = %s"
         if g.get("db_kind") == "pg"
@@ -948,16 +963,12 @@ def staff_leave_approve(req_id: int):
         phone = req["resident_phone"] if isinstance(req, dict) else req[4]
 
         msg = f"Leave approved for {first_name} {last_name}. Leave {fmt_dt(leave_at)}. Return {fmt_dt(return_at)}."
-        print("SMS DEBUG approve phone=", phone)
-        print("SMS DEBUG env present=", bool(TWILIO_ACCOUNT_SID), bool(TWILIO_AUTH_TOKEN), bool(TWILIO_FROM_NUMBER))
-
         try:
             if phone:
-                print("SMS DEBUG: calling send_sms now")
                 send_sms(phone, msg)
-                print("SMS DEBUG: returned from send_sms")
         except Exception as e:
             log_action("leave", req_id, shelter, staff_id, "sms_failed", str(e))
+
     flash("Approved.", "ok")
     return redirect(url_for("staff_leave_pending"))
 
@@ -1036,6 +1047,7 @@ def staff_transport_pending():
     )
     return render_template("staff_transport_pending.html", rows=rows, fmt_dt=fmt_dt, shelter=shelter)
 
+
 @app.route("/staff/transport/board")
 @require_login
 @require_shelter
@@ -1061,25 +1073,22 @@ def staff_transport_board():
         """,
         (shelter, "pending", "scheduled"),
     )
-    # --- optional day filter from ?date=YYYY-MM-DD ---
+
     day = (request.args.get("date") or "").strip()
     if day:
         filtered = []
         for r in rows:
             try:
-                dt = parse_dt(r.get("needed_at"))
+                needed_at_val = r.get("needed_at") if isinstance(r, dict) else r["needed_at"]
+                dt = parse_dt(needed_at_val)
                 if dt.strftime("%Y-%m-%d") == day:
                     filtered.append(r)
             except Exception:
                 pass
         rows = filtered
-    
-    return render_template(
-        "staff_transport_board.html",
-        rows=rows,
-        shelter=shelter,
-        fmt_dt=fmt_dt,
-    )
+
+    return render_template("staff_transport_board.html", rows=rows, shelter=shelter, fmt_dt=fmt_dt)
+
 
 @app.route("/staff/transport/print")
 @require_login
@@ -1088,7 +1097,6 @@ def staff_transport_print():
     import html as _html
 
     shelter = session["shelter"]
-
     rows = db_fetchall(
         """
         SELECT *
@@ -1108,7 +1116,7 @@ def staff_transport_print():
         """,
         (shelter, "pending", "scheduled"),
     )
-    # --- day filter (YYYY-MM-DD), default today ---
+
     day = (request.args.get("date") or "").strip()
     if not day:
         day = datetime.utcnow().strftime("%Y-%m-%d")
@@ -1116,26 +1124,29 @@ def staff_transport_print():
     filtered = []
     for r in rows:
         try:
-            dt = parse_dt(r.get("needed_at"))
+            needed_at_val = r.get("needed_at") if isinstance(r, dict) else r["needed_at"]
+            dt = parse_dt(needed_at_val)
             if dt.strftime("%Y-%m-%d") == day:
                 filtered.append(r)
         except Exception:
-            # if needed_at is missing or unparsable, exclude it from the print sheet
             pass
 
     rows = filtered
-    
+
     def _cell(v):
         return _html.escape("" if v is None else str(v))
 
     trs = []
     for r in rows:
-        # assumes your rows are dict like (your app uses dict rows in templates already)
-        needed_at = fmt_dt(r.get("needed_at"))
-        name = f'{r.get("last_name","")}, {r.get("first_name","")}'
-        pickup = r.get("pickup_location", "")
-        dest = r.get("destination", "")
-        status = r.get("status", "")
+        needed_at_val = r.get("needed_at") if isinstance(r, dict) else r["needed_at"]
+        needed_at = fmt_dt(needed_at_val)
+        first = r.get("first_name") if isinstance(r, dict) else r["first_name"]
+        last = r.get("last_name") if isinstance(r, dict) else r["last_name"]
+        pickup = r.get("pickup_location") if isinstance(r, dict) else r["pickup_location"]
+        dest = r.get("destination") if isinstance(r, dict) else r["destination"]
+        status = r.get("status") if isinstance(r, dict) else r["status"]
+
+        name = f"{last}, {first}"
 
         trs.append(
             "<tr>"
@@ -1175,7 +1186,7 @@ def staff_transport_print():
     <button onclick="window.close()">Close</button>
   </div>
 
-  <h1>Transportation Sheet, {_html.escape(str(shelter))} | {_html.escape(day)}</h1>
+  <h1>Transportation Sheet, {_cell(shelter)} | {_cell(day)}</h1>
 
   <table>
     <thead>
@@ -1196,6 +1207,7 @@ def staff_transport_print():
 """.strip()
 
     return html_doc
+
 
 @app.route("/staff/transport/<int:req_id>/schedule", methods=["POST"])
 @require_login
@@ -1235,16 +1247,6 @@ def staff_transport_schedule(req_id: int):
 @require_login
 @require_shelter
 def staff_attendance():
-    """
-    Attendance board for the selected shelter.
-
-    Shows two groups:
-    1) Residents currently out, sorted by last name
-    2) Residents currently present, sorted by last name
-
-    Columns:
-    date, name, time checked out, time expected back, time checked back in, overdue
-    """
     shelter = session["shelter"]
     init_db()
 
@@ -1260,10 +1262,9 @@ def staff_attendance():
 
     for r in residents:
         rid = int(r["id"] if isinstance(r, dict) else r[0])
-        first = r["first_name"] if isinstance(r, dict) else r[2]
-        last = r["last_name"] if isinstance(r, dict) else r[3]
+        first = r["first_name"] if isinstance(r, dict) else r[4]
+        last = r["last_name"] if isinstance(r, dict) else r[5]
 
-        # Last event decides current status
         last_event = db_fetchone(
             """
             SELECT event_type, event_time, expected_back_time
@@ -1290,7 +1291,6 @@ def staff_attendance():
             last_event_type = last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
             last_event_time = last_event["event_time"] if isinstance(last_event, dict) else last_event[1]
 
-        # Most recent checkout (for columns)
         last_checkout = db_fetchone(
             """
             SELECT event_time, expected_back_time
@@ -1315,9 +1315,8 @@ def staff_attendance():
         expected_back_time = ""
         if last_checkout:
             checkout_time = last_checkout["event_time"] if isinstance(last_checkout, dict) else last_checkout[0]
-            expected_back_time = last_checkout["expected_back_time"] if isinstance(last_checkout, dict) else last_checkout[1] or ""
+            expected_back_time = last_checkout["expected_back_time"] if isinstance(last_checkout, dict) else (last_checkout[1] or "")
 
-        # Most recent check in that happened after the last checkout (if any)
         checkin_after_checkout_time = ""
         if checkout_time:
             checkin_after = db_fetchone(
@@ -1342,8 +1341,7 @@ def staff_attendance():
             if checkin_after:
                 checkin_after_checkout_time = checkin_after["event_time"] if isinstance(checkin_after, dict) else checkin_after[0]
 
-        # Determine current status
-        is_out = (last_event_type == "check_out")
+        is_out = last_event_type == "check_out"
         is_overdue = False
         if is_out and expected_back_time:
             try:
@@ -1351,8 +1349,6 @@ def staff_attendance():
             except Exception:
                 is_overdue = False
 
-        # Date column
-        # Date column (show local Chicago date, not UTC date)
         date_source = checkout_time or (last_event_time or "")
         date_value = ""
         if date_source:
@@ -1362,6 +1358,7 @@ def staff_attendance():
                 date_value = local_dt.strftime("%Y-%m-%d")
             except Exception:
                 date_value = date_source[:10]
+
         row = {
             "resident_id": rid,
             "first_name": first,
@@ -1390,6 +1387,8 @@ def staff_attendance():
         fmt_time=fmt_time_only,
         shelter=shelter,
     )
+
+
 @app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
@@ -1399,14 +1398,84 @@ def staff_attendance_check_in(resident_id: int):
     note = (request.form.get("note") or "").strip()
 
     sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note) VALUES (%s, %s, %s, %s, %s, %s)"
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
         if g.get("db_kind") == "pg"
         else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note) VALUES (?, ?, ?, ?, ?, ?)"
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
-    db_execute(sql, (resident_id, shelter, "check_in", utcnow_iso(), staff_id, note or None))
+    db_execute(sql, (resident_id, shelter, "check_in", utcnow_iso(), staff_id, note or None, None))
     log_action("attendance", resident_id, shelter, staff_id, "check_in", note or "")
     return redirect(url_for("staff_attendance"))
+
+
+@app.route("/staff/attendance/check-out", methods=["POST"], endpoint="staff_attendance_check_out_global")
+@require_login
+@require_shelter
+def staff_attendance_check_out_global():
+    shelter = session["shelter"]
+    staff_id = session["staff_user_id"]
+
+    rid_raw = (request.form.get("resident_id") or "").strip()
+    note = (request.form.get("note") or "").strip()
+    expected_back = (request.form.get("expected_back_time") or "").strip()
+
+    if not rid_raw.isdigit():
+        flash("Select a resident.", "error")
+        return redirect(url_for("staff_attendance"))
+
+    resident_id = int(rid_raw)
+
+    resident = db_fetchone(
+        "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
+        if g.get("db_kind") == "pg"
+        else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
+        (resident_id, shelter),
+    )
+    if not resident:
+        flash("Invalid resident.", "error")
+        return redirect(url_for("staff_attendance"))
+
+    expected_back_value = None
+    if expected_back:
+        try:
+            hh, mm = expected_back.split(":")
+            now_chi = datetime.now(ZoneInfo("America/Chicago"))
+            local_dt = now_chi.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
+            if local_dt <= now_chi:
+                local_dt = local_dt + timedelta(days=1)
+            expected_back_value = (
+                local_dt.astimezone(timezone.utc)
+                .replace(tzinfo=None)
+                .isoformat(timespec="seconds")
+            )
+        except Exception:
+            expected_back_value = None
+
+    sql = (
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        if g.get("db_kind") == "pg"
+        else
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)"
+    )
+
+    db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None, expected_back_value))
+
+    log_action(
+        "attendance",
+        resident_id,
+        shelter,
+        staff_id,
+        "check_out",
+        f"expected_back={expected_back_value or ''} {note or ''}".strip(),
+    )
+
+    return redirect(url_for("staff_attendance"))
+
+
 @app.route("/staff/attendance/resident/<int:resident_id>/print")
 @require_login
 @require_shelter
@@ -1424,8 +1493,8 @@ def staff_attendance_resident_print(resident_id: int):
         flash("Resident not found for this shelter.", "error")
         return redirect(url_for("staff_attendance"))
 
-    start = (request.args.get("start") or "").strip()  # YYYY-MM-DD
-    end = (request.args.get("end") or "").strip()      # YYYY-MM-DD
+    start = (request.args.get("start") or "").strip()
+    end = (request.args.get("end") or "").strip()
 
     if not end:
         end = datetime.now(ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
@@ -1436,7 +1505,6 @@ def staff_attendance_resident_print(resident_id: int):
     try:
         start_local = datetime.fromisoformat(start + "T00:00:00").replace(tzinfo=ZoneInfo("America/Chicago"))
         end_local = datetime.fromisoformat(end + "T23:59:59").replace(tzinfo=ZoneInfo("America/Chicago"))
-
         start_utc = start_local.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
         end_utc = end_local.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
     except Exception:
@@ -1478,14 +1546,15 @@ def staff_attendance_resident_print(resident_id: int):
         """,
         (resident_id, shelter, start_utc, end_utc),
     )
+
     trip_rows = []
     current_trip = None
 
     for e in events:
-        et = e["event_type"] if isinstance(e, dict) else e["event_type"]
-        tm = e["event_time"] if isinstance(e, dict) else e["event_time"]
-        eb = e.get("expected_back_time") if isinstance(e, dict) else e["expected_back_time"]
-        note_val = e.get("note") if isinstance(e, dict) else e["note"]
+        et = e["event_type"] if isinstance(e, dict) else e[0]
+        tm = e["event_time"] if isinstance(e, dict) else e[1]
+        eb = e.get("expected_back_time") if isinstance(e, dict) else e[2]
+        note_val = e.get("note") if isinstance(e, dict) else e[3]
 
         if et == "check_out":
             current_trip = {
@@ -1496,24 +1565,20 @@ def staff_attendance_resident_print(resident_id: int):
                 "late": None,
                 "note": note_val,
             }
-
         elif et == "check_in" and current_trip:
             current_trip["checked_in_at"] = tm
-
             if current_trip["expected_back_at"]:
                 try:
                     current_trip["late"] = parse_dt(tm) > parse_dt(current_trip["expected_back_at"])
                 except Exception:
                     current_trip["late"] = None
-
             trip_rows.append(current_trip)
             current_trip = None
 
-    # Replace events with one row per out and in pair
     events = trip_rows
-   
-    first = resident["first_name"] if isinstance(resident, dict) else resident[2]
-    last = resident["last_name"] if isinstance(resident, dict) else resident[3]
+
+    first = resident["first_name"] if isinstance(resident, dict) else resident[4]
+    last = resident["last_name"] if isinstance(resident, dict) else resident[5]
 
     return render_template(
         "staff_attendance_resident_print.html",
@@ -1525,6 +1590,8 @@ def staff_attendance_resident_print(resident_id: int):
         events=events,
         fmt_dt=fmt_dt,
     )
+
+
 @app.route("/kiosk/<shelter>/checkout", methods=["GET"])
 def kiosk_checkout(shelter: str):
     if shelter not in SHELTERS:
@@ -1539,11 +1606,9 @@ def kiosk_checkout(shelter: str):
         (shelter,),
     )
 
-    return render_template(
-        "kiosk_checkout.html",
-        residents=residents,
-        shelter=shelter,
-    )
+    return render_template("kiosk_checkout.html", residents=residents, shelter=shelter)
+
+
 @app.route("/kiosk/<shelter>/checkout/<int:resident_id>/out", methods=["POST"])
 def kiosk_checkout_out(shelter: str, resident_id: int):
     if shelter not in SHELTERS:
@@ -1552,17 +1617,19 @@ def kiosk_checkout_out(shelter: str, resident_id: int):
     init_db()
 
     note = (request.form.get("note") or "").strip() or None
-
     expected_back = (request.form.get("expected_back_time") or "").strip()
+
     expected_back_value = None
     if expected_back:
-        # datetime-local posts local time with no timezone; treat as Chicago, store UTC
-        local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
-        expected_back_value = (
-            local_dt.astimezone(timezone.utc)
-            .replace(tzinfo=None)
-            .isoformat(timespec="seconds")
-        )
+        try:
+            local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
+            expected_back_value = (
+                local_dt.astimezone(timezone.utc)
+                .replace(tzinfo=None)
+                .isoformat(timespec="seconds")
+            )
+        except Exception:
+            expected_back_value = None
 
     sql = (
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
@@ -1573,193 +1640,9 @@ def kiosk_checkout_out(shelter: str, resident_id: int):
         "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
 
-    # staff_user_id is NULL for kiosk events
     db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), None, note, expected_back_value))
-
     return redirect(url_for("kiosk_checkout", shelter=shelter))
-@app.route("/staff/attendance/check-out", methods=["POST"], endpoint="staff_attendance_check_out_global")
-@require_login
-@require_shelter
-def staff_attendance_check_out_global():
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
 
-    rid_raw = (request.form.get("resident_id") or "").strip()
-    note = (request.form.get("note") or "").strip()
-    expected_back = (request.form.get("expected_back_time") or "").strip()
-
-    if not rid_raw.isdigit():
-        flash("Select a resident.", "error")
-        return redirect(url_for("staff_attendance"))
-
-    resident_id = int(rid_raw)
-
-    resident = db_fetchone(
-        "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
-        if g.get("db_kind") == "pg"
-        else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
-        (resident_id, shelter),
-    )
-    if not resident:
-        flash("Invalid resident.", "error")
-        return redirect(url_for("staff_attendance"))
-
-    expected_back_value = None
-    if expected_back:
-        hh, mm = expected_back.split(":")
-        now_chi = datetime.now(ZoneInfo("America/Chicago"))
-
-        local_dt = now_chi.replace(
-            hour=int(hh),
-            minute=int(mm),
-            second=0,
-            microsecond=0,
-        )
-
-        if local_dt <= now_chi:
-            local_dt = local_dt + timedelta(days=1)
-
-        expected_back_value = (
-            local_dt.astimezone(timezone.utc)
-            .replace(tzinfo=None)
-            .isoformat(timespec="seconds")
-        )
-
-    sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-
-    db_execute(
-        sql,
-        (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None, expected_back_value),
-    )
-
-    log_action(
-        "attendance",
-        resident_id,
-        shelter,
-        staff_id,
-        "check_out",
-        f"expected_back={expected_back_value or ''} {note or ''}".strip(),
-    )
-
-    return redirect(url_for("staff_attendance"))
-
-
-    resident_id = int(rid_raw)
-
-    resident = db_fetchone(
-        "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
-        if g.get("db_kind") == "pg"
-        else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
-        (resident_id, shelter),
-    )
-    if not resident:
-        flash("Invalid resident.", "error")
-        return redirect(url_for("staff_attendance"))
-
-    expected_back_value = None
-    if expected_back:
-        hh, mm = expected_back.split(":")
-        now_chi = datetime.now(ZoneInfo("America/Chicago"))
-
-        local_dt = now_chi.replace(
-            hour=int(hh),
-            minute=int(mm),
-            second=0,
-            microsecond=0,
-        )
-
-        if local_dt <= now_chi:
-            local_dt = local_dt + timedelta(days=1)
-
-        expected_back_value = (
-            local_dt.astimezone(timezone.utc)
-            .replace(tzinfo=None)
-            .isoformat(timespec="seconds")
-        )
-
-    sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-
-    db_execute(
-        sql,
-        (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None, expected_back_value),
-    )
-
-    log_action(
-        "attendance",
-        resident_id,
-        shelter,
-        staff_id,
-        "check_out",
-        f"expected_back={expected_back_value or ''} {note or ''}".strip(),
-    )
-
-    return redirect(url_for("staff_attendance"))
-def staff_attendance_check_out(resident_id: int):
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-
-    note = (request.form.get("note") or "").strip()
-    expected_back = (request.form.get("expected_back_time") or "").strip()
-    expected_back_value = None
-
-    if expected_back:
-        hh, mm = expected_back.split(":")
-        now_chi = datetime.now(ZoneInfo("America/Chicago"))
-
-        local_dt = now_chi.replace(
-            hour=int(hh),
-            minute=int(mm),
-            second=0,
-            microsecond=0,
-        )
-
-        if local_dt <= now_chi:
-            local_dt = local_dt + timedelta(days=1)
-
-        expected_back_value = (
-            local_dt.astimezone(timezone.utc)
-            .replace(tzinfo=None)
-            .isoformat(timespec="seconds")
-        )
-
-    sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-
-    db_execute(
-        sql,
-        (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None, expected_back_value),
-    )
-
-    log_action(
-        "attendance",
-        resident_id,
-        shelter,
-        staff_id,
-        "check_out",
-        f"expected_back={expected_back_value or ''} {note or ''}".strip(),
-    )
-
-    return redirect(url_for("staff_attendance"))
 
 @app.route("/staff/admin/users", methods=["GET", "POST"])
 @require_login
@@ -1795,6 +1678,8 @@ def admin_users():
 
     users = db_fetchall("SELECT id, username, role, is_active, created_at FROM staff_users ORDER BY created_at DESC")
     return render_template("admin_users.html", users=users, fmt_dt=fmt_dt)
+
+
 @app.route("/admin/delete-user/<username>", methods=["POST"])
 @require_login
 @require_admin
@@ -1812,7 +1697,8 @@ def delete_user(username):
 
     flash(f"User '{username}' deleted.", "ok")
     return redirect(url_for("admin_users"))
-    
+
+
 @app.route("/staff/residents", methods=["GET", "POST"])
 @require_login
 @require_shelter
@@ -1822,10 +1708,13 @@ def staff_residents():
     shelter = session["shelter"]
 
     if request.method == "POST":
-        resident_identifier = ""
         first = (request.form.get("first_name") or "").strip()
         last = (request.form.get("last_name") or "").strip()
         phone = (request.form.get("phone") or "").strip()
+
+        if not first or not last:
+            flash("First name and last name are required.", "error")
+            return redirect(url_for("staff_residents"))
 
         resident_code = make_resident_code()
         for _ in range(10):
@@ -1842,9 +1731,7 @@ def staff_residents():
             flash("Could not generate a unique Resident Code. Try again.", "error")
             return redirect(url_for("staff_residents"))
 
-        if not first or not last:
-            flash("First name and last name are required.", "error")
-            return redirect(url_for("staff_residents"))
+        resident_identifier = ""
 
         sql = (
             "INSERT INTO residents (shelter, resident_identifier, resident_code, first_name, last_name, phone, is_active, created_at) "
@@ -1857,18 +1744,10 @@ def staff_residents():
 
         db_execute(sql, (shelter, resident_identifier, resident_code, first, last, phone or None, utcnow_iso()))
 
-        log_action(
-            "resident",
-            None,
-            shelter,
-            session["staff_user_id"],
-            "create",
-            f"code={resident_code} {resident_identifier} {first} {last}"
-        )
+        log_action("resident", None, shelter, session["staff_user_id"], "create", f"code={resident_code} {first} {last}")
 
-        flash("Resident added.", "ok")
+        flash(f"Resident added. Code: {resident_code}", "ok")
         return redirect(url_for("staff_residents"))
-    
 
     show = (request.args.get("show") or "active").strip()
     only_active = show != "all"
@@ -1914,20 +1793,15 @@ def staff_resident_set_active(resident_id: int):
         return redirect(url_for("staff_residents"))
 
     if g.get("db_kind") == "pg":
-        db_execute(
-            "UPDATE residents SET is_active = %s WHERE id = %s AND shelter = %s",
-            (active == "1", resident_id, shelter),
-        )
+        db_execute("UPDATE residents SET is_active = %s WHERE id = %s AND shelter = %s", (active == "1", resident_id, shelter))
     else:
-        db_execute(
-            "UPDATE residents SET is_active = ? WHERE id = ? AND shelter = ?",
-            (1 if active == "1" else 0, resident_id, shelter),
-        )
+        db_execute("UPDATE residents SET is_active = ? WHERE id = ? AND shelter = ?", (1 if active == "1" else 0, resident_id, shelter))
 
     log_action("resident", resident_id, shelter, staff_id, "set_active", f"active={active}")
     flash("Updated.", "ok")
     return redirect(url_for("staff_residents"))
-    
+
+
 @app.route("/admin/wipe-all-data", methods=["POST"])
 @require_login
 @require_admin
@@ -1941,7 +1815,8 @@ def wipe_all_data():
     db_execute("TRUNCATE TABLE audit_log RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM audit_log")
 
     log_action("admin", None, None, session.get("staff_user_id"), "wipe_all_data", "Wiped attendance, leave, transport, residents, audit_log")
-    return "All non-staff data wiped."
+    return "All non staff data wiped."
+
 
 @app.route("/admin/recreate-schema", methods=["POST"])
 @require_login
@@ -1965,7 +1840,8 @@ def recreate_schema():
     init_db()
     log_action("admin", None, None, session.get("staff_user_id"), "recreate_schema", "Dropped and recreated tables")
     return "Schema recreated."
-    
+
+
 if __name__ == "__main__":
     with app.app_context():
         init_db()
