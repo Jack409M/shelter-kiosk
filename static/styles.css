@@ -99,4 +99,10 @@ form.card label[for="callback_phone"] {
   margin-right: 12px;
   margin-top: 10px;
 }  
-  
+  /* Leave form date fields compact */
+form.card input[type="date"] {
+  width: 160px;
+  max-width: 160px;
+  display: inline-block;
+}
+
