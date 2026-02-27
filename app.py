@@ -579,16 +579,27 @@ def resident_leave():
         flash("Select a valid shelter.", "error")
         return redirect(url_for("resident_leave"))
 
-    resident_code = (request.form.get("resident_code") or "").strip()
-    r = _find_active_resident_by_code(shelter, resident_code)
-    if not r:
+        resident_code = (request.form.get("resident_code") or "").strip()
+
+    if not resident_code.isdigit() or len(resident_code) != 8:
         flash("Invalid Resident Code.", "error")
         return redirect(url_for("resident_leave"))
 
-    resident_identifier = r["resident_identifier"]
-    first = r["first_name"]
-    last = r["last_name"]
-    resident_phone = r["phone"]
+    res = db_fetchone(
+        "SELECT resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
+        if g.get("db_kind") == "pg"
+        else "SELECT resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
+        (shelter, resident_code),
+    )
+
+    if not res:
+        flash("Invalid Resident Code.", "error")
+        return redirect(url_for("resident_leave"))
+
+    resident_identifier = res["resident_identifier"] if isinstance(res, dict) else res[0]
+    first = res["first_name"] if isinstance(res, dict) else res[1]
+    last = res["last_name"] if isinstance(res, dict) else res[2]
+    resident_phone = res["phone"] if isinstance(res, dict) else res[3]
 
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
@@ -1846,6 +1857,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
