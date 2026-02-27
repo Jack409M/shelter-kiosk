@@ -626,11 +626,11 @@ def resident_leave():
     resident_phone = (request.form.get("resident_phone") or "").strip()
 
     if resident_phone:
-    db_execute(
-        "UPDATE residents SET phone = %s WHERE shelter = %s AND resident_code = %s"
-        if g.get("db_kind") == "pg"
-        else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_code = ?",
-        (resident_phone, shelter, resident_code),
+        db_execute(
+            "UPDATE residents SET phone = %s WHERE shelter = %s AND resident_code = %s"
+            if g.get("db_kind") == "pg"
+            else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_code = ?",
+            (resident_phone, shelter, resident_code),
     )
 
     destination = (request.form.get("destination") or "").strip()
@@ -1918,6 +1918,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
