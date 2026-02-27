@@ -85,8 +85,10 @@ textarea:focus {
 }
 
 /* Checkbox styling */
+/* Checkbox styling */
 input[type="checkbox"] {
     accent-color: #000000;
+}
 /* Phone fields shorter */
 form.card input[type="tel"] {
   width: 180px;
@@ -111,4 +113,5 @@ form.card input[type="date"] {
   max-width: 160px !important;
   display: inline-block !important;
 }
+
 
