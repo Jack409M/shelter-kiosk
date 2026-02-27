@@ -623,7 +623,15 @@ def resident_leave():
     resident_identifier = res["resident_identifier"] if isinstance(res, dict) else res[0]
     first = res["first_name"] if isinstance(res, dict) else res[1]
     last = res["last_name"] if isinstance(res, dict) else res[2]
-    resident_phone = res["phone"] if isinstance(res, dict) else res[3]
+    resident_phone = (request.form.get("resident_phone") or "").strip()
+
+    if resident_phone:
+    db_execute(
+        "UPDATE residents SET phone = %s WHERE shelter = %s AND resident_code = %s"
+        if g.get("db_kind") == "pg"
+        else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_code = ?",
+        (resident_phone, shelter, resident_code),
+    )
 
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
@@ -1910,6 +1918,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
