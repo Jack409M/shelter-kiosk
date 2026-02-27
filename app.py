@@ -952,7 +952,7 @@ def staff_leave_pending():
         else "SELECT * FROM leave_requests WHERE status = ? AND shelter = ? ORDER BY submitted_at DESC",
         ("pending", shelter),
     )
-    return render_template("staff_leave_pending.html", rows=rows, fmt_dt=fmt_dt, shelter=shelter)
+    return render_template("staff_leave_pending.html", rows=rows, fmt_dt=fmt_dt, fmt_date=fmt_date, shelter=shelter)
 
 
 @app.route("/staff/leave/away-now")
@@ -984,23 +984,50 @@ def staff_leave_away_now():
 @require_shelter
 def staff_leave_overdue():
     shelter = session["shelter"]
-    now = utcnow_iso()
+
+    # pull approved leaves not yet checked in
     rows = db_fetchall(
         """
         SELECT * FROM leave_requests
-        WHERE status = %s AND shelter = %s AND return_at < %s AND check_in_at IS NULL
+        WHERE status = %s AND shelter = %s AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
         if g.get("db_kind") == "pg"
         else
         """
         SELECT * FROM leave_requests
-        WHERE status = ? AND shelter = ? AND return_at < ? AND check_in_at IS NULL
+        WHERE status = ? AND shelter = ? AND check_in_at IS NULL
         ORDER BY return_at ASC
         """,
-        ("approved", shelter, now),
+        ("approved", shelter),
     )
-    return render_template("staff_leave_overdue.html", rows=rows, fmt_dt=fmt_dt, shelter=shelter)
+
+    now_local = datetime.now(ZoneInfo("America/Chicago"))
+    overdue_rows = []
+
+    for r in rows:
+        # sqlite Row and pg dict both support r["return_at"]
+        return_iso = r["return_at"] if isinstance(r, dict) or hasattr(r, "__getitem__") else None
+        if not return_iso:
+            continue
+
+        try:
+            rt_utc = datetime.fromisoformat(return_iso).replace(tzinfo=timezone.utc)
+            rt_local = rt_utc.astimezone(ZoneInfo("America/Chicago"))
+            cutoff_local = rt_local.replace(hour=22, minute=0, second=0, microsecond=0)
+
+            if now_local > cutoff_local:
+                overdue_rows.append(r)
+        except Exception:
+            continue
+
+    return render_template(
+        "staff_leave_overdue.html",
+        rows=overdue_rows,
+        fmt_dt=fmt_dt,
+        fmt_date=fmt_date,
+        shelter=shelter,
+    )
 
 
 @app.route("/staff/leave/<int:req_id>/approve", methods=["POST"])
@@ -1942,6 +1969,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
