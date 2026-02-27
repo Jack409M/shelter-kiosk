@@ -39,29 +39,31 @@
   placeholder="8065551234"
   style="width:180px; display:inline-block;"
 />
-  <label>Destination</label>
-  <input name="destination" required>
 
-  <div class="grid">
-    <div>
-      <label>Leave date and time</label>
-      <input name="leave_at" type="datetime-local" required>
-    </div>
-    <div>
-      <label>Return date and time</label>
-      <input name="return_at" type="datetime-local" required>
-    </div>
+<label>Destination</label>
+<input name="destination" required>
+
+<div class="grid">
+  <div>
+    <label>Leave date</label>
+    <input name="leave_at" type="date" required>
   </div>
 
-  <label>Reason optional</label>
-  <select name="reason">
-    <option value="">Select</option>
-    <option>Medical</option>
-    <option>Work</option>
-    <option>Family</option>
-    <option>Legal</option>
-    <option>Other</option>
-  </select>
+  <div>
+    <label>Return date</label>
+    <input name="return_at" type="date" required>
+  </div>
+</div>
+
+<label>Reason optional</label>
+<select name="reason">
+  <option value="">Select</option>
+  <option>Medical</option>
+  <option>Work</option>
+  <option>Family</option>
+  <option>Legal</option>
+  <option>Other</option>
+</select>
 
   <label>Notes optional</label>
   <textarea name="resident_notes" rows="3"></textarea>
@@ -80,6 +82,7 @@
 </form>
 
 {% endblock %}
+
 
 
 
