@@ -331,7 +331,23 @@ def init_db() -> None:
         )
         """,
     )
-   
+    # Add resident_code column if it does not exist
+    try:
+        if kind == "pg":
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS resident_code TEXT")
+        else:
+            db_execute("ALTER TABLE residents ADD COLUMN resident_code TEXT")
+    except Exception:
+        pass
+
+    # Create unique index on resident_code
+    try:
+        if kind == "pg":
+            db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
+        else:
+            db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
+    except Exception:
+        pass   
 
     # attendance events
     create(
@@ -1897,6 +1913,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
