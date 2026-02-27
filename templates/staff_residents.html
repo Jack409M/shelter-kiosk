@@ -16,7 +16,14 @@
       </div>
       <div>
   <label>Resident ID</label>
-  <input name="resident_identifier" required>
+  <input
+  name="resident_identifier"
+  required
+  maxlength="10"
+  inputmode="numeric"
+  pattern="[0-9]*"
+  placeholder="Numbers only"
+/>
 </div>
     </div>
     <button type="submit">Add</button>
@@ -74,4 +81,5 @@
 
 
 {% endblock %}
+
 
