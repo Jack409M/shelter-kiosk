@@ -579,10 +579,10 @@ def resident_leave():
         flash("Select a valid shelter.", "error")
         return redirect(url_for("resident_leave"))
 
-        resident_code = (request.form.get("resident_code") or "").strip()
+    resident_code = (request.form.get("resident_code") or "").strip()
 
-    if not resident_code.isdigit() or len(resident_code) != 8:
-        flash("Invalid Resident Code.", "error")
+    if (not resident_code.isdigit()) or (len(resident_code) != 8):
+        flash("Enter your 8 digit Resident Code.", "error")
         return redirect(url_for("resident_leave"))
 
     res = db_fetchone(
@@ -1859,6 +1859,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
