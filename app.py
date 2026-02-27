@@ -822,7 +822,9 @@ def sms_consent():
         "To receive SMS updates regarding shelter leave approvals, transportation notifications, and service reminders, "
         "text JOIN to +18066394503.\n\n"
         "Message frequency varies. Message and data rates may apply.\n"
-        "Reply STOP to opt out. Reply HELP for help.\n"
+        "Reply STOP to opt out. Reply HELP for help.\n\n"
+        "View our Privacy Policy: https://shelter-kiosk-production.up.railway.app/privacy\n"
+        "View our Terms and Conditions: https://shelter-kiosk-production.up.railway.app/terms\n"
     ), 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 @app.route("/staff/login", methods=["GET", "POST"])
@@ -1892,6 +1894,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
