@@ -609,8 +609,10 @@ def resident_leave():
     agreed = request.form.get("agreed") == "on"
 
     errors: list[str] = []
+
     if not agreed:
         errors.append("You must accept the agreement.")
+        
     if not first or not last or not destination or not leave_at_raw or not return_at_raw:
         errors.append("Complete all required fields.")
     if not resident_phone:
@@ -1857,6 +1859,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
