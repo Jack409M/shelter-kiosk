@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import secrets
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Optional
@@ -57,6 +58,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 def utcnow_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat()
 
+def make_resident_code(length: int = 8) -> str:
+    return "".join(secrets.choice("0123456789") for _ in range(length))
 
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
@@ -1894,6 +1897,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
