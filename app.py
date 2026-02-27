@@ -348,7 +348,34 @@ def init_db() -> None:
             db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
     except Exception:
         pass   
+    # Backfill resident_code for existing rows that are missing it
+    rows = db_fetchall(
+        "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
+        if kind == "pg"
+        else "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
+    )
 
+    for r in rows:
+        rid = r["id"] if isinstance(r, dict) else r[0]
+
+        code = make_resident_code()
+        for _ in range(10):
+            exists = db_fetchone(
+                "SELECT id FROM residents WHERE resident_code = %s"
+                if kind == "pg"
+                else "SELECT id FROM residents WHERE resident_code = ?",
+                (code,),
+            )
+            if not exists:
+                break
+            code = make_resident_code()
+
+        db_execute(
+            "UPDATE residents SET resident_code = %s WHERE id = %s"
+            if kind == "pg"
+            else "UPDATE residents SET resident_code = ? WHERE id = ?",
+            (code, rid),
+        )
     # attendance events
     create(
         """
@@ -1940,6 +1967,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
