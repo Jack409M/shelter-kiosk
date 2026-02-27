@@ -119,5 +119,10 @@ form.card select[name="shelter"] {
   max-width: 200px;
   display: inline-block !important;
 }
+form.card input[name="first_name"],
+form.card input[name="last_name"] {
+  width: 22ch;
+  display: inline-block;
+}
 
 
