@@ -817,15 +817,31 @@ def resident_transport():
 
 @app.get("/sms-consent")
 def sms_consent():
-    return (
-        "SMS Updates from Downtown Women’s Center\n\n"
-        "To receive SMS updates regarding shelter leave approvals, transportation notifications, and service reminders, "
-        "text JOIN to +18066394503.\n\n"
-        "Message frequency varies. Message and data rates may apply.\n"
-        "Reply STOP to opt out. Reply HELP for help.\n\n"
-        "View our Privacy Policy: https://shelter-kiosk-production.up.railway.app/privacy\n"
-        "View our Terms and Conditions: https://shelter-kiosk-production.up.railway.app/terms\n"
-    ), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return """
+    <html>
+        <head>
+            <title>SMS Consent - Downtown Women’s Center</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; line-height: 1.6;">
+            <h2>SMS Updates from Downtown Women’s Center</h2>
+
+            <p>
+                To receive SMS updates regarding shelter leave approvals, transportation notifications,
+                and service reminders, text <strong>JOIN</strong> to <strong>+1 806 639 4503</strong>.
+            </p>
+
+            <p>
+                Message frequency varies. Message and data rates may apply.
+                Reply STOP to opt out. Reply HELP for help.
+            </p>
+
+            <p>
+                <a href="/privacy">Privacy Policy</a><br>
+                <a href="/terms">Terms and Conditions</a>
+            </p>
+        </body>
+    </html>
+    """
 
 @app.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
@@ -1894,6 +1910,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
