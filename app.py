@@ -1050,7 +1050,11 @@ def staff_leave_approve(req_id: int):
         return_at = req["return_at"] if isinstance(req, dict) else req[3]
         phone = req["resident_phone"] if isinstance(req, dict) else req[4]
 
-        msg = f"Leave approved for {first_name} {last_name}. Leave {fmt_dt(leave_at)}. Return {fmt_dt(return_at)}."
+        msg = (
+    f"Leave approved for {first_name} {last_name}. "
+    f"Leave {fmt_pretty_date(leave_at)}. "
+    f"Return {fmt_pretty_date(return_at)} by 10 PM."
+)
         try:
             if phone:
                 send_sms(phone, msg)
@@ -1934,6 +1938,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
