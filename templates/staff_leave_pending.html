@@ -14,8 +14,8 @@
       <td>{{ r["id"] }}</td>
       <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
       <td>{{ r["dob"] }}</td>
-      <td>{{ fmt_dt(r["leave_at"]) }}</td>
-      <td>{{ fmt_dt(r["return_at"]) }}</td>
+      <td>{{ fmt_date(row.leave_at) }}</td>
+      <td>{{ fmt_date(row.return_at) }}</td>
       <td>{{ r["destination"] }}</td>
       <td>
         <form method="post" action="{{ url_for('staff_leave_approve', req_id=r['id']) }}" class="inline">
@@ -31,4 +31,5 @@
   {% endfor %}
   </tbody>
 </table>
+
 {% endblock %}
