@@ -1787,6 +1787,21 @@ def staff_residents():
         last = (request.form.get("last_name") or "").strip()
         phone = (request.form.get("phone") or "").strip()
 
+        resident_code = make_resident_code()
+        for _ in range(10):
+            existing_code = db_fetchone(
+                "SELECT id FROM residents WHERE resident_code = %s"
+                if g.get("db_kind") == "pg"
+                else "SELECT id FROM residents WHERE resident_code = ?",
+                (resident_code,),
+            )
+            if not existing_code:
+                break
+            resident_code = make_resident_code()
+        else:
+            flash("Could not generate a unique Resident Code. Try again.", "error")
+            return redirect(url_for("staff_residents"))
+
         if not resident_identifier or not first or not last:
             flash("Resident ID, first name, and last name are required.", "error")
             return redirect(url_for("staff_residents"))
@@ -1802,13 +1817,25 @@ def staff_residents():
             return redirect(url_for("staff_residents"))
 
         sql = (
-            "INSERT INTO residents (shelter, resident_identifier, first_name, last_name, phone, is_active, created_at) VALUES (%s, %s, %s, %s, %s, TRUE, %s)"
+            "INSERT INTO residents (shelter, resident_identifier, resident_code, first_name, last_name, phone, is_active, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, TRUE, %s)"
             if g.get("db_kind") == "pg"
             else
-            "INSERT INTO residents (shelter, resident_identifier, first_name, last_name, phone, is_active, created_at) VALUES (?, ?, ?, ?, ?, 1, ?)"
+            "INSERT INTO residents (shelter, resident_identifier, resident_code, first_name, last_name, phone, is_active, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, 1, ?)"
         )
-        db_execute(sql, (shelter, resident_identifier, first, last, phone or None, utcnow_iso()))
-        log_action("resident", None, shelter, session["staff_user_id"], "create", f"{resident_identifier} {first} {last}")
+
+        db_execute(sql, (shelter, resident_identifier, resident_code, first, last, phone or None, utcnow_iso()))
+
+        log_action(
+            "resident",
+            None,
+            shelter,
+            session["staff_user_id"],
+            "create",
+            f"code={resident_code} {resident_identifier} {first} {last}"
+        )
+
         flash("Resident added.", "ok")
         return redirect(url_for("staff_residents"))
     
@@ -1913,6 +1940,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
