@@ -1809,7 +1809,7 @@ def staff_residents():
     shelter = session["shelter"]
 
     if request.method == "POST":
-        resident_identifier = (request.form.get("resident_identifier") or "").strip()
+        resident_identifier = ""
         first = (request.form.get("first_name") or "").strip()
         last = (request.form.get("last_name") or "").strip()
         phone = (request.form.get("phone") or "").strip()
@@ -1829,18 +1829,8 @@ def staff_residents():
             flash("Could not generate a unique Resident Code. Try again.", "error")
             return redirect(url_for("staff_residents"))
 
-        if not resident_identifier or not first or not last:
-            flash("Resident ID, first name, and last name are required.", "error")
-            return redirect(url_for("staff_residents"))
-
-        existing = db_fetchone(
-            "SELECT id FROM residents WHERE shelter = %s AND resident_identifier = %s"
-            if g.get("db_kind") == "pg"
-            else "SELECT id FROM residents WHERE shelter = ? AND resident_identifier = ?",
-            (shelter, resident_identifier),
-        )
-        if existing:
-            flash("That Resident ID is already in use for this shelter.", "error")
+        if not first or not last:
+            flash("First name and last name are required.", "error")
             return redirect(url_for("staff_residents"))
 
         sql = (
@@ -1967,6 +1957,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
