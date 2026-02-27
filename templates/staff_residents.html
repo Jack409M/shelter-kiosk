@@ -34,15 +34,17 @@
 <table>
   <thead>
     <tr>
-      <th>Name</th>
-      <th>Active</th>
-      <th>Action</th>
-    </tr>
+  <th>Name</th>
+  <th>Resident Code</th>
+  <th>Active</th>
+  <th>Action</th>
+</tr>
   </thead>
   <tbody>
  {% for r in residents %}
   <tr>
-    <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+  <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+  <td><strong>{{ r["resident_code"] }}</strong></td>
 
     <td>
       {% if r["is_active"]|int == 1 %}
@@ -72,3 +74,4 @@
 
 
 {% endblock %}
+
