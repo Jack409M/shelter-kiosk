@@ -113,5 +113,11 @@ form.card input[type="date"] {
   max-width: 160px !important;
   display: inline-block !important;
 }
+/* Shelter select compact width */
+form.card select[name="shelter"] {
+  width: 16ch !important;
+  max-width: 200px;
+  display: inline-block !important;
+}
 
 
