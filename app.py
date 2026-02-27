@@ -791,6 +791,15 @@ def resident_transport():
     log_action("transport", req_id, shelter, None, "create", "Resident submitted transport request")
     return render_template("resident_submitted.html", request_id=req_id, kind="Transportation request submitted")
 
+@app.get("/sms-consent")
+def sms_consent():
+    return (
+        "SMS Updates from Downtown Women’s Center\n\n"
+        "To receive SMS updates regarding shelter leave approvals, transportation notifications, and service reminders, "
+        "text JOIN to +18066394503.\n\n"
+        "Message frequency varies. Message and data rates may apply.\n"
+        "Reply STOP to opt out. Reply HELP for help.\n"
+    ), 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 @app.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
@@ -1859,6 +1868,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
