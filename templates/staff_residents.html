@@ -18,10 +18,10 @@
   <label>Resident ID</label>
   <input
   name="resident_identifier"
+  type="tel"
   required
   maxlength="10"
-  inputmode="numeric"
-  pattern="[0-9]*"
+  pattern="[0-9]{1,10}"
   placeholder="Numbers only"
 />
 </div>
@@ -81,5 +81,6 @@
 
 
 {% endblock %}
+
 
 
