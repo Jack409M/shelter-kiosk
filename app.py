@@ -516,6 +516,19 @@ def privacy_policy():
         "If you have questions about this policy, please contact Downtown Women’s Center at 806-XXX-XXXX.\n"
     ), 200, {"Content-Type": "text/plain; charset=utf-8"}
 
+@app.get("/terms")
+def terms_and_conditions():
+    return (
+        "Terms and Conditions – Downtown Women’s Center\n\n"
+        "By opting in to receive SMS messages from Downtown Women’s Center, "
+        "you agree to receive operational notifications related to shelter services, "
+        "including leave approvals, transportation scheduling, reminders, and service updates.\n\n"
+        "Message frequency varies. Message and data rates may apply.\n\n"
+        "You may opt out at any time by replying STOP.\n"
+        "For assistance, reply HELP.\n\n"
+        "Downtown Women’s Center is not responsible for delayed or undelivered messages.\n"
+    ), 200, {"Content-Type": "text/plain; charset=utf-8"}
+
 @app.route("/")
 def public_home():
     return redirect(url_for("resident_leave"))
@@ -1879,6 +1892,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
