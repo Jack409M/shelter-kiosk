@@ -105,4 +105,10 @@ form.card input[type="date"] {
   max-width: 160px;
   display: inline-block;
 }
+/* Force date inputs to be compact (override global width:100%) */
+form.card input[type="date"] {
+  width: 160px !important;
+  max-width: 160px !important;
+  display: inline-block !important;
+}
 
