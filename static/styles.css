@@ -124,5 +124,6 @@ form.card input[name="last_name"] {
   width: 22ch;
   display: inline-block;
 }
+html, body { background: #ff00ff !important; }
 
 
