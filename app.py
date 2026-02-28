@@ -530,16 +530,15 @@ def require_admin(fn):
     return wrapper
 
 
-def require_staff_or_admin(fn):
+def require_transfer(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if session.get("role") not in ["admin", "staff"]:
-            flash("Staff or admin only.", "error")
+        if session.get("role") not in TRANSFER_ROLES:
+            flash("Admin or case manager only.", "error")
             return redirect(url_for("staff_home"))
         return fn(*args, **kwargs)
-
     return wrapper
-
+    
 @app.get("/privacy")
 def privacy_policy():
     return (
@@ -1989,6 +1988,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
