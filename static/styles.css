@@ -316,6 +316,14 @@ form.card input[name="last_name"] {
   display: block;
 }
 
+.top select {
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  color: var(--text);
+  cursor: pointer;
+}
 
 
 
