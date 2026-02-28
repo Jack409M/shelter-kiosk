@@ -139,6 +139,11 @@ html, body {
 nav a { color: #0f2f57; }
 .brand a { color: #0f2f57; }
 
+main.container,
+.container {
+  background: #eaf3ff;
+  min-height: 100vh;
+}
 
 
 
