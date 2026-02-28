@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Transfer Resident</h2>
+
+<p>
+  <strong>{{ resident.first_name }} {{ resident.last_name }}</strong><br>
+  DOB: {{ resident.dob }}<br>
+  From shelter: <strong>{{ from_shelter }}</strong>
+</p>
+
+<form method="post">
+  <label for="to_shelter">To shelter</label><br>
+  <select name="to_shelter" id="to_shelter" required>
+    <option value="">Select…</option>
+    {% for s in shelters %}
+      <option value="{{ s }}">{{ s }}</option>
+    {% endfor %}
+  </select>
+
+  <br><br>
+
+  <label for="note">Note (optional)</label><br>
+  <textarea name="note" id="note" rows="3" style="width: 100%;"></textarea>
+
+  <br><br>
+
+  <button type="submit">Transfer</button>
+  <a href="{{ url_for('staff_residents') }}">Cancel</a>
+</form>
+{% endblock %}
