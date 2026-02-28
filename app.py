@@ -1879,7 +1879,7 @@ def admin_users():
             flash("Username and password required.", "error")
             return redirect(url_for("admin_users"))
 
-        if role not in ["staff", "admin"]:
+        if role not in USER_ROLES:
             flash("Invalid role.", "error")
             return redirect(url_for("admin_users"))
 
@@ -1897,7 +1897,14 @@ def admin_users():
         return redirect(url_for("admin_users"))
 
     users = db_fetchall("SELECT id, username, role, is_active, created_at FROM staff_users ORDER BY created_at DESC")
-    return render_template("admin_users.html", users=users, fmt_dt=fmt_dt)
+    return render_template(
+    "admin_users.html",
+    users=users,
+    fmt_dt=fmt_dt,
+    roles=sorted(USER_ROLES),
+    ROLE_LABELS=ROLE_LABELS
+)
+
 
 
 @app.route("/admin/delete-user/<username>", methods=["POST"])
@@ -2066,6 +2073,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
