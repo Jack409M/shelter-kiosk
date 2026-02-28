@@ -23,7 +23,12 @@ nav .sep { margin-right: 10px; }
 label { display: block; margin-top: 10px; font-size: 14px; }
 input, select, textarea { width: 100%; padding: 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
 button { margin-top: 12px; padding: 8px 12px; border: 1px solid #333; border-radius: 8px; background: #fff; cursor: pointer; }
-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #ddd; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #f7fbff;        /* light blue tint instead of white */
+  border: 1px solid #c7dcf5;  /* softer border */
+}
 th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
 .inline { display: inline-block; margin-right: 10px; }
 .flash .msg { padding: 10px; border-radius: 8px; margin-bottom: 8px; }
@@ -144,6 +149,7 @@ main.container,
   background: #eaf3ff;
   min-height: 100vh;
 }
+
 
 
 
