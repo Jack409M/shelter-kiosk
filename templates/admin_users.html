@@ -29,7 +29,7 @@
     {% for u in users %}
       <tr>
         <td>{{ u["username"] }}</td>
-        <td>{{ u["role"] }}</td>
+        <td>{{ ROLE_LABELS.get(u["role"], u["role"]) }}</td>
         <td>{{ u["is_active"] }}</td>
         <td>{{ fmt_dt(u["created_at"]) }}</td>
         <td>
@@ -43,4 +43,5 @@
 </table>
 
 {% endblock %}
+
 
