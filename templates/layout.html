@@ -18,11 +18,22 @@
         {% endif %}
         {% if session.get("staff_user_id") %}
           <a href="{{ url_for('staff_select_shelter') }}">Select shelter</a>
-          <a href="{{ url_for('staff_leave_pending') }}">Leave pending</a>
-          <a href="{{ url_for('staff_leave_away_now') }}">Leave away</a>
-          <a href="{{ url_for('staff_leave_overdue') }}">Leave overdue</a>
-          <a href="{{ url_for('staff_transport_pending') }}">Transport Pending</a>
-          <a href="{{ url_for('staff_transport_board') }}">Transport Schedule</a>
+          <div class="nav-dd">
+  <button type="button">Leave ▾</button>
+  <div class="menu">
+    <a href="/staff/leave/pending">Leave pending</a>
+    <a href="/staff/leave/away-now">Leave away</a>
+    <a href="/staff/leave/overdue">Leave overdue</a>
+  </div>
+</div>
+
+<div class="nav-dd">
+  <button type="button">Transport ▾</button>
+  <div class="menu">
+    <a href="/staff/transport/pending">Transport pending</a>
+    <a href="/staff/transport/board">Transport schedule</a>
+  </div>
+</div>
           <a href="{{ url_for('staff_attendance') }}">Checkout Log</a>
 {% if session.get("role") in ["admin", "staff"] %}
   <a href="{{ url_for('staff_residents') }}">Residents</a>
@@ -51,6 +62,7 @@
   </body>
 
 </html>
+
 
 
 
