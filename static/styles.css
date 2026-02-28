@@ -2,21 +2,21 @@
    Theme
 ========= */
 :root {
-  --bg: #b8d8ff;          /* page background */
-  --bg-soft: #cfe6ff;     /* cards + tables */
-  --top: #5c9ded;         /* header + table header */
-  --top-border: #3f84d9;
+  --bg: #e6f0fa;          /* soft page blue */
+  --bg-soft: #f4f8fc;     /* card + table surface */
+  --top: #c9deef;         /* gentle header blue */
+  --top-border: #b7d2e6;
 
-  --text: #0f2f57;
-  --text-muted: #444;
+  --text: #1f2f3f;        /* softened dark */
+  --text-muted: #5a6b7a;
 
-  --border: #7fb4f2;
-  --border-soft: #9cc7f7;
+  --border: #cbdbe8;
+  --border-soft: #dde8f2;
 
-  --ok-bg: #e9ffe7;
-  --ok-border: #b9ffb6;
-  --err-bg: #ffe7e7;
-  --err-border: #ffb6b6;
+  --ok-bg: #eef9f0;
+  --ok-border: #cde7d1;
+  --err-bg: #fdeeee;
+  --err-border: #f2caca;
 
   --radius: 8px;
 }
@@ -236,6 +236,7 @@ form.card input[name="last_name"] {
   width: 22ch;
   display: inline-block;
 }
+
 
 
 
