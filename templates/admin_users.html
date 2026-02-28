@@ -11,10 +11,11 @@
     <input name="password" type="password" required>
     <label>Role</label>
     <select name="role" required>
-      <option value="staff">staff</option>
-      <option value="desk">desk</option>
-      <option value="admin">admin</option>
-    </select>
+  {% for r in roles %}
+    <option value="{{ r }}">{{ r.replace('_', ' ') }}</option>
+  {% endfor %}
+</select>
+    
     <button type="submit">Create</button>
   </form>
 </div>
@@ -42,3 +43,4 @@
 </table>
 
 {% endblock %}
+
