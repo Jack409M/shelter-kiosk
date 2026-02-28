@@ -236,6 +236,85 @@ form.card input[name="last_name"] {
   width: 22ch;
   display: inline-block;
 }
+/* ===== Header menu pills + dropdowns ===== */
+.top nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.top nav a {
+  display: inline-block;
+  margin-right: 0;                 /* override old margin */
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1;
+}
+
+.top nav a:hover {
+  border-color: rgba(15, 47, 87, 0.35);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+
+/* Dropdown container */
+.nav-dd {
+  position: relative;
+  display: inline-block;
+}
+
+/* Button that looks like a pill link */
+.nav-dd > button {
+  margin-top: 0;                   /* override button default */
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Dropdown panel */
+.nav-dd .menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  border-radius: 12px;
+  padding: 8px;
+  z-index: 50;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.10);
+}
+
+/* Dropdown items */
+.nav-dd .menu a {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: transparent;
+  border: 0;
+}
+
+.nav-dd .menu a:hover {
+  background: rgba(79, 143, 190, 0.12);
+}
+
+/* Show menu on hover (desktop) */
+.nav-dd:hover .menu {
+  display: block;
+}
+
+/* Mobile: click focus opens menu */
+.nav-dd:focus-within .menu {
+  display: block;
+}
 
 
 
