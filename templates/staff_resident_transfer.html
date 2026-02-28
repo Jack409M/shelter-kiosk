@@ -3,8 +3,12 @@
 <h2>Transfer Resident</h2>
 
 <p>
-  <strong>{{ resident.first_name }} {{ resident.last_name }}</strong><br>
-  DOB: {{ resident.dob }}<br>
+  <strong>
+    {{ resident["first_name"] if resident is mapping else resident[4] }}
+    {{ resident["last_name"] if resident is mapping else resident[5] }}
+  </strong><br>
+  Resident Code:
+  <strong>{{ resident["resident_code"] if resident is mapping else resident[3] }}</strong><br>
   From shelter: <strong>{{ from_shelter }}</strong>
 </p>
 
