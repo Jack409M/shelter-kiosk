@@ -247,6 +247,7 @@ def init_db() -> None:
     def create(sqlite_sql: str, pg_sql: str) -> None:
         db_execute(pg_sql if kind == "pg" else sqlite_sql)
 
+    
     create(
         """
         CREATE TABLE IF NOT EXISTS staff_users (
@@ -338,7 +339,35 @@ def init_db() -> None:
             else "UPDATE residents SET resident_code = ? WHERE id = ?",
             (code, rid),
         )
-
+    if g.get("db_kind") == "pg":
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS resident_transfers (
+              id SERIAL PRIMARY KEY,
+              resident_id INTEGER NOT NULL REFERENCES residents(id),
+              from_shelter TEXT NOT NULL,
+              to_shelter TEXT NOT NULL,
+              transferred_by TEXT NOT NULL,
+              transferred_at TIMESTAMP NOT NULL DEFAULT NOW(),
+              note TEXT
+            );
+            """
+        )
+    else:
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS resident_transfers (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              resident_id INTEGER NOT NULL,
+              from_shelter TEXT NOT NULL,
+              to_shelter TEXT NOT NULL,
+              transferred_by TEXT NOT NULL,
+              transferred_at TEXT NOT NULL,
+              note TEXT,
+              FOREIGN KEY(resident_id) REFERENCES residents(id)
+            );
+            """
+        )
     create(
         """
         CREATE TABLE IF NOT EXISTS leave_requests (
@@ -2010,6 +2039,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
