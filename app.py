@@ -2033,8 +2033,8 @@ def staff_resident_transfer(resident_id: int):
         return redirect(url_for("staff_residents"))
 
     from_shelter = resident["shelter"] if isinstance(resident, dict) else resident[1]
-    first_name = resident["first_name"] if isinstance(resident, dict) else resident[2]
-    last_name = resident["last_name"] if isinstance(resident, dict) else resident[3]
+    first_name = resident["first_name"] if isinstance(resident, dict) else resident[4]
+    last_name = resident["last_name"] if isinstance(resident, dict) else resident[5]
 
     if request.method == "POST":
         to_shelter = (request.form.get("to_shelter") or "").strip()
@@ -2078,39 +2078,41 @@ def staff_resident_transfer(resident_id: int):
             ),
         )
 
-        # 3) move pending leave + transport to new shelter (permanent transfer default)
+        # 3) move pending leave + transport to new shelter (match by resident_identifier)
+        resident_identifier = resident["resident_identifier"] if isinstance(resident, dict) else resident[2]
+
         db_execute(
             """
             UPDATE leave_requests
             SET shelter = %s
-            WHERE shelter = %s AND first_name = %s AND last_name = %s AND dob = %s AND status = 'pending'
+            WHERE shelter = %s AND resident_identifier = %s AND status = 'pending'
             """
             if g.get("db_kind") == "pg"
             else
             """
             UPDATE leave_requests
             SET shelter = ?
-            WHERE shelter = ? AND first_name = ? AND last_name = ? AND dob = ? AND status = 'pending'
+            WHERE shelter = ? AND resident_identifier = ? AND status = 'pending'
             """,
-            (to_shelter, from_shelter, first_name, last_name, dob),
+            (to_shelter, from_shelter, resident_identifier),
         )
 
         db_execute(
             """
             UPDATE transport_requests
             SET shelter = %s
-            WHERE shelter = %s AND first_name = %s AND last_name = %s AND dob = %s AND status = 'pending'
+            WHERE shelter = %s AND resident_identifier = %s AND status = 'pending'
             """
             if g.get("db_kind") == "pg"
             else
             """
             UPDATE transport_requests
             SET shelter = ?
-            WHERE shelter = ? AND first_name = ? AND last_name = ? AND dob = ? AND status = 'pending'
+            WHERE shelter = ? AND resident_identifier = ? AND status = 'pending'
             """,
-            (to_shelter, from_shelter, first_name, last_name, dob),
+            (to_shelter, from_shelter, resident_identifier),
         )
-
+        
         # 4) update resident home shelter (resident code stays untouched automatically)
         db_execute(
             "UPDATE residents SET shelter = %s WHERE id = %s" if g.get("db_kind") == "pg" else "UPDATE residents SET shelter = ? WHERE id = ?",
@@ -2196,6 +2198,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
