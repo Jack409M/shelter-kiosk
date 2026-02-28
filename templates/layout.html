@@ -21,6 +21,15 @@
   <input type="hidden" name="next" value="{{ request.full_path }}">
   <select name="shelter" onchange="this.form.submit()">
     <option value="">Select Shelter</option>
+
+    <option value="Abba" {% if current_shelter == "Abba" %}selected{% endif %}>Abba House</option>
+    <option value="Haven" {% if current_shelter == "Haven" %}selected{% endif %}>Haven House</option>
+    <option value="Gratitude" {% if current_shelter == "Gratitude" %}selected{% endif %}>Gratitude House</option>
+  </select>
+</form>
+  <input type="hidden" name="next" value="{{ request.full_path }}">
+  <select name="shelter" onchange="this.form.submit()">
+    <option value="">Select Shelter</option>
     {% for s in all_shelters %}
       <option value="{{ s }}" {% if s == current_shelter %}selected{% endif %}>
         {% if s == "Gratitude" %}Gratitude House{% else %}{{ s }}{% endif %}
@@ -85,6 +94,7 @@
   </body>
 
 </html>
+
 
 
 
