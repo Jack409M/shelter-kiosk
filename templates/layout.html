@@ -19,9 +19,9 @@
         {% if session.get("staff_user_id") %}
           <form method="post" action="{{ url_for('staff_select_shelter') }}" style="display:inline-block; margin:0;">
   <input type="hidden" name="next" value="{{ request.full_path }}">
+
   <select name="shelter" onchange="this.form.submit()">
     <option value="">Select Shelter</option>
-
     <option value="Abba" {% if current_shelter == "Abba" %}selected{% endif %}>Abba House</option>
     <option value="Haven" {% if current_shelter == "Haven" %}selected{% endif %}>Haven House</option>
     <option value="Gratitude" {% if current_shelter == "Gratitude" %}selected{% endif %}>Gratitude House</option>
@@ -94,6 +94,7 @@
   </body>
 
 </html>
+
 
 
 
