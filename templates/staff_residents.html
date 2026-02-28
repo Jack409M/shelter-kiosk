@@ -14,7 +14,6 @@
         <label>Last name</label>
         <input name="last_name" required>
       </div>
-      
     </div>
     <button type="submit">Add</button>
   </form>
@@ -23,72 +22,56 @@
 <div class="card">
   <strong>View:</strong>
   <a href="{{ url_for('staff_residents', show='active') }}">Active only</a>
-|
+  |
   <a href="{{ url_for('staff_residents', show='all') }}">All</a>
 </div>
-
 
 <table>
   <thead>
     <tr>
-  <th>Name</th>
-  <th>Resident Code</th>
-  <th>Active</th>
-  <th>Action</th>
-</tr>
+      <th>Name</th>
+      <th>Resident Code</th>
+      <th>Active</th>
+      <th>Action</th>
+    </tr>
   </thead>
   <tbody>
- {% for r in residents %}
-  <tr>
-  <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+    {% for r in residents %}
+      <tr>
+        <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
 
-  <td><strong>{{ r["resident_code"] }}</strong></td>
+        <td><strong>{{ r["resident_code"] }}</strong></td>
 
-  <td>
-    {% if r["is_active"]|int == 1 %}
-      <span class="badge in" style="background: yellow !important; border: 3px solid black !important;">
-        Active
-      </span>
-    {% else %}
-      <span class="badge out" style="background: orange !important; border: 3px solid black !important;">
-        Inactive
-      </span>
-    {% endif %}
-  </td>
+        <td>
+          {% if r["is_active"]|int == 1 %}
+            <span class="badge in" style="background: yellow !important; border: 3px solid black !important;">Active</span>
+          {% else %}
+            <span class="badge out" style="background: orange !important; border: 3px solid black !important;">Inactive</span>
+          {% endif %}
+        </td>
 
-  <td>
-    {% if r["is_active"]|int == 1 %}
-      <form method="post"
-            action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}"
-            class="inline">
-        <input type="hidden" name="active" value="0">
-        <button type="submit">Deactivate</button>
-      </form>
-    {% else %}
-      <form method="post"
-            action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}"
-            class="inline">
-        <input type="hidden" name="active" value="1">
-        <button type="submit">Reactivate</button>
-      </form>
-    {% endif %}
+        <td>
+          {% if r["is_active"]|int == 1 %}
+            <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}" class="inline">
+              <input type="hidden" name="active" value="0">
+              <button type="submit">Deactivate</button>
+            </form>
+          {% else %}
+            <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}" class="inline">
+              <input type="hidden" name="active" value="1">
+              <button type="submit">Reactivate</button>
+            </form>
+          {% endif %}
 
-    {% if session.get("role") in ["admin", "case_manager"] %}
-      <a href="{{ url_for('staff_resident_transfer', resident_id=r['id']) }}"
-         class="inline">
-        <button type="button">Transfer</button>
-      </a>
-    {% endif %}
-  </td>
-</tr>
-{% endfor %}
+          {% if session.get("role") in ["admin", "case_manager"] %}
+            <a href="{{ url_for('staff_resident_transfer', resident_id=r['id']) }}" class="inline">
+              <button type="button">Transfer</button>
+            </a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
   </tbody>
 </table>
 
-
 {% endblock %}
-
-
-
-
-
