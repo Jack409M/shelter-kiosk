@@ -1,76 +1,184 @@
-body { font-family: Arial, sans-serif; margin: 0; background: #f6f6f6; }
+/* =========
+   Theme
+========= */
+:root {
+  --bg: #eaf3ff;           /* page background */
+  --bg-soft: #f7fbff;      /* table + surface tint */
+  --top: #d9ebff;          /* header + table header */
+  --top-border: #b5d4f5;
+
+  --text: #0f2f57;
+  --text-muted: #555;
+
+  --border: #c7dcf5;
+  --border-soft: #e3eefc;
+
+  --ok-bg: #e9ffe7;
+  --ok-border: #b9ffb6;
+  --err-bg: #ffe7e7;
+  --err-border: #ffb6b6;
+
+  --radius: 8px;
+}
+
+/* =========
+   Base
+========= */
+* { box-sizing: border-box; }
+
+html, body {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  color: var(--text);
+}
+
+/* =========
+   Header / Nav
+========= */
 .top {
   display: flex;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #d9ebff;
-  border-bottom: 1px solid #b5d4f5;
+  background: var(--top);
+  border-bottom: 1px solid var(--top-border);
   flex-wrap: wrap;
   gap: 10px;
 }
-.brand a { text-decoration: none; color: #111; font-weight: bold; }
-nav a { margin-right: 10px; text-decoration: none; color: #333; }
+
+.brand a {
+  text-decoration: none;
+  font-weight: 700;
+  color: var(--text);
+}
+
+nav a {
+  margin-right: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+
 nav .sep { margin-right: 10px; }
-.container { padding: 18px; }
+
+/* =========
+   Layout
+========= */
+.container {
+  padding: 18px;
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* =========
+   Cards / Forms
+========= */
 .card {
-  background: #eaf3ff;
+  background: var(--bg);
   padding: 14px;
   border: 1px solid #000;
-  border-radius: 8px;
+  border-radius: var(--radius);
   margin-bottom: 16px;
 }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-label { display: block; margin-top: 10px; font-size: 14px; }
-input, select, textarea { width: 100%; padding: 8px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-button { margin-top: 12px; padding: 8px 12px; border: 1px solid #333; border-radius: 8px; background: #fff; cursor: pointer; }
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+label {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 6px;
+  border: 2px solid #000;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #333;
+  box-shadow: 0 0 4px rgba(0,0,0,0.25);
+}
+
+/* Buttons */
+button,
+input[type="submit"] {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid #333;
+  border-radius: var(--radius);
+  background: #fff;
+  cursor: pointer;
+  color: #111;
+  -webkit-text-fill-color: #111;
+}
+
+/* =========
+   Tables
+========= */
 table {
   width: 100%;
   border-collapse: collapse;
-  background: #f7fbff;        /* light blue tint */
-  border: 1px solid #c7dcf5;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
 }
 
 th, td {
   padding: 10px;
-  border-bottom: 1px solid #e3eefc;
   text-align: left;
   vertical-align: top;
-  background: #f7fbff;        /* IMPORTANT: cells too */
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-soft);
 }
 
-th {
-  background: #d9ebff;        /* header row */
+thead th {
+  background: var(--top);
 }
 
-th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
-.inline { display: inline-block; margin-right: 10px; }
-.flash .msg { padding: 10px; border-radius: 8px; margin-bottom: 8px; }
-.flash .error { background: #ffe7e7; border: 1px solid #ffb6b6; }
-.flash .ok { background: #e9ffe7; border: 1px solid #b9ffb6; }
-.check { margin-top: 12px; }
-.check input[type="checkbox"] { width: auto; }
-.hint { color: #555; font-size: 13px; margin-top: 10px; }
-.badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; border: 1px solid #ccc; display: inline-block; }
-.badge.in { background: #e9ffe7; border-color: #b9ffb6; }
-.badge.out { background: #f0f0f0; border-color: #d0d0d0; }
-tr.overdue td { font-weight: bold; }
-button,
-input[type="submit"] {
-  color: #111;
-  -webkit-text-fill-color: #111;
-  background: #fff;
-}
+/* overdue highlight */
+tr.overdue td { font-weight: 700; }
 
-
-.agreement input[type="checkbox"] {
+/* =========
+   Inline forms
+========= */
+.inline {
+  display: inline-block;
   margin-right: 10px;
 }
-/* iPhone Safari: fix checkbox label text not rendering correctly */
-.check {
-  display: block;
-  width: 100%;
+
+/* =========
+   Flash messages
+========= */
+.flash .msg {
+  padding: 10px;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
 }
 
+.flash .error { background: var(--err-bg); border: 1px solid var(--err-border); }
+.flash .ok { background: var(--ok-bg); border: 1px solid var(--ok-border); }
+
+/* =========
+   Checkboxes
+========= */
+.check { margin-top: 12px; display: block; width: 100%; }
+.check input[type="checkbox"] { width: auto; accent-color: #000; }
+
+.agreement input[type="checkbox"] { margin-right: 10px; }
+
+/* iPhone Safari: fix checkbox label text not rendering correctly */
 .check label {
   display: block;
   width: 100%;
@@ -84,103 +192,50 @@ input[type="submit"] {
   color: #111;
   -webkit-text-fill-color: #111;
 }
-/* Form Field Styling */
 
-input[type="text"],
-input[type="date"],
-input[type="datetime-local"],
-input[type="tel"],
-select,
-textarea {
-    background-color: #ffffff;
-    color: #000000;
-    border: 2px solid #000000;
-    border-radius: 6px;
-    padding: 8px 10px;
-    font-size: 14px;
-    width: 100%;
-    box-sizing: border-box;
+/* =========
+   Helpers
+========= */
+.hint { color: var(--text-muted); font-size: 13px; margin-top: 10px; }
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  display: inline-block;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-    outline: none;
-    border-color: #333333;
-    box-shadow: 0 0 4px rgba(0,0,0,0.25);
-}
+.badge.in { background: var(--ok-bg); border-color: var(--ok-border); }
+.badge.out { background: #f0f0f0; border-color: #d0d0d0; }
 
-/* Checkbox styling */
-/* Checkbox styling */
-input[type="checkbox"] {
-    accent-color: #000000;
-}
-/* Phone fields shorter */
+/* =========
+   Compact field widths (forms inside .card)
+========= */
 form.card input[type="tel"] {
   width: 180px;
   max-width: 180px;
   display: inline-block;
 }
+
 form.card label[for="resident_phone"],
 form.card label[for="callback_phone"] {
   display: inline-block;
   margin-right: 12px;
   margin-top: 10px;
-}  
-  /* Leave form date fields compact */
-form.card input[type="date"] {
-  width: 160px;
-  max-width: 160px;
-  display: inline-block;
 }
-/* Force date inputs to be compact (override global width:100%) */
-form.card input[type="date"] {
-  width: 160px !important;
-  max-width: 160px !important;
-  display: inline-block !important;
-}
+
 /* Shelter select compact width */
 form.card select[name="shelter"] {
-  width: 16ch !important;
+  width: 16ch;
   max-width: 200px;
-  display: inline-block !important;
+  display: inline-block;
 }
+
 form.card input[name="first_name"],
 form.card input[name="last_name"] {
   width: 22ch;
   display: inline-block;
-}
-html, body {
-  background: #eaf3ff;
-  min-height: 100vh;
-}
-nav a { color: #0f2f57; }
-.brand a { color: #0f2f57; }
-
-main.container,
-.container {
-  background: #eaf3ff;
-  min-height: 100vh;
-}
-
-/* FORCE staff tables to not be white */
-table,
-table th,
-table td {
-  background-color: #f7fbff !important;
-}
-
-table thead th {
-  background-color: #d9ebff !important;
-}
-
-/* Force staff tables to be light blue everywhere */
-table, table th, table td {
-  background-color: #f7fbff !important;
-}
-
-table thead th {
-  background-color: #d9ebff !important;
 }
 
 
