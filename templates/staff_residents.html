@@ -41,36 +41,53 @@
  {% for r in residents %}
   <tr>
   <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
+
   <td><strong>{{ r["resident_code"] }}</strong></td>
 
-    <td>
-      {% if r["is_active"]|int == 1 %}
-       <span class="badge in" style="background: yellow !important; border: 3px solid black !important;">Active</span>
-      {% else %}
-        <span class="badge out" style="background: orange !important; border: 3px solid black !important;">Inactive</span>
-      {% endif %}
-    </td>
+  <td>
+    {% if r["is_active"]|int == 1 %}
+      <span class="badge in" style="background: yellow !important; border: 3px solid black !important;">
+        Active
+      </span>
+    {% else %}
+      <span class="badge out" style="background: orange !important; border: 3px solid black !important;">
+        Inactive
+      </span>
+    {% endif %}
+  </td>
 
-    <td>
-      {% if r["is_active"]|int == 1 %}
-        <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}" class="inline">
-          <input type="hidden" name="active" value="0">
-          <button type="submit">Deactivate</button>
-        </form>
-      {% else %}
-        <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}" class="inline">
-          <input type="hidden" name="active" value="1">
-          <button type="submit">Reactivate</button>
-        </form>
-      {% endif %}
-    </td>
-  </tr>
+  <td>
+    {% if r["is_active"]|int == 1 %}
+      <form method="post"
+            action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}"
+            class="inline">
+        <input type="hidden" name="active" value="0">
+        <button type="submit">Deactivate</button>
+      </form>
+    {% else %}
+      <form method="post"
+            action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}"
+            class="inline">
+        <input type="hidden" name="active" value="1">
+        <button type="submit">Reactivate</button>
+      </form>
+    {% endif %}
+
+    {% if session.get("role") in ["admin", "case_manager"] %}
+      <a href="{{ url_for('staff_resident_transfer', resident_id=r['id']) }}"
+         class="inline">
+        <button type="button">Transfer</button>
+      </a>
+    {% endif %}
+  </td>
+</tr>
 {% endfor %}
   </tbody>
 </table>
 
 
 {% endblock %}
+
 
 
 
