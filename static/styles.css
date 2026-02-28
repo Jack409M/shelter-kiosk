@@ -136,6 +136,9 @@ html, body {
   background: #eaf3ff;
   min-height: 100vh;
 }
+nav a { color: #0f2f57; }
+.brand a { color: #0f2f57; }
+
 
 
 
