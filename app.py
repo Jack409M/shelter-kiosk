@@ -23,6 +23,13 @@ MAX_LEAVE_DAYS = 7
 # User roles
 USER_ROLES = {"admin", "staff", "case_manager", "ra"}
 
+ROLE_LABELS = {
+    "admin": "Admin",
+    "staff": "Staff",
+    "ra": "RA DESK",
+    "case_manager": "Case Mgr",
+}
+
 # Any role allowed to use normal staff pages
 STAFF_ROLES = {"admin", "staff", "case_manager", "ra"}
 
@@ -2185,6 +2192,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
