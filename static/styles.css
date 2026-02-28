@@ -161,6 +161,15 @@ table thead th {
   background-color: #d9ebff !important;
 }
 
+/* Force staff tables to be light blue everywhere */
+table, table th, table td {
+  background-color: #f7fbff !important;
+}
+
+table thead th {
+  background-color: #d9ebff !important;
+}
+
 
 
 
