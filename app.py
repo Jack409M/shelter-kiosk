@@ -925,7 +925,6 @@ def staff_logout():
         log_action("staff", staff_id, None, staff_id, "logout", f"Logout {username}")
     return redirect(url_for("staff_login"))
 
-
 @app.route("/staff/select-shelter", methods=["GET", "POST"])
 @require_login
 def staff_select_shelter():
@@ -938,9 +937,14 @@ def staff_select_shelter():
         return redirect(url_for("staff_select_shelter"))
 
     session["shelter"] = shelter
+
+    # NEW: go back to the page you were on
+    nxt = (request.form.get("next") or "").strip()
+    if nxt and nxt.startswith("/staff"):
+        return redirect(nxt)
+
     return redirect(url_for("staff_home"))
-
-
+    
 @app.route("/staff")
 @require_login
 @require_shelter
@@ -1976,6 +1980,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
