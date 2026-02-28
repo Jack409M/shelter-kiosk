@@ -220,6 +220,33 @@ def log_action(
     )
     db_execute(sql, (entity_type, entity_id, shelter, staff_user_id, action_type, details, utcnow_iso()))
 
+def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: str, note: str = ""):
+    actor = session.get("username") or "unknown"
+
+    if g.get("db_kind") == "pg":
+        db_execute(
+            """
+            INSERT INTO resident_transfers
+              (resident_id, from_shelter, to_shelter, transferred_by, note)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (resident_id, from_shelter, to_shelter, actor, note or None),
+        )
+    else:
+        db_execute(
+            """
+            INSERT INTO resident_transfers
+              (resident_id, from_shelter, to_shelter, transferred_by, transferred_at, note)
+            VALUES (?, ?, ?, ?, datetime('now'), ?)
+            """,
+            (resident_id, from_shelter, to_shelter, actor, note or None),
+        )
+
+    log_action(
+        actor=actor,
+        action="resident_transfer",
+        details=f"resident_id={resident_id} from={from_shelter} to={to_shelter} note={note}".strip(),
+    )
 
 def ensure_admin_bootstrap() -> None:
     row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
@@ -2039,6 +2066,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
