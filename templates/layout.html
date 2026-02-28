@@ -18,6 +18,16 @@
         {% endif %}
         {% if session.get("staff_user_id") %}
           <form method="post" action="{{ url_for('staff_select_shelter') }}" style="display:inline-block; margin:0;">
+  <input type="hidden" name="next" value="{{ request.full_path }}">
+  <select name="shelter" onchange="this.form.submit()">
+    <option value="">Select Shelter</option>
+    {% for s in all_shelters %}
+      <option value="{{ s }}" {% if s == current_shelter %}selected{% endif %}>
+        {% if s == "Gratitude" %}Gratitude House{% else %}{{ s }}{% endif %}
+      </option>
+    {% endfor %}
+  </select>
+</form>
   <select name="shelter" onchange="this.form.submit()">
     <option value="">Select Shelter</option>
     {% for s in all_shelters %}
@@ -75,6 +85,7 @@
   </body>
 
 </html>
+
 
 
 
