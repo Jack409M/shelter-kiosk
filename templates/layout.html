@@ -17,7 +17,20 @@
         <a href="{{ url_for('staff_login') }}">Login</a>
         {% endif %}
         {% if session.get("staff_user_id") %}
-          <a href="{{ url_for('staff_select_shelter') }}">Select shelter</a>
+          <form method="post" action="{{ url_for('staff_select_shelter') }}" style="display:inline-block; margin:0;">
+  <select name="shelter" onchange="this.form.submit()">
+    <option value="">Select Shelter</option>
+    {% for s in all_shelters %}
+      <option value="{{ s }}" {% if s == current_shelter %}selected{% endif %}>
+        {% if s == "Gratitude" %}
+          Gratitude House
+        {% else %}
+          {{ s }}
+        {% endif %}
+      </option>
+    {% endfor %}
+  </select>
+</form>
           <div class="nav-dd">
   <button type="button">Leave ▾</button>
   <div class="menu">
@@ -62,6 +75,7 @@
   </body>
 
 </html>
+
 
 
 
