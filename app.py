@@ -786,7 +786,9 @@ def staff_login():
     password = (request.form.get("password") or "").strip()
 
     row = db_fetchone(
-        "SELECT * FROM staff_users WHERE username = %s" if g.get("db_kind") == "pg" else "SELECT * FROM staff_users WHERE username = ?",
+        "SELECT * FROM staff_users WHERE username = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT * FROM staff_users WHERE username = ?",
         (username,),
     )
 
@@ -794,31 +796,32 @@ def staff_login():
         flash("Invalid login.", "error")
         return render_template("staff_login.html"), 401
 
-    is_active = bool(row["is_active"] if isinstance(row, dict) else row[5])
-    pw_hash = row["password_hash"] if isinstance(row, dict) else row[2]
+    # Works for both Postgres dict rows and SQLite sqlite3.Row
+    is_active = bool(row["is_active"])
+    pw_hash = row["password_hash"]
 
-    if not is_active or not check_password_hash(pw_hash, password):
+    if (not is_active) or (not check_password_hash(pw_hash, password)):
         flash("Invalid login.", "error")
         return render_template("staff_login.html"), 401
 
-    session["staff_user_id"] = row["id"] if isinstance(row, dict) else row[0]
-    session["username"] = row["username"] if isinstance(row, dict) else row[1]
-    session["role"] = row["role"] if isinstance(row, dict) else row[3]
+    session["staff_user_id"] = row["id"]
+    session["username"] = row["username"]
+    session["role"] = row["role"]
     session.pop("shelter", None)
 
-    staff_role = session.get("role")
-    staff_shelter = row.get("shelter") if isinstance(row, dict) else row[4]
+    staff_role = session["role"]
+    staff_shelter = (row["shelter"] or "").strip()
 
     if staff_role in {"staff", "ra"}:
         if staff_shelter not in SHELTERS:
             flash("Your account is missing an assigned shelter. Contact admin.", "error")
             session.clear()
             return redirect(url_for("staff_login"))
+
         session["shelter"] = staff_shelter
         return redirect(url_for("staff_home"))
 
     return redirect(url_for("staff_select_shelter"))
-
 
 @app.route("/staff/select-shelter", methods=["GET", "POST"])
 @require_login
@@ -864,3 +867,4 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
