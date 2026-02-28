@@ -87,5 +87,17 @@
 
       {% block content %}{% endblock %}
     </main>
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll('input[name="first_name"]').forEach(function (el) {
+    el.maxLength = 15;
+  });
+
+  document.querySelectorAll('input[name="last_name"]').forEach(function (el) {
+    el.maxLength = 25;
+  });
+});
+</script>
   </body>
 </html>
+
