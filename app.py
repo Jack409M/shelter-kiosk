@@ -2004,6 +2004,118 @@ def staff_residents():
 
     return render_template("staff_residents.html", residents=residents, shelter=shelter, show=show)
 
+@app.route("/staff/residents/<int:resident_id>/transfer", methods=["GET", "POST"])
+@require_login
+@require_shelter
+@require_transfer
+def staff_resident_transfer(resident_id: int):
+    init_db()
+
+    # fetch resident
+    resident = db_fetchone(
+        "SELECT * FROM residents WHERE id = %s" if g.get("db_kind") == "pg" else "SELECT * FROM residents WHERE id = ?",
+        (resident_id,),
+    )
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("staff_residents"))
+
+    from_shelter = resident["shelter"] if isinstance(resident, dict) else resident[1]
+    first_name = resident["first_name"] if isinstance(resident, dict) else resident[2]
+    last_name = resident["last_name"] if isinstance(resident, dict) else resident[3]
+    dob = resident["dob"] if isinstance(resident, dict) else resident[4]
+
+    if request.method == "POST":
+        to_shelter = (request.form.get("to_shelter") or "").strip()
+        note = (request.form.get("note") or "").strip()
+
+        if to_shelter not in SHELTERS:
+            flash("Select a valid shelter.", "error")
+            return redirect(url_for("staff_resident_transfer", resident_id=resident_id))
+
+        if to_shelter == from_shelter:
+            flash("Resident is already at that shelter.", "error")
+            return redirect(url_for("staff_resident_transfer", resident_id=resident_id))
+
+        # 1) record transfer + audit log (from Step 2 helper)
+        record_resident_transfer(
+            resident_id=resident_id,
+            from_shelter=from_shelter,
+            to_shelter=to_shelter,
+            note=note,
+        )
+
+        # 2) close out attendance at old shelter (force OUT)
+        db_execute(
+            """
+            INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                resident_id,
+                from_shelter,
+                "check_out",
+                utcnow_iso(),
+                session.get("staff_user_id"),
+                f"Transferred to {to_shelter}. {note}".strip(),
+            ),
+        )
+
+        # 3) move pending leave + transport to new shelter (permanent transfer default)
+        db_execute(
+            """
+            UPDATE leave_requests
+            SET shelter = %s
+            WHERE shelter = %s AND first_name = %s AND last_name = %s AND dob = %s AND status = 'pending'
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            UPDATE leave_requests
+            SET shelter = ?
+            WHERE shelter = ? AND first_name = ? AND last_name = ? AND dob = ? AND status = 'pending'
+            """,
+            (to_shelter, from_shelter, first_name, last_name, dob),
+        )
+
+        db_execute(
+            """
+            UPDATE transport_requests
+            SET shelter = %s
+            WHERE shelter = %s AND first_name = %s AND last_name = %s AND dob = %s AND status = 'pending'
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            UPDATE transport_requests
+            SET shelter = ?
+            WHERE shelter = ? AND first_name = ? AND last_name = ? AND dob = ? AND status = 'pending'
+            """,
+            (to_shelter, from_shelter, first_name, last_name, dob),
+        )
+
+        # 4) update resident home shelter (resident code stays untouched automatically)
+        db_execute(
+            "UPDATE residents SET shelter = %s WHERE id = %s" if g.get("db_kind") == "pg" else "UPDATE residents SET shelter = ? WHERE id = ?",
+            (to_shelter, resident_id),
+        )
+
+        flash(f"Resident transferred from {from_shelter} to {to_shelter}.", "ok")
+        return redirect(url_for("staff_residents"))
+
+    # GET
+    return render_template(
+        "staff_resident_transfer.html",
+        resident=resident,
+        from_shelter=from_shelter,
+        shelters=[s for s in SHELTERS if s != from_shelter],
+    )
 
 @app.route("/staff/residents/<int:resident_id>/set-active", methods=["POST"])
 @require_login
@@ -2073,6 +2185,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
