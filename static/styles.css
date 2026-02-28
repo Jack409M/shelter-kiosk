@@ -325,6 +325,9 @@ form.card input[name="last_name"] {
   cursor: pointer;
 }
 
+/* Name fields: match character limits visually */
+input[name="first_name"] { width: 16ch; max-width: 16ch; }
+input[name="last_name"]  { width: 26ch; max-width: 26ch; }
 
 
 
