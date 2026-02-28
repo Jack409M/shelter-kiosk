@@ -2023,12 +2023,15 @@ def staff_resident_transfer(resident_id: int):
         "SELECT * FROM residents WHERE id = %s" if g.get("db_kind") == "pg" else "SELECT * FROM residents WHERE id = ?",
         (resident_id,),
     )
+
     if not resident:
         flash("Resident not found.", "error")
         return redirect(url_for("staff_residents"))
 
     from_shelter = resident["shelter"] if isinstance(resident, dict) else resident[1]
-    
+    first_name = resident["first_name"] if isinstance(resident, dict) else resident[2]
+    last_name = resident["last_name"] if isinstance(resident, dict) else resident[3]
+
     if request.method == "POST":
         to_shelter = (request.form.get("to_shelter") or "").strip()
         note = (request.form.get("note") or "").strip()
@@ -2189,6 +2192,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
