@@ -26,9 +26,22 @@ button { margin-top: 12px; padding: 8px 12px; border: 1px solid #333; border-rad
 table {
   width: 100%;
   border-collapse: collapse;
-  background: #f7fbff;        /* light blue tint instead of white */
-  border: 1px solid #c7dcf5;  /* softer border */
+  background: #f7fbff;        /* light blue tint */
+  border: 1px solid #c7dcf5;
 }
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #e3eefc;
+  text-align: left;
+  vertical-align: top;
+  background: #f7fbff;        /* IMPORTANT: cells too */
+}
+
+th {
+  background: #d9ebff;        /* header row */
+}
+
 th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
 .inline { display: inline-block; margin-right: 10px; }
 .flash .msg { padding: 10px; border-radius: 8px; margin-bottom: 8px; }
@@ -169,6 +182,7 @@ table, table th, table td {
 table thead th {
   background-color: #d9ebff !important;
 }
+
 
 
 
