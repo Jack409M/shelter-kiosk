@@ -351,6 +351,15 @@ table td:first-child {
   max-width: 50ch;
 }
 
+/* Attendance expected back time input */
+input[name="expected_back_time"] {
+  width: 10ch;
+  max-width: 10ch;
+}
+
+
+
+
 
 
 
