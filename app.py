@@ -1842,8 +1842,8 @@ def staff_residents():
     shelter = session["shelter"]
 
     if request.method == "POST":
-        first = (request.form.get("first_name") or "").strip()
-        last = (request.form.get("last_name") or "").strip()
+        first = (request.form.get("first_name") or "").strip()[:15]
+        last  = (request.form.get("last_name") or "").strip()[:25]
         phone = (request.form.get("phone") or "").strip()
 
         if not first or not last:
@@ -1980,6 +1980,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
