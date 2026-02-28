@@ -2,16 +2,16 @@
    Theme
 ========= */
 :root {
-  --bg: #d4e6f5;          /* visible but soft page blue */
-  --bg-soft: #e2eff9;     /* cards + tables */
-  --top: #7fb0d8;         /* gentle medium blue header */
-  --top-border: #5e99c9;
+  --bg: #bcd6ea;          /* clearly blue page */
+  --bg-soft: #cfe3f2;     /* cards + tables */
+  --top: #4f8fbe;         /* header */
+  --top-border: #3f79a5;
 
   --text: #1f2f3f;
-  --text-muted: #4f5f6e;
+  --text-muted: #4a5a66;
 
-  --border: #a7c7df;
-  --border-soft: #c4dcee;
+  --border: #8fb6d4;
+  --border-soft: #b5d2e6;
 
   --ok-bg: #eef9f0;
   --ok-border: #cde7d1;
@@ -236,6 +236,7 @@ form.card input[name="last_name"] {
   width: 22ch;
   display: inline-block;
 }
+
 
 
 
