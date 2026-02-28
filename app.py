@@ -26,6 +26,13 @@ SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change_me")
 
+@app.context_processor
+def inject_shelters():
+    return {
+        "all_shelters": SHELTERS,
+        "current_shelter": session.get("shelter")
+    }
+
 DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
@@ -1969,6 +1976,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
