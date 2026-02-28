@@ -329,6 +329,21 @@ form.card input[name="last_name"] {
 input[name="first_name"] { width: 16ch; max-width: 16ch; }
 input[name="last_name"]  { width: 26ch; max-width: 26ch; }
 
+/* Admin Users page field sizing */
+input[name="username"] {
+  width: 50ch;
+  max-width: 50ch;
+}
+
+input[name="password"] {
+  width: 25ch;
+  max-width: 25ch;
+}
+
+select[name="role"] {
+  width: 15ch;
+  max-width: 15ch;
+}
 
 
 
