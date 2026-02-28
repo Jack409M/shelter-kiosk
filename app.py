@@ -20,6 +20,15 @@ except Exception:
 SHELTERS = ["Abba", "Haven", "Gratitude"]
 MAX_LEAVE_DAYS = 7
 
+# User roles
+USER_ROLES = {"admin", "staff", "case_manager", "ra"}
+
+# Any role allowed to use normal staff pages
+STAFF_ROLES = {"admin", "staff", "case_manager", "ra"}
+
+# Only these roles can perform permanent transfers
+TRANSFER_ROLES = {"admin", "case_manager"}
+
 APP_DIR = os.path.abspath(os.path.dirname(__file__))
 SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
 
@@ -1980,6 +1989,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
