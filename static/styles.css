@@ -150,6 +150,16 @@ main.container,
   min-height: 100vh;
 }
 
+/* FORCE staff tables to not be white */
+table,
+table th,
+table td {
+  background-color: #f7fbff !important;
+}
+
+table thead th {
+  background-color: #d9ebff !important;
+}
 
 
 
