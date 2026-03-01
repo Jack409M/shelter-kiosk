@@ -453,7 +453,6 @@ def init_db() -> None:
         """,
     )
 
-        """
         CREATE TABLE IF NOT EXISTS leave_requests (
             id SERIAL PRIMARY KEY,
             shelter TEXT NOT NULL,
@@ -2230,4 +2229,5 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
