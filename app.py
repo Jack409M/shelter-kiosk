@@ -793,9 +793,9 @@ def resident_logout():
     return redirect(url_for("resident_signin"))
 
 @app.route("/leave", methods=["GET", "POST"])
+@require_resident
 def resident_leave():
-    init_db()
-
+    
     if request.method == "GET":
         shelter = (request.args.get("shelter") or "").strip()
         shelter_value = shelter if shelter in SHELTERS else ""
@@ -2282,6 +2282,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
