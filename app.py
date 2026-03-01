@@ -40,11 +40,14 @@ APP_DIR = os.path.abspath(os.path.dirname(__file__))
 SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
 
 app = Flask(__name__)
+
 secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
 if not secret:
     raise RuntimeError("FLASK_SECRET_KEY is required and must be set in the environment.")
 app.secret_key = secret
 app.permanent_session_lifetime = timedelta(hours=8)
+
+# CSRF token generator for templates
 def _csrf_token() -> str:
     tok = session.get("_csrf_token")
     if not tok:
@@ -52,6 +55,7 @@ def _csrf_token() -> str:
         session["_csrf_token"] = tok
     return tok
 
+# makes csrf_token() available in every Jinja template
 app.jinja_env.globals["csrf_token"] = _csrf_token
 
 @app.context_processor
@@ -2316,6 +2320,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
