@@ -816,35 +816,13 @@ def resident_leave():
     first = session.get("resident_first") or ""
     last = session.get("resident_last") or ""
     resident_phone = (request.form.get("resident_phone") or "").strip()
-    resident_code = (request.form.get("resident_code") or "").strip()
-
-    if (not resident_code.isdigit()) or (len(resident_code) != 8):
-        flash("Enter your 8 digit Resident Code.", "error")
-        return redirect(url_for("resident_leave"))
-
-    res = db_fetchone(
-        "SELECT resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
+ if resident_phone:
+    db_execute(
+        "UPDATE residents SET phone = %s WHERE shelter = %s AND resident_identifier = %s"
         if g.get("db_kind") == "pg"
-        else "SELECT resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
-        (shelter, resident_code),
+        else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_identifier = ?",
+        (resident_phone, shelter, resident_identifier),
     )
-
-    if not res:
-        flash("Invalid Resident Code.", "error")
-        return redirect(url_for("resident_leave"))
-
-    resident_identifier = res["resident_identifier"] if isinstance(res, dict) else res[0]
-    first = res["first_name"] if isinstance(res, dict) else res[1]
-    last = res["last_name"] if isinstance(res, dict) else res[2]
-    resident_phone = (request.form.get("resident_phone") or "").strip()
-
-    if resident_phone:
-        db_execute(
-            "UPDATE residents SET phone = %s WHERE shelter = %s AND resident_code = %s"
-            if g.get("db_kind") == "pg"
-            else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_code = ?",
-            (resident_phone, shelter, resident_code),
-        )
 
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
@@ -2308,6 +2286,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
