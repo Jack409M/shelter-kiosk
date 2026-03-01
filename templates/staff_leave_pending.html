@@ -18,19 +18,23 @@
       <td>{{ fmt_date(r.return_at) }}</td>
       <td>{{ r["destination"] }}</td>
       <td>
-        <form method="post" action="{{ url_for('staff_leave_approve', req_id=r['id']) }}" class="inline">
-          <input name="note" placeholder="Optional note">
-          <button type="submit">Approve</button>
-        </form>
-        <form method="post" action="{{ url_for('staff_leave_deny', req_id=r['id']) }}" class="inline">
-          <input name="note" placeholder="Denial note" required>
-          <button type="submit">Deny</button>
-        </form>
-      </td>
+  <form method="post" action="{{ url_for('staff_leave_approve', req_id=r['id']) }}" class="inline">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input name="note" placeholder="Optional note">
+    <button type="submit">Approve</button>
+  </form>
+
+  <form method="post" action="{{ url_for('staff_leave_deny', req_id=r['id']) }}" class="inline">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input name="note" placeholder="Denial note" required>
+    <button type="submit">Deny</button>
+  </form>
+</td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 
 {% endblock %}
+
 
