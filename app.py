@@ -41,7 +41,7 @@ SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change_me")
-
+app.permanent_session_lifetime = timedelta(hours=8)
 @app.context_processor
 def inject_shelters():
     return {
@@ -59,6 +59,15 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 def utcnow_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat()
 
+def resident_session_start(resident_row: Any, shelter: str, resident_code: str) -> None:
+    session.permanent = True
+    session["resident_id"] = resident_row["id"] if isinstance(resident_row, dict) else resident_row[0]
+    session["resident_identifier"] = resident_row["resident_identifier"] if isinstance(resident_row, dict) else resident_row[1]
+    session["resident_first"] = resident_row["first_name"] if isinstance(resident_row, dict) else resident_row[2]
+    session["resident_last"] = resident_row["last_name"] if isinstance(resident_row, dict) else resident_row[3]
+    session["resident_phone"] = (resident_row["phone"] if isinstance(resident_row, dict) else resident_row[4]) or ""
+    session["resident_shelter"] = shelter
+    session["resident_code"] = resident_code
 
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
@@ -2209,6 +2218,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
