@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SMS Consent</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 520px; margin: 40px auto; line-height: 1.5; }
+    button { padding: 10px 14px; width: 100%; margin-top: 10px; }
+    .box { border: 1px solid #ccc; padding: 14px; border-radius: 8px; margin-bottom: 12px; }
+    a { word-break: break-word; }
+  </style>
+</head>
+<body>
+
+<h2>SMS Consent</h2>
+
+<div class="box">
+  <p>
+    We can text you about leave approvals, transportation updates, and service reminders.
+    Message frequency varies. Message and data rates may apply.
+    Reply STOP to opt out. Reply HELP for help.
+  </p>
+  <p>
+    <a href="/privacy">Privacy Policy</a><br>
+    <a href="/terms">Terms and Conditions</a><br>
+    <a href="/sms-consent">Full SMS instructions</a>
+  </p>
+</div>
+
+<form method="post">
+  <input type="hidden" name="next" value="{{ next or '' }}">
+
+  <button type="submit" name="choice" value="accept">Accept SMS updates</button>
+  <button type="submit" name="choice" value="decline">Decline and continue</button>
+</form>
+
+</body>
+</html>
