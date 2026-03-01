@@ -29,6 +29,20 @@
 </div>
 
 <form method="post">
+      <a href="/terms">Terms and Conditions</a><br>
+    <a href="/sms-consent">Full SMS instructions</a>
+  </p>
+</div>
+
+<form method="post">
+  <input type="hidden" name="next" value="{{ next or '' }}">
+
+  <button type="submit" name="choice" value="accept">Accept SMS updates</button>
+  <button type="submit" name="choice" value="decline">Decline and continue</button>
+</form>
+
+</body>
+</html>
   <input type="hidden" name="next" value="{{ next or '' }}">
 
   <button type="submit" name="choice" value="accept">Accept SMS updates</button>
