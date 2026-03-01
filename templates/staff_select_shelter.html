@@ -2,6 +2,7 @@
 {% block content %}
 <h1>Select shelter</h1>
 <form method="post" class="card">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <label>Shelter</label>
   <select name="shelter" required>
     <option value="">Select</option>
@@ -11,4 +12,5 @@
   </select>
   <button type="submit">Continue</button>
 </form>
+
 {% endblock %}
