@@ -1980,7 +1980,7 @@ def staff_residents():
             flash("Could not generate a unique Resident Code. Try again.", "error")
             return redirect(url_for("staff_residents"))
 
-        resident_identifier = ""
+        resident_identifier = secrets.token_urlsafe(12)
 
         sql = (
             "INSERT INTO residents (shelter, resident_identifier, resident_code, first_name, last_name, phone, is_active, created_at) "
@@ -2209,6 +2209,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
