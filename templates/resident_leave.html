@@ -3,6 +3,8 @@
 <h1>Leave request</h1>
 
 <form method="post" class="card">
+    <form method="post" class="card">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <label>Shelter</label>
   <input value="{{ shelter }}" readonly>
 
@@ -58,6 +60,7 @@
 </form>
 
 {% endblock %}
+
 
 
 
