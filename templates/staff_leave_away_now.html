@@ -18,12 +18,14 @@
       <td>{{ r["destination"] }}</td>
       <td>
         <form method="post" action="{{ url_for('staff_leave_check_in', req_id=r['id']) }}" class="inline">
-          <input name="note" placeholder="Optional note">
-          <button type="submit">Check in</button>
-        </form>
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input name="note" placeholder="Optional note">
+  <button type="submit">Check in</button>
+</form>
       </td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+
 {% endblock %}
