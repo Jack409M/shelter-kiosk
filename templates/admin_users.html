@@ -34,9 +34,10 @@
         <td>{{ u["is_active"] }}</td>
         <td>{{ fmt_dt(u["created_at"]) }}</td>
         <td>
-  <form method="post" action="{{ url_for('delete_user', username=u.username) }}">
-    <button type="submit">Delete</button>
-  </form>
+<form method="post" action="{{ url_for('delete_user', username=u['username']) }}">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <button type="submit">Delete</button>
+</form>
 </td>
       </tr>
     {% endfor %}
@@ -44,6 +45,7 @@
 </table>
 
 {% endblock %}
+
 
 
 
