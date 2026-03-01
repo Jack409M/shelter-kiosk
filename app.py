@@ -45,6 +45,15 @@ if not secret:
     raise RuntimeError("FLASK_SECRET_KEY is required and must be set in the environment.")
 app.secret_key = secret
 app.permanent_session_lifetime = timedelta(hours=8)
+def _csrf_token() -> str:
+    tok = session.get("_csrf_token")
+    if not tok:
+        tok = secrets.token_urlsafe(32)
+        session["_csrf_token"] = tok
+    return tok
+
+app.jinja_env.globals["csrf_token"] = _csrf_token
+
 @app.context_processor
 def inject_shelters():
     return {
@@ -2280,6 +2289,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
