@@ -918,24 +918,21 @@ def resident_transport():
     init_db()
 
     if request.method == "GET":
-        shelter = (request.args.get("shelter") or "").strip()
-        shelter_value = shelter if shelter in SHELTERS else ""
-        return render_template("resident_transport.html", shelters=SHELTERS, shelter=shelter_value)
-  
-    shelter = (request.form.get("shelter") or "").strip()
-    if shelter not in SHELTERS:
-        flash("Select a valid shelter.", "error")
-        return redirect(url_for("resident_transport"))
+        shelter = session.get("resident_shelter") or ""
+        return render_template("resident_transport.html", shelter=shelter)
 
-    resident_code = (request.form.get("resident_code") or "").strip()
-    r = _find_active_resident_by_code(shelter, resident_code)
-    if not r:
-        flash("Invalid Resident Code.", "error")
-        return redirect(url_for("resident_transport"))
+    # POST
+    shelter = session.get("resident_shelter") or ""
+    resident_identifier = session.get("resident_identifier") or ""
+    first = session.get("resident_first") or ""
+    last = session.get("resident_last") or ""
 
-    resident_identifier = r["resident_identifier"]
-    first = r["first_name"]
-    last = r["last_name"]
+    needed_raw = (request.form.get("needed_at") or "").strip()
+    pickup = (request.form.get("pickup_location") or "").strip()
+    destination = (request.form.get("destination") or "").strip()
+    reason = (request.form.get("reason") or "").strip()
+    resident_notes = (request.form.get("resident_notes") or "").strip()
+    callback_phone = (request.form.get("callback_phone") or "").strip()
 
     needed_raw = (request.form.get("needed_at") or "").strip()
     pickup = (request.form.get("pickup_location") or "").strip()
@@ -2286,6 +2283,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
