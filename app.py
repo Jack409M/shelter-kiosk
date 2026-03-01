@@ -817,7 +817,7 @@ def resident_leave():
     last = session.get("resident_last") or ""
     resident_phone = (request.form.get("resident_phone") or "").strip()
     if resident_phone:
-    db_execute(
+        db_execute(
         "UPDATE residents SET phone = %s WHERE shelter = %s AND resident_identifier = %s"
         if g.get("db_kind") == "pg"
         else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_identifier = ?",
@@ -2286,6 +2286,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
