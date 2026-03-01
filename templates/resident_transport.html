@@ -4,40 +4,8 @@
 
 <form method="post" class="card">
   <label>Shelter</label>
-  {% if shelter %}
-    <input value="{{ shelter }}" readonly>
-    <input type="hidden" name="shelter" value="{{ shelter }}">
-  {% else %}
-    <select name="shelter" required>
-      <option value="">Select</option>
-      {% for s in shelters %}
-        <option value="{{ s }}">{{ s }}</option>
-      {% endfor %}
-    </select>
-  {% endif %}
-
-  <div class="field">
-  <label for="resident_identifier">Resident ID</label>
-  <input
-    type="text"
-    id="resident_identifier"
-    name="resident_identifier"
-    autocomplete="off"
-    required
-  >
-</div>
+  <input value="{{ shelter }}" readonly>
   
-  <div class="grid">
-    <div>
-      <label>First name</label>
-      <input name="first_name" required>
-    </div>
-    <div>
-      <label>Last name</label>
-      <input name="last_name" required>
-    </div>
-    
-  </div>
 
   <label>Needed date and time</label>
   <input name="needed_at" type="datetime-local" required>
@@ -68,4 +36,5 @@
 </form>
 
 {% endblock %}
+
 
