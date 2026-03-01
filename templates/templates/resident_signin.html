@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resident Sign In</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 520px;
+            margin: 40px auto;
+            line-height: 1.5;
+        }
+        label {
+            font-weight: bold;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0 14px 0;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 14px;
+            width: 100%;
+        }
+        .flash-error {
+            color: red;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Resident Sign In</h2>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="flash-error">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<form method="post">
+    <label>Shelter</label>
+    <select name="shelter" required>
+        <option value="">Select</option>
+        {% for s in shelters %}
+            <option value="{{ s }}" {% if s == shelter %}selected{% endif %}>
+                {{ s }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label>Resident Code</label>
+    <input
+        name="resident_code"
+        inputmode="numeric"
+        pattern="\d{8}"
+        maxlength="8"
+        required
+        placeholder="8 digit code"
+    >
+
+    <input type="hidden" name="next" value="{{ next or '' }}">
+
+    <button type="submit">Continue</button>
+</form>
+
+<p style="margin-top:18px;">
+    <a href="/sms-consent">SMS Consent</a>
+</p>
+
+</body>
+</html>
