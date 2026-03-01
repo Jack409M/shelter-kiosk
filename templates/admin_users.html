@@ -5,6 +5,7 @@
 <div class="card">
   <h2>Create user</h2>
   <form method="post">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <label>Username</label>
     <input name="username" required>
     <label>Temporary password</label>
@@ -43,5 +44,6 @@
 </table>
 
 {% endblock %}
+
 
 
