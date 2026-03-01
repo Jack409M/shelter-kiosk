@@ -58,6 +58,46 @@ def _csrf_token() -> str:
 # makes csrf_token() available in every Jinja template
 app.jinja_env.globals["csrf_token"] = _csrf_token
 
+def _csrf_protect():
+    # Only protect state changing methods
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return None
+
+    # Allow these endpoints to work even if we missed adding the hidden input.
+    # We'll tighten this list later after templates are fully updated.
+    exempt_endpoints = {
+        "staff_login",
+        "resident_signin",
+        "resident_consent",
+        "sms_consent",
+    }
+
+    if request.endpoint in exempt_endpoints:
+        return None
+
+    sent = (
+        request.form.get("_csrf_token")
+        or request.headers.get("X-CSRF-Token")
+        or ""
+    )
+    expected = session.get("_csrf_token") or ""
+
+    if not sent or not expected or sent != expected:
+        # Safe mode: do not hard lockout
+        flash("Session expired. Please retry.", "error")
+
+        # Bounce back where they came from if possible
+        return redirect(request.referrer or url_for("staff_login"))
+
+    return None
+
+
+@app.before_request
+def _csrf_before_request():
+    resp = _csrf_protect()
+    if resp is not None:
+        return resp
+
 @app.context_processor
 def inject_shelters():
     return {
@@ -2320,6 +2360,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
