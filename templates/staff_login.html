@@ -2,6 +2,7 @@
 {% block content %}
 <h1>Staff login</h1>
 <form method="post" class="card">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <label>Username</label>
   <input name="username" required>
   <label>Password</label>
@@ -9,4 +10,5 @@
   <button type="submit">Login</button>
 </form>
 <p class="hint">Admin account is created only if ADMIN_USERNAME and ADMIN_PASSWORD are set in hosting settings.</p>
+
 {% endblock %}
