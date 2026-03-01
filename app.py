@@ -1006,7 +1006,7 @@ def resident_transport():
     log_action("transport", req_id, shelter, None, "create", "Resident submitted transport request")
     return render_template("resident_submitted.html", request_id=req_id, kind="Transportation request submitted")
 
-@app.get("/sms-consent")
+@app.get("/resident/sms-consent")
 def sms_consent():
     return """
     <html>
@@ -2277,6 +2277,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
