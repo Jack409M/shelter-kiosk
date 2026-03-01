@@ -19,18 +19,18 @@
 
     <table>
       <thead>
-        <tr>
-          <th>Name</th>
-          <th>Date of Birth</th>
-        </tr>
-      </thead>
+  <tr>
+    <th>Name</th>
+    <th>Action</th>
+  </tr>
+</thead>
       <tbody>
         {% for r in residents %}
         <tr>
   <td>{{ r.last_name }}, {{ r.first_name }}</td>
-  <td>{{ r.dob }}</td>
   <td>
     <form method="post" action="{{ url_for('kiosk_checkout_out', shelter=shelter, resident_id=r.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <label style="font-size:12px;">Expected back</label>
       <input type="datetime-local" name="expected_back_time">
       <input type="text" name="note" placeholder="Note (optional)">
