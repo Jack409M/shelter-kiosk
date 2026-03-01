@@ -53,14 +53,16 @@
         <td>
           {% if r["is_active"]|int == 1 %}
             <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}" class="inline">
-              <input type="hidden" name="active" value="0">
-              <button type="submit">Deactivate</button>
-            </form>
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="active" value="0">
+  <button type="submit">Deactivate</button>
+</form>
           {% else %}
             <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r['id']) }}" class="inline">
-              <input type="hidden" name="active" value="1">
-              <button type="submit">Reactivate</button>
-            </form>
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="active" value="1">
+  <button type="submit">Reactivate</button>
+</form>
           {% endif %}
 
           {% if session.get("role") in ["admin", "case_manager"] %}
@@ -75,3 +77,4 @@
 </table>
 
 {% endblock %}
+
