@@ -685,26 +685,25 @@ def public_home():
 
 
 @app.route("/debug/db")
+@require_login
+@require_admin
 def debug_db():
+    if not ENABLE_DEBUG_ROUTES:
+        abort(404)
+
     live_env = (os.environ.get("DATABASE_URL") or "").strip()
     try:
         init_db()
     except Exception as e:
         return {
             "ok": False,
-            "error": str(e),
+            "error": "db init failed",
             "db_kind": g.get("db_kind"),
-            "module_DATABASE_URL_set": bool(DATABASE_URL),
-            "live_env_DATABASE_URL_set": bool(live_env),
-            "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID"),
         }, 500
 
     return {
         "ok": True,
         "db_kind": g.get("db_kind"),
-        "module_DATABASE_URL_set": bool(DATABASE_URL),
-        "live_env_DATABASE_URL_set": bool(live_env),
-        "railway_deployment_id": os.environ.get("RAILWAY_DEPLOYMENT_ID"),
     }
 
 
@@ -2281,6 +2280,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
