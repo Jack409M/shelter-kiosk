@@ -40,7 +40,10 @@ APP_DIR = os.path.abspath(os.path.dirname(__file__))
 SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change_me")
+secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
+if not secret:
+    raise RuntimeError("FLASK_SECRET_KEY is required and must be set in the environment.")
+app.secret_key = secret
 app.permanent_session_lifetime = timedelta(hours=8)
 @app.context_processor
 def inject_shelters():
@@ -2277,6 +2280,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
