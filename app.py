@@ -1920,21 +1920,72 @@ def staff_attendance_resident_print(resident_id: int):
     )
 
 
-@app.route("/kiosk/<shelter>/checkout", methods=["GET"])
+@app.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
 def kiosk_checkout(shelter: str):
     if shelter not in SHELTERS:
         return "Invalid shelter", 404
 
     init_db()
 
-    residents = db_fetchall(
-        "SELECT * FROM residents WHERE shelter = %s AND is_active = TRUE ORDER BY last_name, first_name"
+    if request.method == "GET":
+        return render_template("kiosk_checkout.html", shelter=shelter)
+
+    # POST
+    resident_code = (request.form.get("resident_code") or "").strip()
+    destination = (request.form.get("destination") or "").strip()
+    expected_back = (request.form.get("expected_back_time") or "").strip()
+    note = (request.form.get("note") or "").strip()
+
+    errors = []
+    if (not resident_code.isdigit()) or (len(resident_code) != 8):
+        errors.append("Enter an 8 digit Resident Code.")
+    if not destination:
+        errors.append("Destination is required.")
+
+    row = db_fetchone(
+        "SELECT id FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
         if g.get("db_kind") == "pg"
-        else "SELECT * FROM residents WHERE shelter = ? AND is_active = 1 ORDER BY last_name, first_name",
-        (shelter,),
+        else "SELECT id FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
+        (shelter, resident_code),
+    )
+    if not row:
+        errors.append("Invalid Resident Code.")
+
+    expected_back_value = None
+    if expected_back:
+        try:
+            local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
+            expected_back_value = (
+                local_dt.astimezone(timezone.utc)
+                .replace(tzinfo=None)
+                .isoformat(timespec="seconds")
+            )
+        except Exception:
+            errors.append("Invalid expected back time.")
+
+    if errors:
+        for e in errors:
+            flash(e, "error")
+        return render_template("kiosk_checkout.html", shelter=shelter), 400
+
+    resident_id = int(row["id"] if isinstance(row, dict) else row[0])
+
+    full_note = f"Destination: {destination}"
+    if note:
+        full_note = f"{full_note} | Note: {note}"
+
+    sql = (
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        if g.get("db_kind") == "pg"
+        else
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
 
-    return render_template("kiosk_checkout.html", residents=residents, shelter=shelter)
+    db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), None, full_note, expected_back_value))
+    flash("Checked out.", "ok")
+    return redirect(url_for("kiosk_checkout", shelter=shelter))
 
 
 @app.route("/kiosk/<shelter>/checkout/<int:resident_id>/out", methods=["POST"])
@@ -2295,6 +2346,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
