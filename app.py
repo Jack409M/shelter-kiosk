@@ -795,7 +795,8 @@ def resident_logout():
 @app.route("/leave", methods=["GET", "POST"])
 @require_resident
 def resident_leave():
-    
+    init_db()
+
     if request.method == "GET":
         shelter = (request.args.get("shelter") or "").strip()
         shelter_value = shelter if shelter in SHELTERS else ""
@@ -930,6 +931,7 @@ def resident_leave():
 
 
 @app.route("/transport", methods=["GET", "POST"])
+@require_resident
 def resident_transport():
     init_db()
 
@@ -937,7 +939,7 @@ def resident_transport():
         shelter = (request.args.get("shelter") or "").strip()
         shelter_value = shelter if shelter in SHELTERS else ""
         return render_template("resident_transport.html", shelters=SHELTERS, shelter=shelter_value)
-
+  
     shelter = (request.form.get("shelter") or "").strip()
     if shelter not in SHELTERS:
         flash("Select a valid shelter.", "error")
@@ -2282,6 +2284,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
