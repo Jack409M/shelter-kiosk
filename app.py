@@ -452,7 +452,15 @@ def init_db() -> None:
         )
         """,
     )
-
+    # migration safety: add resident_phone if the table already existed
+    try:
+        if kind == "pg":
+            db_execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS resident_phone TEXT")
+        else:
+            db_execute("ALTER TABLE leave_requests ADD COLUMN resident_phone TEXT")
+    except Exception:
+        pass
+    
     # transport requests
     create(
         """
@@ -2201,6 +2209,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
