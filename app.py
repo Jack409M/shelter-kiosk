@@ -934,13 +934,7 @@ def resident_transport():
     resident_notes = (request.form.get("resident_notes") or "").strip()
     callback_phone = (request.form.get("callback_phone") or "").strip()
 
-    needed_raw = (request.form.get("needed_at") or "").strip()
-    pickup = (request.form.get("pickup_location") or "").strip()
-    destination = (request.form.get("destination") or "").strip()
-    reason = (request.form.get("reason") or "").strip()
-    resident_notes = (request.form.get("resident_notes") or "").strip()
-    callback_phone = (request.form.get("callback_phone") or "").strip()
-
+   
     errors: list[str] = []
     if not first or not last or not needed_raw or not pickup or not destination:
         errors.append("Complete all required fields.")
@@ -961,7 +955,7 @@ def resident_transport():
     if errors:
         for e in errors:
             flash(e, "error")
-        return render_template("resident_transport.html", shelters=SHELTERS, shelter=shelter), 400
+        return render_template("resident_transport.html", shelter=shelter), 400
 
     sql = (
         """
@@ -2283,6 +2277,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
