@@ -638,6 +638,13 @@ def require_admin(fn):
 
     return wrapper
 
+def require_resident(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if "resident_id" not in session:
+            return redirect(url_for("resident_signin", next=request.path))
+        return fn(*args, **kwargs)
+    return wrapper
 
 def require_transfer(fn):
     @wraps(fn)
@@ -2218,6 +2225,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
