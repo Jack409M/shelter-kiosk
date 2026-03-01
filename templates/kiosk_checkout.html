@@ -25,25 +25,28 @@
   </tr>
 </thead>
       <tbody>
-        {% for r in residents %}
-        <tr>
-  <td>{{ r.last_name }}, {{ r.first_name }}</td>
-  <td>
-    <form method="post" action="{{ url_for('kiosk_checkout_out', shelter=shelter, resident_id=r.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-      <label style="font-size:12px;">Expected back</label>
-      <input type="datetime-local" name="expected_back_time">
-      <input type="text" name="note" placeholder="Note (optional)">
-      <button type="submit">Check out</button>
-    </form>
-  </td>
-</tr>
-     
-        {% endfor %}
-        {% if residents|length == 0 %}
-        <tr><td colspan="2">No active residents found for this shelter.</td></tr>
-        {% endif %}
-      </tbody>
+  <tr>
+    <td>
+      <form method="post" action="{{ url_for('kiosk_checkout', shelter=shelter) }}" class="kiosk-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <label>Resident Code</label>
+        <input name="resident_code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 digit code" required>
+
+        <label>Destination</label>
+        <input name="destination" placeholder="Where are you going" required>
+
+        <label>Expected back</label>
+        <input type="datetime-local" name="expected_back_time" required>
+
+        <label>Note (optional)</label>
+        <input name="note" placeholder="Optional">
+
+        <button type="submit">Check out</button>
+      </form>
+    </td>
+  </tr>
+</tbody>
     </table>
   </div>
 </body>
