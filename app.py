@@ -408,7 +408,7 @@ def init_db() -> None:
         )
     create(
         """
-        CREATE TABLE IF NOT EXISTS leave_requests (
+           CREATE TABLE IF NOT EXISTS leave_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             shelter TEXT NOT NULL,
             resident_identifier TEXT NOT NULL,
@@ -427,8 +427,10 @@ def init_db() -> None:
             decision_note TEXT,
             check_in_at TEXT,
             check_in_by INTEGER
+           );
+           """
         )
-        """,
+    create(
         """
         CREATE TABLE IF NOT EXISTS leave_requests (
             id SERIAL PRIMARY KEY,
@@ -2229,5 +2231,6 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
