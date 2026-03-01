@@ -19,13 +19,15 @@
       <td>{{ r["destination"] }}</td>
       <td>
         <form method="post" action="{{ url_for('staff_transport_schedule', req_id=r['id']) }}" class="inline">
-          <input name="driver_name" placeholder="Driver name" required>
-          <input name="staff_notes" placeholder="Optional note">
-          <button type="submit">Schedule</button>
-        </form>
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input name="driver_name" placeholder="Driver name" required>
+  <input name="staff_notes" placeholder="Optional note">
+  <button type="submit">Schedule</button>
+</form>
       </td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
+
 {% endblock %}
