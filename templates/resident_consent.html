@@ -24,29 +24,21 @@
   <p>
     <a href="/privacy">Privacy Policy</a><br>
     <a href="/terms">Terms and Conditions</a><br>
-    <a href="/sms-consent">Full SMS instructions</a>
+    <a href="/resident/sms-consent">Full SMS instructions</a>
   </p>
 </div>
 
 <form method="post">
-      <a href="/terms">Terms and Conditions</a><br>
-    <a href="/sms-consent">Full SMS instructions</a>
-  </p>
-</div>
-
-<form method="post">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="next" value="{{ next or '' }}">
 
-  <button type="submit" name="choice" value="accept">Accept SMS updates</button>
-  <button type="submit" name="choice" value="decline">Decline and continue</button>
-</form>
+  <button type="submit" name="choice" value="accept">
+    Accept SMS updates
+  </button>
 
-</body>
-</html>
-  <input type="hidden" name="next" value="{{ next or '' }}">
-
-  <button type="submit" name="choice" value="accept">Accept SMS updates</button>
-  <button type="submit" name="choice" value="decline">Decline and continue</button>
+  <button type="submit" name="choice" value="decline">
+    Decline and continue
+  </button>
 </form>
 
 </body>
