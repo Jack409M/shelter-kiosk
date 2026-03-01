@@ -31,12 +31,12 @@
       <td>{{ fmt_time(r.checked_in_at) }}</td>
       <td>{% if r.is_overdue %}YES{% else %}NO{% endif %}</td>
       <td>
-          <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=r.resident_id) }}">
-    <input name="note" placeholder="Note (optional)">
-    <button type="submit">Check in</button>
-  </form>
-
-  <a class="btn" target="_blank"
+      <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=r.resident_id) }}">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input name="note" placeholder="Note (optional)">
+  <button type="submit">Check in</button>
+</form>
+        <a class="btn" target="_blank"
      href="{{ url_for('staff_attendance_resident_print', resident_id=r.resident_id) }}">
      Print log
   </a>
@@ -54,21 +54,23 @@
   <h4>Check out resident</h4>
 
   <form method="post" action="{{ url_for('staff_attendance_check_out_global') }}" class="checkout-form">
-    <label>Resident</label>
-    <select name="resident_id" required>
-      {% for r in in_rows %}
-        <option value="{{ r.resident_id }}">{{ r.name }}</option>
-      {% endfor %}
-    </select>
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <label>Expected back time</label>
-    <input type="time" name="expected_back_time" required>
+  <label>Resident</label>
+  <select name="resident_id" required>
+    {% for r in in_rows %}
+      <option value="{{ r.resident_id }}">{{ r.name }}</option>
+    {% endfor %}
+  </select>
 
-    <label>Note</label>
-    <input name="note">
+  <label>Expected back time</label>
+  <input type="time" name="expected_back_time" required>
 
-    <button type="submit">Check out</button>
-  </form>
+  <label>Note</label>
+  <input name="note">
+
+  <button type="submit">Check out</button>
+</form>
 </div>
 <table>
   <thead>
@@ -112,6 +114,7 @@
 </div>
 
 {% endblock %}
+
 
 
 
