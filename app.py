@@ -408,7 +408,7 @@ def init_db() -> None:
         )
     create(
         """
-           CREATE TABLE IF NOT EXISTS leave_requests (
+        CREATE TABLE IF NOT EXISTS leave_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             shelter TEXT NOT NULL,
             resident_identifier TEXT NOT NULL,
@@ -427,10 +427,8 @@ def init_db() -> None:
             decision_note TEXT,
             check_in_at TEXT,
             check_in_by INTEGER
-           );
-           """
         )
-    create(
+        """,
         """
         CREATE TABLE IF NOT EXISTS leave_requests (
             id SERIAL PRIMARY KEY,
@@ -455,37 +453,7 @@ def init_db() -> None:
         """,
     )
 
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id SERIAL PRIMARY KEY,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            resident_phone TEXT,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            leave_at TEXT NOT NULL,
-            return_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            decided_at TEXT,
-            decided_by INTEGER,
-            decision_note TEXT,
-            check_in_at TEXT,
-            check_in_by INTEGER
-        )
-        """,
-    )
-
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS transport_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-    
+    # transport requests
     create(
         """
         CREATE TABLE IF NOT EXISTS transport_requests (
@@ -494,6 +462,7 @@ def init_db() -> None:
             resident_identifier TEXT NOT NULL,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
+            dob TEXT NOT NULL,
             needed_at TEXT NOT NULL,
             pickup_location TEXT NOT NULL,
             destination TEXT NOT NULL,
@@ -520,6 +489,7 @@ def init_db() -> None:
             resident_identifier TEXT NOT NULL,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
+            dob TEXT NOT NULL,
             needed_at TEXT NOT NULL,
             pickup_location TEXT NOT NULL,
             destination TEXT NOT NULL,
@@ -2231,6 +2201,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
