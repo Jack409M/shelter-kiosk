@@ -733,7 +733,64 @@ def _find_active_resident_by_code(shelter: str, resident_code: str) -> Optional[
         "last_name": res[2] or "",
         "phone": res[3] or "",
     }
+@app.route("/resident", methods=["GET", "POST"])
+def resident_signin():
+    init_db()
 
+    if request.method == "GET":
+        shelter = (request.args.get("shelter") or "").strip()
+        next_url = (request.args.get("next") or "").strip()
+        return render_template(
+            "resident_signin.html",
+            shelters=SHELTERS,
+            shelter=(shelter if shelter in SHELTERS else ""),
+            next=next_url,
+        )
+
+    shelter = (request.form.get("shelter") or "").strip()
+    resident_code = (request.form.get("resident_code") or "").strip()
+    next_url = (request.form.get("next") or "").strip()
+
+    if shelter not in SHELTERS:
+        flash("Select a valid shelter.", "error")
+        return redirect(url_for("resident_signin"))
+
+    if (not resident_code.isdigit()) or (len(resident_code) != 8):
+        flash("Enter your 8 digit Resident Code.", "error")
+        return redirect(url_for("resident_signin", shelter=shelter))
+
+    row = db_fetchone(
+        "SELECT id, resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
+        if g.get("db_kind") == "pg"
+        else "SELECT id, resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
+        (shelter, resident_code),
+    )
+
+    if not row:
+        flash("Invalid Resident Code.", "error")
+        return redirect(url_for("resident_signin", shelter=shelter))
+
+    resident_session_start(row, shelter, resident_code)
+
+    return redirect(next_url or url_for("resident_home"))
+@app.get("/resident/home")
+@require_resident
+def resident_home():
+    return render_template("resident_home.html")
+
+@app.get("/resident/logout")
+def resident_logout():
+    for k in [
+        "resident_id",
+        "resident_identifier",
+        "resident_first",
+        "resident_last",
+        "resident_phone",
+        "resident_shelter",
+        "resident_code",
+    ]:
+        session.pop(k, None)
+    return redirect(url_for("resident_signin"))
 
 @app.route("/leave", methods=["GET", "POST"])
 def resident_leave():
@@ -2225,6 +2282,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
