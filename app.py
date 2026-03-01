@@ -791,6 +791,8 @@ def resident_logout():
         "resident_phone",
         "resident_shelter",
         "resident_code",
+        "sms_consent_done",
+        "sms_opt_in",
     ]:
         session.pop(k, None)
     return redirect(url_for("resident_signin"))
@@ -2307,6 +2309,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
