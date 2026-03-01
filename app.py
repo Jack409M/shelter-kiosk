@@ -1988,39 +1988,6 @@ def kiosk_checkout(shelter: str):
     return redirect(url_for("kiosk_checkout", shelter=shelter))
 
 
-@app.route("/kiosk/<shelter>/checkout/<int:resident_id>/out", methods=["POST"])
-def kiosk_checkout_out(shelter: str, resident_id: int):
-    if shelter not in SHELTERS:
-        return "Invalid shelter", 404
-
-    init_db()
-
-    note = (request.form.get("note") or "").strip() or None
-    expected_back = (request.form.get("expected_back_time") or "").strip()
-
-    expected_back_value = None
-    if expected_back:
-        try:
-            local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
-            expected_back_value = (
-                local_dt.astimezone(timezone.utc)
-                .replace(tzinfo=None)
-                .isoformat(timespec="seconds")
-            )
-        except Exception:
-            expected_back_value = None
-
-    sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-
-    db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), None, note, expected_back_value))
-    return redirect(url_for("kiosk_checkout", shelter=shelter))
 
 
 @app.route("/staff/admin/users", methods=["GET", "POST"])
@@ -2346,6 +2313,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
