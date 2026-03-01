@@ -803,20 +803,19 @@ def resident_leave():
     init_db()
 
     if request.method == "GET":
-        shelter = (request.args.get("shelter") or "").strip()
-        shelter_value = shelter if shelter in SHELTERS else ""
+        shelter = session.get("resident_shelter") or ""
         return render_template(
             "resident_leave.html",
-            shelters=SHELTERS,
-            shelter=shelter_value,
+            shelter=shelter,
             max_days=MAX_LEAVE_DAYS,
         )
 
-    shelter = (request.form.get("shelter") or "").strip()
-    if shelter not in SHELTERS:
-        flash("Select a valid shelter.", "error")
-        return redirect(url_for("resident_leave"))
-
+    # POST
+    shelter = session.get("resident_shelter") or ""
+    resident_identifier = session.get("resident_identifier") or ""
+    first = session.get("resident_first") or ""
+    last = session.get("resident_last") or ""
+    resident_phone = (request.form.get("resident_phone") or "").strip()
     resident_code = (request.form.get("resident_code") or "").strip()
 
     if (not resident_code.isdigit()) or (len(resident_code) != 8):
@@ -2309,6 +2308,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
