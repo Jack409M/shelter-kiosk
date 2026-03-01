@@ -848,7 +848,7 @@ def resident_leave():
             if g.get("db_kind") == "pg"
             else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_code = ?",
             (resident_phone, shelter, resident_code),
-    )
+        )
 
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
@@ -2312,6 +2312,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
