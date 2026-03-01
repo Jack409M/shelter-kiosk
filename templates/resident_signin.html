@@ -43,6 +43,7 @@
 {% endwith %}
 
 <form method="post">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <label>Shelter</label>
     <select name="shelter" required>
         <option value="">Select</option>
