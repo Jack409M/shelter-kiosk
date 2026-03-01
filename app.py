@@ -525,7 +525,13 @@ def init_db() -> None:
         )
         """,
     )
-
+    # migration: remove dob column if it already exists (Postgres only)
+    try:
+        if g.get("db_kind") == "pg":
+            db_execute("ALTER TABLE transport_requests DROP COLUMN IF EXISTS dob")
+    except Exception:
+        pass
+    
     create(
         """
         CREATE TABLE IF NOT EXISTS attendance_events (
@@ -2310,6 +2316,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
