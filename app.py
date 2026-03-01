@@ -1060,6 +1060,24 @@ def sms_consent():
         </body>
     </html>
     """
+@app.route("/resident/consent", methods=["GET", "POST"])
+def resident_consent():
+    next_url = (request.args.get("next") or request.form.get("next") or "").strip()
+    if not next_url or not next_url.startswith("/"):
+        next_url = url_for("resident_leave")
+
+    if request.method == "GET":
+        return render_template("resident_consent.html", next=next_url)
+
+    choice = (request.form.get("choice") or "").strip().lower()
+    if choice not in ["accept", "decline"]:
+        flash("Select accept or decline.", "error")
+        return render_template("resident_consent.html", next=next_url), 400
+
+    session["sms_consent_done"] = True
+    session["sms_opt_in"] = True if choice == "accept" else False
+
+    return redirect(next_url)
 
 @app.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
@@ -2284,6 +2302,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
