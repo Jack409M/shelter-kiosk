@@ -3,43 +3,19 @@
 <h1>Leave request</h1>
 
 <form method="post" class="card">
-  <label>Shelter</label>
-  {% if shelter %}
-    <input value="{{ shelter }}" readonly>
-    <input type="hidden" name="shelter" value="{{ shelter }}">
-  {% else %}
-    <select name="shelter" required>
-      <option value="">Select</option>
-      {% for s in shelters %}
-        <option value="{{ s }}">{{ s }}</option>
-      {% endfor %}
-    </select>
-  {% endif %}
+    <label>Shelter</label>
+  <input value="{{ shelter }}" readonly>
 
-  <div class="grid">
-  <div>
-    <label>Resident Code</label>
-    <input
-      name="resident_code"
-      required
-      maxlength="8"
-      inputmode="numeric"
-      pattern="[0-9]{8}"
-      autocomplete="off"
-      placeholder="8 digit code"
-    >
-  </div>
-</div>
-<label for="resident_phone">Phone number for text updates</label>
-<input
-  id="resident_phone"
-  name="resident_phone"
-  type="tel"
-  required
-  placeholder="8065551234"
-  style="width:180px; display:inline-block;"
-/>
-
+  <label for="resident_phone">Phone number for text updates</label>
+  <input
+    id="resident_phone"
+    name="resident_phone"
+    type="tel"
+    required
+    placeholder="8065551234"
+    style="width:180px; display:inline-block;"
+  />
+        
 <label>Destination</label>
 <input name="destination" required>
 
@@ -82,6 +58,7 @@
 </form>
 
 {% endblock %}
+
 
 
 
