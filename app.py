@@ -2095,7 +2095,7 @@ def kiosk_checkout(shelter: str):
     code_key = resident_code if resident_code else "blank"
 
     if (
-        _rate_limited(f"kiosk_checkout_ip:{ip}", 10, 60)
+        _rate_limited(f"kiosk_checkout_ip:{ip}", 60, 60)
         or _rate_limited(f"kiosk_checkout_code:{code_key}", 20, 3600)
     ):
         flash("Too many attempts. Please wait and try again.", "error")
@@ -2484,6 +2484,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
