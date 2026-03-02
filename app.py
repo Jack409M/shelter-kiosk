@@ -843,6 +843,17 @@ def resident_signin():
     resident_code = (request.form.get("resident_code") or "").strip()
     next_url = (request.form.get("next") or "").strip()
 
+    # Rate limit protection
+    ip = _client_ip()
+    code_key = resident_code if resident_code else "blank"
+
+    if (
+        _rate_limited(f"resident_signin_ip:{ip}", 15, 60)
+        or _rate_limited(f"resident_signin_code:{code_key}", 30, 3600)
+    ):
+        flash("Too many attempts. Please wait and try again.", "error")
+        return redirect(url_for("resident_signin", shelter=shelter))
+
     if shelter not in SHELTERS:
         flash("Select a valid shelter.", "error")
         return redirect(url_for("resident_signin"))
@@ -861,6 +872,16 @@ def resident_signin():
     if not row:
         flash("Invalid Resident Code.", "error")
         return redirect(url_for("resident_signin", shelter=shelter))
+
+    resident_session_start(row, shelter, resident_code)
+
+    if not next_url or not next_url.startswith("/"):
+        next_url = url_for("resident_leave")
+
+    if not session.get("sms_consent_done"):
+        return redirect(url_for("resident_consent", next=next_url))
+
+    return redirect(next_url)
 
     resident_session_start(row, shelter, resident_code)
 
@@ -2420,6 +2441,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
