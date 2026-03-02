@@ -224,10 +224,10 @@ form.card label[for="callback_phone"] {
   margin-top: 10px;
 }
 
-/* Shelter select compact width */
-form.card select[name="shelter"] {
-  width: 16ch;
-  max-width: 200px;
+/* Shelter select width: 25 characters */
+select[name="shelter"] {
+  width: 25ch;
+  max-width: 25ch;
   display: inline-block;
 }
 
@@ -379,6 +379,7 @@ form select[name="resident_id"] {
     grid-template-columns: 1fr;
   }
 }
+
 
 
 
