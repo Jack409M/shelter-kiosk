@@ -76,6 +76,32 @@
       </nav>
     </header>
 
+    <!-- LOGO + SIGNED IN BANNER (GLOBAL) -->
+    <div class="container" style="padding-top: 10px;">
+      <div style="text-align:center; margin: 6px 0 12px 0;">
+        <img
+          src="{{ url_for('static', filename='logo.png') }}"
+          alt="Shelter Logo"
+          style="max-height: 90px; width: auto; display:inline-block;"
+        >
+
+        <div style="margin-top: 6px; font-size: 14px;">
+          {% if session.get('staff_user_id') %}
+            User currently signed in:
+            <strong>{{ session.get('username') }}</strong>
+            ({{ session.get('role')|capitalize }})
+            {% if session.get('shelter') %} — {{ session.get('shelter') }}{% endif %}
+          {% elif session.get('resident_id') %}
+            User currently signed in:
+            <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
+            {% if session.get('resident_shelter') %} — {{ session.get('resident_shelter') }}{% endif %}
+          {% else %}
+            User currently signed in: <strong>No</strong>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
     <main class="container">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -87,33 +113,9 @@
         {% endif %}
       {% endwith %}
 
-<header class="app-header">
-  <div class="header-inner">
-    
-    <div class="logo-area">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Shelter Logo" class="app-logo">
-    </div>
-
-    {% if session.get('staff_user_id') %}
-      <div class="signed-in-banner">
-        Signed in as:
-        <strong>{{ session.get('username') }}</strong>
-        ({{ session.get('role')|capitalize }}) —
-        {{ session.get('shelter') }}
-      </div>
-    {% elif session.get('resident_id') %}
-      <div class="signed-in-banner">
-        Signed in as:
-        <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
-        — {{ session.get('resident_shelter') }}
-      </div>
-    {% endif %}
-
-  </div>
-</header>
-      
       {% block content %}{% endblock %}
     </main>
+
     <script>
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll('input[name="first_name"]').forEach(function (el) {
@@ -124,9 +126,10 @@ document.addEventListener("DOMContentLoaded", function () {
     el.maxLength = 25;
   });
 });
-</script>
+    </script>
   </body>
 </html>
+
 
 
 
