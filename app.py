@@ -1423,6 +1423,7 @@ def staff_leave_overdue():
 @require_login
 @require_shelter
 @require_transfer
+@require_transfer
 def staff_leave_approve(req_id: int):
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
@@ -2612,6 +2613,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
