@@ -78,7 +78,7 @@
           {% for r in rows %}
             <tr>
               <td>{{ r["id"] }}</td>
-              <td style="white-space:nowrap;">{{ r["created_at"] }}</td>
+              <td style="white-space:nowrap;">{{ fmt_dt(r["created_at"]) }}</td>
               <td>{{ r["shelter"] or "" }}</td>
               <td>
                 {% if r["staff_username"] %}
