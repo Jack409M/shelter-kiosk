@@ -66,7 +66,8 @@
           <a href="{{ url_for('staff_residents') }}">Residents</a>
 
           {% if session.get("role") == "admin" %}
-            <a href="{{ url_for('admin_users') }}">Users</a>
+           <a href="{{ url_for('admin_users') }}">Users</a>
+           <a href="{{ url_for('staff_audit_log') }}">Audit Log</a>
           {% endif %}
 
           <a href="{{ url_for('staff_logout') }}">Logout</a>
@@ -100,4 +101,5 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
   </body>
 </html>
+
 
