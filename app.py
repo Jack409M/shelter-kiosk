@@ -2061,6 +2061,17 @@ def kiosk_checkout(shelter: str):
     expected_back = (request.form.get("expected_back_time") or "").strip()
     note = (request.form.get("note") or "").strip()
 
+    # Rate limit protection
+    ip = _client_ip()
+    code_key = resident_code if resident_code else "blank"
+
+    if (
+        _rate_limited(f"kiosk_checkout_ip:{ip}", 10, 60)
+        or _rate_limited(f"kiosk_checkout_code:{code_key}", 20, 3600)
+    ):
+        flash("Too many attempts. Please wait and try again.", "error")
+        return render_template("kiosk_checkout.html", shelter=shelter), 429
+
     errors = []
     if (not resident_code.isdigit()) or (len(resident_code) != 8):
         errors.append("Enter an 8 digit Resident Code.")
@@ -2114,9 +2125,6 @@ def kiosk_checkout(shelter: str):
     db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), None, full_note, expected_back_value))
     flash("Checked out.", "ok")
     return redirect(url_for("kiosk_checkout", shelter=shelter))
-
-
-
 
 @app.route("/staff/admin/users", methods=["GET", "POST"])
 @require_login
@@ -2441,6 +2449,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
