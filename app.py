@@ -2177,7 +2177,7 @@ def admin_users():
         password = (request.form.get("password") or "").strip()
         role = (request.form.get("role") or "staff").strip()
 
-        MIN_STAFF_PASSWORD_LEN = 12
+        MIN_STAFF_PASSWORD_LEN = 8
 
         if not username or not password:
             flash("Username and password required.", "error")
@@ -2496,6 +2496,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
