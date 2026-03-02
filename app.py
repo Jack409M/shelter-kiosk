@@ -50,8 +50,10 @@ if not secret:
     raise RuntimeError("FLASK_SECRET_KEY is required and must be set in the environment.")
 app.secret_key = secret
 app.permanent_session_lifetime = timedelta(hours=8)
+COOKIE_SECURE = (os.environ.get("COOKIE_SECURE") or "").strip().lower() in {"1", "true", "yes", "on"}
+
 app.config.update(
-    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_SECURE=COOKIE_SECURE,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
 )
@@ -2649,6 +2651,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
