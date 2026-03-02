@@ -2216,8 +2216,11 @@ def kiosk_checkout(shelter: str):
         (resident_id, shelter, "check_out", utcnow_iso(), None, full_note, expected_back_value),
     )
 
+    log_action("attendance", resident_id, shelter, None, "kiosk_check_out", f"expected_back={expected_back_value or ''} {full_note}".strip())
+    
     flash("Checked out.", "ok")
     return redirect(url_for("kiosk_checkout", shelter=shelter))
+    
 @app.route("/staff/admin/users", methods=["GET", "POST"])
 @require_login
 @require_admin
@@ -2600,6 +2603,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
