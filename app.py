@@ -2276,16 +2276,19 @@ def admin_users():
 @require_shelter
 @require_admin
 def staff_audit_log():
+    created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
+
     sql = (
-        "SELECT a.id, a.entity_type, a.entity_id, a.shelter, a.staff_user_id, "
-        "su.username AS staff_username, a.action_type, a.action_details, a.created_at "
-        "FROM audit_log a "
-        "LEFT JOIN staff_users su ON su.id = a.staff_user_id "
-        "ORDER BY a.id DESC "
+        f"SELECT a.id, a.entity_type, a.entity_id, a.shelter, a.staff_user_id, "
+        f"su.username AS staff_username, a.action_type, a.action_details, {created_expr} AS created_at "
+        f"FROM audit_log a "
+        f"LEFT JOIN staff_users su ON su.id = a.staff_user_id "
+        f"ORDER BY a.id DESC "
         + ("LIMIT %s" if g.get("db_kind") == "pg" else "LIMIT ?")
     )
+
     rows = db_fetchall(sql, (200,))
-    return render_template("staff_audit_log.html", rows=rows, title="Audit Log")
+    return render_template("staff_audit_log.html", rows=rows, title="Audit Log", fmt_dt=fmt_dt)
     
 @app.route("/staff/audit.csv")
 @require_login
@@ -2607,6 +2610,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
