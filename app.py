@@ -2277,14 +2277,16 @@ def admin_users():
 @require_admin
 def staff_audit_log():
     sql = (
-        "SELECT id, entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at "
-        "FROM audit_log "
-        "ORDER BY id DESC "
+        "SELECT a.id, a.entity_type, a.entity_id, a.shelter, a.staff_user_id, "
+        "su.username AS staff_username, a.action_type, a.action_details, a.created_at "
+        "FROM audit_log a "
+        "LEFT JOIN staff_users su ON su.id = a.staff_user_id "
+        "ORDER BY a.id DESC "
         + ("LIMIT %s" if g.get("db_kind") == "pg" else "LIMIT ?")
     )
     rows = db_fetchall(sql, (200,))
     return render_template("staff_audit_log.html", rows=rows, title="Audit Log")
-
+    
 @app.route("/staff/audit.csv")
 @require_login
 @require_shelter
@@ -2605,6 +2607,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
