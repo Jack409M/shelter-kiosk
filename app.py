@@ -1263,7 +1263,7 @@ def staff_login():
     init_db()
 
     if request.method == "GET":
-        return render_template("staff_login.html")
+        return render_template("staff_login.html", all_shelters=SHELTERS)
 
     username = (request.form.get("username") or "").strip()
     password = (request.form.get("password") or "").strip()
@@ -2651,6 +2651,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
