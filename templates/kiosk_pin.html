@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Kiosk PIN</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 520px; margin: 40px auto; padding: 0 14px; }
+      .card { border: 1px solid #ddd; border-radius: 12px; padding: 18px; }
+      input { width: 100%; font-size: 20px; padding: 12px; margin: 10px 0; box-sizing: border-box; }
+      button { width: 100%; font-size: 18px; padding: 12px; }
+      .hint { color: #666; font-size: 13px; margin-top: 10px; }
+      ul { margin: 10px 0; padding-left: 18px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Kiosk access</h2>
+      <p>Enter the front desk PIN to continue.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul>
+            {% for category, message in messages %}
+              <li>{{ message }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('kiosk_checkout', shelter=shelter) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="password" name="kiosk_pin" inputmode="numeric" autocomplete="off" placeholder="PIN" required />
+        <button type="submit">Unlock kiosk</button>
+      </form>
+
+      <div class="hint">If you refresh, you may be asked again depending on session settings.</div>
+    </div>
+  </body>
+</html>
