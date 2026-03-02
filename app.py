@@ -2292,6 +2292,44 @@ def staff_audit_log():
     rows = db_fetchall(sql, (200,))
     return render_template("staff_audit_log.html", rows=rows, title="Audit Log")
 
+@app.route("/staff/audit.csv")
+@require_login
+@require_shelter
+@require_admin
+def staff_audit_log_csv():
+    import csv
+    import io
+    from flask import Response
+
+    sql = (
+        "SELECT id, entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at "
+        "FROM audit_log "
+        "ORDER BY id DESC "
+        + ("LIMIT %s" if g.get("db_kind") == "pg" else "LIMIT ?")
+    )
+    rows = db_fetchall(sql, (5000,))
+
+    output = io.StringIO()
+    w = csv.writer(output)
+    w.writerow(["id", "created_at", "shelter", "staff_user_id", "entity_type", "entity_id", "action_type", "action_details"])
+    for r in rows:
+        w.writerow([
+            r.get("id"),
+            r.get("created_at"),
+            r.get("shelter"),
+            r.get("staff_user_id"),
+            r.get("entity_type"),
+            r.get("entity_id"),
+            r.get("action_type"),
+            r.get("action_details"),
+        ])
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=audit_log.csv"},
+    )
+
 @app.route("/admin/delete-user/<username>", methods=["POST"])
 @require_login
 @require_admin
@@ -2572,6 +2610,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
