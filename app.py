@@ -222,33 +222,6 @@ def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
 
-def make_resident_code(length: int = 8) -> str:
-    return "".join(secrets.choice("0123456789") for _ in range(length))
-
-def generate_resident_code() -> str:
-    # 8 digit numeric code
-    code = make_resident_code(8)
-
-    # try a few times to avoid collisions
-    for _ in range(15):
-        exists = db_fetchone(
-            "SELECT id FROM residents WHERE resident_code = %s"
-            if g.get("db_kind") == "pg"
-            else "SELECT id FROM residents WHERE resident_code = ?",
-            (code,),
-        )
-        if not exists:
-            return code
-        code = make_resident_code(8)
-
-    # last resort, return the last generated value
-    return code
-
-
-def generate_resident_identifier() -> str:
-    # stable random identifier used to link leave and transport across shelters
-    return secrets.token_urlsafe(12)
-
 def fmt_dt(dt_iso: Optional[str]) -> str:
     if not dt_iso:
         return ""
@@ -398,6 +371,32 @@ def db_fetchone(sql: str, params: tuple = ()) -> Optional[Any]:
         return None
     return rows[0]
 
+def make_resident_code(length: int = 8) -> str:
+    return "".join(secrets.choice("0123456789") for _ in range(length))
+
+def generate_resident_code() -> str:
+    # 8 digit numeric code
+    code = make_resident_code(8)
+
+    # try a few times to avoid collisions
+    for _ in range(15):
+        exists = db_fetchone(
+            "SELECT id FROM residents WHERE resident_code = %s"
+            if g.get("db_kind") == "pg"
+            else "SELECT id FROM residents WHERE resident_code = ?",
+            (code,),
+        )
+        if not exists:
+            return code
+        code = make_resident_code(8)
+
+    # last resort, return the last generated value
+    return code
+
+
+def generate_resident_identifier() -> str:
+    # stable random identifier used to link leave and transport across shelters
+    return secrets.token_urlsafe(12)
 
 def log_action(
     entity_type: str,
@@ -2627,6 +2626,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
