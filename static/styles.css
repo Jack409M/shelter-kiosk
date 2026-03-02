@@ -357,11 +357,6 @@ form select[name="resident_id"] {
   max-width: 50ch;
 }
 
-form select[name="resident_id"] {
-  width: 50ch;
-  max-width: 50ch;
-}
-
 .grid.grid-names {
   grid-template-columns: max-content max-content;
   justify-content: start;
@@ -380,6 +375,7 @@ select[name="shelter"] {
   max-width: 25ch;
   display: inline-block;
 }
+
 
 
 
