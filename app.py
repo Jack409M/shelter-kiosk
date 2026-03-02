@@ -1937,7 +1937,7 @@ if not resident:
 staff_id = session["staff_user_id"]
 note = (request.form.get("note") or "").strip()
 
-    sql = (
+sql = (
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
         "VALUES (%s, %s, %s, %s, %s, %s, %s)"
         if g.get("db_kind") == "pg"
@@ -2639,6 +2639,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
