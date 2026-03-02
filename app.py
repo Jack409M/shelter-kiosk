@@ -680,7 +680,7 @@ def init_db() -> None:
             staff_user_id INTEGER,
             action_type TEXT NOT NULL,
             action_details TEXT,
-            created_at TEXT NOT NULL
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
         """,
     )
@@ -2508,6 +2508,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
