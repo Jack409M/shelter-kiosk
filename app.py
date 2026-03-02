@@ -1950,22 +1950,11 @@ db_execute(sql, (resident_id, shelter, "check_in", utcnow_iso(), staff_id, note 
     return redirect(url_for("staff_attendance"))
 
 
-@app.route("/staff/attendance/check-out", methods=["POST"], endpoint="staff_attendance_check_out_global")
+@app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
-def staff_attendance_check_out_global():
+def staff_attendance_check_in(resident_id: int):
     shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-
-    rid_raw = (request.form.get("resident_id") or "").strip()
-    note = (request.form.get("note") or "").strip()
-    expected_back = (request.form.get("expected_back_time") or "").strip()
-
-    if not rid_raw.isdigit():
-        flash("Select a resident.", "error")
-        return redirect(url_for("staff_attendance"))
-
-    resident_id = int(rid_raw)
 
     resident = db_fetchone(
         "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
@@ -1973,9 +1962,31 @@ def staff_attendance_check_out_global():
         else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
         (resident_id, shelter),
     )
+
     if not resident:
         flash("Invalid resident.", "error")
         return redirect(url_for("staff_attendance"))
+
+    staff_id = session["staff_user_id"]
+    note = (request.form.get("note") or "").strip()
+
+    sql = (
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        if g.get("db_kind") == "pg"
+        else
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)"
+    )
+
+    db_execute(
+        sql,
+        (resident_id, shelter, "check_in", utcnow_iso(), staff_id, note or None, None),
+    )
+
+    log_action("attendance", resident_id, shelter, staff_id, "check_in", note or "")
+
+    return redirect(url_for("staff_attendance"))
 
     expected_back_value = None
     if expected_back:
@@ -2639,6 +2650,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
