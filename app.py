@@ -1161,6 +1161,17 @@ def staff_login():
     username = (request.form.get("username") or "").strip()
     password = (request.form.get("password") or "").strip()
 
+    # Rate limit protection
+    ip = _client_ip()
+    u = username.lower()
+
+    if (
+        _rate_limited(f"staff_login_ip:{ip}", 10, 60)
+        or _rate_limited(f"staff_login_user:{u}", 20, 3600)
+    ):
+        flash("Too many login attempts. Please wait and try again.", "error")
+        return render_template("staff_login.html"), 429
+
     row = db_fetchone(
         "SELECT * FROM staff_users WHERE username = %s"
         if g.get("db_kind") == "pg"
@@ -1184,11 +1195,12 @@ def staff_login():
         flash("Select a valid shelter.", "error")
         return render_template("staff_login.html"), 400
 
+    session.clear()  # prevent session fixation
     session["staff_user_id"] = row["id"] if isinstance(row, dict) else row[0]
     session["username"] = row["username"] if isinstance(row, dict) else row[1]
     session["role"] = row["role"] if isinstance(row, dict) else row[3]
     session["shelter"] = shelter
-    session.pop("_csrf_token", None)
+    session.permanent = True
 
     log_action(
         "staff",
@@ -1200,7 +1212,6 @@ def staff_login():
     )
 
     return redirect(url_for("staff_attendance"))
-
 
 @app.route("/staff/logout")
 @require_login
@@ -2409,6 +2420,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
