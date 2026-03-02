@@ -1955,82 +1955,6 @@ def staff_attendance_check_in(resident_id: int):
     return redirect(url_for("staff_attendance"))
 
 
-@app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
-@require_login
-@require_shelter
-def staff_attendance_check_in(resident_id: int):
-    shelter = session["shelter"]
-
-    resident = db_fetchone(
-        "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
-        if g.get("db_kind") == "pg"
-        else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
-        (resident_id, shelter),
-    )
-
-    if not resident:
-        flash("Invalid resident.", "error")
-        return redirect(url_for("staff_attendance"))
-
-    staff_id = session["staff_user_id"]
-    note = (request.form.get("note") or "").strip()
-
-    sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-
-    db_execute(
-        sql,
-        (resident_id, shelter, "check_in", utcnow_iso(), staff_id, note or None, None),
-    )
-
-    log_action("attendance", resident_id, shelter, staff_id, "check_in", note or "")
-
-    return redirect(url_for("staff_attendance"))
-
-    expected_back_value = None
-    if expected_back:
-        try:
-            hh, mm = expected_back.split(":")
-            now_chi = datetime.now(ZoneInfo("America/Chicago"))
-            local_dt = now_chi.replace(hour=int(hh), minute=int(mm), second=0, microsecond=0)
-            if local_dt <= now_chi:
-                local_dt = local_dt + timedelta(days=1)
-            expected_back_value = (
-                local_dt.astimezone(timezone.utc)
-                .replace(tzinfo=None)
-                .isoformat(timespec="seconds")
-            )
-        except Exception:
-            expected_back_value = None
-
-    sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
-
-    db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None, expected_back_value))
-
-    log_action(
-        "attendance",
-        resident_id,
-        shelter,
-        staff_id,
-        "check_out",
-        f"expected_back={expected_back_value or ''} {note or ''}".strip(),
-    )
-
-    return redirect(url_for("staff_attendance"))
-
 
 @app.route("/staff/attendance/resident/<int:resident_id>/print")
 @require_login
@@ -2655,6 +2579,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
