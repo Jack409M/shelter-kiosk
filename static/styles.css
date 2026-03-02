@@ -374,6 +374,11 @@ form select[name="resident_id"] {
   align-items: end;
 }
 
+@media (max-width: 640px) {
+  .grid.grid-names {
+    grid-template-columns: 1fr;
+  }
+}
 
 
 
