@@ -2338,6 +2338,8 @@ def delete_user(username):
         (username,),
     )
 
+    log_action("staff_user", None, None, session.get("staff_user_id"), "delete_user", f"deleted_username={username}")
+    
     flash(f"User '{username}' deleted.", "ok")
     return redirect(url_for("admin_users"))
 
@@ -2603,6 +2605,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
