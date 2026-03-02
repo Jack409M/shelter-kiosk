@@ -103,8 +103,6 @@ def _csrf_protect():
     # Allow these endpoints to work even if we missed adding the hidden input.
     # We'll tighten this list later after templates are fully updated.
     exempt_endpoints = {
-        "resident_signin",
-        "resident_consent",
         "sms_consent",
     }
 
@@ -2489,6 +2487,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
