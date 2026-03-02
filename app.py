@@ -49,6 +49,35 @@ if not secret:
 app.secret_key = secret
 app.permanent_session_lifetime = timedelta(hours=8)
 
+def _client_ip() -> str:
+    # Works behind Railway or other proxies
+    xff = (request.headers.get("X-Forwarded-For") or "").strip()
+    if xff:
+        # First IP is the original client in standard proxy chains
+        return xff.split(",")[0].strip()
+    return (request.remote_addr or "").strip() or "unknown"
+
+
+_RATE_BUCKETS: dict[str, deque[float]] = {}
+
+
+def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
+    now = time.time()
+    bucket = _RATE_BUCKETS.get(key)
+    if bucket is None:
+        bucket = deque()
+        _RATE_BUCKETS[key] = bucket
+
+    cutoff = now - window_seconds
+    while bucket and bucket[0] < cutoff:
+        bucket.popleft()
+
+    if len(bucket) >= limit:
+        return True
+
+    bucket.append(now)
+    return False
+
 # CSRF token generator for templates
 def _csrf_token() -> str:
     tok = session.get("_csrf_token")
@@ -2380,6 +2409,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
