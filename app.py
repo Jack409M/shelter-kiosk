@@ -1945,7 +1945,7 @@ sql = (
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
-db_execute(sql, (resident_id, shelter, "check_in", utcnow_iso(), staff_id, note or None, None))
+    db_execute(sql, (resident_id, shelter, "check_in", utcnow_iso(), staff_id, note or None, None))
     log_action("attendance", resident_id, shelter, staff_id, "check_in", note or "")
     return redirect(url_for("staff_attendance"))
 
@@ -2650,6 +2650,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
