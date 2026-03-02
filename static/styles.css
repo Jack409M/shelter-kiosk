@@ -369,12 +369,8 @@ form select[name="resident_id"] {
   } 
 }
 
-/* Leave form: shelter dropdown should not stretch full width */
-select[name="shelter"] {
-  width: 25ch;
-  max-width: 25ch;
-  display: inline-block;
-}
+
+
 
 
 
