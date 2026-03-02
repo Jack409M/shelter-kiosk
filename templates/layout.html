@@ -87,6 +87,31 @@
         {% endif %}
       {% endwith %}
 
+<header class="app-header">
+  <div class="header-inner">
+    
+    <div class="logo-area">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Shelter Logo" class="app-logo">
+    </div>
+
+    {% if session.get('staff_user_id') %}
+      <div class="signed-in-banner">
+        Signed in as:
+        <strong>{{ session.get('username') }}</strong>
+        ({{ session.get('role')|capitalize }}) —
+        {{ session.get('shelter') }}
+      </div>
+    {% elif session.get('resident_id') %}
+      <div class="signed-in-banner">
+        Signed in as:
+        <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
+        — {{ session.get('resident_shelter') }}
+      </div>
+    {% endif %}
+
+  </div>
+</header>
+      
       {% block content %}{% endblock %}
     </main>
     <script>
@@ -102,6 +127,7 @@ document.addEventListener("DOMContentLoaded", function () {
 </script>
   </body>
 </html>
+
 
 
 
