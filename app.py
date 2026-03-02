@@ -836,7 +836,10 @@ def require_transfer(fn):
             return redirect(url_for("staff_home"))
         return fn(*args, **kwargs)
     return wrapper
-    
+# ============================
+# Routes
+# ============================
+
 @app.get("/privacy")
 def privacy_policy():
     return (
@@ -2626,6 +2629,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
