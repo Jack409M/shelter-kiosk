@@ -1148,13 +1148,27 @@ def staff_login():
         flash("Invalid login.", "error")
         return render_template("staff_login.html"), 401
 
+    shelter = (request.form.get("shelter") or "").strip()
+    if shelter not in SHELTERS:
+        flash("Select a valid shelter.", "error")
+        return render_template("staff_login.html"), 400
+
     session["staff_user_id"] = row["id"] if isinstance(row, dict) else row[0]
     session["username"] = row["username"] if isinstance(row, dict) else row[1]
     session["role"] = row["role"] if isinstance(row, dict) else row[3]
-    session.pop("shelter", None)
+    session["shelter"] = shelter
+    session.pop("_csrf_token", None)
 
-    log_action("staff", session["staff_user_id"], None, session["staff_user_id"], "login", f"Login {session['username']}")
-    return redirect(url_for("staff_select_shelter"))
+    log_action(
+        "staff",
+        session["staff_user_id"],
+        None,
+        session["staff_user_id"],
+        "login",
+        f"Login {session['username']}",
+    )
+
+    return redirect(url_for("staff_attendance"))
 
 
 @app.route("/staff/logout")
@@ -2364,6 +2378,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
