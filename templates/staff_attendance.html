@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
+
 <h1>Attendance for {{ shelter }}</h1>
 
 <div class="card">
@@ -22,56 +23,61 @@
     </tr>
   </thead>
   <tbody>
-    {% for r in out_rows %}
-    <tr class="{% if r.is_overdue %}overdue{% endif %}">
-      <td>{{ r.date }}</td>
-      <td>{{ r.name }}</td>
-      <td>{{ fmt_time(r.checked_out_at) }}</td>
-      <td>{{ fmt_time(r.expected_back_at) }}</td>
-      <td>{{ fmt_time(r.checked_in_at) }}</td>
-      <td>{% if r.is_overdue %}YES{% else %}NO{% endif %}</td>
-      <td>
-      <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=r.resident_id) }}">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <input name="note" placeholder="Note (optional)">
-  <button type="submit">Check in</button>
-</form>
-        <a class="btn" target="_blank"
-     href="{{ url_for('staff_attendance_resident_print', resident_id=r.resident_id) }}">
-     Print log
-  </a>
-</td>
-    </tr>
-    {% endfor %}
     {% if out_rows|length == 0 %}
-    <tr><td colspan="7">No one is currently out.</td></tr>
+      <tr><td colspan="7">No one is currently out.</td></tr>
+    {% else %}
+      {% for r in out_rows %}
+      <tr class="{% if r.is_overdue %}overdue{% endif %}">
+        <td>{{ r.date }}</td>
+        <td>{{ r.name }}</td>
+        <td>{{ fmt_time(r.checked_out_at) }}</td>
+        <td>{{ fmt_time(r.expected_back_at) }}</td>
+        <td>{{ fmt_time(r.checked_in_at) }}</td>
+        <td>{% if r.is_overdue %}YES{% else %}NO{% endif %}</td>
+        <td>
+          <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=r.resident_id) }}" style="display:inline;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input name="note" placeholder="Note (optional)" maxlength="200">
+            <button type="submit">Check in</button>
+          </form>
+
+          <a class="btn" target="_blank"
+             href="{{ url_for('staff_attendance_resident_print', resident_id=r.resident_id) }}">
+            Print log
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
     {% endif %}
   </tbody>
 </table>
 
 <h3>Currently present</h3>
+
 <div class="card">
   <h4>Check out resident</h4>
 
   <form method="post" action="{{ url_for('staff_attendance_check_out_global') }}" class="checkout-form">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-  <label>Resident</label>
-  <select name="resident_id" required>
-    {% for r in in_rows %}
-      <option value="{{ r.resident_id }}">{{ r.name }}</option>
-    {% endfor %}
-  </select>
+    <label>Resident</label>
+    <select name="resident_id" required>
+      <option value="" selected disabled>Select a resident</option>
+      {% for r in in_rows %}
+        <option value="{{ r.resident_id }}">{{ r.name }}</option>
+      {% endfor %}
+    </select>
 
-  <label>Expected back time</label>
-  <input type="time" name="expected_back_time" required>
+    <label>Expected back time</label>
+    <input type="time" name="expected_back_time" required>
 
-  <label>Note</label>
-  <input name="note">
+    <label>Note</label>
+    <input name="note" maxlength="200" placeholder="Optional note">
 
-  <button type="submit">Check out</button>
-</form>
+    <button type="submit">Check out</button>
+  </form>
 </div>
+
 <table>
   <thead>
     <tr>
@@ -85,26 +91,27 @@
     </tr>
   </thead>
   <tbody>
-    {% for r in in_rows %}
-    <tr>
-      <td>{{ r.date }}</td>
-      <td>{{ r.name }}</td>
-      <td>{{ fmt_time(r.checked_out_at) }}</td>
-      <td>{{ fmt_time(r.expected_back_at) }}</td>
-      <td>{{ fmt_time(r.checked_in_at) }}</td>
-      <td>NO</td>
-      <td>
-  <span class="hint">Use the check out panel above.</span>
-
-  <a class="btn" target="_blank"
-     href="{{ url_for('staff_attendance_resident_print', resident_id=r.resident_id) }}">
-     Print log
-  </a>
-</td>
-    </tr>
-    {% endfor %}
     {% if in_rows|length == 0 %}
-    <tr><td colspan="7">No one is currently present.</td></tr>
+      <tr><td colspan="7">No one is currently present.</td></tr>
+    {% else %}
+      {% for r in in_rows %}
+      <tr>
+        <td>{{ r.date }}</td>
+        <td>{{ r.name }}</td>
+        <td>{{ fmt_time(r.checked_out_at) }}</td>
+        <td>{{ fmt_time(r.expected_back_at) }}</td>
+        <td>{{ fmt_time(r.checked_in_at) }}</td>
+        <td>{% if r.is_overdue %}YES{% else %}NO{% endif %}</td>
+        <td>
+          <span class="hint">Use the check out panel above.</span>
+
+          <a class="btn" target="_blank"
+             href="{{ url_for('staff_attendance_resident_print', resident_id=r.resident_id) }}">
+            Print log
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
     {% endif %}
   </tbody>
 </table>
@@ -114,17 +121,3 @@
 </div>
 
 {% endblock %}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
