@@ -2053,25 +2053,44 @@ def kiosk_checkout(shelter: str):
         return "Invalid shelter", 404
 
     init_db()
-    # Kiosk PIN gate (required if KIOSK_PIN is set)
+
+    # ===============================
+    # KIOSK PIN GATE
+    # ===============================
     if KIOSK_PIN:
         if session.get("kiosk_authed") is not True:
-            if request.method == "POST" and (request.form.get("kiosk_pin") or "").strip() == KIOSK_PIN:
-                session["kiosk_authed"] = True
-                session.permanent = True
-                return redirect(url_for("kiosk_checkout", shelter=shelter))
+            ip = _client_ip()
+
+            # Rate limit PIN attempts (10 tries per 5 minutes)
+            if _rate_limited(f"kiosk_pin_ip:{ip}", 10, 300):
+                flash("Too many PIN attempts. Please wait and try again.", "error")
+                return render_template("kiosk_pin.html", shelter=shelter), 429
+
+            if request.method == "POST":
+                entered_pin = (request.form.get("kiosk_pin") or "").strip()
+                if entered_pin == KIOSK_PIN:
+                    session.clear()
+                    session["kiosk_authed"] = True
+                    session.permanent = True
+                    return redirect(url_for("kiosk_checkout", shelter=shelter))
+
             return render_template("kiosk_pin.html", shelter=shelter), 401
-    
+
+    # ===============================
+    # NORMAL GET
+    # ===============================
     if request.method == "GET":
         return render_template("kiosk_checkout.html", shelter=shelter)
 
-    # POST
+    # ===============================
+    # CHECKOUT POST
+    # ===============================
     resident_code = (request.form.get("resident_code") or "").strip()
     destination = (request.form.get("destination") or "").strip()
     expected_back = (request.form.get("expected_back_time") or "").strip()
     note = (request.form.get("note") or "").strip()
 
-    # Rate limit protection
+    # Rate limit checkout attempts
     ip = _client_ip()
     code_key = resident_code if resident_code else "blank"
 
@@ -2083,10 +2102,15 @@ def kiosk_checkout(shelter: str):
         return render_template("kiosk_checkout.html", shelter=shelter), 429
 
     errors = []
+
     if (not resident_code.isdigit()) or (len(resident_code) != 8):
         errors.append("Enter an 8 digit Resident Code.")
+
     if not destination:
         errors.append("Destination is required.")
+
+    if not expected_back:
+        errors.append("Expected back time is required.")
 
     row = db_fetchone(
         "SELECT id FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
@@ -2094,11 +2118,9 @@ def kiosk_checkout(shelter: str):
         else "SELECT id FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
         (shelter, resident_code),
     )
+
     if not row:
         errors.append("Invalid Resident Code.")
-
-    if not expected_back:
-        errors.append("Expected back time is required.")
 
     expected_back_value = None
     if expected_back:
@@ -2132,10 +2154,13 @@ def kiosk_checkout(shelter: str):
         "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
 
-    db_execute(sql, (resident_id, shelter, "check_out", utcnow_iso(), None, full_note, expected_back_value))
+    db_execute(
+        sql,
+        (resident_id, shelter, "check_out", utcnow_iso(), None, full_note, expected_back_value),
+    )
+
     flash("Checked out.", "ok")
     return redirect(url_for("kiosk_checkout", shelter=shelter))
-
 @app.route("/staff/admin/users", methods=["GET", "POST"])
 @require_login
 @require_admin
@@ -2459,6 +2484,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
