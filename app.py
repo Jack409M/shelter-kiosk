@@ -2344,7 +2344,7 @@ def delete_user(username):
     return redirect(url_for("admin_users"))
 
 
-@app.route("/staff/residents", methods=["GET", "POST"])
+@app.get("/staff/residents")
 @require_login
 @require_shelter
 @require_staff_or_admin
@@ -2352,75 +2352,74 @@ def staff_residents():
     init_db()
     shelter = session["shelter"]
 
-    if request.method == "POST":
-        first = (request.form.get("first_name") or "").strip()[:15]
-        last  = (request.form.get("last_name") or "").strip()[:25]
-        phone = (request.form.get("phone") or "").strip()
+    show = request.args.get("show", "active")
 
-        if not first or not last:
-            flash("First name and last name are required.", "error")
-            return redirect(url_for("staff_residents"))
-
-        resident_code = make_resident_code()
-        for _ in range(10):
-            existing_code = db_fetchone(
-                "SELECT id FROM residents WHERE resident_code = %s"
-                if g.get("db_kind") == "pg"
-                else "SELECT id FROM residents WHERE resident_code = ?",
-                (resident_code,),
-            )
-            if not existing_code:
-                break
-            resident_code = make_resident_code()
-        else:
-            flash("Could not generate a unique Resident Code. Try again.", "error")
-            return redirect(url_for("staff_residents"))
-
-        resident_identifier = secrets.token_urlsafe(12)
-
-        sql = (
-            "INSERT INTO residents (shelter, resident_identifier, resident_code, first_name, last_name, phone, is_active, created_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, TRUE, %s)"
+    if show == "all":
+        residents = db_fetchall(
+            "SELECT * FROM residents WHERE shelter = %s ORDER BY last_name, first_name"
             if g.get("db_kind") == "pg"
-            else
-            "INSERT INTO residents (shelter, resident_identifier, resident_code, first_name, last_name, phone, is_active, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, 1, ?)"
+            else "SELECT * FROM residents WHERE shelter = ? ORDER BY last_name, first_name",
+            (shelter,),
+        )
+    else:
+        residents = db_fetchall(
+            "SELECT * FROM residents WHERE shelter = %s AND is_active = TRUE ORDER BY last_name, first_name"
+            if g.get("db_kind") == "pg"
+            else "SELECT * FROM residents WHERE shelter = ? AND is_active = 1 ORDER BY last_name, first_name",
+            (shelter,),
         )
 
-        db_execute(sql, (shelter, resident_identifier, resident_code, first, last, phone or None, utcnow_iso()))
+    return render_template(
+        "staff_residents.html",
+        residents=residents,
+        shelter=shelter,
+        show=show,
+    )
 
-        log_action("resident", None, shelter, session["staff_user_id"], "create", f"code={resident_code} {first} {last}")
+@app.post("/staff/residents")
+@require_login
+@require_shelter
+@require_resident_create
+def staff_residents_post():
+    init_db()
+    shelter = session["shelter"]
 
-        flash(f"Resident added. Code: {resident_code}", "ok")
+    first = (request.form.get("first_name") or "").strip()
+    last = (request.form.get("last_name") or "").strip()
+
+    if not first or not last:
+        flash("First and last name required.", "error")
         return redirect(url_for("staff_residents"))
 
-    show = (request.args.get("show") or "active").strip()
-    only_active = show != "all"
+    resident_code = generate_resident_code()
+    resident_identifier = generate_resident_identifier()
 
-    if g.get("db_kind") == "pg":
-        if only_active:
-            residents = db_fetchall(
-                "SELECT * FROM residents WHERE shelter = %s AND is_active = TRUE ORDER BY last_name, first_name",
-                (shelter,),
-            )
-        else:
-            residents = db_fetchall(
-                "SELECT * FROM residents WHERE shelter = %s ORDER BY is_active DESC, last_name, first_name",
-                (shelter,),
-            )
-    else:
-        if only_active:
-            residents = db_fetchall(
-                "SELECT * FROM residents WHERE shelter = ? AND is_active = 1 ORDER BY last_name, first_name",
-                (shelter,),
-            )
-        else:
-            residents = db_fetchall(
-                "SELECT * FROM residents WHERE shelter = ? ORDER BY is_active DESC, last_name, first_name",
-                (shelter,),
-            )
+    db_execute(
+        "INSERT INTO residents (resident_identifier, resident_code, first_name, last_name, shelter, is_active, created_at) "
+        + ("VALUES (%s, %s, %s, %s, %s, %s, %s)" if g.get("db_kind") == "pg"
+           else "VALUES (?, ?, ?, ?, ?, ?, ?)"),
+        (
+            resident_identifier,
+            resident_code,
+            first,
+            last,
+            shelter,
+            True,
+            utcnow_iso(),
+        ),
+    )
 
-    return render_template("staff_residents.html", residents=residents, shelter=shelter, show=show)
+    log_action(
+        "resident",
+        None,
+        shelter,
+        session.get("staff_user_id"),
+        "create",
+        f"code={resident_code} {first} {last}",
+    )
+
+    flash("Resident created.", "ok")
+    return redirect(url_for("staff_residents"))
 
 @app.route("/staff/residents/<int:resident_id>/transfer", methods=["GET", "POST"])
 @require_login
@@ -2605,6 +2604,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
