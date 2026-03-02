@@ -2053,7 +2053,15 @@ def kiosk_checkout(shelter: str):
         return "Invalid shelter", 404
 
     init_db()
-
+    # Kiosk PIN gate (required if KIOSK_PIN is set)
+    if KIOSK_PIN:
+        if session.get("kiosk_authed") is not True:
+            if request.method == "POST" and (request.form.get("kiosk_pin") or "").strip() == KIOSK_PIN:
+                session["kiosk_authed"] = True
+                session.permanent = True
+                return redirect(url_for("kiosk_checkout", shelter=shelter))
+            return render_template("kiosk_pin.html", shelter=shelter), 401
+    
     if request.method == "GET":
         return render_template("kiosk_checkout.html", shelter=shelter)
 
@@ -2451,6 +2459,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
