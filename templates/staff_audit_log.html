@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+{% block content %}
+  <h2>Audit Log</h2>
+
+  <form method="get" action="{{ url_for('staff_audit_log') }}" class="card" style="margin-bottom: 14px;">
+    <div style="display:grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 10px;">
+      <div>
+        <label>Search</label>
+        <input name="q" value="{{ request.args.get('q','') }}" placeholder="details, entity, action">
+      </div>
+
+      <div>
+        <label>Shelter</label>
+        <select name="shelter">
+          <option value="">All</option>
+          {% for s in ["Gratitude","Haven","Abba"] %}
+            <option value="{{ s }}" {% if request.args.get('shelter') == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Entity type</label>
+        <input name="entity_type" value="{{ request.args.get('entity_type','') }}" placeholder="leave, transport, attendance">
+      </div>
+
+      <div>
+        <label>Action type</label>
+        <input name="action_type" value="{{ request.args.get('action_type','') }}" placeholder="create, approve, deny, update">
+      </div>
+
+      <div>
+        <label>Staff user id</label>
+        <input name="staff_user_id" value="{{ request.args.get('staff_user_id','') }}" placeholder="numeric id">
+      </div>
+
+      <div>
+        <label>Limit</label>
+        <input name="limit" value="{{ request.args.get('limit','200') }}" placeholder="200">
+      </div>
+
+      <div>
+        <label>From date</label>
+        <input name="from" value="{{ request.args.get('from','') }}" placeholder="YYYY-MM-DD">
+      </div>
+
+      <div>
+        <label>To date</label>
+        <input name="to" value="{{ request.args.get('to','') }}" placeholder="YYYY-MM-DD">
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:end;">
+        <button type="submit">Filter</button>
+        <a class="btn" href="{{ url_for('staff_audit_log') }}">Reset</a>
+      </div>
+    </div>
+
+    <div style="margin-top: 10px;">
+      <a href="{{ url_for('staff_audit_log_csv', **request.args) }}">Download CSV</a>
+    </div>
+  </form>
+
+  <div class="card">
+    <div style="overflow:auto;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>When</th>
+            <th>Shelter</th>
+            <th>Staff</th>
+            <th>Entity</th>
+            <th>Action</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>{{ r["id"] }}</td>
+              <td style="white-space:nowrap;">{{ r["created_at"] }}</td>
+              <td>{{ r["shelter"] or "" }}</td>
+              <td>
+                {% if r["staff_username"] %}
+                  {{ r["staff_username"] }} ({{ r["staff_user_id"] }})
+                {% else %}
+                  {{ r["staff_user_id"] or "" }}
+                {% endif %}
+              </td>
+              <td style="white-space:nowrap;">{{ r["entity_type"] }}{% if r["entity_id"] %} #{{ r["entity_id"] }}{% endif %}</td>
+              <td style="white-space:nowrap;">{{ r["action_type"] }}</td>
+              <td style="min-width: 420px;">{{ r["action_details"] or "" }}</td>
+            </tr>
+          {% endfor %}
+          {% if not rows %}
+            <tr><td colspan="7">No matching audit entries.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}
