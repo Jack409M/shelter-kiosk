@@ -340,6 +340,15 @@ def db_execute(sql: str, params: tuple = ()) -> None:
     cur.execute(sql, params)
     conn.commit()
 
+def require_resident_create(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if session.get("role") not in {"admin", "case_manager"}:
+            flash("Admin or case manager only.", "error")
+            return redirect(url_for("staff_residents"))
+        return fn(*args, **kwargs)
+    return wrapper
+
 
 def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
     conn = get_db()
@@ -2596,6 +2605,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
