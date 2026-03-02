@@ -1299,10 +1299,8 @@ def staff_login():
 @require_login
 def staff_logout():
     staff_id = session.get("staff_user_id")
-    username = session.get("username", "")
+    log_action("auth", None, None, staff_id, "logout", f"Staff logout: {session.get('username')}")
     session.clear()
-    if staff_id:
-        log_action("staff", staff_id, None, staff_id, "logout", f"Logout {username}")
     return redirect(url_for("staff_login"))
 
 @app.route("/staff/select-shelter", methods=["GET", "POST"])
@@ -2602,6 +2600,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
