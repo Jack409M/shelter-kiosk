@@ -684,7 +684,19 @@ def init_db() -> None:
         )
         """,
     )
-
+    # rate limit storage (Postgres only for now)
+    if kind == "pg":
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS rate_limit_events (
+              id SERIAL PRIMARY KEY,
+              k TEXT NOT NULL,
+              created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            );
+            """
+        )
+        db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_k_idx ON rate_limit_events (k)")
+        db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_created_at_idx ON rate_limit_events (created_at)")
     ensure_admin_bootstrap()
 
 
@@ -2496,6 +2508,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
