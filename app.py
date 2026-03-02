@@ -951,18 +951,7 @@ def resident_signin():
         return redirect(url_for("resident_consent", next=next_url))
 
     return redirect(next_url)
-
-    resident_session_start(row, shelter, resident_code)
-
-    # NEW BLOCK STARTS HERE
-    if not next_url or not next_url.startswith("/"):
-        next_url = url_for("resident_leave")
-
-    if not session.get("sms_consent_done"):
-        return redirect(url_for("resident_consent", next=next_url))
-
-    return redirect(next_url)
-  
+     
 @app.get("/resident/home")
 @require_resident
 def resident_home():
@@ -2612,6 +2601,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
