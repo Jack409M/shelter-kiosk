@@ -2452,8 +2452,10 @@ def staff_resident_transfer(resident_id: int):
 
     # fetch resident
     resident = db_fetchone(
-        "SELECT * FROM residents WHERE id = %s" if g.get("db_kind") == "pg" else "SELECT * FROM residents WHERE id = ?",
-        (resident_id,),
+        "SELECT * FROM residents WHERE id = %s AND shelter = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT * FROM residents WHERE id = ? AND shelter = ?",
+        (resident_id, session["shelter"]),
     )
 
     if not resident:
@@ -2626,6 +2628,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
