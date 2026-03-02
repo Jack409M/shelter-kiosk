@@ -96,6 +96,8 @@
             <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
             {% if session.get('resident_shelter') %} — {{ session.get('resident_shelter') }}{% endif %}
           {% else %}
+            User currently signed in: <strong>No</strong>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -127,10 +129,3 @@ document.addEventListener("DOMContentLoaded", function () {
     </script>
   </body>
 </html>
-
-
-
-
-
-
-
