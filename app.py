@@ -1205,7 +1205,7 @@ def staff_select_shelter():
 @require_login
 @require_shelter
 def staff_home():
-    return redirect(url_for("staff_leave_pending"))
+    return redirect(url_for("staff_attendance"))
 
 
 @app.route("/staff/leave/pending")
@@ -2378,6 +2378,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
