@@ -1291,16 +1291,8 @@ def staff_login():
     session["role"] = row["role"] if isinstance(row, dict) else row[3]
     session["shelter"] = shelter
     session.permanent = True
-
-    log_action(
-        "staff",
-        session["staff_user_id"],
-        None,
-        session["staff_user_id"],
-        "login",
-        f"Login {session['username']}",
-    )
-
+    log_action("auth", None, None, session["staff_user_id"], "login", f"Staff login: {session['username']}")
+    
     return redirect(url_for("staff_attendance"))
 
 @app.route("/staff/logout")
@@ -2610,6 +2602,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
