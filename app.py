@@ -2278,6 +2278,20 @@ def admin_users():
         ROLE_LABELS=ROLE_LABELS
     )
 
+@app.route("/staff/audit")
+@require_login
+@require_shelter
+@require_admin
+def staff_audit_log():
+    sql = (
+        "SELECT id, entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at "
+        "FROM audit_log "
+        "ORDER BY id DESC "
+        + ("LIMIT %s" if g.get("db_kind") == "pg" else "LIMIT ?")
+    )
+    rows = db_fetchall(sql, (200,))
+    return render_template("staff_audit_log.html", rows=rows, title="Audit Log")
+
 @app.route("/admin/delete-user/<username>", methods=["POST"])
 @require_login
 @require_admin
@@ -2558,6 +2572,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
