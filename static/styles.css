@@ -224,12 +224,6 @@ form.card label[for="callback_phone"] {
   margin-top: 10px;
 }
 
-/* Shelter select width: 25 characters */
-select[name="shelter"] {
-  width: 25ch;
-  max-width: 25ch;
-  display: inline-block;
-}
 
 form.card input[name="first_name"],
 form.card input[name="last_name"] {
@@ -377,9 +371,15 @@ form select[name="resident_id"] {
 @media (max-width: 640px) {
   .grid.grid-names {
     grid-template-columns: 1fr;
-  }
+  } 
 }
 
+/* Leave form: shelter dropdown should not stretch full width */
+select[name="shelter"] {
+  width: 25ch;
+  max-width: 25ch;
+  display: inline-block;
+}
 
 
 
