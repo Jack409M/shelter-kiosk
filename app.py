@@ -1923,8 +1923,19 @@ def staff_attendance():
 @require_shelter
 def staff_attendance_check_in(resident_id: int):
     shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-    note = (request.form.get("note") or "").strip()
+
+    resident = db_fetchone(
+        "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
+        if g.get("db_kind") == "pg"
+        else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
+        (resident_id, shelter),
+)
+if not resident:
+    flash("Invalid resident.", "error")
+    return redirect(url_for("staff_attendance"))
+
+staff_id = session["staff_user_id"]
+note = (request.form.get("note") or "").strip()
 
     sql = (
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
@@ -2628,6 +2639,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
