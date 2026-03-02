@@ -1163,7 +1163,7 @@ def staff_login():
 
     # Rate limit protection
     ip = _client_ip()
-    u = username.lower()
+    u = (username or "").strip().lower()
 
     if (
         _rate_limited(f"staff_login_ip:{ip}", 10, 60)
@@ -2420,6 +2420,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
