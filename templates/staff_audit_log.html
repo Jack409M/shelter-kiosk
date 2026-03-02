@@ -81,11 +81,7 @@
               <td style="white-space:nowrap;">{{ fmt_dt(r["created_at"]) }}</td>
               <td>{{ r["shelter"] or "" }}</td>
               <td>
-                {% if r["staff_username"] %}
-                  {{ r["staff_username"] }} ({{ r["staff_user_id"] }})
-                {% else %}
-                  {{ r["staff_user_id"] or "" }}
-                {% endif %}
+                {{ r["staff_username"] or "" }}
               </td>
               <td style="white-space:nowrap;">{{ r["entity_type"] }}{% if r["entity_id"] %} #{{ r["entity_id"] }}{% endif %}</td>
               <td style="white-space:nowrap;">{{ r["action_type"] }}</td>
