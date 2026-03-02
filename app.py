@@ -68,6 +68,26 @@ def _client_ip() -> str:
 # Lightweight in process cleanup throttle for rate_limit_events pruning
 _LAST_RL_PRUNE_TS = 0.0
 
+# Fallback limiter used only when not on Postgres (sqlite or other)
+_RATE_BUCKETS_MEM: dict[str, deque[float]] = {}
+
+def _rate_limited_memory(key: str, limit: int, window_seconds: int) -> bool:
+    now = time.time()
+    bucket = _RATE_BUCKETS_MEM.get(key)
+    if bucket is None:
+        bucket = deque()
+        _RATE_BUCKETS_MEM[key] = bucket
+
+    cutoff = now - window_seconds
+    while bucket and bucket[0] < cutoff:
+        bucket.popleft()
+
+    if len(bucket) >= limit:
+        return True
+
+    bucket.append(now)
+    return False
+
 def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
     """
     Postgres backed rate limiter.
@@ -114,27 +134,6 @@ def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
             pass
 
     return c > limit
-
-
-# Fallback limiter used only when not on Postgres (sqlite or other)
-_RATE_BUCKETS_MEM: dict[str, deque[float]] = {}
-
-def _rate_limited_memory(key: str, limit: int, window_seconds: int) -> bool:
-    now = time.time()
-    bucket = _RATE_BUCKETS_MEM.get(key)
-    if bucket is None:
-        bucket = deque()
-        _RATE_BUCKETS_MEM[key] = bucket
-
-    cutoff = now - window_seconds
-    while bucket and bucket[0] < cutoff:
-        bucket.popleft()
-
-    if len(bucket) >= limit:
-        return True
-
-    bucket.append(now)
-    return False
 
 # CSRF token generator for templates
 def _csrf_token() -> str:
@@ -2559,6 +2558,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
