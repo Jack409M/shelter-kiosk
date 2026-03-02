@@ -5,6 +5,7 @@
 <div class="card">
   <h2>Add resident</h2>
   <form method="post">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <div class="grid">
       <div>
         <label>First name</label>
@@ -77,4 +78,5 @@
 </table>
 
 {% endblock %}
+
 
