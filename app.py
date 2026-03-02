@@ -164,20 +164,7 @@ def _csrf_protect():
         or ""
     )
     expected = session.get("_csrf_token") or ""
-
-    print(
-        "CSRF DEBUG",
-        {
-            "path": request.path,
-            "endpoint": request.endpoint,
-            "sent_len": len(sent or ""),
-            "expected_len": len(expected or ""),
-            "match": bool(sent and expected and sent == expected),
-            "cookie_present": bool(request.headers.get("Cookie")),
-            "secret_prefix": (app.secret_key or "")[:8],
-        },
-    )
-
+    
     if not sent or not expected or sent != expected:
         flash("Session expired. Please retry.", "error")
 
@@ -2639,6 +2626,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
