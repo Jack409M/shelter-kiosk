@@ -760,11 +760,6 @@ def require_login(fn):
 
     return wrapper
 
-# User roles
-USER_ROLES = {"admin", "staff", "case_manager", "ra"}
-STAFF_ROLES = {"admin", "staff", "case_manager", "ra"}
-TRANSFER_ROLES = {"admin", "case_manager"}
-
 def require_staff_or_admin(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -2601,6 +2596,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
