@@ -65,15 +65,66 @@ def _client_ip() -> str:
     return (request.remote_addr or "").strip() or "unknown"
 
 
-_RATE_BUCKETS: dict[str, deque[float]] = {}
-
+# Lightweight in process cleanup throttle for rate_limit_events pruning
+_LAST_RL_PRUNE_TS = 0.0
 
 def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
+    """
+    Postgres backed rate limiter.
+    Returns True when the caller should be blocked.
+
+    Behavior: allows up to `limit` events in `window_seconds`.
+    The (limit+1)th attempt within the window will be blocked.
+    """
+    # If not on Postgres, fall back to a simple per process memory limiter
+    if g.get("db_kind") != "pg":
+        return _rate_limited_memory(key, limit, window_seconds)
+
+    # Safety clamps
+    if limit <= 0 or window_seconds <= 0:
+        return True
+
+    # Insert the attempt
+    db_execute(
+        "INSERT INTO rate_limit_events (k) VALUES (%s)",
+        (key,),
+    )
+
+    # Count events within the window (including the one we just inserted)
+    row = db_fetchone(
+        """
+        SELECT COUNT(1) AS c
+        FROM rate_limit_events
+        WHERE k = %s
+          AND created_at >= NOW() - (%s * INTERVAL '1 second')
+        """,
+        (key, window_seconds),
+    )
+    c = int(row["c"] if isinstance(row, dict) else row[0])
+
+    # Periodic prune: keep table from growing forever (runs at most once every 10 minutes per worker)
+    # Keep 2 days as a safety buffer for odd windows.
+    global _LAST_RL_PRUNE_TS
     now = time.time()
-    bucket = _RATE_BUCKETS.get(key)
+    if now - _LAST_RL_PRUNE_TS > 600:
+        _LAST_RL_PRUNE_TS = now
+        try:
+            db_execute("DELETE FROM rate_limit_events WHERE created_at < NOW() - INTERVAL '2 days'")
+        except Exception:
+            pass
+
+    return c > limit
+
+
+# Fallback limiter used only when not on Postgres (sqlite or other)
+_RATE_BUCKETS_MEM: dict[str, deque[float]] = {}
+
+def _rate_limited_memory(key: str, limit: int, window_seconds: int) -> bool:
+    now = time.time()
+    bucket = _RATE_BUCKETS_MEM.get(key)
     if bucket is None:
         bucket = deque()
-        _RATE_BUCKETS[key] = bucket
+        _RATE_BUCKETS_MEM[key] = bucket
 
     cutoff = now - window_seconds
     while bucket and bucket[0] < cutoff:
@@ -2508,6 +2559,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
