@@ -395,5 +395,34 @@ input[name="needed_at"] {
   display: inline-block;
 }
 
+/* =========
+   Consistent field widths
+   Use these classes everywhere for uniform sizing
+========= */
+
+/* Common fixed widths */
+.w-shelter { width: 20ch; max-width: 20ch; display: inline-block; }  /* shelter fields */
+.w-phone   { width: 14ch; max-width: 14ch; display: inline-block; }  /* 10 digit phone */
+.w-date    { width: 15ch; max-width: 15ch; display: inline-block; }  /* YYYY MM DD */
+.w-time    { width: 10ch; max-width: 10ch; display: inline-block; }  /* HH MM */
+.w-dt      { width: 28ch; max-width: 28ch; display: inline-block; }  /* datetime local */
+.w-code    { width: 12ch; max-width: 12ch; display: inline-block; }  /* resident code */
+
+/* Tight row helper for two or three small fields */
+.grid.tight-row {
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  gap: 14px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .grid.tight-row { grid-template-columns: 1fr; }
+  .w-shelter, .w-phone, .w-date, .w-time, .w-dt, .w-code {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+}
 
 
