@@ -591,7 +591,14 @@ def init_db() -> None:
         );
         """,
     )
-
+# Indexes for transfer history lookups
+try:
+    if kind == "pg":
+        db_execute("CREATE INDEX IF NOT EXISTS resident_transfers_resident_id_idx ON resident_transfers (resident_id)")
+        db_execute("CREATE INDEX IF NOT EXISTS resident_transfers_transferred_at_idx ON resident_transfers (transferred_at)")
+except Exception:
+    pass
+    
     create(
         """
         CREATE TABLE IF NOT EXISTS leave_requests (
@@ -2528,6 +2535,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
