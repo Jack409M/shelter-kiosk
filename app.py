@@ -2407,20 +2407,42 @@ def staff_residents():
     init_db()
     shelter = session["shelter"]
 
-    show = request.args.get("show", "active")
+    show = (request.args.get("show") or "active").strip().lower()
 
     if show == "all":
         residents = db_fetchall(
-            "SELECT * FROM residents WHERE shelter = %s ORDER BY last_name, first_name"
+            """
+            SELECT *
+            FROM residents
+            WHERE shelter = %s
+            ORDER BY is_active DESC, last_name ASC, first_name ASC
+            """
             if g.get("db_kind") == "pg"
-            else "SELECT * FROM residents WHERE shelter = ? ORDER BY last_name, first_name",
+            else
+            """
+            SELECT *
+            FROM residents
+            WHERE shelter = ?
+            ORDER BY is_active DESC, last_name ASC, first_name ASC
+            """,
             (shelter,),
         )
     else:
         residents = db_fetchall(
-            "SELECT * FROM residents WHERE shelter = %s AND is_active = TRUE ORDER BY last_name, first_name"
+            """
+            SELECT *
+            FROM residents
+            WHERE shelter = %s AND is_active = TRUE
+            ORDER BY last_name ASC, first_name ASC
+            """
             if g.get("db_kind") == "pg"
-            else "SELECT * FROM residents WHERE shelter = ? AND is_active = 1 ORDER BY last_name, first_name",
+            else
+            """
+            SELECT *
+            FROM residents
+            WHERE shelter = ? AND is_active = 1
+            ORDER BY last_name ASC, first_name ASC
+            """,
             (shelter,),
         )
 
@@ -2661,6 +2683,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
