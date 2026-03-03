@@ -582,6 +582,14 @@ def init_db() -> None:
         )
     except Exception:
         pass
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS transport_requests_shelter_status_pickup_idx "
+            "ON transport_requests (shelter, status, pickup_at)"
+        )
+    except Exception:
+        pass
+
     
     rows = db_fetchall(
         "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
@@ -2727,6 +2735,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
