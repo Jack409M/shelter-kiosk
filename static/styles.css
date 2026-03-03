@@ -370,6 +370,12 @@ input.shelter-box {
   display: inline-block;
 }
 
+/* Leave request date fields */
+input.date-box {
+  width: 15ch;
+  max-width: 15ch;
+  display: inline-block;
+}
 
 
 
