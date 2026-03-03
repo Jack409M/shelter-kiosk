@@ -301,11 +301,12 @@ def get_db() -> Any:
     if "db" in g:
         return g.db
 
-    if DATABASE_URL:
-        import psycopg2
-        import psycopg2.extras
+     if DATABASE_URL:
+        _init_pg_pool()
+        if PG_POOL is None:
+            raise RuntimeError("Postgres pool was not initialized.")
 
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = PG_POOL.getconn()
         conn.autocommit = True
         g.db = conn
         g.db_kind = "pg"
@@ -2690,6 +2691,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
