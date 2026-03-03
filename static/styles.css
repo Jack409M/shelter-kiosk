@@ -425,6 +425,32 @@ input[name="needed_at"] {
   }
 }
 
+/* Responsive nav switch */
+.nav-mobile { display: none; }
+.nav-desktop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+@media (max-width: 640px) {
+  .nav-desktop { display: none; }
+  .nav-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .nav-mobile a {
+    width: 100%;
+    text-align: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 47, 87, 0.18);
+    color: var(--text);
+    text-decoration: none;
+    line-height: 1;
+  }
+}
+
 
 
 
