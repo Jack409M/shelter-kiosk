@@ -915,28 +915,90 @@ def require_resident_create(fn):
 @app.get("/privacy")
 def privacy_policy():
     return (
-        "Privacy Policy – Downtown Women’s Center\n\n"
-        "Downtown Women’s Center collects phone numbers only for operational communication "
-        "related to shelter services, including leave approvals, transportation scheduling, "
-        "and service notifications.\n\n"
-        "We do not sell, rent, or share personal information with third parties for marketing purposes.\n\n"
-        "SMS consent is not shared with third parties or affiliates for marketing purposes.\n\n"
-        "If you have questions about this policy, please contact Downtown Women’s Center at 806-372-3625.\n"
-    ), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        """
+        <html>
+        <head>
+        <title>Privacy Policy – Downtown Women’s Center</title>
+        <style>
+        body {font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; line-height: 1.6;}
+        h1 {margin-bottom: 20px;}
+        p {margin-bottom: 16px;}
+        </style>
+        </head>
+        <body>
+
+        <h1>Privacy Policy – Downtown Women’s Center</h1>
+
+        <p>
+        Downtown Women’s Center collects phone numbers only for operational communication
+        related to shelter services, including leave approvals, transportation scheduling,
+        and service notifications.
+        </p>
+
+        <p>
+        We do not sell, rent, or share personal information with third parties for marketing purposes.
+        </p>
+
+        <p>
+        SMS consent is not shared with third parties or affiliates for marketing purposes.
+        </p>
+
+        <p>
+        If you have questions about this policy, please contact Downtown Women’s Center
+        at 806-372-3625.
+        </p>
+
+        </body>
+        </html>
+        """,
+        200,
+        {"Content-Type": "text/html; charset=utf-8"},
+    )
 
 
 @app.get("/terms")
 def terms_and_conditions():
     return (
-        "Terms and Conditions – Downtown Women’s Center\n\n"
-        "By opting in to receive SMS messages from Downtown Women’s Center, "
-        "you agree to receive operational notifications related to shelter services, "
-        "including leave approvals, transportation scheduling, reminders, and service updates.\n\n"
-        "Message frequency varies. Message and data rates may apply.\n\n"
-        "You may opt out at any time by replying STOP.\n"
-        "For assistance, reply HELP.\n\n"
-        "Downtown Women’s Center is not responsible for delayed or undelivered messages.\n"
-    ), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        """
+        <html>
+        <head>
+        <title>Terms and Conditions – Downtown Women’s Center</title>
+        <style>
+        body {font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; line-height: 1.6;}
+        h1 {margin-bottom: 20px;}
+        p {margin-bottom: 16px;}
+        </style>
+        </head>
+        <body>
+
+        <h1>Terms and Conditions – Downtown Women’s Center</h1>
+
+        <p>
+        By opting in to receive SMS messages from Downtown Women’s Center,
+        you agree to receive operational notifications related to shelter services,
+        including leave approvals, transportation scheduling, reminders,
+        and service updates.
+        </p>
+
+        <p>
+        Message frequency varies. Message and data rates may apply.
+        </p>
+
+        <p>
+        You may opt out at any time by replying STOP.
+        For assistance, reply HELP.
+        </p>
+
+        <p>
+        Downtown Women’s Center is not responsible for delayed or undelivered messages.
+        </p>
+
+        </body>
+        </html>
+        """,
+        200,
+        {"Content-Type": "text/html; charset=utf-8"},
+    )
 
 
 @app.route("/")
@@ -2559,6 +2621,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
