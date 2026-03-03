@@ -76,7 +76,7 @@ nav .sep { margin-right: 10px; }
    Cards / Forms
 ========= */
 .card {
-  background: var(--bg);
+  background: #e4f0f8;
   padding: 12px;
   border: 1px solid #000;
   border-radius: var(--radius);
@@ -435,6 +435,7 @@ input.date-box {
     margin-top: 8px;
   }
 }
+
 
 
 
