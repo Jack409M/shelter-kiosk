@@ -417,6 +417,12 @@ input.date-box {
   }
 }
 
+@media (max-width: 640px) {
+  h1 {
+    margin-top: 6px;
+    margin-bottom: 10px;
+  }
+}
 
 
 
