@@ -377,6 +377,12 @@ input.date-box {
   display: inline-block;
 }
 
+/* Leave request date row layout */
+.grid.date-grid {
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  gap: 20px;
+}
 
 
 
