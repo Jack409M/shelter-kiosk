@@ -2265,13 +2265,13 @@ def staff_audit_log_csv():
     w = csv.writer(output)
     w.writerow(["id", "created_at", "shelter", "staff_user_id", "entity_type", "entity_id", "action_type", "action_details"])
     for r in rows:
-    w.writerow([
-        r["id"],
-        r["actor"],
-        r["action"],
-        r["target"],
-        r["created_at"],
-    ])
+        w.writerow([
+            r["id"],
+            r["actor"],
+            r["action"],
+            r["target"],
+            r["created_at"],
+        ])
 
     return Response(
         output.getvalue(),
@@ -2543,6 +2543,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
