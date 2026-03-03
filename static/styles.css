@@ -1,9 +1,11 @@
 /* =========
-   Theme
+   Theme tokens
+   Change colors here, not in 30 places
 ========= */
 :root {
-  --bg: #bcd6ea;          /* clearly blue page */
-  --bg-soft: #cfe3f2;     /* cards + tables */
+  --bg: #bcd6ea;          /* page background */
+  --bg-soft: #cfe3f2;     /* tables */
+  --card: #e4f0f8;        /* card panels */
   --top: #4f8fbe;         /* header */
   --top-border: #3f79a5;
 
@@ -20,6 +22,7 @@
 
   --radius: 8px;
 }
+
 /* =========
    Base
 ========= */
@@ -37,11 +40,21 @@ body {
 }
 
 /* =========
-   Header / Nav
+   Layout wrapper
+========= */
+.container {
+  padding: 18px;
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* =========
+   Header and nav
 ========= */
 .top {
   display: flex;
   justify-content: space-between;
+  align-items: center;               /* keeps brand and pills aligned */
   padding: 8px 12px;
   background: var(--top);
   border-bottom: 1px solid var(--top-border);
@@ -55,39 +68,101 @@ body {
   color: var(--text);
 }
 
-nav a {
-  margin-right: 10px;
-  text-decoration: none;
+/* Pill style for top nav links */
+.top nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.top nav a {
+  display: inline-block;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
   color: var(--text);
+  text-decoration: none;
+  line-height: 1;
 }
 
-nav .sep { margin-right: 10px; }
+.top nav a:hover {
+  border-color: rgba(15, 47, 87, 0.35);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
 
-/* =========
-   Layout
-========= */
-.container {
-  padding: 18px;
-  background: var(--bg);
-  min-height: 100vh;
+/* Dropdown container */
+.nav-dd {
+  position: relative;
+  display: inline-block;
+}
+
+/* Dropdown button styled like nav pill */
+.nav-dd > button {
+  margin-top: 0;                     /* override default button spacing */
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Dropdown panel */
+.nav-dd .menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  border-radius: 12px;
+  padding: 8px;
+  z-index: 50;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.10);
+}
+
+/* Dropdown links (anchor items) */
+.nav-dd .menu a {
+  display: block;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: transparent;
+  border: 0;
+}
+
+.nav-dd .menu a:hover {
+  background: rgba(79, 143, 190, 0.12);
+}
+
+/* Open dropdown */
+.nav-dd:hover .menu { display: block; }        /* desktop hover */
+.nav-dd:focus-within .menu { display: block; } /* mobile tap focus */
+
+/* If you have selects in the header */
+.top select {
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  color: var(--text);
+  cursor: pointer;
 }
 
 /* =========
-   Cards / Forms
+   Cards and forms
 ========= */
 .card {
-  background: #e4f0f8;
+  background: var(--card);
   padding: 18px;
   border: 1px solid #000;
   border-radius: var(--radius);
+
+  /* desktop: keep forms readable */
   margin: 18px auto;
   max-width: 920px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
 }
 
 label {
@@ -125,6 +200,19 @@ input[type="submit"] {
   -webkit-text-fill-color: #111;
 }
 
+/* Desktop: make submit feel like the main action */
+input[type="submit"] {
+  padding: 10px 18px;
+  font-size: 15px;
+}
+
+/* Simple two column grid helper */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
 /* =========
    Tables
 ========= */
@@ -147,16 +235,7 @@ thead th {
   background: var(--top);
 }
 
-/* overdue highlight */
 tr.overdue td { font-weight: 700; }
-
-/* =========
-   Inline forms
-========= */
-.inline {
-  display: inline-block;
-  margin-right: 10px;
-}
 
 /* =========
    Flash messages
@@ -175,10 +254,9 @@ tr.overdue td { font-weight: 700; }
 ========= */
 .check { margin-top: 12px; display: block; width: 100%; }
 .check input[type="checkbox"] { width: auto; accent-color: #000; }
-
 .agreement input[type="checkbox"] { margin-right: 10px; }
 
-/* iPhone Safari: fix checkbox label text not rendering correctly */
+/* iPhone Safari: keep checkbox text visible */
 .check label {
   display: block;
   width: 100%;
@@ -186,7 +264,6 @@ tr.overdue td { font-weight: 700; }
   -webkit-text-fill-color: #111;
   white-space: normal;
 }
-
 .check-text {
   display: inline;
   color: #111;
@@ -205,13 +282,15 @@ tr.overdue td { font-weight: 700; }
   border: 1px solid #ccc;
   display: inline-block;
 }
-
 .badge.in { background: var(--ok-bg); border-color: var(--ok-border); }
 .badge.out { background: #f0f0f0; border-color: #d0d0d0; }
 
 /* =========
-   Compact field widths (forms inside .card)
+   Field sizing rules
+   These are “exceptions” that override default full width inputs
 ========= */
+
+/* Phone fields */
 form.card input[type="tel"] {
   width: 180px;
   max-width: 180px;
@@ -225,132 +304,23 @@ form.card label[for="callback_phone"] {
   margin-top: 10px;
 }
 
-/* ===== Header menu pills + dropdowns ===== */
-.top nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.top nav a {
-  display: inline-block;
-  margin-right: 0;                 /* override old margin */
-  padding: 7px 10px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  color: var(--text);
-  text-decoration: none;
-  line-height: 1;
-}
-
-.top nav a:hover {
-  border-color: rgba(15, 47, 87, 0.35);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
-}
-
-/* Dropdown container */
-.nav-dd {
-  position: relative;
-  display: inline-block;
-}
-
-/* Button that looks like a pill link */
-.nav-dd > button {
-  margin-top: 0;                   /* override button default */
-  padding: 7px 10px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  color: var(--text);
-  cursor: pointer;
-}
-
-/* Dropdown panel */
-.nav-dd .menu {
-  display: none;
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 220px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  border-radius: 12px;
-  padding: 8px;
-  z-index: 50;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.10);
-}
-
-/* Dropdown items */
-.nav-dd .menu a {
-  display: block;
-  padding: 9px 10px;
-  border-radius: 10px;
-  background: transparent;
-  border: 0;
-}
-
-.nav-dd .menu a:hover {
-  background: rgba(79, 143, 190, 0.12);
-}
-
-/* Show menu on hover (desktop) */
-.nav-dd:hover .menu {
-  display: block;
-}
-
-/* Mobile: click focus opens menu */
-.nav-dd:focus-within .menu {
-  display: block;
-}
-
-.top select {
-  padding: 7px 10px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  color: var(--text);
-  cursor: pointer;
-}
-
 /* Name fields: match character limits visually */
 input[name="first_name"] { width: 16ch; max-width: 16ch; }
 input[name="last_name"]  { width: 26ch; max-width: 26ch; }
 
-/* Admin Users page field sizing */
-input[name="username"] {
-  width: 50ch;
-  max-width: 50ch;
-}
+/* Admin Users page */
+input[name="username"] { width: 50ch; max-width: 50ch; }
+input[name="password"] { width: 25ch; max-width: 25ch; }
+select[name="role"]    { width: 15ch; max-width: 15ch; }
 
-input[name="password"] {
-  width: 25ch;
-  max-width: 25ch;
-}
+/* Attendance page */
+table td:first-child { width: 50ch; max-width: 50ch; }
+input[name="expected_back_time"] { width: 20ch; max-width: 20ch; }
+form select[name="resident_id"]  { width: 50ch; max-width: 50ch; }
 
-select[name="role"] {
-  width: 15ch;
-  max-width: 15ch;
-}
-
-/* Attendance page name column width */
-table td:first-child {
-  width: 50ch;
-  max-width: 50ch;
-}
-
-/* Attendance expected back time input */
-input[name="expected_back_time"] {
-  width: 20ch;
-  max-width: 20ch;
-}
-
-/* Attendance page: resident dropdown box */
-form select[name="resident_id"] {
-  width: 50ch;
-  max-width: 50ch;
-}
+/* Leave request */
+input.shelter-box { width: 25ch; max-width: 25ch; display: inline-block; }
+input.date-box    { width: 15ch; max-width: 15ch; display: inline-block; }
 
 .grid.grid-names {
   grid-template-columns: max-content max-content;
@@ -358,34 +328,23 @@ form select[name="resident_id"] {
   align-items: end;
 }
 
-@media (max-width: 640px) {
-  .grid.grid-names {
-    grid-template-columns: 1fr;
-  } 
-}
-
-/* Leave request shelter field width */
-input.shelter-box {
-  width: 25ch;
-  max-width: 25ch;
-  display: inline-block;
-}
-
-/* Leave request date fields */
-input.date-box {
-  width: 15ch;
-  max-width: 15ch;
-  display: inline-block;
-}
-
-/* Leave request date row layout */
 .grid.date-grid {
   grid-template-columns: max-content max-content;
   justify-content: start;
   gap: 20px;
 }
 
+/* Transport request */
+input[name="needed_at"] {
+  width: 28ch;
+  max-width: 28ch;
+}
+
+/* =========
+   Mobile rules
+========= */
 @media (max-width: 640px) {
+  /* top nav becomes stacked buttons */
   .top nav {
     flex-direction: column;
     align-items: stretch;
@@ -396,75 +355,35 @@ input.date-box {
     width: 100%;
     text-align: center;
   }
-}
 
-@media (max-width: 640px) {
+  /* headings */
   h1 {
     font-size: 28px;
-    margin-top: 10px;
-  }
-}
-
-/* Mobile: stack leave and return date */
-@media (max-width: 640px) {
-  .grid.date-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .grid.date-grid input.date-box {
-    width: 100%;
-    max-width: 100%;
-    display: block;
-  }
-}
-
-@media (max-width: 640px) {
-  h1 {
     margin-top: 6px;
     margin-bottom: 10px;
   }
-}
 
-@media (max-width: 640px) {
-  input[type="date"] {
-    padding: 10px 12px;
-  }
-}
+  /* tighter labels */
+  label { margin-top: 8px; }
 
-@media (max-width: 640px) {
-  label {
-    margin-top: 8px;
-  }
-}
+  /* bigger tap targets */
+  input[type="date"] { padding: 10px 12px; }
 
-@media (max-width: 640px) {
   button,
   input[type="submit"] {
     width: 100%;
     padding: 12px;
     font-size: 16px;
   }
+
+  /* stack leave and return date on phones */
+  .grid.date-grid { grid-template-columns: 1fr; }
+  .grid.date-grid input.date-box {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+
+  /* names grid stacks on phones */
+  .grid.grid-names { grid-template-columns: 1fr; }
 }
-
-/* Primary submit button */
-input[type="submit"] {
-  padding: 10px 18px;
-  font-size: 15px;
-}
-
-/* Transport needed date/time */
-input[name="needed_at"] {
-  width: 28ch;
-  max-width: 28ch;
-}
-
-.top {
-  align-items: center;
-}
-
-
-
-
-
-
-
