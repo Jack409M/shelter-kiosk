@@ -2545,6 +2545,10 @@ def favicon_root():
 def health():
     return {"status": "ok"}, 200
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template("404.html"), 404
+
 @app.after_request
 def add_cache_headers(response):
     if request.path.startswith("/static/"):
@@ -2555,6 +2559,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
