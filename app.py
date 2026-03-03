@@ -301,7 +301,7 @@ def get_db() -> Any:
     if "db" in g:
         return g.db
 
-     if DATABASE_URL:
+    if DATABASE_URL:
         _init_pg_pool()
         if PG_POOL is None:
             raise RuntimeError("Postgres pool was not initialized.")
@@ -2691,6 +2691,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
