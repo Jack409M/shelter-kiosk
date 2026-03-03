@@ -12,7 +12,28 @@
       <div class="brand">
         <a href="/">Shelter Operations</a>
       </div>
+<div class="top-meta">
+  <img
+    class="top-logo"
+    src="{{ url_for('static', filename='logo.png') }}"
+    alt="DWC"
+  >
 
+  <div class="top-user">
+    {% if session.get('staff_user_id') %}
+      Signed in:
+      <strong>{{ session.get('username') }}</strong>
+      ({{ session.get('role')|capitalize }})
+      {% if session.get('shelter') %} | {{ session.get('shelter') }}{% endif %}
+    {% elif session.get('resident_id') %}
+      Signed in:
+      <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
+      {% if session.get('resident_shelter') %} | {{ session.get('resident_shelter') }}{% endif %}
+    {% else %}
+      Not signed in
+    {% endif %}
+  </div>
+</div>
       <nav>
 
         <!-- ===================== -->
@@ -126,4 +147,5 @@
 
   </body>
 </html>
+
 
