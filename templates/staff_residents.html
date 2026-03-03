@@ -1,75 +1,153 @@
 {% extends "layout.html" %}
 {% block content %}
+
+<style>
+  /* Residents page layout */
+  .residents-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .residents-side {
+    position: sticky;
+    top: 14px;
+  }
+
+  /* Tighter cards on the right */
+  .card.tight {
+    padding: 12px;
+    margin: 0 0 14px 0;
+    max-width: 520px;
+  }
+
+  /* Compact table density */
+  table.compact th,
+  table.compact td {
+    padding: 8px 10px;
+  }
+
+  table.compact td {
+    vertical-align: middle;
+  }
+
+  /* Keep action buttons on one line */
+  .actions {
+    white-space: nowrap;
+  }
+
+  .actions form {
+    display: inline-block;
+    margin: 0 8px 0 0;
+  }
+
+  .actions button {
+    margin-top: 0;
+    padding: 6px 10px;
+  }
+
+  /* Make the list area use the space well */
+  .residents-list {
+    overflow-x: auto;
+  }
+
+  /* Mobile and smaller screens */
+  @media (max-width: 900px) {
+    .residents-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .residents-side {
+      position: static;
+    }
+
+    .card.tight {
+      max-width: none;
+    }
+  }
+</style>
+
 <h1>RESIDENTS for {{ shelter }}</h1>
 
-<div class="card">
-  <h2>Add resident</h2>
-  <form method="post">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-    <div class="grid grid-names">
-      <div>
-        <label>First name</label>
-        <input name="first_name" required>
-      </div>
-      <div>
-        <label>Last name</label>
-        <input name="last_name" required>
-      </div>
-    </div>
-    <button type="submit">Add</button>
-  </form>
-</div>
+<div class="residents-layout">
 
-<div class="card">
-  <strong>View:</strong>
-  <a href="{{ url_for('staff_residents', show='active') }}">Active only</a>
-  |
-  <a href="{{ url_for('staff_residents', show='all') }}">All</a>
-</div>
+  <!-- LEFT: list -->
+  <div class="residents-list">
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Resident Code</th>
+          <th>Active</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in residents %}
+          <tr>
+            <td>{{ r.first_name }} {{ r.last_name }}</td>
+            <td><strong>{{ r.resident_code }}</strong></td>
+            <td>
+              {% if r.is_active %}
+                <span class="badge in" style="background: #ffeb3b; border-color: #000; color: #000; font-weight: 700;">Active</span>
+              {% else %}
+                <span class="badge out">Inactive</span>
+              {% endif %}
+            </td>
+            <td class="actions">
+              <form method="post" action="{{ url_for('staff_residents') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="op" value="{% if r.is_active %}deactivate{% else %}activate{% endif %}">
+                <input type="hidden" name="resident_id" value="{{ r.id }}">
+                <button type="submit">{% if r.is_active %}Deactivate{% else %}Activate{% endif %}</button>
+              </form>
 
-<table class="compact">
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Resident Code</th>
-      <th>Active</th>
-      <th>Action</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for r in residents %}
-      <tr>
-        <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
-
-        <td><strong>{{ r["resident_code"] }}</strong></td>
-
-        <td>
-          {% if r["is_active"]|int == 1 %}
-            <span class="badge in" style="background: yellow !important; border: 3px solid black !important;">Active</span>
-          {% else %}
-            <span class="badge out" style="background: orange !important; border: 3px solid black !important;">Inactive</span>
-          {% endif %}
-        </td>
-
-        <td>
-  <div class="actions">
-    <form method="post" action="...">
-      <button type="submit">Deactivate</button>
-    </form>
-
-    <form method="post" action="...">
-      <button type="submit">Transfer</button>
-    </form>
+              <form method="post" action="{{ url_for('staff_residents') }}">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="op" value="transfer">
+                <input type="hidden" name="resident_id" value="{{ r.id }}">
+                <button type="submit">Transfer</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-</td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+
+  <!-- RIGHT: controls -->
+  <div class="residents-side">
+
+    <form method="post" class="card tight" action="{{ url_for('staff_residents') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="op" value="add">
+
+      <h2 style="margin: 0 0 10px 0;">Add resident</h2>
+
+      <div class="grid grid-names" style="gap: 10px;">
+        <div>
+          <label for="first_name">First name</label>
+          <input id="first_name" name="first_name" required>
+        </div>
+        <div>
+          <label for="last_name">Last name</label>
+          <input id="last_name" name="last_name" required>
+        </div>
+      </div>
+
+      <button type="submit" style="margin-top: 10px;">Add</button>
+    </form>
+
+    <div class="card tight">
+      <strong>View:</strong>
+      <a href="{{ url_for('staff_residents', view='active') }}">Active only</a>
+      |
+      <a href="{{ url_for('staff_residents', view='all') }}">All</a>
+    </div>
+
+  </div>
+
+</div>
 
 {% endblock %}
-
-
-
-
-
