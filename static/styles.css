@@ -292,9 +292,9 @@ tr.overdue td { font-weight: 700; }
 
 /* Phone fields */
 form.card input[type="tel"] {
-  width: 180px;
-  max-width: 180px;
-  display: inline-block;
+  width: 100%;
+  max-width: 100%;
+  display: block;
 }
 
 form.card label[for="resident_phone"],
@@ -424,6 +424,7 @@ input[name="needed_at"] {
     display: block;
   }
 }
+
 
 
 
