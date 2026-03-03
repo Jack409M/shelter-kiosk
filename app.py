@@ -2538,10 +2538,17 @@ def resident_login_alias():
 def resident_login_alias_slash():
     return redirect("/resident", code=301)
 
+@app.after_request
+def add_cache_headers(response):
+    if request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
+
 if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
