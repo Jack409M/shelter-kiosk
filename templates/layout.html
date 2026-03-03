@@ -109,35 +109,7 @@
 
       </nav>
     </header>
-
-    <!-- Logo + Signed In Banner -->
-    <div style="padding-top: 10px;">
-      <div style="text-align:center; margin: 6px 0 12px 0;">
-        <img
-          src="{{ url_for('static', filename='logo.png') }}"
-          alt="Shelter Logo"
-          style="max-height: 90px; width: auto; display:inline-block;"
-        >
-
-        <div style="margin-top: 6px; font-size: 14px;">
-          {% if session.get('staff_user_id') %}
-            User signed in:
-            <strong>{{ session.get('username') }}</strong>
-            ({{ session.get('role')|capitalize }})
-            {% if session.get('shelter') %} — {{ session.get('shelter') }}{% endif %}
-
-          {% elif session.get('resident_id') %}
-            Signed in:
-            <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
-            {% if session.get('resident_shelter') %} — {{ session.get('resident_shelter') }}{% endif %}
-
-          {% else %}
-            Not signed in
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
+   
     <main class="container">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -154,3 +126,4 @@
 
   </body>
 </html>
+
