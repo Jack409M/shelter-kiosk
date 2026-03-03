@@ -921,7 +921,7 @@ def privacy_policy():
         "and service notifications.\n\n"
         "We do not sell, rent, or share personal information with third parties for marketing purposes.\n\n"
         "SMS consent is not shared with third parties or affiliates for marketing purposes.\n\n"
-        "If you have questions about this policy, please contact Downtown Women’s Center at 806-XXX-XXXX.\n"
+        "If you have questions about this policy, please contact Downtown Women’s Center at 806-372-3625.\n"
     ), 200, {"Content-Type": "text/plain; charset=utf-8"}
 
 
@@ -2542,6 +2542,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
