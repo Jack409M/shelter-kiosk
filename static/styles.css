@@ -436,6 +436,14 @@ input.date-box {
   }
 }
 
+@media (max-width: 640px) {
+  button,
+  input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+}
 
 
 
