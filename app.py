@@ -914,91 +914,11 @@ def require_resident_create(fn):
 
 @app.get("/privacy")
 def privacy_policy():
-    return (
-        """
-        <html>
-        <head>
-        <title>Privacy Policy – Downtown Women’s Center</title>
-        <style>
-        body {font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; line-height: 1.6;}
-        h1 {margin-bottom: 20px;}
-        p {margin-bottom: 16px;}
-        </style>
-        </head>
-        <body>
-
-        <h1>Privacy Policy – Downtown Women’s Center</h1>
-
-        <p>
-        Downtown Women’s Center collects phone numbers only for operational communication
-        related to shelter services, including leave approvals, transportation scheduling,
-        and service notifications.
-        </p>
-
-        <p>
-        We do not sell, rent, or share personal information with third parties for marketing purposes.
-        </p>
-
-        <p>
-        SMS consent is not shared with third parties or affiliates for marketing purposes.
-        </p>
-
-        <p>
-        If you have questions about this policy, please contact Downtown Women’s Center
-        at 806-372-3625.
-        </p>
-
-        </body>
-        </html>
-        """,
-        200,
-        {"Content-Type": "text/html; charset=utf-8"},
-    )
-
+    return render_template("privacy.html")
 
 @app.get("/terms")
 def terms_and_conditions():
-    return (
-        """
-        <html>
-        <head>
-        <title>Terms and Conditions – Downtown Women’s Center</title>
-        <style>
-        body {font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; line-height: 1.6;}
-        h1 {margin-bottom: 20px;}
-        p {margin-bottom: 16px;}
-        </style>
-        </head>
-        <body>
-
-        <h1>Terms and Conditions – Downtown Women’s Center</h1>
-
-        <p>
-        By opting in to receive SMS messages from Downtown Women’s Center,
-        you agree to receive operational notifications related to shelter services,
-        including leave approvals, transportation scheduling, reminders,
-        and service updates.
-        </p>
-
-        <p>
-        Message frequency varies. Message and data rates may apply.
-        </p>
-
-        <p>
-        You may opt out at any time by replying STOP.
-        For assistance, reply HELP.
-        </p>
-
-        <p>
-        Downtown Women’s Center is not responsible for delayed or undelivered messages.
-        </p>
-
-        </body>
-        </html>
-        """,
-        200,
-        {"Content-Type": "text/html; charset=utf-8"},
-    )
+    return render_template("terms.html")
 
 
 @app.route("/")
@@ -2621,6 +2541,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
