@@ -295,7 +295,6 @@ def get_db() -> Any:
         return g.db
 
     if DATABASE_URL:
-        print("DB kind: pg")
         import psycopg2
         import psycopg2.extras
 
@@ -2684,6 +2683,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
