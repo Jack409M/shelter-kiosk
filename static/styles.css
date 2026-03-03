@@ -424,6 +424,19 @@ input.date-box {
   }
 }
 
+@media (max-width: 640px) {
+  input[type="date"] {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  label {
+    margin-top: 8px;
+  }
+}
+
+
 
 
 
