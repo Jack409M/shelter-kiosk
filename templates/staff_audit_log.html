@@ -183,7 +183,7 @@
 
       <div class="filter-actions">
         <button type="button" id="clearBtn">Clear</button>
-        <a href="{{ url_for('staff_audit_log_csv') }}">Export CSV</a>
+        <a href="{{ url_for('staff_audit_log_csv', **request.args) }}">Export CSV</a>
       </div>
 
       <div class="filter-actions" style="margin-top:10px;">
