@@ -2533,6 +2533,10 @@ def resident_login_alias():
 def resident_login_alias_slash():
     return redirect("/resident", code=301)
 
+@app.get("/favicon.ico")
+def favicon():
+    return redirect(url_for("static", filename="favicon.ico"), code=301)
+
 @app.after_request
 def add_cache_headers(response):
     if request.path.startswith("/static/"):
@@ -2543,6 +2547,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
