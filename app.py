@@ -2226,45 +2226,37 @@ def staff_audit_log():
     return render_template("staff_audit_log.html", rows=rows, title="Audit Log", fmt_dt=fmt_dt)
 
 
-@app.route("/staff/audit.csv")
-@require_login
-@require_shelter
-@require_admin
+@app.get("/staff/admin/audit-log/csv")
 def staff_audit_log_csv():
-    import csv
-    import io
-    from flask import Response
 
-    sql = (
-        "SELECT id, entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at "
-        "FROM audit_log "
-        "ORDER BY id DESC "
-        + ("LIMIT %s" if g.get("db_kind") == "pg" else "LIMIT ?")
-    )
-    rows = db_fetchall(sql, (5000,))
+    rows = db_fetchall("""
+        SELECT id, created_at, shelter, staff_user_id, entity_type, entity_id, action_type, action_details
+        FROM audit_log
+        ORDER BY id DESC
+    """)
 
-    output = io.StringIO()
-    w = csv.writer(output)
+    si = io.StringIO()
+    w = csv.writer(si)
+
     w.writerow(["id", "created_at", "shelter", "staff_user_id", "entity_type", "entity_id", "action_type", "action_details"])
 
-for r in rows:
-    w.writerow([
-        r["id"],
-        r["created_at"],
-        r["shelter"],
-        r["staff_user_id"],
-        r["entity_type"],
-        r["entity_id"],
-        r["action_type"],
-        r["action_details"],
-    ])
+    for r in rows:
+        w.writerow([
+            r["id"],
+            r["created_at"],
+            r["shelter"],
+            r["staff_user_id"],
+            r["entity_type"],
+            r["entity_id"],
+            r["action_type"],
+            r["action_details"],
+        ])
 
     return Response(
-        output.getvalue(),
+        si.getvalue(),
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=audit_log.csv"},
     )
-
 # ---- Residents ----
 
 @app.get("/staff/residents")
@@ -2541,6 +2533,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
