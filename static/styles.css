@@ -158,15 +158,6 @@ header.top,
   background: rgba(79, 143, 190, 0.12);
 }
 
-/* Open dropdown
-   Desktop: hover opens, stays open while hovering menu
-   Mobile: focus within opens on tap */
-.nav-dd:hover .menu,
-.nav-dd .menu:hover,
-.nav-dd:focus-within .menu {
-  display: block;
-}
-
 /* =========
    Cards and forms
 ========= */
@@ -468,3 +459,4 @@ input[name="needed_at"] {
     display: block;
   }
 }
+
