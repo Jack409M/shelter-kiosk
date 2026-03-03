@@ -494,5 +494,23 @@ header.top nav {
   z-index: 6000;
 }
 
+/* --- Fix dropdown menus being hidden by page content --- */
+
+/* Make sure header always stays on top */
+header.top {
+  position: relative;
+  z-index: 10000;
+}
+
+/* Ensure dropdown menu is above everything */
+.nav-dd .menu {
+  z-index: 11000;
+}
+
+/* Prevent cards from clipping dropdowns */
+.card {
+  overflow: visible;
+}
+
 
 
