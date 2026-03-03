@@ -363,6 +363,12 @@ form select[name="resident_id"] {
   } 
 }
 
+/* Leave request shelter field width */
+input.shelter-box {
+  width: 25ch;
+  max-width: 25ch;
+  display: inline-block;
+}
 
 
 
