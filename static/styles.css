@@ -319,7 +319,7 @@ input[name="expected_back_time"] { width: 20ch; max-width: 20ch; }
 form select[name="resident_id"]  { width: 50ch; max-width: 50ch; }
 
 /* Leave request */
-input.shelter-box { width: 25ch; max-width: 25ch; display: inline-block; }
+input.shelter-box { width: 20ch; max-width: 20ch; display: inline-block; }
 input.date-box    { width: 15ch; max-width: 15ch; display: inline-block; }
 
 .grid.grid-names {
@@ -424,5 +424,6 @@ input[name="needed_at"] {
     display: block;
   }
 }
+
 
 
