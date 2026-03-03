@@ -14,50 +14,104 @@
       </div>
 
       <nav>
+        {# =========================
+           Resident navigation
+           ========================= #}
+        {% if session.get("resident_id") %}
+          <a href="{{ url_for('resident_transport') }}">Request Transport</a>
+          <a href="{{ url_for('resident_logout') }}">Logout</a>
+        {% else %}
+          <a href="{{ url_for('resident_leave') }}">Request Leave</a>
+          <a href="{{ url_for('resident_transport') }}">Request Transport</a>
+        {% endif %}
 
-  {% if session.get("resident_identifier") %}
-    <!-- Resident is logged in -->
-    <a href="{{ url_for('resident_transport') }}">Request Transport</a>
-    <a href="{{ url_for('resident_logout') }}">Logout</a>
+        {# =========================
+           Staff navigation
+           ========================= #}
+        {% if session.get("staff_user_id") %}
 
-  {% else %}
-    <!-- Resident not logged in -->
-    {% if session.get("resident_id") %}
-  <a href="{{ url_for('resident_transport') }}">Request Transport</a>
-  <a href="{{ url_for('resident_logout') }}">Logout</a>
-{% else %}
-  <a href="{{ url_for('resident_leave') }}">Request Leave</a>
-  <a href="{{ url_for('resident_transport') }}">Request Transport</a>
-{% endif %}
-  {% endif %}
+          <div class="nav-dd">
+            <button type="button">
+              {% if session.get("shelter") == "Gratitude" %}
+                Gratitude House
+              {% elif session.get("shelter") == "Haven" %}
+                Haven House
+              {% elif session.get("shelter") == "Abba" %}
+                Abba House
+              {% else %}
+                Select Shelter
+              {% endif %}
+              ▾
+            </button>
 
-  {% if not session.get("staff_user_id") %}
-    <a href="{{ url_for('staff_login') }}">Login</a>
-  {% else %}
-    <div class="nav-dd">
+            <div class="menu">
+              <form method="post" action="{{ url_for('staff_select_shelter') }}" style="margin:0;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ request.full_path }}">
+                <button type="submit" name="shelter" value="Abba" style="width:100%; text-align:left; margin:0;">Abba House</button>
+                <button type="submit" name="shelter" value="Haven" style="width:100%; text-align:left; margin:0;">Haven House</button>
+                <button type="submit" name="shelter" value="Gratitude" style="width:100%; text-align:left; margin:0;">Gratitude House</button>
+              </form>
+            </div>
+          </div>
+
+          <div class="nav-dd">
+            <button type="button">Leave ▾</button>
+            <div class="menu">
+              <a href="{{ url_for('staff_leave_pending') }}">Leave pending</a>
+              <a href="{{ url_for('staff_leave_away_now') }}">Leave away</a>
+              <a href="{{ url_for('staff_leave_overdue') }}">Leave overdue</a>
+            </div>
+          </div>
+
+          <div class="nav-dd">
+            <button type="button">Transport ▾</button>
+            <div class="menu">
+              <a href="{{ url_for('staff_transport_pending') }}">Transport pending</a>
+              <a href="/staff/transport/board">Transport schedule</a>
+            </div>
+          </div>
+
+          <a href="{{ url_for('staff_attendance') }}">Checkout Log</a>
+          <a href="{{ url_for('staff_residents') }}">Residents</a>
+
+          {% if session.get("role") == "admin" %}
+            <a href="{{ url_for('admin_users') }}">Users</a>
+            <a href="{{ url_for('staff_audit_log') }}">Audit Log</a>
+          {% endif %}
+
+          <a href="{{ url_for('staff_logout') }}">Logout</a>
+
+        {% else %}
+          {# Only show staff Login when a resident is NOT already logged in #}
+          {% if not session.get("resident_id") %}
+            <a href="{{ url_for('staff_login') }}">Login</a>
+          {% endif %}
+        {% endif %}
+      </nav>
     </header>
 
     <!-- LOGO + SIGNED IN BANNER (GLOBAL) -->
-    <div style="padding-top: 10px;">
-      <div style="text-align:center; margin: 6px 0 12px 0;">
+    <div style="padding-top: 6px;">
+      <div style="text-align:center; margin: 6px 0 10px 0;">
         <img
           src="{{ url_for('static', filename='logo.png') }}"
           alt="Shelter Logo"
-          style="max-height: 90px; width: auto; display:inline-block;"
+          style="max-height: 70px; width: auto; display:inline-block;"
         >
 
-        <div style="margin-top: 6px; font-size: 14px;">
+        <div style="margin-top: 6px; font-size: 13px; line-height: 1.25;">
           {% if session.get('staff_user_id') %}
-            User currently signed in:
+            Signed in:
             <strong>{{ session.get('username') }}</strong>
             ({{ session.get('role')|capitalize }})
             {% if session.get('shelter') %} — {{ session.get('shelter') }}{% endif %}
           {% elif session.get('resident_id') %}
-            User currently signed in:
+            Signed in:
             <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
             {% if session.get('resident_shelter') %} — {{ session.get('resident_shelter') }}{% endif %}
           {% else %}
-            User currently signed in: <strong>No</strong>
+            Signed in: <strong>No</strong>
           {% endif %}
         </div>
       </div>
@@ -90,6 +144,3 @@ document.addEventListener("DOMContentLoaded", function () {
     </script>
   </body>
 </html>
-
-
-
