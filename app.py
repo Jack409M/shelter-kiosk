@@ -2225,10 +2225,13 @@ def staff_audit_log():
     rows = db_fetchall(sql, (200,))
     return render_template("staff_audit_log.html", rows=rows, title="Audit Log", fmt_dt=fmt_dt)
 
-
-@app.get("/staff/admin/audit-log/csv")
+@app.route("/staff/audit.csv")
+@app.route("/staff/admin/audit-log/csv")
+@require_login
+@require_shelter
+@require_admin
 def staff_audit_log_csv():
-
+    
     rows = db_fetchall("""
         SELECT id, created_at, shelter, staff_user_id, entity_type, entity_id, action_type, action_details
         FROM audit_log
@@ -2533,6 +2536,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
