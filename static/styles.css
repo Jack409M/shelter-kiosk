@@ -501,4 +501,53 @@ input[name="needed_at"] {
   }
 }
 
+/* Compact logo and signed in line inside header */
+.top {
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+.top-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.top-logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+.top-user {
+  font-size: 13px;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 52vw;
+}
+
+/* Keep header compact on smaller screens */
+@media (max-width: 640px) {
+  .top-meta {
+    justify-content: flex-start;
+  }
+
+  .top-logo {
+    display: none;
+  }
+
+  .top-user {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+/* Reduce wasted vertical space under the header across all pages */
+.container {
+  padding-top: 10px;
+}
 
