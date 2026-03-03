@@ -1,0 +1,165 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Users</h1>
+
+<style>
+  .users-layout {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .users-results {
+    overflow-x: auto;
+  }
+
+  .users-side {
+    position: sticky;
+    top: 12px;
+  }
+
+  table.compact th,
+  table.compact td {
+    padding: 6px 8px;
+    font-size: 12px;
+    line-height: 1.2;
+    vertical-align: top;
+  }
+
+  .side-card {
+    background: var(--card, #e4f0f8);
+    border: 1px solid #000;
+    border-radius: var(--radius, 8px);
+    padding: 12px;
+  }
+
+  .side-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+  }
+
+  .side-row { margin-bottom: 10px; }
+
+  .side-row label {
+    margin-top: 0;
+    font-weight: 700;
+  }
+
+  .side-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .side-actions button,
+  .side-actions a {
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    padding: 10px 12px;
+    border: 1px solid #333;
+    border-radius: var(--radius, 8px);
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .danger {
+    border-color: #b00020;
+  }
+
+  .small-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted, #4a5a66);
+  }
+
+  @media (max-width: 900px) {
+    .users-layout { grid-template-columns: 1fr; }
+    .users-side { position: static; }
+  }
+</style>
+
+<div class="users-layout">
+
+  <!-- LEFT: USERS TABLE -->
+  <div class="users-results">
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Active</th>
+          <th>Created</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.username }}</td>
+          <td>{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}</td>
+          <td>{{ "Yes" if u.is_active else "No" }}</td>
+          <td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
+          <td style="white-space: nowrap;">
+            {% if u.username != session.get("username") %}
+              <form method="post" action="{{ url_for('delete_user', username=u.username) }}" class="inline"
+                    onsubmit="return confirm('Delete user {{ u.username }}?');">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="danger">Delete</button>
+              </form>
+            {% else %}
+              <span class="hint">You</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RIGHT: ADD USER -->
+  <aside class="users-side">
+    <div class="side-card">
+      <h3>Add user</h3>
+
+      <form method="post" action="{{ url_for('admin_users') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="side-row">
+          <label for="username">Username</label>
+          <input id="username" name="username" autocomplete="off" required>
+        </div>
+
+        <div class="side-row">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required>
+        </div>
+
+        <div class="side-row">
+          <label for="role">Role</label>
+          <select id="role" name="role" required>
+            {% for r in roles %}
+              <option value="{{ r }}">{{ ROLE_LABELS.get(r, r) if ROLE_LABELS else r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="side-actions">
+          <button type="submit">Create</button>
+          <a href="{{ url_for('staff_home') }}">Done</a>
+        </div>
+
+        <div class="small-note">
+          Password must be at least 8 characters.
+        </div>
+      </form>
+    </div>
+  </aside>
+
+</div>
+{% endblock %}
