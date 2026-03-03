@@ -5,7 +5,7 @@
 <form method="post" class="card">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <label for="shelter">Shelter</label>
-<input id="shelter" name="shelter" value="{{ shelter }}" readonly class="shelter-box">
+<input id="shelter" name="shelter" value="{{ shelter }}" readonly class="w-shelter">
 
   <label for="resident_phone">Phone number for text updates</label>
   <p class="hint">You will receive approval and reminder texts at this number.</p>
@@ -60,6 +60,7 @@
 </form>
 
 {% endblock %}
+
 
 
 
