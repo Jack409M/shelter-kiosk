@@ -138,18 +138,19 @@ body {
 }
 
 /* Open dropdown */
-.nav-dd:hover .menu { display: block; }        /* desktop hover */
-.nav-dd:focus-within .menu { display: block; } /* mobile tap focus */
-
-/* If you have selects in the header */
-.top select {
-  padding: 7px 10px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  color: var(--text);
-  cursor: pointer;
+.nav-dd:hover .menu,
+.nav-dd:hover > button,
+.nav-dd .menu:hover {
+  display: block;
 }
+
+/* Desktop hover */
+@media (hover: hover) and (pointer: fine) {
+  .nav-dd:hover .menu { display: block; }
+}
+
+/* Mobile tap focus */
+.nav-dd:focus-within .menu { display: block; }
 
 /* =========
    Cards and forms
@@ -511,6 +512,7 @@ header.top {
 .card {
   overflow: visible;
 }
+
 
 
 
