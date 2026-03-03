@@ -183,13 +183,13 @@
           {% for row in out_rows %}
             <tr class="{% if row.is_overdue %}att_row_overdue{% endif %}">
               <td>
-                {{ row.name }}
-                {% if row.is_overdue %}
-                  <span class="att_badge att_badge_overdue">Overdue</span>
-                {% else %}
-                  <span class="att_badge">Out</span>
-                {% endif %}
-              </td>
+                 {% if row.is_overdue %}
+                 <span class="att_icon att_overdue">✖</span>
+                 {% else %}
+                 <span class="att_icon att_out">✖</span>
+                 {% endif %}
+                 {{ row.name }}
+               </td>
               <td>{{ fmt_time(row.checked_out_at) }}</td>
               <td>{{ fmt_time(row.expected_back_at) }}</td>
               <td>
@@ -278,4 +278,5 @@
 </div>
 
 {% endblock %}
+
 
