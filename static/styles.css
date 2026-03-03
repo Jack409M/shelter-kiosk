@@ -475,6 +475,24 @@ table.compact thead th {
   z-index: 5;
 }
 
+/* Keep top header and dropdown menus above tables/content */
+header.top {
+  position: relative;
+  z-index: 5000;
+  overflow: visible;
+}
+
+header.top nav {
+  overflow: visible;
+}
+
+.nav-dd {
+  position: relative;
+}
+
+.nav-dd .menu {
+  z-index: 6000;
+}
 
 
 
