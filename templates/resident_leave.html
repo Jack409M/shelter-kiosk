@@ -7,16 +7,16 @@
     <label for="shelter">Shelter</label>
 <input id="shelter" name="shelter" value="{{ shelter }}" readonly class="w-shelter">
 
-  <label for="resident_phone">Phone number for text updates</label>
-  <p class="hint">You will receive approval and reminder texts at this number.</p>
-  <input
-    id="resident_phone"
-    name="resident_phone"
-    type="tel"
-    required
-    placeholder="8065551234"
-    style="width:180px; display:inline-block;"
-  />
+<label for="resident_phone">Phone number for text updates</label>
+<input
+  id="resident_phone"
+  name="resident_phone"
+  type="tel"
+  inputmode="numeric"
+  required
+  placeholder="8065551234"
+  class="w-phone"
+/>
         
 <label>Destination</label>
 <input name="destination" required>
@@ -60,6 +60,7 @@
 </form>
 
 {% endblock %}
+
 
 
 
