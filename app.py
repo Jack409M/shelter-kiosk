@@ -1046,12 +1046,22 @@ def resident_leave():
         errors.append("A phone number is required for text updates.")
 
     try:
-        leave_dt = parse_dt(leave_at_raw)
-        return_dt = parse_dt(return_at_raw)
-        if return_dt <= leave_dt:
+        # Inputs come as YYYY-MM-DD from <input type="date">
+        leave_local_date = datetime.fromisoformat(leave_at_raw).date()
+        return_local_date = datetime.fromisoformat(return_at_raw).date()
+
+        if return_local_date < leave_local_date:
             errors.append("Return must be after leave.")
-        if return_dt > leave_dt + timedelta(days=MAX_LEAVE_DAYS):
+
+        if return_local_date > leave_local_date + timedelta(days=MAX_LEAVE_DAYS):
             errors.append(f"Maximum leave is {MAX_LEAVE_DAYS} days.")
+
+        # Store as UTC midnight timestamps for consistency
+        leave_local_dt = datetime.combine(leave_local_date, datetime.min.time()).replace(tzinfo=ZoneInfo("America/Chicago"))
+        return_local_dt = datetime.combine(return_local_date, datetime.strptime("22:00", "%H:%M").time()).replace(tzinfo=ZoneInfo("America/Chicago"))
+
+        leave_dt = leave_local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return_dt = return_local_dt.astimezone(timezone.utc).replace(tzinfo=None)
     except Exception:
         errors.append("Invalid date.")
 
@@ -2651,6 +2661,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
