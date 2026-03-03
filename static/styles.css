@@ -551,3 +551,26 @@ input[name="needed_at"] {
   padding-top: 10px;
 }
 
+.policy {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 12px 6px;
+}
+
+.policy h1 {
+  margin: 0 0 12px 0;
+}
+
+.policy-body p {
+  line-height: 1.55;
+  margin: 10px 0;
+}
+
+.policy-body ul {
+  padding-left: 18px;
+  margin: 10px 0;
+}
+
+.policy-body li {
+  margin: 6px 0;
+}
