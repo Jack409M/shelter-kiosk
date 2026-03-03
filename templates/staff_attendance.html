@@ -226,9 +226,9 @@
           {% for row in in_rows %}
             <tr>
               <td>
+                <span class="att_icon att_in">✔</span>
                 {{ row.name }}
-                <span class="att_badge">In</span>
-              </td>
+            </td>
               <td>
                 <div class="att_actions">
                   <a class="att_link_btn" href="{{ url_for('staff_attendance_resident_print', resident_id=row.resident_id) }}">Print</a>
@@ -278,5 +278,6 @@
 </div>
 
 {% endblock %}
+
 
 
