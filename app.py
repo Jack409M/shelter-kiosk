@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import secrets
+from werkzeug.middleware.proxy_fix import ProxyFix
 import time
 try:
     from psycopg2.pool import SimpleConnectionPool
@@ -51,7 +52,7 @@ APP_DIR = os.path.abspath(os.path.dirname(__file__))
 SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
 
 app = Flask(__name__)
-
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
 if not secret:
     raise RuntimeError("FLASK_SECRET_KEY is required and must be set in the environment.")
@@ -2749,6 +2750,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
