@@ -51,15 +51,21 @@ body {
 /* =========
    Header and nav
 ========= */
+header.top,
 .top {
   display: flex;
   justify-content: space-between;
-  align-items: center;               /* keeps brand and pills aligned */
+  align-items: center;
   padding: 8px 12px;
   background: var(--top);
   border-bottom: 1px solid var(--top-border);
   flex-wrap: wrap;
   gap: 10px;
+
+  /* always above content */
+  position: relative;
+  z-index: 10000;
+  overflow: visible;
 }
 
 .brand a {
@@ -68,12 +74,17 @@ body {
   color: var(--text);
 }
 
+/* Responsive nav switch */
+.nav-mobile { display: none; }
+.nav-desktop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
 /* Pill style for top nav links */
 .top nav {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  overflow: visible;
 }
 
 .top nav a {
@@ -100,7 +111,7 @@ body {
 
 /* Dropdown button styled like nav pill */
 .nav-dd > button {
-  margin-top: 0;                     /* override default button spacing */
+  margin-top: 0;
   padding: 7px 10px;
   border-radius: 10px;
   background: #ffffff;
@@ -113,45 +124,48 @@ body {
 .nav-dd .menu {
   display: none;
   position: absolute;
-  top: 100%;
-  margin-top: 6px;
+  top: 100%;              /* no hover gap */
+  margin-top: 6px;        /* spacing without breaking hover */
   left: 0;
   min-width: 220px;
   background: #ffffff;
   border: 1px solid rgba(15, 47, 87, 0.18);
   border-radius: 12px;
   padding: 8px;
-  z-index: 50;
+  z-index: 11000;
   box-shadow: 0 12px 30px rgba(0,0,0,0.10);
 }
 
-/* Dropdown links (anchor items) */
-.nav-dd .menu a {
+/* Dropdown items (links + form buttons) */
+.nav-dd .menu a,
+.nav-dd .menu button {
   display: block;
+  width: 100%;
+  text-align: left;
   padding: 9px 10px;
   border-radius: 10px;
+
   background: transparent;
   border: 0;
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
 }
 
-.nav-dd .menu a:hover {
+/* Hover highlight */
+.nav-dd .menu a:hover,
+.nav-dd .menu button:hover {
   background: rgba(79, 143, 190, 0.12);
 }
 
-/* Open dropdown */
+/* Open dropdown
+   Desktop: hover opens, stays open while hovering menu
+   Mobile: focus within opens on tap */
 .nav-dd:hover .menu,
-.nav-dd:hover > button,
-.nav-dd .menu:hover {
+.nav-dd .menu:hover,
+.nav-dd:focus-within .menu {
   display: block;
 }
-
-/* Desktop hover */
-@media (hover: hover) and (pointer: fine) {
-  .nav-dd:hover .menu { display: block; }
-}
-
-/* Mobile tap focus */
-.nav-dd:focus-within .menu { display: block; }
 
 /* =========
    Cards and forms
@@ -162,9 +176,11 @@ body {
   border: 1px solid #000;
   border-radius: var(--radius);
 
-  /* desktop: keep forms readable */
   margin: 18px auto;
   max-width: 920px;
+
+  /* never clip dropdowns */
+  overflow: visible;
 }
 
 label {
@@ -202,7 +218,6 @@ input[type="submit"] {
   -webkit-text-fill-color: #111;
 }
 
-/* Desktop: make submit feel like the main action */
 input[type="submit"] {
   padding: 10px 18px;
   font-size: 15px;
@@ -213,6 +228,14 @@ input[type="submit"] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+/* Tight row helper for two or three small fields */
+.grid.tight-row {
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  gap: 14px;
+  align-items: end;
 }
 
 /* =========
@@ -238,6 +261,20 @@ thead th {
 }
 
 tr.overdue td { font-weight: 700; }
+
+/* Compact table option */
+table.compact th,
+table.compact td {
+  padding: 6px 8px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+table.compact thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
 
 /* =========
    Flash messages
@@ -287,24 +324,33 @@ tr.overdue td { font-weight: 700; }
 .badge.in { background: var(--ok-bg); border-color: var(--ok-border); }
 .badge.out { background: #f0f0f0; border-color: #d0d0d0; }
 
+/* Actions row (keep buttons on one line when possible) */
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.actions form { margin: 0; }
+
 /* =========
    Field sizing rules
-   These are “exceptions” that override default full width inputs
 ========= */
 
-/* Phone fields */
-form.card input[type="tel"] {
-  width: 100%;
-  max-width: 100%;
-  display: block;
+/* Standard compact field width */
+.compact-field {
+  width: 22ch;
+  max-width: 22ch;
+  display: inline-block;
 }
 
-form.card label[for="resident_phone"],
-form.card label[for="callback_phone"] {
-  display: inline-block;
-  margin-right: 12px;
-  margin-top: 10px;
-}
+/* Common fixed widths */
+.w-shelter { width: 20ch; max-width: 20ch; display: inline-block; }
+.w-phone   { width: 14ch; max-width: 14ch; display: inline-block; }
+.w-date    { width: 15ch; max-width: 15ch; display: inline-block; }
+.w-time    { width: 10ch; max-width: 10ch; display: inline-block; }
+.w-dt      { width: 28ch; max-width: 28ch; display: inline-block; }
+.w-code    { width: 12ch; max-width: 12ch; display: inline-block; }
 
 /* Name fields: match character limits visually */
 input[name="first_name"] { width: 16ch; max-width: 16ch; }
@@ -320,7 +366,7 @@ table td:first-child { width: 50ch; max-width: 50ch; }
 input[name="expected_back_time"] { width: 20ch; max-width: 20ch; }
 form select[name="resident_id"]  { width: 50ch; max-width: 50ch; }
 
-/* Leave request */
+/* Leave request legacy classes */
 input.shelter-box { width: 20ch; max-width: 20ch; display: inline-block; }
 input.date-box    { width: 15ch; max-width: 15ch; display: inline-block; }
 
@@ -340,13 +386,36 @@ input.date-box    { width: 15ch; max-width: 15ch; display: inline-block; }
 input[name="needed_at"] {
   width: 28ch;
   max-width: 28ch;
+  display: inline-block;
 }
 
 /* =========
    Mobile rules
 ========= */
 @media (max-width: 640px) {
-  /* top nav becomes stacked buttons */
+  /* hide desktop nav, show mobile nav */
+  .nav-desktop { display: none; }
+
+  .nav-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .nav-mobile a {
+    width: 100%;
+    text-align: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid rgba(15, 47, 87, 0.18);
+    color: var(--text);
+    text-decoration: none;
+    line-height: 1;
+  }
+
+  /* keep existing stacked nav behavior as fallback */
   .top nav {
     flex-direction: column;
     align-items: stretch;
@@ -378,7 +447,10 @@ input[name="needed_at"] {
     font-size: 16px;
   }
 
-  /* stack leave and return date on phones */
+  /* stack tight rows on phones */
+  .grid.tight-row { grid-template-columns: 1fr; }
+
+  /* stack legacy grids */
   .grid.date-grid { grid-template-columns: 1fr; }
   .grid.date-grid input.date-box {
     width: 100%;
@@ -386,135 +458,13 @@ input[name="needed_at"] {
     display: block;
   }
 
-  /* names grid stacks on phones */
   .grid.grid-names { grid-template-columns: 1fr; }
-}
 
-/* Standard compact field width */
-.compact-field {
-  width: 22ch;
-  max-width: 22ch;
-  display: inline-block;
-}
-
-/* =========
-   Consistent field widths
-   Use these classes everywhere for uniform sizing
-========= */
-
-/* Common fixed widths */
-.w-shelter { width: 20ch; max-width: 20ch; display: inline-block; }  /* shelter fields */
-.w-phone   { width: 14ch; max-width: 14ch; display: inline-block; }  /* 10 digit phone */
-.w-date    { width: 15ch; max-width: 15ch; display: inline-block; }  /* YYYY MM DD */
-.w-time    { width: 10ch; max-width: 10ch; display: inline-block; }  /* HH MM */
-.w-dt      { width: 28ch; max-width: 28ch; display: inline-block; }  /* datetime local */
-.w-code    { width: 12ch; max-width: 12ch; display: inline-block; }  /* resident code */
-
-/* Tight row helper for two or three small fields */
-.grid.tight-row {
-  grid-template-columns: max-content max-content;
-  justify-content: start;
-  gap: 14px;
-  align-items: end;
-}
-
-@media (max-width: 640px) {
-  .grid.tight-row { grid-template-columns: 1fr; }
-  .w-shelter, .w-phone, .w-date, .w-time, .w-dt, .w-code {
+  /* make fixed width helpers full width on phone */
+  .w-shelter, .w-phone, .w-date, .w-time, .w-dt, .w-code, .compact-field,
+  input.shelter-box, input.date-box, input[name="needed_at"] {
     width: 100%;
     max-width: 100%;
     display: block;
   }
 }
-
-/* Responsive nav switch */
-.nav-mobile { display: none; }
-.nav-desktop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-
-@media (max-width: 640px) {
-  .nav-desktop { display: none; }
-  .nav-mobile {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .nav-mobile a {
-    width: 100%;
-    text-align: center;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: #ffffff;
-    border: 1px solid rgba(15, 47, 87, 0.18);
-    color: var(--text);
-    text-decoration: none;
-    line-height: 1;
-  }
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: nowrap;
-}
-
-.actions form {
-  margin: 0;
-}
-
-table.compact th,
-table.compact td {
-  padding: 6px 8px;
-  font-size: 14px;
-  line-height: 1.2;
-}
-
-table.compact thead th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-}
-
-/* Keep top header and dropdown menus above tables/content */
-header.top {
-  position: relative;
-  z-index: 5000;
-  overflow: visible;
-}
-
-header.top nav {
-  overflow: visible;
-}
-
-.nav-dd {
-  position: relative;
-}
-
-.nav-dd .menu {
-  z-index: 6000;
-}
-
-/* --- Fix dropdown menus being hidden by page content --- */
-
-/* Make sure header always stays on top */
-header.top {
-  position: relative;
-  z-index: 10000;
-}
-
-/* Ensure dropdown menu is above everything */
-.nav-dd .menu {
-  z-index: 11000;
-}
-
-/* Prevent cards from clipping dropdowns */
-.card {
-  overflow: visible;
-}
-
-
-
-
-
