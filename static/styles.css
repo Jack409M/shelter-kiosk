@@ -387,3 +387,13 @@ input[name="needed_at"] {
   /* names grid stacks on phones */
   .grid.grid-names { grid-template-columns: 1fr; }
 }
+
+/* Standard compact field width */
+.compact-field {
+  width: 22ch;
+  max-width: 22ch;
+  display: inline-block;
+}
+
+
+
