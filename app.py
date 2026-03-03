@@ -1067,7 +1067,8 @@ def resident_leave():
             else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_identifier = ?",
             (resident_phone, shelter, resident_identifier),
         )
-
+        session["resident_phone"] = resident_phone
+    
     destination = (request.form.get("destination") or "").strip()
     reason = (request.form.get("reason") or "").strip()
     resident_notes = (request.form.get("resident_notes") or "").strip()
@@ -2528,4 +2529,5 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
