@@ -2519,10 +2519,6 @@ def resident_login_alias_slash():
 def favicon():
     return redirect(url_for("static", filename="favicon.ico"), code=301)
 
-@app.get("/favicon.ico")
-def favicon_root():
-    return redirect(url_for("static", filename="favicon.ico"), code=301)
-
 @app.get("/health")
 def health():
     return {"status": "ok"}, 200
@@ -2541,6 +2537,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
