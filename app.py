@@ -296,6 +296,23 @@ def send_sms(to_number: str, message: str) -> None:
     except Exception as e:
         print("SMS error:", e)
 
+# Postgres connection pool
+PG_POOL = None
+
+def _init_pg_pool() -> None:
+    global PG_POOL
+    if PG_POOL is not None:
+        return
+
+    if not DATABASE_URL:
+        return
+
+    try:
+        from psycopg2.pool import SimpleConnectionPool
+    except Exception as e:
+        raise RuntimeError("psycopg2 is required for Postgres pooling.") from e
+
+    PG_POOL = SimpleConnectionPool(minconn=1, maxconn=10, dsn=DATABASE_URL)
 
 def get_db() -> Any:
     if "db" in g:
@@ -2691,6 +2708,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
