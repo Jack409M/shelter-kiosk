@@ -339,11 +339,23 @@ def get_db() -> Any:
 @app.teardown_appcontext
 def close_db(_exc):
     conn = g.pop("db", None)
-    if conn is not None:
+    kind = g.pop("db_kind", None)
+
+    if conn is None:
+        return
+
+    if kind == "pg":
         try:
-            conn.close()
+            if PG_POOL is not None:
+                PG_POOL.putconn(conn)
+                return
         except Exception:
             pass
+
+    try:
+        conn.close()
+    except Exception:
+        pass
 
 
 def db_execute(sql: str, params: tuple = ()) -> None:
@@ -2708,6 +2720,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
