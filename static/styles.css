@@ -462,5 +462,18 @@ input[name="needed_at"] {
   margin: 0;
 }
 
+table.compact th,
+table.compact td {
+  padding: 6px 8px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+table.compact thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
 
 
