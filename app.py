@@ -2067,7 +2067,7 @@ def kiosk_checkout(shelter: str):
     init_db()
 
     if KIOSK_PIN:
-        if session.get("kiosk_authed") is not True:
+        if session.get(f"kiosk_authed_{shelter}") is not True:
             ip = _client_ip()
 
             if _rate_limited(f"kiosk_pin_ip:{ip}", 10, 300):
@@ -2077,8 +2077,7 @@ def kiosk_checkout(shelter: str):
             if request.method == "POST":
                 entered_pin = (request.form.get("kiosk_pin") or "").strip()
                 if entered_pin == KIOSK_PIN:
-                    session.clear()
-                    session["kiosk_authed"] = True
+                    session[f"kiosk_authed_{shelter}"] = True
                     session.permanent = True
                     return redirect(url_for("kiosk_checkout", shelter=shelter))
 
@@ -2529,5 +2528,6 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
