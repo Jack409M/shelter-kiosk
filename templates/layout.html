@@ -14,66 +14,22 @@
       </div>
 
       <nav>
-        <a href="{{ url_for('resident_leave') }}">Request Leave</a>
-        <a href="{{ url_for('resident_transport') }}">Request Transport</a>
 
-        {% if not session.get("staff_user_id") %}
-          <a href="{{ url_for('staff_login') }}">Login</a>
-        {% else %}
+  {% if session.get("resident_identifier") %}
+    <!-- Resident is logged in -->
+    <a href="{{ url_for('resident_transport') }}">Request Transport</a>
+    <a href="{{ url_for('resident_logout') }}">Logout</a>
 
-          <div class="nav-dd">
-            <button type="button">
-              {% if session.get("shelter") == "Gratitude" %}
-                Gratitude House
-              {% elif session.get("shelter") == "Haven" %}
-                Haven House
-              {% elif session.get("shelter") == "Abba" %}
-                Abba House
-              {% else %}
-                Select Shelter
-              {% endif %}
-              ▾
-            </button>
+  {% else %}
+    <!-- Resident not logged in -->
+    <a href="{{ url_for('resident_leave') }}">Request Leave</a>
+    <a href="{{ url_for('resident_transport') }}">Request Transport</a>
+  {% endif %}
 
-            <div class="menu">
-              <form method="post" action="{{ url_for('staff_select_shelter') }}" style="margin:0;">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="next" value="{{ request.full_path }}">
-                <button type="submit" name="shelter" value="Abba" style="width:100%; text-align:left; margin:0;">Abba House</button>
-                <button type="submit" name="shelter" value="Haven" style="width:100%; text-align:left; margin:0;">Haven House</button>
-                <button type="submit" name="shelter" value="Gratitude" style="width:100%; text-align:left; margin:0;">Gratitude House</button>
-              </form>
-            </div>
-          </div>
-
-          <div class="nav-dd">
-            <button type="button">Leave ▾</button>
-            <div class="menu">
-              <a href="{{ url_for('staff_leave_pending') }}">Leave pending</a>
-              <a href="{{ url_for('staff_leave_away_now') }}">Leave away</a>
-              <a href="{{ url_for('staff_leave_overdue') }}">Leave overdue</a>
-            </div>
-          </div>
-
-          <div class="nav-dd">
-            <button type="button">Transport ▾</button>
-            <div class="menu">
-              <a href="{{ url_for('staff_transport_pending') }}">Transport pending</a>
-              <a href="/staff/transport/board">Transport schedule</a>
-            </div>
-          </div>
-
-          <a href="{{ url_for('staff_attendance') }}">Checkout Log</a>
-          <a href="{{ url_for('staff_residents') }}">Residents</a>
-
-          {% if session.get("role") == "admin" %}
-           <a href="{{ url_for('admin_users') }}">Users</a>
-           <a href="{{ url_for('staff_audit_log') }}">Audit Log</a>
-          {% endif %}
-
-          <a href="{{ url_for('staff_logout') }}">Logout</a>
-        {% endif %}
-      </nav>
+  {% if not session.get("staff_user_id") %}
+    <a href="{{ url_for('staff_login') }}">Login</a>
+  {% else %}
+    <div class="nav-dd">
     </header>
 
     <!-- LOGO + SIGNED IN BANNER (GLOBAL) -->
@@ -129,4 +85,5 @@ document.addEventListener("DOMContentLoaded", function () {
     </script>
   </body>
 </html>
+
 
