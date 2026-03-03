@@ -404,6 +404,18 @@ input.date-box {
   }
 }
 
+/* Mobile: stack leave and return date */
+@media (max-width: 640px) {
+  .grid.date-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid.date-grid input.date-box {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+}
 
 
 
