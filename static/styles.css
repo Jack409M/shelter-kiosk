@@ -77,10 +77,11 @@ nav .sep { margin-right: 10px; }
 ========= */
 .card {
   background: #e4f0f8;
-  padding: 12px;
+  padding: 18px;
   border: 1px solid #000;
   border-radius: var(--radius);
-  margin-bottom: 16px;
+  margin: 18px auto;
+  max-width: 920px;
 }
 
 .grid {
@@ -445,6 +446,21 @@ input.date-box {
   }
 }
 
+/* Primary submit button */
+input[type="submit"] {
+  padding: 10px 18px;
+  font-size: 15px;
+}
+
+/* Transport needed date/time */
+input[name="needed_at"] {
+  width: 28ch;
+  max-width: 28ch;
+}
+
+.top {
+  align-items: center;
+}
 
 
 
