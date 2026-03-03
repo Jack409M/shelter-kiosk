@@ -124,6 +124,33 @@
       position: static;
     }
   }
+
+  .att_icon {
+  display: inline-block;
+  margin-right: 6px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.att_in {
+  color: #0a7a2f;
+}
+
+.att_out {
+  color: #b00000;
+}
+
+.att_overdue {
+  color: #b00000;
+  font-weight: 900;
+  animation: blinkRed 1s linear infinite;
+}
+
+@keyframes blinkRed {
+  0%   { opacity: 1; }
+  50%  { opacity: 0.2; }
+  100% { opacity: 1; }
+}
 </style>
 
 <h1>Attendance for {{ shelter }}</h1>
@@ -251,3 +278,4 @@
 </div>
 
 {% endblock %}
+
