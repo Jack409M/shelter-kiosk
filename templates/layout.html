@@ -22,8 +22,13 @@
 
   {% else %}
     <!-- Resident not logged in -->
-    <a href="{{ url_for('resident_leave') }}">Request Leave</a>
-    <a href="{{ url_for('resident_transport') }}">Request Transport</a>
+    {% if session.get("resident_id") %}
+  <a href="{{ url_for('resident_transport') }}">Request Transport</a>
+  <a href="{{ url_for('resident_logout') }}">Logout</a>
+{% else %}
+  <a href="{{ url_for('resident_leave') }}">Request Leave</a>
+  <a href="{{ url_for('resident_transport') }}">Request Transport</a>
+{% endif %}
   {% endif %}
 
   {% if not session.get("staff_user_id") %}
@@ -85,5 +90,6 @@ document.addEventListener("DOMContentLoaded", function () {
     </script>
   </body>
 </html>
+
 
 
