@@ -2523,11 +2523,19 @@ def recreate_schema():
     log_action("admin", None, None, session.get("staff_user_id"), "recreate_schema", "Dropped and recreated tables")
     return "Schema recreated."
 
+@app.get("/resident/login")
+def resident_login_alias():
+    return redirect("/resident", code=302)
+
+@app.get("/resident/login/")
+def resident_login_alias_slash():
+    return redirect("/resident", code=301)
 
 if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
