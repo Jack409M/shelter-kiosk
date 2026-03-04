@@ -958,27 +958,30 @@ def debug_db():
 def staff_leave_print(req_id: int):
     init_db()
     shelter = session["shelter"]
+    kind = g.get("db_kind")
 
     row = db_fetchone(
         """
         SELECT
-          lr.*,
-          COALESCE(su.username, '') AS decided_by_name
+            lr.*,
+            COALESCE(su.username, '') AS decided_by_name
         FROM leave_requests lr
         LEFT JOIN staff_users su ON su.id = lr.decided_by
         WHERE lr.id = %s AND lr.shelter = %s
         """
-        if g.get("db_kind") == "pg"
-        else """
+        if kind == "pg"
+        else
+        """
         SELECT
-          lr.*,
-          COALESCE(su.username, '') AS decided_by_name
+            lr.*,
+            COALESCE(su.username, '') AS decided_by_name
         FROM leave_requests lr
         LEFT JOIN staff_users su ON su.id = lr.decided_by
         WHERE lr.id = ? AND lr.shelter = ?
         """,
         (req_id, shelter),
     )
+
     if not row:
         abort(404)
 
@@ -989,6 +992,7 @@ def staff_leave_print(req_id: int):
         printed_on=fmt_dt(utcnow_iso()),
         fmt_dt=fmt_dt,
         fmt_date=fmt_date,
+        fmt_time=fmt_time_only,
     )
 
 @app.route("/resident", methods=["GET", "POST"])
@@ -2837,6 +2841,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
