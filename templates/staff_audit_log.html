@@ -3,24 +3,22 @@
 <h1>{{ title or "Audit Log" }}</h1>
 
 <style>
-  /* Page layout: results on left, filters on right */
-  .audit-layout {
+  .auditlayout {
     display: grid;
     grid-template-columns: 3fr 1fr;
     gap: 16px;
     align-items: start;
   }
 
-  .audit-results {
+  .auditresults {
     overflow-x: auto;
   }
 
-  .audit-filters {
+  .auditfilters {
     position: sticky;
     top: 12px;
   }
 
-  /* Compact table to fit more rows */
   table.compact th,
   table.compact td {
     padding: 6px 8px;
@@ -34,61 +32,73 @@
     max-width: 520px;
   }
 
-  .filter-card {
-    background: var(--card, #e4f0f8);
+  .filtercard {
+    background: #e4f0f8;
     border: 1px solid #000;
-    border-radius: var(--radius, 8px);
+    border-radius: 8px;
     padding: 12px;
   }
 
-  .filter-card h3 {
+  .filtercard h3 {
     margin: 0 0 10px 0;
     font-size: 16px;
   }
 
-  .filter-row {
+  .filterrow {
     margin-bottom: 10px;
   }
 
-  .filter-row label {
+  .filterrow label {
     margin-top: 0;
     font-weight: 700;
+    display: block;
+    margin-bottom: 4px;
   }
 
-  .filter-actions {
+  .filterrow input,
+  .filterrow select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background: #fff;
+    color: #111;
+  }
+
+  .filteractions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     margin-top: 12px;
   }
 
-  .filter-actions a,
-  .filter-actions button {
+  .filteractions a,
+  .filteractions button {
     width: 100%;
     text-align: center;
     text-decoration: none;
     display: inline-block;
     padding: 10px 12px;
     border: 1px solid #333;
-    border-radius: var(--radius, 8px);
+    border-radius: 8px;
     background: #fff;
     color: #111;
     cursor: pointer;
     box-sizing: border-box;
   }
 
-  .small-note {
+  .smallnote {
     margin-top: 10px;
     font-size: 12px;
-    color: var(--text-muted, #4a5a66);
+    color: #4a5a66;
   }
 
-  /* Mobile stack */
   @media (max-width: 900px) {
-    .audit-layout {
+    .auditlayout {
       grid-template-columns: 1fr;
     }
-    .audit-filters {
+    .auditfilters {
       position: static;
     }
     table.compact td.details {
@@ -97,10 +107,9 @@
   }
 </style>
 
-<div class="audit-layout">
+<div class="auditlayout">
 
-  <!-- LEFT: RESULTS -->
-  <div class="audit-results">
+  <div class="auditresults">
     <table class="compact">
       <thead>
         <tr>
@@ -114,18 +123,9 @@
           <th>Details</th>
         </tr>
       </thead>
-      <tbody id="auditRows">
+      <tbody>
         {% for r in rows %}
-        <tr
-          class="audit-row"
-          data-id="{{ r.id }}"
-          data-when="{{ r.created_at }}"
-          data-shelter="{{ r.shelter or '' }}"
-          data-staff="{{ r.staff_username or '' }}"
-          data-entity="{{ r.entity_type or '' }}"
-          data-action="{{ r.action_type or '' }}"
-          data-details="{{ (r.action_details or '')|e }}"
-        >
+        <tr>
           <td>{{ r.id }}</td>
           <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
           <td>{{ r.shelter or "" }}</td>
@@ -140,60 +140,56 @@
     </table>
   </div>
 
-  <!-- RIGHT: FILTERS -->
-  <aside class="audit-filters">
-    <div class="filter-card">
+  <aside class="auditfilters">
+    <div class="filtercard">
       <h3>Filter</h3>
 
-      <div class="filter-row">
-        <label for="q">Search text</label>
-        <input id="q" type="text" placeholder="Name, action, details">
-      </div>
+      <form method="get" action="{{ url_for('staff_audit_log') }}" id="auditfilterform">
+        <div class="filterrow">
+          <label for="q">Search text</label>
+          <input id="q" name="q" type="text" placeholder="Name, action, details" value="{{ request.args.get('q','') }}">
+        </div>
 
-      <div class="filter-row">
-        <label for="shelter">Shelter</label>
-        <select id="shelter">
-          <option value="">All</option>
-        </select>
-      </div>
+        <div class="filterrow">
+          <label for="shelter">Shelter</label>
+          {% set shelter_val = request.args.get('shelter','') %}
+          <select id="shelter" name="shelter">
+            <option value="">All</option>
+            {% for s in all_shelters %}
+              <option value="{{ s }}" {% if shelter_val == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-      <div class="filter-row">
-        <label for="staff">Staff</label>
-        <select id="staff">
-          <option value="">All</option>
-        </select>
-      </div>
+        <div class="filterrow">
+          <label for="staff_user_id">Staff user ID</label>
+          <input id="staff_user_id" name="staff_user_id" type="text" placeholder="Numeric ID" value="{{ request.args.get('staff_user_id','') }}">
+        </div>
 
-      <div class="filter-row">
-        <label for="action">Action</label>
-        <select id="action">
-          <option value="">All</option>
-        </select>
-      </div>
+        <div class="filterrow">
+          <label for="entity_type">Entity type</label>
+          <input id="entity_type" name="entity_type" type="text" placeholder="leave, transport, resident, auth" value="{{ request.args.get('entity_type','') }}">
+        </div>
 
-      <div class="filter-row">
-        <label for="limit">Show max rows</label>
-        <select id="limit">
-          <option value="50">50</option>
-          <option value="100" selected>100</option>
-          <option value="200">200</option>
-          <option value="500">500</option>
-        </select>
-      </div>
+        <div class="filterrow">
+          <label for="action_type">Action type</label>
+          <input id="action_type" name="action_type" type="text" placeholder="create, approve, deny, login" value="{{ request.args.get('action_type','') }}">
+        </div>
 
-      <div class="filter-actions">
-        <button type="button" id="clearBtn">Clear</button>
-        <a href="{{ url_for('staff_audit_log_csv', **request.args) }}">Export CSV</a>
-      </div>
+        <div class="filteractions">
+          <button type="button" id="clearbtn">Clear</button>
+          <a href="{{ url_for('staff_audit_log_csv', **request.args) }}">Export CSV</a>
+        </div>
 
-      <div class="filter-actions" style="margin-top:10px;">
-        <button type="button" id="applyBtn">Apply</button>
-        <button type="button" id="refreshBtn">Refresh</button>
-      </div>
+        <div class="filteractions" style="margin-top:10px;">
+          <button type="submit" id="applybtn">Apply</button>
+          <button type="button" id="refreshbtn">Refresh</button>
+        </div>
 
-      <div class="small-note">
-        This filter runs in the browser. It does not change the server query.
-      </div>
+        <div class="smallnote">
+          This filter runs on the server and changes what rows are loaded.
+        </div>
+      </form>
     </div>
   </aside>
 
@@ -201,104 +197,20 @@
 
 <script>
 (function () {
-  function norm(s) {
-    return (s || "").toString().trim().toLowerCase();
-  }
+  const clearBtn = document.getElementById("clearbtn");
+  const refreshBtn = document.getElementById("refreshbtn");
 
-  const rows = Array.from(document.querySelectorAll(".audit-row"));
-
-  const qEl = document.getElementById("q");
-  const shelterEl = document.getElementById("shelter");
-  const staffEl = document.getElementById("staff");
-  const actionEl = document.getElementById("action");
-  const limitEl = document.getElementById("limit");
-
-  const applyBtn = document.getElementById("applyBtn");
-  const clearBtn = document.getElementById("clearBtn");
-  const refreshBtn = document.getElementById("refreshBtn");
-
-  function uniqValues(attr) {
-    const set = new Set();
-    rows.forEach(r => set.add((r.getAttribute(attr) || "").trim()));
-    return Array.from(set).filter(v => v).sort((a, b) => a.localeCompare(b));
-  }
-
-  function fillSelect(selectEl, values) {
-    values.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      selectEl.appendChild(opt);
+  if (clearBtn) {
+    clearBtn.addEventListener("click", function () {
+      window.location.href = "{{ url_for('staff_audit_log') }}";
     });
   }
 
-  fillSelect(shelterEl, uniqValues("data-shelter"));
-  fillSelect(staffEl, uniqValues("data-staff"));
-  fillSelect(actionEl, uniqValues("data-action"));
-
-  function applyFilter() {
-    const q = norm(qEl.value);
-    const shelter = (shelterEl.value || "").trim();
-    const staff = (staffEl.value || "").trim();
-    const action = (actionEl.value || "").trim();
-    const limit = parseInt(limitEl.value || "100", 10);
-
-    let shown = 0;
-
-    rows.forEach(r => {
-      const rShelter = (r.getAttribute("data-shelter") || "").trim();
-      const rStaff = (r.getAttribute("data-staff") || "").trim();
-      const rAction = (r.getAttribute("data-action") || "").trim();
-
-      const hay = norm(
-        (r.getAttribute("data-id") || "") + " " +
-        (r.getAttribute("data-when") || "") + " " +
-        (rShelter || "") + " " +
-        (rStaff || "") + " " +
-        (r.getAttribute("data-entity") || "") + " " +
-        (rAction || "") + " " +
-        (r.getAttribute("data-details") || "")
-      );
-
-      let ok = true;
-
-      if (q && !hay.includes(q)) ok = false;
-      if (shelter && rShelter !== shelter) ok = false;
-      if (staff && rStaff !== staff) ok = false;
-      if (action && rAction !== action) ok = false;
-
-      if (ok && shown < limit) {
-        r.style.display = "";
-        shown += 1;
-      } else {
-        r.style.display = "none";
-      }
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", function () {
+      window.location.reload();
     });
   }
-
-  function clearFilter() {
-    qEl.value = "";
-    shelterEl.value = "";
-    staffEl.value = "";
-    actionEl.value = "";
-    limitEl.value = "100";
-    applyFilter();
-  }
-
-  applyBtn.addEventListener("click", applyFilter);
-  clearBtn.addEventListener("click", clearFilter);
-  refreshBtn.addEventListener("click", function () { window.location.reload(); });
-
-  qEl.addEventListener("input", function () {
-    applyFilter();
-  });
-
-  shelterEl.addEventListener("change", applyFilter);
-  staffEl.addEventListener("change", applyFilter);
-  actionEl.addEventListener("change", applyFilter);
-  limitEl.addEventListener("change", applyFilter);
-
-  applyFilter();
 })();
 </script>
 {% endblock %}
