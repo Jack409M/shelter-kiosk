@@ -1,75 +1,102 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Leave Request</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 16px; color: #111; }
-    .toolbar { margin-bottom: 12px; }
-    button { padding: 7px 10px; border: 1px solid #333; background: #fff; border-radius: 6px; cursor: pointer; }
-    .box { border: 2px solid #000; padding: 12px; margin-bottom: 12px; }
-    h1 { margin: 0 0 8px 0; font-size: 20px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; font-size: 13px; }
-    .label { font-weight: 700; }
-    .line { border-bottom: 1px solid #000; min-height: 18px; padding-bottom: 2px; }
-    .wide { grid-column: 1 / -1; }
-    @media print { .toolbar { display: none; } body { margin: 0.5in; } }
-  </style>
-</head>
-<body>
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+  .print-wrap { max-width: 900px; margin: 0 auto; }
+  .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 18px; }
+  .box { border: 1px solid #999; border-radius: 10px; padding: 12px; }
+  .label { font-size: 12px; color: #444; margin-bottom: 4px; }
+  .value { font-size: 14px; color: #111; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { border: 1px solid #999; padding: 8px; font-size: 13px; vertical-align: top; text-align: left; }
+  .toolbar { margin: 10px 0 14px; display: flex; gap: 10px; }
+  @media print {
+    .toolbar { display: none; }
+    body { margin: 0.5in; }
+  }
+</style>
+
+<div class="print-wrap">
 
   <div class="toolbar">
-    <button type="button" onclick="window.print()">Print</button>
-    <button type="button" onclick="window.close()">Close</button>
+    <button onclick="window.print()">Print</button>
+    <button onclick="window.close()">Close</button>
   </div>
 
-  <div class="box">
-    <h1>Leave Request</h1>
-    <div style="font-size:13px;">
-      Shelter: {{ shelter }}<br>
-      Printed: {{ printed_on }}
+  <h1 style="margin:0;">Leave Request</h1>
+  <div style="margin:6px 0 0; color:#444; font-size:13px;">
+    Shelter: <strong>{{ shelter }}</strong>
+    {% if printed_on %}
+      <span style="margin-left:10px;">Printed: <strong>{{ printed_on }}</strong></span>
+    {% endif %}
+  </div>
+
+  <div class="meta">
+    <div class="box">
+      <div class="label">Requested by</div>
+      <div class="value"><strong>{{ row.last_name }}, {{ row.first_name }}</strong></div>
+
+      <div class="label" style="margin-top:10px;">Submitted</div>
+      <div class="value">{{ fmt_dt(row.submitted_at) }}</div>
+
+      <div class="label" style="margin-top:10px;">Resident phone</div>
+      <div class="value">{{ row.resident_phone or "" }}</div>
+    </div>
+
+    <div class="box">
+      <div class="label">Status</div>
+      <div class="value"><strong>{{ (row.status or "")|upper }}</strong></div>
+
+      <div class="label" style="margin-top:10px;">Approved or denied by</div>
+      <div class="value">
+        {% if row.decided_by_name %}
+          <strong>{{ row.decided_by_name }}</strong>
+          {% if row.decided_by_role %}
+            <span style="color:#444;">({{ row.decided_by_role }})</span>
+          {% endif %}
+        {% else %}
+          <span style="color:#444;">Not decided yet</span>
+        {% endif %}
+      </div>
+
+      <div class="label" style="margin-top:10px;">Decision time</div>
+      <div class="value">
+        {% if row.decided_at %}
+          {{ fmt_dt(row.decided_at) }}
+        {% else %}
+          <span style="color:#444;">Not decided yet</span>
+        {% endif %}
+      </div>
+
+      <div class="label" style="margin-top:10px;">Decision note</div>
+      <div class="value">{{ row.decision_note or "" }}</div>
     </div>
   </div>
 
-  <div class="box">
-    <div class="grid">
-      <div><span class="label">Resident</span><div class="line">{{ row.last_name }}, {{ row.first_name }}</div></div>
-      <div><span class="label">Phone</span><div class="line">{{ row.resident_phone or "" }}</div></div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%;">Leave date</th>
+        <th style="width:22%;">Return date</th>
+        <th style="width:28%;">Destination</th>
+        <th style="width:28%;">Reason</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>{{ fmt_date(row.leave_at) }}</td>
+        <td>{{ fmt_date(row.return_at) }}</td>
+        <td>{{ row.destination }}</td>
+        <td>{{ row.reason or "" }}</td>
+      </tr>
+    </tbody>
+  </table>
 
-      <div><span class="label">Destination</span><div class="line">{{ row.destination }}</div></div>
-      <div><span class="label">Status</span><div class="line">{{ row.status }}</div></div>
-
-      <div><span class="label">Leave date</span><div class="line">{{ fmt_date(row.leave_at) }}</div></div>
-      <div><span class="label">Return date</span><div class="line">{{ fmt_date(row.return_at) }}</div></div>
-
-      <div class="wide"><span class="label">Reason</span><div class="line">{{ row.reason or "" }}</div></div>
-      <div class="wide"><span class="label">Resident notes</span><div class="line">{{ row.resident_notes or "" }}</div></div>
-    </div>
+  <div class="box" style="margin-top:12px;">
+    <div class="label">Resident notes</div>
+    <div class="value">{{ row.resident_notes or "" }}</div>
   </div>
 
-  <div class="box">
-    <div class="grid">
-      <div><span class="label">Submitted</span><div class="line">{{ fmt_dt(row.submitted_at) }}</div></div>
-      <div><span class="label">Decided</span><div class="line">{{ fmt_dt(row.decided_at) }}</div></div>
+</div>
 
-      <div><span class="label">Case manager</span><div class="line">{{ row.decided_by_name or "" }}</div></div>
-      <div><span class="label">Decision note</span><div class="line">{{ row.decision_note or "" }}</div></div>
-    </div>
-  </div>
-
-  <div class="box">
-    <div class="grid">
-      <div><span class="label">Checked in at</span><div class="line">{{ fmt_dt(row.check_in_at) }}</div></div>
-      <div><span class="label">Checked in by</span><div class="line">{{ row.check_in_by or "" }}</div></div>
-    </div>
-  </div>
-
-  <div class="box">
-    <div class="grid">
-      <div class="wide"><span class="label">Staff signature</span><div class="line"></div></div>
-      <div class="wide"><span class="label">Supervisor signature</span><div class="line"></div></div>
-    </div>
-  </div>
-
-</body>
-</html>
+{% endblock %}
