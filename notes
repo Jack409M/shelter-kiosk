@@ -1,0 +1,70 @@
+## Public / General
+
+- https://shelter-kiosk-production.up.railway.app/
+- https://shelter-kiosk-production.up.railway.app/privacy
+- https://shelter-kiosk-production.up.railway.app/terms
+- https://shelter-kiosk-production.up.railway.app/health
+- https://shelter-kiosk-production.up.railway.app/favicon.ico
+
+---
+
+## Resident
+
+- https://shelter-kiosk-production.up.railway.app/resident
+- https://shelter-kiosk-production.up.railway.app/resident/home
+- https://shelter-kiosk-production.up.railway.app/resident/logout
+- https://shelter-kiosk-production.up.railway.app/resident/consent
+- https://shelter-kiosk-production.up.railway.app/resident/login
+- https://shelter-kiosk-production.up.railway.app/resident/login/
+- https://shelter-kiosk-production.up.railway.app/leave
+- https://shelter-kiosk-production.up.railway.app/transport
+
+---
+
+## SMS Consent Pages
+
+- https://shelter-kiosk-production.up.railway.app/sms-consent
+- https://shelter-kiosk-production.up.railway.app/sms-consent/
+- https://shelter-kiosk-production.up.railway.app/resident/sms-consent
+
+---
+
+## Kiosk
+
+- https://shelter-kiosk-production.up.railway.app/kiosk/Abba/checkout
+- https://shelter-kiosk-production.up.railway.app/kiosk/Haven/checkout
+- https://shelter-kiosk-production.up.railway.app/kiosk/Gratitude/checkout
+
+---
+
+## Staff
+
+- https://shelter-kiosk-production.up.railway.app/staff/login
+- https://shelter-kiosk-production.up.railway.app/staff/logout
+- https://shelter-kiosk-production.up.railway.app/staff/select-shelter
+- https://shelter-kiosk-production.up.railway.app/staff
+- https://shelter-kiosk-production.up.railway.app/staff/leave/pending
+- https://shelter-kiosk-production.up.railway.app/staff/leave/away-now
+- https://shelter-kiosk-production.up.railway.app/staff/leave/overdue
+- https://shelter-kiosk-production.up.railway.app/staff/leave/<req_id>/print
+- https://shelter-kiosk-production.up.railway.app/staff/transport/pending
+- https://shelter-kiosk-production.up.railway.app/staff/transport/board
+- https://shelter-kiosk-production.up.railway.app/staff/transport/print
+- https://shelter-kiosk-production.up.railway.app/staff/attendance
+- https://shelter-kiosk-production.up.railway.app/staff/attendance/print_today
+- https://shelter-kiosk-production.up.railway.app/staff/attendance/resident/<resident_id>/print
+- https://shelter-kiosk-production.up.railway.app/staff/residents
+- https://shelter-kiosk-production.up.railway.app/staff/residents/<resident_id>/transfer
+
+---
+
+## Admin
+
+- https://shelter-kiosk-production.up.railway.app/staff/admin/users
+- https://shelter-kiosk-production.up.railway.app/staff/admin/audit-log
+- https://shelter-kiosk-production.up.railway.app/staff/admin/audit-log/csv
+- https://shelter-kiosk-production.up.railway.app/admin/wipe-all-data (**POST**)
+- https://shelter-kiosk-production.up.railway.app/admin/recreate-schema (**POST**)
+- https://shelter-kiosk-production.up.railway.app/admin/delete-user/<username> (**POST**)
+
+---
