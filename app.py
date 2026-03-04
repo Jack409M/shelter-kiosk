@@ -2322,16 +2322,22 @@ def kiosk_checkout(shelter: str):
         if session.get(f"kiosk_authed_{shelter}") is not True:
             ip = _client_ip()
 
-            if _rate_limited(f"kiosk_pin_ip:{ip}", 10, 300):
+            # Rate limit by IP and by shelter to slow brute-force attempts
+            # even when clients rotate IP addresses.
+            if _rate_limited(f"kiosk_pin_ip:{ip}", 10, 300) or _rate_limited(f"kiosk_pin_shelter:{shelter}", 40, 300):
                 flash("Too many PIN attempts. Please wait and try again.", "error")
                 return render_template("kiosk_pin.html", shelter=shelter), 429
 
             if request.method == "POST":
                 entered_pin = (request.form.get("kiosk_pin") or "").strip()
-                if entered_pin == KIOSK_PIN:
+
+                # Constant-time comparison for secret values.
+                if secrets.compare_digest(entered_pin, KIOSK_PIN):
                     session[f"kiosk_authed_{shelter}"] = True
                     session.permanent = True
                     return redirect(url_for("kiosk_checkout", shelter=shelter))
+
+                flash("Invalid PIN.", "error")
 
             return render_template("kiosk_pin.html", shelter=shelter), 401
 
@@ -2406,9 +2412,6 @@ def kiosk_checkout(shelter: str):
     log_action("attendance", resident_id, shelter, None, "kiosk_check_out", f"expected_back={expected_back_value or ''} {full_note}".strip())
     flash("Checked out.", "ok")
     return redirect(url_for("kiosk_checkout", shelter=shelter))
-
-# ---- Admin Users ----
-
 @app.route("/staff/admin/users", methods=["GET", "POST"])
 @require_login
 @require_admin
@@ -2870,6 +2873,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
