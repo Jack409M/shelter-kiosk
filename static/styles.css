@@ -724,4 +724,25 @@ input[name="needed_at"] {
   display: inline-block;
 }
 
+/* Leave Pending Actions Layout */
+
+.leave-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:nowrap;
+  margin-top:6px;
+}
+
+.leave-actions form{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:0;
+}
+
+.leave-note{
+  width:220px;
+}
+
 
