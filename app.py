@@ -493,7 +493,58 @@ def ensure_admin_bootstrap() -> None:
     )
 
 def ensure_sms_consent_columns() -> None:
-    pass
+    """
+    Adds SMS consent columns to residents table for both SQLite and Postgres.
+    Safe to run on every startup.
+    """
+    get_db()
+    kind = g.get("db_kind")
+
+    if kind == "pg":
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_source TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_source TEXT")
+        except Exception:
+            pass
+        return
+
+    # SQLite path
+    try:
+        db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_at TEXT")
+    except Exception:
+        pass
+    try:
+        db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_source TEXT")
+    except Exception:
+        pass
+    try:
+        db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_at TEXT")
+    except Exception:
+        pass
+    try:
+        db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_source TEXT")
+    except Exception:
+        pass
+
 def init_db():
 
 def init_db() -> None:
@@ -2906,6 +2957,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
