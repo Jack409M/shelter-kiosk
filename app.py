@@ -293,6 +293,59 @@ def send_sms(to_number: str, message: str) -> None:
     except Exception as e:
         print("SMS error:", e)
 
+def _normalize_us_phone_10(phone: str) -> Optional[str]:
+    raw = (phone or "").strip()
+    digits = "".join(ch for ch in raw if ch.isdigit())
+    if len(digits) == 10:
+        return digits
+    if len(digits) == 11 and digits.startswith("1"):
+        return digits[1:]
+    if len(digits) > 11:
+        return digits[-10:]
+    return None
+
+
+def sms_is_allowed_for_number(phone: str) -> bool:
+    """
+    Allow SMS only if the resident has opted in and has not opted out.
+    """
+    init_db()
+
+    target = _normalize_us_phone_10(phone)
+    if not target:
+        return False
+
+    try:
+        rows = db_fetchall(
+            """
+            SELECT phone, sms_opt_in, sms_opt_out_at
+            FROM residents
+            WHERE phone IS NOT NULL AND phone != ''
+            ORDER BY id DESC
+            LIMIT 300
+            """
+        )
+    except Exception:
+        return False
+
+    for row in rows or []:
+        r_phone = row["phone"] if isinstance(row, dict) else row[0]
+        r_opt_in = row["sms_opt_in"] if isinstance(row, dict) else row[1]
+        r_opt_out_at = row["sms_opt_out_at"] if isinstance(row, dict) else row[2]
+
+        if _normalize_us_phone_10(str(r_phone or "")) != target:
+            continue
+
+        if not bool(r_opt_in):
+            return False
+
+        if r_opt_out_at:
+            return False
+
+        return True
+
+    return False
+
 # Postgres connection pool
 def _init_pg_pool() -> None:
     global PG_POOL
@@ -2953,6 +3006,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
