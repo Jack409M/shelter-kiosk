@@ -1,0 +1,273 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+
+.history-wrap{
+display:grid;
+grid-template-columns:1fr;
+gap:18px;
+}
+
+.history-card{
+border:1px solid #ddd;
+border-radius:10px;
+padding:14px;
+background:#fff;
+}
+
+.history-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:10px;
+}
+
+.history-title{
+font-size:18px;
+font-weight:700;
+}
+
+.history-table{
+width:100%;
+border-collapse:collapse;
+}
+
+.history-table th,
+.history-table td{
+border:1px solid #ccc;
+padding:7px 8px;
+font-size:13px;
+}
+
+.history-table th{
+background:#f4f4f4;
+}
+
+.btn{
+display:inline-block;
+padding:6px 10px;
+border-radius:8px;
+border:1px solid #333;
+background:#fff;
+cursor:pointer;
+font-size:13px;
+text-decoration:none;
+color:#111;
+}
+
+.status-approved{
+color:#0a7a2f;
+font-weight:700;
+}
+
+.status-denied{
+color:#b00000;
+font-weight:700;
+}
+
+.status-pending{
+color:#555;
+font-weight:700;
+}
+
+</style>
+
+
+<h1>
+Resident History  
+<span style="font-weight:normal;">{{ resident.first_name }} {{ resident.last_name }}</span>
+</h1>
+
+
+<div class="history-wrap">
+
+<!-- LEAVE REQUESTS -->
+
+<div class="history-card">
+
+<div class="history-header">
+<div class="history-title">Leave Requests</div>
+</div>
+
+<table class="history-table">
+
+<thead>
+<tr>
+<th>Submitted</th>
+<th>Leave</th>
+<th>Return</th>
+<th>Status</th>
+<th>Case Manager</th>
+<th>Decision Date</th>
+<th>Print</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% if not leave_rows %}
+<tr>
+<td colspan="7">No leave requests</td>
+</tr>
+{% else %}
+
+{% for row in leave_rows %}
+
+<tr>
+
+<td>{{ fmt_dt(row.submitted_at) }}</td>
+
+<td>{{ fmt_date(row.leave_at) }}</td>
+
+<td>{{ fmt_date(row.return_at) }}</td>
+
+<td>
+
+{% if row.status == "approved" %}
+<span class="status-approved">Approved</span>
+{% elif row.status == "denied" %}
+<span class="status-denied">Denied</span>
+{% else %}
+<span class="status-pending">Pending</span>
+{% endif %}
+
+</td>
+
+<td>{{ row.decided_by_name }}</td>
+
+<td>{{ fmt_dt(row.decided_at) }}</td>
+
+<td>
+
+<a class="btn"
+target="_blank"
+href="{{ url_for('staff_leave_print', req_id=row.id) }}">
+Print
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+{% endif %}
+
+</tbody>
+
+</table>
+
+</div>
+
+
+<!-- ATTENDANCE -->
+
+<div class="history-card">
+
+<div class="history-header">
+<div class="history-title">Attendance History</div>
+</div>
+
+<table class="history-table">
+
+<thead>
+<tr>
+<th>Date</th>
+<th>Event</th>
+<th>Expected Back</th>
+<th>Staff</th>
+<th>Notes</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% if not attendance_rows %}
+<tr>
+<td colspan="5">No attendance history</td>
+</tr>
+{% else %}
+
+{% for row in attendance_rows %}
+
+<tr>
+
+<td>{{ fmt_dt(row.event_time) }}</td>
+
+<td>{{ row.event_type }}</td>
+
+<td>{{ fmt_dt(row.expected_back_time) }}</td>
+
+<td>{{ row.staff_name }}</td>
+
+<td>{{ row.note }}</td>
+
+</tr>
+
+{% endfor %}
+
+{% endif %}
+
+</tbody>
+
+</table>
+
+</div>
+
+
+
+<!-- TRANSPORT REQUESTS -->
+
+<div class="history-card">
+
+<div class="history-header">
+<div class="history-title">Transport Requests</div>
+</div>
+
+<table class="history-table">
+
+<thead>
+<tr>
+<th>Submitted</th>
+<th>Destination</th>
+<th>Date</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% if not transport_rows %}
+<tr>
+<td colspan="4">No transport requests</td>
+</tr>
+{% else %}
+
+{% for row in transport_rows %}
+
+<tr>
+
+<td>{{ fmt_dt(row.submitted_at) }}</td>
+
+<td>{{ row.destination }}</td>
+
+<td>{{ fmt_date(row.transport_date) }}</td>
+
+<td>{{ row.status }}</td>
+
+</tr>
+
+{% endfor %}
+
+{% endif %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+{% endblock %}
