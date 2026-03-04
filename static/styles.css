@@ -581,3 +581,24 @@ input[name="needed_at"] {
   body{ margin: 0.5in; }
 }
 
+@media print {
+
+  nav,
+  .topnav,
+  header,
+  .navbar,
+  .menu {
+    display: none !important;
+  }
+
+  button,
+  .btn {
+    display: none !important;
+  }
+
+  body {
+    margin: 0.5in;
+  }
+
+}
+
