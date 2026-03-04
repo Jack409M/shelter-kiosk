@@ -1,116 +1,21 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<style>
-  .residents-layout {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 18px;
-    align-items: start;
-  }
-
-  .residents-side {
-    position: sticky;
-    top: 14px;
-  }
-
-  .card.tight {
-    padding: 12px;
-    margin: 0 0 14px 0;
-    max-width: 520px;
-  }
-
-  table.compact th,
-  table.compact td {
-    padding: 8px 10px;
-    font-size: 13px;
-  }
-
-  table.compact td {
-    vertical-align: middle;
-  }
-
-  .actions {
-    white-space: nowrap;
-  }
-
-  .actions form,
-  .actions a {
-    display: inline-block;
-    margin: 0 8px 0 0;
-    vertical-align: middle;
-  }
-
-  .btn {
-    margin-top: 0;
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid #333;
-    background: #fff;
-    cursor: pointer;
-    color: #111;
-    -webkit-text-fill-color: #111;
-    font-size: 13px;
-    line-height: 1;
-    text-decoration: none;
-  }
-
-  .residents-list {
-    overflow-x: auto;
-  }
-
-  .badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 999px;
-    border: 1px solid #000;
-    font-size: 12px;
-    line-height: 1;
-    background: #fff;
-  }
-
-  .badge-active {
-    background: #ffeb3b;
-    border-color: #000;
-    color: #000;
-    font-weight: 700;
-  }
-
-  .badge-inactive {
-    background: #fff;
-    border-color: #999;
-    color: #444;
-  }
-
-  @media (max-width: 900px) {
-    .residents-layout {
-      grid-template-columns: 1fr;
-    }
-
-    .residents-side {
-      position: static;
-    }
-
-    .card.tight {
-      max-width: none;
-    }
-  }
-</style>
-
 <h1>Residents for {{ shelter }}</h1>
 
 <div class="residents-layout">
 
   <div class="residents-list">
-    <table class="compact">
+    <table class="table-compact">
       <thead>
         <tr>
-          <th style="width: 42%;">Name</th>
-          <th style="width: 18%;">Resident Code</th>
-          <th style="width: 12%;">Status</th>
-          <th style="width: 28%;">Actions</th>
+          <th class="col-name">Name</th>
+          <th class="col-code">Resident Code</th>
+          <th class="col-status">Status</th>
+          <th class="col-actions">Actions</th>
         </tr>
       </thead>
+
       <tbody>
         {% if not residents %}
           <tr>
@@ -119,13 +24,9 @@
         {% else %}
           {% for r in residents %}
             <tr>
-              <td>
-                {{ r.last_name }}, {{ r.first_name }}
-              </td>
+              <td>{{ r.last_name }}, {{ r.first_name }}</td>
 
-              <td>
-                <strong>{{ r.resident_code }}</strong>
-              </td>
+              <td><strong>{{ r.resident_code }}</strong></td>
 
               <td>
                 {% if r.is_active %}
@@ -137,9 +38,7 @@
 
               <td class="actions">
 
-               
-                <a class="btn"
-                   href="{{ url_for('staff_resident_transfer', resident_id=r.id) }}">
+                <a class="btn" href="{{ url_for('staff_resident_transfer', resident_id=r.id) }}">
                   Transfer
                 </a>
 
@@ -167,7 +66,7 @@
     <form method="post" class="card tight" action="{{ url_for('staff_residents_post') }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-      <h2 style="margin: 0 0 10px 0;">Add resident</h2>
+      <h2 class="h2-tight">Add resident</h2>
 
       <div class="grid grid-names" style="gap: 10px;">
         <div>
@@ -180,7 +79,7 @@
         </div>
       </div>
 
-      <button class="btn" type="submit" style="margin-top: 10px;">Add</button>
+      <button class="btn btn-top" type="submit">Add</button>
     </form>
 
     <div class="card tight">
@@ -195,4 +94,3 @@
 </div>
 
 {% endblock %}
-
