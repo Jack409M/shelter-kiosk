@@ -1164,6 +1164,82 @@ def resident_signin():
 
     return redirect(next_url)
 
+@app.route("/twilio/inbound", methods=["POST"])
+def twilio_inbound():
+    """
+    Twilio will POST inbound messages here.
+    We record STOP/UNSUBSCRIBE/CANCEL/END/QUIT as opt out in our DB.
+    """
+    init_db()
+
+    from_number = (request.form.get("From") or "").strip()
+    body = (request.form.get("Body") or "").strip().lower()
+    now = utcnow_iso()
+    kind = g.get("db_kind")
+
+    # Normalize to last 10 digits
+    digits = "".join(ch for ch in from_number if ch.isdigit())
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    if len(digits) > 10:
+        digits = digits[-10:]
+
+    stop_words = {"stop", "unsubscribe", "cancel", "end", "quit"}
+    help_words = {"help", "info"}
+
+    if body in stop_words:
+        # Update any resident rows with matching phone
+        try:
+            rows = db_fetchall(
+                """
+                SELECT id, shelter, phone
+                FROM residents
+                WHERE phone IS NOT NULL AND phone != ''
+                ORDER BY id DESC
+                LIMIT 300
+                """
+            )
+        except Exception:
+            rows = []
+
+        for r in rows or []:
+            r_id = r["id"] if isinstance(r, dict) else r[0]
+            r_shelter = r["shelter"] if isinstance(r, dict) else r[1]
+            r_phone = r["phone"] if isinstance(r, dict) else r[2]
+            rd = "".join(ch for ch in str(r_phone or "") if ch.isdigit())
+            if len(rd) == 11 and rd.startswith("1"):
+                rd = rd[1:]
+            if len(rd) > 10:
+                rd = rd[-10:]
+            if rd != digits:
+                continue
+
+            db_execute(
+                """
+                UPDATE residents
+                SET sms_opt_in = %s,
+                    sms_opt_out_at = %s,
+                    sms_opt_out_source = %s
+                WHERE id = %s AND shelter = %s
+                """
+                if kind == "pg"
+                else """
+                UPDATE residents
+                SET sms_opt_in = ?,
+                    sms_opt_out_at = ?,
+                    sms_opt_out_source = ?
+                WHERE id = ? AND shelter = ?
+                """,
+                (False if kind == "pg" else 0, now, "twilio_stop", r_id, r_shelter),
+            )
+
+        return ("You are opted out. No more messages will be sent.", 200)
+
+    if body in help_words:
+        return ("Help: Reply STOP to opt out. For help contact staff.", 200)
+
+    # Ignore other inbound messages for now
+    return ("", 200)
 
 @app.get("/resident/home")
 @require_resident
@@ -3061,6 +3137,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
