@@ -1445,6 +1445,35 @@ def staff_leave_pending():
     )
     return render_template("staff_leave_pending.html", rows=rows, fmt_dt=fmt_dt, fmt_date=fmt_date, shelter=shelter)
 
+@app.route("/staff/leave/upcoming")
+@require_login
+@require_shelter
+def staff_leave_upcoming():
+    shelter = session["shelter"]
+    now = utcnow_iso()
+
+    rows = db_fetchall(
+        """
+        SELECT * FROM leave_requests
+        WHERE status = %s AND shelter = %s AND check_in_at IS NULL AND leave_at > %s
+        ORDER BY leave_at ASC
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT * FROM leave_requests
+        WHERE status = ? AND shelter = ? AND check_in_at IS NULL AND leave_at > ?
+        ORDER BY leave_at ASC
+        """,
+        ("approved", shelter, now),
+    )
+
+    return render_template(
+        "staff_leave_upcoming.html",
+        rows=rows,
+        fmt_dt=fmt_dt,
+        fmt_date=fmt_date,
+        shelter=shelter,
+    )
 
 @app.route("/staff/leave/away-now")
 @require_login
@@ -2873,6 +2902,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
