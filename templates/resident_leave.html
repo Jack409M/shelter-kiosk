@@ -3,78 +3,65 @@
 <h1>Leave request</h1>
 
 <form method="post" class="card">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-    <label for="shelter">Shelter</label>
-<input id="shelter" name="shelter" value="{{ shelter }}" readonly class="w-shelter">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-<label for="resident_phone">Phone number for text updates</label>
-<input
-  id="resident_phone"
-  name="resident_phone"
-  type="tel"
-  inputmode="numeric"
-  required
-  placeholder="8065551234"
-  class="w-phone"
-/>
-        
-<label>Destination</label>
-<input name="destination" required>
+  <!-- Shelter (pre-selected from resident session) -->
+  <label for="shelter">Shelter</label>
+  <input id="shelter" name="shelter" value="{{ shelter }}" readonly class="w-shelter">
 
-<div class="grid tight-row">
-  <div>
-    <label>Leave date</label>
-    <input type="date" name="leave_at" required class="w-date">
+  <!-- Optional phone for SMS updates -->
+  <label for="resident_phone">Phone number for text updates (optional)</label>
+  <input
+    id="resident_phone"
+    name="resident_phone"
+    type="tel"
+    inputmode="numeric"
+    placeholder="8065551234"
+    class="w-phone"
+  >
+  <p class="hint">Leave blank if you do not want text updates.</p>
+
+  <!-- Required destination -->
+  <label for="destination">Destination</label>
+  <input id="destination" name="destination" required>
+
+  <div class="grid tight-row">
+    <div>
+      <label for="leave_at">Leave date</label>
+      <input id="leave_at" type="date" name="leave_at" required class="w-date">
+    </div>
+
+    <div>
+      <label for="return_at">Return date</label>
+      <input id="return_at" type="date" name="return_at" required class="w-date">
+    </div>
   </div>
 
-  <div>
-    <label>Return date</label>
-    <input type="date" name="return_at" required class="w-date">
-  </div>
-</div>
+  <!-- Optional reason -->
+  <label for="reason">Reason optional</label>
+  <select id="reason" name="reason">
+    <option value="">Select</option>
+    <option>Medical</option>
+    <option>Work</option>
+    <option>Family</option>
+    <option>Legal</option>
+    <option>Other</option>
+  </select>
 
-<label>Reason optional</label>
-<select name="reason">
-  <option value="">Select</option>
-  <option>Medical</option>
-  <option>Work</option>
-  <option>Family</option>
-  <option>Legal</option>
-  <option>Other</option>
-</select>
-
-  <label>Notes optional</label>
-  <textarea name="resident_notes" rows="3"></textarea>
+  <!-- Optional notes -->
+  <label for="resident_notes">Notes optional</label>
+  <textarea id="resident_notes" name="resident_notes" rows="3"></textarea>
 
   <div class="check">
-  <label>
-    <input type="checkbox" name="agreed" required>
-    <span class="check-text">
-      I understand maximum leave is {{ max_days }} days and I must return by the approved time.
-    </span>
-  </label>
-</div>
-
+    <label>
+      <input type="checkbox" name="agreed" required>
+      <span class="check-text">
+        I understand maximum leave is {{ max_days }} days and I must return by the approved time.
+      </span>
+    </label>
+  </div>
 
   <button type="submit">Submit</button>
 </form>
 
 {% endblock %}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
