@@ -1083,7 +1083,6 @@ def resident_logout():
         session.pop(k, None)
     return redirect(url_for("resident_signin"))
 
-
 @app.route("/leave", methods=["GET", "POST"])
 @require_resident
 def resident_leave():
@@ -1123,7 +1122,7 @@ def resident_leave():
     if not first or not last or not destination or not leave_at_raw or not return_at_raw:
         errors.append("Complete all required fields.")
 
-    # Phone is optional: no error if resident_phone is blank.
+    # phone is optional, so no phone-required error
 
     try:
         leave_local_date = datetime.fromisoformat(leave_at_raw).date()
@@ -1135,9 +1134,7 @@ def resident_leave():
         if return_local_date > leave_local_date + timedelta(days=MAX_LEAVE_DAYS):
             errors.append(f"Maximum leave is {MAX_LEAVE_DAYS} days.")
 
-        leave_local_dt = datetime.combine(leave_local_date, datetime.min.time()).replace(
-            tzinfo=ZoneInfo("America/Chicago")
-        )
+        leave_local_dt = datetime.combine(leave_local_date, datetime.min.time()).replace(tzinfo=ZoneInfo("America/Chicago"))
         return_local_dt = datetime.combine(
             return_local_date,
             datetime.strptime("22:00", "%H:%M").time(),
@@ -1187,16 +1184,20 @@ def resident_leave():
     )
 
     if g.get("db_kind") == "pg":
-        req_id_row = db_fetchone(sql, params)
-        req_id = req_id_row["id"] if isinstance(req_id_row, dict) else req_id_row[0]
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        req_id = cur.fetchone()[0]
+        cur.close()
     else:
-        db_execute(sql, params)
-        req_id = db_fetchone("SELECT last_insert_rowid() AS id")
-        req_id = req_id["id"] if isinstance(req_id, dict) else req_id[0]
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        conn.commit()
+        req_id = cur.lastrowid
 
     log_action("leave", req_id, shelter, None, "create", "Resident submitted leave request")
-    flash("Leave request submitted.", "ok")
-    return redirect(url_for("resident_home"))
+    return render_template("resident_submitted.html", request_id=req_id, kind="Leave request submitted")
 
 @app.route("/transport", methods=["GET", "POST"])
 @require_resident
@@ -2872,6 +2873,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
