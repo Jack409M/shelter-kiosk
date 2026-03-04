@@ -3,27 +3,27 @@
 <h1>{{ title or "Audit Log" }}</h1>
 
 <style>
-  .auditlayout {
+  .audit-layout {
     display: grid;
     grid-template-columns: 3fr 1fr;
     gap: 16px;
     align-items: start;
   }
 
-  .auditresults {
-    overflow-x: auto;
-  }
+  .audit-results { overflow-x: auto; }
 
-  .auditfilters {
+  .audit-filters {
     position: sticky;
     top: 12px;
   }
 
-  table.compact th,
-  table.compact td {
+  table.compact { width: 100%; border-collapse: collapse; }
+  table.compact th, table.compact td {
     padding: 6px 8px;
     font-size: 12px;
     line-height: 1.2;
+    border: 1px solid #999;
+    vertical-align: top;
   }
 
   table.compact td.details {
@@ -32,83 +32,59 @@
     max-width: 520px;
   }
 
-  .filtercard {
-    background: #e4f0f8;
+  .filter-card {
+    background: var(--card, #e4f0f8);
     border: 1px solid #000;
-    border-radius: 8px;
+    border-radius: var(--radius, 8px);
     padding: 12px;
   }
 
-  .filtercard h3 {
-    margin: 0 0 10px 0;
-    font-size: 16px;
-  }
+  .filter-card h3 { margin: 0 0 10px 0; font-size: 16px; }
 
-  .filterrow {
-    margin-bottom: 10px;
-  }
+  .filter-row { margin-bottom: 10px; }
+  .filter-row label { display: block; font-weight: 700; margin-bottom: 4px; }
+  .filter-row input, .filter-row select { width: 100%; padding: 8px; box-sizing: border-box; }
 
-  .filterrow label {
-    display: block;
-    margin: 0 0 4px 0;
-    font-weight: 700;
-  }
-
-  .filterrow input,
-  .filterrow select {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 10px;
-    border: 1px solid #333;
-    border-radius: 8px;
-    background: #fff;
-    color: #111;
-  }
-
-  .filteractions {
+  .filter-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
     margin-top: 12px;
   }
 
-  .filteractions a,
-  .filteractions button {
+  .filter-actions a, .filter-actions button {
     width: 100%;
     text-align: center;
     text-decoration: none;
     display: inline-block;
     padding: 10px 12px;
     border: 1px solid #333;
-    border-radius: 8px;
+    border-radius: var(--radius, 8px);
     background: #fff;
     color: #111;
     cursor: pointer;
     box-sizing: border-box;
   }
 
-  .smallnote {
-    margin-top: 10px;
-    font-size: 12px;
-    color: #4a5a66;
-  }
+  .small-note { margin-top: 10px; font-size: 12px; color: var(--text-muted, #4a5a66); }
 
   @media (max-width: 900px) {
-    .auditlayout {
-      grid-template-columns: 1fr;
-    }
-    .auditfilters {
-      position: static;
-    }
-    table.compact td.details {
-      max-width: none;
-    }
+    .audit-layout { grid-template-columns: 1fr; }
+    .audit-filters { position: static; }
+    table.compact td.details { max-width: none; }
   }
 </style>
 
-<div class="auditlayout">
+{% set q_val = request.args.get('q', '') %}
+{% set shelter_val = request.args.get('shelter', '') %}
+{% set staff_user_id_val = request.args.get('staff_user_id', '') %}
+{% set entity_type_val = request.args.get('entity_type', '') %}
+{% set action_type_val = request.args.get('action_type', '') %}
 
-  <div class="auditresults">
+<div class="audit-layout">
+
+  <!-- LEFT: RESULTS -->
+  <div class="audit-results">
     <table class="compact">
       <thead>
         <tr>
@@ -122,15 +98,9 @@
           <th>Details</th>
         </tr>
       </thead>
-      <tbody id="auditrows">
+      <tbody>
         {% for r in rows %}
-        <tr
-          class="auditrow"
-          data-shelter="{{ r.shelter or '' }}"
-          data-staff="{{ r.staff_username or '' }}"
-          data-entity="{{ r.entity_type or '' }}"
-          data-action="{{ r.action_type or '' }}"
-        >
+        <tr>
           <td>{{ r.id }}</td>
           <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
           <td>{{ r.shelter or "" }}</td>
@@ -141,23 +111,26 @@
           <td class="details">{{ r.action_details or "" }}</td>
         </tr>
         {% endfor %}
+        {% if not rows %}
+        <tr><td colspan="8">No matching audit events.</td></tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
 
-  <aside class="auditfilters">
-    <div class="filtercard">
+  <!-- RIGHT: FILTERS -->
+  <aside class="audit-filters">
+    <div class="filter-card">
       <h3>Filter</h3>
 
-      <form method="get" action="{{ url_for('staff_audit_log') }}" id="auditfilterform">
-        <div class="filterrow">
+      <form method="get" action="{{ url_for('staff_audit_log') }}">
+        <div class="filter-row">
           <label for="q">Search text</label>
-          <input id="q" name="q" type="text" placeholder="Name, action, details" value="{{ request.args.get('q','') }}">
+          <input id="q" name="q" type="text" value="{{ q_val }}" placeholder="Name, action, details">
         </div>
 
-        <div class="filterrow">
+        <div class="filter-row">
           <label for="shelter">Shelter</label>
-          {% set shelter_val = request.args.get('shelter','') %}
           <select id="shelter" name="shelter">
             <option value="">All</option>
             {% for s in all_shelters %}
@@ -166,91 +139,80 @@
           </select>
         </div>
 
-        <div class="filterrow">
-          <label for="staff_user_id">Staff user ID</label>
-          <input id="staff_user_id" name="staff_user_id" type="text" placeholder="Numeric ID" value="{{ request.args.get('staff_user_id','') }}">
+        <div class="filter-row">
+          <label for="staff_user_id">Staff</label>
+          <select id="staff_user_id" name="staff_user_id">
+            <option value="">All</option>
+            {# Build staff list from the rows we already have (safe, no route changes) #}
+            {% set seen = namespace(ids=[]) %}
+            {% for r in rows %}
+              {% if r.staff_user_id and (r.staff_user_id not in seen.ids) %}
+                {% set _ = seen.ids.append(r.staff_user_id) %}
+              {% endif %}
+            {% endfor %}
+            {% for sid in seen.ids %}
+              {# Find a display name for this sid from the first matching row #}
+              {% set display = "" %}
+              {% for r in rows %}
+                {% if r.staff_user_id == sid %}
+                  {% set display = r.staff_username or ("User " ~ sid) %}
+                {% endif %}
+              {% endfor %}
+              <option value="{{ sid }}" {% if staff_user_id_val == (sid|string) %}selected{% endif %}>
+                {{ display }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
 
-        <div class="filterrow">
+        <div class="filter-row">
           <label for="entity_type">Entity</label>
-          {% set entity_val = request.args.get('entity_type','') %}
           <select id="entity_type" name="entity_type">
             <option value="">All</option>
+            {% set entities = namespace(vals=[]) %}
+            {% for r in rows %}
+              {% if r.entity_type and (r.entity_type not in entities.vals) %}
+                {% set _ = entities.vals.append(r.entity_type) %}
+              {% endif %}
+            {% endfor %}
+            {% for v in entities.vals|sort %}
+              <option value="{{ v }}" {% if entity_type_val == v %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
           </select>
         </div>
 
-        <div class="filterrow">
+        <div class="filter-row">
           <label for="action_type">Action</label>
-          {% set action_val = request.args.get('action_type','') %}
           <select id="action_type" name="action_type">
             <option value="">All</option>
+            {% set actions = namespace(vals=[]) %}
+            {% for r in rows %}
+              {% if r.action_type and (r.action_type not in actions.vals) %}
+                {% set _ = actions.vals.append(r.action_type) %}
+              {% endif %}
+            {% endfor %}
+            {% for v in actions.vals|sort %}
+              <option value="{{ v }}" {% if action_type_val == v %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
           </select>
         </div>
 
-        <div class="filteractions">
-          <button type="button" id="clearbtn">Clear</button>
+        <div class="filter-actions">
+          <button type="submit">Apply</button>
+          <a href="{{ url_for('staff_audit_log') }}">Clear</a>
+        </div>
+
+        <div class="filter-actions" style="margin-top:10px;">
           <a href="{{ url_for('staff_audit_log_csv', **request.args) }}">Export CSV</a>
+          <a href="#" onclick="window.location.reload(); return false;">Refresh</a>
         </div>
 
-        <div class="filteractions" style="margin-top:10px;">
-          <button type="submit" id="applybtn">Apply</button>
-          <button type="button" id="refreshbtn">Refresh</button>
-        </div>
-
-        <div class="smallnote">
-          This filter runs on the server and changes what rows are loaded.
-          Entity and Action dropdowns are auto built from the currently loaded rows.
+        <div class="small-note">
+          Filters run on the server and affect export.
         </div>
       </form>
     </div>
   </aside>
 
 </div>
-
-<script>
-(function () {
-  function uniqFromRows(attr) {
-    const set = new Set();
-    document.querySelectorAll(".auditrow").forEach(function (r) {
-      const v = (r.getAttribute(attr) || "").trim();
-      if (v) set.add(v);
-    });
-    return Array.from(set).sort(function (a, b) { return a.localeCompare(b); });
-  }
-
-  function fillSelect(selectEl, values, selectedValue) {
-    values.forEach(function (v) {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      if (selectedValue && v === selectedValue) opt.selected = true;
-      selectEl.appendChild(opt);
-    });
-  }
-
-  const entitySelect = document.getElementById("entity_type");
-  const actionSelect = document.getElementById("action_type");
-
-  const selectedEntity = "{{ request.args.get('entity_type','')|e }}";
-  const selectedAction = "{{ request.args.get('action_type','')|e }}";
-
-  if (entitySelect) fillSelect(entitySelect, uniqFromRows("data-entity"), selectedEntity);
-  if (actionSelect) fillSelect(actionSelect, uniqFromRows("data-action"), selectedAction);
-
-  const clearBtn = document.getElementById("clearbtn");
-  const refreshBtn = document.getElementById("refreshbtn");
-
-  if (clearBtn) {
-    clearBtn.addEventListener("click", function () {
-      window.location.href = "{{ url_for('staff_audit_log') }}";
-    });
-  }
-
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", function () {
-      window.location.reload();
-    });
-  }
-})();
-</script>
 {% endblock %}
