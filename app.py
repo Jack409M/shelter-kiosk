@@ -2208,60 +2208,61 @@ def delete_user(username):
 
 # ---- Audit ----
 
-@app.route("/staff/audit")
-@require_login
-@require_shelter
-@require_admin
-def staff_audit_log():
-    created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
+def _audit_where_from_request():
+    kind = g.get("db_kind")
+    where = []
+    params = []
 
+    def add_eq(field, key):
+        v = (request.args.get(key) or "").strip()
+        if v:
+            where.append(f"{field} = " + ("%s" if kind == "pg" else "?"))
+            params.append(v)
+
+    add_eq("a.shelter", "shelter")
+    add_eq("a.entity_type", "entity_type")
+    add_eq("a.action_type", "action_type")
+
+    staff_user_id = (request.args.get("staff_user_id") or "").strip()
+    if staff_user_id.isdigit():
+        where.append("a.staff_user_id = " + ("%s" if kind == "pg" else "?"))
+        params.append(int(staff_user_id))
+
+    q = (request.args.get("q") or "").strip()
+    if q:
+        like_op = "ILIKE" if kind == "pg" else "LIKE"
+        ph = "%s" if kind == "pg" else "?"
+        where.append(
+            "("
+            f"CAST(a.id AS TEXT) {like_op} {ph} OR "
+            f"COALESCE(a.action_details, '') {like_op} {ph} OR "
+            f"COALESCE(a.action_type, '') {like_op} {ph} OR "
+            f"COALESCE(a.entity_type, '') {like_op} {ph} OR "
+            f"COALESCE(su.username, '') {like_op} {ph}"
+            ")"
+        )
+        pat = f"%{q}%"
+        params.extend([pat, pat, pat, pat, pat])
+
+    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+    return where_sql, tuple(params)
+
+    created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
+    where_sql, params = _audit_where_from_request()
+
+    limit_ph = "%s" if g.get("db_kind") == "pg" else "?"
     sql = (
         f"SELECT a.id, a.entity_type, a.entity_id, a.shelter, a.staff_user_id, "
         f"su.username AS staff_username, a.action_type, a.action_details, {created_expr} AS created_at "
         f"FROM audit_log a "
         f"LEFT JOIN staff_users su ON su.id = a.staff_user_id "
+        f"{where_sql} "
         f"ORDER BY a.id DESC "
-        + ("LIMIT %s" if g.get("db_kind") == "pg" else "LIMIT ?")
+        f"LIMIT {limit_ph}"
     )
 
-    rows = db_fetchall(sql, (200,))
+    rows = db_fetchall(sql, params + (200,))
     return render_template("staff_audit_log.html", rows=rows, title="Audit Log", fmt_dt=fmt_dt)
-
-@app.route("/staff/audit.csv")
-@app.route("/staff/admin/audit-log/csv")
-@require_login
-@require_shelter
-@require_admin
-def staff_audit_log_csv():
-    
-    rows = db_fetchall("""
-        SELECT id, created_at, shelter, staff_user_id, entity_type, entity_id, action_type, action_details
-        FROM audit_log
-        ORDER BY id DESC
-    """)
-
-    si = io.StringIO()
-    w = csv.writer(si)
-
-    w.writerow(["id", "created_at", "shelter", "staff_user_id", "entity_type", "entity_id", "action_type", "action_details"])
-
-    for r in rows:
-        w.writerow([
-            r["id"],
-            r["created_at"],
-            r["shelter"],
-            r["staff_user_id"],
-            r["entity_type"],
-            r["entity_id"],
-            r["action_type"],
-            r["action_details"],
-        ])
-
-    return Response(
-        si.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=audit_log.csv"},
-    )
 # ---- Residents ----
 
 @app.get("/staff/residents")
@@ -2538,6 +2539,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
