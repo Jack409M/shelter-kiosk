@@ -71,6 +71,34 @@ color:#555;
 font-weight:700;
 }
 
+@media print {
+
+  header,
+  nav,
+  .topbar,
+  .navbar,
+  .menu,
+  .site-header {
+    display: none !important;
+  }
+
+  button,
+  .btn,
+  a.btn {
+    display: none !important;
+  }
+
+  body {
+    margin: 0.5in;
+    background: #fff !important;
+  }
+
+  .history-card {
+    border: 1px solid #000;
+  }
+
+}
+  
 </style>
 
 
