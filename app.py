@@ -2048,6 +2048,102 @@ def staff_attendance_check_out_global():
     flash("Checked out.", "ok")
     return redirect(url_for("staff_attendance"))
 
+@app.route("/staff/attendance/resident/<int:resident_id>/print")
+@require_login
+@require_shelter
+def staff_attendance_resident_print(resident_id: int):
+
+    shelter = session["shelter"]
+
+    start = (request.args.get("start") or "").strip()
+    end = (request.args.get("end") or "").strip()
+
+    resident = db_fetchone(
+        "SELECT first_name, last_name FROM residents WHERE id = %s AND shelter = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT first_name, last_name FROM residents WHERE id = ? AND shelter = ?",
+        (resident_id, shelter),
+    )
+
+    if not resident:
+        abort(404)
+
+    first = resident["first_name"] if isinstance(resident, dict) else resident[0]
+    last = resident["last_name"] if isinstance(resident, dict) else resident[1]
+
+    resident_name = f"{last}, {first}"
+
+    params = [resident_id, shelter]
+    date_filter = ""
+
+    if start:
+        date_filter += " AND event_time >= %s" if g.get("db_kind") == "pg" else " AND event_time >= ?"
+        params.append(start + "T00:00:00")
+
+    if end:
+        date_filter += " AND event_time <= %s" if g.get("db_kind") == "pg" else " AND event_time <= ?"
+        params.append(end + "T23:59:59")
+
+    events_raw = db_fetchall(
+        f"""
+        SELECT event_type, event_time, note, expected_back_time
+        FROM attendance_events
+        WHERE resident_id = {"%s" if g.get("db_kind") == "pg" else "?"}
+        AND shelter = {"%s" if g.get("db_kind") == "pg" else "?"}
+        {date_filter}
+        ORDER BY event_time ASC
+        """,
+        tuple(params),
+    )
+
+    events = []
+    last_checkout = None
+
+    for e in events_raw:
+
+        event_type = e["event_type"] if isinstance(e, dict) else e[0]
+        event_time = e["event_time"] if isinstance(e, dict) else e[1]
+        note = e["note"] if isinstance(e, dict) else e[2]
+        expected_back = e["expected_back_time"] if isinstance(e, dict) else e[3]
+
+        if event_type == "check_out":
+            last_checkout = {
+                "checked_out_at": event_time,
+                "expected_back": expected_back,
+                "note": note,
+            }
+
+        if event_type == "check_in" and last_checkout:
+
+            late = None
+
+            if last_checkout["expected_back"]:
+                try:
+                    late = parse_dt(event_time) > parse_dt(last_checkout["expected_back"])
+                except Exception:
+                    late = None
+
+            events.append({
+                "date": event_time[:10],
+                "checked_out_at": last_checkout["checked_out_at"],
+                "checked_in_at": event_time,
+                "late": late,
+                "note": last_checkout["note"]
+            })
+
+            last_checkout = None
+
+    return render_template(
+        "staff_attendance_resident_print.html",
+        resident_id=resident_id,
+        resident_name=resident_name,
+        shelter=shelter,
+        start=start,
+        end=end,
+        events=events,
+        fmt_dt=fmt_time_only
+    )
+
 # ---- Kiosk ----
 
 @app.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
@@ -2594,6 +2690,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
