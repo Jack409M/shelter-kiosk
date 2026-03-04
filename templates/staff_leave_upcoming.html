@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Upcoming Leave</h2>
+<p>Approved leave that has not started yet</p>
+
+<table class="board-table">
+<thead>
+<tr>
+<th>Resident</th>
+<th>Leave</th>
+<th>Return</th>
+<th>Destination</th>
+<th>Notes</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for r in rows %}
+<tr>
+
+<td>{{ r["resident_name"] }}</td>
+
+<td>{{ fmt_dt(r["leave_at"]) }}</td>
+
+<td>{{ fmt_dt(r["return_at"]) }}</td>
+
+<td>{{ r["destination"] }}</td>
+
+<td>{{ r["notes"] }}</td>
+
+</tr>
+{% endfor %}
+
+{% if not rows %}
+<tr>
+<td colspan="5">No upcoming leave</td>
+</tr>
+{% endif %}
+
+</tbody>
+</table>
+
+{% endblock %}
