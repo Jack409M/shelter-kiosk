@@ -492,14 +492,11 @@ def ensure_admin_bootstrap() -> None:
         (admin_user, generate_password_hash(admin_pass), "admin", True, utcnow_iso()),
     )
 
-def init_db():
-
 def init_db() -> None:
-    pass
     get_db()
     kind = g.get("db_kind")
 
-        # SMS consent fields for compliance
+    # SMS consent fields for compliance
     if kind == "pg":
         try:
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE")
@@ -2949,6 +2946,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
