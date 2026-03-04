@@ -23,10 +23,6 @@
     margin: 10px 0 8px 0;
   }
 
-  .att_help {
-    margin: 10px 0 16px 0;
-  }
-
   table.compact th,
   table.compact td {
     padding: 6px 8px;
@@ -126,31 +122,31 @@
   }
 
   .att_icon {
-  display: inline-block;
-  margin-right: 6px;
-  font-weight: 700;
-  font-size: 14px;
-}
+    display: inline-block;
+    margin-right: 6px;
+    font-weight: 700;
+    font-size: 14px;
+  }
 
-.att_in {
-  color: #0a7a2f;
-}
+  .att_in {
+    color: #0a7a2f;
+  }
 
-.att_out {
-  color: #b00000;
-}
+  .att_out {
+    color: #b00000;
+  }
 
-.att_overdue {
-  color: #b00000;
-  font-weight: 900;
-  animation: blinkRed 1s linear infinite;
-}
+  .att_overdue {
+    color: #b00000;
+    font-weight: 900;
+    animation: blinkRed 1s linear infinite;
+  }
 
-@keyframes blinkRed {
-  0%   { opacity: 1; }
-  50%  { opacity: 0.2; }
-  100% { opacity: 1; }
-}
+  @keyframes blinkRed {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.2; }
+    100% { opacity: 1; }
+  }
 </style>
 
 <h1>Attendance for {{ shelter }}</h1>
@@ -160,10 +156,6 @@
      href="{{ url_for('staff_attendance_print_today') }}">
     Print Today's Attendance
   </a>
-</div>
-
-<div class="card att_help">
-  Search your browser page to find a name fast. On iPad, use the search bar in Safari.
 </div>
 
 <div class="att_wrap">
@@ -190,13 +182,13 @@
           {% for row in out_rows %}
             <tr class="{% if row.is_overdue %}att_row_overdue{% endif %}">
               <td>
-                 {% if row.is_overdue %}
-                 <span class="att_icon att_overdue">✖</span>
-                 {% else %}
-                 <span class="att_icon att_out">✖</span>
-                 {% endif %}
-                 {{ row.name }}
-               </td>
+                {% if row.is_overdue %}
+                  <span class="att_icon att_overdue">✖</span>
+                {% else %}
+                  <span class="att_icon att_out">✖</span>
+                {% endif %}
+                {{ row.name }}
+              </td>
               <td>{{ fmt_time(row.checked_out_at) }}</td>
               <td>{{ fmt_time(row.expected_back_at) }}</td>
               <td>
@@ -205,7 +197,6 @@
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button class="att_btn" type="submit">Check in</button>
                   </form>
-
                 </div>
               </td>
             </tr>
@@ -234,10 +225,9 @@
               <td>
                 <span class="att_icon att_in">✔</span>
                 {{ row.name }}
-            </td>
+              </td>
               <td>
                 <div class="att_actions">
-               
                 </div>
               </td>
             </tr>
@@ -258,24 +248,26 @@
 
         <label for="resident_id">Resident</label>
         <select name="resident_id" id="resident_id" required>
-          <option value="">Select a resident</option>
-          {% for row in in_rows %}
-            <option value="{{ row.resident_id }}">{{ row.name }}</option>
+          <option value="">Select resident…</option>
+          {% for r in in_rows %}
+            <option value="{{ r.resident_id }}">{{ r.name }}</option>
           {% endfor %}
         </select>
 
         <div class="att_two_col">
           <div>
-            <label for="expected_back_time">Expected back time</label>
-            <input name="expected_back_time" id="expected_back_time" type="time" required>
+            <label for="expected_back_at">Expected back</label>
+            <input type="datetime-local" name="expected_back_at" id="expected_back_at" class="w-dt" required>
           </div>
           <div>
-            <button class="att_btn" type="submit" style="width: 100%; padding: 10px 12px;">Check out</button>
+            <button type="submit" class="att_btn">Check out</button>
           </div>
         </div>
 
-        <label for="note">Note</label>
-        <input class="att_note_input" name="note" id="note" placeholder="Optional note">
+        <div>
+          <label for="note">Note optional</label>
+          <input id="note" name="note" class="att_note_input">
+        </div>
 
       </div>
     </form>
