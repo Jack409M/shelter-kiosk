@@ -59,13 +59,6 @@
     margin-top: 4px;
   }
 
-  .actions-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-  }
-
   .btn {
     margin: 0;
     padding: 6px 10px;
@@ -91,20 +84,12 @@
     border-radius: 8px;
     border: 1px solid #b9c6d6;
     font-size: 13px;
-    min-width: 220px;
+    width: 240px;
     height: 32px;
   }
 
   .note.denial {
     border-color: #caa;
-  }
-
-  .action-form {
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin: 0;
   }
 
   .pill {
@@ -125,12 +110,45 @@
     font-weight: 700;
   }
 
+  /* This is the missing piece */
+  .leave-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: nowrap;
+    margin-top: 6px;
+  }
+
+  .action-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    flex-wrap: nowrap;
+  }
+
+  .action-form input {
+    margin: 0;
+  }
+
+  @media (max-width: 1100px) {
+    .leave-actions {
+      flex-wrap: wrap;
+    }
+    .action-form {
+      flex-wrap: wrap;
+    }
+    .note {
+      width: 200px;
+    }
+  }
+
   @media (max-width: 900px) {
     table.compact {
       min-width: 760px;
     }
     .note {
-      min-width: 180px;
+      width: 180px;
     }
   }
 </style>
@@ -177,7 +195,7 @@
               </div>
 
               <div class="leave-actions">
-                <a class="btn small"href="{{ url_for('staff_leave_print', req_id=row.id) }}"
+                <a class="btn small" href="{{ url_for('staff_leave_print', req_id=row.id) }}"
                    target="_blank" rel="noopener">
                   Print
                 </a>
@@ -197,7 +215,6 @@
                   <input class="note denial" type="text" name="note" placeholder="Denial note (required)" required>
                   <button class="btn small" type="submit">Deny</button>
                 </form>
-
               </div>
 
               {% if row.reason %}
@@ -219,5 +236,3 @@
 </div>
 
 {% endblock %}
-
-
