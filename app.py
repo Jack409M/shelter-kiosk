@@ -492,6 +492,47 @@ def ensure_admin_bootstrap() -> None:
         (admin_user, generate_password_hash(admin_pass), "admin", True, utcnow_iso()),
     )
 
+def ensure_sms_consent_columns() -> None:
+    """
+    Adds SMS consent columns to residents table for both SQLite and Postgres.
+    Safe to run on every startup.
+    """
+    get_db()
+    kind = g.get("db_kind")
+
+    try:
+        if kind == "pg":
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE")
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_at TEXT")
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_source TEXT")
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_at TEXT")
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_source TEXT")
+        else:
+            try:
+                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in INTEGER NOT NULL DEFAULT 0")
+            except Exception:
+                pass
+            try:
+                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_at TEXT")
+            except Exception:
+                pass
+            try:
+                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_source TEXT")
+            except Exception:
+                pass
+            try:
+                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_at TEXT")
+            except Exception:
+                pass
+            try:
+                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_source TEXT")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+def init_db():
 
 def init_db() -> None:
     get_db()
@@ -564,7 +605,8 @@ def init_db() -> None:
         db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
     except Exception:
         pass
-
+    
+    ensure_sms_consent_columns() 
     create(
         """
         CREATE TABLE IF NOT EXISTS resident_transfers (
@@ -2902,6 +2944,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
