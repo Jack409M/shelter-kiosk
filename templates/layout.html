@@ -1,40 +1,69 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+{% extends "base.html" %}
+{% block body %}
 
-  <title>{{ title or "Shelter Operations" }}</title>
+<style>
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 14px 0;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background: #fff;
+  }
 
-  <style>
-    body { font-family: Arial, sans-serif; margin: 16px; color: #111; }
-    .container { max-width: 1100px; margin: 0 auto; }
-    .flash { padding: 10px 12px; border-radius: 10px; margin: 10px 0; border: 1px solid #999; }
-    .flash.ok { border-color: #2e7d32; }
-    .flash.error { border-color: #c62828; }
-    a { color: inherit; }
-  </style>
-</head>
+  .topbar a {
+    margin-right: 10px;
+  }
 
-<body>
-  <div class="container">
+  .topbar .muted {
+    color: #444;
+    font-size: 13px;
+  }
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
+  .content-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+</style>
+
+<div class="content-wrap">
+
+  <div class="topbar">
+    <div>
+      <a href="{{ url_for('staff_home') }}">Home</a>
+      <a href="{{ url_for('staff_attendance') }}">Attendance</a>
+      <a href="{{ url_for('staff_leave_pending') }}">Leave</a>
+      <a href="{{ url_for('staff_transport_pending') }}">Transport</a>
+      <a href="{{ url_for('staff_residents') }}">Residents</a>
+      {% if session.get('role') == 'admin' %}
+        <a href="{{ url_for('admin_users') }}">Users</a>
+        <a href="{{ url_for('staff_audit_log') }}">Audit</a>
       {% endif %}
-    {% endwith %}
+    </div>
 
-    {% block content %}{% endblock %}
-
+    <div class="muted">
+      {% if session.get('username') %}
+        User: <strong>{{ session.get('username') }}</strong>
+      {% endif %}
+      {% if session.get('shelter') %}
+        <span style="margin-left:10px;">Shelter: <strong>{{ session.get('shelter') }}</strong></span>
+        <a style="margin-left:10px;" href="{{ url_for('staff_select_shelter') }}">Change shelter</a>
+      {% endif %}
+      {% if session.get('staff_user_id') %}
+        <a style="margin-left:10px;" href="{{ url_for('staff_logout') }}">Logout</a>
+      {% endif %}
+    </div>
   </div>
-</body>
-</html>
 
+  {% block content %}{% endblock %}
 
+</div>
 
+{% endblock %}
 
 
 
