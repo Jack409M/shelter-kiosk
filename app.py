@@ -495,6 +495,7 @@ def ensure_admin_bootstrap() -> None:
 def init_db():
 
 def init_db() -> None:
+    pass
     get_db()
     kind = g.get("db_kind")
 
@@ -2948,6 +2949,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
