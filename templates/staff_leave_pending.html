@@ -176,10 +176,8 @@
                 {% endif %}
               </div>
 
-              <div class="actions-row">
-
-                <a class="btn small"
-                   href="{{ url_for('staff_leave_print', req_id=row.id) }}"
+              <div class="leave-actions">
+                <a class="btn small"href="{{ url_for('staff_leave_print', req_id=row.id) }}"
                    target="_blank" rel="noopener">
                   Print
                 </a>
@@ -221,4 +219,5 @@
 </div>
 
 {% endblock %}
+
 
