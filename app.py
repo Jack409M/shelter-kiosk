@@ -262,6 +262,14 @@ def fmt_time_only(dt_iso: Optional[str]) -> str:
 
 
 def send_sms(to_number: str, message: str) -> None:
+    # COMPLIANCE GATE: never send unless allowed by our consent + opt out records
+    try:
+        if not sms_is_allowed_for_number(to_number):
+            return
+    except Exception:
+        # If anything goes wrong checking consent, fail closed (do not send)
+        return
+
     if not Client:
         return
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
@@ -284,7 +292,6 @@ def send_sms(to_number: str, message: str) -> None:
         client.messages.create(body=message, from_=TWILIO_FROM_NUMBER, to=to_e164)
     except Exception as e:
         print("SMS error:", e)
-
 
 # Postgres connection pool
 def _init_pg_pool() -> None:
@@ -2946,6 +2953,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
