@@ -493,47 +493,7 @@ def ensure_admin_bootstrap() -> None:
     )
 
 def ensure_sms_consent_columns() -> None:
-    """
-    Adds SMS consent columns to residents table for both SQLite and Postgres.
-    Safe to run on every startup.
-    """
-    get_db()
-    kind = g.get("db_kind")
-
-    try:
-        if kind == "pg":
-            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE")
-            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_at TEXT")
-            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_source TEXT")
-            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_at TEXT")
-            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_source TEXT")
-        else:
-            # SQLite does not support IF NOT EXISTS for ADD COLUMN
-            # So we try and ignore the error if the column already exists.
-            try:
-                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in INTEGER NOT NULL DEFAULT 0")
-            except Exception:
-                pass
-            try:
-                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_at TEXT")
-            except Exception:
-                pass
-            try:
-                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_source TEXT")
-            except Exception:
-                pass
-            try:
-                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_at TEXT")
-            except Exception:
-                pass
-            try:
-                db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_source TEXT")
-            except Exception:
-                pass
-    except Exception:
-        # Never block app startup on a migration attempt
-        pass
-
+    pass
 def init_db():
 
 def init_db() -> None:
@@ -2946,6 +2906,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
