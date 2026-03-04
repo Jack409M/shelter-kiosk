@@ -611,7 +611,6 @@ def init_db() -> None:
     except Exception:
         pass
     
-    ensure_sms_consent_columns() 
     create(
         """
         CREATE TABLE IF NOT EXISTS resident_transfers (
@@ -2949,6 +2948,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
