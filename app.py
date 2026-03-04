@@ -2247,6 +2247,12 @@ def _audit_where_from_request():
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
     return where_sql, tuple(params)
 
+
+@app.get("/staff/admin/audit-log")
+@require_login
+@require_shelter
+@require_admin
+def staff_audit_log():
     created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
     where_sql, params = _audit_where_from_request()
 
@@ -2263,6 +2269,55 @@ def _audit_where_from_request():
 
     rows = db_fetchall(sql, params + (200,))
     return render_template("staff_audit_log.html", rows=rows, title="Audit Log", fmt_dt=fmt_dt)
+
+
+@app.get("/staff/admin/audit-log/csv")
+@require_login
+@require_shelter
+@require_admin
+def staff_audit_log_csv():
+    created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
+    where_sql, params = _audit_where_from_request()
+
+    sql = (
+        f"SELECT a.id, a.entity_type, a.entity_id, a.shelter, "
+        f"COALESCE(su.username, '') AS staff_username, "
+        f"a.action_type, COALESCE(a.action_details, '') AS action_details, "
+        f"{created_expr} AS created_at "
+        f"FROM audit_log a "
+        f"LEFT JOIN staff_users su ON su.id = a.staff_user_id "
+        f"{where_sql} "
+        f"ORDER BY a.id DESC"
+    )
+
+    rows = db_fetchall(sql, params)
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["id", "entity_type", "entity_id", "shelter", "staff_username", "action_type", "action_details", "created_at"])
+
+    for r in rows:
+        if isinstance(r, dict):
+            w.writerow([
+                r.get("id", ""),
+                r.get("entity_type", ""),
+                r.get("entity_id", ""),
+                r.get("shelter", ""),
+                r.get("staff_username", ""),
+                r.get("action_type", ""),
+                r.get("action_details", ""),
+                r.get("created_at", ""),
+            ])
+        else:
+            w.writerow(list(r))
+
+    data = buf.getvalue()
+    return Response(
+        data,
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=audit_log.csv"},
+    )
+
 # ---- Residents ----
 
 @app.get("/staff/residents")
@@ -2539,6 +2594,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
