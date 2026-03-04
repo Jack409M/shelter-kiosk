@@ -21,7 +21,7 @@
 {% for r in rows %}
 <tr>
 
-<td>{{ r["resident_name"] }}</td>
+<td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
 
 <td>{{ fmt_dt(r["leave_at"]) }}</td>
 
@@ -29,7 +29,7 @@
 
 <td>{{ r["destination"] }}</td>
 
-<td>{{ r["notes"] }}</td>
+<td>{{ r["resident_notes"] }}</td>
 
 </tr>
 {% endfor %}
