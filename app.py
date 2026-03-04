@@ -508,6 +508,8 @@ def ensure_sms_consent_columns() -> None:
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_at TEXT")
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_source TEXT")
         else:
+            # SQLite does not support IF NOT EXISTS for ADD COLUMN
+            # So we try and ignore the error if the column already exists.
             try:
                 db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in INTEGER NOT NULL DEFAULT 0")
             except Exception:
@@ -529,8 +531,8 @@ def ensure_sms_consent_columns() -> None:
             except Exception:
                 pass
     except Exception:
+        # Never block app startup on a migration attempt
         pass
-
 
 def init_db():
 
@@ -2944,6 +2946,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
