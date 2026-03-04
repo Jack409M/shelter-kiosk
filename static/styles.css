@@ -726,3 +726,5 @@ input[name="needed_at"] {
 .leave-note{
   width:220px;
 }
+
+.out { color: #16a34a; font-weight: bold; }
