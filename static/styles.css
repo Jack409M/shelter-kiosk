@@ -602,3 +602,108 @@ input[name="needed_at"] {
 
 }
 
+/* staff_residents.html */
+
+.residents-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.residents-side {
+  position: sticky;
+  top: 14px;
+}
+
+.card.tight {
+  padding: 12px;
+  margin: 0 0 14px 0;
+  max-width: 520px;
+}
+
+.table-compact th,
+.table-compact td {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.table-compact td {
+  vertical-align: middle;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.actions form,
+.actions a {
+  display: inline-block;
+  margin: 0 8px 0 0;
+  vertical-align: middle;
+}
+
+.btn {
+  margin-top: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #fff;
+  cursor: pointer;
+  color: #111;
+  -webkit-text-fill-color: #111;
+  font-size: 13px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.residents-list {
+  overflow-x: auto;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #000;
+  font-size: 12px;
+  line-height: 1;
+  background: #fff;
+}
+
+.badge-active {
+  background: #ffeb3b;
+  border-color: #000;
+  color: #000;
+  font-weight: 700;
+}
+
+.badge-inactive {
+  background: #fff;
+  border-color: #999;
+  color: #444;
+}
+
+.col-name { width: 42%; }
+.col-code { width: 18%; }
+.col-status { width: 12%; }
+.col-actions { width: 28%; }
+
+.h2-tight { margin: 0 0 10px 0; }
+.btn-top { margin-top: 10px; }
+
+@media (max-width: 900px) {
+  .residents-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .residents-side {
+    position: static;
+  }
+
+  .card.tight {
+    max-width: none;
+  }
+}
+
+
