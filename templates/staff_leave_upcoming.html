@@ -1,12 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="menu">
-  <a href="{{ url_for('staff_leave_pending') }}">Leave pending</a>
-  <a href="{{ url_for('staff_leave_upcoming') }}">Upcoming leave</a>
-  <a href="{{ url_for('staff_leave_away_now') }}">Leave away</a>
-  <a href="{{ url_for('staff_leave_overdue') }}">Leave overdue</a>
-</div>
+
 <h2>Upcoming Leave</h2>
 <p>Approved leave that has not started yet</p>
 
