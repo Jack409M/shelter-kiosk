@@ -707,5 +707,21 @@ input[name="needed_at"] {
   }
 }
 
+.leave-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.leave-actions form {
+  margin: 0;
+}
+
+.leave-note {
+  width: 26ch;
+  max-width: 100%;
+  display: inline-block;
+}
 
 
