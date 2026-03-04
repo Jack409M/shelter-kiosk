@@ -2053,6 +2053,7 @@ def staff_attendance_check_out_global():
 @require_shelter
 def staff_attendance_resident_print(resident_id: int):
 
+    init_db()
     shelter = session["shelter"]
 
     start = (request.args.get("start") or "").strip()
@@ -2077,24 +2078,37 @@ def staff_attendance_resident_print(resident_id: int):
     date_filter = ""
 
     if start:
-        date_filter += " AND event_time >= %s" if g.get("db_kind") == "pg" else " AND event_time >= ?"
+        date_filter += " AND ae.event_time >= %s" if g.get("db_kind") == "pg" else " AND ae.event_time >= ?"
         params.append(start + "T00:00:00")
 
     if end:
-        date_filter += " AND event_time <= %s" if g.get("db_kind") == "pg" else " AND event_time <= ?"
+        date_filter += " AND ae.event_time <= %s" if g.get("db_kind") == "pg" else " AND ae.event_time <= ?"
         params.append(end + "T23:59:59")
 
     events_raw = db_fetchall(
         f"""
-        SELECT event_type, event_time, note, expected_back_time
-        FROM attendance_events
-        WHERE resident_id = {"%s" if g.get("db_kind") == "pg" else "?"}
-        AND shelter = {"%s" if g.get("db_kind") == "pg" else "?"}
+        SELECT
+            ae.event_type,
+            ae.event_time,
+            ae.note,
+            ae.expected_back_time,
+            su.username
+        FROM attendance_events ae
+        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
+        WHERE ae.resident_id = {"%s" if g.get("db_kind") == "pg" else "?"}
+        AND ae.shelter = {"%s" if g.get("db_kind") == "pg" else "?"}
         {date_filter}
-        ORDER BY event_time ASC
+        ORDER BY ae.event_time ASC
         """,
         tuple(params),
     )
+
+    def local_day(dt_iso):
+        try:
+            dt = parse_dt(dt_iso).replace(tzinfo=timezone.utc)
+            return dt.astimezone(ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
+        except:
+            return dt_iso[:10]
 
     events = []
     last_checkout = None
@@ -2105,30 +2119,35 @@ def staff_attendance_resident_print(resident_id: int):
         event_time = e["event_time"] if isinstance(e, dict) else e[1]
         note = e["note"] if isinstance(e, dict) else e[2]
         expected_back = e["expected_back_time"] if isinstance(e, dict) else e[3]
+        staff = e["username"] if isinstance(e, dict) else e[4]
 
         if event_type == "check_out":
             last_checkout = {
                 "checked_out_at": event_time,
-                "expected_back": expected_back,
+                "expected_back_at": expected_back,
                 "note": note,
+                "out_staff": staff or "",
             }
+            continue
 
         if event_type == "check_in" and last_checkout:
 
             late = None
-
-            if last_checkout["expected_back"]:
+            if last_checkout["expected_back_at"]:
                 try:
-                    late = parse_dt(event_time) > parse_dt(last_checkout["expected_back"])
-                except Exception:
-                    late = None
+                    late = parse_dt(event_time) > parse_dt(last_checkout["expected_back_at"])
+                except:
+                    pass
 
             events.append({
-                "date": event_time[:10],
+                "date": local_day(event_time),
                 "checked_out_at": last_checkout["checked_out_at"],
+                "expected_back_at": last_checkout["expected_back_at"],
                 "checked_in_at": event_time,
                 "late": late,
-                "note": last_checkout["note"]
+                "note": last_checkout["note"],
+                "out_staff": last_checkout["out_staff"],
+                "in_staff": staff or ""
             })
 
             last_checkout = None
@@ -2141,7 +2160,8 @@ def staff_attendance_resident_print(resident_id: int):
         start=start,
         end=end,
         events=events,
-        fmt_dt=fmt_time_only
+        fmt_dt=fmt_time_only,
+        printed_on=fmt_dt(utcnow_iso())
     )
 
 # ---- Kiosk ----
@@ -2690,6 +2710,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
