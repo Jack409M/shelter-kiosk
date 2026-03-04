@@ -957,6 +957,7 @@ def debug_db():
 @require_staff_or_admin
 def staff_leave_print(req_id: int):
     init_db()
+
     shelter = session["shelter"]
     kind = g.get("db_kind")
 
@@ -964,9 +965,16 @@ def staff_leave_print(req_id: int):
         """
         SELECT
             lr.*,
-            COALESCE(su.username, '') AS decided_by_name
+            r.first_name,
+            r.last_name,
+            COALESCE(su.username, '') AS decided_by_name,
+            COALESCE(su.role, '') AS decided_by_role
         FROM leave_requests lr
-        LEFT JOIN staff_users su ON su.id = lr.decided_by
+        LEFT JOIN residents r
+            ON r.resident_identifier = lr.resident_identifier
+            AND r.shelter = lr.shelter
+        LEFT JOIN staff_users su
+            ON su.id = lr.decided_by
         WHERE lr.id = %s AND lr.shelter = %s
         """
         if kind == "pg"
@@ -974,9 +982,16 @@ def staff_leave_print(req_id: int):
         """
         SELECT
             lr.*,
-            COALESCE(su.username, '') AS decided_by_name
+            r.first_name,
+            r.last_name,
+            COALESCE(su.username, '') AS decided_by_name,
+            COALESCE(su.role, '') AS decided_by_role
         FROM leave_requests lr
-        LEFT JOIN staff_users su ON su.id = lr.decided_by
+        LEFT JOIN residents r
+            ON r.resident_identifier = lr.resident_identifier
+            AND r.shelter = lr.shelter
+        LEFT JOIN staff_users su
+            ON su.id = lr.decided_by
         WHERE lr.id = ? AND lr.shelter = ?
         """,
         (req_id, shelter),
@@ -992,7 +1007,6 @@ def staff_leave_print(req_id: int):
         printed_on=fmt_dt(utcnow_iso()),
         fmt_dt=fmt_dt,
         fmt_date=fmt_date,
-        fmt_time=fmt_time_only,
     )
 
 @app.route("/resident", methods=["GET", "POST"])
@@ -2841,6 +2855,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
