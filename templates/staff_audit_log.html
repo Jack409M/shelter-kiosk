@@ -49,10 +49,9 @@
   }
 
   .filterrow label {
-    margin-top: 0;
-    font-weight: 700;
     display: block;
-    margin-bottom: 4px;
+    margin: 0 0 4px 0;
+    font-weight: 700;
   }
 
   .filterrow input,
@@ -123,9 +122,15 @@
           <th>Details</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="auditrows">
         {% for r in rows %}
-        <tr>
+        <tr
+          class="auditrow"
+          data-shelter="{{ r.shelter or '' }}"
+          data-staff="{{ r.staff_username or '' }}"
+          data-entity="{{ r.entity_type or '' }}"
+          data-action="{{ r.action_type or '' }}"
+        >
           <td>{{ r.id }}</td>
           <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
           <td>{{ r.shelter or "" }}</td>
@@ -167,13 +172,19 @@
         </div>
 
         <div class="filterrow">
-          <label for="entity_type">Entity type</label>
-          <input id="entity_type" name="entity_type" type="text" placeholder="leave, transport, resident, auth" value="{{ request.args.get('entity_type','') }}">
+          <label for="entity_type">Entity</label>
+          {% set entity_val = request.args.get('entity_type','') %}
+          <select id="entity_type" name="entity_type">
+            <option value="">All</option>
+          </select>
         </div>
 
         <div class="filterrow">
-          <label for="action_type">Action type</label>
-          <input id="action_type" name="action_type" type="text" placeholder="create, approve, deny, login" value="{{ request.args.get('action_type','') }}">
+          <label for="action_type">Action</label>
+          {% set action_val = request.args.get('action_type','') %}
+          <select id="action_type" name="action_type">
+            <option value="">All</option>
+          </select>
         </div>
 
         <div class="filteractions">
@@ -188,6 +199,7 @@
 
         <div class="smallnote">
           This filter runs on the server and changes what rows are loaded.
+          Entity and Action dropdowns are auto built from the currently loaded rows.
         </div>
       </form>
     </div>
@@ -197,6 +209,34 @@
 
 <script>
 (function () {
+  function uniqFromRows(attr) {
+    const set = new Set();
+    document.querySelectorAll(".auditrow").forEach(function (r) {
+      const v = (r.getAttribute(attr) || "").trim();
+      if (v) set.add(v);
+    });
+    return Array.from(set).sort(function (a, b) { return a.localeCompare(b); });
+  }
+
+  function fillSelect(selectEl, values, selectedValue) {
+    values.forEach(function (v) {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = v;
+      if (selectedValue && v === selectedValue) opt.selected = true;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  const entitySelect = document.getElementById("entity_type");
+  const actionSelect = document.getElementById("action_type");
+
+  const selectedEntity = "{{ request.args.get('entity_type','')|e }}";
+  const selectedAction = "{{ request.args.get('action_type','')|e }}";
+
+  if (entitySelect) fillSelect(entitySelect, uniqFromRows("data-entity"), selectedEntity);
+  if (actionSelect) fillSelect(actionSelect, uniqFromRows("data-action"), selectedAction);
+
   const clearBtn = document.getElementById("clearbtn");
   const refreshBtn = document.getElementById("refreshbtn");
 
