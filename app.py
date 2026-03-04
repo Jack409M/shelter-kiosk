@@ -57,7 +57,7 @@ SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
 DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 ENABLE_DEBUG_ROUTES = (os.environ.get("ENABLE_DEBUG_ROUTES") or "").strip().lower() in {"1", "true", "yes", "on"}
 KIOSK_PIN = (os.environ.get("KIOSK_PIN") or "").strip()
-
+ENABLE_DANGEROUS_ADMIN_ROUTES = (os.environ.get("ENABLE_DANGEROUS_ADMIN_ROUTES") or "").strip().lower() in {"1", "true", "yes", "on"}
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
@@ -2790,6 +2790,9 @@ def staff_resident_set_active(resident_id: int):
 @require_login
 @require_admin
 def wipe_all_data():
+    if not ENABLE_DANGEROUS_ADMIN_ROUTES:
+        abort(404)
+
     init_db()
 
     db_execute("TRUNCATE TABLE attendance_events RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM attendance_events")
@@ -2806,6 +2809,9 @@ def wipe_all_data():
 @require_login
 @require_admin
 def recreate_schema():
+    if not ENABLE_DANGEROUS_ADMIN_ROUTES:
+        abort(404)
+
     init_db()
 
     if g.get("db_kind") == "pg":
@@ -2873,6 +2879,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
