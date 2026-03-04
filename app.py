@@ -951,6 +951,46 @@ def debug_db():
     return {"ok": True, "db_kind": g.get("db_kind")}
 
 
+@app.get("/staff/leave/<int:req_id>/print")
+@require_login
+@require_shelter
+@require_staff_or_admin
+def staff_leave_print(req_id: int):
+    init_db()
+    shelter = session["shelter"]
+
+    row = db_fetchone(
+        """
+        SELECT
+          lr.*,
+          COALESCE(su.username, '') AS decided_by_name
+        FROM leave_requests lr
+        LEFT JOIN staff_users su ON su.id = lr.decided_by
+        WHERE lr.id = %s AND lr.shelter = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+          lr.*,
+          COALESCE(su.username, '') AS decided_by_name
+        FROM leave_requests lr
+        LEFT JOIN staff_users su ON su.id = lr.decided_by
+        WHERE lr.id = ? AND lr.shelter = ?
+        """,
+        (req_id, shelter),
+    )
+    if not row:
+        abort(404)
+
+    return render_template(
+        "staff_leave_print.html",
+        row=row,
+        shelter=shelter,
+        printed_on=fmt_dt(utcnow_iso()),
+        fmt_dt=fmt_dt,
+        fmt_date=fmt_date,
+    )
+
 @app.route("/resident", methods=["GET", "POST"])
 def resident_signin():
     init_db()
@@ -2889,6 +2929,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
