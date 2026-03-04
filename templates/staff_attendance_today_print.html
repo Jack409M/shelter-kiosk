@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Shelter Attendance Sheet</title>
+
+<style>
+
+body{
+font-family:Arial;
+margin:20px;
+}
+
+h1{
+margin:0;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+}
+
+th,td{
+border:1px solid black;
+padding:6px;
+font-size:13px;
+}
+
+th{
+background:#eee;
+}
+
+.sig{
+margin-top:40px;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:40px;
+}
+
+.line{
+border-bottom:1px solid black;
+height:20px;
+}
+
+@media print{
+button{display:none;}
+}
+
+</style>
+</head>
+
+<body>
+
+<button onclick="window.print()">Print</button>
+
+<h1>Shelter Attendance Verification</h1>
+
+<div>
+Shelter: {{ shelter }}<br>
+Printed: {{ printed_on }}
+</div>
+
+<table>
+
+<tr>
+<th>Resident</th>
+<th>Status</th>
+<th>Out Time</th>
+<th>Expected Back</th>
+<th>Staff</th>
+<th>Notes</th>
+</tr>
+
+{% for r in residents %}
+
+<tr>
+
+<td>{{ r.name }}</td>
+
+<td>{{ r.status }}</td>
+
+<td>{{ fmt_dt(r.out_time) }}</td>
+
+<td>{{ fmt_dt(r.expected) }}</td>
+
+<td>{{ r.staff }}</td>
+
+<td>{{ r.note }}</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<div class="sig">
+
+<div>
+<div class="line"></div>
+Staff Signature
+</div>
+
+<div>
+<div class="line"></div>
+Supervisor Signature
+</div>
+
+</div>
+
+</body>
+</html>
