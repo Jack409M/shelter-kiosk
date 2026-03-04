@@ -80,14 +80,11 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
 )
 
-
 def _client_ip() -> str:
-    xff = (request.headers.get("X-Forwarded-For") or "").strip()
-    if xff:
-        return xff.split(",")[0].strip()
+    # Use remote_addr (already normalized by ProxyFix) to avoid
+    # trusting raw X-Forwarded-For header content directly.
     return (request.remote_addr or "").strip() or "unknown"
-
-
+    
 # Lightweight in process cleanup throttle for rate_limit_events pruning
 _LAST_RL_PRUNE_TS = 0.0
 
@@ -2879,6 +2876,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
