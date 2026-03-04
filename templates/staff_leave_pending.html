@@ -2,23 +2,72 @@
 {% block content %}
 
 <style>
-  .page-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin: 0 0 12px 0; }
-  .page-head h1 { margin:0; font-size: 20px; }
-  .meta { color:#444; font-size: 13px; }
+  .page-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0 0 10px 0;
+  }
 
-  .table-wrap { overflow-x:auto; }
-  table.compact { width:100%; border-collapse: collapse; }
-  table.compact th, table.compact td { border: 1px solid #ddd; padding: 8px 10px; font-size: 13px; vertical-align: top; }
-  table.compact th { background:#f7f7f7; text-align:left; }
-  .muted { color:#444; }
-  .nowrap { white-space: nowrap; }
+  .muted {
+    color: #444;
+    font-size: 13px;
+  }
 
-  .actions { white-space: nowrap; }
-  .actions a, .actions form { display:inline-block; margin: 0 8px 0 0; vertical-align: middle; }
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table.compact {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 860px;
+  }
+
+  table.compact th,
+  table.compact td {
+    border: 1px solid #c9c9c9;
+    padding: 8px 10px;
+    font-size: 13px;
+    vertical-align: top;
+    text-align: left;
+  }
+
+  table.compact th {
+    background: #f7f7f7;
+    font-weight: 700;
+  }
+
+  .actions {
+    min-width: 360px;
+  }
+
+  .actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .row-line {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .row-line input[type="text"] {
+    flex: 1;
+    min-width: 180px;
+    padding: 7px 10px;
+    border: 1px solid #999;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+
   .btn {
     margin-top: 0;
-    padding: 6px 10px;
-    border-radius: 8px;
+    padding: 7px 11px;
+    border-radius: 10px;
     border: 1px solid #333;
     background: #fff;
     cursor: pointer;
@@ -27,68 +76,97 @@
     font-size: 13px;
     line-height: 1;
     text-decoration: none;
+    display: inline-block;
+    white-space: nowrap;
   }
-  .note {
-    width: 220px;
-    max-width: 220px;
+
+  .name {
+    font-weight: 700;
   }
-  .note input {
-    width: 100%;
-    padding: 6px 8px;
-    border: 1px solid #bbb;
-    border-radius: 8px;
-    font-size: 13px;
+
+  .sub {
+    color: #444;
+    font-size: 12px;
+    margin-top: 2px;
   }
 </style>
 
 <div class="page-head">
-  <h1>Leave pending</h1>
-  <div class="meta">Shelter: <strong>{{ shelter }}</strong></div>
+  <h1 style="margin:0;">Leave pending</h1>
+  <div class="muted">Shelter: <strong>{{ shelter }}</strong></div>
 </div>
 
 <div class="table-wrap">
   <table class="compact">
     <thead>
       <tr>
-        <th class="nowrap">Submitted</th>
-        <th>Name</th>
-        <th class="nowrap">Leave</th>
-        <th class="nowrap">Return</th>
-        <th>Destination</th>
-        <th class="actions">Actions</th>
+        <th style="width: 22%;">Submitted</th>
+        <th style="width: 18%;">Name</th>
+        <th style="width: 12%;">Leave</th>
+        <th style="width: 12%;">Return</th>
+        <th style="width: 16%;">Destination</th>
+        <th class="actions" style="width: 20%;">Actions</th>
       </tr>
     </thead>
+
     <tbody>
       {% if not rows %}
         <tr>
-          <td colspan="6" class="muted">No pending leave requests.</td>
+          <td colspan="6">No pending leave requests.</td>
         </tr>
       {% else %}
         {% for r in rows %}
           <tr>
-            <td class="nowrap">{{ fmt_dt(r.submitted_at) }}</td>
-            <td>{{ r.last_name }}, {{ r.first_name }}</td>
-            <td class="nowrap">{{ fmt_date(r.leave_at) }}</td>
-            <td class="nowrap">{{ fmt_date(r.return_at) }}</td>
-            <td>{{ r.destination }}</td>
+            <td>
+              {{ fmt_dt(r.submitted_at) }}
+            </td>
+
+            <td>
+              <div class="name">{{ r.last_name }}, {{ r.first_name }}</div>
+              {% if r.resident_phone %}
+                <div class="sub">{{ r.resident_phone }}</div>
+              {% endif %}
+            </td>
+
+            <td>{{ fmt_date(r.leave_at) }}</td>
+            <td>{{ fmt_date(r.return_at) }}</td>
+
+            <td>
+              <div>{{ r.destination }}</div>
+              {% if r.reason %}
+                <div class="sub">{{ r.reason }}</div>
+              {% endif %}
+            </td>
+
             <td class="actions">
+              <div class="actions-stack">
 
-              <a class="btn" href="{{ url_for('staff_leave_print', req_id=r.id) }}" target="_blank" rel="noopener">
-                Print
-              </a>
+                <a class="btn"
+                   href="{{ url_for('staff_leave_print', req_id=r.id) }}"
+                   target="_blank"
+                   rel="noopener">
+                  Print
+                </a>
 
-              <form method="post" action="{{ url_for('staff_leave_approve', req_id=r.id) }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <span class="note"><input name="note" placeholder="Approval note (optional)"></span>
-                <button class="btn" type="submit">Approve</button>
-              </form>
+                <form method="post"
+                      action="{{ url_for('staff_leave_approve', req_id=r.id) }}"
+                      class="row-line"
+                      style="margin:0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="text" name="note" placeholder="Approval note (optional)">
+                  <button class="btn" type="submit">Approve</button>
+                </form>
 
-              <form method="post" action="{{ url_for('staff_leave_deny', req_id=r.id) }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <span class="note"><input name="note" placeholder="Denial note (required)"></span>
-                <button class="btn" type="submit">Deny</button>
-              </form>
+                <form method="post"
+                      action="{{ url_for('staff_leave_deny', req_id=r.id) }}"
+                      class="row-line"
+                      style="margin:0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="text" name="note" placeholder="Denial note (required)" required>
+                  <button class="btn" type="submit">Deny</button>
+                </form>
 
+              </div>
             </td>
           </tr>
         {% endfor %}
@@ -98,6 +176,7 @@
 </div>
 
 {% endblock %}
+
 
 
 
