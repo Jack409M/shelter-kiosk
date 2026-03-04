@@ -2,7 +2,6 @@
 {% block content %}
 
 <style>
-  /* Residents page layout */
   .residents-layout {
     display: grid;
     grid-template-columns: 2fr 1fr;
@@ -15,44 +14,74 @@
     top: 14px;
   }
 
-  /* Tighter cards on the right */
   .card.tight {
     padding: 12px;
     margin: 0 0 14px 0;
     max-width: 520px;
   }
 
-  /* Compact table density */
   table.compact th,
   table.compact td {
     padding: 8px 10px;
+    font-size: 13px;
   }
 
   table.compact td {
     vertical-align: middle;
   }
 
-  /* Keep action buttons on one line */
   .actions {
     white-space: nowrap;
   }
 
-  .actions form {
+  .actions form,
+  .actions a {
     display: inline-block;
     margin: 0 8px 0 0;
+    vertical-align: middle;
   }
 
-  .actions button {
+  .btn {
     margin-top: 0;
     padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #fff;
+    cursor: pointer;
+    color: #111;
+    -webkit-text-fill-color: #111;
+    font-size: 13px;
+    line-height: 1;
+    text-decoration: none;
   }
 
-  /* Make the list area use the space well */
   .residents-list {
     overflow-x: auto;
   }
 
-  /* Mobile and smaller screens */
+  .badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid #000;
+    font-size: 12px;
+    line-height: 1;
+    background: #fff;
+  }
+
+  .badge-active {
+    background: #ffeb3b;
+    border-color: #000;
+    color: #000;
+    font-weight: 700;
+  }
+
+  .badge-inactive {
+    background: #fff;
+    border-color: #999;
+    color: #444;
+  }
+
   @media (max-width: 900px) {
     .residents-layout {
       grid-template-columns: 1fr;
@@ -68,60 +97,79 @@
   }
 </style>
 
-<h1>RESIDENTS for {{ shelter }}</h1>
+<h1>Residents for {{ shelter }}</h1>
 
 <div class="residents-layout">
 
-  <!-- LEFT: list -->
   <div class="residents-list">
     <table class="compact">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Resident Code</th>
-          <th>Active</th>
-          <th>Action</th>
+          <th style="width: 42%;">Name</th>
+          <th style="width: 18%;">Resident Code</th>
+          <th style="width: 12%;">Status</th>
+          <th style="width: 28%;">Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% for r in residents %}
+        {% if not residents %}
           <tr>
-            <td>{{ r.first_name }} {{ r.last_name }}</td>
-            <td><strong>{{ r.resident_code }}</strong></td>
-            <td>
-              {% if r.is_active %}
-                <span class="badge in" style="background: #ffeb3b; border-color: #000; color: #000; font-weight: 700;">Active</span>
-              {% else %}
-                <span class="badge out">Inactive</span>
-              {% endif %}
-            </td>
-            <td class="actions">
-              <form method="post" action="{{ url_for('staff_residents') }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="op" value="{% if r.is_active %}deactivate{% else %}activate{% endif %}">
-                <input type="hidden" name="resident_id" value="{{ r.id }}">
-                <button type="submit">{% if r.is_active %}Deactivate{% else %}Activate{% endif %}</button>
-              </form>
-
-              <form method="post" action="{{ url_for('staff_residents') }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="op" value="transfer">
-                <input type="hidden" name="resident_id" value="{{ r.id }}">
-                <button type="submit">Transfer</button>
-              </form>
-            </td>
+            <td colspan="4">No residents found.</td>
           </tr>
-        {% endfor %}
+        {% else %}
+          {% for r in residents %}
+            <tr>
+              <td>
+                {{ r.last_name }}, {{ r.first_name }}
+              </td>
+
+              <td>
+                <strong>{{ r.resident_code }}</strong>
+              </td>
+
+              <td>
+                {% if r.is_active %}
+                  <span class="badge badge-active">Active</span>
+                {% else %}
+                  <span class="badge badge-inactive">Inactive</span>
+                {% endif %}
+              </td>
+
+              <td class="actions">
+
+                <a class="btn"
+                   href="{{ url_for('staff_resident_history', resident_id=r.id) }}">
+                  History
+                </a>
+
+                <a class="btn"
+                   href="{{ url_for('staff_resident_transfer', resident_id=r.id) }}">
+                  Transfer
+                </a>
+
+                <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r.id) }}">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  {% if r.is_active %}
+                    <input type="hidden" name="active" value="0">
+                    <button class="btn" type="submit">Deactivate</button>
+                  {% else %}
+                    <input type="hidden" name="active" value="1">
+                    <button class="btn" type="submit">Activate</button>
+                  {% endif %}
+                </form>
+
+              </td>
+            </tr>
+          {% endfor %}
+        {% endif %}
       </tbody>
     </table>
   </div>
 
-  <!-- RIGHT: controls -->
   <div class="residents-side">
 
-    <form method="post" class="card tight" action="{{ url_for('staff_residents') }}">
+    <form method="post" class="card tight" action="{{ url_for('staff_residents_post') }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="op" value="add">
 
       <h2 style="margin: 0 0 10px 0;">Add resident</h2>
 
@@ -136,14 +184,14 @@
         </div>
       </div>
 
-      <button type="submit" style="margin-top: 10px;">Add</button>
+      <button class="btn" type="submit" style="margin-top: 10px;">Add</button>
     </form>
 
     <div class="card tight">
       <strong>View:</strong>
-      <a href="{{ url_for('staff_residents', view='active') }}">Active only</a>
+      <a href="{{ url_for('staff_residents', show='active') }}">Active only</a>
       |
-      <a href="{{ url_for('staff_residents', view='all') }}">All</a>
+      <a href="{{ url_for('staff_residents', show='all') }}">All</a>
     </div>
 
   </div>
