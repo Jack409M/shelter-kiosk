@@ -2164,6 +2164,93 @@ def staff_attendance_resident_print(resident_id: int):
         printed_on=fmt_dt(utcnow_iso())
     )
 
+@app.route("/staff/attendance/print_today")
+@require_login
+@require_shelter
+def staff_attendance_print_today():
+
+    init_db()
+    shelter = session["shelter"]
+
+    rows = db_fetchall(
+        """
+        SELECT
+            r.id,
+            r.first_name,
+            r.last_name,
+            ae.event_type,
+            ae.event_time,
+            ae.expected_back_time,
+            ae.note,
+            su.username
+        FROM residents r
+        LEFT JOIN attendance_events ae
+            ON ae.resident_id = r.id
+        LEFT JOIN staff_users su
+            ON su.id = ae.staff_user_id
+        WHERE r.shelter = %s
+        ORDER BY r.last_name, ae.event_time DESC
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            r.id,
+            r.first_name,
+            r.last_name,
+            ae.event_type,
+            ae.event_time,
+            ae.expected_back_time,
+            ae.note,
+            su.username
+        FROM residents r
+        LEFT JOIN attendance_events ae
+            ON ae.resident_id = r.id
+        LEFT JOIN staff_users su
+            ON su.id = ae.staff_user_id
+        WHERE r.shelter = ?
+        ORDER BY r.last_name, ae.event_time DESC
+        """,
+        (shelter,),
+    )
+
+    residents = {}
+
+    for r in rows:
+
+        rid = r["id"] if isinstance(r, dict) else r[0]
+        first = r["first_name"] if isinstance(r, dict) else r[1]
+        last = r["last_name"] if isinstance(r, dict) else r[2]
+        event_type = r["event_type"] if isinstance(r, dict) else r[3]
+        event_time = r["event_time"] if isinstance(r, dict) else r[4]
+        expected = r["expected_back_time"] if isinstance(r, dict) else r[5]
+        note = r["note"] if isinstance(r, dict) else r[6]
+        staff = r["username"] if isinstance(r, dict) else r[7]
+
+        if rid not in residents:
+            residents[rid] = {
+                "name": f"{last}, {first}",
+                "status": "IN",
+                "out_time": None,
+                "expected": None,
+                "staff": "",
+                "note": ""
+            }
+
+        if event_type == "check_out":
+            residents[rid]["status"] = "OUT"
+            residents[rid]["out_time"] = event_time
+            residents[rid]["expected"] = expected
+            residents[rid]["staff"] = staff or ""
+            residents[rid]["note"] = note or ""
+
+    return render_template(
+        "staff_attendance_today_print.html",
+        residents=residents.values(),
+        shelter=shelter,
+        printed_on=fmt_dt(utcnow_iso()),
+        fmt_dt=fmt_time_only
+    )
+
 # ---- Kiosk ----
 
 @app.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
@@ -2710,6 +2797,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
