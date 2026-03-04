@@ -2849,12 +2849,28 @@ def page_not_found(e):
 def add_cache_headers(response):
     if request.path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=86400"
+     # Baseline security headers
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+
+    # Limit framing via CSP as modern defense-in-depth.
+    # Keep policy conservative and compatible with existing templates.
+    csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    response.headers.setdefault("Content-Security-Policy", csp)
+
+    # Enable HSTS only when running behind HTTPS in production.
+    # Prevents local HTTP development from being forced to HTTPS.
+    if request.is_secure:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    
     return response
 
 if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
