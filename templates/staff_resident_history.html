@@ -79,6 +79,10 @@ Resident History
 <span style="font-weight:normal;">{{ resident.first_name }} {{ resident.last_name }}</span>
 </h1>
 
+<div style="display:flex; gap:10px; margin: 10px 0 14px 0;">
+  <button class="btn" type="button" onclick="window.print()">Print this page</button>
+  <a class="btn" href="{{ url_for('staff_residents') }}">Back</a>
+</div>
 
 <div class="history-wrap">
 
