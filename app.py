@@ -1052,17 +1052,29 @@ def resident_signin():
 def staff_resident_history(resident_id: int):
     init_db()
     shelter = session["shelter"]
+    kind = g.get("db_kind")
 
     resident = db_fetchone(
-        "SELECT * FROM residents WHERE id = %s AND shelter = %s"
-        if g.get("db_kind") == "pg"
-        else "SELECT * FROM residents WHERE id = ? AND shelter = ?",
+        """
+        SELECT id, resident_identifier, first_name, last_name
+        FROM residents
+        WHERE id = %s AND shelter = %s
+        """
+        if kind == "pg"
+        else """
+        SELECT id, resident_identifier, first_name, last_name
+        FROM residents
+        WHERE id = ? AND shelter = ?
+        """,
         (resident_id, shelter),
     )
     if not resident:
         abort(404)
 
-    resident_identifier = resident["resident_identifier"] if isinstance(resident, dict) else resident[2]
+    resident_identifier = resident["resident_identifier"] if isinstance(resident, dict) else resident[1]
+    first = resident["first_name"] if isinstance(resident, dict) else resident[2]
+    last = resident["last_name"] if isinstance(resident, dict) else resident[3]
+    resident_name = f"{first} {last}"
 
     leave_rows = db_fetchall(
         """
@@ -1074,7 +1086,7 @@ def staff_resident_history(resident_id: int):
         WHERE lr.shelter = %s AND lr.resident_identifier = %s
         ORDER BY lr.submitted_at DESC
         """
-        if g.get("db_kind") == "pg"
+        if kind == "pg"
         else """
         SELECT
           lr.*,
@@ -1085,6 +1097,246 @@ def staff_resident_history(resident_id: int):
         ORDER BY lr.submitted_at DESC
         """,
         (shelter, resident_identifier),
+    )
+
+    attendance_rows = db_fetchall(
+        """
+        SELECT
+          ae.event_time,
+          ae.event_type,
+          ae.expected_back_time,
+          COALESCE(su.username, '') AS staff_name,
+          ae.note
+        FROM attendance_events ae
+        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
+        WHERE ae.shelter = %s AND ae.resident_id = %s
+        ORDER BY ae.event_time DESC
+        LIMIT 400
+        """
+        if kind == "pg"
+        else """
+        SELECT
+          ae.event_time,
+          ae.event_type,
+          ae.expected_back_time,
+          COALESCE(su.username, '') AS staff_name,
+          ae.note
+        FROM attendance_events ae
+        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
+        WHERE ae.shelter = ? AND ae.resident_id = ?
+        ORDER BY ae.event_time DESC
+        LIMIT 400
+        """,
+        (shelter, resident_id),
+    )
+
+    transport_rows = db_fetchall(
+        """
+        SELECT
+          tr.*,
+          COALESCE(su.username, '') AS scheduled_by_name
+        FROM transport_requests tr
+        LEFT JOIN staff_users su ON su.id = tr.scheduled_by
+        WHERE tr.shelter = %s AND tr.resident_identifier = %s
+        ORDER BY tr.submitted_at DESC
+        """
+        if kind == "pg"
+        else """
+        SELECT
+          tr.*,
+          COALESCE(su.username, '') AS scheduled_by_name
+        FROM transport_requests tr
+        LEFT JOIN staff_users su ON su.id = tr.scheduled_by
+        WHERE tr.shelter = ? AND tr.resident_identifier = ?
+        ORDER BY tr.submitted_at DESC
+        """,
+        (shelter, resident_identifier),
+    )
+
+    if kind == "pg":
+        timeline = db_fetchall(
+            """
+            SELECT
+              a.ts,
+              a.kind,
+              a.title,
+              a.detail,
+              COALESCE(su.username, '') AS staff_name
+            FROM (
+              SELECT
+                ae.event_time::text AS ts,
+                'attendance' AS kind,
+                CASE
+                  WHEN ae.event_type = 'check_in' THEN 'Checked in'
+                  WHEN ae.event_type = 'check_out' THEN 'Checked out'
+                  ELSE ae.event_type
+                END AS title,
+                TRIM(
+                  COALESCE(ae.note, '') ||
+                  CASE
+                    WHEN ae.expected_back_time IS NOT NULL AND ae.expected_back_time <> '' THEN
+                      ' Expected back ' || ae.expected_back_time
+                    ELSE '' END
+                ) AS detail,
+                ae.staff_user_id AS staff_user_id
+              FROM attendance_events ae
+              WHERE ae.resident_id = %s AND ae.shelter = %s
+
+              UNION ALL
+
+              SELECT
+                lr.submitted_at::text AS ts,
+                'leave' AS kind,
+                CASE
+                  WHEN lr.status IS NOT NULL AND lr.status <> '' THEN 'Leave request ' || lr.status
+                  ELSE 'Leave request'
+                END AS title,
+                TRIM(
+                  'Leave ' || lr.leave_at || ' Return ' || lr.return_at ||
+                  CASE WHEN lr.destination IS NOT NULL AND lr.destination <> '' THEN
+                    ' Destination ' || lr.destination
+                  ELSE '' END ||
+                  CASE WHEN lr.reason IS NOT NULL AND lr.reason <> '' THEN
+                    ' Reason ' || lr.reason
+                  ELSE '' END ||
+                  CASE WHEN lr.decision_note IS NOT NULL AND lr.decision_note <> '' THEN
+                    ' Decision note ' || lr.decision_note
+                  ELSE '' END
+                ) AS detail,
+                lr.decided_by AS staff_user_id
+              FROM leave_requests lr
+              WHERE lr.resident_identifier = %s AND lr.shelter = %s
+
+              UNION ALL
+
+              SELECT
+                tr.submitted_at::text AS ts,
+                'transport' AS kind,
+                CASE
+                  WHEN tr.status IS NOT NULL AND tr.status <> '' THEN 'Transport request ' || tr.status
+                  ELSE 'Transport request'
+                END AS title,
+                TRIM(
+                  'Needed ' || tr.needed_at ||
+                  CASE WHEN tr.pickup_location IS NOT NULL AND tr.pickup_location <> '' THEN
+                    ' Pickup ' || tr.pickup_location
+                  ELSE '' END ||
+                  CASE WHEN tr.destination IS NOT NULL AND tr.destination <> '' THEN
+                    ' Destination ' || tr.destination
+                  ELSE '' END ||
+                  CASE WHEN tr.reason IS NOT NULL AND tr.reason <> '' THEN
+                    ' Reason ' || tr.reason
+                  ELSE '' END
+                ) AS detail,
+                tr.scheduled_by AS staff_user_id
+              FROM transport_requests tr
+              WHERE tr.resident_identifier = %s AND tr.shelter = %s
+            ) a
+            LEFT JOIN staff_users su ON su.id = a.staff_user_id
+            ORDER BY a.ts DESC
+            LIMIT 400
+            """,
+            (resident_id, shelter, resident_identifier, shelter, resident_identifier, shelter),
+        )
+    else:
+        timeline = db_fetchall(
+            """
+            SELECT
+              a.ts,
+              a.kind,
+              a.title,
+              a.detail,
+              COALESCE(su.username, '') AS staff_name
+            FROM (
+              SELECT
+                ae.event_time AS ts,
+                'attendance' AS kind,
+                CASE
+                  WHEN ae.event_type = 'check_in' THEN 'Checked in'
+                  WHEN ae.event_type = 'check_out' THEN 'Checked out'
+                  ELSE ae.event_type
+                END AS title,
+                TRIM(
+                  COALESCE(ae.note, '') ||
+                  CASE
+                    WHEN ae.expected_back_time IS NOT NULL AND ae.expected_back_time <> '' THEN
+                      ' Expected back ' || ae.expected_back_time
+                    ELSE '' END
+                ) AS detail,
+                ae.staff_user_id AS staff_user_id
+              FROM attendance_events ae
+              WHERE ae.resident_id = ? AND ae.shelter = ?
+
+              UNION ALL
+
+              SELECT
+                lr.submitted_at AS ts,
+                'leave' AS kind,
+                CASE
+                  WHEN lr.status IS NOT NULL AND lr.status <> '' THEN 'Leave request ' || lr.status
+                  ELSE 'Leave request'
+                END AS title,
+                TRIM(
+                  'Leave ' || lr.leave_at || ' Return ' || lr.return_at ||
+                  CASE WHEN lr.destination IS NOT NULL AND lr.destination <> '' THEN
+                    ' Destination ' || lr.destination
+                  ELSE '' END ||
+                  CASE WHEN lr.reason IS NOT NULL AND lr.reason <> '' THEN
+                    ' Reason ' || lr.reason
+                  ELSE '' END ||
+                  CASE WHEN lr.decision_note IS NOT NULL AND lr.decision_note <> '' THEN
+                    ' Decision note ' || lr.decision_note
+                  ELSE '' END
+                ) AS detail,
+                lr.decided_by AS staff_user_id
+              FROM leave_requests lr
+              WHERE lr.resident_identifier = ? AND lr.shelter = ?
+
+              UNION ALL
+
+              SELECT
+                tr.submitted_at AS ts,
+                'transport' AS kind,
+                CASE
+                  WHEN tr.status IS NOT NULL AND tr.status <> '' THEN 'Transport request ' || tr.status
+                  ELSE 'Transport request'
+                END AS title,
+                TRIM(
+                  'Needed ' || tr.needed_at ||
+                  CASE WHEN tr.pickup_location IS NOT NULL AND tr.pickup_location <> '' THEN
+                    ' Pickup ' || tr.pickup_location
+                  ELSE '' END ||
+                  CASE WHEN tr.destination IS NOT NULL AND tr.destination <> '' THEN
+                    ' Destination ' || tr.destination
+                  ELSE '' END ||
+                  CASE WHEN tr.reason IS NOT NULL AND tr.reason <> '' THEN
+                    ' Reason ' || tr.reason
+                  ELSE '' END
+                ) AS detail,
+                tr.scheduled_by AS staff_user_id
+              FROM transport_requests tr
+              WHERE tr.resident_identifier = ? AND tr.shelter = ?
+            ) a
+            LEFT JOIN staff_users su ON su.id = a.staff_user_id
+            ORDER BY a.ts DESC
+            LIMIT 400
+            """,
+            (resident_id, shelter, resident_identifier, shelter, resident_identifier, shelter),
+        )
+
+    return render_template(
+        "staff_resident_history.html",
+        shelter=shelter,
+        resident_id=resident_id,
+        resident_name=resident_name,
+        printed_on=fmt_dt(utcnow_iso()),
+        leave_rows=leave_rows,
+        attendance_rows=attendance_rows,
+        transport_rows=transport_rows,
+        timeline=timeline,
+        fmt_dt=fmt_dt,
+        fmt_date=fmt_date,
+        fmt_time=fmt_time_only,
     )
 
     transport_rows = db_fetchall(
@@ -2929,6 +3181,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
