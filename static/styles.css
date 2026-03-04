@@ -158,30 +158,6 @@ header.top,
   background: rgba(79, 143, 190, 0.12);
 }
 
-/* Dropdown container */
-.nav-dd {
-  position: relative;
-  display: inline-block;
-}
-
-/* Dropdown panel */
-.nav-dd .menu {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  min-width: 220px;
-  margin-top: 6px;
-
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  border-radius: 12px;
-  padding: 8px;
-
-  z-index: 11000;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.10);
-}
-
 /* Hover bridge: removes the “gap” failure */
 .nav-dd::after {
   content: "";
@@ -235,6 +211,12 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: #333;
   box-shadow: 0 0 4px rgba(0,0,0,0.25);
+}
+
+/* Transport board: keep date picker compact instead of full-width. */
+.transport-board-filter .date-field {
+  width: clamp(180px, 28vw, 240px);
+  max-width: 100%;
 }
 
 /* Buttons */
@@ -744,5 +726,3 @@ input[name="needed_at"] {
 .leave-note{
   width:220px;
 }
-
-
