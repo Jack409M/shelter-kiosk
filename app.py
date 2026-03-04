@@ -1328,6 +1328,7 @@ def staff_resident_history(resident_id: int):
         "staff_resident_history.html",
         shelter=shelter,
         resident_id=resident_id,
+        resident=resident,
         resident_name=resident_name,
         printed_on=fmt_dt(utcnow_iso()),
         leave_rows=leave_rows,
@@ -1337,57 +1338,6 @@ def staff_resident_history(resident_id: int):
         fmt_dt=fmt_dt,
         fmt_date=fmt_date,
         fmt_time=fmt_time_only,
-    )
-
-    transport_rows = db_fetchall(
-        """
-        SELECT *
-        FROM transport_requests
-        WHERE shelter = %s AND resident_identifier = %s
-        ORDER BY submitted_at DESC
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        SELECT *
-        FROM transport_requests
-        WHERE shelter = ? AND resident_identifier = ?
-        ORDER BY submitted_at DESC
-        """,
-        (shelter, resident_identifier),
-    )
-
-    attendance_rows = db_fetchall(
-        """
-        SELECT
-          ae.*,
-          COALESCE(su.username, '') AS staff_name
-        FROM attendance_events ae
-        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
-        WHERE ae.shelter = %s AND ae.resident_id = %s
-        ORDER BY ae.event_time DESC
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        SELECT
-          ae.*,
-          COALESCE(su.username, '') AS staff_name
-        FROM attendance_events ae
-        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
-        WHERE ae.shelter = ? AND ae.resident_id = ?
-        ORDER BY ae.event_time DESC
-        """,
-        (shelter, resident_id),
-    )
-
-    return render_template(
-        "staff_resident_history.html",
-        resident=resident,
-        leave_rows=leave_rows,
-        transport_rows=transport_rows,
-        attendance_rows=attendance_rows,
-        shelter=shelter,
-        fmt_dt=fmt_dt,
-        fmt_date=fmt_date,
     )
 
 @app.get("/resident/home")
@@ -3181,6 +3131,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
