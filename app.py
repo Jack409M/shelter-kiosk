@@ -1429,12 +1429,19 @@ def sms_consent():
     </html>
     """
 
-
 @app.route("/resident/consent", methods=["GET", "POST"])
 def resident_consent():
+    init_db()
+
     next_url = (request.args.get("next") or request.form.get("next") or "").strip()
     if not next_url or not next_url.startswith("/"):
         next_url = url_for("resident_leave")
+
+    resident_id = session.get("resident_id")
+    shelter = session.get("resident_shelter") or ""
+    if not resident_id or shelter not in SHELTERS:
+        flash("Please sign in again.", "error")
+        return redirect(url_for("resident_signin", next=next_url))
 
     if request.method == "GET":
         return render_template("resident_consent.html", next=next_url)
@@ -1444,11 +1451,59 @@ def resident_consent():
         flash("Select accept or decline.", "error")
         return render_template("resident_consent.html", next=next_url), 400
 
-    session["sms_consent_done"] = True
-    session["sms_opt_in"] = True if choice == "accept" else False
+    now = utcnow_iso()
+    kind = g.get("db_kind")
+
+    if choice == "accept":
+        session["sms_consent_done"] = True
+        session["sms_opt_in"] = True
+
+        db_execute(
+            """
+            UPDATE residents
+            SET sms_opt_in = %s,
+                sms_opt_in_at = %s,
+                sms_opt_in_source = %s,
+                sms_opt_out_at = NULL,
+                sms_opt_out_source = NULL
+            WHERE id = %s AND shelter = %s
+            """
+            if kind == "pg"
+            else """
+            UPDATE residents
+            SET sms_opt_in = ?,
+                sms_opt_in_at = ?,
+                sms_opt_in_source = ?,
+                sms_opt_out_at = NULL,
+                sms_opt_out_source = NULL
+            WHERE id = ? AND shelter = ?
+            """,
+            (True if kind == "pg" else 1, now, "resident_kiosk", resident_id, shelter),
+        )
+    else:
+        session["sms_consent_done"] = True
+        session["sms_opt_in"] = False
+
+        db_execute(
+            """
+            UPDATE residents
+            SET sms_opt_in = %s,
+                sms_opt_out_at = %s,
+                sms_opt_out_source = %s
+            WHERE id = %s AND shelter = %s
+            """
+            if kind == "pg"
+            else """
+            UPDATE residents
+            SET sms_opt_in = ?,
+                sms_opt_out_at = ?,
+                sms_opt_out_source = ?
+            WHERE id = ? AND shelter = ?
+            """,
+            (False if kind == "pg" else 0, now, "resident_kiosk_decline", resident_id, shelter),
+        )
 
     return redirect(next_url)
-
 
 @app.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
@@ -3006,6 +3061,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
