@@ -1005,6 +1005,98 @@ def resident_signin():
 
     return redirect(next_url)
 
+@app.get("/staff/residents/<int:resident_id>/history")
+@require_login
+@require_shelter
+@require_staff_or_admin
+def staff_resident_history(resident_id: int):
+    init_db()
+    shelter = session["shelter"]
+
+    resident = db_fetchone(
+        "SELECT * FROM residents WHERE id = %s AND shelter = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT * FROM residents WHERE id = ? AND shelter = ?",
+        (resident_id, shelter),
+    )
+    if not resident:
+        abort(404)
+
+    resident_identifier = resident["resident_identifier"] if isinstance(resident, dict) else resident[2]
+
+    leave_rows = db_fetchall(
+        """
+        SELECT
+          lr.*,
+          COALESCE(su.username, '') AS decided_by_name
+        FROM leave_requests lr
+        LEFT JOIN staff_users su ON su.id = lr.decided_by
+        WHERE lr.shelter = %s AND lr.resident_identifier = %s
+        ORDER BY lr.submitted_at DESC
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+          lr.*,
+          COALESCE(su.username, '') AS decided_by_name
+        FROM leave_requests lr
+        LEFT JOIN staff_users su ON su.id = lr.decided_by
+        WHERE lr.shelter = ? AND lr.resident_identifier = ?
+        ORDER BY lr.submitted_at DESC
+        """,
+        (shelter, resident_identifier),
+    )
+
+    transport_rows = db_fetchall(
+        """
+        SELECT *
+        FROM transport_requests
+        WHERE shelter = %s AND resident_identifier = %s
+        ORDER BY submitted_at DESC
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT *
+        FROM transport_requests
+        WHERE shelter = ? AND resident_identifier = ?
+        ORDER BY submitted_at DESC
+        """,
+        (shelter, resident_identifier),
+    )
+
+    attendance_rows = db_fetchall(
+        """
+        SELECT
+          ae.*,
+          COALESCE(su.username, '') AS staff_name
+        FROM attendance_events ae
+        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
+        WHERE ae.shelter = %s AND ae.resident_id = %s
+        ORDER BY ae.event_time DESC
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+          ae.*,
+          COALESCE(su.username, '') AS staff_name
+        FROM attendance_events ae
+        LEFT JOIN staff_users su ON su.id = ae.staff_user_id
+        WHERE ae.shelter = ? AND ae.resident_id = ?
+        ORDER BY ae.event_time DESC
+        """,
+        (shelter, resident_id),
+    )
+
+    return render_template(
+        "staff_resident_history.html",
+        resident=resident,
+        leave_rows=leave_rows,
+        transport_rows=transport_rows,
+        attendance_rows=attendance_rows,
+        shelter=shelter,
+        fmt_dt=fmt_dt,
+        fmt_date=fmt_date,
+    )
 
 @app.get("/resident/home")
 @require_resident
@@ -2797,6 +2889,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
