@@ -2,304 +2,238 @@
 {% block content %}
 
 <style>
-
-.history-wrap{
-display:grid;
-grid-template-columns:1fr;
-gap:18px;
-}
-
-.history-card{
-border:1px solid #ddd;
-border-radius:10px;
-padding:14px;
-background:#fff;
-}
-
-.history-header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:10px;
-}
-
-.history-title{
-font-size:18px;
-font-weight:700;
-}
-
-.history-table{
-width:100%;
-border-collapse:collapse;
-}
-
-.history-table th,
-.history-table td{
-border:1px solid #ccc;
-padding:7px 8px;
-font-size:13px;
-}
-
-.history-table th{
-background:#f4f4f4;
-}
-
-.btn{
-display:inline-block;
-padding:6px 10px;
-border-radius:8px;
-border:1px solid #333;
-background:#fff;
-cursor:pointer;
-font-size:13px;
-text-decoration:none;
-color:#111;
-}
-
-.status-approved{
-color:#0a7a2f;
-font-weight:700;
-}
-
-.status-denied{
-color:#b00000;
-font-weight:700;
-}
-
-.status-pending{
-color:#555;
-font-weight:700;
-}
-
-@media print {
-
-  header,
-  nav,
-  .topbar,
-  .navbar,
-  .menu,
-  .site-header {
-    display: none !important;
+  .hist_header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
   }
 
-  button,
-  .btn,
-  a.btn {
-    display: none !important;
+  .hist_title {
+    margin: 0;
   }
 
-  body {
-    margin: 0.5in;
-    background: #fff !important;
+  .hist_actions {
+    display: inline-flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
-  .history-card {
-    border: 1px solid #000;
+  .hist_btn {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #333;
+    background: #fff;
+    cursor: pointer;
+    color: #111;
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1;
   }
 
-}
-  
+  .hist_section {
+    margin-top: 18px;
+  }
+
+  .hist_card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+
+  table.compact {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table.compact th,
+  table.compact td {
+    border: 1px solid rgba(0,0,0,0.18);
+    padding: 8px 10px;
+    font-size: 13px;
+    vertical-align: top;
+  }
+
+  table.compact thead th {
+    font-weight: 700;
+    background: rgba(0,0,0,0.04);
+  }
+
+  .muted {
+    opacity: 0.75;
+  }
+
+  .nowrap {
+    white-space: nowrap;
+  }
+
+  @media (max-width: 900px) {
+    .hist_header {
+      align-items: flex-start;
+    }
+    table.compact th,
+    table.compact td {
+      font-size: 12px;
+      padding: 7px 8px;
+    }
+  }
+
+  @media print {
+    .topnav,
+    .hist_actions,
+    .flash,
+    .nav,
+    .toolbar,
+    button,
+    a.hist_btn {
+      display: none !important;
+    }
+
+    body {
+      margin: 0.5in !important;
+      background: #fff !important;
+    }
+
+    .hist_card {
+      border: 1px solid #000;
+      box-shadow: none !important;
+    }
+  }
 </style>
 
+<script>
+  function printThisPage() {
+    window.print();
+  }
+</script>
 
-<h1>
-Resident History  
-<span style="font-weight:normal;">{{ resident.first_name }} {{ resident.last_name }}</span>
-</h1>
+{% set display_name = resident_name
+  if resident_name is defined and resident_name
+  else ((resident.last_name ~ ", " ~ resident.first_name) if resident is defined else "Resident")
+%}
 
-<div style="display:flex; gap:10px; margin: 10px 0 14px 0;">
-  <button class="btn" type="button" onclick="window.print()">Print this page</button>
-  <a class="btn" href="{{ url_for('staff_residents') }}">Back</a>
+<div class="hist_header">
+  <h1 class="hist_title">Resident History <span style="font-weight: normal;">{{ display_name }}</span></h1>
+
+  <div class="hist_actions">
+    <button type="button" class="hist_btn" onclick="printThisPage()">Print this page</button>
+    <a class="hist_btn" href="{{ url_for('staff_residents') }}">Back</a>
+  </div>
 </div>
 
-<div class="history-wrap">
+<div class="hist_section hist_card">
+  <h2 style="margin: 0 0 10px 0;">Leave Requests</h2>
 
-<!-- LEAVE REQUESTS -->
+  <table class="compact">
+    <thead>
+      <tr>
+        <th class="nowrap">Submitted</th>
+        <th class="nowrap">Leave</th>
+        <th class="nowrap">Return</th>
+        <th class="nowrap">Status</th>
+        <th class="nowrap">Case Manager</th>
+        <th class="nowrap">Decision Date</th>
+        <th class="nowrap">Print</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if not leave_rows %}
+        <tr>
+          <td colspan="7" class="muted">No leave requests</td>
+        </tr>
+      {% else %}
+        {% for r in leave_rows %}
+          <tr>
+            <td class="nowrap">{{ fmt_dt(r.submitted_at) if r.submitted_at else "" }}</td>
+            <td class="nowrap">{{ fmt_date(r.leave_at) if r.leave_at else "" }}</td>
+            <td class="nowrap">{{ fmt_date(r.return_at) if r.return_at else "" }}</td>
+            <td class="nowrap">{{ r.status }}</td>
+            <td class="nowrap">{{ r.decided_by_name if r.decided_by_name else "" }}</td>
+            <td class="nowrap">{{ fmt_dt(r.decided_at) if r.decided_at else "" }}</td>
+            <td class="nowrap">
+              {# Safe for now: print the page. Do not call a missing endpoint. #}
+              <button type="button" class="hist_btn" onclick="printThisPage()">Print</button>
+            </td>
+          </tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
 
-<div class="history-card">
-
-<div class="history-header">
-<div class="history-title">Leave Requests</div>
+  {% if leave_rows %}
+    <div class="muted" style="margin-top: 8px; font-size: 12px;">
+      Note: This print button prints the full resident history page. If you want per leave request printing, add a dedicated print route and we will wire it into the Print column.
+    </div>
+  {% endif %}
 </div>
 
-<table class="history-table">
+<div class="hist_section hist_card">
+  <h2 style="margin: 0 0 10px 0;">Attendance History</h2>
 
-<thead>
-<tr>
-<th>Submitted</th>
-<th>Leave</th>
-<th>Return</th>
-<th>Status</th>
-<th>Case Manager</th>
-<th>Decision Date</th>
-<th>Print</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% if not leave_rows %}
-<tr>
-<td colspan="7">No leave requests</td>
-</tr>
-{% else %}
-
-{% for row in leave_rows %}
-
-<tr>
-
-<td>{{ fmt_dt(row.submitted_at) }}</td>
-
-<td>{{ fmt_date(row.leave_at) }}</td>
-
-<td>{{ fmt_date(row.return_at) }}</td>
-
-<td>
-
-{% if row.status == "approved" %}
-<span class="status-approved">Approved</span>
-{% elif row.status == "denied" %}
-<span class="status-denied">Denied</span>
-{% else %}
-<span class="status-pending">Pending</span>
-{% endif %}
-
-</td>
-
-<td>{{ row.decided_by_name }}</td>
-
-<td>{{ fmt_dt(row.decided_at) }}</td>
-
-<td>
-
-<a class="btn"
-target="_blank"
-href="{{ url_for('staff_leave_print', req_id=row.id) }}">
-Print
-</a>
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-{% endif %}
-
-</tbody>
-
-</table>
-
+  <table class="compact">
+    <thead>
+      <tr>
+        <th class="nowrap">Date</th>
+        <th class="nowrap">Event</th>
+        <th class="nowrap">Expected Back</th>
+        <th class="nowrap">Staff</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if not attendance_rows %}
+        <tr>
+          <td colspan="5" class="muted">No attendance events</td>
+        </tr>
+      {% else %}
+        {% for r in attendance_rows %}
+          <tr>
+            <td class="nowrap">{{ fmt_dt(r.event_time) if r.event_time else "" }}</td>
+            <td class="nowrap">{{ r.event_type }}</td>
+            <td class="nowrap">{{ fmt_dt(r.expected_back_time) if r.expected_back_time else "" }}</td>
+            <td class="nowrap">{{ r.staff_name if r.staff_name else "" }}</td>
+            <td>{{ r.note if r.note else "None" }}</td>
+          </tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
 </div>
 
+<div class="hist_section hist_card">
+  <h2 style="margin: 0 0 10px 0;">Transport Requests</h2>
 
-<!-- ATTENDANCE -->
-
-<div class="history-card">
-
-<div class="history-header">
-<div class="history-title">Attendance History</div>
-</div>
-
-<table class="history-table">
-
-<thead>
-<tr>
-<th>Date</th>
-<th>Event</th>
-<th>Expected Back</th>
-<th>Staff</th>
-<th>Notes</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% if not attendance_rows %}
-<tr>
-<td colspan="5">No attendance history</td>
-</tr>
-{% else %}
-
-{% for row in attendance_rows %}
-
-<tr>
-
-<td>{{ fmt_dt(row.event_time) }}</td>
-
-<td>{{ row.event_type }}</td>
-
-<td>{{ fmt_dt(row.expected_back_time) }}</td>
-
-<td>{{ row.staff_name }}</td>
-
-<td>{{ row.note }}</td>
-
-</tr>
-
-{% endfor %}
-
-{% endif %}
-
-</tbody>
-
-</table>
-
-</div>
-
-
-
-<!-- TRANSPORT REQUESTS -->
-
-<div class="history-card">
-
-<div class="history-header">
-<div class="history-title">Transport Requests</div>
-</div>
-
-<table class="history-table">
-
-<thead>
-<tr>
-<th>Submitted</th>
-<th>Destination</th>
-<th>Date</th>
-<th>Status</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% if not transport_rows %}
-<tr>
-<td colspan="4">No transport requests</td>
-</tr>
-{% else %}
-
-{% for row in transport_rows %}
-
-<tr>
-
-<td>{{ fmt_dt(row.submitted_at) }}</td>
-
-<td>{{ row.destination }}</td>
-
-<td>{{ fmt_date(row.transport_date) }}</td>
-
-<td>{{ row.status }}</td>
-
-</tr>
-
-{% endfor %}
-
-{% endif %}
-
-</tbody>
-
-</table>
-
-</div>
-
+  <table class="compact">
+    <thead>
+      <tr>
+        <th class="nowrap">Submitted</th>
+        <th>Destination</th>
+        <th class="nowrap">Date</th>
+        <th class="nowrap">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if not transport_rows %}
+        <tr>
+          <td colspan="4" class="muted">No transport requests</td>
+        </tr>
+      {% else %}
+        {% for r in transport_rows %}
+          <tr>
+            <td class="nowrap">{{ fmt_dt(r.submitted_at) if r.submitted_at else "" }}</td>
+            <td>{{ r.destination if r.destination else "" }}</td>
+            <td class="nowrap">{{ fmt_dt(r.needed_at) if r.needed_at else "" }}</td>
+            <td class="nowrap">{{ r.status }}</td>
+          </tr>
+        {% endfor %}
+      {% endif %}
+    </tbody>
+  </table>
 </div>
 
 {% endblock %}
