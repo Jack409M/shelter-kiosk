@@ -5,11 +5,9 @@
 <form method="post" class="card">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-  <!-- Shelter (pre-selected from resident session) -->
   <label for="shelter">Shelter</label>
   <input id="shelter" name="shelter" value="{{ shelter }}" readonly class="w-shelter">
 
-  <!-- Optional phone for SMS updates -->
   <label for="resident_phone">Phone number for text updates (optional)</label>
   <input
     id="resident_phone"
@@ -19,9 +17,7 @@
     placeholder="8065551234"
     class="w-phone"
   >
-  <p class="hint">Leave blank if you do not want text updates.</p>
 
-  <!-- Required destination -->
   <label for="destination">Destination</label>
   <input id="destination" name="destination" required>
 
@@ -37,7 +33,6 @@
     </div>
   </div>
 
-  <!-- Optional reason -->
   <label for="reason">Reason optional</label>
   <select id="reason" name="reason">
     <option value="">Select</option>
@@ -48,7 +43,6 @@
     <option>Other</option>
   </select>
 
-  <!-- Optional notes -->
   <label for="resident_notes">Notes optional</label>
   <textarea id="resident_notes" name="resident_notes" rows="3"></textarea>
 
@@ -65,3 +59,4 @@
 </form>
 
 {% endblock %}
+
