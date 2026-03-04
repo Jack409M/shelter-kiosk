@@ -632,12 +632,13 @@ input[name="needed_at"] {
   vertical-align: middle;
 }
 
-.actions {
+/* staff_residents.html */
+.resident-actions {
   white-space: nowrap;
 }
 
-.actions form,
-.actions a {
+.resident-actions form,
+.resident-actions a {
   display: inline-block;
   margin: 0 8px 0 0;
   vertical-align: middle;
@@ -705,5 +706,6 @@ input[name="needed_at"] {
     max-width: none;
   }
 }
+
 
 
