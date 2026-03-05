@@ -356,6 +356,115 @@ def sms_is_allowed_for_number(phone: str) -> bool:
 
     return False
 
+@app.route("/twilio/inbound", methods=["POST"])
+def twilio_inbound():
+    """
+    Twilio posts inbound messages here.
+
+    We record STOP style keywords as opt out in our DB.
+    We record START style keywords as opt back in.
+    We reply with TwiML so Twilio delivers an automatic response.
+    """
+    init_db()
+
+    from_number = (request.form.get("From") or "").strip()
+    body_raw = (request.form.get("Body") or "").strip()
+    body = body_raw.lower().strip()
+    now = utcnow_iso()
+    kind = g.get("db_kind")
+
+    # Normalize to last 10 digits for matching
+    target = _normalize_us_phone_10(from_number)
+    if not target:
+        return Response("<Response></Response>", mimetype="text/xml")
+
+    # Find the most recent resident row with a matching phone
+    try:
+        rows = db_fetchall(
+            """
+            SELECT id, phone
+            FROM residents
+            WHERE phone IS NOT NULL AND phone != ''
+            ORDER BY id DESC
+            LIMIT 500
+            """
+        )
+    except Exception:
+        rows = []
+
+    resident_id = None
+    for row in rows or []:
+        rid = row["id"] if isinstance(row, dict) else row[0]
+        rphone = row["phone"] if isinstance(row, dict) else row[1]
+        if _normalize_us_phone_10(str(rphone or "")) == target:
+            resident_id = rid
+            break
+
+    # If no resident matches, still respond politely, but do not change DB
+    if resident_id is None:
+        msg = "Reply STOP to unsubscribe. Msg and data rates may apply."
+        return Response(f"<Response><Message>{msg}</Message></Response>", mimetype="text/xml")
+
+    stop_words = {"stop", "unsubscribe", "cancel", "end", "quit"}
+    start_words = {"start", "yes", "unstop"}
+    help_words = {"help", "info"}
+
+    if body in stop_words:
+        db_execute(
+            """
+            UPDATE residents
+            SET sms_opt_in = %s,
+                sms_opt_out_at = %s,
+                sms_opt_out_source = %s
+            WHERE id = %s
+            """
+            if kind == "pg"
+            else """
+            UPDATE residents
+            SET sms_opt_in = ?,
+                sms_opt_out_at = ?,
+                sms_opt_out_source = ?
+            WHERE id = ?
+            """,
+            (False if kind == "pg" else 0, now, "twilio_stop", resident_id),
+        )
+        msg = "You are opted out. Reply START to resubscribe."
+        return Response(f"<Response><Message>{msg}</Message></Response>", mimetype="text/xml")
+
+    if body in start_words:
+        db_execute(
+            """
+            UPDATE residents
+            SET sms_opt_in = %s,
+                sms_opt_in_at = %s,
+                sms_opt_in_source = %s,
+                sms_opt_out_at = NULL,
+                sms_opt_out_source = NULL
+            WHERE id = %s
+            """
+            if kind == "pg"
+            else """
+            UPDATE residents
+            SET sms_opt_in = ?,
+                sms_opt_in_at = ?,
+                sms_opt_in_source = ?,
+                sms_opt_out_at = NULL,
+                sms_opt_out_source = NULL
+            WHERE id = ?
+            """,
+            (True if kind == "pg" else 1, now, "twilio_start", resident_id),
+        )
+        msg = "You are resubscribed. Reply STOP to unsubscribe."
+        return Response(f"<Response><Message>{msg}</Message></Response>", mimetype="text/xml")
+
+    if body in help_words:
+        msg = "Reply STOP to unsubscribe. Msg and data rates may apply."
+        return Response(f"<Response><Message>{msg}</Message></Response>", mimetype="text/xml")
+
+    # Default response for any other inbound text
+    msg = "Reply STOP to unsubscribe. Msg and data rates may apply."
+    return Response(f"<Response><Message>{msg}</Message></Response>", mimetype="text/xml")
+
 # Postgres connection pool
 def _init_pg_pool() -> None:
     global PG_POOL
@@ -3172,6 +3281,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
