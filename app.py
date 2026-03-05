@@ -1299,6 +1299,7 @@ def twilio_inbound():
         return app.response_class("", mimetype="text/xml")
 
     stop_words = {"stop", "unsubscribe", "cancel", "end", "quit"}
+    start_words = {"start", "yes", "unstop", "subscribe"}
     help_words = {"help", "info"}
 
     reply_text = ""
@@ -3329,6 +3330,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
