@@ -2308,71 +2308,46 @@ def staff_attendance_check_in(resident_id: int):
 @require_login
 @require_shelter
 def staff_attendance_check_out_global():
-    init_db()
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
+    record_id = (request.form.get("record_id") or "").strip()
+    expected_back = (request.form.get("expected_back_at") or "").strip()
 
-    rid_raw = (request.form.get("resident_id") or "").strip()
-    note = (request.form.get("note") or "").strip()
-    expected_back = (request.form.get("expected_back_time") or "").strip()
-
-    if not rid_raw.isdigit():
-        flash("Select a resident.", "error")
-        return redirect(url_for("staff_attendance"))
-
-    resident_id = int(rid_raw)
-
-    resident = db_fetchone(
-        "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
-        if g.get("db_kind") == "pg"
-        else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
-        (resident_id, shelter),
-    )
-    if not resident:
-        flash("Invalid resident.", "error")
+    if not record_id:
+        flash("Missing attendance record.", "error")
         return redirect(url_for("staff_attendance"))
 
     if not expected_back:
         flash("Expected back time is required.", "error")
         return redirect(url_for("staff_attendance"))
 
-    expected_back_value = None
     try:
-        today_local = datetime.now(ZoneInfo("America/Chicago")).date()
-        local_dt = datetime.combine(today_local, datetime.strptime(expected_back, "%H:%M").time())
+        # datetime-local from browser: YYYY-MM-DDTHH:MM
+        local_dt = datetime.fromisoformat(expected_back)  # naive
         local_dt = local_dt.replace(tzinfo=ZoneInfo("America/Chicago"))
+
         expected_back_value = (
-            local_dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+            local_dt.astimezone(timezone.utc)
+            .replace(tzinfo=None)
+            .isoformat(timespec="seconds")
         )
     except Exception:
         flash("Invalid expected back time.", "error")
         return redirect(url_for("staff_attendance"))
 
-    sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
-    )
+    now_utc = datetime.utcnow().replace(microsecond=0).isoformat()
 
-    db_execute(
-        sql,
-        (resident_id, shelter, "check_out", utcnow_iso(), staff_id, note or None, expected_back_value),
+    db = get_db()
+    db.execute(
+        """
+        UPDATE staff_attendance
+        SET checked_out_at = ?, expected_back_at = ?
+        WHERE id = ?
+        """,
+        (now_utc, expected_back_value, record_id),
     )
+    db.commit()
 
-    log_action(
-        "attendance",
-        resident_id,
-        shelter,
-        staff_id,
-        "check_out",
-        f"expected_back={expected_back_value or ''} {note}".strip(),
-    )
-
-    flash("Checked out.", "ok")
+    flash("Staff checked out.", "success")
     return redirect(url_for("staff_attendance"))
-
 @app.route("/staff/attendance/resident/<int:resident_id>/print")
 @require_login
 @require_shelter
@@ -3146,6 +3121,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
