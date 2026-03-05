@@ -1787,6 +1787,11 @@ def resident_consent():
 
     return redirect(next_url)
 
+@app.route("/staff/sms-consent")
+@staff_required
+def staff_sms_consent():
+    return "SMS consent page ok"
+
 @app.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
     init_db()
@@ -3339,6 +3344,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
