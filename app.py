@@ -297,7 +297,29 @@ def send_sms(to_number: str, message: str) -> None:
         to_e164 = "+" + digits
     else:
         return
+        
+    # OUTBOUND CIRCUIT BREAKER
+    # Caps sends even if app logic accidentally loops.
+    try:
+        per_number_per_hour = int(os.environ.get("SMS_OUTBOUND_PER_NUMBER_PER_HOUR", "6"))
+    except Exception:
+        per_number_per_hour = 6
 
+    try:
+        global_per_minute = int(os.environ.get("SMS_OUTBOUND_GLOBAL_PER_MIN", "30"))
+    except Exception:
+        global_per_minute = 30
+
+    to10 = _normalize_us_phone_10(to_e164) or to_e164
+
+    # Global cap (all outbound)
+    if _rate_limited("sms_out_global", global_per_minute, 60):
+        return
+
+    # Per number cap
+    if _rate_limited(f"sms_out_to:{to10}", per_number_per_hour, 3600):
+        return
+    
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
@@ -3307,6 +3329,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
