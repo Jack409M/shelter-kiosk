@@ -199,16 +199,6 @@ def _csrf_protect():
     return None
 
 
-import traceback
-
-@app.route("/__debug/boom")
-def __debug_boom():
-    # Forces an exception and returns it so we know the app is serving requests
-    try:
-        1 / 0
-    except Exception:
-        return "<pre>" + traceback.format_exc() + "</pre>", 200
-
 @app.before_request
 def _csrf_before_request():
     resp = _csrf_protect()
@@ -3350,6 +3340,80 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
