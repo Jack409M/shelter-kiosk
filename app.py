@@ -1171,12 +1171,17 @@ def twilio_inbound():
     We record STOP type words as opt out in our DB, and we reply using TwiML.
     """
     init_db()
-
     from_number = (request.form.get("From") or "").strip()
     body = (request.form.get("Body") or "").strip().lower()
+
+    # TEST: verify Twilio webhook is hitting our app
+    if body == "ping":
+        twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Message>pong</Message></Response>'
+        return app.response_class(twiml, mimetype="text/xml")
+
     now = utcnow_iso()
     kind = g.get("db_kind")
-
+    
     def normalize_last10(s: str) -> str:
         d = "".join(ch for ch in (s or "") if ch.isdigit())
         if len(d) == 11 and d.startswith("1"):
@@ -3143,6 +3148,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
