@@ -1098,6 +1098,11 @@ def require_resident_create(fn):
 # Routes
 # ============================
 
+@app.route("/staff/sms-consent")
+@staff_required
+def staff_sms_consent():
+    return "SMS consent page ok"
+
 @app.get("/privacy")
 def privacy_policy():
     return render_template("privacy.html")
@@ -3340,6 +3345,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
