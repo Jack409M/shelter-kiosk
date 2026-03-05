@@ -198,12 +198,6 @@ def _csrf_protect():
 
     return None
 
-@app.route("/__debug/last-error")
-def __debug_last_error():
-    try:
-        1 / 0
-    except Exception as e:
-        return "DEBUG OK. Example error: " + str(e), 200
 
 @app.before_request
 def _csrf_before_request():
@@ -1793,8 +1787,6 @@ def resident_consent():
 
     return redirect(next_url)
 
-
-
 @app.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
     init_db()
@@ -2470,6 +2462,7 @@ def staff_attendance():
         fmt_time=fmt_time_only,
         shelter=shelter,
     )
+
 
 @app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
@@ -3347,88 +3340,6 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
