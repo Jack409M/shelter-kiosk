@@ -1174,11 +1174,22 @@ def twilio_inbound():
     Twilio posts inbound messages here.
     We record STOP type words as opt out in our DB, and we reply using TwiML.
     """
+
+    if not TWILIO_INBOUND_ENABLED:
+        return app.response_class("", mimetype="text/xml")
+
+    ip = _client_ip()
+    if _rate_limited(f"twilio_inbound_ip:{ip}", 60, 60):
+        return app.response_class("", mimetype="text/xml")
+
+    msg_sid = (request.form.get("MessageSid") or "").strip()
+    if msg_sid and _rate_limited(f"twilio_msgsid:{msg_sid}", 1, 86400):
+        return app.response_class("", mimetype="text/xml")
+
     init_db()
 
     from_number = (request.form.get("From") or "").strip()
     body = (request.form.get("Body") or "").strip().lower()
-    now = utcnow_iso()
     kind = g.get("db_kind")
 
     def normalize_last10(s: str) -> str:
@@ -1190,6 +1201,9 @@ def twilio_inbound():
         return d
 
     sender10 = normalize_last10(from_number)
+
+    if sender10 and _rate_limited(f"twilio_inbound_from:{sender10}", 10, 60):
+        return app.response_class("", mimetype="text/xml")
 
     stop_words = {"stop", "unsubscribe", "cancel", "end", "quit"}
     help_words = {"help", "info"}
@@ -1234,20 +1248,22 @@ def twilio_inbound():
                     sms_opt_out_source = ?
                 WHERE id = ? AND shelter = ?
                 """,
-                (False if kind == "pg" else 0, now, "twilio_stop", r_id, r_shelter),
+                (0, utcnow_iso(), "twilio_inbound", r_id, r_shelter),
             )
 
-        reply_text = "You are opted out. No more messages will be sent."
+        reply_text = "You have been opted out. Reply START to opt back in."
 
     elif body in help_words:
-        reply_text = "Help. Reply STOP to opt out. For help contact staff."
+        reply_text = "For help contact staff."
 
-    # Return TwiML so Twilio can send the reply message
+    else:
+        reply_text = "For help contact staff."
+
     twiml = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
         "<Response>"
-        + (f"<Message>{reply_text}</Message>" if reply_text else "")
-        + "</Response>"
+        f"<Message>{reply_text}</Message>"
+        "</Response>"
     )
     return app.response_class(twiml, mimetype="text/xml")
 
@@ -3144,6 +3160,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
