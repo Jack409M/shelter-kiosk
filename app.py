@@ -300,7 +300,12 @@ def send_sms(to_number: str, message: str) -> None:
 
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-        client.messages.create(body=message, from_=TWILIO_FROM_NUMBER, to=to_e164)
+
+        kwargs = {"body": message, "from_": TWILIO_FROM_NUMBER, "to": to_e164}
+        if TWILIO_STATUS_ENABLED and TWILIO_STATUS_CALLBACK_URL:
+            kwargs["status_callback"] = TWILIO_STATUS_CALLBACK_URL
+
+        client.messages.create(**kwargs)
     except Exception as e:
         print("SMS error:", e)
 
@@ -3187,6 +3192,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
