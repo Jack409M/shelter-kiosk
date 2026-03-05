@@ -169,6 +169,7 @@ def _csrf_protect():
     exempt_endpoints = {
         "sms_consent",
         "twilio_inbound",
+        "staff_login",
     }
 
     if request.endpoint in exempt_endpoints:
@@ -3146,6 +3147,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
