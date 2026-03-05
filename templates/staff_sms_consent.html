@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>SMS Opt In / Opt Out Records</h1>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Phone Number</th>
+      <th>Status</th>
+      <th>Updated</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.phone_number }}</td>
+      <td>
+        {% if r.consent_status == "opt_in" %}
+          <span style="color:green;">OPTED IN</span>
+        {% else %}
+          <span style="color:red;">OPTED OUT</span>
+        {% endif %}
+      </td>
+      <td>{{ r.updated_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+
+</table>
+
+{% endblock %}
