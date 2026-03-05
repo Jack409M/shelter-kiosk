@@ -198,6 +198,12 @@ def _csrf_protect():
 
     return None
 
+@app.route("/__debug/last-error")
+def __debug_last_error():
+    try:
+        1 / 0
+    except Exception as e:
+        return "DEBUG OK. Example error: " + str(e), 200
 
 @app.before_request
 def _csrf_before_request():
@@ -3344,6 +3350,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
