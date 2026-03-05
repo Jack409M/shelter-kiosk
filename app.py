@@ -28,7 +28,7 @@ try:
 except Exception:
     Client = None
 
-TWILIO_ENABLED = False
+TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
 
 SHELTERS = ["Abba", "Haven", "Gratitude"]
 MAX_LEAVE_DAYS = 7
@@ -3143,6 +3143,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
