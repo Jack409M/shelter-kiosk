@@ -553,10 +553,25 @@ def ensure_admin_bootstrap() -> None:
     if not admin_user or not admin_pass:
         return
 
+    # Postgres: upsert so we never crash on duplicate username
+    if g.get("db_kind") == "pg":
+        db_execute(
+            """
+            INSERT INTO staff_users (username, password_hash, role, is_active, created_at)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (username)
+            DO UPDATE SET
+                password_hash = EXCLUDED.password_hash,
+                role = EXCLUDED.role,
+                is_active = EXCLUDED.is_active
+            """,
+            (admin_user, generate_password_hash(admin_pass), "admin", True, utcnow_iso()),
+        )
+        return
+
+    # SQLite: keep the original insert (no ON CONFLICT syntax here)
     db_execute(
-        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
         (admin_user, generate_password_hash(admin_pass), "admin", True, utcnow_iso()),
     )
 
@@ -3157,6 +3172,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
