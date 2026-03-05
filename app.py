@@ -185,7 +185,8 @@ def _csrf_protect():
         if request.endpoint and str(request.endpoint).startswith("resident_"):
             fallback = url_for("resident_signin")
 
-        return redirect(request.referrer or fallback)
+        session.pop("_csrf_token", None)
+        return redirect(fallback)
 
     return None
 
@@ -3147,6 +3148,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
