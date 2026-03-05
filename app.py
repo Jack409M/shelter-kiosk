@@ -92,6 +92,15 @@ _LAST_RL_PRUNE_TS = 0.0
 # Fallback limiter used only when not on Postgres (sqlite or other)
 _RATE_BUCKETS_MEM: dict[str, deque[float]] = {}
 
+@app.after_request
+def _log_redirects(resp):
+    try:
+        if resp.status_code in (301, 302, 303, 307, 308):
+            loc = resp.headers.get("Location", "")
+            print(f"REDIRECT {request.method} {request.path} -> {loc} ({resp.status_code})")
+    except Exception:
+        pass
+    return resp
 
 def _rate_limited_memory(key: str, limit: int, window_seconds: int) -> bool:
     now = time.time()
@@ -3148,6 +3157,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
