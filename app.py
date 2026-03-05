@@ -2308,22 +2308,40 @@ def staff_attendance_check_in(resident_id: int):
 @require_login
 @require_shelter
 def staff_attendance_check_out_global():
-    record_id = (request.form.get("record_id") or "").strip()
-    expected_back = (request.form.get("expected_back_at") or "").strip()
+    init_db()
+    shelter = session["shelter"]
+    staff_id = session["staff_user_id"]
 
-    if not record_id:
-        flash("Missing attendance record.", "error")
+    rid_raw = (request.form.get("resident_id") or "").strip()
+    note = (request.form.get("note") or "").strip()
+
+    # IMPORTANT: form field is expected_back_at (datetime-local)
+    expected_back_raw = (request.form.get("expected_back_at") or "").strip()
+
+    if not rid_raw.isdigit():
+        flash("Select a resident.", "error")
         return redirect(url_for("staff_attendance"))
 
-    if not expected_back:
+    resident_id = int(rid_raw)
+
+    resident = db_fetchone(
+        "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
+        if g.get("db_kind") == "pg"
+        else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
+        (resident_id, shelter),
+    )
+    if not resident:
+        flash("Invalid resident.", "error")
+        return redirect(url_for("staff_attendance"))
+
+    if not expected_back_raw:
         flash("Expected back time is required.", "error")
         return redirect(url_for("staff_attendance"))
 
+    # Convert browser datetime-local (YYYY-MM-DDTHH:MM) to UTC naive ISO string
     try:
-        # datetime-local from browser: YYYY-MM-DDTHH:MM
-        local_dt = datetime.fromisoformat(expected_back)  # naive
+        local_dt = datetime.fromisoformat(expected_back_raw)  # naive local
         local_dt = local_dt.replace(tzinfo=ZoneInfo("America/Chicago"))
-
         expected_back_value = (
             local_dt.astimezone(timezone.utc)
             .replace(tzinfo=None)
@@ -2333,21 +2351,25 @@ def staff_attendance_check_out_global():
         flash("Invalid expected back time.", "error")
         return redirect(url_for("staff_attendance"))
 
-    now_utc = datetime.utcnow().replace(microsecond=0).isoformat()
+    event_time = datetime.utcnow().replace(microsecond=0).isoformat()
 
-    db = get_db()
-    db.execute(
-        """
-        UPDATE staff_attendance
-        SET checked_out_at = ?, expected_back_at = ?
-        WHERE id = ?
-        """,
-        (now_utc, expected_back_value, record_id),
+    sql = (
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        if g.get("db_kind") == "pg"
+        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+             "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
-    db.commit()
 
-    flash("Staff checked out.", "success")
+    db_execute(
+        sql,
+        (resident_id, shelter, "check_out", event_time, staff_id, note or "", expected_back_value),
+    )
+
+    log_action("attendance", resident_id, shelter, staff_id, "check_out", note or "")
+    flash("Resident checked out.", "success")
     return redirect(url_for("staff_attendance"))
+
 @app.route("/staff/attendance/resident/<int:resident_id>/print")
 @require_login
 @require_shelter
@@ -3121,6 +3143,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
