@@ -122,6 +122,7 @@
 
             <a href="{{ url_for('staff_attendance') }}">Checkout Log</a>
             <a href="{{ url_for('staff_residents') }}">Residents</a>
+            <a href="{{ url_for('staff_sms_consent') }}">SMS Consent</a>
 
             {% if session.get("role") == "admin" %}
               <a href="{{ url_for('admin_users') }}">Users</a>
@@ -152,6 +153,7 @@
 
   </body>
 </html>
+
 
 
 
