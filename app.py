@@ -2469,11 +2469,25 @@ def staff_attendance():
 @require_login
 def staff_sms_consent():
     try:
-        db = get_db()
+        sql = (
+            "SELECT phone_number, consent_status, updated_at "
+            "FROM sms_consent "
+            "ORDER BY updated_at DESC"
+        )
 
-        rows = db.execute(
-            "SELECT phone_number, consent_status, updated_at FROM sms_consent ORDER BY updated_at DESC"
-        ).fetchall()
+        if g.get("db_kind") == "pg":
+            db = get_db()
+            cur = db.cursor()
+            cur.execute(sql)
+
+            cols = [d[0] for d in cur.description]
+            rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+
+            cur.close()
+
+        else:
+            db = get_db()
+            rows = db.execute(sql).fetchall()
 
         return render_template(
             "staff_sms_consent.html",
@@ -3360,6 +3374,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
