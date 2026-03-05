@@ -64,8 +64,7 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
-
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
 if not secret:
@@ -92,15 +91,6 @@ _LAST_RL_PRUNE_TS = 0.0
 # Fallback limiter used only when not on Postgres (sqlite or other)
 _RATE_BUCKETS_MEM: dict[str, deque[float]] = {}
 
-@app.after_request
-def _log_redirects(resp):
-    try:
-        if resp.status_code in (301, 302, 303, 307, 308):
-            loc = resp.headers.get("Location", "")
-            print(f"REDIRECT {request.method} {request.path} -> {loc} ({resp.status_code})")
-    except Exception:
-        pass
-    return resp
 
 def _rate_limited_memory(key: str, limit: int, window_seconds: int) -> bool:
     now = time.time()
@@ -175,10 +165,11 @@ app.jinja_env.globals["csrf_token"] = _csrf_token
 
 
 def _csrf_protect():
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return None
+
     exempt_endpoints = {
         "sms_consent",
-        "twilio_inbound",
-        "staff_login",
     }
 
     if request.endpoint in exempt_endpoints:
@@ -194,8 +185,7 @@ def _csrf_protect():
         if request.endpoint and str(request.endpoint).startswith("resident_"):
             fallback = url_for("resident_signin")
 
-        session.pop("_csrf_token", None)
-        return redirect(fallback)
+        return redirect(request.referrer or fallback)
 
     return None
 
@@ -355,9 +345,6 @@ def sms_is_allowed_for_number(phone: str) -> bool:
         return True
 
     return False
-
-@app.route("/twilio/inbound", methods=["POST"])
-ponse><Message>{msg}</Message></Response>", mimetype="text/xml")
 
 # Postgres connection pool
 def _init_pg_pool() -> None:
@@ -549,32 +536,19 @@ def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: st
 
 def ensure_admin_bootstrap() -> None:
     row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
-    
+    count = int(row["c"] if isinstance(row, dict) else row[0])
+    if count > 0:
+        return
 
     admin_user = (os.environ.get("ADMIN_USERNAME") or "").strip()
     admin_pass = (os.environ.get("ADMIN_PASSWORD") or "").strip()
     if not admin_user or not admin_pass:
         return
 
-    # Postgres: upsert so we never crash on duplicate username
-    if g.get("db_kind") == "pg":
-        db_execute(
-            """
-            INSERT INTO staff_users (username, password_hash, role, is_active, created_at)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (username)
-            DO UPDATE SET
-                password_hash = EXCLUDED.password_hash,
-                role = EXCLUDED.role,
-                is_active = EXCLUDED.is_active
-            """,
-            (admin_user, generate_password_hash(admin_pass), "admin", True, utcnow_iso()),
-        )
-        return
-
-    # SQLite: keep the original insert (no ON CONFLICT syntax here)
     db_execute(
-        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s, %s, %s, %s, %s)"
+        if g.get("db_kind") == "pg"
+        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
         (admin_user, generate_password_hash(admin_pass), "admin", True, utcnow_iso()),
     )
 
@@ -1190,25 +1164,19 @@ def resident_signin():
 
     return redirect(next_url)
 
-@app.route("/twilio/inbound", methods=["POST"], strict_slashes=False)
-@app.route("/twilio/inbound/", methods=["POST"], strict_slashes=False)
+@app.route("/twilio/inbound", methods=["POST"])
 def twilio_inbound():
     """
     Twilio posts inbound messages here.
     We record STOP type words as opt out in our DB, and we reply using TwiML.
     """
     init_db()
+
     from_number = (request.form.get("From") or "").strip()
     body = (request.form.get("Body") or "").strip().lower()
-
-    # TEST: verify Twilio webhook is hitting our app
-    if body == "ping":
-        twiml = '<?xml version="1.0" encoding="UTF-8"?><Response><Message>pong</Message></Response>'
-        return app.response_class(twiml, mimetype="text/xml")
-
     now = utcnow_iso()
     kind = g.get("db_kind")
-    
+
     def normalize_last10(s: str) -> str:
         d = "".join(ch for ch in (s or "") if ch.isdigit())
         if len(d) == 11 and d.startswith("1"):
@@ -3175,18 +3143,6 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
