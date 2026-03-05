@@ -2468,7 +2468,21 @@ def staff_attendance():
 @app.route("/staff/sms-consent")
 @require_login
 def staff_sms_consent():
-    return "SMS consent page ok"
+    try:
+        db = get_db()
+
+        rows = db.execute(
+            "SELECT phone_number, consent_status, updated_at FROM sms_consent ORDER BY updated_at DESC"
+        ).fetchall()
+
+        return render_template(
+            "staff_sms_consent.html",
+            rows=rows,
+            title="SMS Consent"
+        )
+
+    except Exception as e:
+        return "SMS consent error: " + str(e), 500
         
 @app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
@@ -3346,6 +3360,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
