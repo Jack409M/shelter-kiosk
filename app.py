@@ -1760,7 +1760,7 @@ def resident_consent():
                 sms_opt_out_source = NULL
             WHERE id = ? AND shelter = ?
             """,
-            (True if kind == "pg" else 1, now, "resident_kiosk", resident_id, shelter),
+            (True if kind == "pg" else 1, now, "resident_kiosk_web_form", resident_id, shelter)
         )
     else:
         session["sms_consent_done"] = True
@@ -3340,6 +3340,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
