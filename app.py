@@ -1189,6 +1189,26 @@ def twilio_inbound():
     if msg_sid and _rate_limited(f"twilio_msgsid:{msg_sid}", 1, 86400):
         return app.response_class("", mimetype="text/xml")
 
+    # Require validator when inbound is enabled
+    if RequestValidator is None:
+        abort(500)
+
+    sig = request.headers.get("X-Twilio-Signature", "")
+    if not sig:
+        abort(403)
+
+    # Build the URL used for validation (account for proxy https)
+    url = request.url
+    xf_proto = (request.headers.get("X-Forwarded-Proto") or "").lower()
+    if xf_proto == "https" and url.startswith("http://"):
+        url = "https://" + url[len("http://"):]
+
+    validator = RequestValidator(TWILIO_AUTH_TOKEN or "")
+    form = request.form.to_dict(flat=True)
+
+    if not validator.validate(url, form, sig):
+        abort(403)
+    
     init_db()
 
     from_number = (request.form.get("From") or "").strip()
@@ -3163,6 +3183,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
