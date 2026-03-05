@@ -25,8 +25,11 @@ PG_POOL = None
 
 try:
     from twilio.rest import Client
+    from twilio.request_validator import RequestValidator
 except Exception:
     Client = None
+    RequestValidator = None
+    
 
 TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
 TWILIO_INBOUND_ENABLED = os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true"
@@ -3160,6 +3163,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
