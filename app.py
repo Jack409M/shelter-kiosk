@@ -2465,7 +2465,11 @@ def staff_attendance():
         shelter=shelter,
     )
 
-
+@app.route("/staff/sms-consent")
+@require_login
+def staff_sms_consent():
+    return "SMS consent page ok"
+        
 @app.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
@@ -3342,6 +3346,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
