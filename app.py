@@ -1782,7 +1782,7 @@ def resident_consent():
                 sms_opt_out_source = ?
             WHERE id = ? AND shelter = ?
             """,
-            (False if kind == "pg" else 0, now, "resident_kiosk_decline", resident_id, shelter),
+            (False if kind == "pg" else 0, now, "resident_kiosk_web_form_decline", resident_id, shelter)
         )
 
     return redirect(next_url)
@@ -3340,6 +3340,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
