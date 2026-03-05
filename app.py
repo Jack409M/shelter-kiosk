@@ -535,9 +535,7 @@ def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: st
 
 def ensure_admin_bootstrap() -> None:
     row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
-    count = int(row["c"] if isinstance(row, dict) else row[0])
-    if count > 0:
-        return
+    
 
     admin_user = (os.environ.get("ADMIN_USERNAME") or "").strip()
     admin_pass = (os.environ.get("ADMIN_PASSWORD") or "").strip()
@@ -3148,6 +3146,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
