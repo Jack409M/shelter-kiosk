@@ -1283,6 +1283,10 @@ def twilio_inbound():
 
     from_number = (request.form.get("From") or "").strip()
     body = (request.form.get("Body") or "").strip().lower()
+    
+    if body not in stop_words and body not in start_words and body not in help_words:
+        return app.response_class("", mimetype="text/xml")
+        
     kind = g.get("db_kind")
 
     def normalize_last10(s: str) -> str:
@@ -3330,6 +3334,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
