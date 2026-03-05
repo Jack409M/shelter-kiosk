@@ -2467,24 +2467,6 @@ def staff_attendance():
 @staff_required
 def staff_sms_consent():
     db = get_db()
-    rows = db.execute(
-        """
-        SELECT phone_number, consent_status, updated_at
-        FROM sms_consent
-        ORDER BY updated_at DESC
-        """
-    ).fetchall()
-
-    return render_template(
-        "staff_sms_consent.html",
-        rows=rows,
-        title="SMS Consent"
-    )
-
-@app.route("/staff/sms-consent")
-@staff_required
-def staff_sms_consent():
-    db = get_db()
 
     rows = db.execute(
         """
@@ -3376,6 +3358,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
