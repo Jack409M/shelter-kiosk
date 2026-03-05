@@ -1098,6 +1098,27 @@ def require_resident_create(fn):
 # Routes
 # ============================
 
+@app.route("/staff/sms-consent")
+@staff_required
+def staff_sms_consent():
+    try:
+        db = get_db()
+        rows_raw = db.execute(
+            "SELECT phone_number, consent_status, updated_at FROM sms_consent ORDER BY updated_at DESC"
+        ).fetchall()
+    except Exception as e:
+        return "SMS consent error: " + str(e), 500
+
+    # Normalize for templates
+    rows = []
+    for r in rows_raw:
+        try:
+            rows.append(dict(r))
+        except Exception:
+            rows.append(r)
+
+    return render_template("staff_sms_consent.html", rows=rows, title="SMS Consent")
+
 @app.get("/privacy")
 def privacy_policy():
     return render_template("privacy.html")
@@ -3340,6 +3361,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
