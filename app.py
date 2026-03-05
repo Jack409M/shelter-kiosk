@@ -1164,7 +1164,7 @@ def resident_signin():
 
     return redirect(next_url)
 
-@app.route("/twilio/inbound", methods=["POST"])
+@app.route("/twilio/inbound", methods=["POST"], strict_slashes=False)
 def twilio_inbound():
     """
     Twilio posts inbound messages here.
@@ -3148,6 +3148,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
