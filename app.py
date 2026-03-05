@@ -880,7 +880,36 @@ def init_db() -> None:
         )
         """,
     )
-
+    
+    create(
+        """
+        CREATE TABLE IF NOT EXISTS twilio_message_status (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_sid TEXT NOT NULL,
+            message_status TEXT NOT NULL,
+            error_code TEXT,
+            to_number TEXT,
+            from_number TEXT,
+            account_sid TEXT,
+            api_version TEXT,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS twilio_message_status (
+            id SERIAL PRIMARY KEY,
+            message_sid TEXT NOT NULL,
+            message_status TEXT NOT NULL,
+            error_code TEXT,
+            to_number TEXT,
+            from_number TEXT,
+            account_sid TEXT,
+            api_version TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )
+        """,
+    )
+    
     if kind == "pg":
         db_execute(
             """
@@ -3268,6 +3297,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
