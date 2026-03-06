@@ -21,17 +21,40 @@
   </div>
 
   <div class="portal-status">
-    <h3>Leave Status</h3>
-    <p>{{ leave_status_text }}</p>
-    {% if leave_status_note %}
-      <p class="hint">{{ leave_status_note }}</p>
+
+    <h3>Upcoming Leave Requests</h3>
+    {% if leave_items %}
+      <ul>
+        {% for item in leave_items %}
+          <li>
+            <strong>{{ item.status }}</strong>
+            —
+            {{ item.leave_at }} to {{ item.return_at }}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No upcoming leave requests.</p>
     {% endif %}
 
-    <h3>Transportation Status</h3>
-    <p>{{ transport_status_text }}</p>
-    {% if transport_status_note %}
-      <p class="hint">{{ transport_status_note }}</p>
+    <h3>Upcoming Transportation Requests</h3>
+    {% if transport_items %}
+      <ul>
+        {% for item in transport_items %}
+          <li>
+            <strong>{{ item.status }}</strong>
+            —
+            {{ item.needed_at }}
+            {% if item.driver_name %}
+              (Driver: {{ item.driver_name }})
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>No transportation scheduled.</p>
     {% endif %}
+
   </div>
 
 </div>
