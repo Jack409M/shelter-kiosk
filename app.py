@@ -1379,7 +1379,10 @@ def twilio_inbound():
         reply_text = "You have been opted out. Reply START to opt back in."
 
     elif body in help_words:
-        reply_text = "For help contact staff."
+        reply_text = "Downtown Women's Center Alerts. Reply STOP to opt out or START to rejoin. For help call 806-XXX-XXXX. Msg and data rates may apply."
+
+    elif body in start_words:
+        reply_text = "You are re-subscribed to Downtown Women's Center Alerts. Msg and data rates may apply."
 
     else:
         reply_text = "For help contact staff."
@@ -3401,6 +3404,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
