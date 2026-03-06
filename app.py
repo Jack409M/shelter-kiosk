@@ -7,12 +7,14 @@ import sqlite3
 import secrets
 import time
 import logging
+from routes.resident_portal import resident_portal
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Optional
 
 from flask import Flask, g, redirect, render_template, request, session, url_for, flash, abort, Response
+from routes.resident_portal import resident_portal
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from zoneinfo import ZoneInfo
@@ -74,6 +76,8 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
+app.register_blueprint(resident_portal)
 
 @app.before_request
 def log_request_info():
@@ -3415,6 +3419,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
