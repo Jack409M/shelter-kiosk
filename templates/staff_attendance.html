@@ -78,10 +78,28 @@
     font-size: 12px;
     line-height: 1;
     background: #fff;
+    white-space: nowrap;
+  }
+
+  .att_badge_out {
+    background: #fff;
+  }
+
+  .att_badge_pass {
+    background: #eef4ff;
+    border-color: #5d7ea6;
+  }
+
+  .att_badge_sal {
+    background: #f6f0ff;
+    border-color: #7c5da6;
   }
 
   .att_badge_overdue {
     font-weight: 700;
+    background: #fdeeee;
+    border-color: #b00000;
+    color: #b00000;
   }
 
   .att_row_overdue td {
@@ -142,6 +160,20 @@
     animation: blinkRed 1s linear infinite;
   }
 
+  .att_name_block {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .att_status_stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
   @keyframes blinkRed {
     0%   { opacity: 1; }
     50%  { opacity: 0.2; }
@@ -167,30 +199,59 @@
     <table class="compact">
       <thead>
         <tr>
-          <th style="width: 42%;">Name</th>
-          <th style="width: 18%;">Out</th>
-          <th style="width: 20%;">Expected</th>
-          <th style="width: 20%;">Actions</th>
+          <th style="width: 34%;">Name</th>
+          <th style="width: 16%;">Status</th>
+          <th style="width: 16%;">Out</th>
+          <th style="width: 16%;">Expected</th>
+          <th style="width: 18%;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% if not out_rows %}
           <tr>
-            <td colspan="4">No one is currently out.</td>
+            <td colspan="5">No one is currently out.</td>
           </tr>
         {% else %}
           {% for row in out_rows %}
+            {% set row_note = (row.note or '')|lower %}
+            {% set checkout_kind = 'out' %}
+            {% if '[pass]' in row_note %}
+              {% set checkout_kind = 'pass' %}
+            {% elif '[sal]' in row_note %}
+              {% set checkout_kind = 'sal' %}
+            {% endif %}
+
             <tr class="{% if row.is_overdue %}att_row_overdue{% endif %}">
               <td>
-                {% if row.is_overdue %}
-                  <span class="att_icon att_overdue">✖</span>
-                {% else %}
-                  <span class="out">←</span>
-                {% endif %}
-                {{ row.name }}
+                <div class="att_name_block">
+                  {% if row.is_overdue %}
+                    <span class="att_icon att_overdue">✖</span>
+                  {% else %}
+                    <span class="att_icon att_out">←</span>
+                  {% endif %}
+                  <span>{{ row.name }}</span>
+                </div>
               </td>
+
+              <td>
+                <div class="att_status_stack">
+                  {% if row.is_overdue %}
+                    <span class="att_badge att_badge_overdue">Overdue</span>
+                  {% endif %}
+
+                  {% if checkout_kind == 'pass' %}
+                    <span class="att_badge att_badge_pass">Pass</span>
+                  {% elif checkout_kind == 'sal' %}
+                    <span class="att_badge att_badge_sal">SAL</span>
+                  {% else %}
+                    <span class="att_badge att_badge_out">Out</span>
+                  {% endif %}
+                </div>
+              </td>
+
               <td>{{ fmt_time(row.checked_out_at) }}</td>
               <td>{{ fmt_time(row.expected_back_at) }}</td>
+
               <td>
                 <div class="att_actions">
                   <form method="post" action="{{ url_for('staff_attendance_check_in', resident_id=row.resident_id) }}">
@@ -246,6 +307,7 @@
 
       <div class="att_checkout_grid">
 
+        <!-- Resident selection -->
         <label for="resident_id">Resident</label>
         <select name="resident_id" id="resident_id" required>
           <option value="">Select resident…</option>
@@ -254,6 +316,14 @@
           {% endfor %}
         </select>
 
+        <!-- Checkout type -->
+        <label for="checkout_type">Checkout Type</label>
+        <select name="checkout_type" id="checkout_type" required>
+          <option value="out">Out</option>
+          <option value="pass">Pass</option>
+        </select>
+
+        <!-- Expected return and submit -->
         <div class="att_two_col">
           <div>
             <label for="expected_back_at">Expected back</label>
@@ -264,6 +334,7 @@
           </div>
         </div>
 
+        <!-- Optional note -->
         <div>
           <label for="note">Note optional</label>
           <input id="note" name="note" class="att_note_input">
@@ -276,9 +347,3 @@
 </div>
 
 {% endblock %}
-
-
-
-
-
-
