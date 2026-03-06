@@ -39,21 +39,21 @@
         </div>
       </div>
 
+      {% set endpoint = request.endpoint or '' %}
+      {% set is_resident_signin_page = endpoint in ['resident_signin', 'resident_portal.signin'] %}
+      {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) %}
+
       <nav>
         <div class="nav-mobile">
-
           {% if session.get("staff_user_id") %}
             <a href="{{ url_for('staff_logout') }}">Logout</a>
-
-          {% elif not session.get("resident_id") %}
+          {% elif show_logged_out_nav %}
             <a href="{{ url_for('resident_signin') }}">Resident Sign In</a>
             <a href="{{ url_for('staff_login') }}">Staff Login</a>
           {% endif %}
-
         </div>
 
         <div class="nav-desktop">
-
           {% if session.get("staff_user_id") %}
 
             <div class="nav-dd">
@@ -74,9 +74,9 @@
                 <form method="post" action="{{ url_for('staff_select_shelter') }}" style="margin:0;">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="next" value="{{ request.full_path }}">
-                  <button type="submit" name="shelter" value="Abba" style="width:100%; text-align:left; margin:0;">Abba House</button>
-                  <button type="submit" name="shelter" value="Haven" style="width:100%; text-align:left; margin:0;">Haven House</button>
-                  <button type="submit" name="shelter" value="Gratitude" style="width:100%; text-align:left; margin:0;">Gratitude House</button>
+                  <button type="submit" name="shelter" value="Abba" style="width:100%;text-align:left;margin:0;">Abba House</button>
+                  <button type="submit" name="shelter" value="Haven" style="width:100%;text-align:left;margin:0;">Haven House</button>
+                  <button type="submit" name="shelter" value="Gratitude" style="width:100%;text-align:left;margin:0;">Gratitude House</button>
                 </form>
               </div>
             </div>
@@ -110,13 +110,10 @@
 
             <a href="{{ url_for('staff_logout') }}">Logout</a>
 
-          {% elif not session.get("resident_id") %}
-
+          {% elif show_logged_out_nav %}
             <a href="{{ url_for('resident_signin') }}">Resident Sign In</a>
             <a href="{{ url_for('staff_login') }}">Staff Login</a>
-
           {% endif %}
-
         </div>
       </nav>
     </header>
@@ -136,3 +133,4 @@
     </main>
   </body>
 </html>
+
