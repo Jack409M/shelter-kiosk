@@ -4,55 +4,47 @@
 
 <div class="card" style="max-width:520px;margin:40px auto;">
 
-<h2 style="text-align:center;">Resident Sign In</h2>
+  <h2 style="text-align:center;">Resident Sign In</h2>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div style="color:red;margin-bottom:12px;text-align:center;">
-        {{ message }}
-      </div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div style="color:red;margin-bottom:12px;text-align:center;">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
 
-<form method="post">
+  <p style="text-align:center;margin:0 0 20px 0;font-size:15px;">
+    Enter your 8 digit resident code.
+  </p>
 
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <form method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ next or '' }}">
 
-<label>Shelter</label>
+    <label for="resident_code">Resident Code</label>
 
-<select name="shelter" required>
-    <option value="">Select</option>
-    {% for s in shelters %}
-        <option value="{{ s }}" {% if s == shelter %}selected{% endif %}>
-            {{ s }}
-        </option>
-    {% endfor %}
-</select>
+    <input
+      id="resident_code"
+      name="resident_code"
+      inputmode="numeric"
+      pattern="\d{8}"
+      maxlength="8"
+      required
+      placeholder="8 digit code"
+      autocomplete="off"
+    >
 
-<label>Resident Code</label>
-
-<input
-    name="resident_code"
-    inputmode="numeric"
-    pattern="\d{8}"
-    maxlength="8"
-    required
-    placeholder="8 digit code"
->
-
-<input type="hidden" name="next" value="{{ next or '' }}">
-
-<button type="submit" class="btn" style="width:100%;margin-top:10px;">
-    Continue
+    <button type="submit" class="btn" style="width:100%;margin-top:14px;padding:14px 16px;font-size:18px;">
+      Continue
+    </button>
+  </form>
 
   <p style="margin-top:18px;text-align:center;font-size:14px;">
     <a href="/sms-consent">View SMS terms and consent information</a>
-</p>
-</button>
-
-</form>
+  </p>
 
 </div>
 
