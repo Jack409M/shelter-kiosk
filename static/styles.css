@@ -1,12 +1,13 @@
-/* =========
-   Theme tokens
-   Change colors here, not in 30 places
-========= */
+/* =========================================================
+   Theme Tokens
+   Change colors here instead of editing many sections
+========================================================= */
 :root {
-  --bg: #bcd6ea;          /* page background */
-  --bg-soft: #cfe3f2;     /* tables */
-  --card: #e4f0f8;        /* card panels */
-  --top: #4f8fbe;         /* header */
+  --bg: #bcd6ea;
+  --bg-soft: #cfe3f2;
+  --card: #e4f0f8;
+
+  --top: #4f8fbe;
   --top-border: #3f79a5;
 
   --text: #1f2f3f;
@@ -23,12 +24,15 @@
   --radius: 8px;
 }
 
-/* =========
+/* =========================================================
    Base
-========= */
-* { box-sizing: border-box; }
+========================================================= */
+* {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   min-height: 100vh;
   background: var(--bg);
 }
@@ -39,454 +43,39 @@ body {
   color: var(--text);
 }
 
-/* =========
-   Layout wrapper
-========= */
+/* =========================================================
+   Main Layout
+========================================================= */
 .container {
-  padding: 18px;
-  background: var(--bg);
   min-height: 100vh;
+  padding: 10px 18px 18px 18px;
+  background: var(--bg);
 }
 
-/* =========
-   Header and nav
-========= */
+/* =========================================================
+   Header
+========================================================= */
 header.top,
 .top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: var(--top);
-  border-bottom: 1px solid var(--top-border);
-  flex-wrap: wrap;
-  gap: 10px;
-
-  /* always above content */
   position: relative;
   z-index: 10000;
   overflow: visible;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  padding: 6px 10px;
+  background: var(--top);
+  border-bottom: 1px solid var(--top-border);
 }
 
 .brand a {
   text-decoration: none;
   font-weight: 700;
   color: var(--text);
-}
-
-/* Responsive nav switch */
-.nav-mobile { display: none; }
-.nav-desktop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-
-/* Pill style for top nav links */
-.top nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  overflow: visible;
-}
-
-.top nav a {
-  display: inline-block;
-  padding: 7px 10px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  color: var(--text);
-  text-decoration: none;
-  line-height: 1;
-}
-
-.top nav a:hover {
-  border-color: rgba(15, 47, 87, 0.35);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.04);
-}
-
-/* Dropdown container */
-.nav-dd {
-  position: relative;
-  display: inline-block;
-}
-
-/* Dropdown button styled like nav pill */
-.nav-dd > button {
-  margin-top: 0;
-  padding: 7px 10px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  color: var(--text);
-  cursor: pointer;
-}
-
-/* Dropdown panel */
-.nav-dd .menu {
-  display: none;
-  position: absolute;
-  top: 100%;              /* no hover gap */
-  margin-top: 6px;        /* spacing without breaking hover */
-  left: 0;
-  min-width: 220px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 47, 87, 0.18);
-  border-radius: 12px;
-  padding: 8px;
-  z-index: 11000;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.10);
-}
-
-/* Dropdown items (links + form buttons) */
-.nav-dd .menu a,
-.nav-dd .menu button {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 9px 10px;
-  border-radius: 10px;
-
-  background: transparent;
-  border: 0;
-  color: var(--text);
-  cursor: pointer;
-  text-decoration: none;
-}
-
-/* Hover highlight */
-.nav-dd .menu a:hover,
-.nav-dd .menu button:hover {
-  background: rgba(79, 143, 190, 0.12);
-}
-
-/* Hover bridge: removes the “gap” failure */
-.nav-dd::after {
-  content: "";
-  position: absolute;
-  left: -10px;
-  right: -10px;
-  top: 100%;
-  height: 16px;
-  background: transparent;
-}
-
-/* Only open rule */
-.nav-dd:hover .menu,
-.nav-dd:focus-within .menu {
-  display: block;
-}
-
-/* =========
-   Cards and forms
-========= */
-.card {
-  background: var(--card);
-  padding: 18px;
-  border: 1px solid #000;
-  border-radius: var(--radius);
-
-  margin: 18px auto;
-  max-width: 920px;
-
-  /* never clip dropdowns */
-  overflow: visible;
-}
-
-label {
-  display: block;
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-input, select, textarea {
-  width: 100%;
-  padding: 8px 10px;
-  margin-top: 6px;
-  border: 2px solid #000;
-  border-radius: 6px;
-  background: #fff;
-  color: #000;
-}
-
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: #333;
-  box-shadow: 0 0 4px rgba(0,0,0,0.25);
-}
-
-/* Transport board: keep date picker compact instead of full-width. */
-.transport-board-filter .date-field {
-  width: clamp(180px, 28vw, 240px);
-  max-width: 100%;
-}
-
-/* Buttons */
-button,
-input[type="submit"] {
-  margin-top: 12px;
-  padding: 8px 12px;
-  border: 1px solid #333;
-  border-radius: var(--radius);
-  background: #fff;
-  cursor: pointer;
-  color: #111;
-  -webkit-text-fill-color: #111;
-}
-
-input[type="submit"] {
-  padding: 10px 18px;
-  font-size: 15px;
-}
-
-/* Simple two column grid helper */
-.grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-/* Tight row helper for two or three small fields */
-.grid.tight-row {
-  grid-template-columns: max-content max-content;
-  justify-content: start;
-  gap: 14px;
-  align-items: end;
-}
-
-/* =========
-   Tables
-========= */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid var(--border);
-  background: var(--bg-soft);
-}
-
-th, td {
-  padding: 10px;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--bg-soft);
-}
-
-thead th {
-  background: var(--top);
-}
-
-tr.overdue td { font-weight: 700; }
-
-/* Compact table option */
-table.compact th,
-table.compact td {
-  padding: 6px 8px;
-  font-size: 14px;
-  line-height: 1.2;
-}
-
-table.compact thead th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-}
-
-/* =========
-   Flash messages
-========= */
-.flash .msg {
-  padding: 10px;
-  border-radius: var(--radius);
-  margin-bottom: 8px;
-}
-
-.flash .error { background: var(--err-bg); border: 1px solid var(--err-border); }
-.flash .ok { background: var(--ok-bg); border: 1px solid var(--ok-border); }
-
-/* =========
-   Checkboxes
-========= */
-.check { margin-top: 12px; display: block; width: 100%; }
-.check input[type="checkbox"] { width: auto; accent-color: #000; }
-.agreement input[type="checkbox"] { margin-right: 10px; }
-
-/* iPhone Safari: keep checkbox text visible */
-.check label {
-  display: block;
-  width: 100%;
-  color: #111;
-  -webkit-text-fill-color: #111;
-  white-space: normal;
-}
-.check-text {
-  display: inline;
-  color: #111;
-  -webkit-text-fill-color: #111;
-}
-
-/* =========
-   Helpers
-========= */
-.hint { color: var(--text-muted); font-size: 13px; margin-top: 10px; }
-
-.badge {
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  border: 1px solid #ccc;
-  display: inline-block;
-}
-.badge.in { background: var(--ok-bg); border-color: var(--ok-border); }
-.badge.out { background: #f0f0f0; border-color: #d0d0d0; }
-
-/* Actions row (keep buttons on one line when possible) */
-.actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: nowrap;
-}
-.actions form { margin: 0; }
-
-/* =========
-   Field sizing rules
-========= */
-
-/* Standard compact field width */
-.compact-field {
-  width: 22ch;
-  max-width: 22ch;
-  display: inline-block;
-}
-
-/* Common fixed widths */
-.w-shelter { width: 20ch; max-width: 20ch; display: inline-block; }
-.w-phone   { width: 14ch; max-width: 14ch; display: inline-block; }
-.w-date    { width: 15ch; max-width: 15ch; display: inline-block; }
-.w-time    { width: 10ch; max-width: 10ch; display: inline-block; }
-.w-dt      { width: 28ch; max-width: 28ch; display: inline-block; }
-.w-code    { width: 12ch; max-width: 12ch; display: inline-block; }
-
-/* Name fields: match character limits visually */
-input[name="first_name"] { width: 16ch; max-width: 16ch; }
-input[name="last_name"]  { width: 26ch; max-width: 26ch; }
-
-/* Admin Users page */
-input[name="username"] { width: 50ch; max-width: 50ch; }
-input[name="password"] { width: 25ch; max-width: 25ch; }
-select[name="role"]    { width: 15ch; max-width: 15ch; }
-
-/* Attendance page */
-table td:first-child { width: 50ch; max-width: 50ch; }
-input[name="expected_back_time"] { width: 20ch; max-width: 20ch; }
-form select[name="resident_id"]  { width: 50ch; max-width: 50ch; }
-
-/* Leave request legacy classes */
-input.shelter-box { width: 20ch; max-width: 20ch; display: inline-block; }
-input.date-box    { width: 15ch; max-width: 15ch; display: inline-block; }
-
-.grid.grid-names {
-  grid-template-columns: max-content max-content;
-  justify-content: start;
-  align-items: end;
-}
-
-.grid.date-grid {
-  grid-template-columns: max-content max-content;
-  justify-content: start;
-  gap: 20px;
-}
-
-/* Transport request */
-input[name="needed_at"] {
-  width: 28ch;
-  max-width: 28ch;
-  display: inline-block;
-}
-
-/* =========
-   Mobile rules
-========= */
-@media (max-width: 640px) {
-  /* hide desktop nav, show mobile nav */
-  .nav-desktop { display: none; }
-
-  .nav-mobile {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .nav-mobile a {
-    width: 100%;
-    text-align: center;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: #ffffff;
-    border: 1px solid rgba(15, 47, 87, 0.18);
-    color: var(--text);
-    text-decoration: none;
-    line-height: 1;
-  }
-
-  /* keep existing stacked nav behavior as fallback */
-  .top nav {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .top nav a,
-  .nav-dd > button {
-    width: 100%;
-    text-align: center;
-  }
-
-  /* headings */
-  h1 {
-    font-size: 28px;
-    margin-top: 6px;
-    margin-bottom: 10px;
-  }
-
-  /* tighter labels */
-  label { margin-top: 8px; }
-
-  /* bigger tap targets */
-  input[type="date"] { padding: 10px 12px; }
-
-  button,
-  input[type="submit"] {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-  }
-
-  /* stack tight rows on phones */
-  .grid.tight-row { grid-template-columns: 1fr; }
-
-  /* stack legacy grids */
-  .grid.date-grid { grid-template-columns: 1fr; }
-  .grid.date-grid input.date-box {
-    width: 100%;
-    max-width: 100%;
-    display: block;
-  }
-
-  .grid.grid-names { grid-template-columns: 1fr; }
-
-  /* make fixed width helpers full width on phone */
-  .w-shelter, .w-phone, .w-date, .w-time, .w-dt, .w-code, .compact-field,
-  input.shelter-box, input.date-box, input[name="needed_at"] {
-    width: 100%;
-    max-width: 100%;
-    display: block;
-  }
-}
-
-/* Compact logo and signed in line inside header */
-.top {
-  gap: 8px;
-  padding: 6px 10px;
 }
 
 .top-meta {
@@ -512,96 +101,272 @@ input[name="needed_at"] {
   max-width: 52vw;
 }
 
-/* Keep header compact on smaller screens */
-@media (max-width: 640px) {
-  .top-meta {
-    justify-content: flex-start;
-  }
-
-  .top-logo {
-    display: none;
-  }
-
-  .top-user {
-    max-width: 100%;
-    white-space: normal;
-  }
+/* =========================================================
+   Navigation
+========================================================= */
+.nav-mobile {
+  display: none;
 }
 
-/* Reduce wasted vertical space under the header across all pages */
-.container {
-  padding-top: 10px;
+.nav-desktop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 
-.policy {
-  max-width: 820px;
-  margin: 0 auto;
-  padding: 12px 6px;
+.top nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  overflow: visible;
 }
 
-.policy h1 {
-  margin: 0 0 12px 0;
+.top nav a {
+  display: inline-block;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  color: var(--text);
+  text-decoration: none;
+  line-height: 1;
 }
 
-.policy-body p {
-  line-height: 1.55;
-  margin: 10px 0;
+.top nav a:hover {
+  border-color: rgba(15, 47, 87, 0.35);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
 }
 
-.policy-body ul {
-  padding-left: 18px;
-  margin: 10px 0;
+/* =========================================================
+   Navigation Dropdowns
+========================================================= */
+.nav-dd {
+  position: relative;
+  display: inline-block;
 }
 
-.policy-body li {
-  margin: 6px 0;
+.nav-dd > button {
+  margin-top: 0;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  color: var(--text);
+  cursor: pointer;
 }
 
-@media print{
-  .btn{ display:none !important; }
-  a.btn{ display:none !important; }
-  body{ margin: 0.5in; }
+.nav-dd .menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 6px;
+  min-width: 220px;
+  padding: 8px;
+
+  background: #ffffff;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.10);
+
+  z-index: 11000;
 }
 
-@media print {
+.nav-dd .menu a,
+.nav-dd .menu button {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  text-align: left;
+  text-decoration: none;
 
-  nav,
-  .topnav,
-  header,
-  .navbar,
-  .menu {
-    display: none !important;
-  }
-
-  button,
-  .btn {
-    display: none !important;
-  }
-
-  body {
-    margin: 0.5in;
-  }
-
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
 }
 
-/* staff_residents.html */
-
-.residents-layout {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 18px;
-  align-items: start;
+.nav-dd .menu a:hover,
+.nav-dd .menu button:hover {
+  background: rgba(79, 143, 190, 0.12);
 }
 
-.residents-side {
-  position: sticky;
-  top: 14px;
+.nav-dd::after {
+  content: "";
+  position: absolute;
+  left: -10px;
+  right: -10px;
+  top: 100%;
+  height: 16px;
+  background: transparent;
+}
+
+.nav-dd:hover .menu,
+.nav-dd:focus-within .menu {
+  display: block;
+}
+
+/* =========================================================
+   Cards and Forms
+========================================================= */
+.card {
+  max-width: 920px;
+  margin: 18px auto;
+  padding: 18px;
+
+  background: var(--card);
+  border: 1px solid #000;
+  border-radius: var(--radius);
+
+  overflow: visible;
 }
 
 .card.tight {
-  padding: 12px;
-  margin: 0 0 14px 0;
   max-width: 520px;
+  margin: 0 0 14px 0;
+  padding: 12px;
+}
+
+label {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px 10px;
+
+  border: 2px solid #000;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #333;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
+}
+
+/* =========================================================
+   Buttons
+========================================================= */
+button,
+input[type="submit"] {
+  margin-top: 12px;
+  padding: 8px 12px;
+
+  border: 1px solid #333;
+  border-radius: var(--radius);
+  background: #fff;
+
+  cursor: pointer;
+  color: #111;
+  -webkit-text-fill-color: #111;
+}
+
+input[type="submit"] {
+  padding: 10px 18px;
+  font-size: 15px;
+}
+
+.btn {
+  margin-top: 0;
+  padding: 6px 10px;
+
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #fff;
+
+  cursor: pointer;
+  color: #111;
+  -webkit-text-fill-color: #111;
+
+  font-size: 13px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.btn-top {
+  margin-top: 10px;
+}
+
+/* =========================================================
+   Grid Helpers
+========================================================= */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.grid.tight-row {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  align-items: end;
+  gap: 14px;
+}
+
+.grid.grid-names {
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  align-items: end;
+}
+
+.grid.date-grid {
+  grid-template-columns: max-content max-content;
+  justify-content: start;
+  gap: 20px;
+}
+
+/* =========================================================
+   Tables
+========================================================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+}
+
+th,
+td {
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--bg-soft);
+}
+
+thead th {
+  background: var(--top);
+}
+
+tr.overdue td {
+  font-weight: 700;
+}
+
+table.compact th,
+table.compact td {
+  padding: 6px 8px;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+table.compact thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
 .table-compact th,
@@ -614,44 +379,86 @@ input[name="needed_at"] {
   vertical-align: middle;
 }
 
-/* staff_residents.html */
-.resident-actions {
-  white-space: nowrap;
+/* =========================================================
+   Flash Messages
+========================================================= */
+.flash .msg {
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: var(--radius);
 }
 
-.resident-actions form,
-.resident-actions a {
-  display: inline-block;
-  margin: 0 8px 0 0;
-  vertical-align: middle;
+.flash .error {
+  background: var(--err-bg);
+  border: 1px solid var(--err-border);
 }
 
-.btn {
-  margin-top: 0;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #333;
-  background: #fff;
-  cursor: pointer;
+.flash .ok {
+  background: var(--ok-bg);
+  border: 1px solid var(--ok-border);
+}
+
+/* =========================================================
+   Checkbox Helpers
+========================================================= */
+.check {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.check input[type="checkbox"] {
+  width: auto;
+  accent-color: #000;
+}
+
+.agreement input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+.check label {
+  display: block;
+  width: 100%;
   color: #111;
   -webkit-text-fill-color: #111;
-  font-size: 13px;
-  line-height: 1;
-  text-decoration: none;
+  white-space: normal;
 }
 
-.residents-list {
-  overflow-x: auto;
+.check-text {
+  display: inline;
+  color: #111;
+  -webkit-text-fill-color: #111;
+}
+
+/* =========================================================
+   Helper Styles
+========================================================= */
+.hint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .badge {
   display: inline-block;
   padding: 3px 8px;
-  border-radius: 999px;
+
   border: 1px solid #000;
+  border-radius: 999px;
+  background: #fff;
+
   font-size: 12px;
   line-height: 1;
-  background: #fff;
+}
+
+.badge.in {
+  background: var(--ok-bg);
+  border-color: var(--ok-border);
+}
+
+.badge.out {
+  background: #f0f0f0;
+  border-color: #d0d0d0;
 }
 
 .badge-active {
@@ -667,14 +474,294 @@ input[name="needed_at"] {
   color: #444;
 }
 
-.col-name { width: 42%; }
-.col-code { width: 18%; }
-.col-status { width: 12%; }
-.col-actions { width: 28%; }
+.out {
+  color: #16a34a;
+  font-weight: bold;
+}
 
-.h2-tight { margin: 0 0 10px 0; }
-.btn-top { margin-top: 10px; }
+/* =========================================================
+   Action Rows
+========================================================= */
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
 
+.actions form {
+  margin: 0;
+}
+
+.leave-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.leave-actions form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.leave-note {
+  width: 220px;
+  max-width: 100%;
+  display: inline-block;
+}
+
+.resident-actions {
+  white-space: nowrap;
+}
+
+.resident-actions form,
+.resident-actions a {
+  display: inline-block;
+  margin: 0 8px 0 0;
+  vertical-align: middle;
+}
+
+/* =========================================================
+   Common Width Helpers
+========================================================= */
+.compact-field {
+  width: 22ch;
+  max-width: 22ch;
+  display: inline-block;
+}
+
+.w-shelter {
+  width: 20ch;
+  max-width: 20ch;
+  display: inline-block;
+}
+
+.w-phone {
+  width: 14ch;
+  max-width: 14ch;
+  display: inline-block;
+}
+
+.w-date {
+  width: 15ch;
+  max-width: 15ch;
+  display: inline-block;
+}
+
+.w-time {
+  width: 10ch;
+  max-width: 10ch;
+  display: inline-block;
+}
+
+.w-dt {
+  width: 28ch;
+  max-width: 28ch;
+  display: inline-block;
+}
+
+.w-code {
+  width: 12ch;
+  max-width: 12ch;
+  display: inline-block;
+}
+
+/* =========================================================
+   Page Specific Width Rules
+========================================================= */
+input[name="first_name"] {
+  width: 16ch;
+  max-width: 16ch;
+}
+
+input[name="last_name"] {
+  width: 26ch;
+  max-width: 26ch;
+}
+
+input[name="username"] {
+  width: 50ch;
+  max-width: 50ch;
+}
+
+input[name="password"] {
+  width: 25ch;
+  max-width: 25ch;
+}
+
+select[name="role"] {
+  width: 15ch;
+  max-width: 15ch;
+}
+
+table td:first-child {
+  width: 50ch;
+  max-width: 50ch;
+}
+
+input[name="expected_back_time"] {
+  width: 20ch;
+  max-width: 20ch;
+}
+
+form select[name="resident_id"] {
+  width: 50ch;
+  max-width: 50ch;
+}
+
+input.shelter-box {
+  width: 20ch;
+  max-width: 20ch;
+  display: inline-block;
+}
+
+input.date-box {
+  width: 15ch;
+  max-width: 15ch;
+  display: inline-block;
+}
+
+input[name="needed_at"] {
+  width: 28ch;
+  max-width: 28ch;
+  display: inline-block;
+}
+
+.transport-board-filter .date-field {
+  width: clamp(180px, 28vw, 240px);
+  max-width: 100%;
+}
+
+/* =========================================================
+   Policy Pages
+========================================================= */
+.policy {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 12px 6px;
+}
+
+.policy h1 {
+  margin: 0 0 12px 0;
+}
+
+.policy-body p {
+  margin: 10px 0;
+  line-height: 1.55;
+}
+
+.policy-body ul {
+  margin: 10px 0;
+  padding-left: 18px;
+}
+
+.policy-body li {
+  margin: 6px 0;
+}
+
+/* =========================================================
+   Staff Residents Page
+========================================================= */
+.residents-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.residents-side {
+  position: sticky;
+  top: 14px;
+}
+
+.residents-list {
+  overflow-x: auto;
+}
+
+.col-name {
+  width: 42%;
+}
+
+.col-code {
+  width: 18%;
+}
+
+.col-status {
+  width: 12%;
+}
+
+.col-actions {
+  width: 28%;
+}
+
+.h2-tight {
+  margin: 0 0 10px 0;
+}
+
+/* =========================================================
+   Resident Portal
+========================================================= */
+.resident-portal {
+  max-width: 700px;
+  margin: 40px auto;
+  text-align: center;
+}
+
+.portal-actions {
+  margin: 30px 0;
+}
+
+.portal-btn {
+  display: block;
+  margin: 12px 0;
+  padding: 18px;
+
+  background: #2c3e50;
+  color: #ffffff;
+  text-decoration: none;
+
+  border: 1px solid #1f2f3f;
+  border-radius: 8px;
+
+  font-size: 20px;
+}
+
+.portal-btn:hover {
+  background: #34495e;
+}
+
+.portal-status {
+  margin-top: 40px;
+  text-align: left;
+}
+
+/* =========================================================
+   Print
+========================================================= */
+@media print {
+  nav,
+  .topnav,
+  header,
+  .navbar,
+  .menu,
+  button,
+  .btn,
+  a.btn {
+    display: none !important;
+  }
+
+  body {
+    margin: 0.5in;
+  }
+}
+
+/* =========================================================
+   Responsive
+========================================================= */
 @media (max-width: 900px) {
   .residents-layout {
     grid-template-columns: 1fr;
@@ -689,44 +776,101 @@ input[name="needed_at"] {
   }
 }
 
-.leave-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+@media (max-width: 640px) {
+  .nav-desktop {
+    display: none;
+  }
+
+  .nav-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .nav-mobile a {
+    width: 100%;
+    text-align: center;
+    padding: 10px 12px;
+
+    border: 1px solid rgba(15, 47, 87, 0.18);
+    border-radius: 10px;
+    background: #ffffff;
+
+    color: var(--text);
+    text-decoration: none;
+    line-height: 1;
+  }
+
+  .top nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .top nav a,
+  .nav-dd > button {
+    width: 100%;
+    text-align: center;
+  }
+
+  .top-meta {
+    justify-content: flex-start;
+  }
+
+  .top-logo {
+    display: none;
+  }
+
+  .top-user {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  h1 {
+    font-size: 28px;
+    margin-top: 6px;
+    margin-bottom: 10px;
+  }
+
+  label {
+    margin-top: 8px;
+  }
+
+  input[type="date"] {
+    padding: 10px 12px;
+  }
+
+  button,
+  input[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .grid.tight-row,
+  .grid.date-grid,
+  .grid.grid-names {
+    grid-template-columns: 1fr;
+  }
+
+  .grid.date-grid input.date-box {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+
+  .w-shelter,
+  .w-phone,
+  .w-date,
+  .w-time,
+  .w-dt,
+  .w-code,
+  .compact-field,
+  input.shelter-box,
+  input.date-box,
+  input[name="needed_at"] {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
 }
-
-.leave-actions form {
-  margin: 0;
-}
-
-.leave-note {
-  width: 26ch;
-  max-width: 100%;
-  display: inline-block;
-}
-
-/* Leave Pending Actions Layout */
-
-.leave-actions{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:nowrap;
-  margin-top:6px;
-}
-
-.leave-actions form{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  margin:0;
-}
-
-.leave-note{
-  width:220px;
-}
-
-.out { color: #16a34a; font-weight: bold; }
-
-static/styles.css
