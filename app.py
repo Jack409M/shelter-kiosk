@@ -1694,7 +1694,8 @@ def resident_leave():
         req_id = cur.lastrowid
 
     log_action("leave", req_id, shelter, None, "create", "Resident submitted leave request")
-    return render_template("resident_submitted.html", request_id=req_id, kind="Leave request submitted")
+    flash("Your leave request was submitted successfully.", "ok")
+    return redirect(url_for("resident_portal.home"))
 
 @app.route("/transport", methods=["GET", "POST"])
 @require_resident
@@ -3500,6 +3501,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
