@@ -82,6 +82,8 @@ def log_request_info():
             f"REQUEST method={request.method} path={request.path} endpoint={request.endpoint}"
         )
 
+        app.logger.debug(f"URL RULE {request.url_rule}")
+
         if request.method == "POST":
             app.logger.debug(f"FORM KEYS {list(request.form.keys())}")
 
@@ -3397,6 +3399,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
