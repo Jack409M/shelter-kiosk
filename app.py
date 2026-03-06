@@ -2753,9 +2753,13 @@ def staff_attendance_check_out_global():
 
     rid_raw = (request.form.get("resident_id") or "").strip()
     note = (request.form.get("note") or "").strip()
+    checkout_type = (request.form.get("checkout_type") or "out").strip().lower()
 
-    # IMPORTANT: form field is expected_back_at (datetime-local)
     expected_back_raw = (request.form.get("expected_back_at") or "").strip()
+
+    if checkout_type not in {"out", "pass"}:
+        flash("Select a valid checkout type.", "error")
+        return redirect(url_for("staff_attendance"))
 
     if not rid_raw.isdigit():
         flash("Select a resident.", "error")
@@ -2777,9 +2781,8 @@ def staff_attendance_check_out_global():
         flash("Expected back time is required.", "error")
         return redirect(url_for("staff_attendance"))
 
-    # Convert browser datetime-local (YYYY-MM-DDTHH:MM) to UTC naive ISO string
     try:
-        local_dt = datetime.fromisoformat(expected_back_raw)  # naive local
+        local_dt = datetime.fromisoformat(expected_back_raw)
         local_dt = local_dt.replace(tzinfo=ZoneInfo("America/Chicago"))
         expected_back_value = (
             local_dt.astimezone(timezone.utc)
@@ -2792,6 +2795,10 @@ def staff_attendance_check_out_global():
 
     event_time = datetime.utcnow().replace(microsecond=0).isoformat()
 
+    stored_note = f"[{checkout_type.upper()}]"
+    if note:
+        stored_note = f"{stored_note} {note}"
+
     sql = (
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
         "VALUES (%s, %s, %s, %s, %s, %s, %s)"
@@ -2802,11 +2809,14 @@ def staff_attendance_check_out_global():
 
     db_execute(
         sql,
-        (resident_id, shelter, "check_out", event_time, staff_id, note or "", expected_back_value),
+        (resident_id, shelter, "check_out", event_time, staff_id, stored_note, expected_back_value),
     )
 
-    log_action("attendance", resident_id, shelter, staff_id, "check_out", note or "")
-    flash("Resident checked out.", "success")
+    log_action("attendance", resident_id, shelter, staff_id, "check_out", stored_note)
+    flash(
+        "Resident checked out on Pass." if checkout_type == "pass" else "Resident checked out.",
+        "success",
+    )
     return redirect(url_for("staff_attendance"))
 
 @app.route("/staff/attendance/resident/<int:resident_id>/print")
@@ -3582,6 +3592,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
