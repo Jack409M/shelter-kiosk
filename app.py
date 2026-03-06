@@ -1376,10 +1376,10 @@ def twilio_inbound():
                 (0, utcnow_iso(), "twilio_inbound", r_id, r_shelter),
             )
 
-        reply_text = "You have been opted out. Reply START to opt back in."
+        reply_text = "You are unsubscribed from Downtown Women's Center Alerts. No more messages will be sent. Reply START to rejoin."
 
     elif body in help_words:
-        reply_text = "Downtown Women's Center Alerts. Reply STOP to opt out or START to rejoin. For help call 806-XXX-XXXX. Msg and data rates may apply."
+        reply_text = "Downtown Women's Center Alerts. Reply STOP to opt out or START to rejoin. For help call 806-372-3625. Msg and data rates may apply."
 
     elif body in start_words:
         reply_text = "You are re-subscribed to Downtown Women's Center Alerts. Msg and data rates may apply."
@@ -3404,6 +3404,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
