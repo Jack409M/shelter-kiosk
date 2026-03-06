@@ -40,19 +40,12 @@
       </div>
 
       <nav>
-
         <div class="nav-mobile">
 
-          {% if session.get("resident_id") %}
-            <a href="{{ url_for('resident_portal.home') }}">Home</a>
-            <a href="{{ url_for('resident_leave') }}">Leave</a>
-            <a href="{{ url_for('resident_transport') }}">Transport</a>
-            <a href="{{ url_for('resident_logout') }}">Logout</a>
-
-          {% elif session.get("staff_user_id") %}
+          {% if session.get("staff_user_id") %}
             <a href="{{ url_for('staff_logout') }}">Logout</a>
 
-          {% else %}
+          {% elif not session.get("resident_id") %}
             <a href="{{ url_for('resident_signin') }}">Resident Sign In</a>
             <a href="{{ url_for('staff_login') }}">Staff Login</a>
           {% endif %}
@@ -61,14 +54,7 @@
 
         <div class="nav-desktop">
 
-          {% if session.get("resident_id") %}
-
-            <a href="{{ url_for('resident_portal.home') }}">Resident Home</a>
-            <a href="{{ url_for('resident_leave') }}">Request Leave</a>
-            <a href="{{ url_for('resident_transport') }}">Request Transport</a>
-            <a href="{{ url_for('resident_logout') }}">Logout</a>
-
-          {% elif session.get("staff_user_id") %}
+          {% if session.get("staff_user_id") %}
 
             <div class="nav-dd">
               <button type="button">
@@ -124,7 +110,7 @@
 
             <a href="{{ url_for('staff_logout') }}">Logout</a>
 
-          {% else %}
+          {% elif not session.get("resident_id") %}
 
             <a href="{{ url_for('resident_signin') }}">Resident Sign In</a>
             <a href="{{ url_for('staff_login') }}">Staff Login</a>
@@ -132,7 +118,6 @@
           {% endif %}
 
         </div>
-
       </nav>
     </header>
 
@@ -149,6 +134,5 @@
 
       {% block content %}{% endblock %}
     </main>
-
   </body>
 </html>
