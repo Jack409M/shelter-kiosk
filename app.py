@@ -2469,31 +2469,36 @@ def staff_attendance():
 @require_login
 def staff_sms_consent():
     try:
-        sql = (
-            "SELECT phone_number, consent_status, updated_at "
-            "FROM sms_consent "
-            "ORDER BY updated_at DESC"
+        init_db()
+
+        rows_raw = db_fetchall(
+            """
+            SELECT id, first_name, last_name, phone, sms_opt_in, sms_opt_out_at
+            FROM residents
+            WHERE phone IS NOT NULL AND phone != ''
+            ORDER BY last_name ASC, first_name ASC, id DESC
+            LIMIT 500
+            """
         )
 
-        if g.get("db_kind") == "pg":
-            db = get_db()
-            cur = db.cursor()
-            cur.execute(sql)
+        # Normalize for template (pg gives dict rows, sqlite gives tuples)
+        rows = []
+        for r in rows_raw or []:
+            if isinstance(r, dict):
+                rows.append(r)
+            else:
+                rows.append(
+                    {
+                        "id": r[0],
+                        "first_name": r[1],
+                        "last_name": r[2],
+                        "phone": r[3],
+                        "sms_opt_in": r[4],
+                        "sms_opt_out_at": r[5],
+                    }
+                )
 
-            cols = [d[0] for d in cur.description]
-            rows = [dict(zip(cols, row)) for row in cur.fetchall()]
-
-            cur.close()
-
-        else:
-            db = get_db()
-            rows = db.execute(sql).fetchall()
-
-        return render_template(
-            "staff_sms_consent.html",
-            rows=rows,
-            title="SMS Consent"
-        )
+        return render_template("staff_sms_consent.html", rows=rows, title="SMS Consent")
 
     except Exception as e:
         return "SMS consent error: " + str(e), 500
@@ -3374,6 +3379,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
