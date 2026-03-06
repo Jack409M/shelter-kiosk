@@ -75,6 +75,19 @@ app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
+@app.before_request
+def log_request_info():
+    try:
+        app.logger.debug(
+            f"REQUEST method={request.method} path={request.path} endpoint={request.endpoint}"
+        )
+
+        if request.method == "POST":
+            app.logger.debug(f"FORM KEYS {list(request.form.keys())}")
+
+    except Exception as e:
+        app.logger.debug(f"LOGGING ERROR {e}")
+
 secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
 if not secret:
     raise RuntimeError("FLASK_SECRET_KEY is required and must be set in the environment.")
@@ -3384,6 +3397,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
