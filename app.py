@@ -1224,14 +1224,22 @@ def resident_signin():
 
     if request.method == "GET":
         shelter = (request.args.get("shelter") or "").strip()
-        return render_template("resident_signin.html", shelter=shelter)
+        return render_template(
+            "resident_signin.html",
+            shelter=shelter,
+            shelters=SHELTERS,
+        )
 
     shelter = (request.form.get("shelter") or "").strip()
     resident_code = (request.form.get("resident_code") or "").strip()
 
     if shelter not in SHELTERS:
         flash("Select a valid shelter.", "error")
-        return redirect(url_for("resident_signin"))
+        return render_template(
+            "resident_signin.html",
+            shelter=shelter,
+            shelters=SHELTERS,
+        ), 400
 
     row = db_fetchone(
         "SELECT * FROM residents WHERE shelter = %s AND resident_code = %s"
@@ -1242,7 +1250,11 @@ def resident_signin():
 
     if not row:
         flash("Invalid Resident Code.", "error")
-        return redirect(url_for("resident_signin", shelter=shelter))
+        return render_template(
+            "resident_signin.html",
+            shelter=shelter,
+            shelters=SHELTERS,
+        ), 401
 
     resident_session_start(row, shelter, resident_code)
 
@@ -3398,6 +3410,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
