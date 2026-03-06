@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card" style="max-width: 700px; margin: 40px auto; text-align: center;">
+    <h2>Resident Portal</h2>
+    <p>Please choose an option below.</p>
+
+    <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 24px;">
+        <a href="{{ url_for('resident_leave') }}" class="btn">Request Leave</a>
+        <a href="{{ url_for('resident_transport') }}" class="btn">Request Transportation</a>
+        <a href="{{ url_for('resident_logout') }}" class="btn btn-secondary">Logout</a>
+    </div>
+</div>
+{% endblock %}
