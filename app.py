@@ -1741,13 +1741,14 @@ def resident_consent():
     allowed_next = {
         url_for("resident_leave"),
         url_for("resident_transport"),
-}
+    }
 
-if next_url not in allowed_next:
-    next_url = url_for("resident_leave")
+    if next_url not in allowed_next:
+        next_url = url_for("resident_leave")
 
     resident_id = session.get("resident_id")
     shelter = session.get("resident_shelter") or ""
+
     if not resident_id or shelter not in SHELTERS:
         flash("Please sign in again.", "error")
         return redirect(url_for("resident_signin", next=next_url))
@@ -1789,6 +1790,7 @@ if next_url not in allowed_next:
             """,
             (True if kind == "pg" else 1, now, "resident_kiosk_web_form", resident_id, shelter)
         )
+
     else:
         session["sms_consent_done"] = True
         session["sms_opt_in"] = False
@@ -3407,6 +3409,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
