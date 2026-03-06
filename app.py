@@ -1220,39 +1220,23 @@ def staff_leave_print(req_id: int):
 def resident_signin():
     init_db()
 
+    next_url = (request.args.get("next") or request.form.get("next") or "").strip()
+
     if request.method == "GET":
         shelter = (request.args.get("shelter") or "").strip()
-        next_url = (request.args.get("next") or "").strip()
-        return render_template(
-            "resident_signin.html",
-            shelters=SHELTERS,
-            shelter=(shelter if shelter in SHELTERS else ""),
-            next=next_url,
-        )
+        return render_template("resident_signin.html", shelter=shelter)
 
     shelter = (request.form.get("shelter") or "").strip()
     resident_code = (request.form.get("resident_code") or "").strip()
-    next_url = (request.form.get("next") or "").strip()
-
-    ip = _client_ip()
-    code_key = resident_code if resident_code else "blank"
-
-    if _rate_limited(f"resident_signin_ip:{ip}", 15, 60) or _rate_limited(f"resident_signin_code:{code_key}", 30, 3600):
-        flash("Too many attempts. Please wait and try again.", "error")
-        return redirect(url_for("resident_signin", shelter=shelter))
 
     if shelter not in SHELTERS:
         flash("Select a valid shelter.", "error")
         return redirect(url_for("resident_signin"))
 
-    if (not resident_code.isdigit()) or (len(resident_code) != 8):
-        flash("Enter your 8 digit Resident Code.", "error")
-        return redirect(url_for("resident_signin", shelter=shelter))
-
     row = db_fetchone(
-        "SELECT id, resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
+        "SELECT * FROM residents WHERE shelter = %s AND resident_code = %s"
         if g.get("db_kind") == "pg"
-        else "SELECT id, resident_identifier, first_name, last_name, phone FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
+        else "SELECT * FROM residents WHERE shelter = ? AND resident_code = ?",
         (shelter, resident_code),
     )
 
@@ -1265,11 +1249,11 @@ def resident_signin():
     allowed_next = {
         url_for("resident_leave"),
         url_for("resident_transport"),
-        url_for("resident_home"),
+        url_for("resident_portal.home"),
     }
 
     if next_url not in allowed_next:
-        next_url = url_for("resident_leave")
+        next_url = url_for("resident_portal.home")
 
     if not session.get("sms_consent_done"):
         return redirect(url_for("resident_consent", next=next_url))
@@ -3414,6 +3398,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
