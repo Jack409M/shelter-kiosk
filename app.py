@@ -256,38 +256,38 @@ def inject_resident_dashboard_status():
         """
         SELECT status, leave_at, return_at
         FROM leave_requests
-        WHERE shelter = %s
-        AND resident_identifier = %s
+        WHERE resident_identifier = %s
+        AND status IN ('pending','approved')
         ORDER BY leave_at ASC
         """
         if g.get("db_kind") == "pg"
         else """
         SELECT status, leave_at, return_at
         FROM leave_requests
-        WHERE shelter = ?
-        AND resident_identifier = ?
+        WHERE resident_identifier = ?
+        AND status IN ('pending','approved')
         ORDER BY leave_at ASC
         """,
-        (shelter, resident_identifier),
+        (resident_identifier,),
 )
 
     transport_rows = db_fetchall(
         """
         SELECT status, needed_at, driver_name
         FROM transport_requests
-        WHERE shelter = %s
-        AND resident_identifier = %s
+        WHERE resident_identifier = %s
+        AND status IN ('pending','scheduled')
         ORDER BY needed_at ASC
         """
         if g.get("db_kind") == "pg"
         else """
         SELECT status, needed_at, driver_name
         FROM transport_requests
-        WHERE shelter = ?
-        AND resident_identifier = ?
+        WHERE resident_identifier = ?
+        AND status IN ('pending','scheduled')
         ORDER BY needed_at ASC
         """,
-       (shelter, resident_identifier),
+        (resident_identifier,),
 )
 
     return {
@@ -3554,6 +3554,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
