@@ -234,6 +234,112 @@ def inject_shelters():
         "current_shelter": session.get("shelter"),
     }
 
+@app.context_processor
+def inject_resident_dashboard_status():
+    if (request.endpoint or "") != "resident_portal.home":
+        return {}
+
+    if "resident_id" not in session:
+        return {}
+
+    init_db()
+
+    shelter = (session.get("resident_shelter") or "").strip()
+    resident_identifier = (session.get("resident_identifier") or "").strip()
+
+    if not shelter or not resident_identifier:
+        return {}
+
+    leave_row = db_fetchone(
+        """
+        SELECT status, leave_at, return_at, decision_note, submitted_at
+        FROM leave_requests
+        WHERE shelter = %s AND resident_identifier = %s
+        ORDER BY submitted_at DESC
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT status, leave_at, return_at, decision_note, submitted_at
+        FROM leave_requests
+        WHERE shelter = ? AND resident_identifier = ?
+        ORDER BY submitted_at DESC
+        LIMIT 1
+        """,
+        (shelter, resident_identifier),
+    )
+
+    transport_row = db_fetchone(
+        """
+        SELECT status, needed_at, driver_name, staff_notes, submitted_at
+        FROM transport_requests
+        WHERE shelter = %s AND resident_identifier = %s
+        ORDER BY submitted_at DESC
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT status, needed_at, driver_name, staff_notes, submitted_at
+        FROM transport_requests
+        WHERE shelter = ? AND resident_identifier = ?
+        ORDER BY submitted_at DESC
+        LIMIT 1
+        """,
+        (shelter, resident_identifier),
+    )
+
+    leave_status_text = "You do not currently have a leave request."
+    leave_status_note = ""
+
+    if leave_row:
+        leave_status = (leave_row["status"] if isinstance(leave_row, dict) else leave_row[0]) or ""
+        leave_at = leave_row["leave_at"] if isinstance(leave_row, dict) else leave_row[1]
+        return_at = leave_row["return_at"] if isinstance(leave_row, dict) else leave_row[2]
+        decision_note = (leave_row["decision_note"] if isinstance(leave_row, dict) else leave_row[3]) or ""
+
+        if leave_status == "pending":
+            leave_status_text = "Your leave request is pending staff review."
+        elif leave_status == "approved":
+            leave_status_text = f"Approved from {fmt_date(leave_at)} through {fmt_dt(return_at)}."
+        elif leave_status == "denied":
+            leave_status_text = "Your most recent leave request was denied."
+            if decision_note:
+                leave_status_note = decision_note
+        elif leave_status == "checked_in":
+            leave_status_text = "Your most recent leave request has been checked in."
+        else:
+            leave_status_text = f"Current leave status: {leave_status.title()}."
+
+    transport_status_text = "No transportation is currently scheduled."
+    transport_status_note = ""
+
+    if transport_row:
+        transport_status = (transport_row["status"] if isinstance(transport_row, dict) else transport_row[0]) or ""
+        needed_at = transport_row["needed_at"] if isinstance(transport_row, dict) else transport_row[1]
+        driver_name = (transport_row["driver_name"] if isinstance(transport_row, dict) else transport_row[2]) or ""
+        staff_notes = (transport_row["staff_notes"] if isinstance(transport_row, dict) else transport_row[3]) or ""
+
+        if transport_status == "pending":
+            transport_status_text = "Your transportation request is pending staff review."
+        elif transport_status == "scheduled":
+            transport_status_text = f"Transportation is scheduled for {fmt_dt(needed_at)}."
+            if driver_name:
+                transport_status_note = f"Driver: {driver_name}"
+        elif transport_status == "completed":
+            transport_status_text = "Your most recent transportation request was completed."
+        elif transport_status == "cancelled":
+            transport_status_text = "Your most recent transportation request was cancelled."
+            if staff_notes:
+                transport_status_note = staff_notes
+        else:
+            transport_status_text = f"Current transportation status: {transport_status.title()}."
+
+    return {
+        "leave_status_text": leave_status_text,
+        "leave_status_note": leave_status_note,
+        "transport_status_text": transport_status_text,
+        "transport_status_note": transport_status_note,
+    }
 
 def utcnow_iso() -> str:
     return datetime.utcnow().replace(microsecond=0).isoformat()
@@ -3394,6 +3500,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
