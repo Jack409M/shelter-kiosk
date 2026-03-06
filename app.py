@@ -2547,7 +2547,7 @@ def staff_attendance():
 
         last_event = db_fetchone(
             """
-            SELECT event_type, event_time, expected_back_time
+            SELECT event_type, event_time, expected_back_time, note
             FROM attendance_events
             WHERE resident_id = %s AND shelter = %s
             ORDER BY event_time DESC
@@ -2555,7 +2555,7 @@ def staff_attendance():
             """
             if g.get("db_kind") == "pg"
             else """
-            SELECT event_type, event_time, expected_back_time
+            SELECT event_type, event_time, expected_back_time, note
             FROM attendance_events
             WHERE resident_id = ? AND shelter = ?
             ORDER BY event_time DESC
@@ -2566,13 +2566,15 @@ def staff_attendance():
 
         last_event_type = ""
         last_event_time = ""
+        last_event_note = ""
         if last_event:
             last_event_type = last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
             last_event_time = last_event["event_time"] if isinstance(last_event, dict) else last_event[1]
+            last_event_note = (last_event["note"] if isinstance(last_event, dict) else last_event[3]) or ""
 
         last_checkout = db_fetchone(
             """
-            SELECT event_time, expected_back_time
+            SELECT event_time, expected_back_time, note
             FROM attendance_events
             WHERE resident_id = %s AND shelter = %s AND event_type = %s
             ORDER BY event_time DESC
@@ -2580,7 +2582,7 @@ def staff_attendance():
             """
             if g.get("db_kind") == "pg"
             else """
-            SELECT event_time, expected_back_time
+            SELECT event_time, expected_back_time, note
             FROM attendance_events
             WHERE resident_id = ? AND shelter = ? AND event_type = ?
             ORDER BY event_time DESC
@@ -2591,9 +2593,11 @@ def staff_attendance():
 
         checkout_time = ""
         expected_back_time = ""
+        checkout_note = ""
         if last_checkout:
             checkout_time = last_checkout["event_time"] if isinstance(last_checkout, dict) else last_checkout[0]
             expected_back_time = last_checkout["expected_back_time"] if isinstance(last_checkout, dict) else (last_checkout[1] or "")
+            checkout_note = (last_checkout["note"] if isinstance(last_checkout, dict) else last_checkout[2]) or ""
 
         checkin_after_checkout_time = ""
         if checkout_time:
@@ -2619,6 +2623,16 @@ def staff_attendance():
                 checkin_after_checkout_time = checkin_after["event_time"] if isinstance(checkin_after, dict) else checkin_after[0]
 
         is_out = last_event_type == "check_out"
+
+        checkout_type = "out"
+        note_for_display = checkout_note or last_event_note or ""
+        note_lower = note_for_display.lower()
+
+        if "[pass]" in note_lower:
+            checkout_type = "pass"
+        elif "[sal]" in note_lower:
+            checkout_type = "sal"
+
         is_overdue = False
         if is_out and expected_back_time:
             try:
@@ -2636,6 +2650,14 @@ def staff_attendance():
             except Exception:
                 date_value = date_source[:10]
 
+        clean_note = note_for_display
+        if clean_note.startswith("[OUT]"):
+            clean_note = clean_note[5:].strip()
+        elif clean_note.startswith("[PASS]"):
+            clean_note = clean_note[6:].strip()
+        elif clean_note.startswith("[SAL]"):
+            clean_note = clean_note[5:].strip()
+
         row = {
             "resident_id": rid,
             "first_name": first,
@@ -2647,6 +2669,8 @@ def staff_attendance():
             "checked_in_at": checkin_after_checkout_time,
             "is_out": is_out,
             "is_overdue": is_overdue,
+            "checkout_type": checkout_type,
+            "note": clean_note,
         }
 
         if is_out:
@@ -3592,6 +3616,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
