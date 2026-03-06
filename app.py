@@ -1471,7 +1471,7 @@ def twilio_status():
 @app.get("/resident/home")
 @require_resident
 def resident_home():
-    return render_template("resident_home.html")
+    return redirect(url_for("resident_leave"))
 
 
 @app.get("/resident/logout")
@@ -3409,6 +3409,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
