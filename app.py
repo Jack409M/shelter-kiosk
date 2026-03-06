@@ -1742,10 +1742,11 @@ def resident_consent():
     allowed_next = {
         url_for("resident_leave"),
         url_for("resident_transport"),
+        url_for("resident_portal.home"),
     }
 
     if next_url not in allowed_next:
-        next_url = url_for("resident_leave")
+        next_url = url_for("resident_portal.home")
 
     resident_id = session.get("resident_id")
     shelter = session.get("resident_shelter") or ""
@@ -3410,6 +3411,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
