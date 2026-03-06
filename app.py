@@ -246,55 +246,76 @@ def inject_resident_dashboard_status():
 
     shelter = (session.get("resident_shelter") or "").strip()
     resident_identifier = (session.get("resident_identifier") or "").strip()
-    
-    print("DEBUG RESIDENT HOME:", shelter, resident_identifier)
 
     if not shelter or not resident_identifier:
         return {}
 
-    leave_rows = db_fetchall(
+    all_leave_rows = db_fetchall(
         """
-        SELECT status, leave_at, return_at
+        SELECT status, shelter, resident_identifier, leave_at, return_at
         FROM leave_requests
         WHERE resident_identifier = %s
-        AND status IN ('pending','approved')
         ORDER BY leave_at ASC
         """
         if g.get("db_kind") == "pg"
         else """
-        SELECT status, leave_at, return_at
+        SELECT status, shelter, resident_identifier, leave_at, return_at
         FROM leave_requests
         WHERE resident_identifier = ?
-        AND status IN ('pending','approved')
         ORDER BY leave_at ASC
         """,
         (resident_identifier,),
-)
+    )
 
-    transport_rows = db_fetchall(
+    all_transport_rows = db_fetchall(
         """
-        SELECT status, needed_at, driver_name
+        SELECT status, shelter, resident_identifier, needed_at, driver_name
         FROM transport_requests
         WHERE resident_identifier = %s
-        AND status IN ('pending','scheduled')
         ORDER BY needed_at ASC
         """
         if g.get("db_kind") == "pg"
         else """
-        SELECT status, needed_at, driver_name
+        SELECT status, shelter, resident_identifier, needed_at, driver_name
         FROM transport_requests
         WHERE resident_identifier = ?
-        AND status IN ('pending','scheduled')
         ORDER BY needed_at ASC
         """,
         (resident_identifier,),
-)
+    )
+
+    print("DEBUG RESIDENT HOME IDENTIFIER:", resident_identifier)
+    print("DEBUG LEAVE COUNT:", len(all_leave_rows))
+    print("DEBUG TRANSPORT COUNT:", len(all_transport_rows))
+
+    for row in all_leave_rows:
+        if isinstance(row, dict):
+            print("DEBUG LEAVE ROW:", row["status"], row["shelter"], row["resident_identifier"], row["leave_at"], row["return_at"])
+        else:
+            print("DEBUG LEAVE ROW:", row[0], row[1], row[2], row[3], row[4])
+
+    for row in all_transport_rows:
+        if isinstance(row, dict):
+            print("DEBUG TRANSPORT ROW:", row["status"], row["shelter"], row["resident_identifier"], row["needed_at"], row["driver_name"])
+        else:
+            print("DEBUG TRANSPORT ROW:", row[0], row[1], row[2], row[3], row[4])
+
+    leave_rows = []
+    for row in all_leave_rows:
+        status = row["status"] if isinstance(row, dict) else row[0]
+        if status in ["pending", "approved"]:
+            leave_rows.append(row)
+
+    transport_rows = []
+    for row in all_transport_rows:
+        status = row["status"] if isinstance(row, dict) else row[0]
+        if status in ["pending", "scheduled"]:
+            transport_rows.append(row)
 
     return {
-        "leave_rows": leave_rows or [],
-        "transport_rows": transport_rows or [],
+        "leave_rows": leave_rows,
+        "transport_rows": transport_rows,
     }
-
     leave_row = db_fetchone(
         """
         SELECT status, leave_at, return_at, decision_note, submitted_at
@@ -3554,6 +3575,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
