@@ -1309,6 +1309,10 @@ def twilio_inbound():
     from_number = (request.form.get("From") or "").strip()
     body = (request.form.get("Body") or "").strip().lower()
     
+    stop_words = {"stop", "unsubscribe", "cancel", "end", "quit"}
+    start_words = {"start", "yes", "unstop", "subscribe"}
+    help_words = {"help", "info"}
+    
     if body not in stop_words and body not in start_words and body not in help_words:
         return app.response_class("", mimetype="text/xml")
         
@@ -1327,9 +1331,7 @@ def twilio_inbound():
     if sender10 and _rate_limited(f"twilio_inbound_from:{sender10}", 10, 60):
         return app.response_class("", mimetype="text/xml")
 
-    stop_words = {"stop", "unsubscribe", "cancel", "end", "quit"}
-    start_words = {"start", "yes", "unstop", "subscribe"}
-    help_words = {"help", "info"}
+    
 
     reply_text = ""
 
@@ -3399,6 +3401,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
