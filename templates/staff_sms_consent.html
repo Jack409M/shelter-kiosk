@@ -6,24 +6,26 @@
 <table>
   <thead>
     <tr>
+      <th>Name</th>
       <th>Phone</th>
       <th>Status</th>
-      <th>Updated</th>
+      <th>Opt out at</th>
     </tr>
   </thead>
 
   <tbody>
     {% for r in rows %}
     <tr>
-      <td>{{ r["phone_number"] }}</td>
+      <td>{{ r["last_name"] }}, {{ r["first_name"] }}</td>
+      <td>{{ r["phone"] }}</td>
       <td>
-        {% if r["consent_status"] == "opt_in" %}
+        {% if r["sms_opt_in"] and not r["sms_opt_out_at"] %}
           <span style="color:green;">Opted In</span>
         {% else %}
           <span style="color:red;">Opted Out</span>
         {% endif %}
       </td>
-      <td>{{ r["updated_at"] }}</td>
+      <td>{{ r["sms_opt_out_at"] }}</td>
     </tr>
     {% endfor %}
   </tbody>
