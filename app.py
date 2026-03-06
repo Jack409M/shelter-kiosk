@@ -1223,39 +1223,22 @@ def resident_signin():
     next_url = (request.args.get("next") or request.form.get("next") or "").strip()
 
     if request.method == "GET":
-        shelter = (request.args.get("shelter") or "").strip()
-        return render_template(
-            "resident_signin.html",
-            shelter=shelter,
-            shelters=SHELTERS,
-        )
+        return render_template("resident_signin.html")
 
-    shelter = (request.form.get("shelter") or "").strip()
     resident_code = (request.form.get("resident_code") or "").strip()
 
-    if shelter not in SHELTERS:
-        flash("Select a valid shelter.", "error")
-        return render_template(
-            "resident_signin.html",
-            shelter=shelter,
-            shelters=SHELTERS,
-        ), 400
-
     row = db_fetchone(
-        "SELECT * FROM residents WHERE shelter = %s AND resident_code = %s"
+        "SELECT * FROM residents WHERE resident_code = %s"
         if g.get("db_kind") == "pg"
-        else "SELECT * FROM residents WHERE shelter = ? AND resident_code = ?",
-        (shelter, resident_code),
+        else "SELECT * FROM residents WHERE resident_code = ?",
+        (resident_code,),
     )
 
     if not row:
         flash("Invalid Resident Code.", "error")
-        return render_template(
-            "resident_signin.html",
-            shelter=shelter,
-            shelters=SHELTERS,
-        ), 401
+        return render_template("resident_signin.html"), 401
 
+    shelter = (row.get("shelter") or "").strip()
     resident_session_start(row, shelter, resident_code)
 
     allowed_next = {
@@ -3411,6 +3394,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
