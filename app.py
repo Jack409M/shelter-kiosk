@@ -1258,7 +1258,13 @@ def resident_signin():
 
     resident_session_start(row, shelter, resident_code)
 
-    if not next_url or not next_url.startswith("/"):
+    allowed_next = {
+        url_for("resident_leave"),
+        url_for("resident_transport"),
+        url_for("resident_home"),
+    }
+
+    if next_url not in allowed_next:
         next_url = url_for("resident_leave")
 
     if not session.get("sms_consent_done"):
@@ -3409,6 +3415,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
