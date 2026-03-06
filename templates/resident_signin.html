@@ -37,6 +37,7 @@
       placeholder="8 digit code"
       autocomplete="off"
       autofocus
+      oninput="this.value=this.value.replace(/[^0-9]/g,'')"
     >
 
     <p class="hint">
