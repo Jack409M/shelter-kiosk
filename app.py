@@ -244,10 +244,8 @@ def inject_resident_dashboard_status():
 
     init_db()
 
-    shelter = (session.get("resident_shelter") or "").strip()
     resident_identifier = (session.get("resident_identifier") or "").strip()
-
-    if not shelter or not resident_identifier:
+    if not resident_identifier:
         return {}
 
     all_leave_rows = db_fetchall(
@@ -284,38 +282,47 @@ def inject_resident_dashboard_status():
         (resident_identifier,),
     )
 
-    print("DEBUG RESIDENT HOME IDENTIFIER:", resident_identifier)
-    print("DEBUG LEAVE COUNT:", len(all_leave_rows))
-    print("DEBUG TRANSPORT COUNT:", len(all_transport_rows))
-
+    leave_items = []
     for row in all_leave_rows:
         if isinstance(row, dict):
-            print("DEBUG LEAVE ROW:", row["status"], row["shelter"], row["resident_identifier"], row["leave_at"], row["return_at"])
+            status = (row.get("status") or "").lower()
+            leave_at = row.get("leave_at")
+            return_at = row.get("return_at")
         else:
-            print("DEBUG LEAVE ROW:", row[0], row[1], row[2], row[3], row[4])
+            status = (row[0] or "").lower()
+            leave_at = row[3]
+            return_at = row[4]
 
-    for row in all_transport_rows:
-        if isinstance(row, dict):
-            print("DEBUG TRANSPORT ROW:", row["status"], row["shelter"], row["resident_identifier"], row["needed_at"], row["driver_name"])
-        else:
-            print("DEBUG TRANSPORT ROW:", row[0], row[1], row[2], row[3], row[4])
-
-    leave_rows = []
-    for row in all_leave_rows:
-        status = row["status"] if isinstance(row, dict) else row[0]
         if status in ["pending", "approved"]:
-            leave_rows.append(row)
+            leave_items.append({
+                "status": status.capitalize(),
+                "leave_at": fmt_dt(leave_at),
+                "return_at": fmt_dt(return_at),
+            })
 
-    transport_rows = []
+    transport_items = []
     for row in all_transport_rows:
-        status = row["status"] if isinstance(row, dict) else row[0]
+        if isinstance(row, dict):
+            status = (row.get("status") or "").lower()
+            needed_at = row.get("needed_at")
+            driver_name = row.get("driver_name") or ""
+        else:
+            status = (row[0] or "").lower()
+            needed_at = row[3]
+            driver_name = row[4] or ""
+
         if status in ["pending", "scheduled"]:
-            transport_rows.append(row)
+            transport_items.append({
+                "status": status.capitalize(),
+                "needed_at": fmt_dt(needed_at),
+                "driver_name": driver_name,
+            })
 
     return {
-        "leave_rows": leave_rows,
-        "transport_rows": transport_rows,
+        "leave_items": leave_items,
+        "transport_items": transport_items,
     }
+    
     leave_row = db_fetchone(
         """
         SELECT status, leave_at, return_at, decision_note, submitted_at
@@ -3575,6 +3582,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
