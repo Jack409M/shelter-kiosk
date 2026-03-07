@@ -52,4 +52,15 @@ def fmt_time_only(dt_iso: Optional[str]) -> str:
         local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
         return local_dt.strftime("%I:%M %p")
     except Exception:
+
+def fmt_pretty_date(dt_iso: Optional[str]) -> str:
+    if not dt_iso:
+        return ""
+    try:
+        dt = datetime.fromisoformat(dt_iso)
+        dt = dt.replace(tzinfo=timezone.utc)
+        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
+        return local_dt.strftime("%B %d, %Y")
+    except Exception:
+        return dt_iso        
         return ""
