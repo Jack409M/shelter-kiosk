@@ -65,3 +65,12 @@ def fmt_pretty_date(dt_iso: Optional[str]) -> str:
         return local_dt.strftime("%B %d, %Y")
     except Exception:
         return dt_iso
+
+from flask import url_for, current_app
+
+def safe_url_for(endpoint, **values):
+    try:
+        return url_for(endpoint, **values)
+    except Exception as e:
+        current_app.logger.error(f"URL BUILD ERROR: {endpoint} {values}")
+        return "#"
