@@ -18,7 +18,7 @@
       <td>{{ r["pickup_location"] }}</td>
       <td>{{ r["destination"] }}</td>
       <td>
-        <form method="post" action="{{ url_for('staff_transport_schedule', req_id=r['id']) }}" class="inline">
+        <form method="post" action="{{ url_for('transport.staff_transport_schedule', req_id=r['id']) }}" class="inline">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <input name="driver_name" placeholder="Driver name" required>
   <input name="staff_notes" placeholder="Optional note">
@@ -31,3 +31,4 @@
 </table>
 
 {% endblock %}
+
