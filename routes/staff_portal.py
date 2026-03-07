@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template
 from core.auth import require_login, require_shelter
 from core.helpers import utcnow_iso, fmt_date, fmt_dt
+from core.db import db_fetchall
 
 staff_portal = Blueprint("staff_portal", __name__)
 
