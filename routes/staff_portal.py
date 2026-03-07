@@ -310,7 +310,6 @@ def staff_leave_check_in(req_id: int):
 @staff_portal.get("/staff/leave/<int:req_id>/print")
 @require_login
 @require_shelter
-@require_staff_or_admin
 def staff_leave_print(req_id: int):
     init_db()
 
