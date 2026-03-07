@@ -15,6 +15,7 @@ from flask import (
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
+from core.audit import log_action
 
 
 staff_portal = Blueprint("staff_portal", __name__)
