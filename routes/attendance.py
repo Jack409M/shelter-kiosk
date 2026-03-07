@@ -121,3 +121,37 @@ def staff_attendance():
         fmt_time=fmt_time_only,
         shelter=shelter,
     )
+
+from flask import redirect, url_for
+from core.db import db_execute
+from core.helpers import utcnow_iso
+from core.audit import log_action
+
+
+@attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
+@require_login
+@require_shelter
+def staff_attendance_check_in(resident_id: int):
+    shelter = session["shelter"]
+
+    sql = (
+        """
+        INSERT INTO attendance_events (resident_id, event_type, event_time, shelter)
+        VALUES (%s, %s, %s, %s)
+        """
+        if current_app.config.get("DATABASE_URL")
+        else """
+        INSERT INTO attendance_events (resident_id, event_type, event_time, shelter)
+        VALUES (?, ?, ?, ?)
+        """
+    )
+
+    db_execute(sql, (resident_id, "check_in", utcnow_iso(), shelter))
+
+    log_action(
+        "attendance_check_in",
+        resident_id=resident_id,
+        shelter=shelter,
+    )
+
+    return redirect(url_for("attendance.staff_attendance"))
