@@ -168,12 +168,6 @@ def staff_leave_overdue():
 @require_login
 @require_shelter
 def staff_leave_approve(req_id: int):
-    """
-    Temporary bridge:
-    log_action and send_sms still live in app.py.
-    Importing them inside the function avoids import time circular issues
-    until those helpers are extracted into shared modules.
-    """
     from app import send_sms
 
     shelter = session["shelter"]
@@ -193,7 +187,7 @@ def staff_leave_approve(req_id: int):
 
     decided_at = utcnow_iso()
 
-    db_execute(
+    sql = (
         """
         UPDATE leave_requests
         SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
@@ -205,7 +199,11 @@ def staff_leave_approve(req_id: int):
         UPDATE leave_requests
         SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
         WHERE id = ? AND shelter = ?
-        """,
+        """
+    )
+
+    db_execute(
+        sql,
         ("approved", decided_at, staff_id, note or None, req_id, shelter),
     )
 
@@ -240,6 +238,7 @@ def staff_leave_approve(req_id: int):
     flash("Approved.", "ok")
     return redirect(url_for("staff_portal.staff_leave_pending"))
 
+
 @staff_portal.route("/staff/leave/<int:req_id>/deny", methods=["POST"])
 @require_login
 @require_shelter
@@ -247,25 +246,31 @@ def staff_leave_deny(req_id: int):
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
+
     if not note:
         flash("Denial note required.", "error")
-        return redirect(url_for("staff_leave_pending"))
+        return redirect(url_for("staff_portal.staff_leave_pending"))
 
-    db_execute(
+    sql = (
         """
         UPDATE leave_requests
         SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
         WHERE id = %s AND shelter = %s AND status = %s
         """
-        current_app.config.get("DATABASE_URL")
-        else """
+        if current_app.config.get("DATABASE_URL")
+        else
+        """
         UPDATE leave_requests
         SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
         WHERE id = ? AND shelter = ? AND status = ?
-        """,
+        """
+    )
+
+    db_execute(
+        sql,
         ("denied", utcnow_iso(), staff_id, note, req_id, shelter, "pending"),
     )
 
     log_action("leave", req_id, shelter, staff_id, "deny", note)
     flash("Denied.", "ok")
-    return redirect(url_for("staff_leave_pending"))
+    return redirect(url_for("staff_portal.staff_leave_pending"))
