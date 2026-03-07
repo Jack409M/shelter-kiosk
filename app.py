@@ -2666,27 +2666,36 @@ def _audit_where_from_request():
     return where_sql, tuple(params)
 
 
-@app.get("/staff/admin/audit-log")
+@app.route("/staff/admin/audit-log")
 @require_login
-@require_shelter
 @require_admin
 def staff_audit_log():
-    created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
-    where_sql, params = _audit_where_from_request()
+    params = ()
 
-    limit_ph = "%s" if g.get("db_kind") == "pg" else "?"
     sql = (
-        f"SELECT a.id, a.entity_type, a.entity_id, a.shelter, a.staff_user_id, "
-        f"su.username AS staff_username, a.action_type, a.action_details, {created_expr} AS created_at "
-        f"FROM audit_log a "
-        f"LEFT JOIN staff_users su ON su.id = a.staff_user_id "
-        f"{where_sql} "
-        f"ORDER BY a.id DESC "
-        f"LIMIT {limit_ph}"
+        """
+        SELECT a.*, su.username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        ORDER BY a.id DESC
+        LIMIT %s
+        """
+        if current_app.config.get("DATABASE_URL")
+        else """
+        SELECT a.*, su.username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        ORDER BY a.id DESC
+        LIMIT ?
+        """
     )
 
     rows = db_fetchall(sql, params + (200,))
-    return render_template("staff_audit_log.html", rows=rows, title="Audit Log", fmt_dt=fmt_dt)
+
+    return render_template(
+        "staff_audit_log.html",
+        rows=rows,
+    )
 
 
 @app.get("/staff/admin/audit-log/csv")
@@ -3035,6 +3044,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
