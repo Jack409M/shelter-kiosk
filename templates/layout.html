@@ -56,6 +56,7 @@
         <div class="nav-desktop">
           {% if session.get("staff_user_id") %}
 
+            {# Shelter selector #}
             <div class="nav-dd">
               <button type="button">
                 {% if session.get("shelter") == "Gratitude" %}
@@ -81,6 +82,7 @@
               </div>
             </div>
 
+            {# Leave menu #}
             <div class="nav-dd">
               <button type="button">Leave ▾</button>
               <div class="menu">
@@ -91,14 +93,17 @@
               </div>
             </div>
 
+            {# Transport menu #}
             <div class="nav-dd">
               <button type="button">Transport ▾</button>
               <div class="menu">
-                <a href="{{ url_for('transport.staff_transport_pending') }}">
-                <a href="{{ url_for('transport.staff_transport_board') }}">Transport schedule</a>
+                <a href="{{ url_for('transport.staff_transport_pending') }}">Transport pending</a>
+                <a href="{{ url_for('transport.staff_transport_board') }}">Transport board</a>
+                <a href="{{ url_for('transport.staff_transport_print') }}" target="_blank">Transport print</a>
               </div>
             </div>
 
+            {# Core staff links #}
             <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
             <a href="{{ url_for('staff_residents') }}">Residents</a>
             <a href="{{ url_for('staff_sms_consent') }}">SMS Consent</a>
@@ -133,11 +138,3 @@
     </main>
   </body>
 </html>
-
-
-
-
-
-
-
-
