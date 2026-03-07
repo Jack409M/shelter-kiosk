@@ -1,8 +1,8 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, current_app, render_template, session
+
 from core.auth import require_login, require_shelter
-from core.helpers import utcnow_iso, fmt_date, fmt_dt
 from core.db import db_fetchall
-from flask import session
+from core.helpers import fmt_date, fmt_dt
 
 
 staff_portal = Blueprint("staff_portal", __name__)
@@ -12,7 +12,6 @@ staff_portal = Blueprint("staff_portal", __name__)
 def staff_attendance_test():
     return "staff attendance blueprint working"
 
-from flask import session
 
 @staff_portal.route("/_staff_test/leave/pending")
 @require_login
@@ -20,12 +19,13 @@ from flask import session
 def staff_leave_pending_test():
     shelter = session["shelter"]
 
-    rows = db_fetchall(
+    sql = (
         "SELECT * FROM leave_requests WHERE status = %s AND shelter = %s ORDER BY submitted_at DESC"
-        if g.get("db_kind") == "pg"
-        else "SELECT * FROM leave_requests WHERE status = ? AND shelter = ? ORDER BY submitted_at DESC",
-        ("pending", shelter),
+        if current_app.config.get("DATABASE_URL")
+        else "SELECT * FROM leave_requests WHERE status = ? AND shelter = ? ORDER BY submitted_at DESC"
     )
+
+    rows = db_fetchall(sql, ("pending", shelter))
 
     return render_template(
         "staff_leave_pending.html",
