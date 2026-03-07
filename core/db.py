@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sqlite3
 from typing import Any
 
@@ -35,6 +34,12 @@ def _init_pg_pool() -> None:
     )
 
 
+def _normalize_sql(sql: str) -> str:
+    if g.get("db_kind") == "pg":
+        return sql.replace("?", "%s")
+    return sql
+
+
 def get_db() -> Any:
     if "db" in g:
         return g.db
@@ -51,6 +56,9 @@ def get_db() -> Any:
         g.db = conn
         g.db_kind = "pg"
         return conn
+
+    if not sqlite_path:
+        raise RuntimeError("SQLITE_PATH is not configured.")
 
     conn = sqlite3.connect(sqlite_path)
     conn.row_factory = sqlite3.Row
@@ -78,49 +86,56 @@ def close_db(e: Exception | None = None) -> None:
 def db_execute(sql: str, params: tuple = ()) -> None:
     conn = get_db()
     cur = conn.cursor()
-    cur.execute(sql, params)
 
-    if g.get("db_kind") != "pg":
-        conn.commit()
-
-    cur.close()
+    try:
+        cur.execute(_normalize_sql(sql), params)
+        if g.get("db_kind") != "pg":
+            conn.commit()
+    finally:
+        cur.close()
 
 
 def db_fetchone(sql: str, params: tuple = ()) -> Any:
     conn = get_db()
     kind = g.get("db_kind")
+    sql = _normalize_sql(sql)
 
     if kind == "pg":
         import psycopg2.extras
 
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql, params)
-        row = cur.fetchone()
-        cur.close()
-        return row
+        try:
+            cur.execute(sql, params)
+            return cur.fetchone()
+        finally:
+            cur.close()
 
     cur = conn.cursor()
-    cur.execute(sql, params)
-    row = cur.fetchone()
-    cur.close()
-    return row
+    try:
+        cur.execute(sql, params)
+        return cur.fetchone()
+    finally:
+        cur.close()
 
 
 def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
     conn = get_db()
     kind = g.get("db_kind")
+    sql = _normalize_sql(sql)
 
     if kind == "pg":
         import psycopg2.extras
 
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql, params)
-        rows = cur.fetchall()
-        cur.close()
-        return rows
+        try:
+            cur.execute(sql, params)
+            return cur.fetchall()
+        finally:
+            cur.close()
 
     cur = conn.cursor()
-    cur.execute(sql, params)
-    rows = cur.fetchall()
-    cur.close()
-    return rows
+    try:
+        cur.execute(sql, params)
+        return cur.fetchall()
+    finally:
+        cur.close()
