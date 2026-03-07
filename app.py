@@ -2054,32 +2054,6 @@ def staff_leave_deny(req_id: int):
     return redirect(url_for("staff_leave_pending"))
 
 
-@app.route("/staff/leave/<int:req_id>/check-in", methods=["POST"])
-@require_login
-@require_shelter
-def staff_leave_check_in(req_id: int):
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-    note = (request.form.get("note") or "").strip()
-
-    db_execute(
-        """
-        UPDATE leave_requests
-        SET status = %s, check_in_at = %s, check_in_by = %s
-        WHERE id = %s AND shelter = %s AND status = %s AND check_in_at IS NULL
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        UPDATE leave_requests
-        SET status = ?, check_in_at = ?, check_in_by = ?
-        WHERE id = ? AND shelter = ? AND status = ? AND check_in_at IS NULL
-        """,
-        ("checked_in", utcnow_iso(), staff_id, req_id, shelter, "approved"),
-    )
-
-    log_action("leave", req_id, shelter, staff_id, "check_in", note or "")
-    flash("Checked in.", "ok")
-    return redirect(url_for("staff_leave_away_now"))
 
 # ---- Staff Transport ----
 
@@ -3385,6 +3359,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
