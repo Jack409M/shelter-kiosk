@@ -1954,41 +1954,6 @@ def staff_select_shelter():
 def staff_home():
     return redirect(url_for("staff_attendance"))
 
-# ---- Staff Leave ----
-
-@app.route("/staff/leave/<int:req_id>/deny", methods=["POST"])
-@require_login
-@require_shelter
-@require_transfer
-def staff_leave_deny(req_id: int):
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-    note = (request.form.get("note") or "").strip()
-    if not note:
-        flash("Denial note required.", "error")
-        return redirect(url_for("staff_leave_pending"))
-
-    db_execute(
-        """
-        UPDATE leave_requests
-        SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
-        WHERE id = %s AND shelter = %s AND status = %s
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        UPDATE leave_requests
-        SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
-        WHERE id = ? AND shelter = ? AND status = ?
-        """,
-        ("denied", utcnow_iso(), staff_id, note, req_id, shelter, "pending"),
-    )
-
-    log_action("leave", req_id, shelter, staff_id, "deny", note)
-    flash("Denied.", "ok")
-    return redirect(url_for("staff_leave_pending"))
-
-
-
 # ---- Staff Transport ----
 
 @app.route("/staff/transport/pending")
@@ -3293,6 +3258,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
