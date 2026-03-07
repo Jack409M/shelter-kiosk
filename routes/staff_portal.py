@@ -22,6 +22,10 @@ from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
 staff_portal = Blueprint("staff_portal", __name__)
 
 
+def _is_pg() -> bool:
+    return bool(current_app.config.get("DATABASE_URL"))
+
+
 @staff_portal.route("/_staff_test/attendance")
 def staff_attendance_test():
     return "staff attendance blueprint working"
@@ -37,13 +41,12 @@ def staff_attendance_test():
 def staff_leave_pending():
     shelter = session["shelter"]
 
-    sql = (
+    rows = db_fetchall(
         "SELECT * FROM leave_requests WHERE status = %s AND shelter = %s ORDER BY submitted_at DESC"
-        if current_app.config.get("DATABASE_URL")
-        else "SELECT * FROM leave_requests WHERE status = ? AND shelter = ? ORDER BY submitted_at DESC"
+        if _is_pg()
+        else "SELECT * FROM leave_requests WHERE status = ? AND shelter = ? ORDER BY submitted_at DESC",
+        ("pending", shelter),
     )
-
-    rows = db_fetchall(sql, ("pending", shelter))
 
     return render_template(
         "staff_leave_pending.html",
@@ -61,24 +64,23 @@ def staff_leave_upcoming():
     shelter = session["shelter"]
     now = utcnow_iso()
 
-    sql = (
+    rows = db_fetchall(
         """
         SELECT *
         FROM leave_requests
         WHERE status = %s AND shelter = %s AND check_in_at IS NULL AND leave_at > %s
         ORDER BY leave_at ASC
         """
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else
         """
         SELECT *
         FROM leave_requests
         WHERE status = ? AND shelter = ? AND check_in_at IS NULL AND leave_at > ?
         ORDER BY leave_at ASC
-        """
+        """,
+        ("approved", shelter, now),
     )
-
-    rows = db_fetchall(sql, ("approved", shelter, now))
 
     return render_template(
         "staff_leave_upcoming.html",
@@ -96,24 +98,23 @@ def staff_leave_away_now():
     shelter = session["shelter"]
     now = utcnow_iso()
 
-    sql = (
+    rows = db_fetchall(
         """
         SELECT *
         FROM leave_requests
         WHERE status = %s AND shelter = %s AND leave_at <= %s AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else
         """
         SELECT *
         FROM leave_requests
         WHERE status = ? AND shelter = ? AND leave_at <= ? AND check_in_at IS NULL
         ORDER BY return_at ASC
-        """
+        """,
+        ("approved", shelter, now),
     )
-
-    rows = db_fetchall(sql, ("approved", shelter, now))
 
     return render_template(
         "staff_leave_away_now.html",
@@ -129,24 +130,23 @@ def staff_leave_away_now():
 def staff_leave_overdue():
     shelter = session["shelter"]
 
-    sql = (
+    rows = db_fetchall(
         """
         SELECT *
         FROM leave_requests
         WHERE status = %s AND shelter = %s AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else
         """
         SELECT *
         FROM leave_requests
         WHERE status = ? AND shelter = ? AND check_in_at IS NULL
         ORDER BY return_at ASC
-        """
+        """,
+        ("approved", shelter),
     )
-
-    rows = db_fetchall(sql, ("approved", shelter))
 
     now_local = datetime.now(ZoneInfo("America/Chicago"))
     overdue_rows = []
@@ -192,7 +192,7 @@ def staff_leave_approve(req_id: int):
 
     row = db_fetchone(
         "SELECT * FROM leave_requests WHERE id = %s AND shelter = %s"
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else "SELECT * FROM leave_requests WHERE id = ? AND shelter = ?",
         (req_id, shelter),
     )
@@ -201,33 +201,27 @@ def staff_leave_approve(req_id: int):
         flash("Not pending.", "error")
         return redirect(url_for("staff_portal.staff_leave_pending"))
 
-    decided_at = utcnow_iso()
-
-    sql = (
+    db_execute(
         """
         UPDATE leave_requests
         SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
         WHERE id = %s AND shelter = %s
         """
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else
         """
         UPDATE leave_requests
         SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
         WHERE id = ? AND shelter = ?
-        """
-    )
-
-    db_execute(
-        sql,
-        ("approved", decided_at, staff_id, note or None, req_id, shelter),
+        """,
+        ("approved", utcnow_iso(), staff_id, note or None, req_id, shelter),
     )
 
     log_action("leave", req_id, shelter, staff_id, "approve", note or "")
 
     req = db_fetchone(
         "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = %s AND shelter = %s"
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = ? AND shelter = ?",
         (req_id, shelter),
     )
@@ -267,23 +261,19 @@ def staff_leave_deny(req_id: int):
         flash("Denial note required.", "error")
         return redirect(url_for("staff_portal.staff_leave_pending"))
 
-    sql = (
+    db_execute(
         """
         UPDATE leave_requests
         SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
         WHERE id = %s AND shelter = %s AND status = %s
         """
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else
         """
         UPDATE leave_requests
         SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
         WHERE id = ? AND shelter = ? AND status = ?
-        """
-    )
-
-    db_execute(
-        sql,
+        """,
         ("denied", utcnow_iso(), staff_id, note, req_id, shelter, "pending"),
     )
 
@@ -300,23 +290,19 @@ def staff_leave_check_in(req_id: int):
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
 
-    sql = (
+    db_execute(
         """
         UPDATE leave_requests
         SET status = %s, check_in_at = %s, check_in_by = %s
         WHERE id = %s AND shelter = %s AND status = %s AND check_in_at IS NULL
         """
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else
         """
         UPDATE leave_requests
         SET status = ?, check_in_at = ?, check_in_by = ?
         WHERE id = ? AND shelter = ? AND status = ? AND check_in_at IS NULL
-        """
-    )
-
-    db_execute(
-        sql,
+        """,
         ("checked_in", utcnow_iso(), staff_id, req_id, shelter, "approved"),
     )
 
@@ -351,7 +337,7 @@ def staff_leave_print(req_id: int):
             ON su.id = lr.decided_by
         WHERE lr.id = %s AND lr.shelter = %s
         """
-        if current_app.config.get("DATABASE_URL")
+        if _is_pg()
         else
         """
         SELECT
@@ -382,4 +368,3 @@ def staff_leave_print(req_id: int):
         fmt_dt=fmt_dt,
         fmt_date=fmt_date,
     )
-    
