@@ -77,19 +77,27 @@ def staff_leave_upcoming():
 def staff_leave_away_now():
     shelter = session["shelter"]
     now = utcnow_iso()
-    rows = db_fetchall(
+
+    sql = (
         """
         SELECT * FROM leave_requests
         WHERE status = %s AND shelter = %s AND leave_at <= %s AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
         if current_app.config.get("DATABASE_URL")
-        else """
+        else
+        """
         SELECT * FROM leave_requests
         WHERE status = ? AND shelter = ? AND leave_at <= ? AND check_in_at IS NULL
         ORDER BY return_at ASC
-        """,
-        ("approved", shelter, now),
+        """
     )
-    return render_template("staff_leave_away_now.html", rows=rows, fmt_dt=fmt_dt, shelter=shelter)
 
+    rows = db_fetchall(sql, ("approved", shelter, now))
+
+    return render_template(
+        "staff_leave_away_now.html",
+        rows=rows,
+        fmt_dt=fmt_dt,
+        shelter=shelter,
+    )
