@@ -283,22 +283,26 @@ def staff_leave_check_in(req_id: int):
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
 
-    db_execute(
+    sql = (
         """
         UPDATE leave_requests
         SET status = %s, check_in_at = %s, check_in_by = %s
         WHERE id = %s AND shelter = %s AND status = %s AND check_in_at IS NULL
         """
-        current_app.config.get("DATABASE_URL")
-        else """
+        if current_app.config.get("DATABASE_URL")
+        else
+        """
         UPDATE leave_requests
         SET status = ?, check_in_at = ?, check_in_by = ?
         WHERE id = ? AND shelter = ? AND status = ? AND check_in_at IS NULL
-        """,
+        """
+    )
+
+    db_execute(
+        sql,
         ("checked_in", utcnow_iso(), staff_id, req_id, shelter, "approved"),
     )
 
     log_action("leave", req_id, shelter, staff_id, "check_in", note or "")
     flash("Checked in.", "ok")
-    return redirect(url_for("staff_leave_away_now"))
-
+    return redirect(url_for("staff_portal.staff_leave_away_now"))
