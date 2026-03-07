@@ -1274,18 +1274,6 @@ def legacy_init_db() -> None:
 
     ensure_admin_bootstrap()
 
-
-def legacy_require_login(f):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if "staff_user_id" not in session:
-            return redirect(url_for("staff_login"))
-        get_db()
-        return fn(*args, **kwargs)
-
-    return wrapper
-
-
 def require_staff_or_admin(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -3667,6 +3655,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
