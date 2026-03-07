@@ -1,157 +1,141 @@
-from __future__ import annotations
-
-from typing import Any
-
-from flask import Blueprint, current_app, render_template, session
-
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from core.auth import require_login, require_shelter
-from core.db import db_fetchall, db_fetchone
-from core.helpers import fmt_time_only
-
+from core.db import db_execute, db_fetchall
+from core.helpers import utcnow_iso
 
 attendance = Blueprint("attendance", __name__)
 
 
-def _is_pg() -> bool:
-    return bool(current_app.config.get("DATABASE_URL"))
-
-
-def _get_value(row: Any, key: str, index: int, default: Any = "") -> Any:
-    if not row:
-        return default
-    if isinstance(row, dict):
-        value = row.get(key, default)
-    else:
-        value = row[index] if len(row) > index else default
-    return default if value is None else value
-
+# -----------------------------------------------------
+# Staff Attendance Board
+# -----------------------------------------------------
 
 @attendance.route("/staff/attendance")
 @require_login
 @require_shelter
 def staff_attendance():
-    shelter = session["shelter"]
-    is_pg = _is_pg()
+    shelter = session.get("shelter")
 
-    residents_sql = (
-        "SELECT * FROM residents WHERE shelter = %s AND is_active = TRUE ORDER BY last_name, first_name"
-        if is_pg
-        else "SELECT * FROM residents WHERE shelter = ? AND is_active = 1 ORDER BY last_name, first_name"
+    rows = db_fetchall(
+        """
+        SELECT *
+        FROM attendance
+        WHERE shelter = %s
+        ORDER BY checked_out_at DESC
+        """
+        if shelter else
+        """
+        SELECT *
+        FROM attendance
+        ORDER BY checked_out_at DESC
+        """,
+        (shelter,) if shelter else ()
     )
-
-    last_event_sql = (
-        """
-        SELECT event_type, event_time, expected_back_time, note
-        FROM attendance_events
-        WHERE resident_id = %s AND shelter = %s
-        ORDER BY event_time DESC
-        LIMIT 1
-        """
-        if is_pg
-        else """
-        SELECT event_type, event_time, expected_back_time, note
-        FROM attendance_events
-        WHERE resident_id = ? AND shelter = ?
-        ORDER BY event_time DESC
-        LIMIT 1
-        """
-    )
-
-    last_checkout_sql = (
-        """
-        SELECT event_time, expected_back_time, note
-        FROM attendance_events
-        WHERE resident_id = %s AND shelter = %s AND event_type = %s
-        ORDER BY event_time DESC
-        LIMIT 1
-        """
-        if is_pg
-        else """
-        SELECT event_time, expected_back_time, note
-        FROM attendance_events
-        WHERE resident_id = ? AND shelter = ? AND event_type = ?
-        ORDER BY event_time DESC
-        LIMIT 1
-        """
-    )
-
-    residents = db_fetchall(residents_sql, (shelter,))
-
-    out_rows: list[dict[str, Any]] = []
-    in_rows: list[dict[str, Any]] = []
-
-    for r in residents:
-        rid = int(_get_value(r, "id", 0, 0))
-        first = _get_value(r, "first_name", 4, "")
-        last = _get_value(r, "last_name", 5, "")
-
-        last_event = db_fetchone(last_event_sql, (rid, shelter))
-        last_event_type = _get_value(last_event, "event_type", 0, "")
-
-        last_checkout = db_fetchone(last_checkout_sql, (rid, shelter, "check_out"))
-        checkout_time = _get_value(last_checkout, "event_time", 0, "")
-        expected_back_time = _get_value(last_checkout, "expected_back_time", 1, "")
-        checkout_note = _get_value(last_checkout, "note", 2, "")
-
-        is_out = last_event_type == "check_out"
-
-        row = {
-            "resident_id": rid,
-            "first_name": first,
-            "last_name": last,
-            "name": f"{last}, {first}",
-            "checked_out_at": checkout_time,
-            "expected_back_at": expected_back_time,
-            "is_out": is_out,
-            "note": checkout_note,
-        }
-
-        if is_out:
-            out_rows.append(row)
-        else:
-            in_rows.append(row)
-
-    out_rows.sort(key=lambda x: (x["last_name"].lower(), x["first_name"].lower()))
-    in_rows.sort(key=lambda x: (x["last_name"].lower(), x["first_name"].lower()))
 
     return render_template(
         "staff_attendance.html",
-        out_rows=out_rows,
-        in_rows=in_rows,
-        fmt_time=fmt_time_only,
-        shelter=shelter,
+        rows=rows,
     )
 
-from flask import redirect, url_for
-from core.db import db_execute
-from core.helpers import utcnow_iso
-from core.audit import log_action
 
+# -----------------------------------------------------
+# Check In Resident
+# FIXED ROUTE: removed double slash and restored param
+# -----------------------------------------------------
 
 @attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
-def staff_attendance_check_in(resident_id: int):
-    shelter = session["shelter"]
+def staff_attendance_check_in(resident_id):
 
-    sql = (
+    db_execute(
         """
-        INSERT INTO attendance_events (resident_id, event_type, event_time, shelter)
-        VALUES (%s, %s, %s, %s)
-        """
-        if current_app.config.get("DATABASE_URL")
-        else """
-        INSERT INTO attendance_events (resident_id, event_type, event_time, shelter)
-        VALUES (?, ?, ?, ?)
-        """
+        UPDATE attendance
+        SET checked_in_at = %s,
+            checked_out_at = NULL
+        WHERE resident_id = %s
+        """,
+        (utcnow_iso(), resident_id)
     )
 
-    db_execute(sql, (resident_id, "check_in", utcnow_iso(), shelter))
-
-    log_action(
-        "attendance_check_in",
-        resident_id=resident_id,
-        shelter=shelter,
-    )
+    flash("Resident checked in.", "success")
 
     return redirect(url_for("attendance.staff_attendance"))
+
+
+# -----------------------------------------------------
+# Check Out Resident
+# -----------------------------------------------------
+
+@attendance.route("/staff/attendance/check-out", methods=["POST"])
+@require_login
+@require_shelter
+def staff_attendance_check_out():
+
+    resident_id = request.form.get("resident_id")
+
+    if not resident_id:
+        flash("Missing resident.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    db_execute(
+        """
+        UPDATE attendance
+        SET checked_out_at = %s
+        WHERE resident_id = %s
+        """,
+        (utcnow_iso(), resident_id)
+    )
+
+    flash("Resident checked out.", "success")
+
+    return redirect(url_for("attendance.staff_attendance"))
+
+
+# -----------------------------------------------------
+# Print Today
+# -----------------------------------------------------
+
+@attendance.route("/staff/attendance/print_today")
+@require_login
+@require_shelter
+def staff_attendance_print_today():
+
+    rows = db_fetchall(
+        """
+        SELECT *
+        FROM attendance
+        ORDER BY checked_out_at DESC
+        """
+    )
+
+    return render_template(
+        "staff_attendance_print.html",
+        rows=rows,
+    )
+
+
+# -----------------------------------------------------
+# Print Resident History
+# FIXED ROUTE: restored resident_id parameter
+# -----------------------------------------------------
+
+@attendance.route("/staff/attendance/resident/<int:resident_id>/print")
+@require_login
+@require_shelter
+def staff_attendance_resident_print(resident_id):
+
+    rows = db_fetchall(
+        """
+        SELECT *
+        FROM attendance
+        WHERE resident_id = %s
+        ORDER BY checked_out_at DESC
+        """,
+        (resident_id,)
+    )
+
+    return render_template(
+        "staff_attendance_resident_print.html",
+        rows=rows,
+    )
