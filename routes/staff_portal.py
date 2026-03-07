@@ -155,3 +155,68 @@ def staff_leave_overdue():
         fmt_date=fmt_date,
         shelter=shelter,
     )
+
+@staff_portal.route("/staff/leave/<int:req_id>/approve", methods=["POST"])
+@require_login
+@require_shelter
+@require_transfer
+def staff_leave_approve(req_id: int):
+    shelter = session["shelter"]
+    staff_id = session["staff_user_id"]
+    note = (request.form.get("note") or "").strip()
+
+    row = db_fetchone(
+        "SELECT * FROM leave_requests WHERE id = %s AND shelter = %s"
+        if current_app.config.get("DATABASE_URL")
+        else "SELECT * FROM leave_requests WHERE id = ? AND shelter = ?",
+        (req_id, shelter),
+    )
+    if not row or (row["status"] if isinstance(row, dict) else row[10]) != "pending":
+        flash("Not pending.", "error")
+        return redirect(url_for("staff_leave_pending"))
+
+    decided_at = utcnow_iso()
+    db_execute(
+        """
+        UPDATE leave_requests
+        SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
+        WHERE id = %s AND shelter = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE leave_requests
+        SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
+        WHERE id = ? AND shelter = ?
+        """,
+        ("approved", decided_at, staff_id, note or None, req_id, shelter),
+    )
+
+    log_action("leave", req_id, shelter, staff_id, "approve", note or "")
+
+    req = db_fetchone(
+        "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = %s AND shelter = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = ? AND shelter = ?",
+        (req_id, shelter),
+    )
+
+    if req:
+        first_name = req["first_name"] if isinstance(req, dict) else req[0]
+        last_name = req["last_name"] if isinstance(req, dict) else req[1]
+        leave_at = req["leave_at"] if isinstance(req, dict) else req[2]
+        return_at = req["return_at"] if isinstance(req, dict) else req[3]
+        phone = req["resident_phone"] if isinstance(req, dict) else req[4]
+
+        msg = (
+            f"Leave approved for {first_name} {last_name}. "
+            f"Leave {fmt_pretty_date(leave_at)}. "
+            f"Return {fmt_pretty_date(return_at)} by 10 PM."
+        )
+        try:
+            if phone:
+                send_sms(phone, msg)
+        except Exception as e:
+            log_action("leave", req_id, shelter, staff_id, "sms_failed", str(e))
+
+    flash("Approved.", "ok")
+    return redirect(url_for("staff_leave_pending"))
