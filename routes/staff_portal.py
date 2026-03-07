@@ -10,8 +10,6 @@ def staff_attendance_test():
     return "staff attendance blueprint working"
 
 from flask import session, g
-from db import db_fetchall
-
 
 @staff_portal.route("/_staff_test/leave/pending")
 @require_login
