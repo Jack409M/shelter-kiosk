@@ -79,7 +79,6 @@ app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
 app.register_blueprint(resident_portal)
-app.register_blueprint(staff_portal)
 
 @app.before_request
 def log_request_info():
@@ -3666,6 +3665,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
