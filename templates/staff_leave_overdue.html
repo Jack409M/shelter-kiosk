@@ -17,7 +17,7 @@
       <td>{{ fmt_dt(r["return_at"]) }}</td>
       <td>{{ r["destination"] }}</td>
       <td>
-        <form method="post" action="{{ url_for('staff_leave_check_in', req_id=r['id']) }}" class="inline">
+        <form method="post" action="{{ url_for('staff_portal.staff_leave_check_in', req_id=r['id']) }}" class="inline">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input name="note" placeholder="Optional note">
           <button type="submit">Check in</button>
@@ -29,3 +29,4 @@
 </table>
 
 {% endblock %}
+
