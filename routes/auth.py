@@ -1,95 +1,102 @@
 from __future__ import annotations
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash
 
+from core.audit import log_action
+from core.auth import require_login, require_shelter
 from core.db import db_fetchone
-from core.helpers import utcnow_iso
+
 
 auth = Blueprint("auth", __name__)
 
 
 @auth.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
-    from app import check_staff_password
+    from app import SHELTERS, _client_ip, _rate_limited, init_db
 
-    if request.method == "POST":
-        username = (request.form.get("username") or "").strip()
-        password = (request.form.get("password") or "").strip()
+    init_db()
 
-        user = db_fetchone(
-            "SELECT * FROM staff_users WHERE username = %s"
-            if session.get("db_kind") == "pg"
-            else "SELECT * FROM staff_users WHERE username = ?",
-            (username,),
-        )
+    if request.method == "GET":
+        return render_template("staff_login.html", all_shelters=SHELTERS)
 
-        if not user:
-            flash("Invalid credentials.", "error")
-            return redirect(url_for("auth.staff_login"))
+    username = (request.form.get("username") or "").strip()
+    password = (request.form.get("password") or "").strip()
 
-        if not check_staff_password(user, password):
-            flash("Invalid credentials.", "error")
-            return redirect(url_for("auth.staff_login"))
+    ip = _client_ip()
+    u = (username or "").strip().lower()
 
-        session["staff_user_id"] = user["id"]
-        session["username"] = user["username"]
-        session["role"] = user["role"]
+    if _rate_limited(f"staff_login_ip:{ip}", 10, 60) or _rate_limited(f"staff_login_user:{u}", 20, 3600):
+        flash("Too many login attempts. Please wait and try again.", "error")
+        return render_template("staff_login.html", all_shelters=SHELTERS), 429
 
-        flash("Logged in.", "ok")
-        return redirect(url_for("staff_home"))
+    row = db_fetchone(
+        "SELECT * FROM staff_users WHERE username = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT * FROM staff_users WHERE username = ?",
+        (username,),
+    )
 
-    return render_template("staff_login.html")
+    if not row:
+        flash("Invalid login.", "error")
+        return render_template("staff_login.html", all_shelters=SHELTERS), 401
+
+    is_active = bool(row["is_active"] if isinstance(row, dict) else row[4])
+    pw_hash = row["password_hash"] if isinstance(row, dict) else row[2]
+
+    if not is_active or not check_password_hash(pw_hash, password):
+        flash("Invalid login.", "error")
+        return render_template("staff_login.html", all_shelters=SHELTERS), 401
+
+    shelter = (request.form.get("shelter") or "").strip()
+    if shelter not in SHELTERS:
+        flash("Select a valid shelter.", "error")
+        return render_template("staff_login.html", all_shelters=SHELTERS), 400
+
+    session.clear()
+    session["staff_user_id"] = row["id"] if isinstance(row, dict) else row[0]
+    session["username"] = row["username"] if isinstance(row, dict) else row[1]
+    session["role"] = row["role"] if isinstance(row, dict) else row[3]
+    session["shelter"] = shelter
+    session.permanent = True
+
+    log_action("auth", None, None, session["staff_user_id"], "login", f"Staff login: {session['username']}")
+    return redirect(url_for("attendance.staff_attendance"))
 
 
 @auth.route("/staff/logout")
+@require_login
 def staff_logout():
+    staff_id = session.get("staff_user_id")
+    log_action("auth", None, None, staff_id, "logout", f"Staff logout: {session.get('username')}")
     session.clear()
-    flash("Logged out.", "ok")
     return redirect(url_for("auth.staff_login"))
 
 
-@auth.route("/staff")
-def staff_home():
-    if not session.get("staff_user_id"):
-        return redirect(url_for("auth.staff_login"))
-
-    return render_template("staff_home.html")
-
-
 @auth.route("/staff/select-shelter", methods=["GET", "POST"])
+@require_login
 def staff_select_shelter():
     from app import SHELTERS
 
-    if request.method == "POST":
-        shelter = (request.form.get("shelter") or "").strip()
+    if request.method == "GET":
+        return render_template("staff_select_shelter.html", shelters=SHELTERS)
 
-        if shelter not in SHELTERS:
-            flash("Invalid shelter.", "error")
-            return redirect(url_for("auth.staff_select_shelter"))
+    shelter = (request.form.get("shelter") or "").strip()
+    if shelter not in SHELTERS:
+        flash("Select a valid shelter.", "error")
+        return redirect(url_for("auth.staff_select_shelter"))
 
-        session["shelter"] = shelter
-        return redirect(url_for("auth.staff_home"))
+    session["shelter"] = shelter
 
-    return render_template("staff_select_shelter.html", shelters=SHELTERS)
+    nxt = (request.form.get("next") or "").strip()
+    if nxt and nxt.startswith("/staff"):
+        return redirect(nxt)
 
-
-@auth.route("/resident")
-def resident_signin():
-    return render_template("resident_signin.html")
-
-
-@auth.route("/resident/login", methods=["POST"])
-def resident_login_alias():
-    return redirect(url_for("resident_signin"))
+    return redirect(url_for("auth.staff_home"))
 
 
-@auth.route("/resident/login/")
-def resident_login_alias_slash():
-    return redirect(url_for("resident_signin"))
-
-
-@auth.route("/resident/logout")
-def resident_logout():
-    session.clear()
-    flash("Logged out.", "ok")
-    return redirect(url_for("resident_signin"))
+@auth.route("/staff")
+@require_login
+@require_shelter
+def staff_home():
+    return redirect(url_for("attendance.staff_attendance"))
