@@ -260,7 +260,7 @@ def inject_resident_dashboard_status():
         WHERE resident_identifier = %s
         ORDER BY leave_at ASC
         """
-        is_postgres()
+        if is_postgres()
         else """
         SELECT status, shelter, resident_identifier, leave_at, return_at
         FROM leave_requests
@@ -3646,6 +3646,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
