@@ -79,40 +79,6 @@ def staff_transport_board():
         fmt_dt=fmt_dt,
     )
 
-
-@attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"]) 
-@require_login
-@require_shelter
-def staff_transport_schedule(req_id: int):
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-
-    driver_name = (request.form.get("driver_name") or "").strip()
-    staff_notes = (request.form.get("staff_notes") or "").strip()
-
-    if not driver_name:
-        flash("Driver name required.", "error")
-        return redirect(url_for("transport.staff_transport_pending"))
-
-    db_execute(
-        """
-        UPDATE transport_requests
-        SET status = %s, scheduled_at = %s, scheduled_by = %s, driver_name = %s, staff_notes = %s
-        WHERE id = %s AND shelter = %s AND status = %s
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        UPDATE transport_requests
-        SET status = ?, scheduled_at = ?, scheduled_by = ?, driver_name = ?, staff_notes = ?
-        WHERE id = ? AND shelter = ? AND status = ?
-        """,
-        ("scheduled", datetime.utcnow().isoformat(), staff_id, driver_name, staff_notes or None, req_id, shelter, "pending"),
-    )
-
-    log_action("transport", req_id, shelter, staff_id, "schedule", f"Driver {driver_name}")
-    flash("Scheduled.", "ok")
-    return redirect(url_for("transport.staff_transport_pending"))
-
 @transport.route("/staff/transport/print")
 @require_login
 @require_shelter
