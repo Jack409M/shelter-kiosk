@@ -21,6 +21,7 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Optional
 from routes.admin import admin
+from routes.auth import auth
 
 from flask import Flask, Response, current_app, g, redirect, render_template, request, session, url_for, flash, abort
 
@@ -84,7 +85,7 @@ app.teardown_appcontext(close_db)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 app.register_blueprint(admin)
-
+app.register_blueprint(auth)
 
 def register_blueprints(app: Flask) -> None:
     import routes
@@ -2042,6 +2043,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
