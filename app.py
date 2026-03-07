@@ -1943,9 +1943,9 @@ def staff_transport_pending():
     shelter = session["shelter"]
 
     rows = db_fetchall(
-        "SELECT * FROM transport_requests WHERE status = %s AND shelter = %s ORDER BY requested_at DESC"
+        "SELECT * FROM transport_requests WHERE status = %s AND shelter = %s ORDER BY id DESC"
         if current_app.config.get("DATABASE_URL")
-        else "SELECT * FROM transport_requests WHERE status = ? AND shelter = ? ORDER BY requested_at DESC",
+        else "SELECT * FROM transport_requests WHERE status = ? AND shelter = ? ORDER BY id DESC",
         ("pending", shelter),
     )
 
@@ -3049,6 +3049,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
