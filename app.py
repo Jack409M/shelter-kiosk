@@ -445,19 +445,6 @@ def fmt_pretty_date(dt_iso: Optional[str]) -> str:
     except Exception:
         return dt_iso
 
-
-def fmt_time_only(dt_iso: Optional[str]) -> str:
-    if not dt_iso:
-        return ""
-    try:
-        dt = datetime.fromisoformat(dt_iso)
-        dt = dt.replace(tzinfo=timezone.utc)
-        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-        return local_dt.strftime("%I:%M %p")
-    except Exception:
-        return ""
-
-
 def send_sms(to_number: str, message: str) -> None:
 
     # GLOBAL SMS PANIC SWITCH
@@ -3629,6 +3616,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
