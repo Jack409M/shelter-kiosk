@@ -80,7 +80,7 @@ def staff_transport_board():
     )
 
 
-@transport.route("/staff/transport/<int:req_id>/schedule", methods=["POST"])
+@attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"]) 
 @require_login
 @require_shelter
 def staff_transport_schedule(req_id: int):
