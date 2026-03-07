@@ -14,13 +14,9 @@ from core.helpers import utcnow_iso
 kiosk = Blueprint("kiosk", __name__)
 
 
-def _client_ip() -> str:
-    return (request.remote_addr or "").strip() or "unknown"
-
-
 @kiosk.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
 def kiosk_checkout(shelter: str):
-    from app import KIOSK_PIN, SHELTERS, init_db, _rate_limited
+    from app import KIOSK_PIN, SHELTERS, _client_ip, _rate_limited, init_db
 
     if shelter not in SHELTERS:
         return "Invalid shelter", 404
@@ -124,5 +120,6 @@ def kiosk_checkout(shelter: str):
         "kiosk_check_out",
         f"expected_back={expected_back_value or ''} {full_note}".strip(),
     )
+
     flash("Checked out.", "ok")
     return redirect(url_for("kiosk.kiosk_checkout", shelter=shelter))
