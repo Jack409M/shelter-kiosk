@@ -1286,7 +1286,7 @@ def require_staff_or_admin(fn):
     return wrapper
 
 
-def require_shelter(fn):
+def legacy_require_shelter(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if "shelter" not in session:
@@ -3656,6 +3656,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
