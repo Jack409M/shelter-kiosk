@@ -16,7 +16,7 @@ def staff_attendance_test():
 @staff_portal.route("/staff/leave/pending")
 @require_login
 @require_shelter
-def staff_leave_pending_test():
+def staff_leave_pending():
     shelter = session["shelter"]
 
     sql = (
