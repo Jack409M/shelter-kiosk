@@ -2,6 +2,8 @@ from flask import Blueprint, render_template
 from core.auth import require_login, require_shelter
 from core.helpers import utcnow_iso, fmt_date, fmt_dt
 from core.db import db_fetchall
+from flask import session
+
 
 staff_portal = Blueprint("staff_portal", __name__)
 
@@ -10,7 +12,7 @@ staff_portal = Blueprint("staff_portal", __name__)
 def staff_attendance_test():
     return "staff attendance blueprint working"
 
-from flask import session, g
+from flask import session
 
 @staff_portal.route("/_staff_test/leave/pending")
 @require_login
