@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import importlib
+import pkgutil
 import os
 import io
 import csv
@@ -7,15 +9,12 @@ import sqlite3
 import secrets
 import time
 import logging
-from routes.resident_portal import resident_portal
 from db import schema
-from routes.staff_portal import staff_portal
 from core.auth import require_login
 from core.auth import require_shelter
 from core.helpers import is_postgres, db_placeholder, utcnow_iso, fmt_date, fmt_dt, fmt_time_only, fmt_pretty_date
 from core.db import get_db, close_db, db_execute, db_fetchone, db_fetchall
 from core.audit import log_action
-from routes.attendance import attendance
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -82,9 +81,21 @@ app.teardown_appcontext(close_db)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
-app.register_blueprint(resident_portal)
-app.register_blueprint(staff_portal)
-app.register_blueprint(attendance)
+
+def register_blueprints(app: Flask) -> None:
+    import routes
+    from flask import Blueprint
+
+    for _, module_name, _ in pkgutil.iter_modules(routes.__path__):
+        module = importlib.import_module(f"routes.{module_name}")
+
+        for attr_name in dir(module):
+            obj = getattr(module, attr_name)
+            if isinstance(obj, Blueprint) and obj.name not in app.blueprints:
+                app.register_blueprint(obj)
+
+
+register_blueprints(app)
 
 @app.before_request
 def log_request_info():
@@ -3055,6 +3066,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
