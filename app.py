@@ -12,6 +12,7 @@ from db import schema
 from routes.staff_portal import staff_portal
 from core.auth import require_login
 from core.auth import require_shelter
+from core.helpers import is_postgres, db_placeholder
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -3645,6 +3646,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
