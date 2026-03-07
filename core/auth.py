@@ -17,3 +17,6 @@ def require_shelter(fn):
         if "shelter" not in session:
             return redirect(url_for("staff_select_shelter"))
         return fn(*args, **kwargs)
+    
+    return wrapper
+    
