@@ -174,7 +174,7 @@ def staff_leave_approve(req_id: int):
     Importing them inside the function avoids import time circular issues
     until those helpers are extracted into shared modules.
     """
-    from app import log_action, send_sms
+    from app import send_sms
 
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
