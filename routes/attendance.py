@@ -22,7 +22,7 @@ def staff_attendance():
 
     residents = db_fetchall(
         "SELECT * FROM residents WHERE shelter = %s AND is_active = TRUE ORDER BY last_name, first_name"
-        if g.get("db_kind") == "pg"
+        if current_app.config.get("DATABASE_URL")
         else "SELECT * FROM residents WHERE shelter = ? AND is_active = 1 ORDER BY last_name, first_name",
         (shelter,),
     )
@@ -43,7 +43,7 @@ def staff_attendance():
             ORDER BY event_time DESC
             LIMIT 1
             """
-            if g.get("db_kind") == "pg"
+            if current_app.config.get("DATABASE_URL")
             else """
             SELECT event_type, event_time, expected_back_time, note
             FROM attendance_events
@@ -67,7 +67,7 @@ def staff_attendance():
             ORDER BY event_time DESC
             LIMIT 1
             """
-            if g.get("db_kind") == "pg"
+            if current_app.config.get("DATABASE_URL")
             else """
             SELECT event_time, expected_back_time, note
             FROM attendance_events
