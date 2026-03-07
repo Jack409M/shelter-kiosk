@@ -1136,7 +1136,7 @@ def require_staff_or_admin(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") not in STAFF_ROLES:
             flash("Staff only.", "error")
-            return redirect(url_for("staff_home"))
+            return redirect(url_for("auth.staff_home"))
         return fn(*args, **kwargs)
 
     return wrapper
@@ -1146,7 +1146,7 @@ def require_admin(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") != "admin":
             flash("Admin only.", "error")
-            return redirect(url_for("staff_home"))
+            return redirect(url_for("auth.staff_home"))
         return fn(*args, **kwargs)
 
     return wrapper
@@ -1167,7 +1167,7 @@ def require_transfer(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") not in TRANSFER_ROLES:
             flash("Admin or case manager only.", "error")
-            return redirect(url_for("staff_home"))
+            return redirect(url_for("auth.staff_home"))
         return fn(*args, **kwargs)
 
     return wrapper
@@ -1178,7 +1178,7 @@ def require_resident_create(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") not in {"admin", "case_manager"}:
             flash("Admin or case manager only.", "error")
-            return redirect(url_for("staff_residents"))
+            return redirect(url_for("residents.staff_residents"))
         return fn(*args, **kwargs)
 
     return wrapper
@@ -1951,6 +1951,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
