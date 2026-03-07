@@ -1977,54 +1977,6 @@ def staff_home():
 
 # ---- Staff Leave ----
 
-@app.route("/staff/leave/overdue")
-@require_login
-@require_shelter
-def staff_leave_overdue():
-    shelter = session["shelter"]
-
-    rows = db_fetchall(
-        """
-        SELECT * FROM leave_requests
-        WHERE status = %s AND shelter = %s AND check_in_at IS NULL
-        ORDER BY return_at ASC
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        SELECT * FROM leave_requests
-        WHERE status = ? AND shelter = ? AND check_in_at IS NULL
-        ORDER BY return_at ASC
-        """,
-        ("approved", shelter),
-    )
-
-    now_local = datetime.now(ZoneInfo("America/Chicago"))
-    overdue_rows = []
-
-    for r in rows:
-        return_iso = r["return_at"] if isinstance(r, dict) or hasattr(r, "__getitem__") else None
-        if not return_iso:
-            continue
-
-        try:
-            rt_utc = datetime.fromisoformat(return_iso).replace(tzinfo=timezone.utc)
-            rt_local = rt_utc.astimezone(ZoneInfo("America/Chicago"))
-            cutoff_local = rt_local.replace(hour=22, minute=0, second=0, microsecond=0)
-
-            if now_local > cutoff_local:
-                overdue_rows.append(r)
-        except Exception:
-            continue
-
-    return render_template(
-        "staff_leave_overdue.html",
-        rows=overdue_rows,
-        fmt_dt=fmt_dt,
-        fmt_date=fmt_date,
-        shelter=shelter,
-    )
-
-
 @app.route("/staff/leave/<int:req_id>/approve", methods=["POST"])
 @require_login
 @require_shelter
@@ -3454,35 +3406,6 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
