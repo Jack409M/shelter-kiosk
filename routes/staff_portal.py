@@ -2,17 +2,19 @@ from flask import Blueprint, current_app, render_template, session
 
 from core.auth import require_login, require_shelter
 from core.db import db_fetchall
-from core.helpers import fmt_date, fmt_dt
+from core.helpers import fmt_date, fmt_dt, utcnow_iso
 
 
 staff_portal = Blueprint("staff_portal", __name__)
 
 
+# Simple test route to confirm blueprint wiring
 @staff_portal.route("/_staff_test/attendance")
 def staff_attendance_test():
     return "staff attendance blueprint working"
 
 
+# Pending leave requests
 @staff_portal.route("/staff/leave/pending")
 @require_login
 @require_shelter
@@ -35,27 +37,31 @@ def staff_leave_pending():
         shelter=shelter,
     )
 
-@app.route("/staff/leave/upcoming")
+
+# Upcoming approved leave
+@staff_portal.route("/staff/leave/upcoming")
 @require_login
 @require_shelter
 def staff_leave_upcoming():
     shelter = session["shelter"]
     now = utcnow_iso()
 
-    rows = db_fetchall(
+    sql = (
         """
         SELECT * FROM leave_requests
         WHERE status = %s AND shelter = %s AND check_in_at IS NULL AND leave_at > %s
         ORDER BY leave_at ASC
         """
-        if g.get("db_kind") == "pg"
-        else """
+        if current_app.config.get("DATABASE_URL")
+        else
+        """
         SELECT * FROM leave_requests
         WHERE status = ? AND shelter = ? AND check_in_at IS NULL AND leave_at > ?
         ORDER BY leave_at ASC
-        """,
-        ("approved", shelter, now),
+        """
     )
+
+    rows = db_fetchall(sql, ("approved", shelter, now))
 
     return render_template(
         "staff_leave_upcoming.html",
