@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
 from flask import Blueprint, current_app, render_template, session
 
 from core.auth import require_login, require_shelter
@@ -71,6 +74,7 @@ def staff_leave_upcoming():
         shelter=shelter,
     )
 
+
 @staff_portal.route("/staff/leave/away-now")
 @require_login
 @require_shelter
@@ -102,26 +106,29 @@ def staff_leave_away_now():
         shelter=shelter,
     )
 
+
 @staff_portal.route("/staff/leave/overdue")
 @require_login
 @require_shelter
 def staff_leave_overdue():
     shelter = session["shelter"]
 
-    rows = db_fetchall(
+    sql = (
         """
         SELECT * FROM leave_requests
         WHERE status = %s AND shelter = %s AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
-        current_app.config.get("DATABASE_URL")
-        else """
+        if current_app.config.get("DATABASE_URL")
+        else
+        """
         SELECT * FROM leave_requests
         WHERE status = ? AND shelter = ? AND check_in_at IS NULL
         ORDER BY return_at ASC
-        """,
-        ("approved", shelter),
+        """
     )
+
+    rows = db_fetchall(sql, ("approved", shelter))
 
     now_local = datetime.now(ZoneInfo("America/Chicago"))
     overdue_rows = []
