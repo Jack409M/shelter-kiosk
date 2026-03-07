@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template
+from core.auth import require_login, require_shelter
 
 staff_portal = Blueprint("staff_portal", __name__)
 
