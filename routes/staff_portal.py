@@ -70,3 +70,26 @@ def staff_leave_upcoming():
         fmt_date=fmt_date,
         shelter=shelter,
     )
+
+@app.route("/staff/leave/away-now")
+@require_login
+@require_shelter
+def staff_leave_away_now():
+    shelter = session["shelter"]
+    now = utcnow_iso()
+    rows = db_fetchall(
+        """
+        SELECT * FROM leave_requests
+        WHERE status = %s AND shelter = %s AND leave_at <= %s AND check_in_at IS NULL
+        ORDER BY return_at ASC
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT * FROM leave_requests
+        WHERE status = ? AND shelter = ? AND leave_at <= ? AND check_in_at IS NULL
+        ORDER BY return_at ASC
+        """,
+        ("approved", shelter, now),
+    )
+    return render_template("staff_leave_away_now.html", rows=rows, fmt_dt=fmt_dt, shelter=shelter)
+
