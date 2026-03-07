@@ -73,6 +73,9 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 
 app = Flask(__name__)
+app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
+app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", "shelter.db")
+app.teardown_appcontext(close_db)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
@@ -561,103 +564,6 @@ def sms_is_allowed_for_number(phone: str) -> bool:
     return False
 
 # Postgres connection pool
-def _init_pg_pool() -> None:
-    global PG_POOL
-    if PG_POOL is not None:
-        return
-
-    if not DATABASE_URL:
-        return
-
-    if SimpleConnectionPool is None:
-        raise RuntimeError("psycopg2 is required for Postgres pooling.")
-
-    PG_POOL = SimpleConnectionPool(minconn=1, maxconn=10, dsn=DATABASE_URL)
-
-
-def get_db() -> Any:
-    if "db" in g:
-        return g.db
-
-    if DATABASE_URL:
-        _init_pg_pool()
-        if PG_POOL is None:
-            raise RuntimeError("Postgres pool was not initialized.")
-        conn = PG_POOL.getconn()
-        conn.autocommit = True
-        g.db = conn
-        g.db_kind = "pg"
-        return conn
-
-    conn = sqlite3.connect(SQLITE_PATH)
-    conn.row_factory = sqlite3.Row
-    g.db = conn
-    g.db_kind = "sqlite"
-    return conn
-
-
-@app.teardown_appcontext
-def close_db(_exc):
-    conn = g.pop("db", None)
-    kind = g.pop("db_kind", None)
-
-    if conn is None:
-        return
-
-    if kind == "pg":
-        try:
-            if PG_POOL is not None:
-                PG_POOL.putconn(conn)
-                return
-        except Exception:
-            pass
-
-    try:
-        conn.close()
-    except Exception:
-        pass
-
-
-def db_execute(sql: str, params: tuple = ()) -> None:
-    conn = get_db()
-    kind = g.get("db_kind", "sqlite")
-
-    if kind == "pg":
-        cur = conn.cursor()
-        cur.execute(sql, params)
-        cur.close()
-        return
-
-    cur = conn.cursor()
-    cur.execute(sql, params)
-    conn.commit()
-
-
-def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
-    conn = get_db()
-    kind = g.get("db_kind")
-
-    if kind == "pg":
-        import psycopg2.extras
-
-        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-        cur.execute(sql, params)
-        rows = cur.fetchall()
-        cur.close()
-        return rows
-
-    cur = conn.cursor()
-    cur.execute(sql, params)
-    rows = cur.fetchall()
-    return rows
-
-
-def db_fetchone(sql: str, params: tuple = ()) -> Optional[Any]:
-    rows = db_fetchall(sql, params)
-    if not rows:
-        return None
-    return rows[0]
-
 
 def make_resident_code(length: int = 8) -> str:
     return "".join(secrets.choice("0123456789") for _ in range(length))
@@ -3611,6 +3517,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
