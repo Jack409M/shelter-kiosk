@@ -306,3 +306,61 @@ def staff_leave_check_in(req_id: int):
     log_action("leave", req_id, shelter, staff_id, "check_in", note or "")
     flash("Checked in.", "ok")
     return redirect(url_for("staff_portal.staff_leave_away_now"))
+
+@staff_portal.get("/staff/leave/<int:req_id>/print")
+@require_login
+@require_shelter
+@require_staff_or_admin
+def staff_leave_print(req_id: int):
+    init_db()
+
+    shelter = session["shelter"]
+    
+
+    row = db_fetchone(
+        """
+        SELECT
+            lr.*,
+            r.first_name,
+            r.last_name,
+            COALESCE(su.username, '') AS decided_by_name,
+            COALESCE(su.role, '') AS decided_by_role
+        FROM leave_requests lr
+        LEFT JOIN residents r
+            ON r.resident_identifier = lr.resident_identifier
+            AND r.shelter = lr.shelter
+        LEFT JOIN staff_users su
+            ON su.id = lr.decided_by
+        WHERE lr.id = %s AND lr.shelter = %s
+        """
+        if current_app.config.get("DATABASE_URL")
+        else
+        """
+        SELECT
+            lr.*,
+            r.first_name,
+            r.last_name,
+            COALESCE(su.username, '') AS decided_by_name,
+            COALESCE(su.role, '') AS decided_by_role
+        FROM leave_requests lr
+        LEFT JOIN residents r
+            ON r.resident_identifier = lr.resident_identifier
+            AND r.shelter = lr.shelter
+        LEFT JOIN staff_users su
+            ON su.id = lr.decided_by
+        WHERE lr.id = ? AND lr.shelter = ?
+        """,
+        (req_id, shelter),
+    )
+
+    if not row:
+        abort(404)
+
+    return render_template(
+        "staff_leave_print.html",
+        row=row,
+        shelter=shelter,
+        printed_on=fmt_dt(utcnow_iso()),
+        fmt_dt=fmt_dt,
+        fmt_date=fmt_date,
+    )
