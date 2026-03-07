@@ -27,6 +27,10 @@ def staff_attendance_test():
     return "staff attendance blueprint working"
 
 
+# -----------------------------------------------------
+# Leave dashboards
+# -----------------------------------------------------
+
 @staff_portal.route("/staff/leave/pending")
 @require_login
 @require_shelter
@@ -170,6 +174,10 @@ def staff_leave_overdue():
         shelter=shelter,
     )
 
+
+# -----------------------------------------------------
+# Leave actions
+# -----------------------------------------------------
 
 @staff_portal.route("/staff/leave/<int:req_id>/approve", methods=["POST"])
 @require_login
@@ -317,6 +325,10 @@ def staff_leave_check_in(req_id: int):
     return redirect(url_for("staff_portal.staff_leave_away_now"))
 
 
+# -----------------------------------------------------
+# Leave print
+# -----------------------------------------------------
+
 @staff_portal.get("/staff/leave/<int:req_id>/print")
 @require_login
 @require_shelter
@@ -370,3 +382,4 @@ def staff_leave_print(req_id: int):
         fmt_dt=fmt_dt,
         fmt_date=fmt_date,
     )
+    
