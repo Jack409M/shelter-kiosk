@@ -1895,7 +1895,7 @@ def staff_login():
     session.permanent = True
 
     log_action("auth", None, None, session["staff_user_id"], "login", f"Staff login: {session['username']}")
-    return redirect(url_for("staff_attendance"))
+    return redirect(url_for("attendance.staff_attendance"))
 
 
 @app.route("/staff/logout")
@@ -1931,7 +1931,7 @@ def staff_select_shelter():
 @require_login
 @require_shelter
 def staff_home():
-    return redirect(url_for("staff_attendance"))
+    return redirect(url_for("attendance.staff_attendance"))
 
 # ---- Staff Transport ----
 
@@ -2200,11 +2200,11 @@ def staff_attendance_check_out_global():
 
     if checkout_type not in {"out", "pass"}:
         flash("Select a valid checkout type.", "error")
-        return redirect(url_for("staff_attendance"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     if not rid_raw.isdigit():
         flash("Select a resident.", "error")
-        return redirect(url_for("staff_attendance"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     resident_id = int(rid_raw)
 
@@ -2216,11 +2216,11 @@ def staff_attendance_check_out_global():
     )
     if not resident:
         flash("Invalid resident.", "error")
-        return redirect(url_for("staff_attendance"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     if not expected_back_raw:
         flash("Expected back time is required.", "error")
-        return redirect(url_for("staff_attendance"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     try:
         local_dt = datetime.fromisoformat(expected_back_raw)
@@ -2232,7 +2232,7 @@ def staff_attendance_check_out_global():
         )
     except Exception:
         flash("Invalid expected back time.", "error")
-        return redirect(url_for("staff_attendance"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     event_time = datetime.utcnow().replace(microsecond=0).isoformat()
 
@@ -2258,7 +2258,7 @@ def staff_attendance_check_out_global():
         "Resident checked out on Pass." if checkout_type == "pass" else "Resident checked out.",
         "success",
     )
-    return redirect(url_for("staff_attendance"))
+    return redirect(url_for("attendance.staff_attendance"))
 
 @app.route("/staff/attendance/resident/<int:resident_id>/print")
 @require_login
@@ -3035,6 +3035,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
