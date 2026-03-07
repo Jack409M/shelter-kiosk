@@ -878,6 +878,37 @@ def init_db() -> None:
         """,
     )
 
+        create(
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            public_name TEXT NOT NULL,
+            primary_color TEXT,
+            secondary_color TEXT,
+            logo_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            public_name TEXT NOT NULL,
+            primary_color TEXT,
+            secondary_color TEXT,
+            logo_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """,
+    )
+    
     create(
         """
         CREATE TABLE IF NOT EXISTS residents (
@@ -919,8 +950,22 @@ def init_db() -> None:
         db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
     except Exception:
         pass
+
+    # Seed first organization (safe if it already exists)
+    try:
+        db_execute(
+            """
+            INSERT INTO organizations
+            (name, slug, public_name, primary_color, secondary_color, created_at)
+            VALUES
+            ('Downtown Womens Center', 'dwc', 'Downtown Womens Center', '#4f8fbe', '#3f79a5', ?)
+            """,
+            (datetime.utcnow().isoformat(),),
+        )
+    except Exception:
+        pass
     
-    create(
+create(
         """
         CREATE TABLE IF NOT EXISTS resident_transfers (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3616,6 +3661,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
