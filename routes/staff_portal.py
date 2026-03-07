@@ -83,7 +83,7 @@ def staff_leave_away_now():
         WHERE status = %s AND shelter = %s AND leave_at <= %s AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
-        if g.get("db_kind") == "pg"
+        if current_app.config.get("DATABASE_URL")
         else """
         SELECT * FROM leave_requests
         WHERE status = ? AND shelter = ? AND leave_at <= ? AND check_in_at IS NULL
