@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from flask import (
     Blueprint,
+    abort,
     current_app,
     flash,
     redirect,
@@ -12,10 +13,10 @@ from flask import (
     url_for,
 )
 
+from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
-from core.audit import log_action
 
 
 staff_portal = Blueprint("staff_portal", __name__)
@@ -58,14 +59,16 @@ def staff_leave_upcoming():
 
     sql = (
         """
-        SELECT * FROM leave_requests
+        SELECT *
+        FROM leave_requests
         WHERE status = %s AND shelter = %s AND check_in_at IS NULL AND leave_at > %s
         ORDER BY leave_at ASC
         """
         if current_app.config.get("DATABASE_URL")
         else
         """
-        SELECT * FROM leave_requests
+        SELECT *
+        FROM leave_requests
         WHERE status = ? AND shelter = ? AND check_in_at IS NULL AND leave_at > ?
         ORDER BY leave_at ASC
         """
@@ -91,14 +94,16 @@ def staff_leave_away_now():
 
     sql = (
         """
-        SELECT * FROM leave_requests
+        SELECT *
+        FROM leave_requests
         WHERE status = %s AND shelter = %s AND leave_at <= %s AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
         if current_app.config.get("DATABASE_URL")
         else
         """
-        SELECT * FROM leave_requests
+        SELECT *
+        FROM leave_requests
         WHERE status = ? AND shelter = ? AND leave_at <= ? AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
@@ -122,14 +127,16 @@ def staff_leave_overdue():
 
     sql = (
         """
-        SELECT * FROM leave_requests
+        SELECT *
+        FROM leave_requests
         WHERE status = %s AND shelter = %s AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
         if current_app.config.get("DATABASE_URL")
         else
         """
-        SELECT * FROM leave_requests
+        SELECT *
+        FROM leave_requests
         WHERE status = ? AND shelter = ? AND check_in_at IS NULL
         ORDER BY return_at ASC
         """
@@ -140,8 +147,8 @@ def staff_leave_overdue():
     now_local = datetime.now(ZoneInfo("America/Chicago"))
     overdue_rows = []
 
-    for r in rows:
-        return_iso = r["return_at"] if isinstance(r, dict) or hasattr(r, "__getitem__") else None
+    for row in rows:
+        return_iso = row["return_at"] if isinstance(row, dict) else row[10]
         if not return_iso:
             continue
 
@@ -151,7 +158,7 @@ def staff_leave_overdue():
             cutoff_local = rt_local.replace(hour=22, minute=0, second=0, microsecond=0)
 
             if now_local > cutoff_local:
-                overdue_rows.append(r)
+                overdue_rows.append(row)
         except Exception:
             continue
 
@@ -168,6 +175,7 @@ def staff_leave_overdue():
 @require_login
 @require_shelter
 def staff_leave_approve(req_id: int):
+    # Temporary bridge until SMS moves into a shared core module.
     from app import send_sms
 
     shelter = session["shelter"]
@@ -275,6 +283,7 @@ def staff_leave_deny(req_id: int):
     flash("Denied.", "ok")
     return redirect(url_for("staff_portal.staff_leave_pending"))
 
+
 @staff_portal.route("/staff/leave/<int:req_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
@@ -307,14 +316,12 @@ def staff_leave_check_in(req_id: int):
     flash("Checked in.", "ok")
     return redirect(url_for("staff_portal.staff_leave_away_now"))
 
+
 @staff_portal.get("/staff/leave/<int:req_id>/print")
 @require_login
 @require_shelter
 def staff_leave_print(req_id: int):
-    init_db()
-
     shelter = session["shelter"]
-    
 
     row = db_fetchone(
         """
