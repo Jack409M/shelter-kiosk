@@ -804,7 +804,7 @@ def ensure_admin_bootstrap() -> None:
     )
 
  # DATABASE SCHEMA INITIALIZATION (moving to db/schema.py later)       
-def legacy_init_db() -> None::
+def legacy_init_db() -> None:
     get_db()
     kind = g.get("db_kind")
 
@@ -3664,3 +3664,4 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
