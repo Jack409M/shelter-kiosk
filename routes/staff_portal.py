@@ -1,7 +1,16 @@
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from core.auth import require_login, require_shelter, require_transfer
 from core.db import db_execute, db_fetchall, db_fetchone
@@ -11,13 +20,11 @@ from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
 staff_portal = Blueprint("staff_portal", __name__)
 
 
-# Simple test route to confirm blueprint wiring
 @staff_portal.route("/_staff_test/attendance")
 def staff_attendance_test():
     return "staff attendance blueprint working"
 
 
-# Pending leave requests
 @staff_portal.route("/staff/leave/pending")
 @require_login
 @require_shelter
@@ -41,7 +48,6 @@ def staff_leave_pending():
     )
 
 
-# Upcoming approved leave
 @staff_portal.route("/staff/leave/upcoming")
 @require_login
 @require_shelter
@@ -156,11 +162,20 @@ def staff_leave_overdue():
         shelter=shelter,
     )
 
+
 @staff_portal.route("/staff/leave/<int:req_id>/approve", methods=["POST"])
 @require_login
 @require_shelter
 @require_transfer
 def staff_leave_approve(req_id: int):
+    """
+    Temporary bridge:
+    log_action and send_sms still live in app.py.
+    Importing them inside the function avoids import time circular issues
+    until those helpers are extracted into shared modules.
+    """
+    from app import log_action, send_sms
+
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
@@ -171,11 +186,13 @@ def staff_leave_approve(req_id: int):
         else "SELECT * FROM leave_requests WHERE id = ? AND shelter = ?",
         (req_id, shelter),
     )
+
     if not row or (row["status"] if isinstance(row, dict) else row[10]) != "pending":
         flash("Not pending.", "error")
-        return redirect(url_for("staff_portal.staff_leave_pending")
+        return redirect(url_for("staff_portal.staff_leave_pending"))
 
     decided_at = utcnow_iso()
+
     db_execute(
         """
         UPDATE leave_requests
@@ -183,7 +200,8 @@ def staff_leave_approve(req_id: int):
         WHERE id = %s AND shelter = %s
         """
         if current_app.config.get("DATABASE_URL")
-        else """
+        else
+        """
         UPDATE leave_requests
         SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
         WHERE id = ? AND shelter = ?
@@ -212,6 +230,7 @@ def staff_leave_approve(req_id: int):
             f"Leave {fmt_pretty_date(leave_at)}. "
             f"Return {fmt_pretty_date(return_at)} by 10 PM."
         )
+
         try:
             if phone:
                 send_sms(phone, msg)
@@ -219,4 +238,4 @@ def staff_leave_approve(req_id: int):
             log_action("leave", req_id, shelter, staff_id, "sms_failed", str(e))
 
     flash("Approved.", "ok")
-    return redirect(url_for("staff_portal.staff_leave_pending")
+    return redirect(url_for("staff_portal.staff_leave_pending"))
