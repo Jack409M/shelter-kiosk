@@ -20,8 +20,6 @@ from collections import deque
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Optional
-from routes.admin import admin
-from routes.auth import auth
 
 from flask import Flask, Response, current_app, g, redirect, render_template, request, session, url_for, flash, abort
 
@@ -1955,4 +1953,5 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
