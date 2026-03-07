@@ -24,12 +24,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from zoneinfo import ZoneInfo
 
-try:
-    from psycopg2.pool import SimpleConnectionPool
-except Exception:
-    SimpleConnectionPool = None
-
-PG_POOL = None
 
 try:
     from twilio.rest import Client
@@ -3617,6 +3611,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
