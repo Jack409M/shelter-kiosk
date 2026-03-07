@@ -10,6 +10,7 @@ import logging
 from routes.resident_portal import resident_portal
 from db import schema
 from routes.staff_portal import staff_portal
+from core.auth import require_login as require_login_new
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -3666,6 +3667,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
