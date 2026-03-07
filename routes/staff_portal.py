@@ -1,11 +1,11 @@
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, current_app, render_template, session
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 
-from core.auth import require_login, require_shelter
-from core.db import db_fetchall
-from core.helpers import fmt_date, fmt_dt, utcnow_iso
+from core.auth import require_login, require_shelter, require_transfer
+from core.db import db_execute, db_fetchall, db_fetchone
+from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
 
 
 staff_portal = Blueprint("staff_portal", __name__)
@@ -182,7 +182,7 @@ def staff_leave_approve(req_id: int):
         SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
         WHERE id = %s AND shelter = %s
         """
-        if g.get("db_kind") == "pg"
+        if current_app.config.get("DATABASE_URL")
         else """
         UPDATE leave_requests
         SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
@@ -195,7 +195,7 @@ def staff_leave_approve(req_id: int):
 
     req = db_fetchone(
         "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = %s AND shelter = %s"
-        if g.get("db_kind") == "pg"
+        if current_app.config.get("DATABASE_URL")
         else "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = ? AND shelter = ?",
         (req_id, shelter),
     )
