@@ -244,6 +244,12 @@ def _csrf_before_request():
     if resp is not None:
         return resp
 
+@app.route("/_routes")
+def list_routes():
+    out = []
+    for r in app.url_map.iter_rules():
+        out.append(f"{r.endpoint} -> {r.rule}")
+    return "<br>".join(sorted(out))
 
 @app.context_processor
 def inject_shelters():
@@ -2853,6 +2859,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
