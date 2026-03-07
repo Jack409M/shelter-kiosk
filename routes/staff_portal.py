@@ -12,7 +12,7 @@ from flask import (
     url_for,
 )
 
-from core.auth import require_login, require_shelter, require_transfer
+from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
 
