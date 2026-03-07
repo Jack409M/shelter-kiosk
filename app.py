@@ -75,7 +75,7 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 app = Flask(__name__)
 app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
-app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", "shelter.db")
+app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", SQLITE_PATH)
 app.teardown_appcontext(close_db)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
@@ -3235,6 +3235,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
