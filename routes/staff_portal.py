@@ -173,7 +173,7 @@ def staff_leave_approve(req_id: int):
     )
     if not row or (row["status"] if isinstance(row, dict) else row[10]) != "pending":
         flash("Not pending.", "error")
-        return redirect(url_for("staff_leave_pending"))
+        return redirect(url_for("staff_portal.staff_leave_pending")
 
     decided_at = utcnow_iso()
     db_execute(
@@ -219,4 +219,4 @@ def staff_leave_approve(req_id: int):
             log_action("leave", req_id, shelter, staff_id, "sms_failed", str(e))
 
     flash("Approved.", "ok")
-    return redirect(url_for("staff_leave_pending"))
+    return redirect(url_for("staff_portal.staff_leave_pending")
