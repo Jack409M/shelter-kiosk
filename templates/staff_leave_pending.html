@@ -110,7 +110,6 @@
     font-weight: 700;
   }
 
-  /* This is the missing piece */
   .leave-actions {
     display: flex;
     align-items: center;
@@ -135,9 +134,11 @@
     .leave-actions {
       flex-wrap: wrap;
     }
+
     .action-form {
       flex-wrap: wrap;
     }
+
     .note {
       width: 200px;
     }
@@ -147,6 +148,7 @@
     table.compact {
       min-width: 760px;
     }
+
     .note {
       width: 180px;
     }
@@ -178,39 +180,45 @@
       {% else %}
         {% for row in rows %}
           <tr>
-            <td>
-              {{ fmt_dt(row.submitted_at) }}
-            </td>
+            <td>{{ fmt_dt(row.submitted_at) }}</td>
 
             <td class="resident-cell">
               <div class="name">
                 {{ row.last_name }}, {{ row.first_name }}
                 {% if row.status %}
                   {% if row.status == "pending" %}
-                    <span class="pill pending" style="margin-left:8px;">PENDING</span>
+                    <span class="pill pending" style="margin-left: 8px;">PENDING</span>
                   {% else %}
-                    <span class="pill" style="margin-left:8px;">{{ (row.status or "")|upper }}</span>
+                    <span class="pill" style="margin-left: 8px;">{{ (row.status or "")|upper }}</span>
                   {% endif %}
                 {% endif %}
               </div>
 
               <div class="leave-actions">
-                <a class="btn small" href="{{ url_for('staff_leave_print', req_id=row.id) }}"
-                   target="_blank" rel="noopener">
+                <a
+                  class="btn small"
+                  href="{{ url_for('staff_leave_print', req_id=row.id) }}"
+                  target="_blank"
+                  rel="noopener"
+                >
                   Print
                 </a>
 
-                <form class="action-form"
-                      method="post"
-                      action="{{ url_for('staff_portal.staff_leave_approve', req_id=row.id) }}">
+                <form
+                  class="action-form"
+                  method="post"
+                  action="{{ url_for('staff_portal.staff_leave_approve', req_id=row.id) }}"
+                >
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input class="note" type="text" name="note" placeholder="Approval note (optional)">
                   <button class="btn small" type="submit">Approve</button>
                 </form>
 
-                <form class="action-form"
-                      method="post"
-                      action="{{ url_for('staff_portal.staff_leave_deny', req_id=row.id) }}">
+                <form
+                  class="action-form"
+                  method="post"
+                  action="{{ url_for('staff_portal.staff_leave_deny', req_id=row.id) }}"
+                >
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input class="note denial" type="text" name="note" placeholder="Denial note (required)" required>
                   <button class="btn small" type="submit">Deny</button>
@@ -220,6 +228,7 @@
               {% if row.reason %}
                 <div class="meta"><strong>Reason:</strong> {{ row.reason }}</div>
               {% endif %}
+
               {% if row.resident_notes %}
                 <div class="meta"><strong>Resident notes:</strong> {{ row.resident_notes }}</div>
               {% endif %}
@@ -236,4 +245,3 @@
 </div>
 
 {% endblock %}
-
