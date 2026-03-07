@@ -634,7 +634,7 @@ def log_action(
 def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: str, note: str = ""):
     actor = session.get("username") or "unknown"
 
-    if app.config.get("DATABASE_URL")
+    if app.config.get("DATABASE_URL"):
         db_execute(
             """
             INSERT INTO resident_transfers
@@ -3520,6 +3520,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
