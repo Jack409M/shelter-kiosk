@@ -121,7 +121,7 @@ def staff_attendance():
     )
 
 
-@attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
+@attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"]) 
 @require_login
 @require_shelter
 def staff_attendance_check_in(resident_id: int):
