@@ -27,7 +27,7 @@
       <tbody>
   <tr>
     <td>
-      <form method="post" action="{{ url_for('kiosk_checkout', shelter=shelter) }}" class="kiosk-form">
+      <form method="post" action="{{ url_for('kiosk.kiosk_checkout', shelter=shelter) }}" class="kiosk-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
         <label>Resident Code</label>
