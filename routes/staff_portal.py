@@ -13,7 +13,7 @@ def staff_attendance_test():
     return "staff attendance blueprint working"
 
 
-@staff_portal.route("/_staff_test/leave/pending")
+@staff_portal.route("/staff/leave/pending")
 @require_login
 @require_shelter
 def staff_leave_pending_test():
