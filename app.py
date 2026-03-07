@@ -1947,67 +1947,6 @@ def staff_sms_consent():
     except Exception as e:
         return "SMS consent error: " + str(e), 500
   
-# ---- Kiosk ----
-
-
-@app.route("/staff/admin/users", methods=["GET", "POST"])
-@require_login
-@require_admin
-def admin_users():
-    init_db()
-
-    if request.method == "POST":
-        username = (request.form.get("username") or "").strip()
-        password = (request.form.get("password") or "").strip()
-        role = (request.form.get("role") or "staff").strip()
-
-        if not username or not password:
-            flash("Username and password required.", "error")
-            return redirect(url_for("admin_users"))
-
-        if len(password) < MIN_STAFF_PASSWORD_LEN:
-            flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
-            return redirect(url_for("admin_users"))
-
-        if role not in USER_ROLES:
-            flash("Invalid role.", "error")
-            return redirect(url_for("admin_users"))
-
-        try:
-            db_execute(
-                "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s, %s, %s, %s, %s)"
-                if g.get("db_kind") == "pg"
-                else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
-                (username, generate_password_hash(password), role, True, utcnow_iso()),
-            )
-            flash("User created.", "ok")
-        except Exception:
-            flash("Username already exists.", "error")
-
-        return redirect(url_for("admin_users"))
-
-    users = db_fetchall("SELECT id, username, role, is_active, created_at FROM staff_users ORDER BY created_at DESC")
-
-    return render_template("admin_users.html", users=users, fmt_dt=fmt_dt, roles=sorted(USER_ROLES), ROLE_LABELS=ROLE_LABELS)
-
-
-@app.route("/admin/delete-user/<username>", methods=["POST"])
-@require_login
-@require_admin
-def delete_user(username):
-    if username == session.get("username"):
-        flash("You cannot delete yourself.", "error")
-        return redirect(url_for("admin_users"))
-
-    db_execute(
-        "DELETE FROM staff_users WHERE username = %s" if g.get("db_kind") == "pg" else "DELETE FROM staff_users WHERE username = ?",
-        (username,),
-    )
-
-    log_action("staff_user", None, None, session.get("staff_user_id"), "delete_user", f"deleted_username={username}")
-    flash(f"User '{username}' deleted.", "ok")
-    return redirect(url_for("admin_users"))
-
 # ---- Audit ----
 
 def _audit_where_from_request():
@@ -2050,134 +1989,11 @@ def _audit_where_from_request():
     return where_sql, tuple(params)
 
 
-@app.route("/staff/admin/audit-log")
-@require_login
-@require_admin
-def staff_audit_log():
-    params = ()
-
-    sql = (
-        """
-        SELECT a.*, su.username
-        FROM audit_log a
-        LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        ORDER BY a.id DESC
-        LIMIT %s
-        """
-        if current_app.config.get("DATABASE_URL")
-        else """
-        SELECT a.*, su.username
-        FROM audit_log a
-        LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        ORDER BY a.id DESC
-        LIMIT ?
-        """
-    )
-
-    rows = db_fetchall(sql, params + (200,))
-
-    return render_template(
-        "staff_audit_log.html",
-        rows=rows,
-    )
 
 
-@app.get("/staff/admin/audit-log/csv")
-@require_login
-@require_shelter
-@require_admin
-def staff_audit_log_csv():
-    created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
-    where_sql, params = _audit_where_from_request()
 
-    sql = (
-        f"SELECT a.id, a.entity_type, a.entity_id, a.shelter, "
-        f"COALESCE(su.username, '') AS staff_username, "
-        f"a.action_type, COALESCE(a.action_details, '') AS action_details, "
-        f"{created_expr} AS created_at "
-        f"FROM audit_log a "
-        f"LEFT JOIN staff_users su ON su.id = a.staff_user_id "
-        f"{where_sql} "
-        f"ORDER BY a.id DESC"
-    )
-
-    rows = db_fetchall(sql, params)
-
-    buf = io.StringIO()
-    w = csv.writer(buf)
-    w.writerow(["id", "entity_type", "entity_id", "shelter", "staff_username", "action_type", "action_details", "created_at"])
-
-    for r in rows:
-        if isinstance(r, dict):
-            w.writerow([
-                r.get("id", ""),
-                r.get("entity_type", ""),
-                r.get("entity_id", ""),
-                r.get("shelter", ""),
-                r.get("staff_username", ""),
-                r.get("action_type", ""),
-                r.get("action_details", ""),
-                r.get("created_at", ""),
-            ])
-        else:
-            w.writerow(list(r))
-
-    data = buf.getvalue()
-    return Response(
-        data,
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=audit_log.csv"},
-    )
 
 # ---- Dangerous Admin Maintenance ----
-
-@app.route("/admin/wipe-all-data", methods=["POST"])
-@require_login
-@require_admin
-def wipe_all_data():
-    if not ENABLE_DANGEROUS_ADMIN_ROUTES:
-        abort(404)
-
-    init_db()
-
-    db_execute("TRUNCATE TABLE attendance_events RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM attendance_events")
-    db_execute("TRUNCATE TABLE leave_requests RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM leave_requests")
-    db_execute("TRUNCATE TABLE transport_requests RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM transport_requests")
-    db_execute("TRUNCATE TABLE residents RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM residents")
-    db_execute("TRUNCATE TABLE audit_log RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM audit_log")
-
-    log_action("admin", None, None, session.get("staff_user_id"), "wipe_all_data", "Wiped attendance, leave, transport, residents, audit_log")
-    return "All non staff data wiped."
-
-
-@app.route("/admin/recreate-schema", methods=["POST"])
-@require_login
-@require_admin
-def recreate_schema():
-    if not ENABLE_DANGEROUS_ADMIN_ROUTES:
-        abort(404)
-
-    init_db()
-
-    if g.get("db_kind") == "pg":
-        db_execute("DROP TABLE IF EXISTS attendance_events CASCADE")
-        db_execute("DROP TABLE IF EXISTS leave_requests CASCADE")
-        db_execute("DROP TABLE IF EXISTS transport_requests CASCADE")
-        db_execute("DROP TABLE IF EXISTS residents CASCADE")
-        db_execute("DROP TABLE IF EXISTS audit_log CASCADE")
-        db_execute("DROP TABLE IF EXISTS resident_transfers CASCADE")
-        db_execute("DROP TABLE IF EXISTS rate_limit_events CASCADE")
-    else:
-        db_execute("DROP TABLE IF EXISTS attendance_events")
-        db_execute("DROP TABLE IF EXISTS leave_requests")
-        db_execute("DROP TABLE IF EXISTS transport_requests")
-        db_execute("DROP TABLE IF EXISTS residents")
-        db_execute("DROP TABLE IF EXISTS audit_log")
-        db_execute("DROP TABLE IF EXISTS resident_transfers")
-
-    init_db()
-    log_action("admin", None, None, session.get("staff_user_id"), "recreate_schema", "Dropped and recreated tables")
-    return "Schema recreated."
 
 @app.get("/resident/login")
 def resident_login_alias():
@@ -2224,6 +2040,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
