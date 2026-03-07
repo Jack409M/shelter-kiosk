@@ -1,11 +1,16 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Transportation pending for {{ shelter }}</h1>
+<h1>Transportation pending{% if current_shelter %} for {{ current_shelter }}{% endif %}</h1>
 
 <table>
   <thead>
     <tr>
-      <th>ID</th><th>Name</th><th>DOB</th><th>Needed</th><th>Pickup</th><th>Destination</th><th>Schedule</th>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Needed</th>
+      <th>Pickup</th>
+      <th>Destination</th>
+      <th>Schedule</th>
     </tr>
   </thead>
   <tbody>
@@ -13,18 +18,21 @@
     <tr>
       <td>{{ r["id"] }}</td>
       <td>{{ r["first_name"] }} {{ r["last_name"] }}</td>
-      <td>{{ r["dob"] }}</td>
       <td>{{ fmt_dt(r["needed_at"]) }}</td>
       <td>{{ r["pickup_location"] }}</td>
       <td>{{ r["destination"] }}</td>
       <td>
         <form method="post" action="{{ url_for('transport.staff_transport_schedule', req_id=r['id']) }}" class="inline">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <input name="driver_name" placeholder="Driver name" required>
-  <input name="staff_notes" placeholder="Optional note">
-  <button type="submit">Schedule</button>
-</form>
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input name="driver_name" placeholder="Driver name" required>
+          <input name="staff_notes" placeholder="Optional note">
+          <button type="submit">Schedule</button>
+        </form>
       </td>
+    </tr>
+  {% else %}
+    <tr>
+      <td colspan="6">No pending transportation requests.</td>
     </tr>
   {% endfor %}
   </tbody>
