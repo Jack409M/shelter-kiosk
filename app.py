@@ -15,6 +15,7 @@ from core.auth import require_shelter
 from core.helpers import is_postgres, db_placeholder, utcnow_iso, fmt_date, fmt_dt, fmt_time_only, fmt_pretty_date
 from core.db import get_db, close_db, db_execute, db_fetchone, db_fetchall
 from core.audit import log_action
+from routes.attendance import attendance
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -3235,6 +3236,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
