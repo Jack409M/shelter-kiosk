@@ -1969,7 +1969,7 @@ def staff_transport_board():
           AND status IN (%s, %s)
         ORDER BY needed_at ASC
         """
-        if g.get("db_kind") == "pg"
+        if current_app.config.get("DATABASE_URL")
         else """
         SELECT *
         FROM transport_requests
@@ -1993,7 +1993,12 @@ def staff_transport_board():
                 pass
         rows = filtered
 
-    return render_template("staff_transport_board.html", rows=rows, shelter=shelter, fmt_dt=fmt_dt)
+    return render_template(
+        "staff_transport_board.html",
+        rows=rows,
+        shelter=shelter,
+        fmt_dt=fmt_dt,
+    )
 
 
 @app.route("/staff/transport/print")
@@ -3050,6 +3055,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
