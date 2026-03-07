@@ -2570,7 +2570,7 @@ def staff_transport_schedule(req_id: int):
 
 # ---- Staff Attendance ----
 
-@staff_portal.route("/staff/attendance")
+@app.route("/staff/attendance")
 @require_login
 @require_shelter
 def staff_attendance():
@@ -3665,6 +3665,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
