@@ -306,7 +306,7 @@
   </div>
 
   <div class="att_right">
-    <form method="post" action="{{ url_for('staff_attendance_check_out_global') }}" class="card">
+    <form method="post" action="{{ url_for('attendance.staff_attendance_check_out_global') }}" class="card">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
       <h3 style="margin-top: 0;">Check out resident</h3>
@@ -349,6 +349,7 @@
 </div>
 
 {% endblock %}
+
 
 
 
