@@ -28,7 +28,7 @@
         {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('kiosk_checkout', shelter=shelter) }}">
+      <form method="post" action="{{ url_for('kiosk.kiosk_checkout', shelter=shelter) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="password" name="kiosk_pin" inputmode="numeric" autocomplete="off" placeholder="PIN" required />
         <button type="submit">Unlock kiosk</button>
