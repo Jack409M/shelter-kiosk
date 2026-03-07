@@ -8,3 +8,8 @@ def db_placeholder():
     if g.get("db_kind") == "pg":
         return "%s"
     return "?"
+
+from datetime import datetime, timezone
+
+def utcnow_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
