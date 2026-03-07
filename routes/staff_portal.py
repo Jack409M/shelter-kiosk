@@ -71,7 +71,7 @@ def staff_leave_upcoming():
         shelter=shelter,
     )
 
-@app.route("/staff/leave/away-now")
+@staff_portal.route("/staff/leave/away-now")
 @require_login
 @require_shelter
 def staff_leave_away_now():
