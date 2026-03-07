@@ -202,7 +202,7 @@
 
                 <form class="action-form"
                       method="post"
-                      action="{{ url_for('staff_leave_approve', req_id=row.id) }}">
+                      action="{{ url_for('staff_portal.staff_leave_approve', req_id=row.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input class="note" type="text" name="note" placeholder="Approval note (optional)">
                   <button class="btn small" type="submit">Approve</button>
@@ -210,7 +210,7 @@
 
                 <form class="action-form"
                       method="post"
-                      action="{{ url_for('staff_leave_deny', req_id=row.id) }}">
+                      action="{{ url_for('staff_portal.staff_leave_deny', req_id=row.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input class="note denial" type="text" name="note" placeholder="Denial note (required)" required>
                   <button class="btn small" type="submit">Deny</button>
@@ -236,3 +236,4 @@
 </div>
 
 {% endblock %}
+
