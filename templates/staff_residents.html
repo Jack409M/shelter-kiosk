@@ -38,11 +38,11 @@
 
               <td class="resident-actions">
 
-                <a class="btn" href="{{ url_for('staff_resident_transfer', resident_id=r.id) }}">
+                <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=r.id) }}">
                   Transfer
                 </a>
 
-                <form method="post" action="{{ url_for('staff_resident_set_active', resident_id=r.id) }}">
+                <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=r.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   {% if r.is_active %}
                     <input type="hidden" name="active" value="0">
@@ -63,7 +63,7 @@
 
   <div class="residents-side">
 
-    <form method="post" class="card tight" action="{{ url_for('staff_residents_post') }}">
+    <form method="post" class="card tight" action="{{ url_for('residents.staff_residents_post') }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
       <h2 class="h2-tight">Add resident</h2>
@@ -84,9 +84,9 @@
 
     <div class="card tight">
       <strong>View:</strong>
-      <a href="{{ url_for('staff_residents', show='active') }}">Active only</a>
+      <a href="{{ url_for('residents.staff_residents', show='active') }}">Active only</a>
       |
-      <a href="{{ url_for('staff_residents', show='all') }}">All</a>
+      <a href="{{ url_for('residents.staff_residents', show='all') }}">All</a>
     </div>
 
   </div>
@@ -94,4 +94,3 @@
 </div>
 
 {% endblock %}
-
