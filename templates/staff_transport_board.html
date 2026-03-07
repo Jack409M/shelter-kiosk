@@ -4,7 +4,7 @@
 <div class="card">
   <h2>Transportation Board, {{ shelter }}</h2>
 
-<form method="get" action="{{ url_for('staff_transport_board') }}" style="margin-bottom:12px;">
+<form method="get" action="{{ url_for('transport.staff_transport_board') }}" style="margin-bottom:12px;">
   <label>Select date:</label>
   <input type="date" name="date" class="date-box" value="{{ request.args.get('date', '') }}">
   <button type="submit">View</button>
