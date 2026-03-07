@@ -420,10 +420,6 @@ def inject_resident_dashboard_status():
         "transport_status_note": transport_status_note,
     }
 
-def utcnow_iso() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat()
-
-
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
@@ -3647,6 +3643,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
