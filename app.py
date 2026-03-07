@@ -21,7 +21,8 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Optional
 
-from flask import Flask, g, redirect, render_template, request, session, url_for, flash, abort, Response
+from flask import Flask, current_app, g, redirect, render_template, request, session, url_for, flash, abort
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from zoneinfo import ZoneInfo
@@ -3044,6 +3045,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
