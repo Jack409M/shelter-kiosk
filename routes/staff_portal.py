@@ -166,7 +166,6 @@ def staff_leave_overdue():
 @staff_portal.route("/staff/leave/<int:req_id>/approve", methods=["POST"])
 @require_login
 @require_shelter
-@require_transfer
 def staff_leave_approve(req_id: int):
     """
     Temporary bridge:
