@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, g, render_template, session
+from flask import Blueprint, current_app, render_template, session
 
 from core.auth import require_login, require_shelter
 from core.db import db_fetchall, db_fetchone
