@@ -230,7 +230,7 @@ def _csrf_protect():
     if not sent or not expected or sent != expected:
         flash("Session expired. Please retry.", "error")
 
-        fallback = url_for("staff_login")
+        fallback = url_for("auth.staff_login")
         if request.endpoint and str(request.endpoint).startswith("resident_"):
             fallback = url_for("resident_signin")
 
@@ -1951,6 +1951,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
