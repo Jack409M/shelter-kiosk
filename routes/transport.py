@@ -1,16 +1,19 @@
-from flask import Blueprint, render_template, session, request, redirect, url_for, flash, current_app
+from __future__ import annotations
+
 from datetime import datetime
-from core.auth import require_login, require_shelter
-from core.helpers import fmt_dt
-from core.db import db_fetchall, db_execute
+
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
+
 from core.audit import log_action
-from flask import g
+from core.auth import require_login, require_shelter
+from core.db import db_execute, db_fetchall
+from core.helpers import fmt_dt, utcnow_iso
+
 
 transport = Blueprint("transport", __name__)
 
 
-def parse_dt(dt_str):
-    from datetime import datetime
+def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
 
@@ -79,6 +82,7 @@ def staff_transport_board():
         fmt_dt=fmt_dt,
     )
 
+
 @transport.route("/staff/transport/print")
 @require_login
 @require_shelter
@@ -86,6 +90,7 @@ def staff_transport_print():
     import html as _html
 
     shelter = session["shelter"]
+
     rows = db_fetchall(
         """
         SELECT *
@@ -195,3 +200,37 @@ def staff_transport_print():
 """.strip()
 
     return html_doc
+
+
+@transport.route("/staff/transport/<int:req_id>/schedule", methods=["POST"])
+@require_login
+@require_shelter
+def staff_transport_schedule(req_id: int):
+    shelter = session["shelter"]
+    staff_id = session["staff_user_id"]
+
+    driver_name = (request.form.get("driver_name") or "").strip()
+    staff_notes = (request.form.get("staff_notes") or "").strip()
+
+    if not driver_name:
+        flash("Driver name required.", "error")
+        return redirect(url_for("transport.staff_transport_pending"))
+
+    db_execute(
+        """
+        UPDATE transport_requests
+        SET status = %s, scheduled_at = %s, scheduled_by = %s, driver_name = %s, staff_notes = %s
+        WHERE id = %s AND shelter = %s AND status = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE transport_requests
+        SET status = ?, scheduled_at = ?, scheduled_by = ?, driver_name = ?, staff_notes = ?
+        WHERE id = ? AND shelter = ? AND status = ?
+        """,
+        ("scheduled", utcnow_iso(), staff_id, driver_name, staff_notes or None, req_id, shelter, "pending"),
+    )
+
+    log_action("transport", req_id, shelter, staff_id, "schedule", f"Driver {driver_name}")
+    flash("Scheduled.", "ok")
+    return redirect(url_for("transport.staff_transport_pending"))
