@@ -1941,14 +1941,18 @@ def staff_home():
 @require_shelter
 def staff_transport_pending():
     shelter = session["shelter"]
+
     rows = db_fetchall(
-        "SELECT * FROM transport_requests WHERE status = %s AND shelter = %s ORDER BY submitted_at DESC"
-        if g.get("db_kind") == "pg"
-        else "SELECT * FROM transport_requests WHERE status = ? AND shelter = ? ORDER BY submitted_at DESC",
+        "SELECT * FROM transport_requests WHERE status = %s AND shelter = %s ORDER BY requested_at DESC"
+        if current_app.config.get("DATABASE_URL")
+        else "SELECT * FROM transport_requests WHERE status = ? AND shelter = ? ORDER BY requested_at DESC",
         ("pending", shelter),
     )
-    return render_template("staff_transport_pending.html", rows=rows, fmt_dt=fmt_dt, shelter=shelter)
 
+    return render_template(
+        "staff_transport_pending.html",
+        rows=rows,
+    )
 
 @app.route("/staff/transport/board")
 @require_login
@@ -3045,6 +3049,7 @@ if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000)
 
 init_db = legacy_init_db
+
 
 
 
