@@ -87,8 +87,6 @@ def ensure_sms_consent_columns(kind: str) -> None:
 def ensure_resident_code_schema(kind: str) -> None:
     """
     Ensure residents.resident_code exists and has a unique index.
-
-    Safe to run repeatedly for both Postgres and SQLite.
     """
     try:
         if kind == "pg":
@@ -99,7 +97,10 @@ def ensure_resident_code_schema(kind: str) -> None:
         pass
 
     try:
-        db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
+        db_execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq "
+            "ON residents (resident_code)"
+        )
     except Exception:
         pass
 
@@ -107,8 +108,6 @@ def ensure_resident_code_schema(kind: str) -> None:
 def ensure_leave_request_phone_column(kind: str) -> None:
     """
     Ensure leave_requests.resident_phone exists.
-
-    Safe to run repeatedly for both Postgres and SQLite.
     """
     try:
         if kind == "pg":
@@ -121,9 +120,7 @@ def ensure_leave_request_phone_column(kind: str) -> None:
 
 def drop_transport_dob_column_if_present(kind: str) -> None:
     """
-    Remove the old transport_requests.dob column when running on Postgres.
-
-    This is safe to run repeatedly and is a no op for SQLite.
+    Remove old transport_requests.dob column on Postgres.
     """
     if kind != "pg":
         return
@@ -136,10 +133,7 @@ def drop_transport_dob_column_if_present(kind: str) -> None:
 
 def ensure_admin_bootstrap() -> None:
     """
-    Create the first admin user from environment variables if no admin exists.
-
-    This is safe to run repeatedly. If an admin already exists, it exits.
-    If the environment variables are missing, it exits.
+    Create the first admin user if none exists.
     """
     row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
     count = int(row["c"] if isinstance(row, dict) else row[0])
@@ -154,9 +148,9 @@ def ensure_admin_bootstrap() -> None:
         return
 
     db_execute(
-        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s, %s, %s, %s, %s)"
+        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s,%s,%s,%s,%s)"
         if g.get("db_kind") == "pg"
-        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
+        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?,?,?,?,?)",
         (
             admin_user,
             generate_password_hash(admin_pass),
@@ -170,8 +164,6 @@ def ensure_admin_bootstrap() -> None:
 def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
     """
     Ensure every resident has a resident_code.
-
-    Safe to run repeatedly. Only residents missing a code are updated.
     """
     rows = db_fetchall(
         "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
@@ -202,9 +194,7 @@ def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
 
 def ensure_rate_limit_events_table(kind: str) -> None:
     """
-    Ensure the Postgres rate_limit_events table exists.
-
-    Safe to run repeatedly. This is a no op for SQLite.
+    Ensure Postgres rate_limit_events table exists.
     """
     if kind != "pg":
         return
@@ -222,22 +212,42 @@ def ensure_rate_limit_events_table(kind: str) -> None:
 
 def ensure_rate_limit_event_indexes(kind: str) -> None:
     """
-    Ensure Postgres indexes exist for rate_limit_events.
-
-    Safe to run repeatedly. This is a no op for SQLite.
+    Ensure indexes exist for rate_limit_events.
     """
     if kind != "pg":
         return
 
-    db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_k_idx ON rate_limit_events (k)")
-    db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_created_at_idx ON rate_limit_events (created_at)")
+    db_execute(
+        "CREATE INDEX IF NOT EXISTS rate_limit_events_k_idx ON rate_limit_events (k)"
+    )
+    db_execute(
+        "CREATE INDEX IF NOT EXISTS rate_limit_events_created_at_idx ON rate_limit_events (created_at)"
+    )
+
+
+def ensure_twilio_message_status_indexes() -> None:
+    """
+    Ensure indexes exist for twilio_message_status.
+    """
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS twilio_message_status_sid_idx "
+            "ON twilio_message_status (message_sid)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS twilio_message_status_created_idx "
+            "ON twilio_message_status (created_at)"
+        )
+    except Exception:
+        pass
 
 
 def init_db() -> None:
     """
     Current public schema entry point.
-
-    For now this still forwards to the configured initializer.
-    Later this module will own the full database bootstrap logic.
     """
     _run_configured_init()
