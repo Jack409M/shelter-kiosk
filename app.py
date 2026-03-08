@@ -827,15 +827,7 @@ def legacy_init_db() -> None:
             schema.ensure_rate_limit_events_table(kind)
             schema.ensure_rate_limit_event_indexes(kind)
 
-    try:
-        db_execute("CREATE INDEX IF NOT EXISTS twilio_message_status_sid_idx ON twilio_message_status (message_sid)")
-    except Exception:
-        pass
-
-    try:
-        db_execute("CREATE INDEX IF NOT EXISTS twilio_message_status_created_idx ON twilio_message_status (created_at)") 
-    except Exception:
-        pass
+    schema.ensure_twilio_message_status_indexes()
     
     try:
         db_execute(
@@ -955,6 +947,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
