@@ -246,6 +246,45 @@ def ensure_twilio_message_status_indexes() -> None:
         pass
 
 
+def ensure_common_app_indexes() -> None:
+    """
+    Ensure common application indexes exist.
+
+    Safe to run repeatedly across supported databases.
+    """
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS leave_requests_shelter_status_return_idx "
+            "ON leave_requests (shelter, status, return_at)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS transport_requests_shelter_status_pickup_idx "
+            "ON transport_requests (shelter, status, needed_at)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS attendance_events_shelter_occurred_idx "
+            "ON attendance_events (shelter, event_time)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_shelter_active_name_idx "
+            "ON residents (shelter, is_active, last_name, first_name)"
+        )
+    except Exception:
+        pass
+
+
 def init_db() -> None:
     """
     Current public schema entry point.
