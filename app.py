@@ -522,38 +522,7 @@ def legacy_init_db() -> None:
     # Already extracted to db/schema.py
     schema.ensure_staff_users_table(kind)
     schema.ensure_organizations_table(kind)
-    
-
-    # Future extraction target: residents table
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS residents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            resident_code TEXT,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            phone TEXT,
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS residents (
-            id SERIAL PRIMARY KEY,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            resident_code TEXT,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            phone TEXT,
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL
-        )
-        """,
-    )
-
+    schema.ensure_residents_table(kind)
     schema.ensure_resident_code_schema(kind)
 
     # Seed first organization.
@@ -681,6 +650,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
