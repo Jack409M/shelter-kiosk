@@ -757,35 +757,8 @@ def legacy_init_db() -> None:
 
     schema.drop_transport_dob_column_if_present(kind)
 
-    # Future extraction target: attendance_events table
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS attendance_events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resident_id INTEGER NOT NULL,
-            shelter TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            event_time TEXT NOT NULL,
-            staff_user_id INTEGER,
-            note TEXT,
-            expected_back_time TEXT
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS attendance_events (
-            id SERIAL PRIMARY KEY,
-            resident_id INTEGER NOT NULL,
-            shelter TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            event_time TEXT NOT NULL,
-            staff_user_id INTEGER,
-            note TEXT,
-            expected_back_time TEXT
-        )
-        """,
-    )
-
     # Already extracted to db/schema.py
+    schema.ensure_attendance_events_table(kind)
     schema.ensure_audit_log_table(kind)
     schema.ensure_twilio_message_status_table(kind)
 
@@ -892,4 +865,5 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
