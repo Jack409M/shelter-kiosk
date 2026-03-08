@@ -210,15 +210,14 @@ def _csrf_token() -> str:
 
 app.jinja_env.globals["csrf_token"] = _csrf_token
 
-
 def _csrf_protect():
     if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
         return None
 
     exempt_endpoints = {
-        "sms_consent",
-         "twilio_inbound",
-         "twilio_status",
+        "resident_requests.sms_consent",
+        "twilio_inbound",
+        "twilio_status",
     }
 
     if request.endpoint in exempt_endpoints:
@@ -231,8 +230,11 @@ def _csrf_protect():
         flash("Session expired. Please retry.", "error")
 
         fallback = url_for("auth.staff_login")
-        if request.endpoint and str(request.endpoint).startswith("resident_"):
-            fallback = url_for("resident_signin")
+        if request.endpoint and (
+            str(request.endpoint).startswith("resident_")
+            or str(request.endpoint).startswith("resident_requests.")
+        ):
+            fallback = url_for("resident_requests.resident_signin")
 
         return redirect(request.referrer or fallback)
 
@@ -1347,6 +1349,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
