@@ -396,6 +396,7 @@ def send_sms(to_number: str, message: str) -> None:
     except Exception:
         global_per_minute = 30
 
+    from core.sms import _normalize_us_phone_10
     to10 = _normalize_us_phone_10(to_e164) or to_e164
 
     # Global cap (all outbound)
@@ -1069,6 +1070,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
