@@ -1113,33 +1113,6 @@ def terms_and_conditions():
 def public_home():
     return redirect(url_for("resident_leave"))
 
-
-@app.post("/debug/csrf-post")
-@require_login
-def debug_csrf_post():
-    if not ENABLE_DEBUG_ROUTES:
-        abort(404)
-    return "CSRF OK", 200
-
-
-@app.route("/debug/db")
-@require_login
-@require_admin
-def debug_db():
-    if not ENABLE_DEBUG_ROUTES:
-        abort(404)
-
-    try:
-        init_db()
-    except Exception:
-        return {"ok": False, "error": "db init failed", "db_kind": g.get("db_kind")}, 500
-
-    return {"ok": True, "db_kind": g.get("db_kind")}
-
-
-
-
-
 @app.route("/twilio/inbound", methods=["POST"])
 def twilio_inbound():
     """
@@ -1427,6 +1400,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
