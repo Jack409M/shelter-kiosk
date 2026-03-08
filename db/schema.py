@@ -113,6 +113,78 @@ def ensure_staff_users_table(kind: str) -> None:
     )
 
 
+def ensure_organizations_table(kind: str) -> None:
+    """
+    Ensure organizations table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            public_name TEXT NOT NULL,
+            primary_color TEXT,
+            secondary_color TEXT,
+            logo_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            public_name TEXT NOT NULL,
+            primary_color TEXT,
+            secondary_color TEXT,
+            logo_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """,
+        kind,
+    )
+
+
+def ensure_residents_table(kind: str) -> None:
+    """
+    Ensure residents table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS residents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            resident_code TEXT,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            phone TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS residents (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            resident_code TEXT,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            phone TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL
+        )
+        """,
+        kind,
+    )
+
+
 def ensure_resident_code_schema(kind: str) -> None:
     """
     Ensure residents.resident_code exists and has a unique index.
@@ -132,6 +204,38 @@ def ensure_resident_code_schema(kind: str) -> None:
         )
     except Exception:
         pass
+
+
+def ensure_resident_transfers_table(kind: str) -> None:
+    """
+    Ensure resident_transfers table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS resident_transfers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          resident_id INTEGER NOT NULL,
+          from_shelter TEXT NOT NULL,
+          to_shelter TEXT NOT NULL,
+          transferred_by TEXT NOT NULL,
+          transferred_at TEXT NOT NULL,
+          note TEXT,
+          FOREIGN KEY(resident_id) REFERENCES residents(id)
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_transfers (
+          id SERIAL PRIMARY KEY,
+          resident_id INTEGER NOT NULL REFERENCES residents(id),
+          from_shelter TEXT NOT NULL,
+          to_shelter TEXT NOT NULL,
+          transferred_by TEXT NOT NULL,
+          transferred_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          note TEXT
+        );
+        """,
+        kind,
+    )
 
 
 def ensure_leave_requests_table(kind: str) -> None:
@@ -200,149 +304,6 @@ def ensure_leave_request_phone_column(kind: str) -> None:
         pass
 
 
-def drop_transport_dob_column_if_present(kind: str) -> None:
-    """
-    Remove old transport_requests.dob column on Postgres.
-    """
-    if kind != "pg":
-        return
-
-    try:
-        db_execute("ALTER TABLE transport_requests DROP COLUMN IF EXISTS dob")
-    except Exception:
-        pass
-
-
-def ensure_admin_bootstrap() -> None:
-    """
-    Create the first admin user if none exists.
-    """
-    row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
-    count = int(row["c"] if isinstance(row, dict) else row[0])
-
-    if count > 0:
-        return
-
-    admin_user = (current_app.config.get("ADMIN_USERNAME") or "").strip()
-    admin_pass = (current_app.config.get("ADMIN_PASSWORD") or "").strip()
-
-    if not admin_user or not admin_pass:
-        return
-
-    db_execute(
-        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s,%s,%s,%s,%s)"
-        if g.get("db_kind") == "pg"
-        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?,?,?,?,?)",
-        (
-            admin_user,
-            generate_password_hash(admin_pass),
-            "admin",
-            True,
-            current_app.config["UTCNOW_ISO_FUNC"](),
-        ),
-    )
-
-
-def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
-    """
-    Ensure every resident has a resident_code.
-    """
-    rows = db_fetchall(
-        "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
-    )
-
-    for row in rows or []:
-        resident_id = row["id"] if isinstance(row, dict) else row[0]
-        code = make_resident_code_func()
-
-        for _ in range(10):
-            exists = db_fetchone(
-                "SELECT id FROM residents WHERE resident_code = %s"
-                if kind == "pg"
-                else "SELECT id FROM residents WHERE resident_code = ?",
-                (code,),
-            )
-            if not exists:
-                break
-            code = make_resident_code_func()
-
-        db_execute(
-            "UPDATE residents SET resident_code = %s WHERE id = %s"
-            if kind == "pg"
-            else "UPDATE residents SET resident_code = ? WHERE id = ?",
-            (code, resident_id),
-        )
-
-
-def ensure_organizations_table(kind: str) -> None:
-    """
-    Ensure organizations table exists.
-    """
-    _create(
-        """
-        CREATE TABLE IF NOT EXISTS organizations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            slug TEXT NOT NULL UNIQUE,
-            public_name TEXT NOT NULL,
-            primary_color TEXT,
-            secondary_color TEXT,
-            logo_url TEXT,
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL,
-            updated_at TEXT
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS organizations (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            slug TEXT NOT NULL UNIQUE,
-            public_name TEXT NOT NULL,
-            primary_color TEXT,
-            secondary_color TEXT,
-            logo_url TEXT,
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL,
-            updated_at TEXT
-        )
-        """,
-        kind,
-    )
-
-
-def ensure_resident_transfers_table(kind: str) -> None:
-    """
-    Ensure resident_transfers table exists.
-    """
-    _create(
-        """
-        CREATE TABLE IF NOT EXISTS resident_transfers (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          resident_id INTEGER NOT NULL,
-          from_shelter TEXT NOT NULL,
-          to_shelter TEXT NOT NULL,
-          transferred_by TEXT NOT NULL,
-          transferred_at TEXT NOT NULL,
-          note TEXT,
-          FOREIGN KEY(resident_id) REFERENCES residents(id)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS resident_transfers (
-          id SERIAL PRIMARY KEY,
-          resident_id INTEGER NOT NULL REFERENCES residents(id),
-          from_shelter TEXT NOT NULL,
-          to_shelter TEXT NOT NULL,
-          transferred_by TEXT NOT NULL,
-          transferred_at TIMESTAMP NOT NULL DEFAULT NOW(),
-          note TEXT
-        );
-        """,
-        kind,
-    )
-
-
 def ensure_transport_requests_table(kind: str) -> None:
     """
     Ensure transport_requests table exists.
@@ -404,35 +365,46 @@ def ensure_transport_requests_table(kind: str) -> None:
     )
 
 
-def ensure_twilio_message_status_table(kind: str) -> None:
+def drop_transport_dob_column_if_present(kind: str) -> None:
     """
-    Ensure twilio_message_status table exists.
+    Remove old transport_requests.dob column on Postgres.
+    """
+    if kind != "pg":
+        return
+
+    try:
+        db_execute("ALTER TABLE transport_requests DROP COLUMN IF EXISTS dob")
+    except Exception:
+        pass
+
+
+def ensure_attendance_events_table(kind: str) -> None:
+    """
+    Ensure attendance_events table exists.
     """
     _create(
         """
-        CREATE TABLE IF NOT EXISTS twilio_message_status (
+        CREATE TABLE IF NOT EXISTS attendance_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message_sid TEXT NOT NULL,
-            message_status TEXT NOT NULL,
-            error_code TEXT,
-            to_number TEXT,
-            from_number TEXT,
-            account_sid TEXT,
-            api_version TEXT,
-            created_at TEXT NOT NULL
+            resident_id INTEGER NOT NULL,
+            shelter TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            event_time TEXT NOT NULL,
+            staff_user_id INTEGER,
+            note TEXT,
+            expected_back_time TEXT
         )
         """,
         """
-        CREATE TABLE IF NOT EXISTS twilio_message_status (
+        CREATE TABLE IF NOT EXISTS attendance_events (
             id SERIAL PRIMARY KEY,
-            message_sid TEXT NOT NULL,
-            message_status TEXT NOT NULL,
-            error_code TEXT,
-            to_number TEXT,
-            from_number TEXT,
-            account_sid TEXT,
-            api_version TEXT,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            resident_id INTEGER NOT NULL,
+            shelter TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            event_time TEXT NOT NULL,
+            staff_user_id INTEGER,
+            note TEXT,
+            expected_back_time TEXT
         )
         """,
         kind,
@@ -472,33 +444,35 @@ def ensure_audit_log_table(kind: str) -> None:
     )
 
 
-def ensure_attendance_events_table(kind: str) -> None:
+def ensure_twilio_message_status_table(kind: str) -> None:
     """
-    Ensure attendance_events table exists.
+    Ensure twilio_message_status table exists.
     """
     _create(
         """
-        CREATE TABLE IF NOT EXISTS attendance_events (
+        CREATE TABLE IF NOT EXISTS twilio_message_status (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resident_id INTEGER NOT NULL,
-            shelter TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            event_time TEXT NOT NULL,
-            staff_user_id INTEGER,
-            note TEXT,
-            expected_back_time TEXT
+            message_sid TEXT NOT NULL,
+            message_status TEXT NOT NULL,
+            error_code TEXT,
+            to_number TEXT,
+            from_number TEXT,
+            account_sid TEXT,
+            api_version TEXT,
+            created_at TEXT NOT NULL
         )
         """,
         """
-        CREATE TABLE IF NOT EXISTS attendance_events (
+        CREATE TABLE IF NOT EXISTS twilio_message_status (
             id SERIAL PRIMARY KEY,
-            resident_id INTEGER NOT NULL,
-            shelter TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            event_time TEXT NOT NULL,
-            staff_user_id INTEGER,
-            note TEXT,
-            expected_back_time TEXT
+            message_sid TEXT NOT NULL,
+            message_status TEXT NOT NULL,
+            error_code TEXT,
+            to_number TEXT,
+            from_number TEXT,
+            account_sid TEXT,
+            api_version TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
         )
         """,
         kind,
@@ -596,6 +570,67 @@ def ensure_common_app_indexes() -> None:
         )
     except Exception:
         pass
+
+
+def ensure_admin_bootstrap() -> None:
+    """
+    Create the first admin user if none exists.
+    """
+    row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
+    count = int(row["c"] if isinstance(row, dict) else row[0])
+
+    if count > 0:
+        return
+
+    admin_user = (current_app.config.get("ADMIN_USERNAME") or "").strip()
+    admin_pass = (current_app.config.get("ADMIN_PASSWORD") or "").strip()
+
+    if not admin_user or not admin_pass:
+        return
+
+    db_execute(
+        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s,%s,%s,%s,%s)"
+        if g.get("db_kind") == "pg"
+        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?,?,?,?,?)",
+        (
+            admin_user,
+            generate_password_hash(admin_pass),
+            "admin",
+            True,
+            current_app.config["UTCNOW_ISO_FUNC"](),
+        ),
+    )
+
+
+def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
+    """
+    Ensure every resident has a resident_code.
+    """
+    rows = db_fetchall(
+        "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
+    )
+
+    for row in rows or []:
+        resident_id = row["id"] if isinstance(row, dict) else row[0]
+        code = make_resident_code_func()
+
+        for _ in range(10):
+            exists = db_fetchone(
+                "SELECT id FROM residents WHERE resident_code = %s"
+                if kind == "pg"
+                else "SELECT id FROM residents WHERE resident_code = ?",
+                (code,),
+            )
+            if not exists:
+                break
+            code = make_resident_code_func()
+
+        db_execute(
+            "UPDATE residents SET resident_code = %s WHERE id = %s"
+            if kind == "pg"
+            else "UPDATE residents SET resident_code = ? WHERE id = ?",
+            (code, resident_id),
+        )
 
 
 def init_db() -> None:
