@@ -965,7 +965,7 @@ def legacy_init_db() -> None:
             (code, rid),
         )
 
-    ensure_admin_bootstrap()
+    schema.ensure_admin_bootstrap()
 
 init_db = legacy_init_db
 app.config["INIT_DB_FUNC"] = init_db
@@ -1052,6 +1052,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
