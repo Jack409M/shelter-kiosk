@@ -681,13 +681,7 @@ def legacy_init_db() -> None:
         """,
     )
 
-    try:
-        if kind == "pg":
-            db_execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS resident_phone TEXT")
-        else:
-            db_execute("ALTER TABLE leave_requests ADD COLUMN resident_phone TEXT")
-    except Exception:
-        pass
+    schema.ensure_leave_request_phone_column(kind)
 
     create(
         """
@@ -974,6 +968,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
