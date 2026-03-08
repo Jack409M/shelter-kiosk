@@ -7,7 +7,7 @@ from __future__ import annotations
 from flask import current_app, g
 from werkzeug.security import generate_password_hash
 
-from core.db import db_execute, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone
 
 
 def _run_configured_init() -> None:
@@ -63,6 +63,39 @@ def ensure_admin_bootstrap() -> None:
             current_app.config["UTCNOW_ISO_FUNC"](),
         ),
     )
+
+
+def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
+    """
+    Ensure every resident has a resident_code.
+
+    Safe to run repeatedly. Only residents missing a code are updated.
+    """
+    rows = db_fetchall(
+        "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
+    )
+
+    for row in rows or []:
+        resident_id = row["id"] if isinstance(row, dict) else row[0]
+        code = make_resident_code_func()
+
+        for _ in range(10):
+            exists = db_fetchone(
+                "SELECT id FROM residents WHERE resident_code = %s"
+                if kind == "pg"
+                else "SELECT id FROM residents WHERE resident_code = ?",
+                (code,),
+            )
+            if not exists:
+                break
+            code = make_resident_code_func()
+
+        db_execute(
+            "UPDATE residents SET resident_code = %s WHERE id = %s"
+            if kind == "pg"
+            else "UPDATE residents SET resident_code = ? WHERE id = ?",
+            (code, resident_id),
+        )
 
 
 def init_db() -> None:
