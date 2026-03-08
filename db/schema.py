@@ -290,6 +290,67 @@ def ensure_resident_transfers_table(kind: str) -> None:
     )
 
 
+def ensure_transport_requests_table(kind: str) -> None:
+    """
+    Ensure transport_requests table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS transport_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            needed_at TEXT NOT NULL,
+            pickup_location TEXT NOT NULL,
+            destination TEXT NOT NULL,
+            reason TEXT,
+            resident_notes TEXT,
+            callback_phone TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            submitted_at TEXT NOT NULL,
+            scheduled_at TEXT,
+            scheduled_by INTEGER,
+            driver_name TEXT,
+            staff_notes TEXT,
+            completed_at TEXT,
+            completed_by INTEGER,
+            cancelled_at TEXT,
+            cancelled_by INTEGER,
+            cancel_reason TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS transport_requests (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            needed_at TEXT NOT NULL,
+            pickup_location TEXT NOT NULL,
+            destination TEXT NOT NULL,
+            reason TEXT,
+            resident_notes TEXT,
+            callback_phone TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            submitted_at TEXT NOT NULL,
+            scheduled_at TEXT,
+            scheduled_by INTEGER,
+            driver_name TEXT,
+            staff_notes TEXT,
+            completed_at TEXT,
+            completed_by INTEGER,
+            cancelled_at TEXT,
+            cancelled_by INTEGER,
+            cancel_reason TEXT
+        )
+        """,
+        kind,
+    )
+
+
 def ensure_twilio_message_status_table(kind: str) -> None:
     """
     Ensure twilio_message_status table exists.
