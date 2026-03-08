@@ -32,6 +32,56 @@ def _create(sqlite_sql: str, pg_sql: str, kind: str) -> None:
     db_execute(pg_sql if kind == "pg" else sqlite_sql)
 
 
+def ensure_sms_consent_columns(kind: str) -> None:
+    """
+    Ensure SMS consent columns exist on residents.
+
+    Safe to run repeatedly for both Postgres and SQLite.
+    """
+    if kind == "pg":
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_source TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_source TEXT")
+        except Exception:
+            pass
+    else:
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_source TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_source TEXT")
+        except Exception:
+            pass
+
+
 def ensure_admin_bootstrap() -> None:
     """
     Create the first admin user from environment variables if no admin exists.
