@@ -542,38 +542,8 @@ def legacy_init_db() -> None:
         )
         """,
     )
-
-    # Future extraction target: organizations table
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS organizations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            slug TEXT NOT NULL UNIQUE,
-            public_name TEXT NOT NULL,
-            primary_color TEXT,
-            secondary_color TEXT,
-            logo_url TEXT,
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL,
-            updated_at TEXT
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS organizations (
-            id SERIAL PRIMARY KEY,
-            name TEXT NOT NULL,
-            slug TEXT NOT NULL UNIQUE,
-            public_name TEXT NOT NULL,
-            primary_color TEXT,
-            secondary_color TEXT,
-            logo_url TEXT,
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL,
-            updated_at TEXT
-        )
-        """,
-    )
+    # Already extracted to db/schema.py
+    schema.ensure_organizations_table(kind)
 
     # Future extraction target: residents table
     create(
@@ -841,6 +811,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
