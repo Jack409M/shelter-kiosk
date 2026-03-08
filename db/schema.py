@@ -84,6 +84,35 @@ def ensure_sms_consent_columns(kind: str) -> None:
             pass
 
 
+def ensure_staff_users_table(kind: str) -> None:
+    """
+    Ensure staff_users table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS staff_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'staff',
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS staff_users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'staff',
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL
+        )
+        """,
+        kind,
+    )
+
+
 def ensure_resident_code_schema(kind: str) -> None:
     """
     Ensure residents.resident_code exists and has a unique index.
