@@ -1138,44 +1138,7 @@ def debug_db():
 
 
 
-@app.route("/resident", methods=["GET", "POST"])
-def resident_signin():
-    init_db()
 
-    next_url = (request.args.get("next") or request.form.get("next") or "").strip()
-
-    if request.method == "GET":
-        return render_template("resident_signin.html")
-
-    resident_code = (request.form.get("resident_code") or "").strip()
-
-    row = db_fetchone(
-        "SELECT * FROM residents WHERE resident_code = %s"
-        if g.get("db_kind") == "pg"
-        else "SELECT * FROM residents WHERE resident_code = ?",
-        (resident_code,),
-    )
-
-    if not row:
-        flash("Invalid Resident Code.", "error")
-        return render_template("resident_signin.html"), 401
-
-    shelter = (row.get("shelter") or "").strip()
-    resident_session_start(row, shelter, resident_code)
-
-    allowed_next = {
-        url_for("resident_leave"),
-        url_for("resident_transport"),
-        url_for("resident_portal.home"),
-    }
-
-    if next_url not in allowed_next:
-        next_url = url_for("resident_portal.home")
-
-    if not session.get("sms_consent_done"):
-        return redirect(url_for("resident_consent", next=next_url))
-
-    return redirect(next_url)
 
 @app.route("/twilio/inbound", methods=["POST"])
 def twilio_inbound():
@@ -1816,6 +1779,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
