@@ -9,6 +9,17 @@ import sqlite3
 import secrets
 import time
 import logging
+
+from collections import deque
+from datetime import datetime, timedelta, timezone
+from functools import wraps
+from typing import Any, Optional
+from zoneinfo import ZoneInfo
+
+from flask import Flask, Response, current_app, g, redirect, render_template, request, session, url_for, flash, abort
+from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import generate_password_hash, check_password_hash
+
 from db import schema
 from core.auth import require_login
 from core.auth import require_shelter
@@ -16,17 +27,7 @@ from core.helpers import is_postgres, db_placeholder, utcnow_iso, fmt_date, fmt_
 from core.helpers import safe_url_for
 from core.db import get_db, close_db, db_execute, db_fetchone, db_fetchall
 from core.audit import log_action
-from collections import deque
-from datetime import datetime, timedelta, timezone
-from functools import wraps
-from typing import Any, Optional
 from core.sms import sms_is_allowed_for_number
-
-from flask import Flask, Response, current_app, g, redirect, render_template, request, session, url_for, flash, abort
-
-from werkzeug.security import generate_password_hash, check_password_hash
-from werkzeug.middleware.proxy_fix import ProxyFix
-from zoneinfo import ZoneInfo
 
 
 try:
@@ -35,7 +36,7 @@ try:
 except Exception:
     Client = None
     RequestValidator = None
-    
+
 
 TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
 TWILIO_INBOUND_ENABLED = os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true"
@@ -44,10 +45,8 @@ TWILIO_STATUS_CALLBACK_URL = (os.environ.get("TWILIO_STATUS_CALLBACK_URL") or ""
 
 SHELTERS = ["Abba", "Haven", "Gratitude"]
 MAX_LEAVE_DAYS = 7
-
 MIN_STAFF_PASSWORD_LEN = 8
 
-# User roles
 USER_ROLES = {"admin", "staff", "case_manager", "ra"}
 
 ROLE_LABELS = {
@@ -57,12 +56,8 @@ ROLE_LABELS = {
     "case_manager": "Case Mgr",
 }
 
-# Any role allowed to use normal staff pages
 STAFF_ROLES = {"admin", "staff", "case_manager", "ra"}
-
-# Only these roles can perform permanent transfers
 TRANSFER_ROLES = {"admin", "case_manager"}
-
 
 APP_DIR = os.path.abspath(os.path.dirname(__file__))
 SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
@@ -75,7 +70,6 @@ TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
-
 app = Flask(__name__)
 app.jinja_env.globals["safe_url_for"] = safe_url_for
 app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
@@ -83,6 +77,7 @@ app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", SQLITE_PATH)
 app.teardown_appcontext(close_db)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
 
 def register_blueprints(app: Flask) -> None:
     import routes
@@ -99,13 +94,13 @@ def register_blueprints(app: Flask) -> None:
 
 register_blueprints(app)
 
+
 @app.before_request
 def log_request_info():
     try:
         app.logger.debug(
             f"REQUEST method={request.method} path={request.path} endpoint={request.endpoint}"
         )
-
         app.logger.debug(f"URL RULE {request.url_rule}")
 
         if request.method == "POST":
@@ -113,6 +108,7 @@ def log_request_info():
 
     except Exception as e:
         app.logger.debug(f"LOGGING ERROR {e}")
+
 
 secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
 if not secret:
@@ -128,15 +124,18 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
 )
 
+
 def _client_ip() -> str:
-    # Use remote_addr (already normalized by ProxyFix) to avoid
-    # trusting raw X-Forwarded-For header content directly.
+    """
+    Use ProxyFix normalized remote_addr rather than trusting raw forwarded headers.
+    """
     return (request.remote_addr or "").strip() or "unknown"
-    
-# Lightweight in process cleanup throttle for rate_limit_events pruning
+
+
+# In process cleanup throttle for Postgres rate_limit_events pruning.
 _LAST_RL_PRUNE_TS = 0.0
 
-# Fallback limiter used only when not on Postgres (sqlite or other)
+# Fallback limiter used only when not on Postgres.
 _RATE_BUCKETS_MEM: dict[str, deque[float]] = {}
 
 
@@ -161,10 +160,10 @@ def _rate_limited_memory(key: str, limit: int, window_seconds: int) -> bool:
 def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
     """
     Postgres backed rate limiter.
-    Returns True when the caller should be blocked.
 
-    Behavior: allows up to `limit` events in `window_seconds`.
-    The (limit+1)th attempt within the window will be blocked.
+    Returns True when the caller should be blocked.
+    Allows up to `limit` events in `window_seconds`.
+    The next attempt inside the same window is blocked.
     """
     if g.get("db_kind") != "pg":
         return _rate_limited_memory(key, limit, window_seconds)
@@ -200,7 +199,6 @@ def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
     return c > limit
 
 
-# CSRF token generator for templates
 def _csrf_token() -> str:
     tok = session.get("_csrf_token")
     if not tok:
@@ -210,6 +208,7 @@ def _csrf_token() -> str:
 
 
 app.jinja_env.globals["csrf_token"] = _csrf_token
+
 
 def _csrf_protect():
     if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
@@ -249,13 +248,13 @@ def _csrf_before_request():
         return resp
 
 
-
 @app.context_processor
 def inject_shelters():
     return {
         "all_shelters": SHELTERS,
         "current_shelter": session.get("shelter"),
     }
+
 
 @app.context_processor
 def inject_resident_dashboard_status():
@@ -317,11 +316,13 @@ def inject_resident_dashboard_status():
             return_at = row[4]
 
         if status in ["pending", "approved"]:
-            leave_items.append({
-                "status": status.capitalize(),
-                "leave_at": fmt_dt(leave_at),
-                "return_at": fmt_dt(return_at),
-            })
+            leave_items.append(
+                {
+                    "status": status.capitalize(),
+                    "leave_at": fmt_dt(leave_at),
+                    "return_at": fmt_dt(return_at),
+                }
+            )
 
     transport_items = []
     for row in all_transport_rows:
@@ -335,40 +336,48 @@ def inject_resident_dashboard_status():
             driver_name = row[4] or ""
 
         if status in ["pending", "scheduled"]:
-            transport_items.append({
-                "status": status.capitalize(),
-                "needed_at": fmt_dt(needed_at),
-                "driver_name": driver_name,
-            })
+            transport_items.append(
+                {
+                    "status": status.capitalize(),
+                    "needed_at": fmt_dt(needed_at),
+                    "driver_name": driver_name,
+                }
+            )
 
     return {
         "leave_items": leave_items,
         "transport_items": transport_items,
     }
-    
-    
+
+
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
-def send_sms(to_number: str, message: str) -> None:
 
-    # GLOBAL SMS PANIC SWITCH
+def send_sms(to_number: str, message: str) -> None:
+    """
+    Outbound SMS sender with:
+    global panic switch,
+    Twilio enable gate,
+    consent enforcement,
+    per number and global rate limiting.
+    """
+
     if os.environ.get("SMS_SYSTEM_ENABLED", "true").lower() != "true":
         return
 
     if not TWILIO_ENABLED:
         return
 
-    # COMPLIANCE GATE: never send unless allowed by our consent + opt out records
     try:
         if not sms_is_allowed_for_number(to_number):
             return
     except Exception:
-        # If anything goes wrong checking consent, fail closed (do not send)
         return
 
     if not Client:
         return
+
     if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
         return
 
@@ -383,9 +392,7 @@ def send_sms(to_number: str, message: str) -> None:
         to_e164 = "+" + digits
     else:
         return
-        
-    # OUTBOUND CIRCUIT BREAKER
-    # Caps sends even if app logic accidentally loops.
+
     try:
         per_number_per_hour = int(os.environ.get("SMS_OUTBOUND_PER_NUMBER_PER_HOUR", "6"))
     except Exception:
@@ -397,16 +404,15 @@ def send_sms(to_number: str, message: str) -> None:
         global_per_minute = 30
 
     from core.sms import _normalize_us_phone_10
+
     to10 = _normalize_us_phone_10(to_e164) or to_e164
 
-    # Global cap (all outbound)
     if _rate_limited("sms_out_global", global_per_minute, 60):
         return
 
-    # Per number cap
     if _rate_limited(f"sms_out_to:{to10}", per_number_per_hour, 3600):
         return
-    
+
     try:
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
@@ -418,9 +424,6 @@ def send_sms(to_number: str, message: str) -> None:
     except Exception as e:
         print("SMS error:", e)
 
-
-
-# Postgres connection pool
 
 def make_resident_code(length: int = 8) -> str:
     return "".join(secrets.choice("0123456789") for _ in range(length))
@@ -466,6 +469,7 @@ def resident_session_start(resident_row: Any, shelter: str, resident_code: str) 
     session["resident_shelter"] = shelter
     session["resident_code"] = resident_code
 
+
 def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: str, note: str = ""):
     actor = session.get("username") or "unknown"
 
@@ -498,17 +502,24 @@ def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: st
         f"from={from_shelter} to={to_shelter} note={note}".strip(),
     )
 
- # DATABASE SCHEMA INITIALIZATION (moving to db/schema.py later)       
+
+# Database schema initialization.
+# Current state:
+# schema mutations and indexes are mostly delegated to db/schema.py.
+# Future extraction targets:
+#   1. move inline table create blocks below into db/schema.py one table at a time
+#   2. replace local create(...) usage with schema owned helpers
+#   3. eventually collapse this function into schema.init_db()
 def legacy_init_db() -> None:
     get_db()
     kind = g.get("db_kind")
 
     schema.ensure_sms_consent_columns(kind)
-    
+
     def create(sqlite_sql: str, pg_sql: str) -> None:
         schema._create(sqlite_sql, pg_sql, kind)
-    
 
+    # Future extraction target: staff_users table
     create(
         """
         CREATE TABLE IF NOT EXISTS staff_users (
@@ -532,6 +543,7 @@ def legacy_init_db() -> None:
         """,
     )
 
+    # Future extraction target: organizations table
     create(
         """
         CREATE TABLE IF NOT EXISTS organizations (
@@ -562,7 +574,8 @@ def legacy_init_db() -> None:
         )
         """,
     )
-    
+
+    # Future extraction target: residents table
     create(
         """
         CREATE TABLE IF NOT EXISTS residents (
@@ -594,7 +607,8 @@ def legacy_init_db() -> None:
 
     schema.ensure_resident_code_schema(kind)
 
-    # Seed first organization (safe if it already exists)
+    # Seed first organization.
+    # Left inline for now because it is data bootstrap rather than schema definition.
     try:
         db_execute(
             """
@@ -608,6 +622,7 @@ def legacy_init_db() -> None:
     except Exception:
         pass
 
+    # Future extraction target: resident_transfers table
     create(
         """
         CREATE TABLE IF NOT EXISTS resident_transfers (
@@ -633,7 +648,8 @@ def legacy_init_db() -> None:
         );
         """,
     )
-    
+
+    # Future extraction target: leave_requests table
     create(
         """
         CREATE TABLE IF NOT EXISTS leave_requests (
@@ -683,6 +699,7 @@ def legacy_init_db() -> None:
 
     schema.ensure_leave_request_phone_column(kind)
 
+    # Future extraction target: transport_requests table
     create(
         """
         CREATE TABLE IF NOT EXISTS transport_requests (
@@ -740,6 +757,7 @@ def legacy_init_db() -> None:
 
     schema.drop_transport_dob_column_if_present(kind)
 
+    # Future extraction target: attendance_events table
     create(
         """
         CREATE TABLE IF NOT EXISTS attendance_events (
@@ -767,6 +785,7 @@ def legacy_init_db() -> None:
         """,
     )
 
+    # Future extraction target: audit_log table
     create(
         """
         CREATE TABLE IF NOT EXISTS audit_log (
@@ -793,49 +812,23 @@ def legacy_init_db() -> None:
         )
         """,
     )
-    
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS twilio_message_status (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message_sid TEXT NOT NULL,
-            message_status TEXT NOT NULL,
-            error_code TEXT,
-            to_number TEXT,
-            from_number TEXT,
-            account_sid TEXT,
-            api_version TEXT,
-            created_at TEXT NOT NULL
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS twilio_message_status (
-            id SERIAL PRIMARY KEY,
-            message_sid TEXT NOT NULL,
-            message_status TEXT NOT NULL,
-            error_code TEXT,
-            to_number TEXT,
-            from_number TEXT,
-            account_sid TEXT,
-            api_version TEXT,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
-        )
-        """,
-    )
-    
+
+    # Already extracted to db/schema.py
+    schema.ensure_twilio_message_status_table(kind)
+
     if kind == "pg":
-            schema.ensure_rate_limit_events_table(kind)
-            schema.ensure_rate_limit_event_indexes(kind)
+        schema.ensure_rate_limit_events_table(kind)
+        schema.ensure_rate_limit_event_indexes(kind)
 
     schema.ensure_twilio_message_status_indexes()
-    
     schema.ensure_common_app_indexes()
     schema.backfill_resident_codes(kind, make_resident_code)
-
     schema.ensure_admin_bootstrap()
+
 
 init_db = legacy_init_db
 app.config["INIT_DB_FUNC"] = init_db
+
 
 def require_staff_or_admin(fn):
     @wraps(fn)
@@ -846,6 +839,7 @@ def require_staff_or_admin(fn):
         return fn(*args, **kwargs)
 
     return wrapper
+
 
 def require_admin(fn):
     @wraps(fn)
@@ -866,7 +860,8 @@ def require_resident(fn):
         return fn(*args, **kwargs)
 
     return wrapper
-    
+
+
 def require_transfer(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -888,36 +883,39 @@ def require_resident_create(fn):
 
     return wrapper
 
-# ---- Dangerous Admin Maintenance ----
 
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
 
+
 @app.after_request
 def add_cache_headers(response):
     if request.path.startswith("/static/"):
         response.headers["Cache-Control"] = "public, max-age=86400"
-     # Baseline security headers
+
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("X-Frame-Options", "DENY")
 
-    # Limit framing via CSP as modern defense-in-depth.
-    # Keep policy conservative and compatible with existing templates.
-    csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    csp = (
+        "default-src 'self'; "
+        "img-src 'self' data:; "
+        "style-src 'self' 'unsafe-inline'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'"
+    )
     response.headers.setdefault("Content-Security-Policy", csp)
 
-    # Enable HSTS only when running behind HTTPS in production.
-    # Prevents local HTTP development from being forced to HTTPS.
     if request.is_secure:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-    
+
     return response
+
 
 if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
-
