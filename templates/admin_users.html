@@ -19,12 +19,18 @@
     top: 12px;
   }
 
+  table.compact {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
   table.compact th,
   table.compact td {
     padding: 6px 8px;
     font-size: 12px;
     line-height: 1.2;
     vertical-align: top;
+    border: 1px solid #999;
   }
 
   .side-card {
@@ -39,11 +45,21 @@
     font-size: 16px;
   }
 
-  .side-row { margin-bottom: 10px; }
+  .side-row {
+    margin-bottom: 10px;
+  }
 
   .side-row label {
-    margin-top: 0;
+    display: block;
+    margin-bottom: 4px;
     font-weight: 700;
+  }
+
+  .side-row input,
+  .side-row select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
   }
 
   .side-actions {
@@ -70,6 +86,12 @@
 
   .danger {
     border-color: #b00020;
+    color: #b00020;
+  }
+
+  .hint {
+    color: var(--text-muted, #4a5a66);
+    font-size: 12px;
   }
 
   .small-note {
@@ -79,14 +101,19 @@
   }
 
   @media (max-width: 900px) {
-    .users-layout { grid-template-columns: 1fr; }
-    .users-side { position: static; }
+    .users-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .users-side {
+      position: static;
+    }
   }
 </style>
 
 <div class="users-layout">
 
-  <!-- LEFT: USERS TABLE -->
+  {# left side: user list #}
   <div class="users-results">
     <table class="compact">
       <thead>
@@ -99,35 +126,45 @@
         </tr>
       </thead>
       <tbody>
-        {% for u in users %}
-        <tr>
-          <td>{{ u.username }}</td>
-          <td>{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}</td>
-          <td>{{ "Yes" if u.is_active else "No" }}</td>
-          <td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
-          <td style="white-space: nowrap;">
-            {% if u.username != session.get("username") %}
-              <form method="post" action="{{ url_for('delete_user', username=u.username) }}" class="inline"
-                    onsubmit="return confirm('Delete user {{ u.username }}?');">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="danger">Delete</button>
-              </form>
-            {% else %}
-              <span class="hint">You</span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
+        {% if users %}
+          {% for u in users %}
+            <tr>
+              <td>{{ u.username }}</td>
+              <td>{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}</td>
+              <td>{{ "Yes" if u.is_active else "No" }}</td>
+              <td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
+              <td style="white-space: nowrap;">
+                {% if u.username != session.get("username") %}
+                  <form
+                    method="post"
+                    action="{{ url_for('admin.delete_user', username=u.username) }}"
+                    class="inline"
+                    onsubmit="return confirm('Delete user {{ u.username }}?');"
+                  >
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="danger">Delete</button>
+                  </form>
+                {% else %}
+                  <span class="hint">You</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5">No users found.</td>
+          </tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
 
-  <!-- RIGHT: ADD USER -->
+  {# right side: add user form #}
   <aside class="users-side">
     <div class="side-card">
       <h3>Add user</h3>
 
-      <form method="post" action="{{ url_for('admin_users') }}">
+      <form method="post" action="{{ url_for('admin.admin_users') }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
         <div class="side-row">
@@ -151,7 +188,7 @@
 
         <div class="side-actions">
           <button type="submit">Create</button>
-          <a href="{{ url_for('staff_home') }}">Done</a>
+          <a href="{{ url_for('auth.staff_home') }}">Done</a>
         </div>
 
         <div class="small-note">
