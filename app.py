@@ -621,35 +621,11 @@ def legacy_init_db() -> None:
         )
     except Exception:
         pass
-
-    # Future extraction target: resident_transfers table
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS resident_transfers (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          resident_id INTEGER NOT NULL,
-          from_shelter TEXT NOT NULL,
-          to_shelter TEXT NOT NULL,
-          transferred_by TEXT NOT NULL,
-          transferred_at TEXT NOT NULL,
-          note TEXT,
-          FOREIGN KEY(resident_id) REFERENCES residents(id)
-        );
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS resident_transfers (
-          id SERIAL PRIMARY KEY,
-          resident_id INTEGER NOT NULL REFERENCES residents(id),
-          from_shelter TEXT NOT NULL,
-          to_shelter TEXT NOT NULL,
-          transferred_by TEXT NOT NULL,
-          transferred_at TIMESTAMP NOT NULL DEFAULT NOW(),
-          note TEXT
-        );
-        """,
-    )
+    # Already extracted to db/schema.py
+    schema.ensure_resident_transfers_table(kind)
 
     # Future extraction target: leave_requests table
+    
     create(
         """
         CREATE TABLE IF NOT EXISTS leave_requests (
@@ -865,5 +841,6 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
