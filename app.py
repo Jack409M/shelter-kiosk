@@ -1116,131 +1116,7 @@ def public_home():
     return redirect(url_for("resident_requests.resident_leave"))
     
 
-@app.route("/twilio/inbound", methods=["POST"])
-def twilio_inbound():
-    """
-    Twilio posts inbound messages here.
-    We record STOP type words as opt out in our DB, and we reply using TwiML.
-    """
 
-    if not TWILIO_INBOUND_ENABLED:
-        return app.response_class("", mimetype="text/xml")
-
-    ip = _client_ip()
-    if _rate_limited(f"twilio_inbound_ip:{ip}", 60, 60):
-        return app.response_class("", mimetype="text/xml")
-
-    msg_sid = (request.form.get("MessageSid") or "").strip()
-    if msg_sid and _rate_limited(f"twilio_msgsid:{msg_sid}", 1, 86400):
-        return app.response_class("", mimetype="text/xml")
-
-    # Require validator when inbound is enabled
-    if RequestValidator is None:
-        abort(500)
-
-    sig = request.headers.get("X-Twilio-Signature", "")
-    if not sig:
-        abort(403)
-
-    # Build the URL used for validation (account for proxy https)
-    url = request.url
-    xf_proto = (request.headers.get("X-Forwarded-Proto") or "").lower()
-    if xf_proto == "https" and url.startswith("http://"):
-        url = "https://" + url[len("http://"):]
-
-    validator = RequestValidator(TWILIO_AUTH_TOKEN or "")
-    form = request.form.to_dict(flat=True)
-
-    if not validator.validate(url, form, sig):
-        abort(403)
-    
-    init_db()
-
-    from_number = (request.form.get("From") or "").strip()
-    body = (request.form.get("Body") or "").strip().lower()
-    
-    stop_words = {"stop", "unsubscribe", "cancel", "end", "quit"}
-    start_words = {"start", "yes", "unstop", "subscribe"}
-    help_words = {"help", "info"}
-    
-    if body not in stop_words and body not in start_words and body not in help_words:
-        return app.response_class("", mimetype="text/xml")
-        
-    kind = g.get("db_kind")
-
-    def normalize_last10(s: str) -> str:
-        d = "".join(ch for ch in (s or "") if ch.isdigit())
-        if len(d) == 11 and d.startswith("1"):
-            d = d[1:]
-        if len(d) > 10:
-            d = d[-10:]
-        return d
-
-    sender10 = normalize_last10(from_number)
-
-    if sender10 and _rate_limited(f"twilio_inbound_from:{sender10}", 10, 60):
-        return app.response_class("", mimetype="text/xml")
-
-    
-
-    reply_text = ""
-
-    if body in stop_words:
-        try:
-            rows = db_fetchall(
-                """
-                SELECT id, shelter, phone
-                FROM residents
-                WHERE phone IS NOT NULL AND phone != ''
-                ORDER BY id DESC
-                LIMIT 300
-                """
-            )
-        except Exception:
-            rows = []
-
-        for r in rows or []:
-            r_id = r["id"] if isinstance(r, dict) else r[0]
-            r_shelter = r["shelter"] if isinstance(r, dict) else r[1]
-            r_phone = r["phone"] if isinstance(r, dict) else r[2]
-
-            if normalize_last10(str(r_phone or "")) != sender10:
-                continue
-
-            db_execute(
-                """
-                UPDATE residents
-                SET sms_opt_in = %s,
-                    sms_opt_out_at = %s,
-                    sms_opt_out_source = %s
-                WHERE id = %s AND shelter = %s
-                """
-                if kind == "pg"
-                else """
-                UPDATE residents
-                SET sms_opt_in = ?,
-                    sms_opt_out_at = ?,
-                    sms_opt_out_source = ?
-                WHERE id = ? AND shelter = ?
-                """,
-                (0, utcnow_iso(), "twilio_inbound", r_id, r_shelter),
-            )
-
-        reply_text = "You are unsubscribed from Downtown Women's Center Alerts. No more messages will be sent. Reply START to rejoin."
-
-    elif body in help_words or body in start_words:
-        return app.response_class("", mimetype="text/xml")
-
-    else:
-        reply_text = "For help contact staff."
-
-    twiml = (
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-        "<Response>"
-        f"<Message>{reply_text}</Message>"
-        "</Response>"
-    )
-    return app.response_class(twiml, mimetype="text/xml")
 
 @app.route("/twilio/status", methods=["POST"])
 def twilio_status():
@@ -1350,6 +1226,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
