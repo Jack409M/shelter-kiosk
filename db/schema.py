@@ -260,6 +260,39 @@ def ensure_audit_log_table(kind: str) -> None:
     )
 
 
+def ensure_attendance_events_table(kind: str) -> None:
+    """
+    Ensure attendance_events table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS attendance_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            shelter TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            event_time TEXT NOT NULL,
+            staff_user_id INTEGER,
+            note TEXT,
+            expected_back_time TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS attendance_events (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL,
+            shelter TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            event_time TEXT NOT NULL,
+            staff_user_id INTEGER,
+            note TEXT,
+            expected_back_time TEXT
+        )
+        """,
+        kind,
+    )
+
+
 def ensure_rate_limit_events_table(kind: str) -> None:
     """
     Ensure Postgres rate_limit_events table exists.
