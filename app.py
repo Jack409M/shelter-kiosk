@@ -624,65 +624,9 @@ def legacy_init_db() -> None:
 
     schema.ensure_leave_request_phone_column(kind)
 
-    # Future extraction target: transport_requests table
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS transport_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            needed_at TEXT NOT NULL,
-            pickup_location TEXT NOT NULL,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            callback_phone TEXT,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            scheduled_at TEXT,
-            scheduled_by INTEGER,
-            driver_name TEXT,
-            staff_notes TEXT,
-            completed_at TEXT,
-            completed_by INTEGER,
-            cancelled_at TEXT,
-            cancelled_by INTEGER,
-            cancel_reason TEXT
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS transport_requests (
-            id SERIAL PRIMARY KEY,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            needed_at TEXT NOT NULL,
-            pickup_location TEXT NOT NULL,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            callback_phone TEXT,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            scheduled_at TEXT,
-            scheduled_by INTEGER,
-            driver_name TEXT,
-            staff_notes TEXT,
-            completed_at TEXT,
-            completed_by INTEGER,
-            cancelled_at TEXT,
-            cancelled_by INTEGER,
-            cancel_reason TEXT
-        )
-        """,
-    )
-
-    schema.drop_transport_dob_column_if_present(kind)
-
     # Already extracted to db/schema.py
+    schema.ensure_transport_requests_table(kind)
+    schema.drop_transport_dob_column_if_present(kind)
     schema.ensure_attendance_events_table(kind)
     schema.ensure_audit_log_table(kind)
     schema.ensure_twilio_message_status_table(kind)
@@ -790,6 +734,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
