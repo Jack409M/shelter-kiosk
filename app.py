@@ -592,18 +592,7 @@ def legacy_init_db() -> None:
         """,
     )
 
-    try:
-        if kind == "pg":
-            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS resident_code TEXT")
-        else:
-            db_execute("ALTER TABLE residents ADD COLUMN resident_code TEXT")
-    except Exception:
-        pass
-
-    try:
-        db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
-    except Exception:
-        pass
+    schema.ensure_resident_code_schema(kind)
 
     # Seed first organization (safe if it already exists)
     try:
@@ -985,6 +974,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
