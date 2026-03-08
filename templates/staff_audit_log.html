@@ -123,7 +123,7 @@
     <div class="filter-card">
       <h3>Filter</h3>
 
-      <form method="get" action="{{ url_for('staff_audit_log') }}">
+      <form method="get" action="{{ url_for('admin.staff_audit_log') }}">
         <div class="filter-row">
           <label for="q">Search text</label>
           <input id="q" name="q" type="text" value="{{ q_val }}" placeholder="Name, action, details">
