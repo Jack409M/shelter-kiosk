@@ -1042,6 +1042,7 @@ def legacy_init_db() -> None:
     ensure_admin_bootstrap()
 
 init_db = legacy_init_db
+app.config["INIT_DB_FUNC"] = init_db
 
 def require_staff_or_admin(fn):
     @wraps(fn)
@@ -1349,6 +1350,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
