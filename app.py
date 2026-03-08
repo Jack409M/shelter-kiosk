@@ -785,35 +785,8 @@ def legacy_init_db() -> None:
         """,
     )
 
-    # Future extraction target: audit_log table
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS audit_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            entity_type TEXT NOT NULL,
-            entity_id INTEGER,
-            shelter TEXT,
-            staff_user_id INTEGER,
-            action_type TEXT NOT NULL,
-            action_details TEXT,
-            created_at TEXT NOT NULL
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS audit_log (
-            id SERIAL PRIMARY KEY,
-            entity_type TEXT NOT NULL,
-            entity_id INTEGER,
-            shelter TEXT,
-            staff_user_id INTEGER,
-            action_type TEXT NOT NULL,
-            action_details TEXT,
-            created_at TIMESTAMP NOT NULL DEFAULT NOW()
-        )
-        """,
-    )
-
     # Already extracted to db/schema.py
+    schema.ensure_audit_log_table(kind)
     schema.ensure_twilio_message_status_table(kind)
 
     if kind == "pg":
@@ -919,3 +892,4 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
