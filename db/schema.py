@@ -192,6 +192,41 @@ def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
         )
 
 
+def ensure_twilio_message_status_table(kind: str) -> None:
+    """
+    Ensure twilio_message_status table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS twilio_message_status (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_sid TEXT NOT NULL,
+            message_status TEXT NOT NULL,
+            error_code TEXT,
+            to_number TEXT,
+            from_number TEXT,
+            account_sid TEXT,
+            api_version TEXT,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS twilio_message_status (
+            id SERIAL PRIMARY KEY,
+            message_sid TEXT NOT NULL,
+            message_status TEXT NOT NULL,
+            error_code TEXT,
+            to_number TEXT,
+            from_number TEXT,
+            account_sid TEXT,
+            api_version TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )
+        """,
+        kind,
+    )
+
+
 def ensure_rate_limit_events_table(kind: str) -> None:
     """
     Ensure Postgres rate_limit_events table exists.
