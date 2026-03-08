@@ -192,6 +192,38 @@ def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
         )
 
 
+def ensure_resident_transfers_table(kind: str) -> None:
+    """
+    Ensure resident_transfers table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS resident_transfers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          resident_id INTEGER NOT NULL,
+          from_shelter TEXT NOT NULL,
+          to_shelter TEXT NOT NULL,
+          transferred_by TEXT NOT NULL,
+          transferred_at TEXT NOT NULL,
+          note TEXT,
+          FOREIGN KEY(resident_id) REFERENCES residents(id)
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_transfers (
+          id SERIAL PRIMARY KEY,
+          resident_id INTEGER NOT NULL REFERENCES residents(id),
+          from_shelter TEXT NOT NULL,
+          to_shelter TEXT NOT NULL,
+          transferred_by TEXT NOT NULL,
+          transferred_at TIMESTAMP NOT NULL DEFAULT NOW(),
+          note TEXT
+        );
+        """,
+        kind,
+    )
+
+
 def ensure_twilio_message_status_table(kind: str) -> None:
     """
     Ensure twilio_message_status table exists.
