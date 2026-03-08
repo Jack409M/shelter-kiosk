@@ -27,7 +27,7 @@ def _run_configured_init() -> None:
 
 def _create(sqlite_sql: str, pg_sql: str, kind: str) -> None:
     """
-    Execute the sqlite or postgres version of a schema statement.
+    Execute the SQLite or Postgres version of a schema statement.
     """
     db_execute(pg_sql if kind == "pg" else sqlite_sql)
 
@@ -40,7 +40,9 @@ def ensure_sms_consent_columns(kind: str) -> None:
     """
     if kind == "pg":
         try:
-            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE")
+            db_execute(
+                "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE"
+            )
         except Exception:
             pass
         try:
@@ -198,6 +200,26 @@ def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
         )
 
 
+def ensure_rate_limit_events_table(kind: str) -> None:
+    """
+    Ensure the Postgres rate_limit_events table exists.
+
+    Safe to run repeatedly. This is a no op for SQLite.
+    """
+    if kind != "pg":
+        return
+
+    db_execute(
+        """
+        CREATE TABLE IF NOT EXISTS rate_limit_events (
+            id SERIAL PRIMARY KEY,
+            k TEXT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+        """
+    )
+
+
 def init_db() -> None:
     """
     Current public schema entry point.
@@ -206,4 +228,3 @@ def init_db() -> None:
     Later this module will own the full database bootstrap logic.
     """
     _run_configured_init()
-    
