@@ -829,35 +829,7 @@ def legacy_init_db() -> None:
 
     schema.ensure_twilio_message_status_indexes()
     
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS leave_requests_shelter_status_return_idx "
-            "ON leave_requests (shelter, status, return_at)"
-        )
-    except Exception:
-        pass
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS transport_requests_shelter_status_pickup_idx "
-            "ON transport_requests (shelter, status, needed_at)"
-        )
-    except Exception:
-        pass
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS attendance_events_shelter_occurred_idx "
-            "ON attendance_events (shelter, event_time)"
-        )
-    except Exception:
-        pass
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_shelter_active_name_idx "
-            "ON residents (shelter, is_active, last_name, first_name)"
-        )
-    except Exception:
-        pass
-
+    schema.ensure_common_app_indexes()
     schema.backfill_resident_codes(kind, make_resident_code)
 
     schema.ensure_admin_bootstrap()
@@ -947,6 +919,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
