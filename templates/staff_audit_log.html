@@ -10,15 +10,22 @@
     align-items: start;
   }
 
-  .audit-results { overflow-x: auto; }
+  .audit-results {
+    overflow-x: auto;
+  }
 
   .audit-filters {
     position: sticky;
     top: 12px;
   }
 
-  table.compact { width: 100%; border-collapse: collapse; }
-  table.compact th, table.compact td {
+  table.compact {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table.compact th,
+  table.compact td {
     padding: 6px 8px;
     font-size: 12px;
     line-height: 1.2;
@@ -39,11 +46,27 @@
     padding: 12px;
   }
 
-  .filter-card h3 { margin: 0 0 10px 0; font-size: 16px; }
+  .filter-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+  }
 
-  .filter-row { margin-bottom: 10px; }
-  .filter-row label { display: block; font-weight: 700; margin-bottom: 4px; }
-  .filter-row input, .filter-row select { width: 100%; padding: 8px; box-sizing: border-box; }
+  .filter-row {
+    margin-bottom: 10px;
+  }
+
+  .filter-row label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .filter-row input,
+  .filter-row select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+  }
 
   .filter-actions {
     display: grid;
@@ -52,7 +75,8 @@
     margin-top: 12px;
   }
 
-  .filter-actions a, .filter-actions button {
+  .filter-actions a,
+  .filter-actions button {
     width: 100%;
     text-align: center;
     text-decoration: none;
@@ -66,15 +90,28 @@
     box-sizing: border-box;
   }
 
-  .small-note { margin-top: 10px; font-size: 12px; color: var(--text-muted, #4a5a66); }
+  .small-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted, #4a5a66);
+  }
 
   @media (max-width: 900px) {
-    .audit-layout { grid-template-columns: 1fr; }
-    .audit-filters { position: static; }
-    table.compact td.details { max-width: none; }
+    .audit-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .audit-filters {
+      position: static;
+    }
+
+    table.compact td.details {
+      max-width: none;
+    }
   }
 </style>
 
+{# current filter values #}
 {% set q_val = request.args.get('q', '') %}
 {% set shelter_val = request.args.get('shelter', '') %}
 {% set staff_user_id_val = request.args.get('staff_user_id', '') %}
@@ -83,7 +120,7 @@
 
 <div class="audit-layout">
 
-  <!-- LEFT: RESULTS -->
+  {# left side: results table #}
   <div class="audit-results">
     <table class="compact">
       <thead>
@@ -99,26 +136,29 @@
         </tr>
       </thead>
       <tbody>
-        {% for r in rows %}
-        <tr>
-          <td>{{ r.id }}</td>
-          <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
-          <td>{{ r.shelter or "" }}</td>
-          <td>{{ r.staff_username or "" }}</td>
-          <td>{{ r.entity_type or "" }}</td>
-          <td>{{ r.entity_id or "" }}</td>
-          <td>{{ r.action_type or "" }}</td>
-          <td class="details">{{ r.action_details or "" }}</td>
-        </tr>
-        {% endfor %}
-        {% if not rows %}
-        <tr><td colspan="8">No matching audit events.</td></tr>
+        {% if rows %}
+          {% for r in rows %}
+            <tr>
+              <td>{{ r.id }}</td>
+              <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
+              <td>{{ r.shelter or "" }}</td>
+              <td>{{ r.staff_username or "" }}</td>
+              <td>{{ r.entity_type or "" }}</td>
+              <td>{{ r.entity_id or "" }}</td>
+              <td>{{ r.action_type or "" }}</td>
+              <td class="details">{{ r.action_details or "" }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8">No matching audit events.</td>
+          </tr>
         {% endif %}
       </tbody>
     </table>
   </div>
 
-  <!-- RIGHT: FILTERS -->
+  {# right side: filters panel #}
   <aside class="audit-filters">
     <div class="filter-card">
       <h3>Filter</h3>
@@ -143,7 +183,6 @@
           <label for="staff_user_id">Staff</label>
           <select id="staff_user_id" name="staff_user_id">
             <option value="">All</option>
-            {# Build staff list from the rows we already have (safe, no route changes) #}
             {% set seen = namespace(ids=[]) %}
             {% for r in rows %}
               {% if r.staff_user_id and (r.staff_user_id not in seen.ids) %}
@@ -151,15 +190,14 @@
               {% endif %}
             {% endfor %}
             {% for sid in seen.ids %}
-              {# Find a display name for this sid from the first matching row #}
-              {% set display = "" %}
+              {% set display = namespace(value="") %}
               {% for r in rows %}
-                {% if r.staff_user_id == sid %}
-                  {% set display = r.staff_username or ("User " ~ sid) %}
+                {% if r.staff_user_id == sid and not display.value %}
+                  {% set display.value = r.staff_username or ("User " ~ sid) %}
                 {% endif %}
               {% endfor %}
               <option value="{{ sid }}" {% if staff_user_id_val == (sid|string) %}selected{% endif %}>
-                {{ display }}
+                {{ display.value }}
               </option>
             {% endfor %}
           </select>
@@ -199,11 +237,11 @@
 
         <div class="filter-actions">
           <button type="submit">Apply</button>
-          <a href="{{ url_for('staff_audit_log') }}">Clear</a>
+          <a href="{{ url_for('admin.staff_audit_log') }}">Clear</a>
         </div>
 
         <div class="filter-actions" style="margin-top:10px;">
-          <a href="{{ url_for('staff_audit_log_csv', **request.args) }}">Export CSV</a>
+          <a href="{{ url_for('admin.staff_audit_log_csv', **request.args) }}">Export CSV</a>
           <a href="#" onclick="window.location.reload(); return false;">Refresh</a>
         </div>
 
