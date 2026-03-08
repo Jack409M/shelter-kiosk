@@ -1118,81 +1118,6 @@ def public_home():
 
 
 
-@app.route("/twilio/status", methods=["POST"])
-def twilio_status():
-    if not TWILIO_STATUS_ENABLED:
-        return "OK", 200
-
-    ip = _client_ip()
-    if _rate_limited(f"twilio_status_ip:{ip}", 120, 60):
-        return "OK", 200
-
-    # Require validator when status callbacks are enabled
-    if RequestValidator is None:
-        abort(500)
-
-    sig = request.headers.get("X-Twilio-Signature", "")
-    if not sig:
-        abort(403)
-
-    # Build the URL used for validation (account for proxy https)
-    url = request.url
-    xf_proto = (request.headers.get("X-Forwarded-Proto") or "").lower()
-    if xf_proto == "https" and url.startswith("http://"):
-        url = "https://" + url[len("http://"):]
-
-    validator = RequestValidator(TWILIO_AUTH_TOKEN or "")
-    form = request.form.to_dict(flat=True)
-
-    if not validator.validate(url, form, sig):
-        abort(403)
-
-    message_sid = (request.form.get("MessageSid") or "").strip()
-    message_status = (request.form.get("MessageStatus") or "").strip()
-
-    # Idempotency: store each status transition once
-    if message_sid and message_status:
-        if _rate_limited(f"twilio_status:{message_sid}:{message_status}", 1, 172800):
-            return "OK", 200
-
-    init_db()
-    kind = g.get("db_kind")
-
-    error_code = (request.form.get("ErrorCode") or "").strip()
-    to_number = (request.form.get("To") or "").strip()
-    from_number = (request.form.get("From") or "").strip()
-    account_sid = (request.form.get("AccountSid") or "").strip()
-    api_version = (request.form.get("ApiVersion") or "").strip()
-    created_at = utcnow_iso()
-
-    if message_sid and message_status:
-        db_execute(
-            """
-            INSERT INTO twilio_message_status
-              (message_sid, message_status, error_code, to_number, from_number, account_sid, api_version, created_at)
-            VALUES
-              (%s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            if kind == "pg"
-            else """
-            INSERT INTO twilio_message_status
-              (message_sid, message_status, error_code, to_number, from_number, account_sid, api_version, created_at)
-            VALUES
-              (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                message_sid,
-                message_status,
-                (error_code or None),
-                (to_number or None),
-                (from_number or None),
-                (account_sid or None),
-                (api_version or None),
-                created_at,
-            ),
-        )
-
-    return "OK", 200
 
 
 # ---- Dangerous Admin Maintenance ----
@@ -1226,6 +1151,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
