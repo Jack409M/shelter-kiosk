@@ -939,31 +939,7 @@ def legacy_init_db() -> None:
     except Exception:
         pass
 
-    rows = db_fetchall(
-        "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
-        if kind == "pg"
-        else "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
-    )
-    for r in rows:
-        rid = r["id"] if isinstance(r, dict) else r[0]
-        code = make_resident_code()
-        for _ in range(10):
-            exists = db_fetchone(
-                "SELECT id FROM residents WHERE resident_code = %s"
-                if kind == "pg"
-                else "SELECT id FROM residents WHERE resident_code = ?",
-                (code,),
-            )
-            if not exists:
-                break
-            code = make_resident_code()
-
-        db_execute(
-            "UPDATE residents SET resident_code = %s WHERE id = %s"
-            if kind == "pg"
-            else "UPDATE residents SET resident_code = ? WHERE id = ?",
-            (code, rid),
-        )
+    schema.backfill_resident_codes(kind, make_resident_code)
 
     schema.ensure_admin_bootstrap()
 
@@ -1052,6 +1028,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
