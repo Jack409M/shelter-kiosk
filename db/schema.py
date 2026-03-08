@@ -227,6 +227,39 @@ def ensure_twilio_message_status_table(kind: str) -> None:
     )
 
 
+def ensure_audit_log_table(kind: str) -> None:
+    """
+    Ensure audit_log table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER,
+            shelter TEXT,
+            staff_user_id INTEGER,
+            action_type TEXT NOT NULL,
+            action_details TEXT,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id SERIAL PRIMARY KEY,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER,
+            shelter TEXT,
+            staff_user_id INTEGER,
+            action_type TEXT NOT NULL,
+            action_details TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        )
+        """,
+        kind,
+    )
+
+
 def ensure_rate_limit_events_table(kind: str) -> None:
     """
     Ensure Postgres rate_limit_events table exists.
