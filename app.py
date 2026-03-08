@@ -498,25 +498,6 @@ def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: st
         f"from={from_shelter} to={to_shelter} note={note}".strip(),
     )
 
-
-def ensure_admin_bootstrap() -> None:
-    row = db_fetchone("SELECT COUNT(1) AS c FROM staff_users WHERE role = 'admin'")
-    count = int(row["c"] if isinstance(row, dict) else row[0])
-    if count > 0:
-        return
-
-    admin_user = (os.environ.get("ADMIN_USERNAME") or "").strip()
-    admin_pass = (os.environ.get("ADMIN_PASSWORD") or "").strip()
-    if not admin_user or not admin_pass:
-        return
-
-    db_execute(
-        "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s, %s, %s, %s, %s)"
-        if g.get("db_kind") == "pg"
-        else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
-        (admin_user, generate_password_hash(admin_pass), "admin", True, utcnow_iso()),
-    )
-
  # DATABASE SCHEMA INITIALIZATION (moving to db/schema.py later)       
 def legacy_init_db() -> None:
     get_db()
@@ -1071,6 +1052,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
