@@ -82,6 +82,26 @@ def ensure_sms_consent_columns(kind: str) -> None:
             pass
 
 
+def ensure_resident_code_schema(kind: str) -> None:
+    """
+    Ensure residents.resident_code exists and has a unique index.
+
+    Safe to run repeatedly for both Postgres and SQLite.
+    """
+    try:
+        if kind == "pg":
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS resident_code TEXT")
+        else:
+            db_execute("ALTER TABLE residents ADD COLUMN resident_code TEXT")
+    except Exception:
+        pass
+
+    try:
+        db_execute("CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq ON residents (resident_code)")
+    except Exception:
+        pass
+
+
 def ensure_admin_bootstrap() -> None:
     """
     Create the first admin user from environment variables if no admin exists.
