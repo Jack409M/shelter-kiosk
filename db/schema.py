@@ -192,6 +192,43 @@ def backfill_resident_codes(kind: str, make_resident_code_func) -> None:
         )
 
 
+def ensure_organizations_table(kind: str) -> None:
+    """
+    Ensure organizations table exists.
+    """
+    _create(
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            public_name TEXT NOT NULL,
+            primary_color TEXT,
+            secondary_color TEXT,
+            logo_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            public_name TEXT NOT NULL,
+            primary_color TEXT,
+            secondary_color TEXT,
+            logo_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """,
+        kind,
+    )
+
+
 def ensure_resident_transfers_table(kind: str) -> None:
     """
     Ensure resident_transfers table exists.
