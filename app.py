@@ -824,17 +824,8 @@ def legacy_init_db() -> None:
     )
     
     if kind == "pg":
-        db_execute(
-            """
-            CREATE TABLE IF NOT EXISTS rate_limit_events (
-              id SERIAL PRIMARY KEY,
-              k TEXT NOT NULL,
-              created_at TIMESTAMP NOT NULL DEFAULT NOW()
-            );
-            """
-        )
-        db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_k_idx ON rate_limit_events (k)")
-        db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_created_at_idx ON rate_limit_events (created_at)")
+            schema.ensure_rate_limit_events_table(kind)
+            schema.ensure_rate_limit_event_indexes(kind)
 
     try:
         db_execute("CREATE INDEX IF NOT EXISTS twilio_message_status_sid_idx ON twilio_message_status (message_sid)")
@@ -964,6 +955,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
