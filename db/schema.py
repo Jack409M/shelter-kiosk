@@ -117,6 +117,21 @@ def ensure_leave_request_phone_column(kind: str) -> None:
         pass
 
 
+def drop_transport_dob_column_if_present(kind: str) -> None:
+    """
+    Remove the old transport_requests.dob column when running on Postgres.
+
+    This is safe to run repeatedly and is a no op for SQLite.
+    """
+    if kind != "pg":
+        return
+
+    try:
+        db_execute("ALTER TABLE transport_requests DROP COLUMN IF EXISTS dob")
+    except Exception:
+        pass
+
+
 def ensure_admin_bootstrap() -> None:
     """
     Create the first admin user from environment variables if no admin exists.
@@ -191,3 +206,4 @@ def init_db() -> None:
     Later this module will own the full database bootstrap logic.
     """
     _run_configured_init()
+    
