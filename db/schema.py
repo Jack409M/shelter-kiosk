@@ -220,6 +220,19 @@ def ensure_rate_limit_events_table(kind: str) -> None:
     )
 
 
+def ensure_rate_limit_event_indexes(kind: str) -> None:
+    """
+    Ensure Postgres indexes exist for rate_limit_events.
+
+    Safe to run repeatedly. This is a no op for SQLite.
+    """
+    if kind != "pg":
+        return
+
+    db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_k_idx ON rate_limit_events (k)")
+    db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_created_at_idx ON rate_limit_events (created_at)")
+
+
 def init_db() -> None:
     """
     Current public schema entry point.
