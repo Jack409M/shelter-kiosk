@@ -738,11 +738,7 @@ def legacy_init_db() -> None:
         """,
     )
 
-    try:
-        if g.get("db_kind") == "pg":
-            db_execute("ALTER TABLE transport_requests DROP COLUMN IF EXISTS dob")
-    except Exception:
-        pass
+    schema.drop_transport_dob_column_if_present(kind)
 
     create(
         """
@@ -968,6 +964,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
