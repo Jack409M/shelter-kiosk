@@ -1095,31 +1095,6 @@ def require_resident_create(fn):
 
     return wrapper
 
-
-# ============================
-# Routes
-# ============================
-
-
-
-@app.get("/privacy")
-def privacy_policy():
-    return render_template("privacy.html")
-
-@app.get("/terms")
-def terms_and_conditions():
-    return render_template("terms.html")
-
-
-@app.route("/")
-def public_home():
-    return redirect(url_for("resident_requests.resident_leave"))
-    
-
-
-
-
-
 # ---- Dangerous Admin Maintenance ----
 
 @app.errorhandler(404)
@@ -1151,6 +1126,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
