@@ -568,7 +568,7 @@ def legacy_init_db() -> None:
             pass
 
     def create(sqlite_sql: str, pg_sql: str) -> None:
-    schema._create(sqlite_sql, pg_sql, kind)
+        schema._create(sqlite_sql, pg_sql, kind)
     
 
     create(
@@ -1071,6 +1071,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
