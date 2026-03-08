@@ -519,31 +519,10 @@ def legacy_init_db() -> None:
     def create(sqlite_sql: str, pg_sql: str) -> None:
         schema._create(sqlite_sql, pg_sql, kind)
 
-    # Future extraction target: staff_users table
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS staff_users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'staff',
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS staff_users (
-            id SERIAL PRIMARY KEY,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'staff',
-            is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL
-        )
-        """,
-    )
-    # Already extracted to db/schema.py
+        # Already extracted to db/schema.py
+    schema.ensure_staff_users_table(kind)
     schema.ensure_organizations_table(kind)
+    
 
     # Future extraction target: residents table
     create(
@@ -811,6 +790,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
