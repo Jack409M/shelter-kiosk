@@ -572,59 +572,6 @@ def legacy_init_db() -> None:
         pass
     # Already extracted to db/schema.py
     schema.ensure_resident_transfers_table(kind)
-
-    # Future extraction target: leave_requests table
-    
-    create(
-        """
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            resident_phone TEXT,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            leave_at TEXT NOT NULL,
-            return_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            decided_at TEXT,
-            decided_by INTEGER,
-            decision_note TEXT,
-            check_in_at TEXT,
-            check_in_by INTEGER
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id SERIAL PRIMARY KEY,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            resident_phone TEXT,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            leave_at TEXT NOT NULL,
-            return_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            decided_at TEXT,
-            decided_by INTEGER,
-            decision_note TEXT,
-            check_in_at TEXT,
-            check_in_by INTEGER
-        )
-        """,
-    )
-
-    schema.ensure_leave_request_phone_column(kind)
-
-    # Already extracted to db/schema.py
     schema.ensure_transport_requests_table(kind)
     schema.drop_transport_dob_column_if_present(kind)
     schema.ensure_attendance_events_table(kind)
@@ -734,6 +681,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
