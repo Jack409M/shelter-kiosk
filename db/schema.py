@@ -102,6 +102,21 @@ def ensure_resident_code_schema(kind: str) -> None:
         pass
 
 
+def ensure_leave_request_phone_column(kind: str) -> None:
+    """
+    Ensure leave_requests.resident_phone exists.
+
+    Safe to run repeatedly for both Postgres and SQLite.
+    """
+    try:
+        if kind == "pg":
+            db_execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS resident_phone TEXT")
+        else:
+            db_execute("ALTER TABLE leave_requests ADD COLUMN resident_phone TEXT")
+    except Exception:
+        pass
+
+
 def ensure_admin_bootstrap() -> None:
     """
     Create the first admin user from environment variables if no admin exists.
