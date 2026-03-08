@@ -109,7 +109,7 @@
             {# core staff links #}
             <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
             <a href="{{ url_for('residents.staff_residents') }}">Residents</a>
-            <a href="{{ url_for('staff_sms_consent') }}">SMS Consent</a>
+            <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
 
             {% if session.get("role") == "admin" %}
               <a href="{{ url_for('admin.admin_users') }}">Users</a>
@@ -141,3 +141,4 @@
     </main>
   </body>
 </html>
+
