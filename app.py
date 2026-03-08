@@ -519,7 +519,7 @@ def legacy_init_db() -> None:
     def create(sqlite_sql: str, pg_sql: str) -> None:
         schema._create(sqlite_sql, pg_sql, kind)
 
-        # Already extracted to db/schema.py
+    # Already extracted to db/schema.py
     schema.ensure_staff_users_table(kind)
     schema.ensure_organizations_table(kind)
     
@@ -790,6 +790,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
