@@ -62,7 +62,7 @@ def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
         (key,),
     )
 
-    row = db_fetchall(
+    rows = db_fetchall(
         """
         SELECT COUNT(1) AS c
         FROM rate_limit_events
@@ -71,7 +71,7 @@ def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
         """,
         (key, window_seconds),
     )
-    c = int((row[0]["c"] if isinstance(row[0], dict) else row[0][0])) if row else 0
+    c = int((rows[0]["c"] if isinstance(rows[0], dict) else rows[0][0])) if rows else 0
 
     last_prune = current_app.config.get("_LAST_RL_PRUNE_TS", 0.0)
     now = time.time()
