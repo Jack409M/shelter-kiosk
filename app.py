@@ -559,6 +559,9 @@ def legacy_init_db() -> None:
 
 init_db = legacy_init_db
 app.config["INIT_DB_FUNC"] = init_db
+app.config["UTCNOW_ISO_FUNC"] = utcnow_iso
+app.config["ADMIN_USERNAME"] = os.environ.get("ADMIN_USERNAME")
+app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
 
 
 def require_staff_or_admin(fn):
@@ -650,6 +653,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
