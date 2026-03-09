@@ -284,38 +284,6 @@ def inject_resident_dashboard_status():
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
-def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: str, note: str = ""):
-    actor = session.get("username") or "unknown"
-
-    if app.config.get("DATABASE_URL"):
-        db_execute(
-            """
-            INSERT INTO resident_transfers
-              (resident_id, from_shelter, to_shelter, transferred_by, note)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (resident_id, from_shelter, to_shelter, actor, note or None),
-        )
-    else:
-        db_execute(
-            """
-            INSERT INTO resident_transfers
-              (resident_id, from_shelter, to_shelter, transferred_by, transferred_at, note)
-            VALUES (?, ?, ?, ?, datetime('now'), ?)
-            """,
-            (resident_id, from_shelter, to_shelter, actor, note or None),
-        )
-
-    staff_id = session.get("staff_user_id")
-    log_action(
-        "resident",
-        resident_id,
-        from_shelter,
-        staff_id,
-        "resident_transfer",
-        f"from={from_shelter} to={to_shelter} note={note}".strip(),
-    )
-
 
 # Database schema initialization.
 # Current state:
@@ -425,6 +393,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
