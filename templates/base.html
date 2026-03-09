@@ -14,10 +14,10 @@
       <nav>
         <a href="{{ url_for('resident_requests.resident_leave') }}">Leave</a>
         <a href="{{ url_for('resident_requests.resident_transport') }}">Transport</a>
-        <a href="{{ url_for('staff_login') }}">Staff</a>
+        <a href="{{ url_for('auth.staff_login') }}">Staff</a>
         {% if session.get("staff_user_id") %}
-  <a href="{{ url_for('staff_transport_board') }}">Transport Board</a>
-{% endif %}
+          <a href="{{ url_for('staff_transport_board') }}">Transport Board</a>
+        {% endif %}
       </nav>
     </header>
 
@@ -33,9 +33,4 @@
       {% block content %}{% endblock %}
     </main>
   </body>
-
 </html>
-
-
-
-
