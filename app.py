@@ -510,51 +510,10 @@ def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: st
 #   1. move inline table create blocks below into db/schema.py one table at a time
 #   2. replace local create(...) usage with schema owned helpers
 #   3. eventually collapse this function into schema.init_db()
+
 def legacy_init_db() -> None:
     get_db()
     schema.init_db()
-
-    schema.ensure_sms_consent_columns(kind)
-
-    def create(sqlite_sql: str, pg_sql: str) -> None:
-        schema._create(sqlite_sql, pg_sql, kind)
-
-    # Already extracted to db/schema.py
-    schema.ensure_staff_users_table(kind)
-    schema.ensure_organizations_table(kind)
-    schema.ensure_residents_table(kind)
-    schema.ensure_resident_code_schema(kind)
-
-    # Seed first organization.
-    # Left inline for now because it is data bootstrap rather than schema definition.
-    try:
-        db_execute(
-            """
-            INSERT INTO organizations
-            (name, slug, public_name, primary_color, secondary_color, created_at)
-            VALUES
-            ('Downtown Womens Center', 'dwc', 'Downtown Womens Center', '#4f8fbe', '#3f79a5', ?)
-            """,
-            (datetime.utcnow().isoformat(),),
-        )
-    except Exception:
-        pass
-    # Already extracted to db/schema.py
-    schema.ensure_resident_transfers_table(kind)
-    schema.ensure_transport_requests_table(kind)
-    schema.drop_transport_dob_column_if_present(kind)
-    schema.ensure_attendance_events_table(kind)
-    schema.ensure_audit_log_table(kind)
-    schema.ensure_twilio_message_status_table(kind)
-
-    if kind == "pg":
-        schema.ensure_rate_limit_events_table(kind)
-        schema.ensure_rate_limit_event_indexes(kind)
-
-    schema.ensure_twilio_message_status_indexes()
-    schema.ensure_common_app_indexes()
-    schema.backfill_resident_codes(kind, make_resident_code)
-    schema.ensure_admin_bootstrap()
 
 
 init_db = legacy_init_db
@@ -562,7 +521,6 @@ app.config["INIT_DB_FUNC"] = init_db
 app.config["UTCNOW_ISO_FUNC"] = utcnow_iso
 app.config["ADMIN_USERNAME"] = os.environ.get("ADMIN_USERNAME")
 app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
-
 
 def require_staff_or_admin(fn):
     @wraps(fn)
@@ -653,6 +611,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
