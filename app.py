@@ -202,10 +202,42 @@ def _public_bot_throttle():
 
     return None
 
+def get_all_shelters() -> list[str]:
+    init_db()
+
+    rows = db_fetchall(
+        """
+        SELECT name
+        FROM shelters
+        WHERE is_active = %s
+        ORDER BY name ASC
+        """
+        if is_postgres()
+        else """
+        SELECT name
+        FROM shelters
+        WHERE is_active = 1
+        ORDER BY name ASC
+        """
+    )
+
+    names: list[str] = []
+
+    for row in rows:
+        if isinstance(row, dict):
+            name = row.get("name") or ""
+        else:
+            name = row[0] or ""
+
+        if name:
+            names.append(name)
+
+    return names
+
 @app.context_processor
 def inject_shelters():
     return {
-        "all_shelters": SHELTERS,
+        "all_shelters": get_all_shelters(),
         "current_shelter": session.get("shelter"),
     }
 
@@ -416,6 +448,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
