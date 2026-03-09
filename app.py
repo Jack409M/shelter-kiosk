@@ -186,6 +186,7 @@ def _block_banned_ips():
     if ip != "unknown" and is_ip_banned(ip):
         abort(403)
 
+
 @app.before_request
 def _block_bad_methods_and_agents():
     bad_methods = {"TRACE", "TRACK", "CONNECT"}
@@ -193,6 +194,13 @@ def _block_bad_methods_and_agents():
         abort(405)
 
     user_agent = (request.headers.get("User-Agent") or "").lower()
+
+    allowed_agent_markers = (
+        "twilio",
+    )
+
+    if any(marker in user_agent for marker in allowed_agent_markers):
+        return None
 
     bad_agent_markers = (
         "sqlmap",
@@ -219,6 +227,7 @@ def _block_bad_methods_and_agents():
                 request.path,
             )
         abort(403)
+
 
 @app.before_request
 def _auto_ban_scanner_probes():
@@ -584,6 +593,4 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
-
 
