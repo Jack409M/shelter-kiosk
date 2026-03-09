@@ -11,7 +11,6 @@ from core.audit import log_action
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 
-
 kiosk = Blueprint("kiosk", __name__)
 
 
@@ -22,8 +21,14 @@ def kiosk_checkout(shelter: str):
 
     init_db()
 
-    if shelter not in get_all_shelters():
+    matched_shelter = next(
+        (name for name in get_all_shelters() if name.lower() == shelter.lower()),
+        None,
+    )
+    if not matched_shelter:
         return "Invalid shelter", 404
+
+    shelter = matched_shelter
 
     kiosk_manager_user = (os.environ.get("KIOSK_MANAGER_USER") or "").strip()
     kiosk_manager_pass = (os.environ.get("KIOSK_MANAGER_PASS") or "").strip()
@@ -50,7 +55,9 @@ def kiosk_checkout(shelter: str):
         if session.get(f"kiosk_authed_{shelter}") is not True:
             ip = _client_ip()
 
-            if _rate_limited(f"kiosk_pin_ip:{ip}", 10, 300) or _rate_limited(f"kiosk_pin_shelter:{shelter}", 40, 300):
+            if is_rate_limited(f"kiosk_pin_ip:{ip}", limit=10, window_seconds=300) or is_rate_limited(
+                f"kiosk_pin_shelter:{shelter}", limit=40, window_seconds=300
+            ):
                 flash("Too many PIN attempts. Please wait and try again.", "error")
                 return render_template("kiosk_pin.html", shelter=shelter), 429
 
@@ -77,7 +84,9 @@ def kiosk_checkout(shelter: str):
     ip = _client_ip()
     code_key = resident_code if resident_code else "blank"
 
-    if _rate_limited(f"kiosk_checkout_ip:{ip}", 60, 60) or _rate_limited(f"kiosk_checkout_code:{code_key}", 20, 3600):
+    if is_rate_limited(f"kiosk_checkout_ip:{ip}", limit=60, window_seconds=60) or is_rate_limited(
+        f"kiosk_checkout_code:{code_key}", limit=20, window_seconds=3600
+    ):
         flash("Too many attempts. Please wait and try again.", "error")
         return render_template("kiosk_checkout.html", shelter=shelter), 429
 
@@ -125,8 +134,7 @@ def kiosk_checkout(shelter: str):
         "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
         "VALUES (%s, %s, %s, %s, %s, %s, %s)"
         if g.get("db_kind") == "pg"
-        else
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
+        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
 
