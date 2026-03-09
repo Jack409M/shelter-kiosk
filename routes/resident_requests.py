@@ -1,20 +1,32 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
-from zoneinfo import ZoneInfo
 
 from core.audit import log_action
 from core.db import db_execute, db_fetchone, get_db
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
 
+
 resident_requests = Blueprint("resident_requests", __name__)
 
 
 def _parse_dt(dt_str: str) -> datetime:
+    """
+    Parse an ISO formatted datetime string from form input.
+    """
     return datetime.fromisoformat(dt_str)
+
+
+def _client_ip() -> str:
+    """
+    Use Flask's normalized remote address.
+    Falls back to a stable placeholder if missing.
+    """
+    return (request.remote_addr or "").strip() or "unknown"
 
 
 @resident_requests.route("/resident", methods=["GET", "POST"])
@@ -29,6 +41,13 @@ def resident_signin():
     if request.method == "GET":
         return render_template("resident_signin.html")
 
+    # Public endpoint protection.
+    # Use a higher threshold because many residents may share one kiosk IP.
+    ip = _client_ip()
+    if is_rate_limited(f"resident_signin:{ip}", limit=30, window_seconds=300):
+        flash("Too many sign in attempts. Please wait a few minutes and try again.", "error")
+        return render_template("resident_signin.html"), 429
+
     resident_code = (request.form.get("resident_code") or "").strip()
 
     row = db_fetchone(
@@ -42,7 +61,7 @@ def resident_signin():
         flash("Invalid Resident Code.", "error")
         return render_template("resident_signin.html"), 401
 
-    shelter = (row.get("shelter") if isinstance(row, dict) else row[1] or "").strip()
+    shelter = ((row.get("shelter") if isinstance(row, dict) else row[1]) or "").strip()
     resident_session_start(row, shelter, resident_code)
 
     allowed_next = {
@@ -85,14 +104,26 @@ def resident_leave():
     def _inner():
         init_db()
 
+        shelter = session.get("resident_shelter") or ""
+
         if request.method == "GET":
-            shelter = session.get("resident_shelter") or ""
             return render_template("resident_leave.html", shelter=shelter, max_days=MAX_LEAVE_DAYS)
 
-        shelter = session.get("resident_shelter") or ""
         resident_identifier = session.get("resident_identifier") or ""
         first = session.get("resident_first") or ""
         last = session.get("resident_last") or ""
+
+        # Resident specific throttle so one shared kiosk IP does not block everyone.
+        ip = _client_ip()
+        rl_key = f"resident_leave:{ip}:{resident_identifier or 'unknown'}"
+        if is_rate_limited(rl_key, limit=6, window_seconds=900):
+            flash("Too many leave submissions. Please wait a few minutes and try again.", "error")
+            return render_template(
+                "resident_leave.html",
+                shelters=SHELTERS,
+                shelter=shelter,
+                max_days=MAX_LEAVE_DAYS,
+            ), 429
 
         resident_phone = (request.form.get("resident_phone") or "").strip()
         if resident_phone:
@@ -175,10 +206,10 @@ def resident_leave():
 
         params = (
             shelter,
-            resident_identifier or "",
+            resident_identifier,
             first,
             last,
-            resident_phone,
+            resident_phone or None,
             destination,
             reason or None,
             resident_notes or None,
@@ -199,6 +230,7 @@ def resident_leave():
             cur.execute(sql, params)
             conn.commit()
             req_id = cur.lastrowid
+            cur.close()
 
         log_action("leave", req_id, shelter, None, "create", "Resident submitted leave request")
         flash("Your leave request was submitted successfully.", "ok")
@@ -215,14 +247,21 @@ def resident_transport():
     def _inner():
         init_db()
 
+        shelter = session.get("resident_shelter") or ""
+
         if request.method == "GET":
-            shelter = session.get("resident_shelter") or ""
             return render_template("resident_transport.html", shelter=shelter)
 
-        shelter = session.get("resident_shelter") or ""
         resident_identifier = session.get("resident_identifier") or ""
         first = session.get("resident_first") or ""
         last = session.get("resident_last") or ""
+
+        # Resident specific throttle so one shared kiosk IP does not block everyone.
+        ip = _client_ip()
+        rl_key = f"resident_transport:{ip}:{resident_identifier or 'unknown'}"
+        if is_rate_limited(rl_key, limit=6, window_seconds=900):
+            flash("Too many transportation submissions. Please wait a few minutes and try again.", "error")
+            return render_template("resident_transport.html", shelter=shelter), 429
 
         needed_raw = (request.form.get("needed_at") or "").strip()
         pickup = (request.form.get("pickup_location") or "").strip()
@@ -272,7 +311,7 @@ def resident_transport():
 
         params = (
             shelter,
-            resident_identifier or "",
+            resident_identifier,
             first,
             last,
             needed_iso,
@@ -296,6 +335,7 @@ def resident_transport():
             cur.execute(sql, params)
             conn.commit()
             req_id = cur.lastrowid
+            cur.close()
 
         log_action("transport", req_id, shelter, None, "create", "Resident submitted transport request")
         flash("Your transportation request was submitted successfully.", "ok")
@@ -361,6 +401,7 @@ def resident_consent():
         next_url = url_for("resident_portal.home")
 
     resident_id = session.get("resident_id")
+    resident_identifier = session.get("resident_identifier") or ""
     shelter = session.get("resident_shelter") or ""
 
     if not resident_id or shelter not in SHELTERS:
@@ -369,6 +410,13 @@ def resident_consent():
 
     if request.method == "GET":
         return render_template("resident_consent.html", next=next_url)
+
+    # Resident specific throttle on consent posts.
+    ip = _client_ip()
+    rl_key = f"resident_consent:{ip}:{resident_identifier or resident_id}"
+    if is_rate_limited(rl_key, limit=10, window_seconds=300):
+        flash("Too many consent attempts. Please wait a few minutes and try again.", "error")
+        return render_template("resident_consent.html", next=next_url), 429
 
     choice = (request.form.get("choice") or "").strip().lower()
     if choice not in ["accept", "decline"]:
