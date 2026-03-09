@@ -354,75 +354,6 @@ def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
 
-def send_sms(to_number: str, message: str) -> None:
-    """
-    Outbound SMS sender with:
-    global panic switch,
-    Twilio enable gate,
-    consent enforcement,
-    per number and global rate limiting.
-    """
-
-    if os.environ.get("SMS_SYSTEM_ENABLED", "true").lower() != "true":
-        return
-
-    if not TWILIO_ENABLED:
-        return
-
-    try:
-        if not sms_is_allowed_for_number(to_number):
-            return
-    except Exception:
-        return
-
-    if not Client:
-        return
-
-    if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_FROM_NUMBER:
-        return
-
-    raw = (to_number or "").strip()
-    digits = "".join(ch for ch in raw if ch.isdigit())
-
-    if raw.startswith("+"):
-        to_e164 = raw
-    elif len(digits) == 10:
-        to_e164 = "+1" + digits
-    elif len(digits) == 11 and digits.startswith("1"):
-        to_e164 = "+" + digits
-    else:
-        return
-
-    try:
-        per_number_per_hour = int(os.environ.get("SMS_OUTBOUND_PER_NUMBER_PER_HOUR", "6"))
-    except Exception:
-        per_number_per_hour = 6
-
-    try:
-        global_per_minute = int(os.environ.get("SMS_OUTBOUND_GLOBAL_PER_MIN", "30"))
-    except Exception:
-        global_per_minute = 30
-
-    from core.sms import _normalize_us_phone_10
-
-    to10 = _normalize_us_phone_10(to_e164) or to_e164
-
-    if _rate_limited("sms_out_global", global_per_minute, 60):
-        return
-
-    if _rate_limited(f"sms_out_to:{to10}", per_number_per_hour, 3600):
-        return
-
-    try:
-        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-
-        kwargs = {"body": message, "from_": TWILIO_FROM_NUMBER, "to": to_e164}
-        if TWILIO_STATUS_ENABLED and TWILIO_STATUS_CALLBACK_URL:
-            kwargs["status_callback"] = TWILIO_STATUS_CALLBACK_URL
-
-        client.messages.create(**kwargs)
-    except Exception as e:
-        print("SMS error:", e)
 
 
 def make_resident_code(length: int = 8) -> str:
@@ -611,6 +542,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
