@@ -17,7 +17,7 @@ from . import schema_comms
 from . import schema_core
 from . import schema_people
 from . import schema_requests
-
+from . import schema_shelters
 
 def init_db() -> None:
     """
@@ -32,6 +32,7 @@ def init_db() -> None:
 
     # 1. Base tables
     schema_core.ensure_tables(kind)
+    schema_shelters.ensure_tables(kind)
     schema_people.ensure_tables(kind)
     schema_requests.ensure_tables(kind)
     schema_comms.ensure_tables(kind)
