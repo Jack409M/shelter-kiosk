@@ -7,13 +7,12 @@ from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_fetchone
 
-
 auth = Blueprint("auth", __name__)
 
 
 @auth.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
-    from app import _client_ip, get_all_shelters, init_db
+    from app import _ban_ip, _client_ip, get_all_shelters, init_db
     from core.rate_limit import is_rate_limited
 
     init_db()
@@ -26,12 +25,16 @@ def staff_login():
     password = (request.form.get("password") or "").strip()
 
     ip = _client_ip()
-    normalized_username = username.lower()
+    normalized_username = username.lower() or "blank"
 
-    if is_rate_limited(f"staff_login_ip:{ip}", 10, 60) or is_rate_limited(
-        f"staff_login_user:{normalized_username}", 20, 3600
-    ):
+    if is_rate_limited(f"staff_login_ip:{ip}", limit=10, window_seconds=900):
+        log_action("auth", None, None, None, "login_rate_limited_ip", f"ip={ip} username={normalized_username}")
         flash("Too many login attempts. Please wait and try again.", "error")
+        return render_template("staff_login.html", all_shelters=all_shelters), 429
+
+    if is_rate_limited(f"staff_login_user:{normalized_username}", limit=8, window_seconds=900):
+        log_action("auth", None, None, None, "login_rate_limited_user", f"ip={ip} username={normalized_username}")
+        flash("Too many login attempts for that account. Please wait and try again.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 429
 
     row = db_fetchone(
@@ -42,29 +45,60 @@ def staff_login():
     )
 
     if not row:
+        if is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600):
+            _ban_ip(ip, 3600)
+
+        log_action("auth", None, None, None, "login_failed", f"reason=bad_username ip={ip} username={normalized_username}")
         flash("Invalid login.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 401
 
+    staff_user_id = row["id"] if isinstance(row, dict) else row[0]
     is_active = bool(row["is_active"] if isinstance(row, dict) else row[4])
     pw_hash = row["password_hash"] if isinstance(row, dict) else row[2]
 
     if not is_active or not check_password_hash(pw_hash, password):
+        if is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600):
+            _ban_ip(ip, 3600)
+
+        log_action(
+            "auth",
+            None,
+            None,
+            staff_user_id,
+            "login_failed",
+            f"reason=bad_password_or_inactive ip={ip} username={normalized_username}",
+        )
         flash("Invalid login.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 401
 
     shelter = (request.form.get("shelter") or "").strip()
     if shelter not in all_shelters:
+        log_action(
+            "auth",
+            None,
+            None,
+            staff_user_id,
+            "login_failed",
+            f"reason=invalid_shelter ip={ip} username={normalized_username} shelter={shelter}",
+        )
         flash("Select a valid shelter.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 400
 
     session.clear()
-    session["staff_user_id"] = row["id"] if isinstance(row, dict) else row[0]
+    session["staff_user_id"] = staff_user_id
     session["username"] = row["username"] if isinstance(row, dict) else row[1]
     session["role"] = row["role"] if isinstance(row, dict) else row[3]
     session["shelter"] = shelter
     session.permanent = True
 
-    log_action("auth", None, None, session["staff_user_id"], "login", f"Staff login: {session['username']}")
+    log_action(
+        "auth",
+        None,
+        shelter,
+        session["staff_user_id"],
+        "login",
+        f"Staff login: {session['username']} ip={ip}",
+    )
     return redirect(url_for("attendance.staff_attendance"))
 
 
