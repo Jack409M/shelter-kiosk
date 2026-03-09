@@ -96,7 +96,7 @@ def resident_logout():
 
 @resident_requests.route("/leave", methods=["GET", "POST"])
 def resident_leave():
-    from app import MAX_LEAVE_DAYS, init_db, require_resident
+    from app import init_db, require_resident
 
     @require_resident
     def _inner():
@@ -105,7 +105,7 @@ def resident_leave():
         shelter = session.get("resident_shelter") or ""
 
         if request.method == "GET":
-            return render_template("resident_leave.html", shelter=shelter, max_days=MAX_LEAVE_DAYS)
+            return render_template("resident_leave.html", shelter=shelter)
 
         resident_identifier = session.get("resident_identifier") or ""
         first = session.get("resident_first") or ""
@@ -118,7 +118,6 @@ def resident_leave():
             return render_template(
                 "resident_leave.html",
                 shelter=shelter,
-                max_days=MAX_LEAVE_DAYS,
             ), 429
 
         resident_phone = (request.form.get("resident_phone") or "").strip()
@@ -153,9 +152,6 @@ def resident_leave():
             if return_local_date < leave_local_date:
                 errors.append("Return must be after leave.")
 
-            if return_local_date > leave_local_date + timedelta(days=MAX_LEAVE_DAYS):
-                errors.append(f"Maximum leave is {MAX_LEAVE_DAYS} days.")
-
             leave_local_dt = datetime.combine(
                 leave_local_date,
                 datetime.min.time(),
@@ -177,7 +173,6 @@ def resident_leave():
             return render_template(
                 "resident_leave.html",
                 shelter=shelter,
-                max_days=MAX_LEAVE_DAYS,
             ), 400
 
         sql = (
