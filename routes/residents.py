@@ -115,7 +115,7 @@ def staff_residents_post():
 @require_login
 @require_shelter
 def staff_resident_transfer(resident_id: int):
-    from app import SHELTERS, init_db
+    from app import get_all_shelters, init_db
     from core.residents import record_resident_transfer
 
     if not _require_transfer_role():
@@ -123,6 +123,7 @@ def staff_resident_transfer(resident_id: int):
         return redirect(url_for("staff_home"))
 
     init_db()
+    all_shelters = get_all_shelters()
 
     resident = db_fetchone(
         "SELECT * FROM residents WHERE id = %s AND shelter = %s"
@@ -141,7 +142,7 @@ def staff_resident_transfer(resident_id: int):
         to_shelter = (request.form.get("to_shelter") or "").strip()
         note = (request.form.get("note") or "").strip()
 
-        if to_shelter not in SHELTERS:
+        if to_shelter not in all_shelters:
             flash("Select a valid shelter.", "error")
             return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id))
 
@@ -222,7 +223,7 @@ def staff_resident_transfer(resident_id: int):
         "staff_resident_transfer.html",
         resident=resident,
         from_shelter=from_shelter,
-        shelters=[s for s in SHELTERS if s != from_shelter],
+        shelters=[s for s in all_shelters if s != from_shelter],
     )
 
 
