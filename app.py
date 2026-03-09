@@ -1,34 +1,55 @@
 from __future__ import annotations
 
-import importlib
-import pkgutil
-import os
-import io
 import csv
-import sqlite3
-import secrets
+import importlib
+import io
 import logging
+import os
+import pkgutil
+import secrets
+import sqlite3
+import time
 
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
-from flask import request, flash, render_template
-from flask import Flask, Response, current_app, g, redirect, render_template, request, session, url_for, flash, abort
+
+from flask import (
+    Flask,
+    Response,
+    abort,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from werkzeug.middleware.proxy_fix import ProxyFix
-from core.rate_limit import is_rate_limited
-from db import schema
+
 from core.auth import require_login
 from core.auth import require_shelter
-from core.helpers import is_postgres, db_placeholder, utcnow_iso, fmt_date, fmt_dt, fmt_time_only, fmt_pretty_date
-from core.helpers import safe_url_for
-from core.db import get_db, close_db, db_execute, db_fetchone, db_fetchall
+from core.db import close_db, db_execute, db_fetchall, db_fetchone, get_db
+from core.helpers import (
+    db_placeholder,
+    fmt_date,
+    fmt_dt,
+    fmt_pretty_date,
+    fmt_time_only,
+    is_postgres,
+    safe_url_for,
+    utcnow_iso,
+)
+from core.rate_limit import is_rate_limited
 from core.sms_sender import send_sms
-
+from db import schema
 
 try:
-    from twilio.rest import Client
     from twilio.request_validator import RequestValidator
+    from twilio.rest import Client
 except Exception:
     Client = None
     RequestValidator = None
@@ -59,7 +80,12 @@ SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
 DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 ENABLE_DEBUG_ROUTES = (os.environ.get("ENABLE_DEBUG_ROUTES") or "").strip().lower() in {"1", "true", "yes", "on"}
 KIOSK_PIN = (os.environ.get("KIOSK_PIN") or "").strip()
-ENABLE_DANGEROUS_ADMIN_ROUTES = (os.environ.get("ENABLE_DANGEROUS_ADMIN_ROUTES") or "").strip().lower() in {"1", "true", "yes", "on"}
+ENABLE_DANGEROUS_ADMIN_ROUTES = (os.environ.get("ENABLE_DANGEROUS_ADMIN_ROUTES") or "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
@@ -132,12 +158,76 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
 )
 
+# In memory temporary IP bans.
+# These reset on restart or deploy, but still block active attacks.
+_IP_BANS_MEM: dict[str, float] = {}
+
+
+def _ban_ip(ip: str, seconds: int = 1800) -> None:
+    if not ip or ip == "unknown":
+        return
+    _IP_BANS_MEM[ip] = time.time() + max(1, int(seconds))
+
+
+def _ip_is_banned(ip: str) -> bool:
+    if not ip or ip == "unknown":
+        return False
+
+    expires_at = _IP_BANS_MEM.get(ip)
+    if not expires_at:
+        return False
+
+    if expires_at <= time.time():
+        _IP_BANS_MEM.pop(ip, None)
+        return False
+
+    return True
+
 
 def _client_ip() -> str:
     """
     Use ProxyFix normalized remote_addr rather than trusting raw forwarded headers.
     """
     return (request.remote_addr or "").strip() or "unknown"
+
+
+@app.before_request
+def _block_banned_ips():
+    ip = _client_ip()
+    if _ip_is_banned(ip):
+        abort(403)
+
+
+@app.before_request
+def _auto_ban_scanner_probes():
+    path = (request.path or "").lower()
+
+    scanner_markers = (
+        ".env",
+        ".git",
+        "wp-admin",
+        "wp-login",
+        "phpmyadmin",
+        "xmlrpc.php",
+        "cgi-bin",
+        "boaform",
+        "server-status",
+        "actuator",
+        "jenkins",
+        "/vendor/",
+    )
+
+    if not any(marker in path for marker in scanner_markers):
+        return None
+
+    ip = _client_ip()
+
+    if is_rate_limited(f"scanner_probe:{ip}", limit=3, window_seconds=600):
+        _ban_ip(ip, 3600)
+        current_app.logger.warning("AUTO BAN scanner probe ip=%s path=%s", ip, request.path)
+        abort(403)
+
+    abort(404)
 
 
 def _csrf_token() -> str:
@@ -188,6 +278,7 @@ def _csrf_before_request():
     if resp is not None:
         return resp
 
+
 @app.before_request
 def _public_bot_throttle():
     public_paths = {
@@ -206,6 +297,9 @@ def _public_bot_throttle():
     ip = _client_ip()
 
     if is_rate_limited(f"public_post:{request.path}:{ip}", limit=20, window_seconds=300):
+        _ban_ip(ip, 1800)
+        current_app.logger.warning("AUTO BAN public abuse ip=%s path=%s", ip, request.path)
+
         if request.path == "/resident":
             flash("Too many requests. Please wait a few minutes and try again.", "error")
             return render_template("resident_signin.html"), 429
@@ -213,6 +307,7 @@ def _public_bot_throttle():
         return "Too many requests. Please wait a few minutes and try again.", 429
 
     return None
+
 
 def get_all_shelters() -> list[str]:
     init_db()
@@ -246,6 +341,7 @@ def get_all_shelters() -> list[str]:
             names.append(name)
 
     return names
+
 
 @app.context_processor
 def inject_shelters():
@@ -360,7 +456,6 @@ def parse_dt(dt_str: str) -> datetime:
 #   1. move inline table create blocks below into db/schema.py one table at a time
 #   2. replace local create(...) usage with schema owned helpers
 #   3. eventually collapse this function into schema.init_db()
-
 def legacy_init_db() -> None:
     get_db()
     schema.init_db()
@@ -371,6 +466,7 @@ app.config["INIT_DB_FUNC"] = init_db
 app.config["UTCNOW_ISO_FUNC"] = utcnow_iso
 app.config["ADMIN_USERNAME"] = os.environ.get("ADMIN_USERNAME")
 app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
+
 
 def require_staff_or_admin(fn):
     @wraps(fn)
@@ -461,33 +557,3 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
