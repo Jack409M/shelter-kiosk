@@ -25,9 +25,11 @@ def staff_login():
     password = (request.form.get("password") or "").strip()
 
     ip = _client_ip()
-    u = (username or "").strip().lower()
+    normalized_username = username.lower()
 
-    if _rate_limited(f"staff_login_ip:{ip}", 10, 60) or _rate_limited(f"staff_login_user:{u}", 20, 3600):
+    if is_rate_limited(f"staff_login_ip:{ip}", 10, 60) or is_rate_limited(
+        f"staff_login_user:{normalized_username}", 20, 3600
+    ):
         flash("Too many login attempts. Please wait and try again.", "error")
         return render_template("staff_login.html", all_shelters=SHELTERS), 429
 
