@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
-
+from flask import request, flash, render_template
 from flask import Flask, Response, current_app, g, redirect, render_template, request, session, url_for, flash, abort
 from werkzeug.middleware.proxy_fix import ProxyFix
 from core.rate_limit import is_rate_limited
@@ -176,6 +176,31 @@ def _csrf_before_request():
     if resp is not None:
         return resp
 
+@app.before_request
+def _public_bot_throttle():
+    public_paths = {
+        "/resident",
+        "/leave",
+        "/transport",
+        "/resident/consent",
+    }
+
+    if request.path not in public_paths:
+        return None
+
+    if request.method == "GET":
+        return None
+
+    ip = _client_ip()
+
+    if is_rate_limited(f"public_post:{request.path}:{ip}", limit=20, window_seconds=300):
+        if request.path == "/resident":
+            flash("Too many requests. Please wait a few minutes and try again.", "error")
+            return render_template("resident_signin.html"), 429
+
+        return "Too many requests. Please wait a few minutes and try again.", 429
+
+    return None
 
 @app.context_processor
 def inject_shelters():
@@ -391,6 +416,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
