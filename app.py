@@ -186,6 +186,39 @@ def _block_banned_ips():
     if ip != "unknown" and is_ip_banned(ip):
         abort(403)
 
+@app.before_request
+def _block_bad_methods_and_agents():
+    bad_methods = {"TRACE", "TRACK", "CONNECT"}
+    if request.method in bad_methods:
+        abort(405)
+
+    user_agent = (request.headers.get("User-Agent") or "").lower()
+
+    bad_agent_markers = (
+        "sqlmap",
+        "nikto",
+        "nmap",
+        "masscan",
+        "zgrab",
+        "curl",
+        "wget",
+        "python-requests",
+        "pythonurllib",
+        "go-http-client",
+        "libwww-perl",
+    )
+
+    if any(marker in user_agent for marker in bad_agent_markers):
+        ip = _client_ip()
+        if ip != "unknown":
+            ban_ip(ip, 3600)
+            current_app.logger.warning(
+                "AUTO BAN bad user agent ip=%s ua=%s path=%s",
+                ip,
+                request.headers.get("User-Agent"),
+                request.path,
+            )
+        abort(403)
 
 @app.before_request
 def _auto_ban_scanner_probes():
@@ -551,5 +584,6 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
