@@ -284,12 +284,6 @@ def inject_resident_dashboard_status():
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
-
-
-def generate_resident_identifier() -> str:
-    return secrets.token_urlsafe(12)
-
-
 def resident_session_start(resident_row: Any, shelter: str, resident_code: str) -> None:
     session.permanent = True
 
@@ -451,6 +445,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
