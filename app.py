@@ -218,7 +218,8 @@ def get_all_shelters() -> list[str]:
         FROM shelters
         WHERE is_active = 1
         ORDER BY name ASC
-        """
+        """,
+        (True,) if is_postgres() else (),
     )
 
     names: list[str] = []
@@ -448,6 +449,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
