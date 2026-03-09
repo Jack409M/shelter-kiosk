@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 from core.audit import log_action
 from core.db import db_execute, db_fetchone, get_db
 from core.helpers import utcnow_iso
-
+from core.rate_limit import is_rate_limited
 
 resident_requests = Blueprint("resident_requests", __name__)
 
