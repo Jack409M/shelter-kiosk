@@ -8,7 +8,6 @@ import os
 import pkgutil
 import secrets
 import sqlite3
-import time
 
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -43,7 +42,7 @@ from core.helpers import (
     safe_url_for,
     utcnow_iso,
 )
-from core.rate_limit import is_rate_limited
+from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 from core.sms_sender import send_sms
 from db import schema
 
@@ -158,31 +157,6 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
 )
 
-# In memory temporary IP bans.
-# These reset on restart or deploy, but still block active attacks.
-_IP_BANS_MEM: dict[str, float] = {}
-
-
-def _ban_ip(ip: str, seconds: int = 1800) -> None:
-    if not ip or ip == "unknown":
-        return
-    _IP_BANS_MEM[ip] = time.time() + max(1, int(seconds))
-
-
-def _ip_is_banned(ip: str) -> bool:
-    if not ip or ip == "unknown":
-        return False
-
-    expires_at = _IP_BANS_MEM.get(ip)
-    if not expires_at:
-        return False
-
-    if expires_at <= time.time():
-        _IP_BANS_MEM.pop(ip, None)
-        return False
-
-    return True
-
 
 def _client_ip() -> str:
     """
@@ -208,7 +182,7 @@ def _require_cloudflare_proxy():
 @app.before_request
 def _block_banned_ips():
     ip = _client_ip()
-    if _ip_is_banned(ip):
+    if ip != "unknown" and is_ip_banned(ip):
         abort(403)
 
 
@@ -236,8 +210,8 @@ def _auto_ban_scanner_probes():
 
     ip = _client_ip()
 
-    if is_rate_limited(f"scanner_probe:{ip}", limit=3, window_seconds=600):
-        _ban_ip(ip, 3600)
+    if ip != "unknown" and is_rate_limited(f"scanner_probe:{ip}", limit=3, window_seconds=600):
+        ban_ip(ip, 3600)
         current_app.logger.warning("AUTO BAN scanner probe ip=%s path=%s", ip, request.path)
         abort(403)
 
@@ -311,8 +285,9 @@ def _public_bot_throttle():
     ip = _client_ip()
 
     if is_rate_limited(f"public_post:{request.path}:{ip}", limit=20, window_seconds=300):
-        _ban_ip(ip, 1800)
-        current_app.logger.warning("AUTO BAN public abuse ip=%s path=%s", ip, request.path)
+        if ip != "unknown":
+            ban_ip(ip, 1800)
+            current_app.logger.warning("AUTO BAN public abuse ip=%s path=%s", ip, request.path)
 
         if request.path == "/resident":
             flash("Too many requests. Please wait a few minutes and try again.", "error")
@@ -575,3 +550,4 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
