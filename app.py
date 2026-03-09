@@ -90,6 +90,7 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 app.jinja_env.globals["safe_url_for"] = safe_url_for
 app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
 app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", SQLITE_PATH)
@@ -550,4 +551,5 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
