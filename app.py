@@ -104,6 +104,20 @@ def log_request_info():
         app.logger.debug(f"LOGGING ERROR {e}")
 
 
+@app.before_request
+def force_https_redirect():
+    if current_app.debug:
+        return None
+
+    if request.headers.get("X-Forwarded-Proto", "").lower() == "https":
+        return None
+
+    if request.is_secure:
+        return None
+
+    return redirect(request.url.replace("http://", "https://", 1), code=301)
+
+
 secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
 if not secret:
     raise RuntimeError("FLASK_SECRET_KEY is required and must be set in the environment.")
@@ -447,6 +461,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
