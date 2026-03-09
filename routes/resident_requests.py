@@ -41,8 +41,6 @@ def resident_signin():
     if request.method == "GET":
         return render_template("resident_signin.html")
 
-    # Public endpoint protection.
-    # Use a higher threshold because many residents may share one kiosk IP.
     ip = _client_ip()
     if is_rate_limited(f"resident_signin:{ip}", limit=30, window_seconds=300):
         flash("Too many sign in attempts. Please wait a few minutes and try again.", "error")
@@ -98,7 +96,7 @@ def resident_logout():
 
 @resident_requests.route("/leave", methods=["GET", "POST"])
 def resident_leave():
-    from app import MAX_LEAVE_DAYS, SHELTERS, init_db, require_resident
+    from app import MAX_LEAVE_DAYS, init_db, require_resident
 
     @require_resident
     def _inner():
@@ -113,14 +111,12 @@ def resident_leave():
         first = session.get("resident_first") or ""
         last = session.get("resident_last") or ""
 
-        # Resident specific throttle so one shared kiosk IP does not block everyone.
         ip = _client_ip()
         rl_key = f"resident_leave:{ip}:{resident_identifier or 'unknown'}"
         if is_rate_limited(rl_key, limit=6, window_seconds=900):
             flash("Too many leave submissions. Please wait a few minutes and try again.", "error")
             return render_template(
                 "resident_leave.html",
-                shelters=SHELTERS,
                 shelter=shelter,
                 max_days=MAX_LEAVE_DAYS,
             ), 429
@@ -180,7 +176,6 @@ def resident_leave():
                 flash(e, "error")
             return render_template(
                 "resident_leave.html",
-                shelters=SHELTERS,
                 shelter=shelter,
                 max_days=MAX_LEAVE_DAYS,
             ), 400
@@ -256,7 +251,6 @@ def resident_transport():
         first = session.get("resident_first") or ""
         last = session.get("resident_last") or ""
 
-        # Resident specific throttle so one shared kiosk IP does not block everyone.
         ip = _client_ip()
         rl_key = f"resident_transport:{ip}:{resident_identifier or 'unknown'}"
         if is_rate_limited(rl_key, limit=6, window_seconds=900):
@@ -385,7 +379,7 @@ def sms_consent():
 
 @resident_requests.route("/resident/consent", methods=["GET", "POST"])
 def resident_consent():
-    from app import SHELTERS, init_db
+    from app import get_all_shelters, init_db
 
     init_db()
 
@@ -403,15 +397,15 @@ def resident_consent():
     resident_id = session.get("resident_id")
     resident_identifier = session.get("resident_identifier") or ""
     shelter = session.get("resident_shelter") or ""
+    all_shelters = get_all_shelters()
 
-    if not resident_id or shelter not in SHELTERS:
+    if not resident_id or shelter not in all_shelters:
         flash("Please sign in again.", "error")
         return redirect(url_for("resident_requests.resident_signin", next=next_url))
 
     if request.method == "GET":
         return render_template("resident_consent.html", next=next_url)
 
-    # Resident specific throttle on consent posts.
     ip = _client_ip()
     rl_key = f"resident_consent:{ip}:{resident_identifier or resident_id}"
     if is_rate_limited(rl_key, limit=10, window_seconds=300):
