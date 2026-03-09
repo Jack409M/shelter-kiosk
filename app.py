@@ -27,7 +27,7 @@ from core.helpers import is_postgres, db_placeholder, utcnow_iso, fmt_date, fmt_
 from core.helpers import safe_url_for
 from core.db import get_db, close_db, db_execute, db_fetchone, db_fetchall
 from core.audit import log_action
-from core.sms import sms_is_allowed_for_number
+from core.sms_sender import send_sms
 
 
 try:
@@ -611,6 +611,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
