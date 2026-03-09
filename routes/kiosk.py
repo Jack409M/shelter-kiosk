@@ -16,12 +16,12 @@ kiosk = Blueprint("kiosk", __name__)
 
 @kiosk.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
 def kiosk_checkout(shelter: str):
-    from app import KIOSK_PIN, SHELTERS, _client_ip, _rate_limited, init_db
-
-    if shelter not in SHELTERS:
-        return "Invalid shelter", 404
+    from app import KIOSK_PIN, _client_ip, _rate_limited, get_all_shelters, init_db
 
     init_db()
+
+    if shelter not in get_all_shelters():
+        return "Invalid shelter", 404
 
     if KIOSK_PIN:
         if session.get(f"kiosk_authed_{shelter}") is not True:
