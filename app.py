@@ -39,8 +39,6 @@ TWILIO_INBOUND_ENABLED = os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip
 TWILIO_STATUS_ENABLED = os.environ.get("TWILIO_STATUS_ENABLED", "false").strip().lower() == "true"
 TWILIO_STATUS_CALLBACK_URL = (os.environ.get("TWILIO_STATUS_CALLBACK_URL") or "").strip()
 
-
-MAX_LEAVE_DAYS = 7
 MIN_STAFF_PASSWORD_LEN = 8
 
 USER_ROLES = {"admin", "staff", "case_manager", "ra"}
@@ -449,6 +447,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
