@@ -119,7 +119,7 @@
             <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
 
           {% elif show_logged_out_nav %}
-            <a href="{{ url_for('resident_signin') }}">Resident Sign In</a>
+            <a href="{{ url_for('resident_requests.resident_signin') }}">Resident Sign In</a>
             <a href="{{ url_for('auth.staff_login') }}">Staff Login</a>
           {% endif %}
         </div>
@@ -141,5 +141,6 @@
     </main>
   </body>
 </html>
+
 
 
