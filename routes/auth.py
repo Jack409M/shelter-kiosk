@@ -13,13 +13,14 @@ auth = Blueprint("auth", __name__)
 
 @auth.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
-    from app import SHELTERS, _client_ip, init_db
+    from app import _client_ip, get_all_shelters, init_db
     from core.rate_limit import is_rate_limited
 
     init_db()
+    all_shelters = get_all_shelters()
 
     if request.method == "GET":
-        return render_template("staff_login.html", all_shelters=SHELTERS)
+        return render_template("staff_login.html", all_shelters=all_shelters)
 
     username = (request.form.get("username") or "").strip()
     password = (request.form.get("password") or "").strip()
@@ -31,7 +32,7 @@ def staff_login():
         f"staff_login_user:{normalized_username}", 20, 3600
     ):
         flash("Too many login attempts. Please wait and try again.", "error")
-        return render_template("staff_login.html", all_shelters=SHELTERS), 429
+        return render_template("staff_login.html", all_shelters=all_shelters), 429
 
     row = db_fetchone(
         "SELECT * FROM staff_users WHERE username = %s"
@@ -42,19 +43,19 @@ def staff_login():
 
     if not row:
         flash("Invalid login.", "error")
-        return render_template("staff_login.html", all_shelters=SHELTERS), 401
+        return render_template("staff_login.html", all_shelters=all_shelters), 401
 
     is_active = bool(row["is_active"] if isinstance(row, dict) else row[4])
     pw_hash = row["password_hash"] if isinstance(row, dict) else row[2]
 
     if not is_active or not check_password_hash(pw_hash, password):
         flash("Invalid login.", "error")
-        return render_template("staff_login.html", all_shelters=SHELTERS), 401
+        return render_template("staff_login.html", all_shelters=all_shelters), 401
 
     shelter = (request.form.get("shelter") or "").strip()
-    if shelter not in SHELTERS:
+    if shelter not in all_shelters:
         flash("Select a valid shelter.", "error")
-        return render_template("staff_login.html", all_shelters=SHELTERS), 400
+        return render_template("staff_login.html", all_shelters=all_shelters), 400
 
     session.clear()
     session["staff_user_id"] = row["id"] if isinstance(row, dict) else row[0]
@@ -79,13 +80,15 @@ def staff_logout():
 @auth.route("/staff/select-shelter", methods=["GET", "POST"])
 @require_login
 def staff_select_shelter():
-    from app import SHELTERS
+    from app import get_all_shelters
+
+    shelters = get_all_shelters()
 
     if request.method == "GET":
-        return render_template("staff_select_shelter.html", shelters=SHELTERS)
+        return render_template("staff_select_shelter.html", shelters=shelters)
 
     shelter = (request.form.get("shelter") or "").strip()
-    if shelter not in SHELTERS:
+    if shelter not in shelters:
         flash("Select a valid shelter.", "error")
         return redirect(url_for("auth.staff_select_shelter"))
 
