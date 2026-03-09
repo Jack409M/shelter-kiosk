@@ -115,7 +115,8 @@ def staff_residents_post():
 @require_login
 @require_shelter
 def staff_resident_transfer(resident_id: int):
-    from app import SHELTERS, init_db, record_resident_transfer
+    from app import SHELTERS, init_db
+    from core.residents import record_resident_transfer
 
     if not _require_transfer_role():
         flash("Admin or case manager only.", "error")
