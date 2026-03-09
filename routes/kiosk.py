@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import secrets
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -22,6 +23,27 @@ def kiosk_checkout(shelter: str):
 
     if shelter not in get_all_shelters():
         return "Invalid shelter", 404
+
+    kiosk_manager_user = (os.environ.get("KIOSK_MANAGER_USER") or "").strip()
+    kiosk_manager_pass = (os.environ.get("KIOSK_MANAGER_PASS") or "").strip()
+
+    if kiosk_manager_user and kiosk_manager_pass:
+        if session.get(f"kiosk_mgr_authed_{shelter}") is not True:
+            if request.method == "POST" and request.form.get("kiosk_mgr_login") == "1":
+                entered_user = (request.form.get("username") or "").strip()
+                entered_pass = (request.form.get("password") or "").strip()
+
+                if (
+                    secrets.compare_digest(entered_user, kiosk_manager_user)
+                    and secrets.compare_digest(entered_pass, kiosk_manager_pass)
+                ):
+                    session[f"kiosk_mgr_authed_{shelter}"] = True
+                    session.permanent = True
+                    return redirect(url_for("kiosk.kiosk_checkout", shelter=shelter))
+
+                flash("Invalid kiosk manager login.", "error")
+
+            return render_template("kiosk_manager_login.html", shelter=shelter), 401
 
     if KIOSK_PIN:
         if session.get(f"kiosk_authed_{shelter}") is not True:
