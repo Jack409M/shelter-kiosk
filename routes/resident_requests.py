@@ -19,7 +19,8 @@ def _parse_dt(dt_str: str) -> datetime:
 
 @resident_requests.route("/resident", methods=["GET", "POST"])
 def resident_signin():
-    from app import init_db, resident_session_start
+    from app import init_db
+    from core.residents import resident_session_start
 
     init_db()
 
