@@ -13,7 +13,8 @@ auth = Blueprint("auth", __name__)
 
 @auth.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
-    from app import SHELTERS, _client_ip, _rate_limited, init_db
+    from app import SHELTERS, _client_ip, init_db
+    from core.rate_limit import is_rate_limited
 
     init_db()
 
