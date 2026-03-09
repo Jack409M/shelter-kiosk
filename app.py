@@ -284,21 +284,6 @@ def inject_resident_dashboard_status():
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
-def generate_resident_code() -> str:
-    code = make_resident_code(8)
-
-    for _ in range(15):
-        exists = db_fetchone(
-            "SELECT id FROM residents WHERE resident_code = %s"
-            if g.get("db_kind") == "pg"
-            else "SELECT id FROM residents WHERE resident_code = ?",
-            (code,),
-        )
-        if not exists:
-            return code
-        code = make_resident_code(8)
-
-    return code
 
 
 def generate_resident_identifier() -> str:
@@ -466,6 +451,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
