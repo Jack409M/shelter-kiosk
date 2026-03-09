@@ -512,7 +512,7 @@ def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: st
 #   3. eventually collapse this function into schema.init_db()
 def legacy_init_db() -> None:
     get_db()
-    kind = g.get("db_kind")
+    schema.init_db()
 
     schema.ensure_sms_consent_columns(kind)
 
@@ -650,6 +650,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
