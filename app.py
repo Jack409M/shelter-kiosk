@@ -284,13 +284,6 @@ def inject_resident_dashboard_status():
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
-
-
-
-def make_resident_code(length: int = 8) -> str:
-    return "".join(secrets.choice("0123456789") for _ in range(length))
-
-
 def generate_resident_code() -> str:
     code = make_resident_code(8)
 
@@ -473,6 +466,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
