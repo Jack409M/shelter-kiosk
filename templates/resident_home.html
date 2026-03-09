@@ -7,15 +7,15 @@
   <h1>What would you like to do?</h1>
 
   <div class="portal-actions">
-    <a class="portal-btn" href="{{ url_for('resident_leave') }}">
+    <a class="portal-btn" href="{{ url_for('resident_requests.resident_leave') }}">
       Request Leave
     </a>
 
-    <a class="portal-btn" href="{{ url_for('resident_transport') }}">
+    <a class="portal-btn" href="{{ url_for('resident_requests.resident_transport') }}">
       Request Transportation
     </a>
 
-    <a class="portal-btn portal-btn-light" href="{{ url_for('resident_logout') }}">
+    <a class="portal-btn portal-btn-light" href="{{ url_for('resident_requests.resident_logout') }}">
       Sign Out
     </a>
   </div>
