@@ -17,7 +17,8 @@ kiosk = Blueprint("kiosk", __name__)
 
 @kiosk.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
 def kiosk_checkout(shelter: str):
-    from app import KIOSK_PIN, _client_ip, _rate_limited, get_all_shelters, init_db
+    from app import KIOSK_PIN, _client_ip, get_all_shelters, init_db
+    from core.rate_limit import is_rate_limited
 
     init_db()
 
