@@ -192,6 +192,20 @@ def _client_ip() -> str:
 
 
 @app.before_request
+def _require_cloudflare_proxy():
+    if (os.environ.get("CLOUDFLARE_ONLY") or "").strip().lower() not in {"1", "true", "yes", "on"}:
+        return None
+
+    if not request.headers.get("CF-Connecting-IP"):
+        current_app.logger.warning(
+            "BLOCK non-cloudflare request remote_addr=%s path=%s",
+            request.remote_addr,
+            request.path,
+        )
+        abort(403)
+
+
+@app.before_request
 def _block_banned_ips():
     ip = _client_ip()
     if _ip_is_banned(ip):
