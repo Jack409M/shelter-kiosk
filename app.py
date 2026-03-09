@@ -7,10 +7,8 @@ import io
 import csv
 import sqlite3
 import secrets
-import time
 import logging
 
-from collections import deque
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 from typing import Any, Optional
@@ -130,73 +128,6 @@ def _client_ip() -> str:
     Use ProxyFix normalized remote_addr rather than trusting raw forwarded headers.
     """
     return (request.remote_addr or "").strip() or "unknown"
-
-
-# In process cleanup throttle for Postgres rate_limit_events pruning.
-_LAST_RL_PRUNE_TS = 0.0
-
-# Fallback limiter used only when not on Postgres.
-_RATE_BUCKETS_MEM: dict[str, deque[float]] = {}
-
-
-def _rate_limited_memory(key: str, limit: int, window_seconds: int) -> bool:
-    now = time.time()
-    bucket = _RATE_BUCKETS_MEM.get(key)
-    if bucket is None:
-        bucket = deque()
-        _RATE_BUCKETS_MEM[key] = bucket
-
-    cutoff = now - window_seconds
-    while bucket and bucket[0] < cutoff:
-        bucket.popleft()
-
-    if len(bucket) >= limit:
-        return True
-
-    bucket.append(now)
-    return False
-
-
-def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
-    """
-    Postgres backed rate limiter.
-
-    Returns True when the caller should be blocked.
-    Allows up to `limit` events in `window_seconds`.
-    The next attempt inside the same window is blocked.
-    """
-    if g.get("db_kind") != "pg":
-        return _rate_limited_memory(key, limit, window_seconds)
-
-    if limit <= 0 or window_seconds <= 0:
-        return True
-
-    db_execute(
-        "INSERT INTO rate_limit_events (k) VALUES (%s)",
-        (key,),
-    )
-
-    row = db_fetchone(
-        """
-        SELECT COUNT(1) AS c
-        FROM rate_limit_events
-        WHERE k = %s
-          AND created_at >= NOW() - (%s * INTERVAL '1 second')
-        """,
-        (key, window_seconds),
-    )
-    c = int(row["c"] if isinstance(row, dict) else row[0])
-
-    global _LAST_RL_PRUNE_TS
-    now = time.time()
-    if now - _LAST_RL_PRUNE_TS > 600:
-        _LAST_RL_PRUNE_TS = now
-        try:
-            db_execute("DELETE FROM rate_limit_events WHERE created_at < NOW() - INTERVAL '2 days'")
-        except Exception:
-            pass
-
-    return c > limit
 
 
 def _csrf_token() -> str:
@@ -542,6 +473,7 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
 
 
