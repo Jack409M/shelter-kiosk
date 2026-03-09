@@ -80,7 +80,8 @@ def staff_residents():
 @require_login
 @require_shelter
 def staff_residents_post():
-    from app import generate_resident_code, generate_resident_identifier, init_db
+    from app import init_db
+    from core.residents import generate_resident_code, generate_resident_identifier
 
     if not _require_resident_create_role():
         flash("Admin or case manager only.", "error")
