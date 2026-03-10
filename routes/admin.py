@@ -191,3 +191,216 @@ def admin_set_user_active(user_id: int):
 
     flash("User updated.", "ok")
     return redirect(url_for("admin.admin_users"))
+
+
+@admin.post("/staff/admin/users/<int:user_id>/set-role")
+@require_login
+@require_shelter
+def admin_set_user_role(user_id: int):
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    new_role = (request.form.get("role") or "").strip()
+
+    if new_role not in _all_roles():
+        flash("Invalid role.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    db_execute(
+        "UPDATE staff_users SET role = %s WHERE id = %s"
+        if current_app.config.get("DATABASE_URL")
+        else "UPDATE staff_users SET role = ? WHERE id = ?",
+        (new_role, user_id),
+    )
+
+    log_action(
+        "staff_user",
+        user_id,
+        None,
+        session.get("staff_user_id"),
+        "set_role",
+        f"role={new_role}",
+    )
+
+    flash("Role updated.", "ok")
+    return redirect(url_for("admin.admin_users"))
+
+
+@admin.post("/staff/admin/users/<int:user_id>/reset-password")
+@require_login
+@require_shelter
+def admin_reset_user_password(user_id: int):
+    from app import MIN_STAFF_PASSWORD_LEN
+    from werkzeug.security import generate_password_hash
+
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    password = (request.form.get("password") or "").strip()
+
+    if len(password) < MIN_STAFF_PASSWORD_LEN:
+        flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    db_execute(
+        "UPDATE staff_users SET password_hash = %s WHERE id = %s"
+        if current_app.config.get("DATABASE_URL")
+        else "UPDATE staff_users SET password_hash = ? WHERE id = ?",
+        (generate_password_hash(password), user_id),
+    )
+
+    log_action(
+        "staff_user",
+        user_id,
+        None,
+        session.get("staff_user_id"),
+        "reset_password",
+        "Admin reset staff password",
+    )
+
+    flash("Password reset.", "ok")
+    return redirect(url_for("admin.admin_users"))
+
+
+@admin.route("/staff/admin/audit-log")
+@require_login
+@require_shelter
+def staff_audit_log():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    sql = (
+        """
+        SELECT a.*, su.username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        ORDER BY a.id DESC
+        LIMIT %s
+        """
+        if current_app.config.get("DATABASE_URL")
+        else """
+        SELECT a.*, su.username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        ORDER BY a.id DESC
+        LIMIT ?
+        """
+    )
+
+    rows = db_fetchall(sql, (200,))
+
+    return render_template("staff_audit_log.html", rows=rows)
+
+
+@admin.get("/staff/admin/audit-log/csv")
+@require_login
+@require_shelter
+def staff_audit_log_csv():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    where_sql, params = _audit_where_from_request()
+    created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
+
+    sql = (
+        f"SELECT a.id, a.entity_type, a.entity_id, a.shelter, "
+        f"COALESCE(su.username, '') AS staff_username, "
+        f"a.action_type, COALESCE(a.action_details, '') AS action_details, "
+        f"{created_expr} AS created_at "
+        f"FROM audit_log a "
+        f"LEFT JOIN staff_users su ON su.id = a.staff_user_id "
+        f"{where_sql} "
+        f"ORDER BY a.id DESC"
+    )
+
+    rows = db_fetchall(sql, params)
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["id", "entity_type", "entity_id", "shelter", "staff_username", "action_type", "action_details", "created_at"])
+
+    for r in rows:
+        if isinstance(r, dict):
+            w.writerow([
+                r.get("id", ""),
+                r.get("entity_type", ""),
+                r.get("entity_id", ""),
+                r.get("shelter", ""),
+                r.get("staff_username", ""),
+                r.get("action_type", ""),
+                r.get("action_details", ""),
+                r.get("created_at", ""),
+            ])
+        else:
+            w.writerow(list(r))
+
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=audit_log.csv"},
+    )
+
+
+@admin.route("/admin/wipe-all-data", methods=["POST"])
+@require_login
+@require_shelter
+def wipe_all_data():
+    from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
+
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    if not ENABLE_DANGEROUS_ADMIN_ROUTES:
+        abort(404)
+
+    init_db()
+
+    db_execute("TRUNCATE TABLE attendance_events RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM attendance_events")
+    db_execute("TRUNCATE TABLE leave_requests RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM leave_requests")
+    db_execute("TRUNCATE TABLE transport_requests RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM transport_requests")
+    db_execute("TRUNCATE TABLE residents RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM residents")
+    db_execute("TRUNCATE TABLE audit_log RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM audit_log")
+
+    log_action("admin", None, None, session.get("staff_user_id"), "wipe_all_data", "Wiped attendance, leave, transport, residents, audit_log")
+    return "All non staff data wiped."
+
+
+@admin.route("/admin/recreate-schema", methods=["POST"])
+@require_login
+@require_shelter
+def recreate_schema():
+    from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
+
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    if not ENABLE_DANGEROUS_ADMIN_ROUTES:
+        abort(404)
+
+    init_db()
+
+    if g.get("db_kind") == "pg":
+        db_execute("DROP TABLE IF EXISTS attendance_events CASCADE")
+        db_execute("DROP TABLE IF EXISTS leave_requests CASCADE")
+        db_execute("DROP TABLE IF EXISTS transport_requests CASCADE")
+        db_execute("DROP TABLE IF EXISTS residents CASCADE")
+        db_execute("DROP TABLE IF EXISTS audit_log CASCADE")
+        db_execute("DROP TABLE IF EXISTS resident_transfers CASCADE")
+        db_execute("DROP TABLE IF EXISTS rate_limit_events CASCADE")
+    else:
+        db_execute("DROP TABLE IF EXISTS attendance_events")
+        db_execute("DROP TABLE IF EXISTS leave_requests")
+        db_execute("DROP TABLE IF EXISTS transport_requests")
+        db_execute("DROP TABLE IF EXISTS residents")
+        db_execute("DROP TABLE IF EXISTS audit_log")
+        db_execute("DROP TABLE IF EXISTS resident_transfers")
+
+    init_db()
+    log_action("admin", None, None, session.get("staff_user_id"), "recreate_schema", "Dropped and recreated tables")
+    return "Schema recreated."
