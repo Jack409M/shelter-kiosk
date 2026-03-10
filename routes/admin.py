@@ -143,6 +143,46 @@ def admin_users():
     )
 
 
+@admin.post("/staff/admin/users/<int:user_id>/set-active")
+@require_login
+@require_shelter
+def admin_set_user_active(user_id: int):
+    role = (session.get("role") or "").strip()
+
+    if role not in {"admin", "shelter_director"}:
+        flash("Not allowed.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    active = (request.form.get("active") or "").strip()
+
+    if active not in ["0", "1"]:
+        flash("Invalid action.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    if g.get("db_kind") == "pg":
+        db_execute(
+            "UPDATE staff_users SET is_active = %s WHERE id = %s",
+            (active == "1", user_id),
+        )
+    else:
+        db_execute(
+            "UPDATE staff_users SET is_active = ? WHERE id = ?",
+            (1 if active == "1" else 0, user_id),
+        )
+
+    log_action(
+        "staff_user",
+        user_id,
+        None,
+        session.get("staff_user_id"),
+        "set_active",
+        f"active={active}",
+    )
+
+    flash("User updated.", "ok")
+    return redirect(url_for("admin.admin_users"))
+
+
 @admin.route("/staff/admin/audit-log")
 @require_login
 @require_shelter
