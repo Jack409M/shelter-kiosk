@@ -145,7 +145,7 @@ def admin_dashboard():
             SELECT COUNT(*) AS c
             FROM audit_log
             WHERE action_type = 'login_failure'
-              AND created_at >= NOW() - INTERVAL '24 hours'
+              AND NULLIF(created_at, '')::timestamptz >= NOW() - INTERVAL '24 hours'
             """
             if is_pg
             else """
