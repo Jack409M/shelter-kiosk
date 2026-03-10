@@ -5,7 +5,7 @@
 <style>
   .dash-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    grid-template-columns: repeat(4, minmax(220px, 1fr));
     gap: 16px;
     margin-bottom: 18px;
   }
@@ -44,6 +44,11 @@
   .dash-panels {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
+    gap: 16px;
+  }
+
+  .dash-stack {
+    display: grid;
     gap: 16px;
   }
 
@@ -105,14 +110,35 @@
     border: 1px solid #cfe7d7;
   }
 
+  .status-pill.warn {
+    background: #fff5e8;
+    color: #9a5a00;
+    border: 1px solid #f0d3a6;
+  }
+
   .small-note {
     color: #60758a;
     font-size: 12px;
   }
 
-  @media (max-width: 900px) {
-    .dash-grid,
+  .empty-state {
+    color: #60758a;
+    font-size: 13px;
+    padding: 4px 0;
+  }
+
+  @media (max-width: 1100px) {
+    .dash-grid {
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+
     .dash-panels {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 700px) {
+    .dash-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -135,6 +161,12 @@
     <h3>Active Users</h3>
     <div class="dash-stat">{{ active_users }}</div>
     <div class="dash-label">Currently enabled accounts</div>
+  </div>
+
+  <div class="dash-card">
+    <h3>Failed Logins</h3>
+    <div class="dash-stat">{{ failed_login_count }}</div>
+    <div class="dash-label">Last 24 hours</div>
   </div>
 </div>
 
@@ -164,23 +196,58 @@
         </tbody>
       </table>
     {% else %}
-      <div class="small-note">No recent audit activity found.</div>
+      <div class="empty-state">No recent audit activity found.</div>
     {% endif %}
   </div>
 
-  <div class="dash-panel">
-    <h3>Quick Links</h3>
-    <div class="quick-links">
-      <a href="{{ url_for('admin.admin_users') }}">Users</a>
-      <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
-      <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
-      <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+  <div class="dash-stack">
+    <div class="dash-panel">
+      <h3>Failed Login Monitoring</h3>
+
+      {% if failed_login_count and failed_login_count > 0 %}
+        <div class="status-pill warn">{{ failed_login_count }} failed login attempts in the last 24 hours</div>
+      {% else %}
+        <div class="status-pill">No failed login activity in the last 24 hours</div>
+      {% endif %}
+
+      <div style="margin-top: 14px;">
+        {% if recent_failed_logins %}
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in recent_failed_logins %}
+                <tr>
+                  <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
+                  <td>{{ r.action_details or "" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state">No recent failed login events found.</div>
+        {% endif %}
+      </div>
     </div>
 
-    <div style="margin-top:18px;">
-      <h3 style="margin-bottom:8px;">What comes next</h3>
-      <div class="small-note">
-        Next dashboard upgrades should include uptime, database connectivity, rate limit events, failed login monitoring, and alert triggers.
+    <div class="dash-panel">
+      <h3>Quick Links</h3>
+      <div class="quick-links">
+        <a href="{{ url_for('admin.admin_users') }}">Users</a>
+        <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
+        <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+        <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+      </div>
+
+      <div style="margin-top:18px;">
+        <h3 style="margin-bottom:8px;">What comes next</h3>
+        <div class="small-note">
+          Next dashboard upgrades should include IP ban monitoring, rate limit event tracking, database connectivity, uptime, active sessions, and alert triggers.
+        </div>
       </div>
     </div>
   </div>
