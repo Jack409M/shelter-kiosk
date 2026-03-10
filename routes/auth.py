@@ -106,6 +106,15 @@ def staff_login():
     return redirect(url_for("attendance.staff_attendance"))
 
 
+@auth.route("/staff/logout")
+@require_login
+def staff_logout():
+    staff_id = session.get("staff_user_id")
+    log_action("auth", None, None, staff_id, "logout", f"Staff logout: {session.get('username')}")
+    session.clear()
+    return redirect(url_for("auth.staff_login"))
+
+
 @auth.route("/staff/select-shelter", methods=["GET", "POST"])
 @require_login
 def staff_select_shelter():
@@ -128,6 +137,7 @@ def staff_select_shelter():
         return redirect(nxt)
 
     return redirect(url_for("auth.staff_home"))
+
 
 @auth.route("/staff/profile", methods=["GET", "POST"])
 @require_login
@@ -152,7 +162,6 @@ def staff_profile():
         return redirect(url_for("auth.staff_home"))
 
     if request.method == "POST":
-
         first_name = (request.form.get("first_name") or "").strip()
         last_name = (request.form.get("last_name") or "").strip()
         email = (request.form.get("email") or "").strip()
