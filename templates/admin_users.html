@@ -3,123 +3,152 @@
 <h1>Users</h1>
 
 <style>
-  .users-page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
+.users-page-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
 
-  .users-results {
-    overflow-x: auto;
-    background: #f7fbff;
-    border: 1px solid #cfd9e3;
-    border-radius: 16px;
-    box-shadow: 0 10px 24px rgba(18, 38, 63, 0.08);
-  }
+.users-controls {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
 
-  table.compact {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-  }
+.users-controls input,
+.users-controls select {
+  padding:8px 10px;
+  border:1px solid #c7d3df;
+  border-radius:8px;
+  font-size:13px;
+}
 
-  table.compact thead th {
-    background: #eaf2f9;
-    color: #26415c;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    border-bottom: 1px solid #d7e1ea;
-  }
+.users-results {
+  overflow-x:auto;
+  background:#f7fbff;
+  border:1px solid #cfd9e3;
+  border-radius:16px;
+  box-shadow:0 10px 24px rgba(18,38,63,0.08);
+}
 
-  table.compact th,
-  table.compact td {
-    padding: 12px 10px;
-    font-size: 13px;
-    line-height: 1.35;
-    vertical-align: top;
-    border: 0;
-    text-align: left;
-  }
+table.compact {
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+}
 
-  table.compact tbody tr + tr td {
-    border-top: 1px solid #e3ebf3;
-  }
+table.compact thead th {
+  background:#eaf2f9;
+  color:#26415c;
+  font-size:12px;
+  font-weight:700;
+  text-transform:uppercase;
+  border-bottom:1px solid #d7e1ea;
+}
 
-  table.compact tbody tr:hover {
-    background: #f4f9fd;
-  }
+table.compact th,
+table.compact td {
+  padding:12px 10px;
+  font-size:13px;
+  border:0;
+}
 
-  .page-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
+table.compact tbody tr + tr td {
+  border-top:1px solid #e3ebf3;
+}
 
-  .page-actions a,
-  .action-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 9px 12px;
-    border: 1px solid #c7d3df;
-    border-radius: 10px;
-    background: #fff;
-    color: #1f3550;
-    text-decoration: none;
-    cursor: pointer;
-    box-sizing: border-box;
-    font-size: 13px;
-    font-weight: 600;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-  }
+table.compact tbody tr:hover {
+  background:#f4f9fd;
+}
 
-  .page-actions a:hover,
-  .action-link:hover {
-    background: #f3f8fc;
-    border-color: #9db6cd;
-    transform: translateY(-1px);
-  }
+.page-actions {
+  display:flex;
+  gap:10px;
+}
 
-  .action-link {
-    padding: 6px 10px;
-    font-size: 12px;
-  }
+.page-actions a,
+.action-link,
+.search-btn {
+  padding:9px 12px;
+  border:1px solid #c7d3df;
+  border-radius:10px;
+  background:#fff;
+  color:#1f3550;
+  text-decoration:none;
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+}
 
-  .user-you {
-    color: #60758a;
-    font-size: 12px;
-    font-weight: 700;
-  }
+.action-link {
+  padding:6px 10px;
+  font-size:12px;
+}
 
-  .small-note {
-    color: #60758a;
-    font-size: 12px;
-  }
+.username-cell {
+  font-size:11px;
+  color:#6b7f92;
+}
 
-  .username-cell {
-    font-size: 11px;
-    color: #6b7f92;
-  }
+.small-note {
+  color:#60758a;
+  font-size:12px;
+}
 </style>
+
 
 <div class="users-page-header">
 
-  <div class="small-note">
-    View users and open a separate page to add or edit user details.
-  </div>
+<div class="small-note">
+Search or sort users. Add or edit on a separate page.
+</div>
 
-  <div class="page-actions">
-    <a href="{{ url_for('admin.admin_add_user') }}">Add User</a>
-    <a href="{{ url_for('auth.staff_home') }}">Done</a>
-  </div>
+<div class="page-actions">
+<a href="{{ url_for('admin.admin_add_user') }}">Add User</a>
+<a href="{{ url_for('auth.staff_home') }}">Done</a>
+</div>
 
 </div>
+
+
+<form method="get">
+
+<div class="users-controls">
+
+<input
+type="text"
+name="q"
+placeholder="Search name..."
+value="{{ q or '' }}"
+>
+
+<select name="sort">
+
+<option value="last_name" {% if sort=="last_name" %}selected{% endif %}>
+Sort: Last Name
+</option>
+
+<option value="first_name" {% if sort=="first_name" %}selected{% endif %}>
+Sort: First Name
+</option>
+
+<option value="role" {% if sort=="role" %}selected{% endif %}>
+Sort: Role
+</option>
+
+</select>
+
+<button class="search-btn">Apply</button>
+
+</div>
+
+</form>
+
+
+<br>
 
 <div class="users-results">
 
@@ -127,13 +156,13 @@
 
 <thead>
 <tr>
-  <th>Last Name</th>
-  <th>First Name</th>
-  <th>Username</th>
-  <th>Role</th>
-  <th>Active</th>
-  <th>Created</th>
-  <th>Actions</th>
+<th>Last Name</th>
+<th>First Name</th>
+<th>Username</th>
+<th>Role</th>
+<th>Active</th>
+<th>Created</th>
+<th>Actions</th>
 </tr>
 </thead>
 
@@ -151,31 +180,21 @@
 
 <td class="username-cell">{{ u.username }}</td>
 
-<td>
-{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}
-</td>
+<td>{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}</td>
 
-<td>
-{{ "Yes" if u.is_active else "No" }}
-</td>
+<td>{{ "Yes" if u.is_active else "No" }}</td>
 
-<td>
-{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}
-</td>
+<td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
 
 <td>
 
 {% if u.username == session.get("username") %}
-
-<span class="user-you">You</span>
-
+<span>You</span>
 {% else %}
-
 <a class="action-link"
 href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}">
 Edit
 </a>
-
 {% endif %}
 
 </td>
@@ -193,6 +212,7 @@ Edit
 {% endif %}
 
 </tbody>
+
 </table>
 
 </div>
