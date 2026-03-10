@@ -92,17 +92,10 @@ def health():
     """
     return {"status": "ok"}, 200
 
+
 @system.get("/_routes")
 def list_routes():
     """
-    Debug endpoint that lists all registered Flask routes.
-    Useful during development and refactors.
+    Disable public route listing in production.
     """
-    import html
-    from flask import current_app
-
-    out = []
-    for r in current_app.url_map.iter_rules():
-        out.append(f"{html.escape(r.endpoint)} -> {html.escape(str(r.rule))}")
-
-    return "<br>".join(sorted(out))
+    abort(404)
