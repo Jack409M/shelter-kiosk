@@ -97,7 +97,14 @@
 
   .inline-form {
     display: inline-block;
-    margin: 0;
+    margin: 0 6px 6px 0;
+  }
+
+  .action-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-start;
   }
 
   .action-btn {
@@ -118,6 +125,27 @@
   .action-btn.activate {
     border-color: #0a6b2d;
     color: #0a6b2d;
+  }
+
+  .action-btn.secondary {
+    border-color: #345;
+    color: #345;
+  }
+
+  .role-form,
+  .pw-form {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .role-form select,
+  .pw-form input {
+    padding: 6px 8px;
+    font-size: 12px;
+    min-width: 140px;
   }
 
   @media (max-width: 900px) {
@@ -152,31 +180,70 @@
               <td>{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}</td>
               <td>{{ "Yes" if u.is_active else "No" }}</td>
               <td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
-              <td style="white-space: nowrap;">
+              <td>
                 {% if u.username == session.get("username") %}
                   <span class="hint">You</span>
-                {% elif u.is_active %}
-                  <form
-                    method="post"
-                    action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
-                    class="inline-form"
-                    onsubmit="return confirm('Deactivate user {{ u.username }}?');"
-                  >
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="active" value="0">
-                    <button type="submit" class="action-btn deactivate">Deactivate</button>
-                  </form>
                 {% else %}
-                  <form
-                    method="post"
-                    action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
-                    class="inline-form"
-                    onsubmit="return confirm('Activate user {{ u.username }}?');"
-                  >
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="active" value="1">
-                    <button type="submit" class="action-btn activate">Activate</button>
-                  </form>
+                  <div class="action-stack">
+                    {% if u.is_active %}
+                      <form
+                        method="post"
+                        action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
+                        class="inline-form"
+                        onsubmit="return confirm('Deactivate user {{ u.username }}?');"
+                      >
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="active" value="0">
+                        <button type="submit" class="action-btn deactivate">Deactivate</button>
+                      </form>
+                    {% else %}
+                      <form
+                        method="post"
+                        action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
+                        class="inline-form"
+                        onsubmit="return confirm('Activate user {{ u.username }}?');"
+                      >
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="active" value="1">
+                        <button type="submit" class="action-btn activate">Activate</button>
+                      </form>
+                    {% endif %}
+                  </div>
+
+                  {% if current_role == "admin" %}
+                    <form
+                      method="post"
+                      action="{{ url_for('admin.admin_set_user_role', user_id=u.id) }}"
+                      class="role-form"
+                    >
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <select name="role" required>
+                        {% for r in all_roles %}
+                          <option value="{{ r }}" {% if r == u.role %}selected{% endif %}>
+                            {{ ROLE_LABELS.get(r, r) if ROLE_LABELS else r }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                      <button type="submit" class="action-btn secondary">Update Role</button>
+                    </form>
+
+                    <form
+                      method="post"
+                      action="{{ url_for('admin.admin_reset_user_password', user_id=u.id) }}"
+                      class="pw-form"
+                      onsubmit="return confirm('Reset password for {{ u.username }}?');"
+                    >
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input
+                        type="password"
+                        name="password"
+                        placeholder="New password"
+                        minlength="8"
+                        required
+                      >
+                      <button type="submit" class="action-btn secondary">Reset Password</button>
+                    </form>
+                  {% endif %}
                 {% endif %}
               </td>
             </tr>
