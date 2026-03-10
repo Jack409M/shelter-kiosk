@@ -26,11 +26,6 @@ def _is_pg() -> bool:
     return bool(current_app.config.get("DATABASE_URL"))
 
 
-@staff_portal.route("/_staff_test/attendance")
-def staff_attendance_test():
-    return "staff attendance blueprint working"
-
-
 # -----------------------------------------------------
 # Leave dashboards
 # -----------------------------------------------------
@@ -183,7 +178,6 @@ def staff_leave_overdue():
 @require_login
 @require_shelter
 def staff_leave_approve(req_id: int):
-    # Temporary bridge until SMS moves into a shared core module.
     from app import send_sms
 
     shelter = session["shelter"]
@@ -368,3 +362,4 @@ def staff_leave_print(req_id: int):
         fmt_dt=fmt_dt,
         fmt_date=fmt_date,
     )
+    
