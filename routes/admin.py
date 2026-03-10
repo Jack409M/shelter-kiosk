@@ -148,6 +148,30 @@ def admin_edit_user(user_id: int):
     return render_template("admin_user_form.html", mode="edit", user=rows[0])
 
 
+# TEMPORARY MIGRATION ROUTE
+# USE THIS ONCE TO ADD first_name AND last_name TO staff_users
+# AFTER YOU VISIT THE ROUTE SUCCESSFULLY, DELETE THIS ENTIRE ROUTE
+@admin.route("/admin/add-name-columns")
+@require_login
+@require_shelter
+def add_name_columns():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    try:
+        db_execute("ALTER TABLE staff_users ADD COLUMN first_name TEXT")
+    except Exception:
+        pass
+
+    try:
+        db_execute("ALTER TABLE staff_users ADD COLUMN last_name TEXT")
+    except Exception:
+        pass
+
+    return "Columns added or already exist."
+
+
 @admin.post("/staff/admin/users/<int:user_id>/set-active")
 @require_login
 @require_shelter
