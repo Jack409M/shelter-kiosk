@@ -434,25 +434,7 @@ def wipe_all_data():
     log_action("admin", None, None, session.get("staff_user_id"), "wipe_all_data", "Wiped attendance, leave, transport, residents, audit_log")
     return "All non staff data wiped."
 
-@admin.route("/admin/add-contact-columns")
-@require_login
-@require_shelter
-def add_contact_columns():
-    if not _require_admin():
-        flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
 
-    try:
-        db_execute("ALTER TABLE staff_users ADD COLUMN email TEXT")
-    except Exception:
-        pass
-
-    try:
-        db_execute("ALTER TABLE staff_users ADD COLUMN mobile_phone TEXT")
-    except Exception:
-        pass
-
-    return "Contact columns added or already exist."
 
 @admin.route("/admin/recreate-schema", methods=["POST"])
 @require_login
