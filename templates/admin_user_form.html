@@ -2,23 +2,312 @@
 {% block content %}
 <h1>{% if mode == "add" %}Add User{% else %}Edit User{% endif %}</h1>
 
-<div style="background:#f7fbff;border:1px solid #cfd9e3;border-radius:16px;padding:20px;max-width:720px;">
-  {% if mode == "add" %}
-    <p>This page is now wired correctly. The actual add user form will go here next.</p>
-  {% else %}
-    <p>This page is now wired correctly. The actual edit form will go here next.</p>
+<style>
+  .user-form-wrap {
+    max-width: 860px;
+  }
 
-    {% if user %}
-      <div style="margin-top:16px;">
-        <p><strong>Username:</strong> {{ user.username }}</p>
-        <p><strong>Role:</strong> {{ user.role }}</p>
-        <p><strong>Active:</strong> {{ "Yes" if user.is_active else "No" }}</p>
+  .user-form-card {
+    background: #f7fbff;
+    border: 1px solid #cfd9e3;
+    border-radius: 16px;
+    padding: 22px;
+    box-shadow: 0 10px 24px rgba(18, 38, 63, 0.08);
+  }
+
+  .user-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-block {
+    margin-bottom: 18px;
+  }
+
+  .form-block h3 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: #1f3550;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #35516d;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .field input,
+  .field select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #c7d3df;
+    border-radius: 10px;
+    background: #fff;
+    box-sizing: border-box;
+    font-size: 14px;
+  }
+
+  .field input:focus,
+  .field select:focus {
+    outline: none;
+    border-color: #6d9fcb;
+    box-shadow: 0 0 0 3px rgba(109, 159, 203, 0.18);
+  }
+
+  .read-only {
+    padding: 10px 12px;
+    border: 1px solid #d7e1ea;
+    border-radius: 10px;
+    background: #fdfefe;
+    color: #35516d;
+    font-size: 14px;
+  }
+
+  .shelter-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    gap: 10px;
+  }
+
+  .shelter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #d7e1ea;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .status-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .status-choice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #d7e1ea;
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .form-actions button,
+  .form-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    border: 1px solid #c7d3df;
+    border-radius: 10px;
+    background: #fff;
+    color: #1f3550;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .form-actions button:hover,
+  .form-actions a:hover {
+    background: #f3f8fc;
+    border-color: #9db6cd;
+  }
+
+  .subnote {
+    margin-top: 6px;
+    color: #60758a;
+    font-size: 12px;
+  }
+
+  .summary-box {
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border: 1px solid #d7e1ea;
+    border-radius: 12px;
+    background: #fbfdff;
+  }
+
+  .summary-box strong {
+    color: #1f3550;
+  }
+
+  @media (max-width: 760px) {
+    .user-form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .shelter-list {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="user-form-wrap">
+  <div class="user-form-card">
+
+    {% if mode == "edit" and user %}
+      <div class="summary-box">
+        <strong>Current record</strong><br>
+        {{ (user.first_name or "") ~ " " ~ (user.last_name or "") }}<br>
+        Username: {{ user.username }}<br>
+        Role: {{ user.role }}<br>
+        Active: {{ "Yes" if user.is_active else "No" }}
       </div>
     {% endif %}
-  {% endif %}
 
-  <div style="margin-top:20px;">
-    <a href="{{ url_for('admin.admin_users') }}">Back to Users</a>
+    <form method="post" action="">
+      <div class="form-block">
+        <h3>Account</h3>
+        <div class="user-form-grid">
+          <div class="field">
+            <label for="first_name">First Name</label>
+            <input
+              id="first_name"
+              name="first_name"
+              value="{{ user.first_name if user and user.first_name else '' }}"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="field">
+            <label for="last_name">Last Name</label>
+            <input
+              id="last_name"
+              name="last_name"
+              value="{{ user.last_name if user and user.last_name else '' }}"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="field">
+            <label for="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              value="{{ user.username if user and user.username else '' }}"
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="field">
+            <label for="role">Role</label>
+            {% if current_role == "admin" %}
+              <select id="role" name="role">
+                {% for r in all_roles %}
+                  <option value="{{ r }}" {% if user and user.role == r %}selected{% endif %}>
+                    {{ ROLE_LABELS.get(r, r) if ROLE_LABELS else r }}
+                  </option>
+                {% endfor %}
+              </select>
+            {% else %}
+              <div class="read-only">
+                {{ ROLE_LABELS.get(user.role, user.role) if user and ROLE_LABELS else (user.role if user else "Staff") }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <h3>Shelter Access</h3>
+        <div class="shelter-list">
+          <label class="shelter-item">
+            <input type="checkbox" name="shelters" value="abba">
+            <span>Abba</span>
+          </label>
+
+          <label class="shelter-item">
+            <input type="checkbox" name="shelters" value="haven">
+            <span>Haven</span>
+          </label>
+
+          <label class="shelter-item">
+            <input type="checkbox" name="shelters" value="gratitude">
+            <span>Gratitude</span>
+          </label>
+        </div>
+        <div class="subnote">
+          Shelter assignments are layout only for now. We will wire the data model next.
+        </div>
+      </div>
+
+      <div class="form-block">
+        <h3>Status</h3>
+        <div class="status-row">
+          <label class="status-choice">
+            <input
+              type="radio"
+              name="is_active"
+              value="1"
+              {% if not user or user.is_active %}checked{% endif %}
+            >
+            <span>Active</span>
+          </label>
+
+          <label class="status-choice">
+            <input
+              type="radio"
+              name="is_active"
+              value="0"
+              {% if user and not user.is_active %}checked{% endif %}
+            >
+            <span>Inactive</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-block">
+        <h3>{% if mode == "add" %}Password{% else %}Password Reset{% endif %}</h3>
+        <div class="user-form-grid">
+          <div class="field">
+            <label for="password">
+              {% if mode == "add" %}Temporary Password{% else %}New Password{% endif %}
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              {% if mode == "add" %}required{% endif %}
+            >
+            <div class="subnote">
+              {% if mode == "add" %}
+                Set a starting password for the new user.
+              {% else %}
+                Leave blank for now. We will wire real reset handling next.
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit">
+          {% if mode == "add" %}Create User{% else %}Save Changes{% endif %}
+        </button>
+        <a href="{{ url_for('admin.admin_users') }}">Cancel</a>
+      </div>
+    </form>
+
   </div>
 </div>
 {% endblock %}
