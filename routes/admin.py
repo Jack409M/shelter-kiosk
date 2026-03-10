@@ -14,8 +14,26 @@ from core.helpers import fmt_dt, utcnow_iso
 admin = Blueprint("admin", __name__)
 
 
+def _current_role() -> str:
+    return (session.get("role") or "").strip()
+
+
 def _require_admin() -> bool:
-    return session.get("role") == "admin"
+    return _current_role() == "admin"
+
+
+def _require_admin_or_shelter_director() -> bool:
+    return _current_role() in {"admin", "shelter_director"}
+
+
+def _allowed_roles_to_create():
+    if _require_admin():
+        return {"admin", "shelter_director", "staff", "case_manager", "ra"}
+
+    if _current_role() == "shelter_director":
+        return {"staff", "case_manager", "ra"}
+
+    return set()
 
 
 def _audit_where_from_request():
@@ -60,14 +78,17 @@ def _audit_where_from_request():
 
 @admin.route("/staff/admin/users", methods=["GET", "POST"])
 @require_login
+@require_shelter
 def admin_users():
-    from app import MIN_STAFF_PASSWORD_LEN, USER_ROLES, ROLE_LABELS, init_db
+    from app import MIN_STAFF_PASSWORD_LEN, ROLE_LABELS, init_db
 
-    if not _require_admin():
-        flash("Admin only.", "error")
-        return redirect(url_for("staff_home"))
+    if not _require_admin_or_shelter_director():
+        flash("Admin or Shelter Director only.", "error")
+        return redirect(url_for("auth.staff_home"))
 
     init_db()
+
+    allowed_roles = _allowed_roles_to_create()
 
     if request.method == "POST":
         from werkzeug.security import generate_password_hash
@@ -84,8 +105,8 @@ def admin_users():
             flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
             return redirect(url_for("admin.admin_users"))
 
-        if role not in USER_ROLES:
-            flash("Invalid role.", "error")
+        if role not in allowed_roles:
+            flash("You are not allowed to create that role.", "error")
             return redirect(url_for("admin.admin_users"))
 
         try:
@@ -95,52 +116,40 @@ def admin_users():
                 else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
                 (username, generate_password_hash(password), role, True, utcnow_iso()),
             )
+            log_action(
+                "staff_user",
+                None,
+                session.get("shelter"),
+                session.get("staff_user_id"),
+                "create_user",
+                f"created_username={username} role={role}",
+            )
             flash("User created.", "ok")
         except Exception:
             flash("Username already exists.", "error")
 
         return redirect(url_for("admin.admin_users"))
 
-    users = db_fetchall("SELECT id, username, role, is_active, created_at FROM staff_users ORDER BY created_at DESC")
+    users = db_fetchall(
+        "SELECT id, username, role, is_active, created_at FROM staff_users ORDER BY created_at DESC"
+    )
 
     return render_template(
         "admin_users.html",
         users=users,
         fmt_dt=fmt_dt,
-        roles=sorted(USER_ROLES),
+        roles=sorted(allowed_roles),
         ROLE_LABELS=ROLE_LABELS,
     )
 
 
-@admin.route("/admin/delete-user/<username>", methods=["POST"])
-@require_login
-def delete_user(username):
-    if not _require_admin():
-        flash("Admin only.", "error")
-        return redirect(url_for("staff_home"))
-
-    if username == session.get("username"):
-        flash("You cannot delete yourself.", "error")
-        return redirect(url_for("admin.admin_users"))
-
-    db_execute(
-        "DELETE FROM staff_users WHERE username = %s"
-        if g.get("db_kind") == "pg"
-        else "DELETE FROM staff_users WHERE username = ?",
-        (username,),
-    )
-
-    log_action("staff_user", None, None, session.get("staff_user_id"), "delete_user", f"deleted_username={username}")
-    flash(f"User '{username}' deleted.", "ok")
-    return redirect(url_for("admin.admin_users"))
-
-
 @admin.route("/staff/admin/audit-log")
 @require_login
+@require_shelter
 def staff_audit_log():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("staff_home"))
+        return redirect(url_for("auth.staff_home"))
 
     sql = (
         """
@@ -171,7 +180,7 @@ def staff_audit_log():
 def staff_audit_log_csv():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("staff_home"))
+        return redirect(url_for("auth.staff_home"))
 
     where_sql, params = _audit_where_from_request()
     created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
@@ -217,12 +226,13 @@ def staff_audit_log_csv():
 
 @admin.route("/admin/wipe-all-data", methods=["POST"])
 @require_login
+@require_shelter
 def wipe_all_data():
     from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
 
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("staff_home"))
+        return redirect(url_for("auth.staff_home"))
 
     if not ENABLE_DANGEROUS_ADMIN_ROUTES:
         abort(404)
@@ -241,12 +251,13 @@ def wipe_all_data():
 
 @admin.route("/admin/recreate-schema", methods=["POST"])
 @require_login
+@require_shelter
 def recreate_schema():
     from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
 
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("staff_home"))
+        return redirect(url_for("auth.staff_home"))
 
     if not ENABLE_DANGEROUS_ADMIN_ROUTES:
         abort(404)
