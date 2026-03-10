@@ -36,6 +36,10 @@ def _allowed_roles_to_create():
     return set()
 
 
+def _all_roles():
+    return {"admin", "shelter_director", "staff", "case_manager", "ra"}
+
+
 def _audit_where_from_request():
     kind = g.get("db_kind")
     where = []
@@ -139,7 +143,9 @@ def admin_users():
         users=users,
         fmt_dt=fmt_dt,
         roles=sorted(allowed_roles),
+        all_roles=sorted(_all_roles()),
         ROLE_LABELS=ROLE_LABELS,
+        current_role=_current_role(),
     )
 
 
@@ -147,7 +153,7 @@ def admin_users():
 @require_login
 @require_shelter
 def admin_set_user_active(user_id: int):
-    role = (session.get("role") or "").strip()
+    role = _current_role()
 
     if role not in {"admin", "shelter_director"}:
         flash("Not allowed.", "error")
@@ -178,6 +184,77 @@ def admin_set_user_active(user_id: int):
     )
 
     flash("User updated.", "ok")
+    return redirect(url_for("admin.admin_users"))
+
+
+@admin.post("/staff/admin/users/<int:user_id>/set-role")
+@require_login
+@require_shelter
+def admin_set_user_role(user_id: int):
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    new_role = (request.form.get("role") or "").strip()
+
+    if new_role not in _all_roles():
+        flash("Invalid role.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    db_execute(
+        "UPDATE staff_users SET role = %s WHERE id = %s"
+        if current_app.config.get("DATABASE_URL")
+        else "UPDATE staff_users SET role = ? WHERE id = ?",
+        (new_role, user_id),
+    )
+
+    log_action(
+        "staff_user",
+        user_id,
+        None,
+        session.get("staff_user_id"),
+        "set_role",
+        f"role={new_role}",
+    )
+
+    flash("Role updated.", "ok")
+    return redirect(url_for("admin.admin_users"))
+
+
+@admin.post("/staff/admin/users/<int:user_id>/reset-password")
+@require_login
+@require_shelter
+def admin_reset_user_password(user_id: int):
+    from app import MIN_STAFF_PASSWORD_LEN
+    from werkzeug.security import generate_password_hash
+
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    password = (request.form.get("password") or "").strip()
+
+    if len(password) < MIN_STAFF_PASSWORD_LEN:
+        flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    db_execute(
+        "UPDATE staff_users SET password_hash = %s WHERE id = %s"
+        if current_app.config.get("DATABASE_URL")
+        else "UPDATE staff_users SET password_hash = ? WHERE id = ?",
+        (generate_password_hash(password), user_id),
+    )
+
+    log_action(
+        "staff_user",
+        user_id,
+        None,
+        session.get("staff_user_id"),
+        "reset_password",
+        "Admin reset staff password",
+    )
+
+    flash("Password reset.", "ok")
     return redirect(url_for("admin.admin_users"))
 
 
