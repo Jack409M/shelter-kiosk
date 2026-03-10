@@ -134,23 +134,62 @@ def staff_select_shelter():
 
     return redirect(url_for("auth.staff_home"))
 
-
-@auth.route("/staff/profile", methods=["GET"])
+@auth.route("/staff/profile", methods=["GET", "POST"])
 @require_login
 @require_shelter
 def staff_profile():
+    from core.db import db_execute
+    from werkzeug.security import generate_password_hash
+
+    staff_id = session.get("staff_user_id")
+
     row = db_fetchone(
-        "SELECT id, first_name, last_name, username, role, is_active, created_at "
+        "SELECT id, first_name, last_name, username, role, email, mobile_phone, is_active, created_at "
         "FROM staff_users WHERE id = %s"
         if g.get("db_kind") == "pg"
-        else "SELECT id, first_name, last_name, username, role, is_active, created_at "
+        else "SELECT id, first_name, last_name, username, role, email, mobile_phone, is_active, created_at "
              "FROM staff_users WHERE id = ?",
-        (session.get("staff_user_id"),),
+        (staff_id,),
     )
 
     if not row:
         flash("User record not found.", "error")
         return redirect(url_for("auth.staff_home"))
+
+    if request.method == "POST":
+
+        first_name = (request.form.get("first_name") or "").strip()
+        last_name = (request.form.get("last_name") or "").strip()
+        email = (request.form.get("email") or "").strip()
+        mobile_phone = (request.form.get("mobile_phone") or "").strip()
+        password = (request.form.get("password") or "").strip()
+
+        db_execute(
+            "UPDATE staff_users SET first_name=%s, last_name=%s, email=%s, mobile_phone=%s WHERE id=%s"
+            if g.get("db_kind") == "pg"
+            else "UPDATE staff_users SET first_name=?, last_name=?, email=?, mobile_phone=? WHERE id=?",
+            (first_name, last_name, email, mobile_phone, staff_id),
+        )
+
+        if password:
+            db_execute(
+                "UPDATE staff_users SET password_hash=%s WHERE id=%s"
+                if g.get("db_kind") == "pg"
+                else "UPDATE staff_users SET password_hash=? WHERE id=?",
+                (generate_password_hash(password), staff_id),
+            )
+
+        log_action(
+            "staff_user",
+            staff_id,
+            session.get("shelter"),
+            staff_id,
+            "profile_update",
+            "User updated own profile",
+        )
+
+        flash("Profile updated.", "ok")
+        return redirect(url_for("auth.staff_profile"))
 
     return render_template("staff_profile.html", user=row)
 
