@@ -13,6 +13,8 @@ from core.helpers import fmt_dt, utcnow_iso
 
 admin = Blueprint("admin", __name__)
 
+ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff"]
+
 
 def _current_role() -> str:
     return (session.get("role") or "").strip()
@@ -38,6 +40,10 @@ def _allowed_roles_to_create():
 
 def _all_roles():
     return {"admin", "shelter_director", "staff", "case_manager", "ra"}
+
+
+def _ordered_roles(role_set):
+    return [r for r in ROLE_ORDER if r in role_set]
 
 
 def _audit_where_from_request():
@@ -142,8 +148,8 @@ def admin_users():
         "admin_users.html",
         users=users,
         fmt_dt=fmt_dt,
-        roles=sorted(allowed_roles),
-        all_roles=sorted(_all_roles()),
+        roles=_ordered_roles(allowed_roles),
+        all_roles=_ordered_roles(_all_roles()),
         ROLE_LABELS=ROLE_LABELS,
         current_role=_current_role(),
     )
