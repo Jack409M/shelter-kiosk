@@ -31,7 +31,7 @@ def staff_residents():
 
     if not _require_staff_or_admin():
         flash("Staff only.", "error")
-        return redirect(url_for("staff_home"))
+        return redirect(url_for("auth.staff_home"))
 
     init_db()
     shelter = session["shelter"]
@@ -120,7 +120,7 @@ def staff_resident_transfer(resident_id: int):
 
     if not _require_transfer_role():
         flash("Admin or case manager only.", "error")
-        return redirect(url_for("staff_home"))
+        return redirect(url_for("auth.staff_home"))
 
     init_db()
     all_shelters = get_all_shelters()
@@ -235,7 +235,7 @@ def staff_resident_set_active(resident_id: int):
 
     if not _require_staff_or_admin():
         flash("Staff only.", "error")
-        return redirect(url_for("staff_home"))
+        return redirect(url_for("auth.staff_home"))
 
     init_db()
     shelter = session["shelter"]
