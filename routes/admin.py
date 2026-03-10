@@ -115,6 +115,39 @@ def admin_users():
     )
 
 
+@admin.route("/staff/admin/users/add", methods=["GET"])
+@require_login
+@require_shelter
+def admin_add_user():
+    if not _require_admin_or_shelter_director():
+        flash("Admin or Shelter Director only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    return render_template("admin_user_form.html", mode="add", user=None)
+
+
+@admin.route("/staff/admin/users/<int:user_id>/edit", methods=["GET"])
+@require_login
+@require_shelter
+def admin_edit_user(user_id: int):
+    if not _require_admin_or_shelter_director():
+        flash("Admin or Shelter Director only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    rows = db_fetchall(
+        "SELECT id, username, role, is_active, created_at FROM staff_users WHERE id = %s"
+        if current_app.config.get("DATABASE_URL")
+        else "SELECT id, username, role, is_active, created_at FROM staff_users WHERE id = ?",
+        (user_id,),
+    )
+
+    if not rows:
+        flash("User not found.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    return render_template("admin_user_form.html", mode="edit", user=rows[0])
+
+
 @admin.post("/staff/admin/users/<int:user_id>/set-active")
 @require_login
 @require_shelter
