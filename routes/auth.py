@@ -6,14 +6,14 @@ from werkzeug.security import check_password_hash
 from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_fetchone
+from core.rate_limit import ban_ip, is_rate_limited
 
 auth = Blueprint("auth", __name__)
 
 
 @auth.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
-    from app import _ban_ip, _client_ip, get_all_shelters, init_db
-    from core.rate_limit import is_rate_limited
+    from app import _client_ip, get_all_shelters, init_db
 
     init_db()
     all_shelters = get_all_shelters()
@@ -46,7 +46,7 @@ def staff_login():
 
     if not row:
         if is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600):
-            _ban_ip(ip, 3600)
+            ban_ip(ip, 3600)
 
         log_action("auth", None, None, None, "login_failed", f"reason=bad_username ip={ip} username={normalized_username}")
         flash("Invalid login.", "error")
@@ -58,7 +58,7 @@ def staff_login():
 
     if not is_active or not check_password_hash(pw_hash, password):
         if is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600):
-            _ban_ip(ip, 3600)
+            ban_ip(ip, 3600)
 
         log_action(
             "auth",
@@ -140,3 +140,4 @@ def staff_select_shelter():
 @require_shelter
 def staff_home():
     return redirect(url_for("attendance.staff_attendance"))
+    
