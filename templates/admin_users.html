@@ -5,13 +5,17 @@
 <style>
   .users-layout {
     display: grid;
-    grid-template-columns: 3fr 1fr;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
     align-items: start;
   }
 
   .users-results {
     overflow-x: auto;
+    background: #f7fbff;
+    border: 1px solid #cfd9e3;
+    border-radius: 16px;
+    box-shadow: 0 10px 24px rgba(18, 38, 63, 0.08);
   }
 
   .users-side {
@@ -21,78 +25,145 @@
 
   table.compact {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  table.compact thead th {
+    background: #eaf2f9;
+    color: #26415c;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 1px solid #d7e1ea;
   }
 
   table.compact th,
   table.compact td {
-    padding: 6px 8px;
-    font-size: 12px;
-    line-height: 1.2;
+    padding: 12px 10px;
+    font-size: 13px;
+    line-height: 1.35;
     vertical-align: top;
-    border: 1px solid #999;
+    border: 0;
+    text-align: left;
+  }
+
+  table.compact tbody tr + tr td {
+    border-top: 1px solid #e3ebf3;
+  }
+
+  table.compact tbody tr:hover {
+    background: #f4f9fd;
   }
 
   .side-card {
-    background: var(--card, #e4f0f8);
-    border: 1px solid #000;
-    border-radius: var(--radius, 8px);
-    padding: 12px;
+    background: #f7fbff;
+    border: 1px solid #cfd9e3;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 10px 24px rgba(18, 38, 63, 0.08);
   }
 
   .side-card h3 {
-    margin: 0 0 10px 0;
-    font-size: 16px;
+    margin: 0 0 14px 0;
+    font-size: 18px;
+    color: #1f3550;
   }
 
   .side-row {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
   }
 
   .side-row label {
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    font-size: 12px;
     font-weight: 700;
+    color: #35516d;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 
   .side-row input,
-  .side-row select {
+  .side-row select,
+  .role-form select,
+  .pw-form input {
     width: 100%;
-    padding: 8px;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid #c7d3df;
+    border-radius: 10px;
+    background: #fff;
     box-sizing: border-box;
+    font-size: 13px;
+  }
+
+  .side-row input:focus,
+  .side-row select:focus,
+  .role-form select:focus,
+  .pw-form input:focus {
+    outline: none;
+    border-color: #6d9fcb;
+    box-shadow: 0 0 0 3px rgba(109, 159, 203, 0.18);
   }
 
   .side-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-top: 12px;
+    margin-top: 14px;
   }
 
   .side-actions button,
-  .side-actions a {
-    width: 100%;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    padding: 10px 12px;
-    border: 1px solid #333;
-    border-radius: var(--radius, 8px);
+  .side-actions a,
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 92px;
+    padding: 9px 12px;
+    border: 1px solid #c7d3df;
+    border-radius: 10px;
     background: #fff;
-    color: #111;
+    color: #1f3550;
+    text-decoration: none;
     cursor: pointer;
     box-sizing: border-box;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
   }
 
-  .hint {
-    color: var(--text-muted, #4a5a66);
-    font-size: 12px;
+  .side-actions button:hover,
+  .side-actions a:hover,
+  .action-btn:hover {
+    background: #f3f8fc;
+    border-color: #9db6cd;
+    transform: translateY(-1px);
   }
 
+  .action-btn.deactivate {
+    color: #9f1d35;
+    border-color: #e2b7c0;
+    background: #fff8f9;
+  }
+
+  .action-btn.activate {
+    color: #1f6a3a;
+    border-color: #b9dec5;
+    background: #f7fff9;
+  }
+
+  .action-btn.secondary {
+    color: #35516d;
+    background: #f8fbfe;
+  }
+
+  .hint,
   .small-note {
-    margin-top: 10px;
+    color: #60758a;
     font-size: 12px;
-    color: var(--text-muted, #4a5a66);
   }
 
   .inline-form {
@@ -103,49 +174,17 @@
   .action-stack {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    align-items: flex-start;
-  }
-
-  .action-btn {
-    min-width: 92px;
-    padding: 6px 10px;
-    border: 1px solid #333;
-    border-radius: 6px;
-    background: #fff;
-    color: #111;
-    cursor: pointer;
-  }
-
-  .action-btn.deactivate {
-    border-color: #b00020;
-    color: #b00020;
-  }
-
-  .action-btn.activate {
-    border-color: #0a6b2d;
-    color: #0a6b2d;
-  }
-
-  .action-btn.secondary {
-    border-color: #345;
-    color: #345;
+    gap: 8px;
+    align-items: center;
   }
 
   .role-form,
   .pw-form {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
     flex-wrap: wrap;
-    margin-top: 6px;
-  }
-
-  .role-form select,
-  .pw-form input {
-    padding: 6px 8px;
-    font-size: 12px;
-    min-width: 140px;
+    margin-top: 8px;
   }
 
   @media (max-width: 900px) {
