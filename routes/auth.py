@@ -6,7 +6,7 @@ from werkzeug.security import check_password_hash
 from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_fetchone
-from core.rate_limit import ban_ip, is_rate_limited
+from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 
 auth = Blueprint("auth", __name__)
 
@@ -27,6 +27,11 @@ def staff_login():
     ip = _client_ip()
     normalized_username = username.lower() or "blank"
 
+    if is_ip_banned(ip):
+        log_action("auth", None, None, None, "login_blocked_banned_ip", f"ip={ip} username={normalized_username}")
+        flash("Too many login attempts. Please wait and try again later.", "error")
+        return render_template("staff_login.html", all_shelters=all_shelters), 403
+
     if is_rate_limited(f"staff_login_ip:{ip}", limit=10, window_seconds=900):
         log_action("auth", None, None, None, "login_rate_limited_ip", f"ip={ip} username={normalized_username}")
         flash("Too many login attempts. Please wait and try again.", "error")
@@ -45,8 +50,10 @@ def staff_login():
     )
 
     if not row:
-        if is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600):
+        triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
+        if triggered_ban:
             ban_ip(ip, 3600)
+            log_action("auth", None, None, None, "login_ip_banned", f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=3600")
 
         log_action("auth", None, None, None, "login_failed", f"reason=bad_username ip={ip} username={normalized_username}")
         flash("Invalid login.", "error")
@@ -57,8 +64,17 @@ def staff_login():
     pw_hash = row["password_hash"] if isinstance(row, dict) else row[2]
 
     if not is_active or not check_password_hash(pw_hash, password):
-        if is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600):
+        triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
+        if triggered_ban:
             ban_ip(ip, 3600)
+            log_action(
+                "auth",
+                None,
+                None,
+                staff_user_id,
+                "login_ip_banned",
+                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=3600",
+            )
 
         log_action(
             "auth",
