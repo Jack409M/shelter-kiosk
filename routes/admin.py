@@ -10,6 +10,7 @@ from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt
+from core.rate_limit import get_banned_ips_snapshot, get_rate_limit_snapshot
 
 
 admin = Blueprint("admin", __name__)
@@ -222,6 +223,9 @@ def admin_dashboard():
     recent_failed_logins = failed_logins_24h[:10]
     top_attacking_ips, targeted_usernames = _build_attack_intelligence(failed_logins_24h)
 
+    banned_ips = get_banned_ips_snapshot()
+    rate_limit_activity = get_rate_limit_snapshot()
+
     return render_template(
         "admin_dashboard.html",
         total_users=total_users,
@@ -231,6 +235,8 @@ def admin_dashboard():
         recent_failed_logins=recent_failed_logins,
         top_attacking_ips=top_attacking_ips,
         targeted_usernames=targeted_usernames,
+        banned_ips=banned_ips,
+        rate_limit_activity=rate_limit_activity,
         fmt_dt=fmt_dt,
         current_role=_current_role(),
     )
