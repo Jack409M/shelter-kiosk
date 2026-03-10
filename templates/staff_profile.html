@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>My Profile</h1>
+
+<div style="max-width:720px;background:#f7fbff;border:1px solid #cfd9e3;border-radius:16px;padding:22px;">
+  <p>This page is now wired correctly. We will make it editable next.</p>
+
+  <div style="margin-top:16px;line-height:1.8;">
+    <div><strong>First Name:</strong> {{ user.first_name or "" }}</div>
+    <div><strong>Last Name:</strong> {{ user.last_name or "" }}</div>
+    <div><strong>Username:</strong> {{ user.username }}</div>
+    <div><strong>Role:</strong> {{ user.role }}</div>
+    <div><strong>Active:</strong> {{ "Yes" if user.is_active else "No" }}</div>
+  </div>
+</div>
+{% endblock %}
