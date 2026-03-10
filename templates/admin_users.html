@@ -101,9 +101,15 @@
     color: #60758a;
     font-size: 12px;
   }
+
+  .username-cell {
+    font-size: 11px;
+    color: #6b7f92;
+  }
 </style>
 
 <div class="users-page-header">
+
   <div class="small-note">
     View users and open a separate page to add or edit user details.
   </div>
@@ -112,42 +118,83 @@
     <a href="{{ url_for('admin.admin_add_user') }}">Add User</a>
     <a href="{{ url_for('auth.staff_home') }}">Done</a>
   </div>
+
 </div>
 
 <div class="users-results">
-  <table class="compact">
-    <thead>
-      <tr>
-        <th>Username</th>
-        <th>Role</th>
-        <th>Active</th>
-        <th>Created</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if users %}
-        {% for u in users %}
-          <tr>
-            <td>{{ u.username }}</td>
-            <td>{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}</td>
-            <td>{{ "Yes" if u.is_active else "No" }}</td>
-            <td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
-            <td>
-              {% if u.username == session.get("username") %}
-                <span class="user-you">You</span>
-              {% else %}
-                <a class="action-link" href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}">Edit</a>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      {% else %}
-        <tr>
-          <td colspan="5">No users found.</td>
-        </tr>
-      {% endif %}
-    </tbody>
-  </table>
+
+<table class="compact">
+
+<thead>
+<tr>
+  <th>Last Name</th>
+  <th>First Name</th>
+  <th>Username</th>
+  <th>Role</th>
+  <th>Active</th>
+  <th>Created</th>
+  <th>Actions</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% if users %}
+
+{% for u in users %}
+
+<tr>
+
+<td>{{ u.last_name or "" }}</td>
+
+<td>{{ u.first_name or "" }}</td>
+
+<td class="username-cell">{{ u.username }}</td>
+
+<td>
+{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}
+</td>
+
+<td>
+{{ "Yes" if u.is_active else "No" }}
+</td>
+
+<td>
+{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}
+</td>
+
+<td>
+
+{% if u.username == session.get("username") %}
+
+<span class="user-you">You</span>
+
+{% else %}
+
+<a class="action-link"
+href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}">
+Edit
+</a>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+{% else %}
+
+<tr>
+<td colspan="7">No users found.</td>
+</tr>
+
+{% endif %}
+
+</tbody>
+</table>
+
 </div>
+
 {% endblock %}
