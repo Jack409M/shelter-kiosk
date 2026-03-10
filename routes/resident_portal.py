@@ -10,6 +10,6 @@ resident_portal = Blueprint(
 @resident_portal.route("/home")
 def home():
     if not session.get("resident_id"):
-        return redirect(url_for("resident_signin"))
+        return redirect(url_for("resident_requests.resident_signin"))
 
     return render_template("resident_home.html")
