@@ -87,11 +87,11 @@
 
   .side-row input,
   .side-row select,
-  .role-form select,
-  .pw-form input {
+  .inline-editor select,
+  .inline-editor input {
     width: 100%;
     min-width: 0;
-    padding: 9px 10px;
+    padding: 8px 10px;
     border: 1px solid #c7d3df;
     border-radius: 10px;
     background: #fff;
@@ -101,8 +101,8 @@
 
   .side-row input:focus,
   .side-row select:focus,
-  .role-form select:focus,
-  .pw-form input:focus {
+  .inline-editor select:focus,
+  .inline-editor input:focus {
     outline: none;
     border-color: #6d9fcb;
     box-shadow: 0 0 0 3px rgba(109, 159, 203, 0.18);
@@ -117,11 +117,10 @@
 
   .side-actions button,
   .side-actions a,
-  .action-btn {
+  .inline-editor button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 92px;
     padding: 9px 12px;
     border: 1px solid #c7d3df;
     border-radius: 10px;
@@ -137,27 +136,10 @@
 
   .side-actions button:hover,
   .side-actions a:hover,
-  .action-btn:hover {
+  .inline-editor button:hover {
     background: #f3f8fc;
     border-color: #9db6cd;
     transform: translateY(-1px);
-  }
-
-  .action-btn.deactivate {
-    color: #9f1d35;
-    border-color: #e2b7c0;
-    background: #fff8f9;
-  }
-
-  .action-btn.activate {
-    color: #1f6a3a;
-    border-color: #b9dec5;
-    background: #f7fff9;
-  }
-
-  .action-btn.secondary {
-    color: #35516d;
-    background: #f8fbfe;
   }
 
   .hint,
@@ -166,25 +148,72 @@
     font-size: 12px;
   }
 
-  .inline-form {
-    display: inline-block;
-    margin: 0 6px 6px 0;
-  }
-
-  .action-stack {
+  .actions-line {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
   }
 
-  .role-form,
-  .pw-form {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
+  .action-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    color: #31597f;
+    cursor: pointer;
+    text-decoration: none;
+  }
+
+  .action-link:hover {
+    text-decoration: underline;
+  }
+
+  .action-link.danger {
+    color: #9f1d35;
+  }
+
+  .action-link.ok {
+    color: #1f6a3a;
+  }
+
+  .actions-sep {
+    color: #91a4b8;
+    font-size: 12px;
+  }
+
+  .inline-editor {
+    display: none;
     margin-top: 8px;
+    padding: 10px;
+    border: 1px solid #d8e3ec;
+    border-radius: 12px;
+    background: #fbfdff;
+  }
+
+  .inline-editor.open {
+    display: block;
+  }
+
+  .inline-editor-row {
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .inline-form {
+    margin: 0;
+    display: inline;
+  }
+
+  .user-you {
+    color: #60758a;
+    font-size: 12px;
+    font-weight: 700;
   }
 
   @media (max-width: 900px) {
@@ -198,8 +227,15 @@
   }
 </style>
 
-<div class="users-layout">
+<script>
+  function toggleUserEditor(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle("open");
+  }
+</script>
 
+<div class="users-layout">
   <div class="users-results">
     <table class="compact">
       <thead>
@@ -221,67 +257,82 @@
               <td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
               <td>
                 {% if u.username == session.get("username") %}
-                  <span class="hint">You</span>
+                  <span class="user-you">You</span>
                 {% else %}
-                  <div class="action-stack">
-                    {% if u.is_active %}
-                      <form
-                        method="post"
-                        action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
-                        class="inline-form"
-                        onsubmit="return confirm('Deactivate user {{ u.username }}?');"
+                  <div class="actions-line">
+                    <form
+                      method="post"
+                      action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
+                      class="inline-form"
+                      onsubmit="return confirm('{% if u.is_active %}Deactivate{% else %}Activate{% endif %} user {{ u.username }}?');"
+                    >
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="active" value="{% if u.is_active %}0{% else %}1{% endif %}">
+                      <button type="submit" class="action-link {% if u.is_active %}danger{% else %}ok{% endif %}">
+                        {% if u.is_active %}Deactivate{% else %}Activate{% endif %}
+                      </button>
+                    </form>
+
+                    {% if current_role == "admin" %}
+                      <span class="actions-sep">·</span>
+                      <button
+                        type="button"
+                        class="action-link"
+                        onclick="toggleUserEditor('role-editor-{{ u.id }}')"
                       >
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="active" value="0">
-                        <button type="submit" class="action-btn deactivate">Deactivate</button>
-                      </form>
-                    {% else %}
-                      <form
-                        method="post"
-                        action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
-                        class="inline-form"
-                        onsubmit="return confirm('Activate user {{ u.username }}?');"
+                        Change Role
+                      </button>
+
+                      <span class="actions-sep">·</span>
+                      <button
+                        type="button"
+                        class="action-link"
+                        onclick="toggleUserEditor('pw-editor-{{ u.id }}')"
                       >
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="active" value="1">
-                        <button type="submit" class="action-btn activate">Activate</button>
-                      </form>
+                        Reset Password
+                      </button>
                     {% endif %}
                   </div>
 
                   {% if current_role == "admin" %}
-                    <form
-                      method="post"
-                      action="{{ url_for('admin.admin_set_user_role', user_id=u.id) }}"
-                      class="role-form"
-                    >
-                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                      <select name="role" required>
-                        {% for r in all_roles %}
-                          <option value="{{ r }}" {% if r == u.role %}selected{% endif %}>
-                            {{ ROLE_LABELS.get(r, r) if ROLE_LABELS else r }}
-                          </option>
-                        {% endfor %}
-                      </select>
-                      <button type="submit" class="action-btn secondary">Update Role</button>
-                    </form>
-
-                    <form
-                      method="post"
-                      action="{{ url_for('admin.admin_reset_user_password', user_id=u.id) }}"
-                      class="pw-form"
-                      onsubmit="return confirm('Reset password for {{ u.username }}?');"
-                    >
-                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                      <input
-                        type="password"
-                        name="password"
-                        placeholder="New password"
-                        minlength="8"
-                        required
+                    <div id="role-editor-{{ u.id }}" class="inline-editor">
+                      <form
+                        method="post"
+                        action="{{ url_for('admin.admin_set_user_role', user_id=u.id) }}"
                       >
-                      <button type="submit" class="action-btn secondary">Reset Password</button>
-                    </form>
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <div class="inline-editor-row">
+                          <select name="role" required>
+                            {% for r in all_roles %}
+                              <option value="{{ r }}" {% if r == u.role %}selected{% endif %}>
+                                {{ ROLE_LABELS.get(r, r) if ROLE_LABELS else r }}
+                              </option>
+                            {% endfor %}
+                          </select>
+                          <button type="submit">Save</button>
+                        </div>
+                      </form>
+                    </div>
+
+                    <div id="pw-editor-{{ u.id }}" class="inline-editor">
+                      <form
+                        method="post"
+                        action="{{ url_for('admin.admin_reset_user_password', user_id=u.id) }}"
+                        onsubmit="return confirm('Reset password for {{ u.username }}?');"
+                      >
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <div class="inline-editor-row">
+                          <input
+                            type="password"
+                            name="password"
+                            placeholder="New password"
+                            minlength="8"
+                            required
+                          >
+                          <button type="submit">Save</button>
+                        </div>
+                      </form>
+                    </div>
                   {% endif %}
                 {% endif %}
               </td>
@@ -333,6 +384,5 @@
       </form>
     </div>
   </aside>
-
 </div>
 {% endblock %}
