@@ -8,7 +8,7 @@ from flask import Blueprint, Response, abort, current_app, g, redirect, render_t
 from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall
-from core.helpers import fmt_dt, utcnow_iso
+from core.helpers import fmt_dt
 
 
 admin = Blueprint("admin", __name__)
@@ -86,11 +86,11 @@ def _audit_where_from_request():
     return where_sql, tuple(params)
 
 
-@admin.route("/staff/admin/users", methods=["GET", "POST"])
+@admin.route("/staff/admin/users", methods=["GET"])
 @require_login
 @require_shelter
 def admin_users():
-    from app import MIN_STAFF_PASSWORD_LEN, ROLE_LABELS, init_db
+    from app import ROLE_LABELS, init_db
 
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
@@ -99,46 +99,6 @@ def admin_users():
     init_db()
 
     allowed_roles = _allowed_roles_to_create()
-
-    if request.method == "POST":
-        from werkzeug.security import generate_password_hash
-
-        username = (request.form.get("username") or "").strip()
-        password = (request.form.get("password") or "").strip()
-        role = (request.form.get("role") or "staff").strip()
-
-        if not username or not password:
-            flash("Username and password required.", "error")
-            return redirect(url_for("admin.admin_users"))
-
-        if len(password) < MIN_STAFF_PASSWORD_LEN:
-            flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
-            return redirect(url_for("admin.admin_users"))
-
-        if role not in allowed_roles:
-            flash("You are not allowed to create that role.", "error")
-            return redirect(url_for("admin.admin_users"))
-
-        try:
-            db_execute(
-                "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (%s, %s, %s, %s, %s)"
-                if current_app.config.get("DATABASE_URL")
-                else "INSERT INTO staff_users (username, password_hash, role, is_active, created_at) VALUES (?, ?, ?, ?, ?)",
-                (username, generate_password_hash(password), role, True if current_app.config.get("DATABASE_URL") else 1, utcnow_iso()),
-            )
-            log_action(
-                "staff_user",
-                None,
-                session.get("shelter"),
-                session.get("staff_user_id"),
-                "create_user",
-                f"created_username={username} role={role}",
-            )
-            flash("User created.", "ok")
-        except Exception:
-            flash("Username already exists.", "error")
-
-        return redirect(url_for("admin.admin_users"))
 
     users = db_fetchall(
         "SELECT id, username, role, is_active, created_at FROM staff_users ORDER BY created_at DESC"
