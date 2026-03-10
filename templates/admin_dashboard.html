@@ -127,12 +127,23 @@
     padding: 4px 0;
   }
 
+  .intel-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 14px;
+  }
+
   @media (max-width: 1100px) {
     .dash-grid {
       grid-template-columns: repeat(2, minmax(220px, 1fr));
     }
 
     .dash-panels {
+      grid-template-columns: 1fr;
+    }
+
+    .intel-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -231,6 +242,56 @@
         {% else %}
           <div class="empty-state">No recent failed login events found.</div>
         {% endif %}
+      </div>
+
+      <div class="intel-grid">
+        <div>
+          <h3 style="margin-top: 18px;">Top Attacking IPs</h3>
+          {% if top_attacking_ips %}
+            <table class="audit-table">
+              <thead>
+                <tr>
+                  <th>IP</th>
+                  <th>Attempts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in top_attacking_ips %}
+                  <tr>
+                    <td>{{ row.ip }}</td>
+                    <td>{{ row.attempts }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="empty-state">No attacking IP data available.</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <h3 style="margin-top: 18px;">Usernames Under Attack</h3>
+          {% if targeted_usernames %}
+            <table class="audit-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Attempts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in targeted_usernames %}
+                  <tr>
+                    <td>{{ row.username }}</td>
+                    <td>{{ row.attempts }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="empty-state">No targeted username data available.</div>
+          {% endif %}
+        </div>
       </div>
     </div>
 
