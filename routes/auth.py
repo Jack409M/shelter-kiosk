@@ -135,9 +135,28 @@ def staff_select_shelter():
     return redirect(url_for("auth.staff_home"))
 
 
+@auth.route("/staff/profile", methods=["GET"])
+@require_login
+@require_shelter
+def staff_profile():
+    row = db_fetchone(
+        "SELECT id, first_name, last_name, username, role, is_active, created_at "
+        "FROM staff_users WHERE id = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT id, first_name, last_name, username, role, is_active, created_at "
+             "FROM staff_users WHERE id = ?",
+        (session.get("staff_user_id"),),
+    )
+
+    if not row:
+        flash("User record not found.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    return render_template("staff_profile.html", user=row)
+
+
 @auth.route("/staff")
 @require_login
 @require_shelter
 def staff_home():
-    return redirect(url_for("attendance.staff_attendance"))
-    
+    return redirect(url_for("attendance.staff_attendance"))  
