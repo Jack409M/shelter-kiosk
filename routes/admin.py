@@ -86,6 +86,54 @@ def _audit_where_from_request():
     return where_sql, tuple(params)
 
 
+@admin.route("/staff/admin/dashboard", methods=["GET"])
+@require_login
+@require_shelter
+def admin_dashboard():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    total_users_row = db_fetchall("SELECT COUNT(*) AS c FROM staff_users")
+    active_users_row = db_fetchall(
+        "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = %s"
+        if current_app.config.get("DATABASE_URL")
+        else "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = ?",
+        (True if current_app.config.get("DATABASE_URL") else 1,),
+    )
+
+    total_users = total_users_row[0]["c"] if total_users_row and isinstance(total_users_row[0], dict) else (total_users_row[0][0] if total_users_row else 0)
+    active_users = active_users_row[0]["c"] if active_users_row and isinstance(active_users_row[0], dict) else (active_users_row[0][0] if active_users_row else 0)
+
+    recent_audit = db_fetchall(
+        """
+        SELECT a.id, a.entity_type, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        ORDER BY a.id DESC
+        LIMIT %s
+        """
+        if current_app.config.get("DATABASE_URL")
+        else """
+        SELECT a.id, a.entity_type, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        ORDER BY a.id DESC
+        LIMIT ?
+        """,
+        (10,),
+    )
+
+    return render_template(
+        "admin_dashboard.html",
+        total_users=total_users,
+        active_users=active_users,
+        recent_audit=recent_audit,
+        fmt_dt=fmt_dt,
+        current_role=_current_role(),
+    )
+
+
 @admin.route("/staff/admin/users", methods=["GET"])
 @require_login
 @require_shelter
@@ -433,7 +481,6 @@ def wipe_all_data():
 
     log_action("admin", None, None, session.get("staff_user_id"), "wipe_all_data", "Wiped attendance, leave, transport, residents, audit_log")
     return "All non staff data wiped."
-
 
 
 @admin.route("/admin/recreate-schema", methods=["POST"])
