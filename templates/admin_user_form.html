@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>{% if mode == "add" %}Add User{% else %}Edit User{% endif %}</h1>
+
+<div style="background:#f7fbff;border:1px solid #cfd9e3;border-radius:16px;padding:20px;max-width:720px;">
+  {% if mode == "add" %}
+    <p>This page is now wired correctly. The actual add user form will go here next.</p>
+  {% else %}
+    <p>This page is now wired correctly. The actual edit form will go here next.</p>
+
+    {% if user %}
+      <div style="margin-top:16px;">
+        <p><strong>Username:</strong> {{ user.username }}</p>
+        <p><strong>Role:</strong> {{ user.role }}</p>
+        <p><strong>Active:</strong> {{ "Yes" if user.is_active else "No" }}</p>
+      </div>
+    {% endif %}
+  {% endif %}
+
+  <div style="margin-top:20px;">
+    <a href="{{ url_for('admin.admin_users') }}">Back to Users</a>
+  </div>
+</div>
+{% endblock %}
