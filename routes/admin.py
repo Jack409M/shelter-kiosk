@@ -46,6 +46,17 @@ def _ordered_roles(role_set):
     return [r for r in ROLE_ORDER if r in role_set]
 
 
+def _scalar_value(rows, default=0):
+    if not rows:
+        return default
+    row = rows[0]
+    if isinstance(row, dict):
+        return next(iter(row.values()), default)
+    if isinstance(row, (list, tuple)) and row:
+        return row[0]
+    return default
+
+
 def _audit_where_from_request():
     kind = g.get("db_kind")
     where = []
@@ -94,16 +105,20 @@ def admin_dashboard():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
 
-    total_users_row = db_fetchall("SELECT COUNT(*) AS c FROM staff_users")
-    active_users_row = db_fetchall(
-        "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = %s"
-        if current_app.config.get("DATABASE_URL")
-        else "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = ?",
-        (True if current_app.config.get("DATABASE_URL") else 1,),
+    is_pg = bool(current_app.config.get("DATABASE_URL"))
+
+    total_users = _scalar_value(
+        db_fetchall("SELECT COUNT(*) AS c FROM staff_users")
     )
 
-    total_users = total_users_row[0]["c"] if total_users_row and isinstance(total_users_row[0], dict) else (total_users_row[0][0] if total_users_row else 0)
-    active_users = active_users_row[0]["c"] if active_users_row and isinstance(active_users_row[0], dict) else (active_users_row[0][0] if active_users_row else 0)
+    active_users = _scalar_value(
+        db_fetchall(
+            "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = %s"
+            if is_pg
+            else "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = ?",
+            (True if is_pg else 1,),
+        )
+    )
 
     recent_audit = db_fetchall(
         """
@@ -113,11 +128,50 @@ def admin_dashboard():
         ORDER BY a.id DESC
         LIMIT %s
         """
-        if current_app.config.get("DATABASE_URL")
+        if is_pg
         else """
         SELECT a.id, a.entity_type, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        ORDER BY a.id DESC
+        LIMIT ?
+        """,
+        (10,),
+    )
+
+    failed_login_count = _scalar_value(
+        db_fetchall(
+            """
+            SELECT COUNT(*) AS c
+            FROM audit_log
+            WHERE action_type = 'login_failure'
+              AND created_at >= NOW() - INTERVAL '24 hours'
+            """
+            if is_pg
+            else """
+            SELECT COUNT(*) AS c
+            FROM audit_log
+            WHERE action_type = 'login_failure'
+              AND created_at >= datetime('now', '-24 hours')
+            """
+        )
+    )
+
+    recent_failed_logins = db_fetchall(
+        """
+        SELECT a.id, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        WHERE a.action_type = 'login_failure'
+        ORDER BY a.id DESC
+        LIMIT %s
+        """
+        if is_pg
+        else """
+        SELECT a.id, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        WHERE a.action_type = 'login_failure'
         ORDER BY a.id DESC
         LIMIT ?
         """,
@@ -129,6 +183,8 @@ def admin_dashboard():
         total_users=total_users,
         active_users=active_users,
         recent_audit=recent_audit,
+        failed_login_count=failed_login_count,
+        recent_failed_logins=recent_failed_logins,
         fmt_dt=fmt_dt,
         current_role=_current_role(),
     )
