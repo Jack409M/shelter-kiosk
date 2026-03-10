@@ -99,16 +99,11 @@ def staff_login():
         "login",
         f"Staff login: {session['username']} ip={ip}",
     )
+
+    if session.get("role") == "admin":
+        return redirect(url_for("admin.admin_dashboard"))
+
     return redirect(url_for("attendance.staff_attendance"))
-
-
-@auth.route("/staff/logout")
-@require_login
-def staff_logout():
-    staff_id = session.get("staff_user_id")
-    log_action("auth", None, None, staff_id, "logout", f"Staff logout: {session.get('username')}")
-    session.clear()
-    return redirect(url_for("auth.staff_login"))
 
 
 @auth.route("/staff/select-shelter", methods=["GET", "POST"])
