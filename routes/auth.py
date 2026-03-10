@@ -198,4 +198,7 @@ def staff_profile():
 @require_login
 @require_shelter
 def staff_home():
-    return redirect(url_for("attendance.staff_attendance"))  
+    if (session.get("role") or "").strip() == "admin":
+        return redirect(url_for("admin.admin_dashboard"))
+
+    return redirect(url_for("attendance.staff_attendance"))
