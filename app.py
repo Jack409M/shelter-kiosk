@@ -61,17 +61,18 @@ TWILIO_STATUS_CALLBACK_URL = (os.environ.get("TWILIO_STATUS_CALLBACK_URL") or ""
 
 MIN_STAFF_PASSWORD_LEN = 8
 
-USER_ROLES = {"admin", "staff", "case_manager", "ra"}
+USER_ROLES = {"admin", "shelter_director", "staff", "case_manager", "ra"}
 
 ROLE_LABELS = {
     "admin": "Admin",
+    "shelter_director": "Shelter Director",
     "staff": "Staff",
     "ra": "RA DESK",
     "case_manager": "Case Mgr",
 }
 
-STAFF_ROLES = {"admin", "staff", "case_manager", "ra"}
-TRANSFER_ROLES = {"admin", "case_manager"}
+STAFF_ROLES = {"admin", "shelter_director", "staff", "case_manager", "ra"}
+TRANSFER_ROLES = {"admin", "shelter_director", "case_manager"}
 
 APP_DIR = os.path.abspath(os.path.dirname(__file__))
 SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
@@ -593,4 +594,5 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
 
