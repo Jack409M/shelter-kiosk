@@ -84,11 +84,6 @@
     box-sizing: border-box;
   }
 
-  .danger {
-    border-color: #b00020;
-    color: #b00020;
-  }
-
   .hint {
     color: var(--text-muted, #4a5a66);
     font-size: 12px;
@@ -98,6 +93,31 @@
     margin-top: 10px;
     font-size: 12px;
     color: var(--text-muted, #4a5a66);
+  }
+
+  .inline-form {
+    display: inline-block;
+    margin: 0;
+  }
+
+  .action-btn {
+    min-width: 92px;
+    padding: 6px 10px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+  }
+
+  .action-btn.deactivate {
+    border-color: #b00020;
+    color: #b00020;
+  }
+
+  .action-btn.activate {
+    border-color: #0a6b2d;
+    color: #0a6b2d;
   }
 
   @media (max-width: 900px) {
@@ -113,7 +133,6 @@
 
 <div class="users-layout">
 
-  {# left side: user list #}
   <div class="users-results">
     <table class="compact">
       <thead>
@@ -134,18 +153,30 @@
               <td>{{ "Yes" if u.is_active else "No" }}</td>
               <td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
               <td style="white-space: nowrap;">
-                {% if u.username != session.get("username") %}
+                {% if u.username == session.get("username") %}
+                  <span class="hint">You</span>
+                {% elif u.is_active %}
                   <form
                     method="post"
-                    action="{{ url_for('admin.delete_user', username=u.username) }}"
-                    class="inline"
-                    onsubmit="return confirm('Delete user {{ u.username }}?');"
+                    action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
+                    class="inline-form"
+                    onsubmit="return confirm('Deactivate user {{ u.username }}?');"
                   >
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="danger">Delete</button>
+                    <input type="hidden" name="active" value="0">
+                    <button type="submit" class="action-btn deactivate">Deactivate</button>
                   </form>
                 {% else %}
-                  <span class="hint">You</span>
+                  <form
+                    method="post"
+                    action="{{ url_for('admin.admin_set_user_active', user_id=u.id) }}"
+                    class="inline-form"
+                    onsubmit="return confirm('Activate user {{ u.username }}?');"
+                  >
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="active" value="1">
+                    <button type="submit" class="action-btn activate">Activate</button>
+                  </form>
                 {% endif %}
               </td>
             </tr>
@@ -159,7 +190,6 @@
     </table>
   </div>
 
-  {# right side: add user form #}
   <aside class="users-side">
     <div class="side-card">
       <h3>Add user</h3>
