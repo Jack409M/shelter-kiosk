@@ -16,12 +16,10 @@ def _require_staff_or_admin() -> bool:
 
 
 def _require_transfer_role() -> bool:
-    return session.get("role") in {"admin", "case_manager"}
-
+    return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 def _require_resident_create_role() -> bool:
-    return session.get("role") in {"admin", "case_manager"}
-
+    return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 @residents.get("/staff/residents")
 @require_login
