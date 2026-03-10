@@ -1,0 +1,188 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Admin Dashboard</h1>
+
+<style>
+  .dash-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .dash-card,
+  .dash-panel {
+    background: #f7fbff;
+    border: 1px solid #cfd9e3;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 10px 24px rgba(18, 38, 63, 0.08);
+  }
+
+  .dash-card h3,
+  .dash-panel h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #1f3550;
+  }
+
+  .dash-stat {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1f3550;
+    line-height: 1.1;
+  }
+
+  .dash-label {
+    margin-top: 6px;
+    color: #60758a;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .dash-panels {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 16px;
+  }
+
+  .quick-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .quick-links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 12px;
+    border: 1px solid #c7d3df;
+    border-radius: 10px;
+    background: #fff;
+    color: #1f3550;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .quick-links a:hover {
+    background: #f3f8fc;
+    border-color: #9db6cd;
+  }
+
+  table.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table.audit-table th,
+  table.audit-table td {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 1px solid #e3ebf3;
+    font-size: 13px;
+    vertical-align: top;
+  }
+
+  table.audit-table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #35516d;
+    letter-spacing: 0.03em;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: #eef8f1;
+    color: #1f6a3a;
+    border: 1px solid #cfe7d7;
+  }
+
+  .small-note {
+    color: #60758a;
+    font-size: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .dash-grid,
+    .dash-panels {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="dash-grid">
+  <div class="dash-card">
+    <h3>System Health</h3>
+    <div class="status-pill">Healthy</div>
+    <div class="dash-label">Initial dashboard status</div>
+  </div>
+
+  <div class="dash-card">
+    <h3>Total Users</h3>
+    <div class="dash-stat">{{ total_users }}</div>
+    <div class="dash-label">All staff accounts</div>
+  </div>
+
+  <div class="dash-card">
+    <h3>Active Users</h3>
+    <div class="dash-stat">{{ active_users }}</div>
+    <div class="dash-label">Currently enabled accounts</div>
+  </div>
+</div>
+
+<div class="dash-panels">
+  <div class="dash-panel">
+    <h3>Recent Audit Activity</h3>
+
+    {% if recent_audit %}
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in recent_audit %}
+            <tr>
+              <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
+              <td>{{ r.staff_username or "" }}</td>
+              <td>{{ r.action_type or "" }}</td>
+              <td>{{ r.action_details or "" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="small-note">No recent audit activity found.</div>
+    {% endif %}
+  </div>
+
+  <div class="dash-panel">
+    <h3>Quick Links</h3>
+    <div class="quick-links">
+      <a href="{{ url_for('admin.admin_users') }}">Users</a>
+      <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
+      <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+      <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+    </div>
+
+    <div style="margin-top:18px;">
+      <h3 style="margin-bottom:8px;">What comes next</h3>
+      <div class="small-note">
+        Next dashboard upgrades should include uptime, database connectivity, rate limit events, failed login monitoring, and alert triggers.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
