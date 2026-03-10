@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import io
+from collections import Counter
 
 from flask import Blueprint, Response, abort, current_app, g, redirect, render_template, request, session, url_for, flash
 
@@ -55,6 +56,44 @@ def _scalar_value(rows, default=0):
     if isinstance(row, (list, tuple)) and row:
         return row[0]
     return default
+
+
+def _extract_detail_value(details: str, key: str) -> str:
+    if not details:
+        return ""
+
+    prefix = f"{key}="
+    for line in details.splitlines():
+        line = line.strip()
+        if line.startswith(prefix):
+            return line[len(prefix):].strip()
+    return ""
+
+
+def _build_attack_intelligence(rows):
+    ip_counter = Counter()
+    username_counter = Counter()
+
+    for row in rows or []:
+        details = row.get("action_details", "") if isinstance(row, dict) else ""
+        ip = _extract_detail_value(details, "ip")
+        username = _extract_detail_value(details, "username")
+
+        if ip:
+            ip_counter[ip] += 1
+        if username:
+            username_counter[username] += 1
+
+    top_attacking_ips = [
+        {"ip": ip, "attempts": attempts}
+        for ip, attempts in ip_counter.most_common(10)
+    ]
+    targeted_usernames = [
+        {"username": username, "attempts": attempts}
+        for username, attempts in username_counter.most_common(10)
+    ]
+
+    return top_attacking_ips, targeted_usernames
 
 
 def _audit_where_from_request():
@@ -157,12 +196,13 @@ def admin_dashboard():
         )
     )
 
-    recent_failed_logins = db_fetchall(
+    failed_logins_24h = db_fetchall(
         """
         SELECT a.id, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
         WHERE a.action_type = 'login_failed'
+          AND NULLIF(a.created_at, '')::timestamptz >= NOW() - INTERVAL '24 hours'
         ORDER BY a.id DESC
         LIMIT %s
         """
@@ -172,11 +212,15 @@ def admin_dashboard():
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
         WHERE a.action_type = 'login_failed'
+          AND a.created_at >= datetime('now', '-24 hours')
         ORDER BY a.id DESC
         LIMIT ?
         """,
-        (10,),
+        (200,),
     )
+
+    recent_failed_logins = failed_logins_24h[:10]
+    top_attacking_ips, targeted_usernames = _build_attack_intelligence(failed_logins_24h)
 
     return render_template(
         "admin_dashboard.html",
@@ -185,6 +229,8 @@ def admin_dashboard():
         recent_audit=recent_audit,
         failed_login_count=failed_login_count,
         recent_failed_logins=recent_failed_logins,
+        top_attacking_ips=top_attacking_ips,
+        targeted_usernames=targeted_usernames,
         fmt_dt=fmt_dt,
         current_role=_current_role(),
     )
