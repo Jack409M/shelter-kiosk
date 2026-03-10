@@ -162,7 +162,7 @@ def admin_dashboard():
         SELECT a.id, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        WHERE a.action_type = 'login_failure'
+        action_type = 'login_failed'
         ORDER BY a.id DESC
         LIMIT %s
         """
@@ -171,7 +171,7 @@ def admin_dashboard():
         SELECT a.id, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        WHERE a.action_type = 'login_failure'
+        action_type = 'login_failed'
         ORDER BY a.id DESC
         LIMIT ?
         """,
