@@ -1,11 +1,8 @@
 """
 Public database schema entry point.
 
-This file is intentionally small.
-
-It does not define every table directly. Instead, it orchestrates
-focused schema modules so database logic stays maintainable and
-does not grow back into one giant monolith.
+This file orchestrates schema modules so database logic
+stays modular and maintainable.
 """
 
 from __future__ import annotations
@@ -13,6 +10,7 @@ from __future__ import annotations
 from flask import g
 
 from . import schema_bootstrap
+from . import schema_case_management
 from . import schema_comms
 from . import schema_core
 from . import schema_goals
@@ -24,11 +22,6 @@ from . import schema_shelters
 
 
 def _ensure_default_security_settings(kind: str) -> None:
-    """
-    Ensure one default security_settings row exists.
-
-    Safe to call repeatedly.
-    """
     from core.db import db_execute, db_fetchall
     from core.helpers import utcnow_iso
 
@@ -92,41 +85,47 @@ def _ensure_default_security_settings(kind: str) -> None:
 
 
 def init_db() -> None:
-    """
-    Initialize all database tables, follow up schema adjustments,
-    indexes, and bootstrap data.
-
-    Safe to call repeatedly on app startup.
-    """
     kind = g.get("db_kind")
     if not kind:
         raise RuntimeError("Database kind is not set on flask.g")
 
-    # 1. Base tables
+    # Core structure
     schema_core.ensure_tables(kind)
     schema_shelters.ensure_tables(kind)
     schema_people.ensure_tables(kind)
+
+    # Program participation
     schema_program.ensure_tables(kind)
+
+    # Outcomes tracking
     schema_outcomes.ensure_tables(kind)
+
+    # Goals and appointments
     schema_goals.ensure_tables(kind)
+
+    # Case manager interaction history
+    schema_case_management.ensure_tables(kind)
+
+    # Existing system modules
     schema_requests.ensure_tables(kind)
     schema_comms.ensure_tables(kind)
 
-    # 2. Security schema upgrades
+    # Security upgrades
     schema_core.ensure_columns_and_security_upgrades(kind)
     _ensure_default_security_settings(kind)
 
-    # 3. Follow up schema adjustments
+    # Schema adjustments
     schema_people.ensure_columns_and_constraints(kind)
     schema_requests.ensure_columns_and_constraints(kind)
 
-    # 4. Indexes
+    # Indexes
     schema_people.ensure_indexes()
     schema_program.ensure_indexes()
     schema_outcomes.ensure_indexes()
     schema_goals.ensure_indexes()
+    schema_case_management.ensure_indexes()
     schema_requests.ensure_indexes()
     schema_comms.ensure_indexes(kind)
 
-    # 5. Seed / bootstrap tasks
+    # Bootstrap data
     schema_bootstrap.ensure_all(kind)
