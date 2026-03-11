@@ -3,28 +3,44 @@
 
 {# ------------------------------------------------------------------
    Future extraction note
-   CSS and live refresh JavaScript have now been moved out.
 
-   Safest next front end refactor path:
+   This template has been reorganized to behave more like a command
+   console instead of a static report page.
 
-   1. Split the body into includes:
+   Current priority order:
+   1. Security posture
+   2. Live activity happening now
+   3. Headline metrics
+   4. Attack intelligence
+   5. Defensive posture
+   6. Historical and admin detail
+
+   Next safest front end refactor path:
+   1. Split body into includes:
       admin_dashboard_parts/header.html
-      admin_dashboard_parts/stats_grid.html
-      admin_dashboard_parts/audit_panel.html
-      admin_dashboard_parts/threat_analysis.html
-      admin_dashboard_parts/security_controls.html
-      admin_dashboard_parts/staff_sessions.html
-      admin_dashboard_parts/active_defenses.html
-      admin_dashboard_parts/security_incidents.html
       admin_dashboard_parts/live_activity.html
+      admin_dashboard_parts/stats_grid.html
+      admin_dashboard_parts/threat_analysis.html
+      admin_dashboard_parts/attacker_radar.html
+      admin_dashboard_parts/login_timeline.html
+      admin_dashboard_parts/active_defenses.html
+      admin_dashboard_parts/lockout_pressure.html
+      admin_dashboard_parts/security_incidents.html
+      admin_dashboard_parts/recent_audit.html
+      admin_dashboard_parts/staff_sessions.html
       admin_dashboard_parts/kiosk_events.html
+      admin_dashboard_parts/security_controls.html
+      admin_dashboard_parts/communications_control.html
       admin_dashboard_parts/quick_links.html
 
    2. Move security posture computation into Python so this template
       receives a precomputed dashboard status object.
 
-   3. Reduce remaining duplicated label logic by precomputing display
-      text server side for live payloads.
+   3. Precompute event labels and classes server side so Jinja and JS
+      stop carrying duplicate display rules.
+
+   4. Keep POST forms CSRF protected. Hidden tokens have been added
+      below so this page does not trigger false session expired errors.
 ------------------------------------------------------------------- #}
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
@@ -152,6 +168,20 @@
   <div id="security-banner-copy" class="security-banner-copy">{{ banner_copy }}</div>
 </div>
 
+{# ------------------------------------------------------------------
+   Live now belongs near the top because this is the operational feed.
+   Historical panels move lower.
+------------------------------------------------------------------- #}
+<div class="dash-panel" style="margin-bottom:20px;">
+  <h3>Live Activity</h3>
+  <div id="live-activity-list" class="live-feed">
+    <div class="empty-state">Waiting for live activity updates.</div>
+  </div>
+  <div class="subtle-note">
+    This panel refreshes automatically every 10 seconds while the dashboard is open.
+  </div>
+</div>
+
 <div class="dash-grid">
 
   <div class="dash-card">
@@ -206,53 +236,14 @@
 
 <div class="dash-panels">
 
-  <div class="dash-panel">
-    <h3>Recent Audit Activity</h3>
-
-    {% if recent_audit %}
-      <table class="audit-table">
-        <thead>
-          <tr>
-            <th style="width:24%;">Time</th>
-            <th style="width:14%;">User</th>
-            <th style="width:18%;">Action</th>
-            <th style="width:44%;">Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in recent_audit %}
-            <tr>
-              <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
-              <td>{{ r.staff_username or "" }}</td>
-              <td class="event-cell">
-                <span class="event-pill {{ event_class(r.action_type or '') }}">{{ pretty_label(r.action_type or "") }}</span>
-              </td>
-              <td class="detail-cell">{{ r.action_details or "" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <div class="empty-state">No audit activity.</div>
-    {% endif %}
-  </div>
-
   <div class="dash-stack">
 
     <div class="dash-panel">
       <h3>Threat Analysis</h3>
 
-      {% if security_level == "ACTIVE ATTACK" %}
-        <div class="status-pill danger"><span class="led red"></span>Threat Level ACTIVE ATTACK</div>
-      {% elif security_level == "ELEVATED" %}
-        <div class="status-pill warn"><span class="led yellow"></span>Threat Level ELEVATED</div>
-      {% else %}
-        <div class="status-pill"><span class="led green"></span>Threat Level LOW</div>
-      {% endif %}
-
       <div class="intel-grid">
         <div>
-          <h3 style="margin-top:18px;">Usernames Under Attack</h3>
+          <h3 style="margin-top:0;">Usernames Under Attack</h3>
           {% if targeted_usernames %}
             {% for row in targeted_usernames %}
               {% set width = (row.attempts * 8) if (row.attempts * 8) < 100 else 100 %}
@@ -310,153 +301,59 @@
     </div>
 
     <div class="dash-panel">
-      <h3>Security Controls</h3>
+      <h3>Login Timeline</h3>
 
-      <div class="security-controls">
-
-        <div class="security-control-card">
-          <div class="security-control-title">SMS System</div>
-          <div class="security-control-copy">
-            Controls outbound SMS alerts and messaging at the security layer.
-          </div>
-          <div class="security-control-actions">
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="field" value="sms_system_enabled">
-              <input type="hidden" name="value" value="1">
-              <button class="control-btn" type="submit">Enable SMS</button>
-            </form>
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="field" value="sms_system_enabled">
-              <input type="hidden" name="value" value="0">
-              <button class="control-btn danger" type="submit">Disable SMS</button>
-            </form>
-          </div>
-          <div class="subtle-note">
-            Current status:
-            {% if security_settings.sms_system_enabled %}
-              <span class="status-indicator enabled">Enabled</span>
-            {% else %}
-              <span class="status-indicator disabled">Disabled</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="security-control-card">
-          <div class="security-control-title">Kiosk Intake</div>
-          <div class="security-control-copy">
-            Stops resident kiosk activity without taking the admin console offline.
-          </div>
-          <div class="security-control-actions">
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="field" value="kiosk_intake_enabled">
-              <input type="hidden" name="value" value="1">
-              <button class="control-btn" type="submit">Enable Kiosk</button>
-            </form>
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="field" value="kiosk_intake_enabled">
-              <input type="hidden" name="value" value="0">
-              <button class="control-btn danger" type="submit">Disable Kiosk</button>
-            </form>
-          </div>
-          <div class="subtle-note">
-            Current status:
-            {% if security_settings.kiosk_intake_enabled %}
-              <span class="status-indicator enabled">Enabled</span>
-            {% else %}
-              <span class="status-indicator disabled">Disabled</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="security-control-card">
-          <div class="security-control-title">Admin Only Mode</div>
-          <div class="security-control-copy">
-            Restricts the platform to admin managed access posture.
-          </div>
-          <div class="security-control-actions">
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="field" value="admin_login_only_mode">
-              <input type="hidden" name="value" value="1">
-              <button class="control-btn warn" type="submit">Enable Admin Only</button>
-            </form>
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="field" value="admin_login_only_mode">
-              <input type="hidden" name="value" value="0">
-              <button class="control-btn" type="submit">Disable Admin Only</button>
-            </form>
-          </div>
-          <div class="subtle-note">
-            Current status:
-            {% if security_settings.admin_login_only_mode %}
-              <span class="status-indicator enabled">Enabled</span>
-            {% else %}
-              <span class="status-indicator disabled">Disabled</span>
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="security-control-card">
-          <div class="security-control-title">Security Alerts</div>
-          <div class="security-control-copy">
-            Controls whether threshold events generate outbound security alerts.
-          </div>
-          <div class="security-control-actions">
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="field" value="security_alerts_enabled">
-              <input type="hidden" name="value" value="1">
-              <button class="control-btn" type="submit">Enable Alerts</button>
-            </form>
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="field" value="security_alerts_enabled">
-              <input type="hidden" name="value" value="0">
-              <button class="control-btn danger" type="submit">Disable Alerts</button>
-            </form>
-          </div>
-          <div class="subtle-note">
-            Current status:
-            {% if security_settings.security_alerts_enabled %}
-              <span class="status-indicator enabled">Enabled</span>
-            {% else %}
-              <span class="status-indicator disabled">Disabled</span>
-            {% endif %}
-          </div>
-        </div>
-
-      </div>
+      {% if recent_failed_logins %}
+        <ul class="timeline">
+          {% for row in recent_failed_logins %}
+            <li>
+              <div class="timeline-time">{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</div>
+              <div class="timeline-title">
+                <span class="event-pill {{ event_class(row.action_type or 'login_failed') }}">{{ pretty_label(row.action_type or "login_failed") }}</span>
+              </div>
+              <div class="detail-cell">{{ row.action_details or "" }}</div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="empty-state">No failed login timeline events in the last 24 hours.</div>
+      {% endif %}
     </div>
 
     <div class="dash-panel">
-      <h3>Active Staff Sessions</h3>
+      <h3>Recent Audit Activity</h3>
 
-      {% if recent_staff_sessions %}
+      {% if recent_audit %}
         <table class="audit-table">
           <thead>
             <tr>
-              <th style="width:28%;">User</th>
-              <th style="width:22%;">Status</th>
-              <th style="width:25%;">Last Action</th>
-              <th style="width:25%;">Last Seen</th>
+              <th style="width:24%;">Time</th>
+              <th style="width:14%;">User</th>
+              <th style="width:18%;">Action</th>
+              <th style="width:44%;">Details</th>
             </tr>
           </thead>
-          <tbody id="active-staff-session-body">
-            {% for row in recent_staff_sessions %}
+          <tbody>
+            {% for r in recent_audit %}
               <tr>
-                <td class="event-cell">{{ row.username }}</td>
-                <td><span class="event-pill success">Active</span></td>
-                <td class="event-cell">{{ pretty_label(row.last_action or "login") }}</td>
-                <td>{{ fmt_dt(row.last_seen) if fmt_dt else row.last_seen }}</td>
+                <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
+                <td>{{ r.staff_username or "" }}</td>
+                <td class="event-cell">
+                  <span class="event-pill {{ event_class(r.action_type or '') }}">{{ pretty_label(r.action_type or "") }}</span>
+                </td>
+                <td class="detail-cell">{{ r.action_details or "" }}</td>
               </tr>
             {% endfor %}
           </tbody>
         </table>
       {% else %}
-        <div id="active-staff-session-body" class="empty-state">No recent active staff sessions detected.</div>
+        <div class="empty-state">No audit activity.</div>
       {% endif %}
-
-      <div class="subtle-note">
-        This panel is based on recent login and logout activity, not a dedicated server side session registry.
-      </div>
     </div>
+
+  </div>
+
+  <div class="dash-stack">
 
     <div class="dash-panel">
       <h3>Active Defenses</h3>
@@ -558,26 +455,6 @@
     </div>
 
     <div class="dash-panel">
-      <h3>Login Timeline</h3>
-
-      {% if recent_failed_logins %}
-        <ul class="timeline">
-          {% for row in recent_failed_logins %}
-            <li>
-              <div class="timeline-time">{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</div>
-              <div class="timeline-title">
-                <span class="event-pill {{ event_class(row.action_type or 'login_failed') }}">{{ pretty_label(row.action_type or "login_failed") }}</span>
-              </div>
-              <div class="detail-cell">{{ row.action_details or "" }}</div>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <div class="empty-state">No failed login timeline events in the last 24 hours.</div>
-      {% endif %}
-    </div>
-
-    <div class="dash-panel">
       <h3>Security Incidents</h3>
 
       {% if recent_security_incidents %}
@@ -607,12 +484,35 @@
     </div>
 
     <div class="dash-panel">
-      <h3>Live Activity</h3>
-      <div id="live-activity-list" class="live-feed">
-        <div class="empty-state">Waiting for live activity updates.</div>
-      </div>
+      <h3>Active Staff Sessions</h3>
+
+      {% if recent_staff_sessions %}
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th style="width:28%;">User</th>
+              <th style="width:22%;">Status</th>
+              <th style="width:25%;">Last Action</th>
+              <th style="width:25%;">Last Seen</th>
+            </tr>
+          </thead>
+          <tbody id="active-staff-session-body">
+            {% for row in recent_staff_sessions %}
+              <tr>
+                <td class="event-cell">{{ row.username }}</td>
+                <td><span class="event-pill success">Active</span></td>
+                <td class="event-cell">{{ pretty_label(row.last_action or "login") }}</td>
+                <td>{{ fmt_dt(row.last_seen) if fmt_dt else row.last_seen }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div id="active-staff-session-body" class="empty-state">No recent active staff sessions detected.</div>
+      {% endif %}
+
       <div class="subtle-note">
-        This panel refreshes automatically every 10 seconds while the dashboard is open.
+        This panel is based on recent login and logout activity, not a dedicated server side session registry.
       </div>
     </div>
 
@@ -643,6 +543,130 @@
       {% else %}
         <div id="kiosk-events-body" class="empty-state">No kiosk security activity recorded.</div>
       {% endif %}
+    </div>
+
+    <div class="dash-panel">
+      <h3>Security Controls</h3>
+
+      <div class="security-controls">
+
+        <div class="security-control-card">
+          <div class="security-control-title">SMS System</div>
+          <div class="security-control-copy">
+            Controls outbound SMS alerts and messaging at the security layer.
+          </div>
+          <div class="security-control-actions">
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="field" value="sms_system_enabled">
+              <input type="hidden" name="value" value="1">
+              <button class="control-btn" type="submit">Enable SMS</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="field" value="sms_system_enabled">
+              <input type="hidden" name="value" value="0">
+              <button class="control-btn danger" type="submit">Disable SMS</button>
+            </form>
+          </div>
+          <div class="subtle-note">
+            Current status:
+            {% if security_settings.sms_system_enabled %}
+              <span class="status-indicator enabled">Enabled</span>
+            {% else %}
+              <span class="status-indicator disabled">Disabled</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="security-control-card">
+          <div class="security-control-title">Kiosk Intake</div>
+          <div class="security-control-copy">
+            Stops resident kiosk activity without taking the admin console offline.
+          </div>
+          <div class="security-control-actions">
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="field" value="kiosk_intake_enabled">
+              <input type="hidden" name="value" value="1">
+              <button class="control-btn" type="submit">Enable Kiosk</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="field" value="kiosk_intake_enabled">
+              <input type="hidden" name="value" value="0">
+              <button class="control-btn danger" type="submit">Disable Kiosk</button>
+            </form>
+          </div>
+          <div class="subtle-note">
+            Current status:
+            {% if security_settings.kiosk_intake_enabled %}
+              <span class="status-indicator enabled">Enabled</span>
+            {% else %}
+              <span class="status-indicator disabled">Disabled</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="security-control-card">
+          <div class="security-control-title">Admin Only Mode</div>
+          <div class="security-control-copy">
+            Restricts the platform to admin managed access posture.
+          </div>
+          <div class="security-control-actions">
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="field" value="admin_login_only_mode">
+              <input type="hidden" name="value" value="1">
+              <button class="control-btn warn" type="submit">Enable Admin Only</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="field" value="admin_login_only_mode">
+              <input type="hidden" name="value" value="0">
+              <button class="control-btn" type="submit">Disable Admin Only</button>
+            </form>
+          </div>
+          <div class="subtle-note">
+            Current status:
+            {% if security_settings.admin_login_only_mode %}
+              <span class="status-indicator enabled">Enabled</span>
+            {% else %}
+              <span class="status-indicator disabled">Disabled</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="security-control-card">
+          <div class="security-control-title">Security Alerts</div>
+          <div class="security-control-copy">
+            Controls whether threshold events generate outbound security alerts.
+          </div>
+          <div class="security-control-actions">
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="field" value="security_alerts_enabled">
+              <input type="hidden" name="value" value="1">
+              <button class="control-btn" type="submit">Enable Alerts</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="field" value="security_alerts_enabled">
+              <input type="hidden" name="value" value="0">
+              <button class="control-btn danger" type="submit">Disable Alerts</button>
+            </form>
+          </div>
+          <div class="subtle-note">
+            Current status:
+            {% if security_settings.security_alerts_enabled %}
+              <span class="status-indicator enabled">Enabled</span>
+            {% else %}
+              <span class="status-indicator disabled">Disabled</span>
+            {% endif %}
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <div class="dash-panel">
