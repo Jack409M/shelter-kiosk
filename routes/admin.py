@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import csv
 import io
-from collections import Counter
+from collections import Counter, deque
 
-from flask import Blueprint, Response, abort, current_app, g, redirect, render_template, request, session, url_for, flash
+from flask import Blueprint, Response, abort, current_app, g, jsonify, redirect, render_template, request, session, url_for, flash
 
 from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt
 from core.rate_limit import get_banned_ips_snapshot, get_locked_keys_snapshot, get_rate_limit_snapshot
+from core.sms_sender import send_sms
 
 
 admin = Blueprint("admin", __name__)
@@ -72,6 +73,31 @@ def _scalar_value(rows, default=0):
         return row[0]
 
     return default
+
+
+def _row_value(row, key: str, default=""):
+    """Read a value from either a dict row or tuple like row."""
+    if isinstance(row, dict):
+        return row.get(key, default)
+
+    try:
+        return row[key]
+    except Exception:
+        return default
+
+
+def _serialize_rows(rows, fields: list[str]) -> list[dict]:
+    """Convert mixed DB rows into JSON safe dictionaries."""
+    out = []
+
+    for row in rows or []:
+        item = {}
+        for field in fields:
+            value = _row_value(row, field, "")
+            item[field] = "" if value is None else value
+        out.append(item)
+
+    return out
 
 
 def _extract_detail_value(details: str, key: str) -> str:
@@ -157,76 +183,181 @@ def _build_locked_username_snapshot():
     return rows
 
 
-def _audit_where_from_request():
+def _build_recent_staff_sessions(limit: int = 12) -> list[dict]:
     """
-    Build dynamic WHERE filters for the audit CSV export endpoint.
+    Approximate active staff sessions from recent login and logout audit events.
 
-    Supports filtering by:
-    - shelter
-    - entity_type
-    - action_type
-    - staff_user_id
-    - free text query
+    This is activity based, not a true server side session store.
+    A user is treated as active when the latest auth event seen is login.
     """
     kind = g.get("db_kind")
-    where = []
-    params = []
 
-    def add_eq(field, key):
-        value = (request.args.get(key) or "").strip()
-        if value:
-            where.append(f"{field} = " + ("%s" if kind == "pg" else "?"))
-            params.append(value)
+    rows = db_fetchall(
+        """
+        SELECT
+            a.action_type,
+            a.action_details,
+            a.created_at,
+            COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        WHERE a.action_type IN ('login', 'logout', 'profile_update', 'reset_password', 'set_role', 'set_active')
+          AND NULLIF(a.created_at, '')::timestamptz >= NOW() - INTERVAL '12 hours'
+        ORDER BY a.id DESC
+        LIMIT %s
+        """
+        if kind == "pg"
+        else """
+        SELECT
+            a.action_type,
+            a.action_details,
+            a.created_at,
+            COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        WHERE a.action_type IN ('login', 'logout', 'profile_update', 'reset_password', 'set_role', 'set_active')
+          AND a.created_at >= datetime('now', '-12 hours')
+        ORDER BY a.id DESC
+        LIMIT ?
+        """,
+        (250,),
+    )
 
-    add_eq("a.shelter", "shelter")
-    add_eq("a.entity_type", "entity_type")
-    add_eq("a.action_type", "action_type")
+    sessions = {}
 
-    staff_user_id = (request.args.get("staff_user_id") or "").strip()
-    if staff_user_id.isdigit():
-        where.append("a.staff_user_id = " + ("%s" if kind == "pg" else "?"))
-        params.append(int(staff_user_id))
+    for row in rows or []:
+        username = (_row_value(row, "staff_username", "") or "").strip()
+        if not username:
+            details = _row_value(row, "action_details", "") or ""
+            username = _extract_detail_value(details, "username")
 
-    q = (request.args.get("q") or "").strip()
-    if q:
-        like_op = "ILIKE" if kind == "pg" else "LIKE"
-        ph = "%s" if kind == "pg" else "?"
-        where.append(
-            "("
-            f"CAST(a.id AS TEXT) {like_op} {ph} OR "
-            f"COALESCE(a.action_details, '') {like_op} {ph} OR "
-            f"COALESCE(a.action_type, '') {like_op} {ph} OR "
-            f"COALESCE(a.entity_type, '') {like_op} {ph} OR "
-            f"COALESCE(su.username, '') {like_op} {ph}"
-            ")"
+        if not username or username in sessions:
+            continue
+
+        action_type = (_row_value(row, "action_type", "") or "").strip()
+        created_at = _row_value(row, "created_at", "") or ""
+        details = _row_value(row, "action_details", "") or ""
+
+        sessions[username] = {
+            "username": username,
+            "status": "active" if action_type == "login" else "ended",
+            "last_seen": created_at,
+            "last_action": action_type,
+            "details": details,
+        }
+
+    active_rows = [row for row in sessions.values() if row["status"] == "active"]
+    active_rows.sort(key=lambda item: str(item.get("last_seen", "")), reverse=True)
+    return active_rows[:limit]
+
+
+def _security_alert_cooldown_hit(key: str, window_seconds: int) -> bool:
+    """
+    Return True when this alert key was already fired inside the cooldown window.
+
+    PostgreSQL uses rate_limit_events.
+    SQLite uses in memory buckets.
+    """
+    import time
+
+    if g.get("db_kind") == "pg":
+        db_execute("INSERT INTO rate_limit_events (k) VALUES (%s)", (key,))
+        rows = db_fetchall(
+            """
+            SELECT COUNT(1) AS c
+            FROM rate_limit_events
+            WHERE k = %s
+              AND created_at >= NOW() - (%s * INTERVAL '1 second')
+            """,
+            (key, window_seconds),
         )
-        pattern = f"%{q}%"
-        params.extend([pattern, pattern, pattern, pattern, pattern])
+        count = int((rows[0]["c"] if isinstance(rows[0], dict) else rows[0][0])) if rows else 0
+        return count > 1
 
-    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
-    return where_sql, tuple(params)
+    store = current_app.config.setdefault("_SECURITY_ALERT_BUCKETS_MEM", {})
+    bucket = store.get(key)
+    now = time.time()
+
+    if bucket is None:
+        bucket = deque()
+        store[key] = bucket
+
+    cutoff = now - window_seconds
+    while bucket and bucket[0] < cutoff:
+        bucket.popleft()
+
+    if bucket:
+        return True
+
+    bucket.append(now)
+    return False
 
 
-@admin.route("/staff/admin/dashboard", methods=["GET"])
-@require_login
-@require_shelter
-def admin_dashboard():
-    """
-    Main admin dashboard.
+def _load_admin_alert_numbers() -> list[str]:
+    """Return all active admin mobile phone numbers."""
+    try:
+        rows = db_fetchall(
+            "SELECT mobile_phone FROM staff_users WHERE role = %s AND is_active = %s AND COALESCE(mobile_phone, '') <> ''"
+            if g.get("db_kind") == "pg"
+            else "SELECT mobile_phone FROM staff_users WHERE role = ? AND is_active = ? AND COALESCE(mobile_phone, '') <> ''",
+            ("admin", True if g.get("db_kind") == "pg" else 1),
+        )
+    except Exception:
+        return []
 
-    Displays:
-    - total users
-    - active users
-    - recent audit activity
-    - failed login monitoring
-    - attack intelligence
-    - active defenses
-    - kiosk security activity
-    """
-    if not _require_admin():
-        flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    numbers = []
+    for row in rows or []:
+        phone = (_row_value(row, "mobile_phone", "") or "").strip()
+        if phone and phone not in numbers:
+            numbers.append(phone)
 
+    return numbers
+
+
+def _maybe_send_security_alerts(*, failed_login_count: int, top_attacking_ips: list[dict], targeted_usernames: list[dict], banned_ips: list[dict], locked_usernames: list[dict]) -> None:
+    """Send throttled SMS alerts for serious security conditions."""
+    numbers = _load_admin_alert_numbers()
+    if not numbers:
+        return
+
+    alert_key = ""
+    alert_message = ""
+
+    if banned_ips:
+        row = banned_ips[0]
+        alert_key = f"security_alert:banned_ip:{row.get('ip', 'unknown')}"
+        alert_message = f"DWC security alert. An IP is banned right now. IP {row.get('ip', 'unknown')}. Review the admin dashboard immediately."
+    elif locked_usernames:
+        row = locked_usernames[0]
+        alert_key = f"security_alert:locked_user:{row.get('username', 'unknown')}"
+        alert_message = f"DWC security alert. A staff username is locked right now. Username {row.get('username', 'unknown')}. Review the admin dashboard immediately."
+    elif top_attacking_ips and int(top_attacking_ips[0].get("attempts", 0)) >= 10:
+        row = top_attacking_ips[0]
+        alert_key = f"security_alert:attacker_ip:{row.get('ip', 'unknown')}"
+        alert_message = f"DWC security alert. High volume login failures detected from IP {row.get('ip', 'unknown')} with {row.get('attempts', 0)} attempts in the last 24 hours."
+    elif targeted_usernames and int(targeted_usernames[0].get("attempts", 0)) >= 10:
+        row = targeted_usernames[0]
+        alert_key = f"security_alert:targeted_user:{row.get('username', 'unknown')}"
+        alert_message = f"DWC security alert. Username {row.get('username', 'unknown')} has been targeted {row.get('attempts', 0)} times in the last 24 hours."
+    elif failed_login_count >= 15:
+        alert_key = "security_alert:failed_logins_24h"
+        alert_message = f"DWC security alert. Failed logins reached {failed_login_count} in the last 24 hours. Review the admin dashboard."
+
+    if not alert_key or not alert_message:
+        return
+
+    if _security_alert_cooldown_hit(alert_key, 1800):
+        return
+
+    for number in numbers:
+        try:
+            send_sms(number, alert_message)
+        except Exception:
+            continue
+
+
+def _build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
+    """Build a single shared payload for the dashboard page and live JSON feed."""
     is_pg = bool(current_app.config.get("DATABASE_URL"))
 
     total_users = _scalar_value(
@@ -330,6 +461,7 @@ def admin_dashboard():
     banned_ips = get_banned_ips_snapshot()
     locked_usernames = _build_locked_username_snapshot()
     rate_limit_activity = get_rate_limit_snapshot()
+    recent_staff_sessions = _build_recent_staff_sessions()
 
     kiosk_security_events = db_fetchall(
         """
@@ -350,22 +482,148 @@ def admin_dashboard():
         (10,),
     )
 
+    if send_alerts:
+        _maybe_send_security_alerts(
+            failed_login_count=int(failed_login_count or 0),
+            top_attacking_ips=top_attacking_ips,
+            targeted_usernames=targeted_usernames,
+            banned_ips=banned_ips,
+            locked_usernames=locked_usernames,
+        )
+
+    return {
+        "total_users": int(total_users or 0),
+        "active_users": int(active_users or 0),
+        "recent_audit": recent_audit,
+        "failed_login_count": int(failed_login_count or 0),
+        "recent_failed_logins": recent_failed_logins,
+        "top_attacking_ips": top_attacking_ips,
+        "targeted_usernames": targeted_usernames,
+        "banned_ips": banned_ips,
+        "locked_usernames": locked_usernames,
+        "rate_limit_activity": rate_limit_activity,
+        "kiosk_security_events": kiosk_security_events,
+        "recent_staff_sessions": recent_staff_sessions,
+        "live_payload": {
+            "failed_login_count": int(failed_login_count or 0),
+            "recent_audit": _serialize_rows(recent_audit, ["created_at", "staff_username", "action_type", "action_details"]),
+            "recent_failed_logins": _serialize_rows(recent_failed_logins, ["created_at", "action_type", "action_details"]),
+            "kiosk_security_events": _serialize_rows(kiosk_security_events, ["created_at", "action_type", "action_details"]),
+            "recent_staff_sessions": recent_staff_sessions,
+            "top_attacking_ips": top_attacking_ips,
+            "targeted_usernames": targeted_usernames,
+            "banned_ips": banned_ips,
+            "locked_usernames": locked_usernames,
+            "rate_limit_activity": rate_limit_activity,
+        },
+    }
+
+
+def _audit_where_from_request():
+    """
+    Build dynamic WHERE filters for the audit CSV export endpoint.
+
+    Supports filtering by:
+    - shelter
+    - entity_type
+    - action_type
+    - staff_user_id
+    - free text query
+    """
+    kind = g.get("db_kind")
+    where = []
+    params = []
+
+    def add_eq(field, key):
+        value = (request.args.get(key) or "").strip()
+        if value:
+            where.append(f"{field} = " + ("%s" if kind == "pg" else "?"))
+            params.append(value)
+
+    add_eq("a.shelter", "shelter")
+    add_eq("a.entity_type", "entity_type")
+    add_eq("a.action_type", "action_type")
+
+    staff_user_id = (request.args.get("staff_user_id") or "").strip()
+    if staff_user_id.isdigit():
+        where.append("a.staff_user_id = " + ("%s" if kind == "pg" else "?"))
+        params.append(int(staff_user_id))
+
+    q = (request.args.get("q") or "").strip()
+    if q:
+        like_op = "ILIKE" if kind == "pg" else "LIKE"
+        ph = "%s" if kind == "pg" else "?"
+        where.append(
+            "("
+            f"CAST(a.id AS TEXT) {like_op} {ph} OR "
+            f"COALESCE(a.action_details, '') {like_op} {ph} OR "
+            f"COALESCE(a.action_type, '') {like_op} {ph} OR "
+            f"COALESCE(a.entity_type, '') {like_op} {ph} OR "
+            f"COALESCE(su.username, '') {like_op} {ph}"
+            ")"
+        )
+        pattern = f"%{q}%"
+        params.extend([pattern, pattern, pattern, pattern, pattern])
+
+    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+    return where_sql, tuple(params)
+
+
+@admin.route("/staff/admin/dashboard", methods=["GET"])
+@require_login
+@require_shelter
+def admin_dashboard():
+    """
+    Main admin dashboard.
+
+    Displays:
+    - total users
+    - active users
+    - recent audit activity
+    - failed login monitoring
+    - attack intelligence
+    - active defenses
+    - kiosk security activity
+    - recent staff access monitor
+    """
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    payload = _build_admin_dashboard_payload(send_alerts=True)
+
     return render_template(
         "admin_dashboard.html",
-        total_users=total_users,
-        active_users=active_users,
-        recent_audit=recent_audit,
-        failed_login_count=failed_login_count,
-        recent_failed_logins=recent_failed_logins,
-        top_attacking_ips=top_attacking_ips,
-        targeted_usernames=targeted_usernames,
-        banned_ips=banned_ips,
-        locked_usernames=locked_usernames,
-        rate_limit_activity=rate_limit_activity,
-        kiosk_security_events=kiosk_security_events,
+        total_users=payload["total_users"],
+        active_users=payload["active_users"],
+        recent_audit=payload["recent_audit"],
+        failed_login_count=payload["failed_login_count"],
+        recent_failed_logins=payload["recent_failed_logins"],
+        top_attacking_ips=payload["top_attacking_ips"],
+        targeted_usernames=payload["targeted_usernames"],
+        banned_ips=payload["banned_ips"],
+        locked_usernames=payload["locked_usernames"],
+        rate_limit_activity=payload["rate_limit_activity"],
+        kiosk_security_events=payload["kiosk_security_events"],
+        recent_staff_sessions=payload["recent_staff_sessions"],
+        dashboard_live_url=url_for("admin.admin_dashboard_live"),
         fmt_dt=fmt_dt,
         current_role=_current_role(),
     )
+
+
+@admin.route("/staff/admin/dashboard/live", methods=["GET"])
+@require_login
+@require_shelter
+def admin_dashboard_live():
+    """Return live dashboard JSON."""
+    if not _require_admin():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    payload = _build_admin_dashboard_payload(send_alerts=True)
+    live_payload = payload["live_payload"]
+    live_payload["ok"] = True
+    return jsonify(live_payload)
 
 
 @admin.route("/staff/admin/users", methods=["GET"])
@@ -787,3 +1045,4 @@ def recreate_schema():
         "Dropped and recreated tables",
     )
     return "Schema recreated."
+    
