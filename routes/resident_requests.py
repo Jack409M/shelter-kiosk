@@ -9,16 +9,24 @@ from core.audit import log_action
 from core.db import db_execute, db_fetchone, get_db
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
+from routes.resident_parts.helpers import parse_dt as _parse_dt
 
 
 resident_requests = Blueprint("resident_requests", __name__)
 
 
-def _parse_dt(dt_str: str) -> datetime:
-    """
-    Parse an ISO formatted datetime string from form input.
-    """
-    return datetime.fromisoformat(dt_str)
+# Future extraction note
+# This file is still acting as a mixed workflow route file.
+# The next clean split should mirror the admin refactor:
+#
+# routes/resident_parts/signin.py
+# routes/resident_parts/leave.py
+# routes/resident_parts/transport.py
+# routes/resident_parts/consent.py
+#
+# Additional app level imports like init_db, require_resident, and
+# get_all_shelters should eventually stop coming from app.py and move
+# into dedicated core modules or resident service helpers.
 
 
 def _client_ip() -> str:
@@ -31,6 +39,8 @@ def _client_ip() -> str:
 
 @resident_requests.route("/resident", methods=["GET", "POST"])
 def resident_signin():
+    # Future extraction note
+    # Move signin and logout together into resident_parts/signin.py.
     from app import init_db
     from core.residents import resident_session_start
 
@@ -91,11 +101,14 @@ def resident_logout():
         "sms_opt_in",
     ]:
         session.pop(k, None)
+
     return redirect(url_for("resident_requests.resident_signin"))
 
 
 @resident_requests.route("/leave", methods=["GET", "POST"])
 def resident_leave():
+    # Future extraction note
+    # Move this full leave workflow into resident_parts/leave.py.
     from app import init_db, require_resident
 
     @require_resident
@@ -110,51 +123,32 @@ def resident_leave():
         resident_identifier = session.get("resident_identifier") or ""
         first = session.get("resident_first") or ""
         last = session.get("resident_last") or ""
+        resident_phone = session.get("resident_phone") or ""
 
         ip = _client_ip()
         rl_key = f"resident_leave:{ip}:{resident_identifier or 'unknown'}"
         if is_rate_limited(rl_key, limit=6, window_seconds=900):
             flash("Too many leave submissions. Please wait a few minutes and try again.", "error")
-            return render_template(
-                "resident_leave.html",
-                shelter=shelter,
-            ), 429
+            return render_template("resident_leave.html", shelter=shelter), 429
 
-        resident_phone = (request.form.get("resident_phone") or "").strip()
-        if resident_phone:
-            db_execute(
-                "UPDATE residents SET phone = %s WHERE shelter = %s AND resident_identifier = %s"
-                if g.get("db_kind") == "pg"
-                else "UPDATE residents SET phone = ? WHERE shelter = ? AND resident_identifier = ?",
-                (resident_phone, shelter, resident_identifier),
-            )
-            session["resident_phone"] = resident_phone
-
+        leave_date_raw = (request.form.get("leave_date") or "").strip()
+        return_date_raw = (request.form.get("return_date") or "").strip()
         destination = (request.form.get("destination") or "").strip()
         reason = (request.form.get("reason") or "").strip()
         resident_notes = (request.form.get("resident_notes") or "").strip()
-        leave_at_raw = (request.form.get("leave_at") or "").strip()
-        return_at_raw = (request.form.get("return_at") or "").strip()
-        agreed = request.form.get("agreed") == "on"
 
         errors: list[str] = []
 
-        if not agreed:
-            errors.append("You must accept the agreement.")
-
-        if not first or not last or not destination or not leave_at_raw or not return_at_raw:
+        if not first or not last or not leave_date_raw or not return_date_raw or not destination:
             errors.append("Complete all required fields.")
 
         try:
-            leave_local_date = datetime.fromisoformat(leave_at_raw).date()
-            return_local_date = datetime.fromisoformat(return_at_raw).date()
-
-            if return_local_date < leave_local_date:
-                errors.append("Return must be after leave.")
+            leave_local_date = datetime.strptime(leave_date_raw, "%Y-%m-%d").date()
+            return_local_date = datetime.strptime(return_date_raw, "%Y-%m-%d").date()
 
             leave_local_dt = datetime.combine(
                 leave_local_date,
-                datetime.min.time(),
+                datetime.strptime("08:00", "%H:%M").time(),
             ).replace(tzinfo=ZoneInfo("America/Chicago"))
 
             return_local_dt = datetime.combine(
@@ -231,6 +225,8 @@ def resident_leave():
 
 @resident_requests.route("/transport", methods=["GET", "POST"])
 def resident_transport():
+    # Future extraction note
+    # Move this full transport workflow into resident_parts/transport.py.
     from app import init_db, require_resident
 
     @require_resident
@@ -345,6 +341,9 @@ def sms_consent_public_alias_slash():
 
 @resident_requests.get("/resident/sms-consent")
 def sms_consent():
+    # Future extraction note
+    # Move public SMS consent info and resident consent flow together into
+    # resident_parts/consent.py.
     return """
     <html>
         <head>
@@ -422,57 +421,40 @@ def resident_consent():
         db_execute(
             """
             UPDATE residents
-            SET sms_opt_in = %s,
-                sms_opt_in_at = %s,
-                sms_opt_in_source = %s,
-                sms_opt_out_at = NULL,
-                sms_opt_out_source = NULL
-            WHERE id = %s AND shelter = %s
+            SET sms_opt_in = %s, sms_opt_in_at = %s
+            WHERE id = %s
             """
             if kind == "pg"
             else """
             UPDATE residents
-            SET sms_opt_in = ?,
-                sms_opt_in_at = ?,
-                sms_opt_in_source = ?,
-                sms_opt_out_at = NULL,
-                sms_opt_out_source = NULL
-            WHERE id = ? AND shelter = ?
+            SET sms_opt_in = ?, sms_opt_in_at = ?
+            WHERE id = ?
             """,
-            (True if kind == "pg" else 1, now, "resident_kiosk_web_form", resident_id, shelter),
+            (True if kind == "pg" else 1, now, resident_id),
         )
 
-    else:
-        session["sms_consent_done"] = True
-        session["sms_opt_in"] = False
+        log_action("resident", resident_id, shelter, None, "sms_opt_in", "Resident accepted SMS consent")
+        flash("Thank you. SMS consent recorded.", "ok")
+        return redirect(next_url)
 
-        db_execute(
-            """
-            UPDATE residents
-            SET sms_opt_in = %s,
-                sms_opt_out_at = %s,
-                sms_opt_out_source = %s
-            WHERE id = %s AND shelter = %s
-            """
-            if kind == "pg"
-            else """
-            UPDATE residents
-            SET sms_opt_in = ?,
-                sms_opt_out_at = ?,
-                sms_opt_out_source = ?
-            WHERE id = ? AND shelter = ?
-            """,
-            (False if kind == "pg" else 0, now, "resident_kiosk_web_form_decline", resident_id, shelter),
-        )
+    session["sms_consent_done"] = True
+    session["sms_opt_in"] = False
 
+    db_execute(
+        """
+        UPDATE residents
+        SET sms_opt_in = %s, sms_opt_in_at = NULL
+        WHERE id = %s
+        """
+        if kind == "pg"
+        else """
+        UPDATE residents
+        SET sms_opt_in = ?, sms_opt_in_at = NULL
+        WHERE id = ?
+        """,
+        (False if kind == "pg" else 0, resident_id),
+    )
+
+    log_action("resident", resident_id, shelter, None, "sms_opt_out", "Resident declined SMS consent")
+    flash("Preference saved.", "ok")
     return redirect(next_url)
-
-
-@resident_requests.get("/resident/login")
-def resident_login_alias():
-    return redirect("/resident", code=302)
-
-
-@resident_requests.get("/resident/login/")
-def resident_login_alias_slash():
-    return redirect("/resident", code=301)
