@@ -1444,4 +1444,57 @@ h1{
 })();
 </script>
 
+<script>
+
+function refreshDashboard(){
+
+  fetch("{{ dashboard_live_url }}")
+    .then(resp => resp.json())
+    .then(data => {
+
+      if(!data.ok){ return }
+
+      // failed login counter
+      const failed = document.querySelectorAll(".mini-metric-value")[0]
+      if(failed){ failed.textContent = data.failed_login_count }
+
+      // update attack radar
+      const radar = document.querySelector(".radar-list")
+      if(radar && data.top_attacking_ips){
+
+        radar.innerHTML = ""
+
+        data.top_attacking_ips.forEach(row => {
+
+          const div = document.createElement("div")
+          div.className = "radar-row"
+
+          const width = Math.min(row.attempts * 8,100)
+
+          div.innerHTML = `
+            <div class="radar-top">
+              <div class="event-cell">${row.ip}</div>
+              <div>${row.attempts} attempts</div>
+            </div>
+            <div class="bar">
+              <span style="width:${width}%"></span>
+            </div>
+          `
+
+          radar.appendChild(div)
+
+        })
+
+      }
+
+    })
+    .catch(()=>{})
+
+}
+
+// refresh every 10 seconds
+setInterval(refreshDashboard,10000)
+
+</script>
+
 {% endblock %}  does this look right? 
