@@ -10,7 +10,7 @@ from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt
-from core.rate_limit import get_banned_ips_snapshot, get_rate_limit_snapshot
+from core.rate_limit import get_banned_ips_snapshot, get_locked_keys_snapshot, get_rate_limit_snapshot
 
 
 admin = Blueprint("admin", __name__)
@@ -95,6 +95,26 @@ def _build_attack_intelligence(rows):
     ]
 
     return top_attacking_ips, targeted_usernames
+
+
+def _build_locked_username_snapshot():
+    rows = []
+    for row in get_locked_keys_snapshot():
+        key = str(row.get("key", ""))
+        prefix = "staff_login_username_lock:"
+        if not key.startswith(prefix):
+            continue
+
+        rows.append(
+            {
+                "username": key[len(prefix):],
+                "seconds_remaining": row.get("seconds_remaining", 0),
+                "key": key,
+            }
+        )
+
+    rows.sort(key=lambda item: int(item["seconds_remaining"]), reverse=True)
+    return rows
 
 
 def _audit_where_from_request():
@@ -224,6 +244,7 @@ def admin_dashboard():
     top_attacking_ips, targeted_usernames = _build_attack_intelligence(failed_logins_24h)
 
     banned_ips = get_banned_ips_snapshot()
+    locked_usernames = _build_locked_username_snapshot()
     rate_limit_activity = get_rate_limit_snapshot()
 
     return render_template(
@@ -236,6 +257,7 @@ def admin_dashboard():
         top_attacking_ips=top_attacking_ips,
         targeted_usernames=targeted_usernames,
         banned_ips=banned_ips,
+        locked_usernames=locked_usernames,
         rate_limit_activity=rate_limit_activity,
         fmt_dt=fmt_dt,
         current_role=_current_role(),
