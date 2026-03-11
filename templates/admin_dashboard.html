@@ -27,44 +27,6 @@ body{
   100%{opacity:.45}
 }
 
-.dash-panel,
-.dash-card{
-  color:#d8eeff;
-}
-
-.security-control-copy,
-.subtle-note,
-.small-note,
-.incident-meta,
-.command-subtitle,
-.dash-label{
-  color:#9fcae8 !important;
-}
-
-.detail-cell,
-.feed-list li,
-.live-feed-item,
-.radar-row,
-.incident-item{
-  color:#e8f6ff !important;
-}
-
-.control-btn,
-.control-btn.danger,
-.control-btn.warn{
-  color:#ffffff !important;
-}
-
-.dash-panel table.audit-table td{
-  color:#eef8ff !important;
-}
-
-.feed-time,
-.timeline-time,
-.live-feed-top{
-  color:#8fc2e6 !important;
-}
-  
 .dash-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
@@ -79,6 +41,7 @@ body{
   border-radius:14px;
   padding:18px;
   box-shadow:0 0 12px rgba(0,200,255,.08);
+  color:#d8eeff;
 }
 
 h1{
@@ -103,7 +66,7 @@ h1{
 
 .dash-label{
   margin-top:6px;
-  color:#6f93af;
+  color:#9fcae8;
   font-size:12px;
   text-transform:uppercase;
   letter-spacing:.08em;
@@ -170,7 +133,7 @@ h1{
 }
 
 .command-subtitle{
-  color:#6e93ad;
+  color:#9fcae8;
   font-size:12px;
   text-transform:uppercase;
   letter-spacing:.08em;
@@ -272,7 +235,7 @@ h1{
   padding:9px 7px !important;
   font-size:13px !important;
   border-bottom:1px solid #173044 !important;
-  color:#f2f8ff !important;
+  color:#eef8ff !important;
   background:transparent !important;
   opacity:1 !important;
   vertical-align:top !important;
@@ -299,11 +262,13 @@ h1{
   word-break:break-word;
   overflow-wrap:anywhere;
   line-height:1.35;
+  color:#eef8ff;
 }
 
 .event-cell{
   word-break:break-word;
   overflow-wrap:anywhere;
+  color:#eef8ff;
 }
 
 .event-pill{
@@ -372,7 +337,7 @@ h1{
 }
 
 .empty-state{
-  color:#8fb1ca;
+  color:#9fcae8;
   font-size:13px;
   padding:4px 0;
 }
@@ -407,7 +372,7 @@ h1{
 
 .mini-metric-label{
   margin-top:6px;
-  color:#7fa9c6;
+  color:#9fcae8;
   font-size:11px;
   text-transform:uppercase;
   letter-spacing:.08em;
@@ -416,13 +381,13 @@ h1{
 .subtle-note{
   margin-top:10px;
   font-size:12px;
-  color:#6e93ad;
+  color:#9fcae8;
 }
 
 .control-btn{
   background:#0d2b40;
   border:1px solid #2c5f82;
-  color:#7fd6ff;
+  color:#ffffff;
   padding:10px 14px;
   border-radius:10px;
   font-weight:600;
@@ -435,13 +400,13 @@ h1{
 
 .control-btn.danger{
   border-color:#7c1e24;
-  color:#ff9da5;
+  color:#ffffff;
   background:#2c1013;
 }
 
 .control-btn.warn{
   border-color:#7b5a14;
-  color:#ffd975;
+  color:#ffffff;
   background:#2b210a;
 }
 
@@ -488,17 +453,17 @@ h1{
 .feed-list li{
   padding:8px 0;
   border-bottom:1px solid #152432;
-  color:#d7ecff;
+  color:#eef8ff;
   font-size:13px;
 }
 
 .feed-time{
-  color:#7aa8c7;
+  color:#8fc2e6;
   margin-right:8px;
 }
 
 .feed-action{
-  color:#7fd6ff;
+  color:#ffffff;
   font-weight:700;
   margin-right:8px;
 }
@@ -534,7 +499,7 @@ h1{
 }
 
 .timeline-time{
-  color:#7aa8c7;
+  color:#8fc2e6;
   font-size:12px;
   margin-bottom:4px;
 }
@@ -554,6 +519,7 @@ h1{
   border:1px solid #1d364c;
   border-radius:10px;
   padding:10px 12px;
+  color:#eef8ff;
 }
 
 .radar-top{
@@ -562,6 +528,7 @@ h1{
   gap:10px;
   margin-bottom:6px;
   font-size:13px;
+  color:#ffffff;
 }
 
 .live-feed{
@@ -574,6 +541,7 @@ h1{
   border:1px solid #1d364c;
   border-radius:10px;
   padding:10px 12px;
+  color:#eef8ff;
 }
 
 .live-feed-top{
@@ -582,11 +550,12 @@ h1{
   gap:10px;
   margin-bottom:6px;
   font-size:12px;
-  color:#89b3d0;
+  color:#8fc2e6;
 }
 
 .live-feed-title{
   margin-bottom:6px;
+  color:#ffffff;
 }
 
 .security-controls{
@@ -606,12 +575,12 @@ h1{
   font-size:13px;
   font-weight:700;
   margin-bottom:6px;
-  color:#dff3ff;
+  color:#ffffff;
 }
 
 .security-control-copy{
   font-size:12px;
-  color:#87aeca;
+  color:#9fcae8;
   line-height:1.4;
   margin-bottom:10px;
 }
@@ -632,6 +601,7 @@ h1{
   border:1px solid #1d364c;
   border-radius:10px;
   padding:12px;
+  color:#eef8ff;
 }
 
 .incident-top{
@@ -643,18 +613,18 @@ h1{
 
 .incident-title{
   font-weight:700;
-  color:#eaf6ff;
+  color:#ffffff;
   margin-bottom:6px;
 }
 
 .incident-meta{
   font-size:12px;
-  color:#87aeca;
+  color:#9fcae8;
   line-height:1.4;
 }
 
 .small-note{
-  color:#8fb1ca;
+  color:#9fcae8;
   font-size:13px;
   line-height:1.5;
 }
