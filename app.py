@@ -1,22 +1,17 @@
 from __future__ import annotations
 
-import csv
 import importlib
-import io
 import logging
 import os
 import pkgutil
 import secrets
-import sqlite3
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Optional
-from zoneinfo import ZoneInfo
+from typing import Optional
 
 from flask import (
     Flask,
-    Response,
     abort,
     current_app,
     flash,
@@ -31,19 +26,15 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core.auth import require_login
 from core.auth import require_shelter
-from core.db import close_db, db_execute, db_fetchall, db_fetchone, get_db
+from core.db import close_db, db_execute, db_fetchall, get_db
 from core.helpers import (
-    db_placeholder,
-    fmt_date,
     fmt_dt,
-    fmt_pretty_date,
-    fmt_time_only,
-    is_postgres,
     safe_url_for,
     utcnow_iso,
 )
 from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
-from core.sms_sender import send_sms
+from core.request_utils import client_ip
+from core.shelters import get_all_shelters as load_all_shelters
 from db import schema
 
 try:
@@ -53,6 +44,13 @@ except Exception:
     Client = None
     RequestValidator = None
 
+
+# ------------------------------------------------------------
+# Environment flags and constants
+# ------------------------------------------------------------
+# Future extraction note
+# These config and environment values should eventually move into
+# a dedicated core.config module so app.py becomes a pure wiring file.
 
 TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
 TWILIO_INBOUND_ENABLED = os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true"
@@ -100,6 +98,12 @@ app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
 
+# ------------------------------------------------------------
+# Blueprint registration
+# ------------------------------------------------------------
+# Future extraction note
+# This can eventually move into a dedicated app factory module
+# once more cross cutting setup is extracted from this file.
 def register_blueprints(app: Flask) -> None:
     import routes
     from flask import Blueprint
@@ -160,11 +164,15 @@ app.config.update(
 )
 
 
+# ------------------------------------------------------------
+# Request and security helpers
+# ------------------------------------------------------------
+# Future extraction note
+# _client_ip now delegates into core.request_utils.
+# The remaining request security hooks below are good candidates
+# for a future core.request_security module.
 def _client_ip() -> str:
-    """
-    Use ProxyFix normalized remote_addr rather than trusting raw forwarded headers.
-    """
-    return (request.remote_addr or "").strip() or "unknown"
+    return client_ip()
 
 
 @app.before_request
@@ -262,6 +270,11 @@ def _auto_ban_scanner_probes():
     abort(404)
 
 
+# ------------------------------------------------------------
+# CSRF
+# ------------------------------------------------------------
+# Future extraction note
+# These CSRF helpers can move into a dedicated core.csrf module later.
 def _csrf_token() -> str:
     tok = session.get("_csrf_token")
     if not tok:
@@ -342,38 +355,13 @@ def _public_bot_throttle():
     return None
 
 
+# ------------------------------------------------------------
+# Shelter helpers
+# ------------------------------------------------------------
+# Future extraction note
+# get_all_shelters now delegates into core.shelters.
 def get_all_shelters() -> list[str]:
-    init_db()
-
-    rows = db_fetchall(
-        """
-        SELECT name
-        FROM shelters
-        WHERE is_active = %s
-        ORDER BY name ASC
-        """
-        if is_postgres()
-        else """
-        SELECT name
-        FROM shelters
-        WHERE is_active = 1
-        ORDER BY name ASC
-        """,
-        (True,) if is_postgres() else (),
-    )
-
-    names: list[str] = []
-
-    for row in rows:
-        if isinstance(row, dict):
-            name = row.get("name") or ""
-        else:
-            name = row[0] or ""
-
-        if name:
-            names.append(name)
-
-    return names
+    return load_all_shelters(init_db)
 
 
 @app.context_processor
@@ -405,7 +393,7 @@ def inject_resident_dashboard_status():
         WHERE resident_identifier = %s
         ORDER BY leave_at ASC
         """
-        if is_postgres()
+        if g.get("db_kind") == "pg"
         else """
         SELECT status, shelter, resident_identifier, leave_at, return_at
         FROM leave_requests
@@ -482,13 +470,14 @@ def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
 
-# Database schema initialization.
-# Current state:
+# ------------------------------------------------------------
+# Database initialization
+# ------------------------------------------------------------
+# Current state
 # schema mutations and indexes are mostly delegated to db/schema.py.
-# Future extraction targets:
-#   1. move inline table create blocks below into db/schema.py one table at a time
-#   2. replace local create(...) usage with schema owned helpers
-#   3. eventually collapse this function into schema.init_db()
+# Future extraction targets
+# 1. move remaining initialization wiring into db/schema.py
+# 2. collapse legacy_init_db into schema.init_db once callers are aligned
 def legacy_init_db() -> None:
     get_db()
     schema.init_db()
@@ -501,6 +490,11 @@ app.config["ADMIN_USERNAME"] = os.environ.get("ADMIN_USERNAME")
 app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
 
 
+# ------------------------------------------------------------
+# Decorators
+# ------------------------------------------------------------
+# Future extraction note
+# These should eventually move into a dedicated core.decorators module.
 def require_staff_or_admin(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -594,5 +588,3 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
-
