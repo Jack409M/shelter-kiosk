@@ -333,11 +333,27 @@ h1{
 {% set security_led = "green" %}
 {% set security_pill = "" %}
 
-{% if failed_login_count and failed_login_count >= 10 %}
+{% if banned_ips %}
   {% set security_level = "ACTIVE ATTACK" %}
   {% set security_led = "red" %}
   {% set security_pill = "danger" %}
-{% elif failed_login_count and failed_login_count >= 5 %}
+{% elif locked_usernames %}
+  {% set security_level = "ACTIVE ATTACK" %}
+  {% set security_led = "red" %}
+  {% set security_pill = "danger" %}
+{% elif top_attacking_ips and top_attacking_ips[0].attempts >= 10 %}
+  {% set security_level = "ACTIVE ATTACK" %}
+  {% set security_led = "red" %}
+  {% set security_pill = "danger" %}
+{% elif targeted_usernames and targeted_usernames[0].attempts >= 10 %}
+  {% set security_level = "ACTIVE ATTACK" %}
+  {% set security_led = "red" %}
+  {% set security_pill = "danger" %}
+{% elif top_attacking_ips and top_attacking_ips[0].attempts >= 5 %}
+  {% set security_level = "ELEVATED" %}
+  {% set security_led = "yellow" %}
+  {% set security_pill = "warn" %}
+{% elif targeted_usernames and targeted_usernames[0].attempts >= 6 %}
   {% set security_level = "ELEVATED" %}
   {% set security_led = "yellow" %}
   {% set security_pill = "warn" %}
@@ -441,9 +457,9 @@ h1{
     <div class="dash-panel">
       <h3>Threat Analysis</h3>
 
-      {% if failed_login_count and failed_login_count >= 10 %}
+      {% if security_level == "ACTIVE ATTACK" %}
         <div class="status-pill danger"><span class="led red"></span>Threat Level ACTIVE ATTACK</div>
-      {% elif failed_login_count and failed_login_count >= 5 %}
+      {% elif security_level == "ELEVATED" %}
         <div class="status-pill warn"><span class="led yellow"></span>Threat Level ELEVATED</div>
       {% else %}
         <div class="status-pill"><span class="led green"></span>Threat Level LOW</div>
@@ -501,7 +517,29 @@ h1{
     <div class="dash-panel">
       <h3>Active Defenses</h3>
 
-      <h3 style="margin-top:14px;">Banned IPs</h3>
+      <h3 style="margin-top:14px;">Locked Usernames</h3>
+      {% if locked_usernames %}
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Seconds Left</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in locked_usernames %}
+              <tr>
+                <td>{{ row.username }}</td>
+                <td>{{ row.seconds_remaining }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty-state">No usernames currently locked.</div>
+      {% endif %}
+
+      <h3 style="margin-top:18px;">Banned IPs</h3>
       {% if banned_ips %}
         <table class="audit-table">
           <thead>
