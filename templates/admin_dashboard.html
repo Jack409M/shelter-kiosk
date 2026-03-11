@@ -1,6 +1,30 @@
 {% extends "layout.html" %}
 {% block content %}
 
+{# ------------------------------------------------------------------
+   Future extraction note
+   This template is still larger than it should be.
+   The safest next front end refactor path is:
+
+   1. Move all CSS into static/css/admin_dashboard.css
+   2. Move live refresh JavaScript into static/js/admin_dashboard_live.js
+   3. Split the body into includes:
+      admin_dashboard_parts/header.html
+      admin_dashboard_parts/stats_grid.html
+      admin_dashboard_parts/audit_panel.html
+      admin_dashboard_parts/threat_analysis.html
+      admin_dashboard_parts/security_controls.html
+      admin_dashboard_parts/staff_sessions.html
+      admin_dashboard_parts/active_defenses.html
+      admin_dashboard_parts/security_incidents.html
+      admin_dashboard_parts/live_activity.html
+      admin_dashboard_parts/kiosk_events.html
+      admin_dashboard_parts/quick_links.html
+
+   This rewrite removes duplicated information first so the dashboard is
+   easier to scan before the template is split into partials.
+------------------------------------------------------------------- #}
+
 <style>
 body{
   background:#0b1118;
@@ -344,38 +368,9 @@ h1{
 
 .intel-grid{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:1fr;
   gap:14px;
   margin-top:14px;
-}
-
-.mini-metrics{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(120px,1fr));
-  gap:12px;
-  margin-top:14px;
-}
-
-.mini-metric{
-  background:#0c1824;
-  border:1px solid #1c3851;
-  border-radius:12px;
-  padding:12px;
-}
-
-.mini-metric-value{
-  font-size:24px;
-  font-weight:700;
-  color:#ffffff;
-  line-height:1.1;
-}
-
-.mini-metric-label{
-  margin-top:6px;
-  color:#9fcae8;
-  font-size:11px;
-  text-transform:uppercase;
-  letter-spacing:.08em;
 }
 
 .subtle-note{
@@ -637,20 +632,12 @@ h1{
   .intel-grid{
     grid-template-columns:1fr;
   }
-
-  .mini-metrics{
-    grid-template-columns:repeat(2,minmax(120px,1fr));
-  }
 }
 
 @media (max-width:700px){
   .command-header{
     flex-direction:column;
     align-items:flex-start;
-  }
-
-  .mini-metrics{
-    grid-template-columns:1fr;
   }
 
   .security-controls{
@@ -703,6 +690,11 @@ h1{
   {% endif %}
 {%- endmacro %}
 
+{# ------------------------------------------------------------------
+   Future extraction note
+   Security posture computation should eventually move to Python so the
+   template receives a precomputed dashboard status object.
+------------------------------------------------------------------- #}
 {% set security_level = "NORMAL" %}
 {% set security_led = "green" %}
 {% set security_pill = "" %}
@@ -782,18 +774,26 @@ h1{
   <div id="security-banner-copy" class="security-banner-copy">{{ banner_copy }}</div>
 </div>
 
+{# ------------------------------------------------------------------
+   Duplication removed
+   We removed:
+   - separate Security Level stat card
+   - separate Security Snapshot panel
+   - Intrusion Feed duplicate list
+   - duplicate Top Attacking IP subsection inside Threat Analysis
+
+   The page now keeps:
+   - one posture indicator area
+   - one top metrics area
+   - one attack radar area
+   - one current defenses area
+------------------------------------------------------------------- #}
 <div class="dash-grid">
 
   <div class="dash-card">
     <h3>System Health</h3>
     <div><span class="led green"></span>Operational</div>
     <div class="dash-label">Core platform stable</div>
-  </div>
-
-  <div class="dash-card">
-    <h3>Security Level</h3>
-    <div><span id="security-level-led" class="led {{ security_led }}"></span><span id="security-level-text">{{ security_level }}</span></div>
-    <div class="dash-label">Threat posture</div>
   </div>
 
   <div class="dash-card">
@@ -818,6 +818,18 @@ h1{
     <h3>Live Attackers</h3>
     <div id="live-attackers-stat" class="dash-stat">{{ top_attacking_ips|length }}</div>
     <div class="dash-label">IPs in active radar</div>
+  </div>
+
+  <div class="dash-card">
+    <h3>Targeted Accounts</h3>
+    <div id="targeted-accounts-stat" class="dash-stat">{{ targeted_usernames|length }}</div>
+    <div class="dash-label">Usernames under pressure</div>
+  </div>
+
+  <div class="dash-card">
+    <h3>Active Defenses</h3>
+    <div id="active-defenses-stat" class="dash-stat">{{ locked_usernames|length + banned_ips|length }}</div>
+    <div class="dash-label">Locks and bans in place</div>
   </div>
 
   <div class="dash-card">
@@ -859,47 +871,9 @@ h1{
     {% else %}
       <div class="empty-state">No audit activity.</div>
     {% endif %}
-
-    <h3 style="margin-top:18px;">Intrusion Feed</h3>
-    {% if recent_failed_logins %}
-      <ul id="intrusion-feed-list" class="feed-list">
-        {% for r in recent_failed_logins %}
-          <li class="detail-cell">
-            <span class="feed-time">{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</span>
-            <span class="feed-action">{{ pretty_label(r.action_type or "login_failed") }}</span>
-            <span>{{ r.action_details or "" }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div id="intrusion-feed-list" class="empty-state">No intrusion events in feed.</div>
-    {% endif %}
   </div>
 
   <div class="dash-stack">
-
-    <div class="dash-panel">
-      <h3>Security Snapshot</h3>
-
-      <div class="mini-metrics">
-        <div class="mini-metric">
-          <div id="snapshot-failed-logins" class="mini-metric-value">{{ failed_login_count }}</div>
-          <div class="mini-metric-label">Failed Logins</div>
-        </div>
-        <div class="mini-metric">
-          <div id="snapshot-attacker-ips" class="mini-metric-value">{{ top_attacking_ips|length }}</div>
-          <div class="mini-metric-label">Attacker IPs</div>
-        </div>
-        <div class="mini-metric">
-          <div id="snapshot-targeted-accounts" class="mini-metric-value">{{ targeted_usernames|length }}</div>
-          <div class="mini-metric-label">Targeted Accounts</div>
-        </div>
-        <div class="mini-metric">
-          <div id="snapshot-active-defenses" class="mini-metric-value">{{ locked_usernames|length + banned_ips|length }}</div>
-          <div class="mini-metric-label">Active Defenses</div>
-        </div>
-      </div>
-    </div>
 
     <div class="dash-panel">
       <h3>Threat Analysis</h3>
@@ -913,29 +887,6 @@ h1{
       {% endif %}
 
       <div class="intel-grid">
-        <div>
-          <h3 style="margin-top:18px;">Top Attacking IPs</h3>
-          {% if top_attacking_ips %}
-            {% for row in top_attacking_ips %}
-              {% set width = (row.attempts * 8) if (row.attempts * 8) < 100 else 100 %}
-              {% set bar_class = "bar" %}
-              {% if row.attempts >= attacker_ip_threshold %}
-                {% set bar_class = "bar danger" %}
-              {% elif row.attempts >= 4 %}
-                {% set bar_class = "bar warn" %}
-              {% endif %}
-              <div style="margin-bottom:10px;">
-                <div class="event-cell">{{ row.ip }} ({{ row.attempts }})</div>
-                <div class="{{ bar_class }}">
-                  <span style="width:{{ width }}%"></span>
-                </div>
-              </div>
-            {% endfor %}
-          {% else %}
-            <div class="empty-state">No attacking IP data available.</div>
-          {% endif %}
-        </div>
-
         <div>
           <h3 style="margin-top:18px;">Usernames Under Attack</h3>
           {% if targeted_usernames %}
@@ -958,6 +909,10 @@ h1{
             <div class="empty-state">No targeted username data available.</div>
           {% endif %}
         </div>
+      </div>
+
+      <div class="subtle-note">
+        This panel is intentionally focused on account targeting so the attack radar can own the IP view without duplicating the same information twice.
       </div>
     </div>
 
@@ -1370,6 +1325,12 @@ h1{
 </div>
 
 <script>
+/* ------------------------------------------------------------------
+   Future extraction note
+   Move this entire script into static/js/admin_dashboard_live.js after
+   the page layout is stable. At that point only the dashboard_live_url
+   value should remain inline as a data attribute or script config value.
+------------------------------------------------------------------- */
 (function(){
   const liveUrl = {{ dashboard_live_url|tojson }};
 
@@ -1507,8 +1468,6 @@ h1{
     const pill = document.getElementById("security-status-pill");
     const pillLed = document.getElementById("security-status-led");
     const pillText = document.getElementById("security-status-text");
-    const levelLed = document.getElementById("security-level-led");
-    const levelText = document.getElementById("security-level-text");
     const banner = document.getElementById("security-banner");
     const bannerTitle = document.getElementById("security-banner-title");
     const bannerCopy = document.getElementById("security-banner-copy");
@@ -1521,12 +1480,6 @@ h1{
     }
     if(pillText){
       pillText.textContent = "Security Level " + state.level;
-    }
-    if(levelLed){
-      levelLed.className = "led " + state.led;
-    }
-    if(levelText){
-      levelText.textContent = state.level;
     }
     if(banner){
       banner.className = "security-banner" + (state.banner ? " " + state.banner : "");
@@ -1543,39 +1496,14 @@ h1{
     const failed = document.getElementById("failed-logins-stat");
     const attackers = document.getElementById("live-attackers-stat");
     const sessions = document.getElementById("staff-sessions-stat");
-    const snapFailed = document.getElementById("snapshot-failed-logins");
-    const snapAttackers = document.getElementById("snapshot-attacker-ips");
-    const snapTargeted = document.getElementById("snapshot-targeted-accounts");
-    const snapDefenses = document.getElementById("snapshot-active-defenses");
+    const targeted = document.getElementById("targeted-accounts-stat");
+    const defenses = document.getElementById("active-defenses-stat");
 
     if(failed) failed.textContent = String(data.failed_login_count || 0);
     if(attackers) attackers.textContent = String((data.top_attacking_ips || []).length);
     if(sessions) sessions.textContent = String((data.recent_staff_sessions || []).length);
-    if(snapFailed) snapFailed.textContent = String(data.failed_login_count || 0);
-    if(snapAttackers) snapAttackers.textContent = String((data.top_attacking_ips || []).length);
-    if(snapTargeted) snapTargeted.textContent = String((data.targeted_usernames || []).length);
-    if(snapDefenses) snapDefenses.textContent = String((data.locked_usernames || []).length + (data.banned_ips || []).length);
-  }
-
-  function updateIntrusionFeed(data){
-    const el = document.getElementById("intrusion-feed-list");
-    if(!el) return;
-
-    const rows = data.recent_failed_logins || [];
-    if(!rows.length){
-      el.className = "empty-state";
-      el.innerHTML = "No intrusion events in feed.";
-      return;
-    }
-
-    el.className = "feed-list";
-    el.innerHTML = rows.map(row => `
-      <li class="detail-cell">
-        <span class="feed-time">${escapeHtml(row.created_at || "")}</span>
-        <span class="feed-action">${escapeHtml(prettyLabel(row.action_type || "login_failed"))}</span>
-        <span>${escapeHtml(row.action_details || "")}</span>
-      </li>
-    `).join("");
+    if(targeted) targeted.textContent = String((data.targeted_usernames || []).length);
+    if(defenses) defenses.textContent = String((data.locked_usernames || []).length + (data.banned_ips || []).length);
   }
 
   function updateKioskPanel(data){
@@ -1746,7 +1674,6 @@ h1{
 
       updateSecurityBanner(data);
       updateTopStats(data);
-      updateIntrusionFeed(data);
       updateKioskPanel(data);
       updateStaffSessions(data);
       updateSecurityIncidents(data);
