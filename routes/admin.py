@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import csv
-import io
-
 from flask import (
     Blueprint,
-    Response,
     abort,
-    current_app,
     g,
     jsonify,
     redirect,
-    render_template,
     request,
     session,
     url_for,
@@ -20,26 +14,28 @@ from flask import (
 
 from core.audit import log_action
 from core.auth import require_login, require_shelter
-from core.db import db_execute, db_fetchall
-from core.helpers import fmt_dt, utcnow_iso
+from core.db import db_execute
+from core.helpers import utcnow_iso
 
 # Future extraction note
-# Shared admin helper logic already lives in routes.admin_parts.helpers.
-# Shared user management view logic already lives in routes.admin_parts.users.
-# The next clean extractions from this file are:
-# 1. dashboard and security routes
-# 2. audit routes
-# 3. dangerous system routes
-# At that point this file can become a thin blueprint registration shell.
+# This file is now acting as the admin blueprint shell.
+# Shared helper logic lives in routes.admin_parts.helpers
+# User management view logic lives in routes.admin_parts.users
+# Audit view logic lives in routes.admin_parts.audit
+#
+# Next extraction targets:
+# 1. dashboard and security routes into routes.admin_parts.dashboard
+# 2. dangerous system routes into routes.admin_parts.system
+#
+# End state goal:
+# this file should eventually contain only:
+# blueprint creation
+# imports of delegated view functions
+# thin route wrappers with decorators
 
 from routes.admin_parts.helpers import (
-    all_roles as _all_roles,
-    allowed_roles_to_create as _allowed_roles_to_create,
-    audit_where_from_request as _audit_where_from_request,
     build_admin_dashboard_payload as _build_admin_dashboard_payload,
     current_role as _current_role,
-    ordered_roles as _ordered_roles,
-    require_admin_or_shelter_director_role as _require_admin_or_shelter_director,
     require_admin_role as _require_admin,
 )
 
@@ -52,6 +48,11 @@ from routes.admin_parts.users import (
     admin_users_view,
 )
 
+from routes.admin_parts.audit import (
+    staff_audit_log_csv_view,
+    staff_audit_log_view,
+)
+
 admin = Blueprint("admin", __name__)
 
 
@@ -60,7 +61,11 @@ admin = Blueprint("admin", __name__)
 @require_shelter
 def admin_dashboard():
     # Future extraction note
-    # Move into admin security routes module after dashboard related routes are grouped.
+    # Move this route into routes.admin_parts.dashboard once the paired live
+    # endpoint and security settings update route are extracted together.
+    from core.helpers import fmt_dt
+    from flask import render_template
+
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -107,7 +112,8 @@ def admin_dashboard_live():
 @require_shelter
 def admin_update_security_settings():
     # Future extraction note
-    # This update logic should eventually move into a dedicated admin security service.
+    # This should move with the dashboard routes into a dedicated admin
+    # security module or service backed route file.
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -160,9 +166,8 @@ def admin_update_security_settings():
 @require_login
 @require_shelter
 def admin_users():
-    # Future extraction note
-    # Route is now a thin delegate. When user routes are moved out fully,
-    # only the decorator and forwarding wrapper will need removal here.
+    # Thin delegation wrapper.
+    # Safe to remove later once decorators move to extracted route modules.
     return admin_users_view()
 
 
@@ -205,95 +210,16 @@ def admin_reset_user_password(user_id: int):
 @require_login
 @require_shelter
 def staff_audit_log():
-    # Future extraction note
-    # Audit routes are now good candidates for a dedicated admin audit routes module.
-    if not _require_admin():
-        flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
-
-    sql = (
-        """
-        SELECT a.*, su.username
-        FROM audit_log a
-        LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        ORDER BY a.id DESC
-        LIMIT %s
-        """
-        if current_app.config.get("DATABASE_URL")
-        else """
-        SELECT a.*, su.username
-        FROM audit_log a
-        LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        ORDER BY a.id DESC
-        LIMIT ?
-        """
-    )
-
-    rows = db_fetchall(sql, (200,))
-    return render_template("staff_audit_log.html", rows=rows)
+    # Thin delegation wrapper.
+    # Audit now lives in routes.admin_parts.audit.
+    return staff_audit_log_view()
 
 
 @admin.get("/staff/admin/audit-log/csv")
 @require_login
 @require_shelter
 def staff_audit_log_csv():
-    if not _require_admin():
-        flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
-
-    where_sql, params = _audit_where_from_request(request)
-    created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
-
-    sql = (
-        f"SELECT a.id, a.entity_type, a.entity_id, a.shelter, "
-        f"COALESCE(su.username, '') AS staff_username, "
-        f"a.action_type, COALESCE(a.action_details, '') AS action_details, "
-        f"{created_expr} AS created_at "
-        f"FROM audit_log a "
-        f"LEFT JOIN staff_users su ON su.id = a.staff_user_id "
-        f"{where_sql} "
-        f"ORDER BY a.id DESC"
-    )
-
-    rows = db_fetchall(sql, params)
-
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow(
-        [
-            "id",
-            "entity_type",
-            "entity_id",
-            "shelter",
-            "staff_username",
-            "action_type",
-            "action_details",
-            "created_at",
-        ]
-    )
-
-    for row in rows:
-        if isinstance(row, dict):
-            writer.writerow(
-                [
-                    row.get("id", ""),
-                    row.get("entity_type", ""),
-                    row.get("entity_id", ""),
-                    row.get("shelter", ""),
-                    row.get("staff_username", ""),
-                    row.get("action_type", ""),
-                    row.get("action_details", ""),
-                    row.get("created_at", ""),
-                ]
-            )
-        else:
-            writer.writerow(list(row))
-
-    return Response(
-        buf.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=audit_log.csv"},
-    )
+    return staff_audit_log_csv_view()
 
 
 @admin.route("/admin/wipe-all-data", methods=["POST"])
@@ -301,8 +227,8 @@ def staff_audit_log_csv():
 @require_shelter
 def wipe_all_data():
     # Future extraction note
-    # Dangerous system routes should be isolated into a dedicated module
-    # and later protected by a small admin system service layer.
+    # Dangerous admin actions should move into routes.admin_parts.system and
+    # eventually behind a guarded service layer for destructive actions.
     from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
 
     if not _require_admin():
