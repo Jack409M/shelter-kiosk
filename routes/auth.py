@@ -9,6 +9,7 @@ from core.db import db_fetchone
 from core.rate_limit import (
     ban_ip,
     get_key_lock_seconds_remaining,
+    get_progressive_lock_seconds,
     is_ip_banned,
     is_key_locked,
     is_rate_limited,
@@ -73,18 +74,19 @@ def staff_login():
     if not row:
         triggered_username_lock = is_rate_limited(
             f"staff_login_fail_username_lock:{normalized_username}",
-            limit=10,
+            limit=8,
             window_seconds=900,
         )
         if triggered_username_lock:
-            lock_key(username_lock_key, 900)
+            lock_seconds = get_progressive_lock_seconds(username_lock_key)
+            lock_key(username_lock_key, lock_seconds)
             log_action(
                 "auth",
                 None,
                 None,
                 None,
                 "login_username_locked",
-                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=900",
+                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds={lock_seconds}",
             )
 
         triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
@@ -110,18 +112,19 @@ def staff_login():
     if not is_active or not check_password_hash(pw_hash, password):
         triggered_username_lock = is_rate_limited(
             f"staff_login_fail_username_lock:{normalized_username}",
-            limit=10,
+            limit=8,
             window_seconds=900,
         )
         if triggered_username_lock:
-            lock_key(username_lock_key, 900)
+            lock_seconds = get_progressive_lock_seconds(username_lock_key)
+            lock_key(username_lock_key, lock_seconds)
             log_action(
                 "auth",
                 None,
                 None,
                 staff_user_id,
                 "login_username_locked",
-                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=900",
+                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds={lock_seconds}",
             )
 
         triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
