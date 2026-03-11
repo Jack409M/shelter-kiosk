@@ -395,6 +395,18 @@ h1{
   background:#153e5d;
 }
 
+.control-btn.danger{
+  border-color:#7c1e24;
+  color:#ff9da5;
+  background:#2c1013;
+}
+
+.control-btn.warn{
+  border-color:#7b5a14;
+  color:#ffd975;
+  background:#2b210a;
+}
+
 .feed-list{
   margin:0;
   padding:0;
@@ -505,6 +517,70 @@ h1{
   margin-bottom:6px;
 }
 
+.security-controls{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.security-control-card{
+  background:#0c1824;
+  border:1px solid #1d364c;
+  border-radius:12px;
+  padding:12px;
+}
+
+.security-control-title{
+  font-size:13px;
+  font-weight:700;
+  margin-bottom:6px;
+  color:#dff3ff;
+}
+
+.security-control-copy{
+  font-size:12px;
+  color:#87aeca;
+  line-height:1.4;
+  margin-bottom:10px;
+}
+
+.security-control-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.incident-list{
+  display:grid;
+  gap:10px;
+}
+
+.incident-item{
+  background:#0c1824;
+  border:1px solid #1d364c;
+  border-radius:10px;
+  padding:12px;
+}
+
+.incident-top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+
+.incident-title{
+  font-weight:700;
+  color:#eaf6ff;
+  margin-bottom:6px;
+}
+
+.incident-meta{
+  font-size:12px;
+  color:#87aeca;
+  line-height:1.4;
+}
+
 .small-note{
   color:#8fb1ca;
   font-size:13px;
@@ -534,6 +610,10 @@ h1{
   .mini-metrics{
     grid-template-columns:1fr;
   }
+
+  .security-controls{
+    grid-template-columns:1fr;
+  }
 }
 </style>
 
@@ -558,6 +638,8 @@ h1{
     Data Wipe
   {% elif value == "recreate_schema" %}
     Schema Recreated
+  {% elif value == "security_setting_updated" %}
+    Security Setting Updated
   {% elif value.startswith("kiosk_") %}
     {{ value[6:]|replace('_', ' ')|title }}
   {% else %}
@@ -568,7 +650,7 @@ h1{
 {% macro event_class(value) -%}
   {% if value in ["login_failed", "wipe_all_data", "recreate_schema"] or value.startswith("kiosk_block") or value.startswith("kiosk_denied") %}
     danger
-  {% elif value in ["reset_password", "set_role", "set_active"] %}
+  {% elif value in ["reset_password", "set_role", "set_active", "security_setting_updated"] %}
     warn
   {% elif value in ["login", "logout"] %}
     success
@@ -586,6 +668,9 @@ h1{
 {% set banner_title = "System Stable" %}
 {% set banner_copy = "No active threat indicators are currently above alert threshold." %}
 
+{% set attacker_ip_threshold = security_settings.attacker_ip_alert_threshold if security_settings else 10 %}
+{% set targeted_username_threshold = security_settings.targeted_username_alert_threshold if security_settings else 10 %}
+
 {% if banned_ips %}
   {% set security_level = "ACTIVE ATTACK" %}
   {% set security_led = "red" %}
@@ -600,14 +685,14 @@ h1{
   {% set banner_class = "danger" %}
   {% set banner_title = "Account Targeting Detected" %}
   {% set banner_copy = "Username lockouts are active. Repeated credential attacks are in progress or were recently contained." %}
-{% elif top_attacking_ips and top_attacking_ips[0].attempts >= 10 %}
+{% elif top_attacking_ips and top_attacking_ips[0].attempts >= attacker_ip_threshold %}
   {% set security_level = "ACTIVE ATTACK" %}
   {% set security_led = "red" %}
   {% set security_pill = "danger" %}
   {% set banner_class = "danger" %}
   {% set banner_title = "Active Attack Detected" %}
   {% set banner_copy = "An IP has crossed high volume login failure thresholds. Review the attack radar and intrusion timeline." %}
-{% elif targeted_usernames and targeted_usernames[0].attempts >= 10 %}
+{% elif targeted_usernames and targeted_usernames[0].attempts >= targeted_username_threshold %}
   {% set security_level = "ACTIVE ATTACK" %}
   {% set security_led = "red" %}
   {% set security_pill = "danger" %}
@@ -630,9 +715,8 @@ h1{
   {% set banner_copy = "Repeated failures are clustering around specific usernames. Watch for lockouts and follow on activity." %}
 {% endif %}
 
-{% set ns = namespace(total_attack_attempts=0, highest_attack=0) %}
+{% set ns = namespace(highest_attack=0) %}
 {% for row in top_attacking_ips %}
-  {% set ns.total_attack_attempts = ns.total_attack_attempts + row.attempts %}
   {% if row.attempts > ns.highest_attack %}
     {% set ns.highest_attack = row.attempts %}
   {% endif %}
@@ -793,7 +877,7 @@ h1{
             {% for row in top_attacking_ips %}
               {% set width = (row.attempts * 8) if (row.attempts * 8) < 100 else 100 %}
               {% set bar_class = "bar" %}
-              {% if row.attempts >= 10 %}
+              {% if row.attempts >= attacker_ip_threshold %}
                 {% set bar_class = "bar danger" %}
               {% elif row.attempts >= 4 %}
                 {% set bar_class = "bar warn" %}
@@ -816,7 +900,7 @@ h1{
             {% for row in targeted_usernames %}
               {% set width = (row.attempts * 8) if (row.attempts * 8) < 100 else 100 %}
               {% set bar_class = "bar" %}
-              {% if row.attempts >= 10 %}
+              {% if row.attempts >= targeted_username_threshold %}
                 {% set bar_class = "bar danger" %}
               {% elif row.attempts >= 4 %}
                 {% set bar_class = "bar warn" %}
@@ -843,7 +927,7 @@ h1{
           {% for row in top_attacking_ips %}
             {% set width = ((row.attempts / ns.highest_attack) * 100) if ns.highest_attack else 0 %}
             {% set bar_class = "bar" %}
-            {% if row.attempts >= 10 %}
+            {% if row.attempts >= attacker_ip_threshold %}
               {% set bar_class = "bar danger" %}
             {% elif row.attempts >= 4 %}
               {% set bar_class = "bar warn" %}
@@ -862,6 +946,106 @@ h1{
       {% else %}
         <div class="empty-state">No attacker IPs are active in the radar.</div>
       {% endif %}
+    </div>
+
+    <div class="dash-panel">
+      <h3>Security Controls</h3>
+
+      <div class="security-controls">
+
+        <div class="security-control-card">
+          <div class="security-control-title">SMS System</div>
+          <div class="security-control-copy">
+            Controls outbound SMS alerts and messaging at the security layer.
+          </div>
+          <div class="security-control-actions">
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="field" value="sms_system_enabled">
+              <input type="hidden" name="value" value="1">
+              <button class="control-btn" type="submit">Enable SMS</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="field" value="sms_system_enabled">
+              <input type="hidden" name="value" value="0">
+              <button class="control-btn danger" type="submit">Disable SMS</button>
+            </form>
+          </div>
+          <div class="subtle-note">
+            Current state:
+            {% if security_settings.sms_system_enabled %}Enabled{% else %}Disabled{% endif %}
+          </div>
+        </div>
+
+        <div class="security-control-card">
+          <div class="security-control-title">Kiosk Intake</div>
+          <div class="security-control-copy">
+            Stops resident kiosk activity without taking the admin console offline.
+          </div>
+          <div class="security-control-actions">
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="field" value="kiosk_intake_enabled">
+              <input type="hidden" name="value" value="1">
+              <button class="control-btn" type="submit">Enable Kiosk</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="field" value="kiosk_intake_enabled">
+              <input type="hidden" name="value" value="0">
+              <button class="control-btn danger" type="submit">Disable Kiosk</button>
+            </form>
+          </div>
+          <div class="subtle-note">
+            Current state:
+            {% if security_settings.kiosk_intake_enabled %}Enabled{% else %}Disabled{% endif %}
+          </div>
+        </div>
+
+        <div class="security-control-card">
+          <div class="security-control-title">Admin Only Mode</div>
+          <div class="security-control-copy">
+            Restricts the platform to admin managed access posture.
+          </div>
+          <div class="security-control-actions">
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="field" value="admin_login_only_mode">
+              <input type="hidden" name="value" value="1">
+              <button class="control-btn warn" type="submit">Enable Admin Only</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="field" value="admin_login_only_mode">
+              <input type="hidden" name="value" value="0">
+              <button class="control-btn" type="submit">Disable Admin Only</button>
+            </form>
+          </div>
+          <div class="subtle-note">
+            Current state:
+            {% if security_settings.admin_login_only_mode %}Enabled{% else %}Disabled{% endif %}
+          </div>
+        </div>
+
+        <div class="security-control-card">
+          <div class="security-control-title">Security Alerts</div>
+          <div class="security-control-copy">
+            Controls whether threshold events generate outbound security alerts.
+          </div>
+          <div class="security-control-actions">
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="field" value="security_alerts_enabled">
+              <input type="hidden" name="value" value="1">
+              <button class="control-btn" type="submit">Enable Alerts</button>
+            </form>
+            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
+              <input type="hidden" name="field" value="security_alerts_enabled">
+              <input type="hidden" name="value" value="0">
+              <button class="control-btn danger" type="submit">Disable Alerts</button>
+            </form>
+          </div>
+          <div class="subtle-note">
+            Current state:
+            {% if security_settings.security_alerts_enabled %}Enabled{% else %}Disabled{% endif %}
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <div class="dash-panel">
@@ -1017,6 +1201,35 @@ h1{
     </div>
 
     <div class="dash-panel">
+      <h3>Security Incidents</h3>
+
+      {% if recent_security_incidents %}
+        <div id="security-incidents-list" class="incident-list">
+          {% for row in recent_security_incidents %}
+            <div class="incident-item">
+              <div class="incident-top">
+                <div>
+                  <span class="event-pill {{ row.severity or 'neutral' }}">{{ (row.severity or 'unknown')|title }}</span>
+                </div>
+                <div class="timeline-time">{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</div>
+              </div>
+              <div class="incident-title">{{ row.title or "Security Incident" }}</div>
+              <div class="detail-cell">{{ row.details or "" }}</div>
+              <div class="incident-meta">
+                {% if row.related_ip %}IP: {{ row.related_ip }}{% endif %}
+                {% if row.related_ip and row.related_username %}<br>{% endif %}
+                {% if row.related_username %}Username: {{ row.related_username }}{% endif %}
+                {% if row.status %}<br>Status: {{ row.status|title }}{% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div id="security-incidents-list" class="empty-state">No security incidents recorded.</div>
+      {% endif %}
+    </div>
+
+    <div class="dash-panel">
       <h3>Live Activity</h3>
       <div id="live-activity-list" class="live-feed">
         <div class="empty-state">Waiting for live activity updates.</div>
@@ -1123,6 +1336,7 @@ h1{
     if(raw === "reset_password") return "Password Reset";
     if(raw === "wipe_all_data") return "Data Wipe";
     if(raw === "recreate_schema") return "Schema Recreated";
+    if(raw === "security_setting_updated") return "Security Setting Updated";
     if(raw.startsWith("kiosk_")){
       return raw.slice(6).replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
     }
@@ -1134,7 +1348,7 @@ h1{
     if(["login_failed", "wipe_all_data", "recreate_schema"].includes(raw) || raw.startsWith("kiosk_block") || raw.startsWith("kiosk_denied")){
       return "danger";
     }
-    if(["reset_password", "set_role", "set_active"].includes(raw)){
+    if(["reset_password", "set_role", "set_active", "security_setting_updated"].includes(raw)){
       return "warn";
     }
     if(["login", "logout"].includes(raw)){
@@ -1147,6 +1361,9 @@ h1{
   }
 
   function computeSecurityState(data){
+    const settings = data.settings || {};
+    const ipThreshold = Number(settings.attacker_ip_alert_threshold || 10);
+    const userThreshold = Number(settings.targeted_username_alert_threshold || 10);
     const topIpAttempts = data.top_attacking_ips && data.top_attacking_ips.length ? Number(data.top_attacking_ips[0].attempts || 0) : 0;
     const topUserAttempts = data.targeted_usernames && data.targeted_usernames.length ? Number(data.targeted_usernames[0].attempts || 0) : 0;
 
@@ -1172,7 +1389,7 @@ h1{
       };
     }
 
-    if(topIpAttempts >= 10){
+    if(topIpAttempts >= ipThreshold){
       return {
         level: "ACTIVE ATTACK",
         led: "red",
@@ -1183,7 +1400,7 @@ h1{
       };
     }
 
-    if(topUserAttempts >= 10){
+    if(topUserAttempts >= userThreshold){
       return {
         level: "ACTIVE ATTACK",
         led: "red",
@@ -1350,6 +1567,38 @@ h1{
     `).join("");
   }
 
+  function updateSecurityIncidents(data){
+    const el = document.getElementById("security-incidents-list");
+    if(!el) return;
+
+    const rows = data.recent_security_incidents || [];
+    if(!rows.length){
+      el.className = "empty-state";
+      el.innerHTML = "No security incidents recorded.";
+      return;
+    }
+
+    el.className = "incident-list";
+    el.innerHTML = rows.map(row => `
+      <div class="incident-item">
+        <div class="incident-top">
+          <div>
+            <span class="event-pill ${escapeHtml(row.severity || "neutral")}">${escapeHtml(String(row.severity || "unknown").replace(/^./, c => c.toUpperCase()))}</span>
+          </div>
+          <div class="timeline-time">${escapeHtml(row.created_at || "")}</div>
+        </div>
+        <div class="incident-title">${escapeHtml(row.title || "Security Incident")}</div>
+        <div class="detail-cell">${escapeHtml(row.details || "")}</div>
+        <div class="incident-meta">
+          ${row.related_ip ? `IP: ${escapeHtml(row.related_ip)}` : ``}
+          ${row.related_ip && row.related_username ? `<br>` : ``}
+          ${row.related_username ? `Username: ${escapeHtml(row.related_username)}` : ``}
+          ${row.status ? `<br>Status: ${escapeHtml(row.status)}` : ``}
+        </div>
+      </div>
+    `).join("");
+  }
+
   function buildLiveActivityRows(data){
     const combined = [];
 
@@ -1377,6 +1626,15 @@ h1{
         created_at: row.created_at || "",
         action_type: row.action_type || "",
         action_details: row.action_details || "",
+      });
+    });
+
+    (data.recent_security_incidents || []).slice(0, 4).forEach(row => {
+      combined.push({
+        source: "Incident",
+        created_at: row.created_at || "",
+        action_type: row.incident_type || "",
+        action_details: row.title || row.details || "",
       });
     });
 
@@ -1433,6 +1691,7 @@ h1{
       updateIntrusionFeed(data);
       updateKioskPanel(data);
       updateStaffSessions(data);
+      updateSecurityIncidents(data);
       updateLiveActivity(data);
     }catch(err){
       console.error("Live dashboard refresh failed", err);
@@ -1444,57 +1703,4 @@ h1{
 })();
 </script>
 
-<script>
-
-function refreshDashboard(){
-
-  fetch("{{ dashboard_live_url }}")
-    .then(resp => resp.json())
-    .then(data => {
-
-      if(!data.ok){ return }
-
-      // failed login counter
-      const failed = document.querySelectorAll(".mini-metric-value")[0]
-      if(failed){ failed.textContent = data.failed_login_count }
-
-      // update attack radar
-      const radar = document.querySelector(".radar-list")
-      if(radar && data.top_attacking_ips){
-
-        radar.innerHTML = ""
-
-        data.top_attacking_ips.forEach(row => {
-
-          const div = document.createElement("div")
-          div.className = "radar-row"
-
-          const width = Math.min(row.attempts * 8,100)
-
-          div.innerHTML = `
-            <div class="radar-top">
-              <div class="event-cell">${row.ip}</div>
-              <div>${row.attempts} attempts</div>
-            </div>
-            <div class="bar">
-              <span style="width:${width}%"></span>
-            </div>
-          `
-
-          radar.appendChild(div)
-
-        })
-
-      }
-
-    })
-    .catch(()=>{})
-
-}
-
-// refresh every 10 seconds
-setInterval(refreshDashboard,10000)
-
-</script>
-
-{% endblock %}  does this look right? 
+{% endblock %}
