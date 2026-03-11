@@ -407,6 +407,40 @@ h1{
   background:#2b210a;
 }
 
+.status-indicator{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:112px;
+  padding:8px 14px;
+  border-radius:999px;
+  border:1px solid transparent;
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.status-indicator.enabled{
+  background:#0f2c1d;
+  border-color:#1b7a49;
+  color:#baffd7;
+  box-shadow:
+    0 0 6px rgba(28,255,136,.45),
+    0 0 14px rgba(28,255,136,.35),
+    inset 0 0 10px rgba(28,255,136,.08);
+}
+
+.status-indicator.disabled{
+  background:#301214;
+  border-color:#a82a35;
+  color:#ffc1c7;
+  box-shadow:
+    0 0 6px rgba(255,64,64,.45),
+    0 0 14px rgba(255,64,64,.35),
+    inset 0 0 10px rgba(255,64,64,.08);
+}
+
 .feed-list{
   margin:0;
   padding:0;
@@ -971,8 +1005,12 @@ h1{
             </form>
           </div>
           <div class="subtle-note">
-            Current state:
-            {% if security_settings.sms_system_enabled %}Enabled{% else %}Disabled{% endif %}
+            Current status:
+            {% if security_settings.sms_system_enabled %}
+              <span class="status-indicator enabled">Enabled</span>
+            {% else %}
+              <span class="status-indicator disabled">Disabled</span>
+            {% endif %}
           </div>
         </div>
 
@@ -994,8 +1032,12 @@ h1{
             </form>
           </div>
           <div class="subtle-note">
-            Current state:
-            {% if security_settings.kiosk_intake_enabled %}Enabled{% else %}Disabled{% endif %}
+            Current status:
+            {% if security_settings.kiosk_intake_enabled %}
+              <span class="status-indicator enabled">Enabled</span>
+            {% else %}
+              <span class="status-indicator disabled">Disabled</span>
+            {% endif %}
           </div>
         </div>
 
@@ -1017,8 +1059,12 @@ h1{
             </form>
           </div>
           <div class="subtle-note">
-            Current state:
-            {% if security_settings.admin_login_only_mode %}Enabled{% else %}Disabled{% endif %}
+            Current status:
+            {% if security_settings.admin_login_only_mode %}
+              <span class="status-indicator enabled">Enabled</span>
+            {% else %}
+              <span class="status-indicator disabled">Disabled</span>
+            {% endif %}
           </div>
         </div>
 
@@ -1040,8 +1086,12 @@ h1{
             </form>
           </div>
           <div class="subtle-note">
-            Current state:
-            {% if security_settings.security_alerts_enabled %}Enabled{% else %}Disabled{% endif %}
+            Current status:
+            {% if security_settings.security_alerts_enabled %}
+              <span class="status-indicator enabled">Enabled</span>
+            {% else %}
+              <span class="status-indicator disabled">Disabled</span>
+            {% endif %}
           </div>
         </div>
 
