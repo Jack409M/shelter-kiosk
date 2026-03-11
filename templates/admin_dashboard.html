@@ -296,6 +296,54 @@
     </div>
 
     <div class="dash-panel">
+      <h3>Active Security Defenses</h3>
+
+      <h3 style="margin-top: 18px;">Banned IPs</h3>
+      {% if banned_ips %}
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>IP</th>
+              <th>Seconds Remaining</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in banned_ips %}
+              <tr>
+                <td>{{ row.ip }}</td>
+                <td>{{ row.seconds_remaining }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty-state">No IPs currently banned.</div>
+      {% endif %}
+
+      <h3 style="margin-top: 18px;">Rate Limit Activity</h3>
+      {% if rate_limit_activity %}
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Hits</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rate_limit_activity %}
+              <tr>
+                <td>{{ row.key }}</td>
+                <td>{{ row.hits }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty-state">No active rate limit buckets.</div>
+      {% endif %}
+    </div>
+
+    <div class="dash-panel">
       <h3>Quick Links</h3>
       <div class="quick-links">
         <a href="{{ url_for('admin.admin_users') }}">Users</a>
@@ -307,7 +355,7 @@
       <div style="margin-top:18px;">
         <h3 style="margin-bottom:8px;">What comes next</h3>
         <div class="small-note">
-          Next dashboard upgrades should include IP ban monitoring, rate limit event tracking, database connectivity, uptime, active sessions, and alert triggers.
+          Next dashboard upgrades should include active staff sessions, database connectivity, application uptime, worker health, and alert triggers.
         </div>
       </div>
     </div>
