@@ -7,6 +7,7 @@ from collections import deque
 _BUCKETS: dict[str, deque[float]] = {}
 _BANNED_IPS: dict[str, float] = {}
 _LOCKED_KEYS: dict[str, float] = {}
+_LOCK_HISTORY: dict[str, deque[float]] = {}
 
 
 def _prune_bucket(bucket: deque[float], window_seconds: int, now: float) -> None:
@@ -27,6 +28,18 @@ def _prune_expired_locks(now: float) -> None:
         del _LOCKED_KEYS[key]
 
 
+def _prune_lock_history(now: float, window_seconds: int = 86400) -> None:
+    empty_keys: list[str] = []
+
+    for key, history in _LOCK_HISTORY.items():
+        _prune_bucket(history, window_seconds, now)
+        if not history:
+            empty_keys.append(key)
+
+    for key in empty_keys:
+        del _LOCK_HISTORY[key]
+
+
 def ban_ip(ip: str, seconds: int) -> None:
     _BANNED_IPS[ip] = time.time() + seconds
 
@@ -43,7 +56,16 @@ def is_ip_banned(ip: str) -> bool:
 
 
 def lock_key(key: str, seconds: int) -> None:
-    _LOCKED_KEYS[key] = time.time() + seconds
+    now = time.time()
+    _LOCKED_KEYS[key] = now + seconds
+
+    history = _LOCK_HISTORY.get(key)
+    if history is None:
+        history = deque()
+        _LOCK_HISTORY[key] = history
+
+    history.append(now)
+    _prune_bucket(history, 86400, now)
 
 
 def is_key_locked(key: str) -> bool:
@@ -66,6 +88,27 @@ def get_key_lock_seconds_remaining(key: str) -> int:
         return 0
 
     return max(0, int(until - now))
+
+
+def get_progressive_lock_seconds(key: str) -> int:
+    now = time.time()
+    _prune_lock_history(now)
+
+    history = _LOCK_HISTORY.get(key)
+    if history is None:
+        return 600
+
+    recent_lock_count_30m = 0
+    cutoff_30m = now - 1800
+
+    for ts in history:
+        if ts >= cutoff_30m:
+            recent_lock_count_30m += 1
+
+    if recent_lock_count_30m >= 1:
+        return 10800
+
+    return 600
 
 
 def is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
