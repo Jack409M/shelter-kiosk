@@ -45,8 +45,8 @@ except Exception:
 # Environment flags and constants
 # ------------------------------------------------------------
 # Future extraction note
-# These config and environment values should eventually move into
-# a dedicated core.config module so app.py becomes a pure wiring file.
+# These environment values should eventually move into core.config
+# so this file becomes app wiring only.
 
 TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
 TWILIO_INBOUND_ENABLED = (os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true")
@@ -100,7 +100,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 # ------------------------------------------------------------
 # Future extraction note
 # This can eventually move into a dedicated app factory module
-# once more cross cutting setup is extracted from this file.
+# after more setup code is extracted from this file.
 def register_blueprints(app: Flask) -> None:
     import routes
     from flask import Blueprint
@@ -118,13 +118,16 @@ def register_blueprints(app: Flask) -> None:
 # Request utility delegation
 # ------------------------------------------------------------
 # Future extraction note
-# More request level helpers can move out of app.py over time.
+# Additional request parsing helpers can move into core.request_utils.
 def _client_ip() -> str:
     return client_ip()
 
 
 register_blueprints(app)
 
+# Centralized request security middleware now lives in core.request_security.
+# Keep request level defense registered here, but keep the actual logic out
+# of app.py so this file does not become a god file again.
 register_request_security(
     app,
     client_ip_func=_client_ip,
@@ -182,7 +185,7 @@ app.config.update(
 # CSRF
 # ------------------------------------------------------------
 # Future extraction note
-# These CSRF helpers can move into a dedicated core.csrf module later.
+# These CSRF helpers can move into core.csrf later.
 def _csrf_token() -> str:
     tok = session.get("_csrf_token")
     if not tok:
@@ -236,7 +239,7 @@ def _csrf_before_request():
 # Shelter helpers
 # ------------------------------------------------------------
 # Future extraction note
-# Additional shelter related query helpers can move into core.shelters.
+# Additional shelter query helpers can move into core.shelters.
 def get_all_shelters() -> list[str]:
     return load_all_shelters(init_db)
 
@@ -371,7 +374,7 @@ app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
 # Decorators
 # ------------------------------------------------------------
 # Future extraction note
-# These should eventually move into a dedicated core.decorators module.
+# These should eventually move into core.decorators.
 def require_staff_or_admin(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -465,3 +468,4 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
