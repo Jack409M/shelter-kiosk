@@ -14,7 +14,6 @@ from core.rate_limit import get_banned_ips_snapshot, get_locked_keys_snapshot, g
 from core.sms_sender import send_sms
 
 
-admin = Blueprint("admin", __name__)
 
 ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff"]
 
