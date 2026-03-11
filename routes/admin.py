@@ -775,6 +775,16 @@ def _audit_where_from_request():
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
     return where_sql, tuple(params)
 
+from routes.admin_parts.helpers import (
+    current_role as _current_role,
+    require_admin_role as _require_admin,
+    require_admin_or_shelter_director_role as _require_admin_or_shelter_director,
+    allowed_roles_to_create as _allowed_roles_to_create,
+    all_roles as _all_roles,
+    ordered_roles as _ordered_roles,
+    build_admin_dashboard_payload as _build_admin_dashboard_payload,
+    audit_where_from_request as _audit_where_from_request,
+)
 
 @admin.route("/staff/admin/dashboard", methods=["GET"])
 @require_login
