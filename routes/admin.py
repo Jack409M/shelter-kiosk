@@ -58,7 +58,7 @@ def _scalar_value(rows, default=0):
     """
     Safely extract a single scalar value from db_fetchall results.
 
-    This handles both dict-based PostgreSQL rows and tuple-based SQLite rows.
+    This handles both dict based PostgreSQL rows and tuple based SQLite rows.
     """
     if not rows:
         return default
@@ -132,7 +132,7 @@ def _build_attack_intelligence(rows):
 
 def _build_locked_username_snapshot():
     """
-    Convert generic locked rate limit keys into dashboard-friendly username rows.
+    Convert generic locked rate limit keys into dashboard friendly username rows.
 
     Only username lock keys are included here.
     """
@@ -335,7 +335,7 @@ def admin_dashboard():
         """
         SELECT action_type, action_details, created_at
         FROM audit_log
-        WHERE action_type LIKE 'kiosk_%'
+        WHERE action_type LIKE 'kiosk_%%'
         ORDER BY id DESC
         LIMIT %s
         """
@@ -376,7 +376,7 @@ def admin_users():
     Staff user list page.
 
     Supports:
-    - role-based access
+    - role based access
     - free text search
     - sorting by last name, first name, or role
     """
