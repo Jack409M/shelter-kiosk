@@ -163,6 +163,7 @@ h1{
   border-collapse:collapse !important;
   background:#0b1621 !important;
   color:#e8f4ff !important;
+  table-layout:fixed !important;
 }
 
 .dash-panel table.audit-table thead,
@@ -188,6 +189,7 @@ h1{
   color:#f2f8ff !important;
   background:transparent !important;
   opacity:1 !important;
+  vertical-align:top !important;
 }
 
 .dash-panel table.audit-table tbody tr{
@@ -204,6 +206,18 @@ h1{
 
 .dash-panel table.audit-table tbody tr:hover{
   background:#163148 !important;
+}
+
+.detail-cell{
+  white-space:pre-wrap;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  line-height:1.35;
+}
+
+.event-cell{
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 
 .bar{
@@ -421,8 +435,8 @@ h1{
             <tr>
               <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
               <td>{{ r.staff_username or "" }}</td>
-              <td>{{ r.action_type or "" }}</td>
-              <td>{{ r.action_details or "" }}</td>
+              <td class="event-cell">{{ r.action_type or "" }}</td>
+              <td class="detail-cell">{{ r.action_details or "" }}</td>
             </tr>
           {% endfor %}
         </tbody>
@@ -435,7 +449,7 @@ h1{
     {% if recent_failed_logins %}
       <ul class="feed-list">
         {% for r in recent_failed_logins %}
-          <li>
+          <li class="detail-cell">
             <span class="feed-time">{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</span>
             <span class="feed-action">{{ r.action_type or "login_failed" }}</span>
             <span>{{ r.action_details or "" }}</span>
@@ -524,7 +538,7 @@ h1{
           <tbody>
             {% for row in locked_usernames %}
               <tr>
-                <td>{{ row.username }}</td>
+                <td class="event-cell">{{ row.username }}</td>
                 <td>{{ row.seconds_remaining }}</td>
               </tr>
             {% endfor %}
@@ -546,7 +560,7 @@ h1{
           <tbody>
             {% for row in banned_ips %}
               <tr>
-                <td>{{ row.ip }}</td>
+                <td class="event-cell">{{ row.ip }}</td>
                 <td>{{ row.seconds_remaining }}</td>
               </tr>
             {% endfor %}
@@ -568,7 +582,7 @@ h1{
           <tbody>
             {% for row in rate_limit_activity %}
               <tr>
-                <td>{{ row.key }}</td>
+                <td class="detail-cell">{{ row.key }}</td>
                 <td>{{ row.hits }}</td>
               </tr>
             {% endfor %}
@@ -595,8 +609,8 @@ h1{
             {% for row in kiosk_security_events %}
               <tr>
                 <td>{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</td>
-                <td>{{ row.action_type or "" }}</td>
-                <td>{{ row.action_details or "" }}</td>
+                <td class="event-cell">{{ row.action_type or "" }}</td>
+                <td class="detail-cell">{{ row.action_details or "" }}</td>
               </tr>
             {% endfor %}
           </tbody>
