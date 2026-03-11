@@ -480,6 +480,31 @@ h1{
   font-size:13px;
 }
 
+.live-feed{
+  display:grid;
+  gap:10px;
+}
+
+.live-feed-item{
+  background:#0c1824;
+  border:1px solid #1d364c;
+  border-radius:10px;
+  padding:10px 12px;
+}
+
+.live-feed-top{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:6px;
+  font-size:12px;
+  color:#89b3d0;
+}
+
+.live-feed-title{
+  margin-bottom:6px;
+}
+
 .small-note{
   color:#8fb1ca;
   font-size:13px;
@@ -620,15 +645,15 @@ h1{
     <h1>Operations Command Console</h1>
     <div class="command-subtitle">DWC shelter command layer</div>
   </div>
-  <div class="status-pill {{ security_pill }}">
-    <span class="led {{ security_led }}"></span>
-    Security Level {{ security_level }}
+  <div id="security-status-pill" class="status-pill {{ security_pill }}">
+    <span id="security-status-led" class="led {{ security_led }}"></span>
+    <span id="security-status-text">Security Level {{ security_level }}</span>
   </div>
 </div>
 
-<div class="security-banner {{ banner_class }}">
-  <div class="security-banner-title">{{ banner_title }}</div>
-  <div class="security-banner-copy">{{ banner_copy }}</div>
+<div id="security-banner" class="security-banner {{ banner_class }}">
+  <div id="security-banner-title" class="security-banner-title">{{ banner_title }}</div>
+  <div id="security-banner-copy" class="security-banner-copy">{{ banner_copy }}</div>
 </div>
 
 <div class="dash-grid">
@@ -641,7 +666,7 @@ h1{
 
   <div class="dash-card">
     <h3>Security Level</h3>
-    <div><span class="led {{ security_led }}"></span>{{ security_level }}</div>
+    <div><span id="security-level-led" class="led {{ security_led }}"></span><span id="security-level-text">{{ security_level }}</span></div>
     <div class="dash-label">Threat posture</div>
   </div>
 
@@ -659,14 +684,20 @@ h1{
 
   <div class="dash-card">
     <h3>Failed Logins</h3>
-    <div class="dash-stat">{{ failed_login_count }}</div>
+    <div id="failed-logins-stat" class="dash-stat">{{ failed_login_count }}</div>
     <div class="dash-label">Last 24 hours</div>
   </div>
 
   <div class="dash-card">
     <h3>Live Attackers</h3>
-    <div class="dash-stat">{{ top_attacking_ips|length }}</div>
+    <div id="live-attackers-stat" class="dash-stat">{{ top_attacking_ips|length }}</div>
     <div class="dash-label">IPs in active radar</div>
+  </div>
+
+  <div class="dash-card">
+    <h3>Staff Sessions</h3>
+    <div id="staff-sessions-stat" class="dash-stat">{{ recent_staff_sessions|length }}</div>
+    <div class="dash-label">Recent active sessions</div>
   </div>
 
 </div>
@@ -705,7 +736,7 @@ h1{
 
     <h3 style="margin-top:18px;">Intrusion Feed</h3>
     {% if recent_failed_logins %}
-      <ul class="feed-list">
+      <ul id="intrusion-feed-list" class="feed-list">
         {% for r in recent_failed_logins %}
           <li class="detail-cell">
             <span class="feed-time">{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</span>
@@ -715,7 +746,7 @@ h1{
         {% endfor %}
       </ul>
     {% else %}
-      <div class="empty-state">No intrusion events in feed.</div>
+      <div id="intrusion-feed-list" class="empty-state">No intrusion events in feed.</div>
     {% endif %}
   </div>
 
@@ -726,19 +757,19 @@ h1{
 
       <div class="mini-metrics">
         <div class="mini-metric">
-          <div class="mini-metric-value">{{ failed_login_count }}</div>
+          <div id="snapshot-failed-logins" class="mini-metric-value">{{ failed_login_count }}</div>
           <div class="mini-metric-label">Failed Logins</div>
         </div>
         <div class="mini-metric">
-          <div class="mini-metric-value">{{ top_attacking_ips|length }}</div>
+          <div id="snapshot-attacker-ips" class="mini-metric-value">{{ top_attacking_ips|length }}</div>
           <div class="mini-metric-label">Attacker IPs</div>
         </div>
         <div class="mini-metric">
-          <div class="mini-metric-value">{{ targeted_usernames|length }}</div>
+          <div id="snapshot-targeted-accounts" class="mini-metric-value">{{ targeted_usernames|length }}</div>
           <div class="mini-metric-label">Targeted Accounts</div>
         </div>
         <div class="mini-metric">
-          <div class="mini-metric-value">{{ locked_usernames|length + banned_ips|length }}</div>
+          <div id="snapshot-active-defenses" class="mini-metric-value">{{ locked_usernames|length + banned_ips|length }}</div>
           <div class="mini-metric-label">Active Defenses</div>
         </div>
       </div>
@@ -831,6 +862,39 @@ h1{
       {% else %}
         <div class="empty-state">No attacker IPs are active in the radar.</div>
       {% endif %}
+    </div>
+
+    <div class="dash-panel">
+      <h3>Active Staff Sessions</h3>
+
+      {% if recent_staff_sessions %}
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th style="width:28%;">User</th>
+              <th style="width:22%;">Status</th>
+              <th style="width:25%;">Last Action</th>
+              <th style="width:25%;">Last Seen</th>
+            </tr>
+          </thead>
+          <tbody id="active-staff-session-body">
+            {% for row in recent_staff_sessions %}
+              <tr>
+                <td class="event-cell">{{ row.username }}</td>
+                <td><span class="event-pill success">Active</span></td>
+                <td class="event-cell">{{ pretty_label(row.last_action or "login") }}</td>
+                <td>{{ fmt_dt(row.last_seen) if fmt_dt else row.last_seen }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div id="active-staff-session-body" class="empty-state">No recent active staff sessions detected.</div>
+      {% endif %}
+
+      <div class="subtle-note">
+        This panel is based on recent login and logout activity, not a dedicated server side session registry.
+      </div>
     </div>
 
     <div class="dash-panel">
@@ -953,6 +1017,16 @@ h1{
     </div>
 
     <div class="dash-panel">
+      <h3>Live Activity</h3>
+      <div id="live-activity-list" class="live-feed">
+        <div class="empty-state">Waiting for live activity updates.</div>
+      </div>
+      <div class="subtle-note">
+        This panel refreshes automatically every 10 seconds while the dashboard is open.
+      </div>
+    </div>
+
+    <div class="dash-panel">
       <h3>Kiosk Security Events</h3>
 
       {% if kiosk_security_events %}
@@ -964,7 +1038,7 @@ h1{
               <th style="width:48%;">Details</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="kiosk-events-body">
             {% for row in kiosk_security_events %}
               <tr>
                 <td>{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</td>
@@ -977,7 +1051,7 @@ h1{
           </tbody>
         </table>
       {% else %}
-        <div class="empty-state">No kiosk security activity recorded.</div>
+        <div id="kiosk-events-body" class="empty-state">No kiosk security activity recorded.</div>
       {% endif %}
     </div>
 
@@ -997,6 +1071,10 @@ h1{
           Suspends outbound SMS messaging if activated.
         </div>
       </div>
+
+      <div class="subtle-note">
+        SMS security alerts will send only to active admin accounts with a mobile phone saved in staff profile.
+      </div>
     </div>
 
     <div class="dash-panel">
@@ -1011,7 +1089,7 @@ h1{
       <div style="margin-top:18px;">
         <h3 style="margin-bottom:8px;">What comes next</h3>
         <div class="small-note">
-          Next dashboard upgrades should include active staff sessions, database connectivity, application uptime, worker health, and alert triggers.
+          Next dashboard upgrades should include database connectivity, application uptime, worker health, and resident kiosk flow analytics.
         </div>
       </div>
     </div>
@@ -1020,4 +1098,350 @@ h1{
 
 </div>
 
-{% endblock %}
+<script>
+(function(){
+  const liveUrl = {{ dashboard_live_url|tojson }};
+
+  function escapeHtml(value){
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function prettyLabel(value){
+    const raw = String(value || "");
+    if(!raw) return "Unknown Event";
+    if(raw === "login_failed") return "Login Failed";
+    if(raw === "login") return "Login Success";
+    if(raw === "logout") return "Logout";
+    if(raw === "profile_update") return "Profile Updated";
+    if(raw === "set_role") return "Role Changed";
+    if(raw === "set_active") return "Account Status Changed";
+    if(raw === "reset_password") return "Password Reset";
+    if(raw === "wipe_all_data") return "Data Wipe";
+    if(raw === "recreate_schema") return "Schema Recreated";
+    if(raw.startsWith("kiosk_")){
+      return raw.slice(6).replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+    }
+    return raw.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function eventClass(value){
+    const raw = String(value || "");
+    if(["login_failed", "wipe_all_data", "recreate_schema"].includes(raw) || raw.startsWith("kiosk_block") || raw.startsWith("kiosk_denied")){
+      return "danger";
+    }
+    if(["reset_password", "set_role", "set_active"].includes(raw)){
+      return "warn";
+    }
+    if(["login", "logout"].includes(raw)){
+      return "success";
+    }
+    if(raw.startsWith("kiosk_")){
+      return "info";
+    }
+    return "neutral";
+  }
+
+  function computeSecurityState(data){
+    const topIpAttempts = data.top_attacking_ips && data.top_attacking_ips.length ? Number(data.top_attacking_ips[0].attempts || 0) : 0;
+    const topUserAttempts = data.targeted_usernames && data.targeted_usernames.length ? Number(data.targeted_usernames[0].attempts || 0) : 0;
+
+    if((data.banned_ips || []).length){
+      return {
+        level: "ACTIVE ATTACK",
+        led: "red",
+        pill: "danger",
+        banner: "danger",
+        title: "Active Defense Triggered",
+        copy: "One or more IP addresses are currently banned. Immediate hostile activity is being contained."
+      };
+    }
+
+    if((data.locked_usernames || []).length){
+      return {
+        level: "ACTIVE ATTACK",
+        led: "red",
+        pill: "danger",
+        banner: "danger",
+        title: "Account Targeting Detected",
+        copy: "Username lockouts are active. Repeated credential attacks are in progress or were recently contained."
+      };
+    }
+
+    if(topIpAttempts >= 10){
+      return {
+        level: "ACTIVE ATTACK",
+        led: "red",
+        pill: "danger",
+        banner: "danger",
+        title: "Active Attack Detected",
+        copy: "An IP has crossed high volume login failure thresholds. Review the attack radar and intrusion timeline."
+      };
+    }
+
+    if(topUserAttempts >= 10){
+      return {
+        level: "ACTIVE ATTACK",
+        led: "red",
+        pill: "danger",
+        banner: "danger",
+        title: "Focused Username Attack Detected",
+        copy: "One or more staff usernames are being repeatedly targeted. Review lockout pressure and affected accounts."
+      };
+    }
+
+    if(topIpAttempts >= 5){
+      return {
+        level: "ELEVATED",
+        led: "yellow",
+        pill: "warn",
+        banner: "warn",
+        title: "Elevated Threat Posture",
+        copy: "Failed login activity is elevated. Continue monitoring intrusion events and attacker concentration."
+      };
+    }
+
+    if(topUserAttempts >= 6){
+      return {
+        level: "ELEVATED",
+        led: "yellow",
+        pill: "warn",
+        banner: "warn",
+        title: "Targeted Login Pressure",
+        copy: "Repeated failures are clustering around specific usernames. Watch for lockouts and follow on activity."
+      };
+    }
+
+    return {
+      level: "NORMAL",
+      led: "green",
+      pill: "",
+      banner: "",
+      title: "System Stable",
+      copy: "No active threat indicators are currently above alert threshold."
+    };
+  }
+
+  function updateSecurityBanner(data){
+    const state = computeSecurityState(data);
+
+    const pill = document.getElementById("security-status-pill");
+    const pillLed = document.getElementById("security-status-led");
+    const pillText = document.getElementById("security-status-text");
+    const levelLed = document.getElementById("security-level-led");
+    const levelText = document.getElementById("security-level-text");
+    const banner = document.getElementById("security-banner");
+    const bannerTitle = document.getElementById("security-banner-title");
+    const bannerCopy = document.getElementById("security-banner-copy");
+
+    if(pill){
+      pill.className = "status-pill" + (state.pill ? " " + state.pill : "");
+    }
+    if(pillLed){
+      pillLed.className = "led " + state.led;
+    }
+    if(pillText){
+      pillText.textContent = "Security Level " + state.level;
+    }
+    if(levelLed){
+      levelLed.className = "led " + state.led;
+    }
+    if(levelText){
+      levelText.textContent = state.level;
+    }
+    if(banner){
+      banner.className = "security-banner" + (state.banner ? " " + state.banner : "");
+    }
+    if(bannerTitle){
+      bannerTitle.textContent = state.title;
+    }
+    if(bannerCopy){
+      bannerCopy.textContent = state.copy;
+    }
+  }
+
+  function updateTopStats(data){
+    const failed = document.getElementById("failed-logins-stat");
+    const attackers = document.getElementById("live-attackers-stat");
+    const sessions = document.getElementById("staff-sessions-stat");
+    const snapFailed = document.getElementById("snapshot-failed-logins");
+    const snapAttackers = document.getElementById("snapshot-attacker-ips");
+    const snapTargeted = document.getElementById("snapshot-targeted-accounts");
+    const snapDefenses = document.getElementById("snapshot-active-defenses");
+
+    if(failed) failed.textContent = String(data.failed_login_count || 0);
+    if(attackers) attackers.textContent = String((data.top_attacking_ips || []).length);
+    if(sessions) sessions.textContent = String((data.recent_staff_sessions || []).length);
+    if(snapFailed) snapFailed.textContent = String(data.failed_login_count || 0);
+    if(snapAttackers) snapAttackers.textContent = String((data.top_attacking_ips || []).length);
+    if(snapTargeted) snapTargeted.textContent = String((data.targeted_usernames || []).length);
+    if(snapDefenses) snapDefenses.textContent = String((data.locked_usernames || []).length + (data.banned_ips || []).length);
+  }
+
+  function updateIntrusionFeed(data){
+    const el = document.getElementById("intrusion-feed-list");
+    if(!el) return;
+
+    const rows = data.recent_failed_logins || [];
+    if(!rows.length){
+      el.className = "empty-state";
+      el.innerHTML = "No intrusion events in feed.";
+      return;
+    }
+
+    el.className = "feed-list";
+    el.innerHTML = rows.map(row => `
+      <li class="detail-cell">
+        <span class="feed-time">${escapeHtml(row.created_at || "")}</span>
+        <span class="feed-action">${escapeHtml(prettyLabel(row.action_type || "login_failed"))}</span>
+        <span>${escapeHtml(row.action_details || "")}</span>
+      </li>
+    `).join("");
+  }
+
+  function updateKioskPanel(data){
+    const el = document.getElementById("kiosk-events-body");
+    if(!el) return;
+
+    const rows = data.kiosk_security_events || [];
+    if(!rows.length){
+      el.className = "empty-state";
+      el.innerHTML = "No kiosk security activity recorded.";
+      return;
+    }
+
+    el.className = "";
+    el.innerHTML = rows.map(row => `
+      <tr>
+        <td>${escapeHtml(row.created_at || "")}</td>
+        <td class="event-cell">
+          <span class="event-pill ${escapeHtml(eventClass(row.action_type || ""))}">
+            ${escapeHtml(prettyLabel(row.action_type || ""))}
+          </span>
+        </td>
+        <td class="detail-cell">${escapeHtml(row.action_details || "")}</td>
+      </tr>
+    `).join("");
+  }
+
+  function updateStaffSessions(data){
+    const el = document.getElementById("active-staff-session-body");
+    if(!el) return;
+
+    const rows = data.recent_staff_sessions || [];
+    if(!rows.length){
+      el.className = "empty-state";
+      el.innerHTML = "No recent active staff sessions detected.";
+      return;
+    }
+
+    el.className = "";
+    el.innerHTML = rows.map(row => `
+      <tr>
+        <td class="event-cell">${escapeHtml(row.username || "")}</td>
+        <td><span class="event-pill success">Active</span></td>
+        <td class="event-cell">${escapeHtml(prettyLabel(row.last_action || "login"))}</td>
+        <td>${escapeHtml(row.last_seen || "")}</td>
+      </tr>
+    `).join("");
+  }
+
+  function buildLiveActivityRows(data){
+    const combined = [];
+
+    (data.recent_audit || []).slice(0, 4).forEach(row => {
+      combined.push({
+        source: "Audit",
+        created_at: row.created_at || "",
+        action_type: row.action_type || "",
+        action_details: row.action_details || "",
+      });
+    });
+
+    (data.recent_failed_logins || []).slice(0, 4).forEach(row => {
+      combined.push({
+        source: "Intrusion",
+        created_at: row.created_at || "",
+        action_type: row.action_type || "",
+        action_details: row.action_details || "",
+      });
+    });
+
+    (data.kiosk_security_events || []).slice(0, 4).forEach(row => {
+      combined.push({
+        source: "Kiosk",
+        created_at: row.created_at || "",
+        action_type: row.action_type || "",
+        action_details: row.action_details || "",
+      });
+    });
+
+    combined.sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+    return combined.slice(0, 8);
+  }
+
+  function updateLiveActivity(data){
+    const el = document.getElementById("live-activity-list");
+    if(!el) return;
+
+    const rows = buildLiveActivityRows(data);
+    if(!rows.length){
+      el.innerHTML = `<div class="empty-state">No live activity available.</div>`;
+      return;
+    }
+
+    el.innerHTML = rows.map(row => `
+      <div class="live-feed-item">
+        <div class="live-feed-top">
+          <div>${escapeHtml(row.source)}</div>
+          <div>${escapeHtml(row.created_at || "")}</div>
+        </div>
+        <div class="live-feed-title">
+          <span class="event-pill ${escapeHtml(eventClass(row.action_type || ""))}">
+            ${escapeHtml(prettyLabel(row.action_type || ""))}
+          </span>
+        </div>
+        <div class="detail-cell">${escapeHtml(row.action_details || "")}</div>
+      </div>
+    `).join("");
+  }
+
+  async function refreshLive(){
+    try{
+      const res = await fetch(liveUrl, {
+        method: "GET",
+        headers: {"X-Requested-With": "XMLHttpRequest"},
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+
+      if(!res.ok){
+        return;
+      }
+
+      const data = await res.json();
+      if(!data.ok){
+        return;
+      }
+
+      updateSecurityBanner(data);
+      updateTopStats(data);
+      updateIntrusionFeed(data);
+      updateKioskPanel(data);
+      updateStaffSessions(data);
+      updateLiveActivity(data);
+    }catch(err){
+      console.error("Live dashboard refresh failed", err);
+    }
+  }
+
+  refreshLive();
+  setInterval(refreshLive, 10000);
+})();
+</script>
+
+{% endblock %}  does this look right? 
