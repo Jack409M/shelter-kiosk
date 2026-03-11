@@ -14,6 +14,18 @@ from core.helpers import utcnow_iso
 kiosk = Blueprint("kiosk", __name__)
 
 
+def _kiosk_enabled() -> bool:
+    try:
+        row = db_fetchone(
+            "SELECT kiosk_intake_enabled FROM security_settings ORDER BY id ASC LIMIT 1"
+        )
+        if not row:
+            return True
+        return bool(row["kiosk_intake_enabled"] if isinstance(row, dict) else row[0])
+    except Exception:
+        return True
+
+
 @kiosk.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
 def kiosk_checkout(shelter: str):
     from app import KIOSK_PIN, _client_ip, get_all_shelters, init_db
@@ -35,6 +47,17 @@ def kiosk_checkout(shelter: str):
 
     shelter = matched_shelter
     ip = _client_ip()
+
+    if not _kiosk_enabled():
+        log_action(
+            "kiosk",
+            None,
+            shelter,
+            None,
+            "kiosk_disabled_block",
+            f"ip={ip}",
+        )
+        return "Kiosk intake is temporarily disabled.", 503
 
     kiosk_manager_user = (os.environ.get("KIOSK_MANAGER_USER") or "").strip()
     kiosk_manager_pass = (os.environ.get("KIOSK_MANAGER_PASS") or "").strip()
