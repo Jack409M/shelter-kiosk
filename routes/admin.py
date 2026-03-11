@@ -225,6 +225,45 @@ def _load_security_settings() -> dict:
     }
 
 
+def _load_recent_security_incidents(limit: int = 10) -> list[dict]:
+    kind = g.get("db_kind")
+
+    rows = db_fetchall(
+        """
+        SELECT id, incident_type, severity, title, details, related_ip, related_username, status, created_at
+        FROM security_incidents
+        ORDER BY id DESC
+        LIMIT %s
+        """
+        if kind == "pg"
+        else """
+        SELECT id, incident_type, severity, title, details, related_ip, related_username, status, created_at
+        FROM security_incidents
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    )
+
+    incidents = []
+    for row in rows or []:
+        incidents.append(
+            {
+                "id": _row_value(row, "id", ""),
+                "incident_type": _row_value(row, "incident_type", ""),
+                "severity": _row_value(row, "severity", ""),
+                "title": _row_value(row, "title", ""),
+                "details": _row_value(row, "details", ""),
+                "related_ip": _row_value(row, "related_ip", ""),
+                "related_username": _row_value(row, "related_username", ""),
+                "status": _row_value(row, "status", ""),
+                "created_at": _row_value(row, "created_at", ""),
+            }
+        )
+
+    return incidents
+
+
 def _build_recent_staff_sessions(limit: int = 12) -> list[dict]:
     kind = g.get("db_kind")
 
@@ -650,6 +689,8 @@ def _build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
         settings=settings,
     )
 
+    recent_security_incidents = _load_recent_security_incidents()
+
     if send_alerts:
         _maybe_send_security_alerts(
             failed_login_count=int(failed_login_count or 0),
@@ -674,12 +715,15 @@ def _build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
         "rate_limit_activity": rate_limit_activity,
         "kiosk_security_events": kiosk_security_events,
         "recent_staff_sessions": recent_staff_sessions,
+        "recent_security_incidents": recent_security_incidents,
         "live_payload": {
+            "settings": settings,
             "failed_login_count": int(failed_login_count or 0),
             "recent_audit": _serialize_rows(recent_audit, ["created_at", "staff_username", "action_type", "action_details"]),
             "recent_failed_logins": _serialize_rows(recent_failed_logins, ["created_at", "action_type", "action_details"]),
             "kiosk_security_events": _serialize_rows(kiosk_security_events, ["created_at", "action_type", "action_details"]),
             "recent_staff_sessions": recent_staff_sessions,
+            "recent_security_incidents": recent_security_incidents,
             "top_attacking_ips": top_attacking_ips,
             "targeted_usernames": targeted_usernames,
             "banned_ips": banned_ips,
@@ -753,6 +797,8 @@ def admin_dashboard():
         rate_limit_activity=payload["rate_limit_activity"],
         kiosk_security_events=payload["kiosk_security_events"],
         recent_staff_sessions=payload["recent_staff_sessions"],
+        recent_security_incidents=payload["recent_security_incidents"],
+        security_settings=payload["settings"],
         dashboard_live_url=url_for("admin.admin_dashboard_live"),
         fmt_dt=fmt_dt,
         current_role=_current_role(),
@@ -770,6 +816,54 @@ def admin_dashboard_live():
     live_payload = payload["live_payload"]
     live_payload["ok"] = True
     return jsonify(live_payload)
+
+
+@admin.post("/staff/admin/security-settings/update")
+@require_login
+@require_shelter
+def admin_update_security_settings():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    allowed_fields = {
+        "sms_system_enabled",
+        "kiosk_intake_enabled",
+        "admin_login_only_mode",
+        "security_alerts_enabled",
+    }
+
+    field = (request.form.get("field") or "").strip()
+    value = (request.form.get("value") or "").strip()
+
+    if field not in allowed_fields:
+        flash("Invalid security setting.", "error")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    if value not in {"0", "1"}:
+        flash("Invalid security setting value.", "error")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    bool_value = value == "1"
+    kind = g.get("db_kind")
+    now = utcnow_iso()
+
+    db_execute(
+        f"UPDATE security_settings SET {field} = " + ("%s" if kind == "pg" else "?") + ", updated_at = " + ("%s" if kind == "pg" else "?") + " WHERE id = (SELECT id FROM security_settings ORDER BY id ASC LIMIT 1)",
+        (bool_value if kind == "pg" else (1 if bool_value else 0), now),
+    )
+
+    log_action(
+        "security_settings",
+        None,
+        None,
+        session.get("staff_user_id"),
+        "security_setting_updated",
+        f"field={field}\nvalue={value}",
+    )
+
+    flash("Security setting updated.", "ok")
+    return redirect(url_for("admin.admin_dashboard"))
 
 
 @admin.route("/staff/admin/users", methods=["GET"])
@@ -1170,4 +1264,4 @@ def recreate_schema():
         "recreate_schema",
         "Dropped and recreated tables",
     )
-    return "Schema recreated."  
+    return "Schema recreated."
