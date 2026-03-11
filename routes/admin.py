@@ -19,18 +19,22 @@ ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff"]
 
 
 def _current_role() -> str:
+    """Return the current logged in staff role from session."""
     return (session.get("role") or "").strip()
 
 
 def _require_admin() -> bool:
+    """Return True if the current user is an admin."""
     return _current_role() == "admin"
 
 
 def _require_admin_or_shelter_director() -> bool:
+    """Return True if the current user is admin or shelter director."""
     return _current_role() in {"admin", "shelter_director"}
 
 
 def _allowed_roles_to_create():
+    """Return the set of roles the current user is allowed to create."""
     if _require_admin():
         return {"admin", "shelter_director", "staff", "case_manager", "ra"}
 
@@ -41,25 +45,44 @@ def _allowed_roles_to_create():
 
 
 def _all_roles():
+    """Return every valid staff role in the system."""
     return {"admin", "shelter_director", "staff", "case_manager", "ra"}
 
 
 def _ordered_roles(role_set):
+    """Return roles ordered consistently for dropdowns and UI display."""
     return [r for r in ROLE_ORDER if r in role_set]
 
 
 def _scalar_value(rows, default=0):
+    """
+    Safely extract a single scalar value from db_fetchall results.
+
+    This handles both dict-based PostgreSQL rows and tuple-based SQLite rows.
+    """
     if not rows:
         return default
+
     row = rows[0]
+
     if isinstance(row, dict):
         return next(iter(row.values()), default)
+
     if isinstance(row, (list, tuple)) and row:
         return row[0]
+
     return default
 
 
 def _extract_detail_value(details: str, key: str) -> str:
+    """
+    Extract a key=value pair from an audit action_details string.
+
+    Example:
+        details = "reason=bad_password ip=1.2.3.4 username=jack"
+
+    This helper expects one key=value pair per line if multiline data is used.
+    """
     if not details:
         return ""
 
@@ -68,10 +91,18 @@ def _extract_detail_value(details: str, key: str) -> str:
         line = line.strip()
         if line.startswith(prefix):
             return line[len(prefix):].strip()
+
     return ""
 
 
 def _build_attack_intelligence(rows):
+    """
+    Build attack summaries from recent failed login audit rows.
+
+    Returns:
+        top_attacking_ips
+        targeted_usernames
+    """
     ip_counter = Counter()
     username_counter = Counter()
 
@@ -82,6 +113,7 @@ def _build_attack_intelligence(rows):
 
         if ip:
             ip_counter[ip] += 1
+
         if username:
             username_counter[username] += 1
 
@@ -89,6 +121,7 @@ def _build_attack_intelligence(rows):
         {"ip": ip, "attempts": attempts}
         for ip, attempts in ip_counter.most_common(10)
     ]
+
     targeted_usernames = [
         {"username": username, "attempts": attempts}
         for username, attempts in username_counter.most_common(10)
@@ -98,10 +131,17 @@ def _build_attack_intelligence(rows):
 
 
 def _build_locked_username_snapshot():
+    """
+    Convert generic locked rate limit keys into dashboard-friendly username rows.
+
+    Only username lock keys are included here.
+    """
     rows = []
+
     for row in get_locked_keys_snapshot():
         key = str(row.get("key", ""))
         prefix = "staff_login_username_lock:"
+
         if not key.startswith(prefix):
             continue
 
@@ -118,15 +158,25 @@ def _build_locked_username_snapshot():
 
 
 def _audit_where_from_request():
+    """
+    Build dynamic WHERE filters for the audit CSV export endpoint.
+
+    Supports filtering by:
+    - shelter
+    - entity_type
+    - action_type
+    - staff_user_id
+    - free text query
+    """
     kind = g.get("db_kind")
     where = []
     params = []
 
     def add_eq(field, key):
-        v = (request.args.get(key) or "").strip()
-        if v:
+        value = (request.args.get(key) or "").strip()
+        if value:
             where.append(f"{field} = " + ("%s" if kind == "pg" else "?"))
-            params.append(v)
+            params.append(value)
 
     add_eq("a.shelter", "shelter")
     add_eq("a.entity_type", "entity_type")
@@ -150,8 +200,8 @@ def _audit_where_from_request():
             f"COALESCE(su.username, '') {like_op} {ph}"
             ")"
         )
-        pat = f"%{q}%"
-        params.extend([pat, pat, pat, pat, pat])
+        pattern = f"%{q}%"
+        params.extend([pattern, pattern, pattern, pattern, pattern])
 
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
     return where_sql, tuple(params)
@@ -161,6 +211,18 @@ def _audit_where_from_request():
 @require_login
 @require_shelter
 def admin_dashboard():
+    """
+    Main admin dashboard.
+
+    Displays:
+    - total users
+    - active users
+    - recent audit activity
+    - failed login monitoring
+    - attack intelligence
+    - active defenses
+    - kiosk security activity
+    """
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -182,7 +244,13 @@ def admin_dashboard():
 
     recent_audit = db_fetchall(
         """
-        SELECT a.id, a.entity_type, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
+        SELECT
+            a.id,
+            a.entity_type,
+            a.action_type,
+            a.action_details,
+            a.created_at,
+            COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
         ORDER BY a.id DESC
@@ -190,7 +258,13 @@ def admin_dashboard():
         """
         if is_pg
         else """
-        SELECT a.id, a.entity_type, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
+        SELECT
+            a.id,
+            a.entity_type,
+            a.action_type,
+            a.action_details,
+            a.created_at,
+            COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
         ORDER BY a.id DESC
@@ -219,7 +293,12 @@ def admin_dashboard():
 
     failed_logins_24h = db_fetchall(
         """
-        SELECT a.id, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
+        SELECT
+            a.id,
+            a.action_type,
+            a.action_details,
+            a.created_at,
+            COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
         WHERE a.action_type = 'login_failed'
@@ -229,7 +308,12 @@ def admin_dashboard():
         """
         if is_pg
         else """
-        SELECT a.id, a.action_type, a.action_details, a.created_at, COALESCE(su.username, '') AS staff_username
+        SELECT
+            a.id,
+            a.action_type,
+            a.action_details,
+            a.created_at,
+            COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
         WHERE a.action_type = 'login_failed'
@@ -247,6 +331,25 @@ def admin_dashboard():
     locked_usernames = _build_locked_username_snapshot()
     rate_limit_activity = get_rate_limit_snapshot()
 
+    kiosk_security_events = db_fetchall(
+        """
+        SELECT action_type, action_details, created_at
+        FROM audit_log
+        WHERE action_type LIKE 'kiosk_%'
+        ORDER BY id DESC
+        LIMIT %s
+        """
+        if is_pg
+        else """
+        SELECT action_type, action_details, created_at
+        FROM audit_log
+        WHERE action_type LIKE 'kiosk_%'
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (10,),
+    )
+
     return render_template(
         "admin_dashboard.html",
         total_users=total_users,
@@ -259,6 +362,7 @@ def admin_dashboard():
         banned_ips=banned_ips,
         locked_usernames=locked_usernames,
         rate_limit_activity=rate_limit_activity,
+        kiosk_security_events=kiosk_security_events,
         fmt_dt=fmt_dt,
         current_role=_current_role(),
     )
@@ -268,6 +372,14 @@ def admin_dashboard():
 @require_login
 @require_shelter
 def admin_users():
+    """
+    Staff user list page.
+
+    Supports:
+    - role-based access
+    - free text search
+    - sorting by last name, first name, or role
+    """
     from app import ROLE_LABELS, init_db
 
     if not _require_admin_or_shelter_director():
@@ -294,8 +406,8 @@ def admin_users():
             f"COALESCE(last_name, '') {like_op} {ph}"
             ")"
         )
-        pat = f"%{q}%"
-        params.extend([pat, pat])
+        pattern = f"%{q}%"
+        params.extend([pattern, pattern])
 
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
 
@@ -369,6 +481,7 @@ def admin_users():
 @require_login
 @require_shelter
 def admin_add_user():
+    """Render add user form."""
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -380,6 +493,7 @@ def admin_add_user():
 @require_login
 @require_shelter
 def admin_edit_user(user_id: int):
+    """Render edit user form for an existing staff user."""
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -402,6 +516,7 @@ def admin_edit_user(user_id: int):
 @require_login
 @require_shelter
 def admin_set_user_active(user_id: int):
+    """Activate or deactivate a staff user account."""
     role = _current_role()
 
     if role not in {"admin", "shelter_director"}:
@@ -409,7 +524,6 @@ def admin_set_user_active(user_id: int):
         return redirect(url_for("auth.staff_home"))
 
     active = (request.form.get("active") or "").strip()
-
     if active not in ["0", "1"]:
         flash("Invalid action.", "error")
         return redirect(url_for("admin.admin_users"))
@@ -440,12 +554,12 @@ def admin_set_user_active(user_id: int):
 @require_login
 @require_shelter
 def admin_set_user_role(user_id: int):
+    """Change the role of a staff user."""
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
 
     new_role = (request.form.get("role") or "").strip()
-
     if new_role not in _all_roles():
         flash("Invalid role.", "error")
         return redirect(url_for("admin.admin_users"))
@@ -474,6 +588,7 @@ def admin_set_user_role(user_id: int):
 @require_login
 @require_shelter
 def admin_reset_user_password(user_id: int):
+    """Reset a staff user's password."""
     from app import MIN_STAFF_PASSWORD_LEN
     from werkzeug.security import generate_password_hash
 
@@ -482,7 +597,6 @@ def admin_reset_user_password(user_id: int):
         return redirect(url_for("auth.staff_home"))
 
     password = (request.form.get("password") or "").strip()
-
     if len(password) < MIN_STAFF_PASSWORD_LEN:
         flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
         return redirect(url_for("admin.admin_users"))
@@ -511,6 +625,7 @@ def admin_reset_user_password(user_id: int):
 @require_login
 @require_shelter
 def staff_audit_log():
+    """Render full audit log page for admins."""
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -534,7 +649,6 @@ def staff_audit_log():
     )
 
     rows = db_fetchall(sql, (200,))
-
     return render_template("staff_audit_log.html", rows=rows)
 
 
@@ -542,6 +656,7 @@ def staff_audit_log():
 @require_login
 @require_shelter
 def staff_audit_log_csv():
+    """Export filtered audit log rows as CSV."""
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -563,23 +678,23 @@ def staff_audit_log_csv():
     rows = db_fetchall(sql, params)
 
     buf = io.StringIO()
-    w = csv.writer(buf)
-    w.writerow(["id", "entity_type", "entity_id", "shelter", "staff_username", "action_type", "action_details", "created_at"])
+    writer = csv.writer(buf)
+    writer.writerow(["id", "entity_type", "entity_id", "shelter", "staff_username", "action_type", "action_details", "created_at"])
 
-    for r in rows:
-        if isinstance(r, dict):
-            w.writerow([
-                r.get("id", ""),
-                r.get("entity_type", ""),
-                r.get("entity_id", ""),
-                r.get("shelter", ""),
-                r.get("staff_username", ""),
-                r.get("action_type", ""),
-                r.get("action_details", ""),
-                r.get("created_at", ""),
+    for row in rows:
+        if isinstance(row, dict):
+            writer.writerow([
+                row.get("id", ""),
+                row.get("entity_type", ""),
+                row.get("entity_id", ""),
+                row.get("shelter", ""),
+                row.get("staff_username", ""),
+                row.get("action_type", ""),
+                row.get("action_details", ""),
+                row.get("created_at", ""),
             ])
         else:
-            w.writerow(list(r))
+            writer.writerow(list(row))
 
     return Response(
         buf.getvalue(),
@@ -592,6 +707,11 @@ def staff_audit_log_csv():
 @require_login
 @require_shelter
 def wipe_all_data():
+    """
+    Dangerous admin route.
+
+    Deletes operational data for development resets when enabled by config.
+    """
     from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
 
     if not _require_admin():
@@ -609,7 +729,14 @@ def wipe_all_data():
     db_execute("TRUNCATE TABLE residents RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM residents")
     db_execute("TRUNCATE TABLE audit_log RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM audit_log")
 
-    log_action("admin", None, None, session.get("staff_user_id"), "wipe_all_data", "Wiped attendance, leave, transport, residents, audit_log")
+    log_action(
+        "admin",
+        None,
+        None,
+        session.get("staff_user_id"),
+        "wipe_all_data",
+        "Wiped attendance, leave, transport, residents, audit_log",
+    )
     return "All non staff data wiped."
 
 
@@ -617,6 +744,11 @@ def wipe_all_data():
 @require_login
 @require_shelter
 def recreate_schema():
+    """
+    Dangerous admin route.
+
+    Drops and recreates schema for development resets when enabled by config.
+    """
     from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
 
     if not _require_admin():
@@ -645,5 +777,13 @@ def recreate_schema():
         db_execute("DROP TABLE IF EXISTS resident_transfers")
 
     init_db()
-    log_action("admin", None, None, session.get("staff_user_id"), "recreate_schema", "Dropped and recreated tables")
+
+    log_action(
+        "admin",
+        None,
+        None,
+        session.get("staff_user_id"),
+        "recreate_schema",
+        "Dropped and recreated tables",
+    )
     return "Schema recreated."
