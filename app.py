@@ -12,7 +12,6 @@ from typing import Optional
 
 from flask import (
     Flask,
-    abort,
     current_app,
     flash,
     g,
@@ -26,13 +25,10 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core.auth import require_login
 from core.auth import require_shelter
-from core.db import close_db, db_execute, db_fetchall, get_db
-from core.helpers import (
-    fmt_dt,
-    safe_url_for,
-    utcnow_iso,
-)
+from core.db import close_db, db_fetchall, get_db
+from core.helpers import fmt_dt, safe_url_for, utcnow_iso
 from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
+from core.request_security import register_request_security
 from core.request_utils import client_ip
 from core.shelters import get_all_shelters as load_all_shelters
 from db import schema
@@ -53,8 +49,8 @@ except Exception:
 # a dedicated core.config module so app.py becomes a pure wiring file.
 
 TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
-TWILIO_INBOUND_ENABLED = os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true"
-TWILIO_STATUS_ENABLED = os.environ.get("TWILIO_STATUS_ENABLED", "false").strip().lower() == "true"
+TWILIO_INBOUND_ENABLED = (os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true")
+TWILIO_STATUS_ENABLED = (os.environ.get("TWILIO_STATUS_ENABLED", "false").strip().lower() == "true")
 TWILIO_STATUS_CALLBACK_URL = (os.environ.get("TWILIO_STATUS_CALLBACK_URL") or "").strip()
 
 MIN_STAFF_PASSWORD_LEN = 8
@@ -90,9 +86,10 @@ TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
-app.jinja_env.globals["safe_url_for"] = safe_url_for
 app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
 app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", SQLITE_PATH)
+app.config["CLOUDFLARE_ONLY"] = os.environ.get("CLOUDFLARE_ONLY", "")
+app.jinja_env.globals["safe_url_for"] = safe_url_for
 app.teardown_appcontext(close_db)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
@@ -117,7 +114,24 @@ def register_blueprints(app: Flask) -> None:
                 app.register_blueprint(obj)
 
 
+# ------------------------------------------------------------
+# Request utility delegation
+# ------------------------------------------------------------
+# Future extraction note
+# More request level helpers can move out of app.py over time.
+def _client_ip() -> str:
+    return client_ip()
+
+
 register_blueprints(app)
+
+register_request_security(
+    app,
+    client_ip_func=_client_ip,
+    is_ip_banned_func=is_ip_banned,
+    is_rate_limited_func=is_rate_limited,
+    ban_ip_func=ban_ip,
+)
 
 
 @app.before_request
@@ -162,112 +176,6 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
 )
-
-
-# ------------------------------------------------------------
-# Request and security helpers
-# ------------------------------------------------------------
-# Future extraction note
-# _client_ip now delegates into core.request_utils.
-# The remaining request security hooks below are good candidates
-# for a future core.request_security module.
-def _client_ip() -> str:
-    return client_ip()
-
-
-@app.before_request
-def _require_cloudflare_proxy():
-    if (os.environ.get("CLOUDFLARE_ONLY") or "").strip().lower() not in {"1", "true", "yes", "on"}:
-        return None
-
-    if not request.headers.get("CF-Connecting-IP"):
-        current_app.logger.warning(
-            "BLOCK non-cloudflare request remote_addr=%s path=%s",
-            request.remote_addr,
-            request.path,
-        )
-        abort(403)
-
-
-@app.before_request
-def _block_banned_ips():
-    ip = _client_ip()
-    if ip != "unknown" and is_ip_banned(ip):
-        abort(403)
-
-
-@app.before_request
-def _block_bad_methods_and_agents():
-    bad_methods = {"TRACE", "TRACK", "CONNECT"}
-    if request.method in bad_methods:
-        abort(405)
-
-    user_agent = (request.headers.get("User-Agent") or "").lower()
-
-    allowed_agent_markers = (
-        "twilio",
-    )
-
-    if any(marker in user_agent for marker in allowed_agent_markers):
-        return None
-
-    bad_agent_markers = (
-        "sqlmap",
-        "nikto",
-        "nmap",
-        "masscan",
-        "zgrab",
-        "curl",
-        "wget",
-        "python-requests",
-        "pythonurllib",
-        "go-http-client",
-        "libwww-perl",
-    )
-
-    if any(marker in user_agent for marker in bad_agent_markers):
-        ip = _client_ip()
-        if ip != "unknown":
-            ban_ip(ip, 3600)
-            current_app.logger.warning(
-                "AUTO BAN bad user agent ip=%s ua=%s path=%s",
-                ip,
-                request.headers.get("User-Agent"),
-                request.path,
-            )
-        abort(403)
-
-
-@app.before_request
-def _auto_ban_scanner_probes():
-    path = (request.path or "").lower()
-
-    scanner_markers = (
-        ".env",
-        ".git",
-        "wp-admin",
-        "wp-login",
-        "phpmyadmin",
-        "xmlrpc.php",
-        "cgi-bin",
-        "boaform",
-        "server-status",
-        "actuator",
-        "jenkins",
-        "/vendor/",
-    )
-
-    if not any(marker in path for marker in scanner_markers):
-        return None
-
-    ip = _client_ip()
-
-    if ip != "unknown" and is_rate_limited(f"scanner_probe:{ip}", limit=3, window_seconds=600):
-        ban_ip(ip, 3600)
-        current_app.logger.warning("AUTO BAN scanner probe ip=%s path=%s", ip, request.path)
-        abort(403)
-
-    abort(404)
 
 
 # ------------------------------------------------------------
@@ -324,42 +232,11 @@ def _csrf_before_request():
         return resp
 
 
-@app.before_request
-def _public_bot_throttle():
-    public_paths = {
-        "/resident",
-        "/leave",
-        "/transport",
-        "/resident/consent",
-    }
-
-    if request.path not in public_paths:
-        return None
-
-    if request.method == "GET":
-        return None
-
-    ip = _client_ip()
-
-    if is_rate_limited(f"public_post:{request.path}:{ip}", limit=20, window_seconds=300):
-        if ip != "unknown":
-            ban_ip(ip, 1800)
-            current_app.logger.warning("AUTO BAN public abuse ip=%s path=%s", ip, request.path)
-
-        if request.path == "/resident":
-            flash("Too many requests. Please wait a few minutes and try again.", "error")
-            return render_template("resident_signin.html"), 429
-
-        return "Too many requests. Please wait a few minutes and try again.", 429
-
-    return None
-
-
 # ------------------------------------------------------------
 # Shelter helpers
 # ------------------------------------------------------------
 # Future extraction note
-# get_all_shelters now delegates into core.shelters.
+# Additional shelter related query helpers can move into core.shelters.
 def get_all_shelters() -> list[str]:
     return load_all_shelters(init_db)
 
