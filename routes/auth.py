@@ -6,7 +6,14 @@ from werkzeug.security import check_password_hash
 from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_fetchone
-from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
+from core.rate_limit import (
+    ban_ip,
+    get_key_lock_seconds_remaining,
+    is_ip_banned,
+    is_key_locked,
+    is_rate_limited,
+    lock_key,
+)
 
 auth = Blueprint("auth", __name__)
 
@@ -26,11 +33,25 @@ def staff_login():
 
     ip = _client_ip()
     normalized_username = username.lower() or "blank"
+    username_lock_key = f"staff_login_username_lock:{normalized_username}"
 
     if is_ip_banned(ip):
         log_action("auth", None, None, None, "login_blocked_banned_ip", f"ip={ip} username={normalized_username}")
         flash("Too many login attempts. Please wait and try again later.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 403
+
+    if is_key_locked(username_lock_key):
+        seconds_remaining = get_key_lock_seconds_remaining(username_lock_key)
+        log_action(
+            "auth",
+            None,
+            None,
+            None,
+            "login_blocked_locked_username",
+            f"ip={ip} username={normalized_username} seconds_remaining={seconds_remaining}",
+        )
+        flash("That username is temporarily locked. Please wait and try again.", "error")
+        return render_template("staff_login.html", all_shelters=all_shelters), 429
 
     if is_rate_limited(f"staff_login_ip:{ip}", limit=10, window_seconds=900):
         log_action("auth", None, None, None, "login_rate_limited_ip", f"ip={ip} username={normalized_username}")
@@ -50,10 +71,33 @@ def staff_login():
     )
 
     if not row:
+        triggered_username_lock = is_rate_limited(
+            f"staff_login_fail_username_lock:{normalized_username}",
+            limit=10,
+            window_seconds=900,
+        )
+        if triggered_username_lock:
+            lock_key(username_lock_key, 900)
+            log_action(
+                "auth",
+                None,
+                None,
+                None,
+                "login_username_locked",
+                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=900",
+            )
+
         triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
         if triggered_ban:
             ban_ip(ip, 3600)
-            log_action("auth", None, None, None, "login_ip_banned", f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=3600")
+            log_action(
+                "auth",
+                None,
+                None,
+                None,
+                "login_ip_banned",
+                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=3600",
+            )
 
         log_action("auth", None, None, None, "login_failed", f"reason=bad_username ip={ip} username={normalized_username}")
         flash("Invalid login.", "error")
@@ -64,6 +108,22 @@ def staff_login():
     pw_hash = row["password_hash"] if isinstance(row, dict) else row[2]
 
     if not is_active or not check_password_hash(pw_hash, password):
+        triggered_username_lock = is_rate_limited(
+            f"staff_login_fail_username_lock:{normalized_username}",
+            limit=10,
+            window_seconds=900,
+        )
+        if triggered_username_lock:
+            lock_key(username_lock_key, 900)
+            log_action(
+                "auth",
+                None,
+                None,
+                staff_user_id,
+                "login_username_locked",
+                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=900",
+            )
+
         triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
         if triggered_ban:
             ban_ip(ip, 3600)
