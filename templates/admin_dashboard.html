@@ -158,34 +158,52 @@ h1{
   background:#153e5d;
 }
 
-table.audit-table{
-  width:100%;
-  border-collapse:collapse;
+.dash-panel table.audit-table{
+  width:100% !important;
+  border-collapse:collapse !important;
+  background:#0b1621 !important;
+  color:#e8f4ff !important;
 }
 
-table.audit-table th{
-  text-align:left;
-  font-size:11px;
-  color:#7aa8c7;
-  letter-spacing:.08em;
-  padding:8px 6px;
-  border-bottom:1px solid #1e354b;
-  background:#0f1e2c;
+.dash-panel table.audit-table thead,
+.dash-panel table.audit-table thead tr{
+  background:#112334 !important;
 }
 
-table.audit-table td{
-  padding:8px 6px;
-  font-size:13px;
-  border-bottom:1px solid #152432;
-  color:#d7ecff;
+.dash-panel table.audit-table th{
+  text-align:left !important;
+  font-size:11px !important;
+  color:#8fdcff !important;
+  letter-spacing:.08em !important;
+  padding:9px 7px !important;
+  border-bottom:1px solid #24445f !important;
+  background:#112334 !important;
+  opacity:1 !important;
 }
 
-table.audit-table tr:nth-child(even){
-  background:#0f1b28;
+.dash-panel table.audit-table td{
+  padding:9px 7px !important;
+  font-size:13px !important;
+  border-bottom:1px solid #173044 !important;
+  color:#f2f8ff !important;
+  background:transparent !important;
+  opacity:1 !important;
 }
 
-table.audit-table tr:nth-child(odd){
-  background:#0c1621;
+.dash-panel table.audit-table tbody tr{
+  background:#0d1823 !important;
+}
+
+.dash-panel table.audit-table tbody tr:nth-child(even){
+  background:#10202e !important;
+}
+
+.dash-panel table.audit-table tbody tr:nth-child(odd){
+  background:#0c1722 !important;
+}
+
+.dash-panel table.audit-table tbody tr:hover{
+  background:#163148 !important;
 }
 
 .bar{
@@ -211,7 +229,7 @@ table.audit-table tr:nth-child(odd){
 }
 
 .empty-state{
-  color:#6b8aa3;
+  color:#8fb1ca;
   font-size:13px;
   padding:4px 0;
 }
@@ -319,7 +337,7 @@ table.audit-table tr:nth-child(odd){
   {% set security_level = "ACTIVE ATTACK" %}
   {% set security_led = "red" %}
   {% set security_pill = "danger" %}
-{% elif failed_login_count and failed_login_count > 0 %}
+{% elif failed_login_count and failed_login_count >= 5 %}
   {% set security_level = "ELEVATED" %}
   {% set security_led = "yellow" %}
   {% set security_pill = "warn" %}
@@ -425,7 +443,7 @@ table.audit-table tr:nth-child(odd){
 
       {% if failed_login_count and failed_login_count >= 10 %}
         <div class="status-pill danger"><span class="led red"></span>Threat Level ACTIVE ATTACK</div>
-      {% elif failed_login_count and failed_login_count > 0 %}
+      {% elif failed_login_count and failed_login_count >= 5 %}
         <div class="status-pill warn"><span class="led yellow"></span>Threat Level ELEVATED</div>
       {% else %}
         <div class="status-pill"><span class="led green"></span>Threat Level LOW</div>
