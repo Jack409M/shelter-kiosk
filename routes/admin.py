@@ -13,6 +13,10 @@ from core.helpers import fmt_dt, utcnow_iso
 from core.rate_limit import get_banned_ips_snapshot, get_locked_keys_snapshot, get_rate_limit_snapshot
 from core.sms_sender import send_sms
 
+admin = Blueprint("admin", __name__)
+
+ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff"]
+
 
 
 ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff"]
