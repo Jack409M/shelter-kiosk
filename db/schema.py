@@ -15,6 +15,7 @@ from flask import g
 from . import schema_bootstrap
 from . import schema_comms
 from . import schema_core
+from . import schema_goals
 from . import schema_outcomes
 from . import schema_people
 from . import schema_program
@@ -107,6 +108,7 @@ def init_db() -> None:
     schema_people.ensure_tables(kind)
     schema_program.ensure_tables(kind)
     schema_outcomes.ensure_tables(kind)
+    schema_goals.ensure_tables(kind)
     schema_requests.ensure_tables(kind)
     schema_comms.ensure_tables(kind)
 
@@ -122,6 +124,7 @@ def init_db() -> None:
     schema_people.ensure_indexes()
     schema_program.ensure_indexes()
     schema_outcomes.ensure_indexes()
+    schema_goals.ensure_indexes()
     schema_requests.ensure_indexes()
     schema_comms.ensure_indexes(kind)
 
