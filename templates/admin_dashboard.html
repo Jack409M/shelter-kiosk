@@ -1,364 +1,364 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Admin Dashboard</h1>
 
 <style>
-  .dash-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(220px, 1fr));
-    gap: 16px;
-    margin-bottom: 18px;
-  }
 
-  .dash-card,
-  .dash-panel {
-    background: #f7fbff;
-    border: 1px solid #cfd9e3;
-    border-radius: 16px;
-    padding: 18px;
-    box-shadow: 0 10px 24px rgba(18, 38, 63, 0.08);
-  }
+body{
+  background:#0b1118;
+  color:#cfe7ff;
+}
 
-  .dash-card h3,
-  .dash-panel h3 {
-    margin: 0 0 10px 0;
-    font-size: 16px;
-    color: #1f3550;
-  }
+/* TOP SCAN RUNNER */
 
-  .dash-stat {
-    font-size: 28px;
-    font-weight: 700;
-    color: #1f3550;
-    line-height: 1.1;
-  }
+.scan-runner{
+  height:4px;
+  background:linear-gradient(90deg,#00eaff,#005bff,#00eaff);
+  background-size:200% 100%;
+  animation:scanmove 6s linear infinite;
+  margin-bottom:20px;
+}
 
-  .dash-label {
-    margin-top: 6px;
-    color: #60758a;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
+@keyframes scanmove{
+  0%{background-position:0%}
+  100%{background-position:200%}
+}
 
-  .dash-panels {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 16px;
-  }
+/* GRID */
 
-  .dash-stack {
-    display: grid;
-    gap: 16px;
-  }
+.dash-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(220px,1fr));
+  gap:16px;
+  margin-bottom:20px;
+}
 
-  .quick-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
+.dash-card,.dash-panel{
+  background:#101a26;
+  border:1px solid #1f3a55;
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 0 12px rgba(0,200,255,.08);
+}
 
-  .quick-links a {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 9px 12px;
-    border: 1px solid #c7d3df;
-    border-radius: 10px;
-    background: #fff;
-    color: #1f3550;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 600;
-  }
+/* TITLES */
 
-  .quick-links a:hover {
-    background: #f3f8fc;
-    border-color: #9db6cd;
-  }
+h1{
+  color:#7fd6ff;
+}
 
-  table.audit-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
+.dash-card h3,
+.dash-panel h3{
+  color:#7fd6ff;
+  font-size:14px;
+  letter-spacing:.08em;
+}
 
-  table.audit-table th,
-  table.audit-table td {
-    text-align: left;
-    padding: 10px 8px;
-    border-bottom: 1px solid #e3ebf3;
-    font-size: 13px;
-    vertical-align: top;
-  }
+/* STAT NUMBERS */
 
-  table.audit-table th {
-    font-size: 12px;
-    text-transform: uppercase;
-    color: #35516d;
-    letter-spacing: 0.03em;
-  }
+.dash-stat{
+  font-size:30px;
+  font-weight:700;
+  color:#ffffff;
+}
 
-  .status-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    background: #eef8f1;
-    color: #1f6a3a;
-    border: 1px solid #cfe7d7;
-  }
+/* LED STATUS */
 
-  .status-pill.warn {
-    background: #fff5e8;
-    color: #9a5a00;
-    border: 1px solid #f0d3a6;
-  }
+.led{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+  margin-right:6px;
+}
 
-  .small-note {
-    color: #60758a;
-    font-size: 12px;
-  }
+.led.green{
+  background:#1cff88;
+  box-shadow:0 0 8px #1cff88;
+}
 
-  .empty-state {
-    color: #60758a;
-    font-size: 13px;
-    padding: 4px 0;
-  }
+.led.yellow{
+  background:#ffc400;
+  box-shadow:0 0 8px #ffc400;
+}
 
-  .intel-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-top: 14px;
-  }
+.led.red{
+  background:#ff4040;
+  box-shadow:0 0 8px #ff4040;
+}
 
-  @media (max-width: 1100px) {
-    .dash-grid {
-      grid-template-columns: repeat(2, minmax(220px, 1fr));
-    }
+/* TABLE */
 
-    .dash-panels {
-      grid-template-columns: 1fr;
-    }
+table.audit-table{
+  width:100%;
+  border-collapse:collapse;
+}
 
-    .intel-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+table.audit-table th{
+  text-align:left;
+  font-size:11px;
+  color:#7aa8c7;
+  letter-spacing:.08em;
+  padding:8px 6px;
+  border-bottom:1px solid #1e354b;
+}
 
-  @media (max-width: 700px) {
-    .dash-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+table.audit-table td{
+  padding:8px 6px;
+  font-size:13px;
+  border-bottom:1px solid #152432;
+}
+
+/* BAR GRAPH */
+
+.bar{
+  height:6px;
+  background:#123a5a;
+  border-radius:4px;
+  overflow:hidden;
+}
+
+.bar span{
+  display:block;
+  height:6px;
+  background:linear-gradient(90deg,#00eaff,#005bff);
+}
+
+/* PANELS */
+
+.dash-panels{
+  display:grid;
+  grid-template-columns:1.2fr 1fr;
+  gap:18px;
+}
+
+.dash-stack{
+  display:grid;
+  gap:16px;
+}
+
+/* BUTTON */
+
+.control-btn{
+  background:#0d2b40;
+  border:1px solid #2c5f82;
+  color:#7fd6ff;
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.control-btn:hover{
+  background:#153e5d;
+}
+
+.empty-state{
+  color:#6b8aa3;
+}
+
 </style>
 
+
+<div class="scan-runner"></div>
+
+<h1>Operations Command Console</h1>
+
+
 <div class="dash-grid">
+
   <div class="dash-card">
     <h3>System Health</h3>
-    <div class="status-pill">Healthy</div>
-    <div class="dash-label">Initial dashboard status</div>
+    <div><span class="led green"></span>Operational</div>
   </div>
 
   <div class="dash-card">
     <h3>Total Users</h3>
     <div class="dash-stat">{{ total_users }}</div>
-    <div class="dash-label">All staff accounts</div>
   </div>
 
   <div class="dash-card">
     <h3>Active Users</h3>
     <div class="dash-stat">{{ active_users }}</div>
-    <div class="dash-label">Currently enabled accounts</div>
   </div>
 
   <div class="dash-card">
-    <h3>Failed Logins</h3>
+    <h3>Failed Logins (24h)</h3>
     <div class="dash-stat">{{ failed_login_count }}</div>
-    <div class="dash-label">Last 24 hours</div>
   </div>
+
 </div>
 
+
+
 <div class="dash-panels">
+
   <div class="dash-panel">
+
     <h3>Recent Audit Activity</h3>
 
     {% if recent_audit %}
-      <table class="audit-table">
-        <thead>
-          <tr>
-            <th>When</th>
-            <th>User</th>
-            <th>Action</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in recent_audit %}
-            <tr>
-              <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
-              <td>{{ r.staff_username or "" }}</td>
-              <td>{{ r.action_type or "" }}</td>
-              <td>{{ r.action_details or "" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <table class="audit-table">
+      <thead>
+      <tr>
+        <th>Time</th>
+        <th>User</th>
+        <th>Action</th>
+        <th>Details</th>
+      </tr>
+      </thead>
+      <tbody>
+
+      {% for r in recent_audit %}
+      <tr>
+        <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
+        <td>{{ r.staff_username }}</td>
+        <td>{{ r.action_type }}</td>
+        <td>{{ r.action_details }}</td>
+      </tr>
+      {% endfor %}
+
+      </tbody>
+    </table>
     {% else %}
-      <div class="empty-state">No recent audit activity found.</div>
+    <div class="empty-state">No audit activity.</div>
     {% endif %}
+
   </div>
+
+
 
   <div class="dash-stack">
-    <div class="dash-panel">
-      <h3>Failed Login Monitoring</h3>
 
-      {% if failed_login_count and failed_login_count > 0 %}
-        <div class="status-pill warn">{{ failed_login_count }} failed login attempts in the last 24 hours</div>
+    <div class="dash-panel">
+
+      <h3>Threat Analysis</h3>
+
+      <h3 style="margin-top:16px">Top Attacking IPs</h3>
+
+      {% if top_attacking_ips %}
+
+      {% for row in top_attacking_ips %}
+      <div style="margin-bottom:8px">
+        {{ row.ip }} ({{ row.attempts }})
+        <div class="bar">
+          <span style="width:{{ row.attempts * 5 }}%"></span>
+        </div>
+      </div>
+      {% endfor %}
+
       {% else %}
-        <div class="status-pill">No failed login activity in the last 24 hours</div>
+      <div class="empty-state">No attack activity.</div>
       {% endif %}
 
-      <div style="margin-top: 14px;">
-        {% if recent_failed_logins %}
-          <table class="audit-table">
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in recent_failed_logins %}
-                <tr>
-                  <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
-                  <td>{{ r.action_details or "" }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% else %}
-          <div class="empty-state">No recent failed login events found.</div>
-        {% endif %}
-      </div>
 
-      <div class="intel-grid">
-        <div>
-          <h3 style="margin-top: 18px;">Top Attacking IPs</h3>
-          {% if top_attacking_ips %}
-            <table class="audit-table">
-              <thead>
-                <tr>
-                  <th>IP</th>
-                  <th>Attempts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in top_attacking_ips %}
-                  <tr>
-                    <td>{{ row.ip }}</td>
-                    <td>{{ row.attempts }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% else %}
-            <div class="empty-state">No attacking IP data available.</div>
-          {% endif %}
-        </div>
+      <h3 style="margin-top:18px">Usernames Targeted</h3>
 
-        <div>
-          <h3 style="margin-top: 18px;">Usernames Under Attack</h3>
-          {% if targeted_usernames %}
-            <table class="audit-table">
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Attempts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in targeted_usernames %}
-                  <tr>
-                    <td>{{ row.username }}</td>
-                    <td>{{ row.attempts }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% else %}
-            <div class="empty-state">No targeted username data available.</div>
-          {% endif %}
+      {% if targeted_usernames %}
+
+      {% for row in targeted_usernames %}
+      <div style="margin-bottom:8px">
+        {{ row.username }} ({{ row.attempts }})
+        <div class="bar">
+          <span style="width:{{ row.attempts * 5 }}%"></span>
         </div>
       </div>
+      {% endfor %}
+
+      {% else %}
+      <div class="empty-state">No targeted usernames.</div>
+      {% endif %}
+
     </div>
 
-    <div class="dash-panel">
-      <h3>Active Security Defenses</h3>
 
-      <h3 style="margin-top: 18px;">Banned IPs</h3>
+
+    <div class="dash-panel">
+
+      <h3>Active Defenses</h3>
+
+      <h3 style="margin-top:14px">Banned IPs</h3>
+
       {% if banned_ips %}
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th>IP</th>
-              <th>Seconds Remaining</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in banned_ips %}
-              <tr>
-                <td>{{ row.ip }}</td>
-                <td>{{ row.seconds_remaining }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+
+      <table class="audit-table">
+        <thead>
+        <tr>
+          <th>IP</th>
+          <th>Seconds Left</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for row in banned_ips %}
+        <tr>
+          <td>{{ row.ip }}</td>
+          <td>{{ row.seconds_remaining }}</td>
+        </tr>
+        {% endfor %}
+
+        </tbody>
+      </table>
+
       {% else %}
-        <div class="empty-state">No IPs currently banned.</div>
+      <div class="empty-state">No active bans</div>
       {% endif %}
 
-      <h3 style="margin-top: 18px;">Rate Limit Activity</h3>
+
+      <h3 style="margin-top:18px">Rate Limit Activity</h3>
+
       {% if rate_limit_activity %}
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Hits</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in rate_limit_activity %}
-              <tr>
-                <td>{{ row.key }}</td>
-                <td>{{ row.hits }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+
+      <table class="audit-table">
+        <thead>
+        <tr>
+          <th>Key</th>
+          <th>Hits</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for row in rate_limit_activity %}
+        <tr>
+          <td>{{ row.key }}</td>
+          <td>{{ row.hits }}</td>
+        </tr>
+        {% endfor %}
+
+        </tbody>
+      </table>
+
       {% else %}
-        <div class="empty-state">No active rate limit buckets.</div>
+      <div class="empty-state">No rate limit pressure</div>
       {% endif %}
+
     </div>
+
+
 
     <div class="dash-panel">
-      <h3>Quick Links</h3>
-      <div class="quick-links">
-        <a href="{{ url_for('admin.admin_users') }}">Users</a>
-        <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
-        <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
-        <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+
+      <h3>Communications Control</h3>
+
+      <div style="margin-top:8px">
+
+        <div><span class="led green"></span>Twilio Operational</div>
+
+        <div style="margin-top:12px">
+          <button class="control-btn">
+            Twilio Circuit Breaker
+          </button>
+        </div>
+
+        <div style="margin-top:10px;font-size:12px;color:#6e93ad">
+          Suspends outbound SMS messaging if activated.
+        </div>
+
       </div>
 
-      <div style="margin-top:18px;">
-        <h3 style="margin-bottom:8px;">What comes next</h3>
-        <div class="small-note">
-          Next dashboard upgrades should include active staff sessions, database connectivity, application uptime, worker health, and alert triggers.
-        </div>
-      </div>
     </div>
+
   </div>
+
 </div>
+
 {% endblock %}
