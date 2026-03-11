@@ -23,14 +23,15 @@ from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt, utcnow_iso
 
-# Future abstraction note:
-# security dashboard helpers, role helpers, and audit filter builders
-# now live in routes.admin_parts.helpers.
-# The next clean extraction target is route level splitting into:
-# admin_security_routes.py
-# admin_user_routes.py
-# admin_audit_routes.py
-# admin_system_routes.py
+# Future extraction note
+# Shared admin helper logic already lives in routes.admin_parts.helpers.
+# Shared user management view logic already lives in routes.admin_parts.users.
+# The next clean extractions from this file are:
+# 1. dashboard and security routes
+# 2. audit routes
+# 3. dangerous system routes
+# At that point this file can become a thin blueprint registration shell.
+
 from routes.admin_parts.helpers import (
     all_roles as _all_roles,
     allowed_roles_to_create as _allowed_roles_to_create,
@@ -42,6 +43,15 @@ from routes.admin_parts.helpers import (
     require_admin_role as _require_admin,
 )
 
+from routes.admin_parts.users import (
+    admin_add_user_view,
+    admin_edit_user_view,
+    admin_reset_user_password_view,
+    admin_set_user_active_view,
+    admin_set_user_role_view,
+    admin_users_view,
+)
+
 admin = Blueprint("admin", __name__)
 
 
@@ -49,9 +59,8 @@ admin = Blueprint("admin", __name__)
 @require_login
 @require_shelter
 def admin_dashboard():
-    # Future abstraction note:
-    # move this route into a dedicated admin security routes module
-    # once all admin routes are split out of this file.
+    # Future extraction note
+    # Move into admin security routes module after dashboard related routes are grouped.
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -97,9 +106,8 @@ def admin_dashboard_live():
 @require_login
 @require_shelter
 def admin_update_security_settings():
-    # Future abstraction note:
-    # this database update logic should eventually move into a small
-    # admin security service module.
+    # Future extraction note
+    # This update logic should eventually move into a dedicated admin security service.
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -152,252 +160,53 @@ def admin_update_security_settings():
 @require_login
 @require_shelter
 def admin_users():
-    # Future abstraction note:
-    # this whole user management group should become its own route module
-    # plus a small staff user service for list and sort query building.
-    from app import ROLE_LABELS, init_db
-
-    if not _require_admin_or_shelter_director():
-        flash("Admin or Shelter Director only.", "error")
-        return redirect(url_for("auth.staff_home"))
-
-    init_db()
-
-    allowed_roles = _allowed_roles_to_create()
-    kind = "pg" if current_app.config.get("DATABASE_URL") else "sqlite"
-
-    q = (request.args.get("q") or "").strip()
-    sort = (request.args.get("sort") or "last_name").strip()
-
-    where = []
-    params = []
-
-    if q:
-        like_op = "ILIKE" if kind == "pg" else "LIKE"
-        ph = "%s" if kind == "pg" else "?"
-        where.append(
-            "("
-            f"COALESCE(first_name, '') {like_op} {ph} OR "
-            f"COALESCE(last_name, '') {like_op} {ph}"
-            ")"
-        )
-        pattern = f"%{q}%"
-        params.extend([pattern, pattern])
-
-    where_sql = (" WHERE " + " AND ".join(where)) if where else ""
-
-    if sort == "first_name":
-        if kind == "pg":
-            order_sql = "ORDER BY first_name ASC NULLS LAST, last_name ASC NULLS LAST, created_at DESC"
-        else:
-            order_sql = "ORDER BY first_name IS NULL, first_name ASC, last_name IS NULL, last_name ASC, created_at DESC"
-    elif sort == "role":
-        if kind == "pg":
-            order_sql = """
-                ORDER BY CASE role
-                    WHEN 'admin' THEN 1
-                    WHEN 'shelter_director' THEN 2
-                    WHEN 'case_manager' THEN 3
-                    WHEN 'ra' THEN 4
-                    WHEN 'staff' THEN 5
-                    ELSE 99
-                END,
-                last_name ASC NULLS LAST,
-                first_name ASC NULLS LAST,
-                created_at DESC
-            """
-        else:
-            order_sql = """
-                ORDER BY CASE role
-                    WHEN 'admin' THEN 1
-                    WHEN 'shelter_director' THEN 2
-                    WHEN 'case_manager' THEN 3
-                    WHEN 'ra' THEN 4
-                    WHEN 'staff' THEN 5
-                    ELSE 99
-                END,
-                last_name IS NULL,
-                last_name ASC,
-                first_name IS NULL,
-                first_name ASC,
-                created_at DESC
-            """
-    else:
-        sort = "last_name"
-        if kind == "pg":
-            order_sql = "ORDER BY last_name ASC NULLS LAST, first_name ASC NULLS LAST, created_at DESC"
-        else:
-            order_sql = "ORDER BY last_name IS NULL, last_name ASC, first_name IS NULL, first_name ASC, created_at DESC"
-
-    users = db_fetchall(
-        f"""
-        SELECT id, first_name, last_name, username, role, is_active, created_at, mobile_phone
-        FROM staff_users
-        {where_sql}
-        {order_sql}
-        """,
-        tuple(params),
-    )
-
-    return render_template(
-        "admin_users.html",
-        users=users,
-        fmt_dt=fmt_dt,
-        roles=_ordered_roles(allowed_roles),
-        all_roles=_ordered_roles(_all_roles()),
-        ROLE_LABELS=ROLE_LABELS,
-        current_role=_current_role(),
-        q=q,
-        sort=sort,
-    )
+    # Future extraction note
+    # Route is now a thin delegate. When user routes are moved out fully,
+    # only the decorator and forwarding wrapper will need removal here.
+    return admin_users_view()
 
 
 @admin.route("/staff/admin/users/add", methods=["GET"])
 @require_login
 @require_shelter
 def admin_add_user():
-    if not _require_admin_or_shelter_director():
-        flash("Admin or Shelter Director only.", "error")
-        return redirect(url_for("auth.staff_home"))
-
-    return render_template("admin_user_form.html", mode="add", user=None)
+    return admin_add_user_view()
 
 
 @admin.route("/staff/admin/users/<int:user_id>/edit", methods=["GET"])
 @require_login
 @require_shelter
 def admin_edit_user(user_id: int):
-    if not _require_admin_or_shelter_director():
-        flash("Admin or Shelter Director only.", "error")
-        return redirect(url_for("auth.staff_home"))
-
-    rows = db_fetchall(
-        "SELECT id, first_name, last_name, username, role, is_active, created_at, mobile_phone FROM staff_users WHERE id = %s"
-        if current_app.config.get("DATABASE_URL")
-        else "SELECT id, first_name, last_name, username, role, is_active, created_at, mobile_phone FROM staff_users WHERE id = ?",
-        (user_id,),
-    )
-
-    if not rows:
-        flash("User not found.", "error")
-        return redirect(url_for("admin.admin_users"))
-
-    return render_template("admin_user_form.html", mode="edit", user=rows[0])
+    return admin_edit_user_view(user_id)
 
 
 @admin.post("/staff/admin/users/<int:user_id>/set-active")
 @require_login
 @require_shelter
 def admin_set_user_active(user_id: int):
-    role = _current_role()
-
-    if role not in {"admin", "shelter_director"}:
-        flash("Not allowed.", "error")
-        return redirect(url_for("auth.staff_home"))
-
-    active = (request.form.get("active") or "").strip()
-    if active not in ["0", "1"]:
-        flash("Invalid action.", "error")
-        return redirect(url_for("admin.admin_users"))
-
-    is_active_value = active == "1"
-
-    db_execute(
-        "UPDATE staff_users SET is_active = %s WHERE id = %s"
-        if current_app.config.get("DATABASE_URL")
-        else "UPDATE staff_users SET is_active = ? WHERE id = ?",
-        (is_active_value if current_app.config.get("DATABASE_URL") else (1 if is_active_value else 0), user_id),
-    )
-
-    log_action(
-        "staff_user",
-        user_id,
-        None,
-        session.get("staff_user_id"),
-        "set_active",
-        f"active={active}",
-    )
-
-    flash("User updated.", "ok")
-    return redirect(url_for("admin.admin_users"))
+    return admin_set_user_active_view(user_id)
 
 
 @admin.post("/staff/admin/users/<int:user_id>/set-role")
 @require_login
 @require_shelter
 def admin_set_user_role(user_id: int):
-    if not _require_admin():
-        flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
-
-    new_role = (request.form.get("role") or "").strip()
-    if new_role not in _all_roles():
-        flash("Invalid role.", "error")
-        return redirect(url_for("admin.admin_users"))
-
-    db_execute(
-        "UPDATE staff_users SET role = %s WHERE id = %s"
-        if current_app.config.get("DATABASE_URL")
-        else "UPDATE staff_users SET role = ? WHERE id = ?",
-        (new_role, user_id),
-    )
-
-    log_action(
-        "staff_user",
-        user_id,
-        None,
-        session.get("staff_user_id"),
-        "set_role",
-        f"role={new_role}",
-    )
-
-    flash("Role updated.", "ok")
-    return redirect(url_for("admin.admin_users"))
+    return admin_set_user_role_view(user_id)
 
 
 @admin.post("/staff/admin/users/<int:user_id>/reset-password")
 @require_login
 @require_shelter
 def admin_reset_user_password(user_id: int):
-    from app import MIN_STAFF_PASSWORD_LEN
-    from werkzeug.security import generate_password_hash
-
-    if not _require_admin():
-        flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
-
-    password = (request.form.get("password") or "").strip()
-    if len(password) < MIN_STAFF_PASSWORD_LEN:
-        flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
-        return redirect(url_for("admin.admin_users"))
-
-    db_execute(
-        "UPDATE staff_users SET password_hash = %s WHERE id = %s"
-        if current_app.config.get("DATABASE_URL")
-        else "UPDATE staff_users SET password_hash = ? WHERE id = ?",
-        (generate_password_hash(password), user_id),
-    )
-
-    log_action(
-        "staff_user",
-        user_id,
-        None,
-        session.get("staff_user_id"),
-        "reset_password",
-        "Admin reset staff password",
-    )
-
-    flash("Password reset.", "ok")
-    return redirect(url_for("admin.admin_users"))
+    return admin_reset_user_password_view(user_id)
 
 
 @admin.route("/staff/admin/audit-log")
 @require_login
 @require_shelter
 def staff_audit_log():
-    # Future abstraction note:
-    # the audit routes are now good candidates for their own module
-    # because filter building already lives outside this file.
+    # Future extraction note
+    # Audit routes are now good candidates for a dedicated admin audit routes module.
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -491,9 +300,9 @@ def staff_audit_log_csv():
 @require_login
 @require_shelter
 def wipe_all_data():
-    # Future abstraction note:
-    # dangerous system routes should be isolated into their own module
-    # and eventually into a guarded admin system service.
+    # Future extraction note
+    # Dangerous system routes should be isolated into a dedicated module
+    # and later protected by a small admin system service layer.
     from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
 
     if not _require_admin():
@@ -505,12 +314,36 @@ def wipe_all_data():
 
     init_db()
 
-    db_execute("TRUNCATE TABLE attendance_events RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM attendance_events")
-    db_execute("TRUNCATE TABLE leave_requests RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM leave_requests")
-    db_execute("TRUNCATE TABLE transport_requests RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM transport_requests")
-    db_execute("TRUNCATE TABLE residents RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM residents")
-    db_execute("TRUNCATE TABLE audit_log RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM audit_log")
-    db_execute("TRUNCATE TABLE security_incidents RESTART IDENTITY CASCADE" if g.get("db_kind") == "pg" else "DELETE FROM security_incidents")
+    db_execute(
+        "TRUNCATE TABLE attendance_events RESTART IDENTITY CASCADE"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM attendance_events"
+    )
+    db_execute(
+        "TRUNCATE TABLE leave_requests RESTART IDENTITY CASCADE"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM leave_requests"
+    )
+    db_execute(
+        "TRUNCATE TABLE transport_requests RESTART IDENTITY CASCADE"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM transport_requests"
+    )
+    db_execute(
+        "TRUNCATE TABLE residents RESTART IDENTITY CASCADE"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM residents"
+    )
+    db_execute(
+        "TRUNCATE TABLE audit_log RESTART IDENTITY CASCADE"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM audit_log"
+    )
+    db_execute(
+        "TRUNCATE TABLE security_incidents RESTART IDENTITY CASCADE"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM security_incidents"
+    )
 
     log_action(
         "admin",
