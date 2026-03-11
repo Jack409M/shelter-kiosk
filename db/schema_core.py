@@ -129,7 +129,42 @@ def ensure_columns_and_security_upgrades(kind: str) -> None:
         pass
 
 
+def ensure_organizations_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            public_name TEXT NOT NULL,
+            primary_color TEXT,
+            secondary_color TEXT,
+            logo_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS organizations (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            slug TEXT NOT NULL UNIQUE,
+            public_name TEXT NOT NULL,
+            primary_color TEXT,
+            secondary_color TEXT,
+            logo_url TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL,
+            updated_at TEXT
+        )
+        """,
+    )
+
+
 def ensure_tables(kind: str) -> None:
     ensure_staff_users_table(kind)
     ensure_security_settings_table(kind)
     ensure_security_incidents_table(kind)
+    ensure_organizations_table(kind)
