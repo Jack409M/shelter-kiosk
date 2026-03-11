@@ -6,6 +6,7 @@ from collections import deque
 
 _BUCKETS: dict[str, deque[float]] = {}
 _BANNED_IPS: dict[str, float] = {}
+_LOCKED_KEYS: dict[str, float] = {}
 
 
 def _prune_bucket(bucket: deque[float], window_seconds: int, now: float) -> None:
@@ -18,6 +19,12 @@ def _prune_expired_bans(now: float) -> None:
     expired = [ip for ip, until in _BANNED_IPS.items() if until <= now]
     for ip in expired:
         del _BANNED_IPS[ip]
+
+
+def _prune_expired_locks(now: float) -> None:
+    expired = [key for key, until in _LOCKED_KEYS.items() if until <= now]
+    for key in expired:
+        del _LOCKED_KEYS[key]
 
 
 def ban_ip(ip: str, seconds: int) -> None:
@@ -33,6 +40,32 @@ def is_ip_banned(ip: str) -> bool:
         return False
 
     return until > now
+
+
+def lock_key(key: str, seconds: int) -> None:
+    _LOCKED_KEYS[key] = time.time() + seconds
+
+
+def is_key_locked(key: str) -> bool:
+    now = time.time()
+    _prune_expired_locks(now)
+
+    until = _LOCKED_KEYS.get(key)
+    if until is None:
+        return False
+
+    return until > now
+
+
+def get_key_lock_seconds_remaining(key: str) -> int:
+    now = time.time()
+    _prune_expired_locks(now)
+
+    until = _LOCKED_KEYS.get(key)
+    if until is None:
+        return 0
+
+    return max(0, int(until - now))
 
 
 def is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
@@ -97,4 +130,23 @@ def get_rate_limit_snapshot(window_seconds: int = 3600) -> list[dict[str, int | 
         del _BUCKETS[key]
 
     rows.sort(key=lambda row: int(row["hits"]), reverse=True)
+    return rows
+
+
+def get_locked_keys_snapshot() -> list[dict[str, int | str]]:
+    now = time.time()
+    _prune_expired_locks(now)
+
+    rows: list[dict[str, int | str]] = []
+
+    for key, until in sorted(_LOCKED_KEYS.items(), key=lambda item: item[1], reverse=True):
+        seconds_remaining = max(0, int(until - now))
+        rows.append(
+            {
+                "key": key,
+                "seconds_remaining": seconds_remaining,
+                "locked_until_epoch": int(until),
+            }
+        )
+
     return rows
