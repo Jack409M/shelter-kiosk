@@ -580,6 +580,33 @@ h1{
     </div>
 
     <div class="dash-panel">
+      <h3>Kiosk Security Events</h3>
+
+      {% if kiosk_security_events %}
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Event</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in kiosk_security_events %}
+              <tr>
+                <td>{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</td>
+                <td>{{ row.action_type or "" }}</td>
+                <td>{{ row.action_details or "" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty-state">No kiosk security activity recorded.</div>
+      {% endif %}
+    </div>
+
+    <div class="dash-panel">
       <h3>Communications Control</h3>
 
       <div style="margin-top:8px;">
