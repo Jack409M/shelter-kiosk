@@ -424,7 +424,7 @@ def require_resident_create(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") not in {"admin", "case_manager"}:
             flash("Admin or case manager only.", "error")
-            return redirect(url_for("residents.staff_residents"))
+            return redirect(safe_url_for("residents.staff_residents") or url_for("auth.staff_home"))
         return fn(*args, **kwargs)
 
     return wrapper
@@ -469,3 +469,4 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
+
