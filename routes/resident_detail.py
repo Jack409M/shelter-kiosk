@@ -51,6 +51,202 @@ def _resident_enrollment_for_shelter(resident_id: int, shelter: str):
     )
 
 
+def _load_timeline(enrollment_id: int):
+    return db_fetchall(
+        _sql(
+            """
+            SELECT
+                event_time,
+                event_type,
+                title,
+                detail,
+                sort_order
+            FROM (
+                SELECT
+                    pe.created_at AS event_time,
+                    'enrollment_started' AS event_type,
+                    'Program enrollment started' AS title,
+                    CONCAT('Status: ', COALESCE(pe.program_status, 'active')) AS detail,
+                    1 AS sort_order
+                FROM program_enrollments pe
+                WHERE pe.id = %s
+
+                UNION ALL
+
+                SELECT
+                    g.created_at AS event_time,
+                    'goal_created' AS event_type,
+                    'Goal created' AS title,
+                    g.goal_text AS detail,
+                    2 AS sort_order
+                FROM goals g
+                WHERE g.enrollment_id = %s
+
+                UNION ALL
+
+                SELECT
+                    g.completed_date AS event_time,
+                    'goal_completed' AS event_type,
+                    'Goal completed' AS title,
+                    g.goal_text AS detail,
+                    3 AS sort_order
+                FROM goals g
+                WHERE g.enrollment_id = %s
+                  AND g.completed_date IS NOT NULL
+
+                UNION ALL
+
+                SELECT
+                    COALESCE(cmu.meeting_date, cmu.created_at) AS event_time,
+                    'case_note' AS event_type,
+                    'Case manager note' AS title,
+                    COALESCE(cmu.notes, cmu.progress_notes, cmu.action_items, 'Case update recorded') AS detail,
+                    4 AS sort_order
+                FROM case_manager_updates cmu
+                WHERE cmu.enrollment_id = %s
+
+                UNION ALL
+
+                SELECT
+                    wrs.submitted_at AS event_time,
+                    'compliance_submitted' AS event_type,
+                    'Weekly compliance submitted' AS title,
+                    CONCAT(
+                        'Productive Hours: ', COALESCE(wrs.productive_hours::text, '0'),
+                        ' | Work Hours: ', COALESCE(wrs.work_hours::text, '0'),
+                        ' | Meetings: ', COALESCE(wrs.meeting_count::text, '0')
+                    ) AS detail,
+                    5 AS sort_order
+                FROM weekly_resident_summary wrs
+                WHERE wrs.enrollment_id = %s
+
+                UNION ALL
+
+                SELECT
+                    a.created_at AS event_time,
+                    'appointment_scheduled' AS event_type,
+                    'Appointment scheduled' AS title,
+                    COALESCE(a.appointment_type, 'Appointment') AS detail,
+                    6 AS sort_order
+                FROM appointments a
+                WHERE a.enrollment_id = %s
+
+                UNION ALL
+
+                SELECT
+                    a.appointment_date AS event_time,
+                    'appointment_due' AS event_type,
+                    'Appointment date' AS title,
+                    COALESCE(a.appointment_type, 'Appointment') AS detail,
+                    7 AS sort_order
+                FROM appointments a
+                WHERE a.enrollment_id = %s
+            ) timeline_items
+            WHERE event_time IS NOT NULL
+            ORDER BY event_time DESC, sort_order DESC
+            """,
+            """
+            SELECT
+                event_time,
+                event_type,
+                title,
+                detail,
+                sort_order
+            FROM (
+                SELECT
+                    pe.created_at AS event_time,
+                    'enrollment_started' AS event_type,
+                    'Program enrollment started' AS title,
+                    'Status: ' || COALESCE(pe.program_status, 'active') AS detail,
+                    1 AS sort_order
+                FROM program_enrollments pe
+                WHERE pe.id = ?
+
+                UNION ALL
+
+                SELECT
+                    g.created_at AS event_time,
+                    'goal_created' AS event_type,
+                    'Goal created' AS title,
+                    g.goal_text AS detail,
+                    2 AS sort_order
+                FROM goals g
+                WHERE g.enrollment_id = ?
+
+                UNION ALL
+
+                SELECT
+                    g.completed_date AS event_time,
+                    'goal_completed' AS event_type,
+                    'Goal completed' AS title,
+                    g.goal_text AS detail,
+                    3 AS sort_order
+                FROM goals g
+                WHERE g.enrollment_id = ?
+                  AND g.completed_date IS NOT NULL
+
+                UNION ALL
+
+                SELECT
+                    COALESCE(cmu.meeting_date, cmu.created_at) AS event_time,
+                    'case_note' AS event_type,
+                    'Case manager note' AS title,
+                    COALESCE(cmu.notes, cmu.progress_notes, cmu.action_items, 'Case update recorded') AS detail,
+                    4 AS sort_order
+                FROM case_manager_updates cmu
+                WHERE cmu.enrollment_id = ?
+
+                UNION ALL
+
+                SELECT
+                    wrs.submitted_at AS event_time,
+                    'compliance_submitted' AS event_type,
+                    'Weekly compliance submitted' AS title,
+                    'Productive Hours: ' || COALESCE(CAST(wrs.productive_hours AS TEXT), '0') ||
+                    ' | Work Hours: ' || COALESCE(CAST(wrs.work_hours AS TEXT), '0') ||
+                    ' | Meetings: ' || COALESCE(CAST(wrs.meeting_count AS TEXT), '0') AS detail,
+                    5 AS sort_order
+                FROM weekly_resident_summary wrs
+                WHERE wrs.enrollment_id = ?
+
+                UNION ALL
+
+                SELECT
+                    a.created_at AS event_time,
+                    'appointment_scheduled' AS event_type,
+                    'Appointment scheduled' AS title,
+                    COALESCE(a.appointment_type, 'Appointment') AS detail,
+                    6 AS sort_order
+                FROM appointments a
+                WHERE a.enrollment_id = ?
+
+                UNION ALL
+
+                SELECT
+                    a.appointment_date AS event_time,
+                    'appointment_due' AS event_type,
+                    'Appointment date' AS title,
+                    COALESCE(a.appointment_type, 'Appointment') AS detail,
+                    7 AS sort_order
+                FROM appointments a
+                WHERE a.enrollment_id = ?
+            ) timeline_items
+            WHERE event_time IS NOT NULL
+            ORDER BY event_time DESC, sort_order DESC
+            """,
+        ),
+        (
+            enrollment_id,
+            enrollment_id,
+            enrollment_id,
+            enrollment_id,
+            enrollment_id,
+            enrollment_id,
+            enrollment_id,
+        ),
+    )
+
+
 @resident_detail.route("/<int:resident_id>")
 @require_login
 @require_shelter
@@ -109,6 +305,7 @@ def resident_profile(resident_id: int):
             goals=[],
             notes=[],
             appointment=None,
+            timeline=[],
         )
 
     enrollment_id = resident["enrollment_id"] if isinstance(resident, dict) else resident[5]
@@ -117,6 +314,7 @@ def resident_profile(resident_id: int):
     goals = []
     notes = []
     appointment = None
+    timeline = []
 
     if enrollment_id:
         compliance = db_fetchone(
@@ -235,6 +433,8 @@ def resident_profile(resident_id: int):
             (enrollment_id,),
         )
 
+        timeline = _load_timeline(enrollment_id)
+
     return render_template(
         "resident_detail/profile.html",
         resident=resident,
@@ -242,6 +442,7 @@ def resident_profile(resident_id: int):
         goals=goals,
         notes=notes,
         appointment=appointment,
+        timeline=timeline,
     )
 
 
