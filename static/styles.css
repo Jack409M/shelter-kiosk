@@ -874,3 +874,63 @@ input[name="needed_at"] {
     display: block;
   }
 }
+
+.profile-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.profile-actions form {
+  margin: 0;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.profile-form-row {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.profile-form-row-compact {
+  grid-template-columns: 220px;
+}
+
+.profile-form-main,
+.profile-form-side {
+  min-width: 0;
+}
+
+.full-width-textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.date-input-compact {
+  width: 220px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 760px) {
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-form-row-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .date-input-compact {
+    width: 100%;
+  }
+}
