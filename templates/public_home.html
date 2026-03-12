@@ -73,11 +73,11 @@
   </div>
 
   <div class="footer-links">
-    <a href="{{ url_for('public.privacy') }}">Privacy Policy</a>
+    <a href="{{ url_for('public.privacy_policy') }}">Privacy Policy</a>
     <span>•</span>
-    <a href="{{ url_for('public.terms') }}">Terms of Service</a>
+    <a href="{{ url_for('public.terms_and_conditions') }}">Terms of Service</a>
     <span>•</span>
-    <a href="{{ url_for('public.sms_consent') }}">SMS Consent</a>
+    <a href="{{ url_for('resident_requests.sms_consent_public_alias') }}">SMS Consent</a>
   </div>
 
   <div class="footer-copyright">
@@ -85,19 +85,10 @@
   </div>
 </div>
 
-
 <style>
 
 body{
   background:#eef3f8;
-}
-
-
-/* hide top right layout buttons on this landing page */
-
-a[href="{{ url_for('resident_requests.resident_leave') }}"],
-a[href="{{ url_for('auth.staff_login') }}"]{
-  display:none;
 }
 
 
@@ -199,7 +190,7 @@ a[href="{{ url_for('auth.staff_login') }}"]{
 }
 
 
-/* FOOTER INFO */
+/* FOOTER */
 
 .public-footer-card{
   max-width:950px;
