@@ -875,12 +875,15 @@ input[name="needed_at"] {
   }
 }
 
+/* =========================================================
+   Resident Profile Layout
+========================================================= */
 .profile-actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .profile-actions form {
@@ -889,20 +892,22 @@ input[name="needed_at"] {
 
 .profile-form-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
-  gap: 16px;
+  grid-template-columns: 1fr 220px;
+  gap: 18px;
   align-items: start;
+  margin-top: 8px;
   margin-bottom: 12px;
 }
 
 .profile-form-row {
-  display: grid;
-  gap: 16px;
+  margin-top: 8px;
   margin-bottom: 12px;
 }
 
 .profile-form-row-compact {
-  grid-template-columns: 220px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .profile-form-main,
@@ -913,10 +918,11 @@ input[name="needed_at"] {
 .full-width-textarea {
   width: 100%;
   box-sizing: border-box;
+  resize: vertical;
 }
 
 .date-input-compact {
-  width: 220px;
+  width: 180px;
   max-width: 100%;
   box-sizing: border-box;
 }
@@ -927,7 +933,7 @@ input[name="needed_at"] {
   }
 
   .profile-form-row-compact {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .date-input-compact {
