@@ -74,10 +74,10 @@
     <form method="post" action="{{ url_for('resident_detail.create_enrollment', resident_id=resident_id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-      <div class="profile-form-row profile-form-row-compact">
+      <div class="profile-form-row-compact">
         <div>
           <label for="entry_date"><strong>Entry Date</strong></label><br>
-          <input class="date-input-compact" id="entry_date" type="date" name="entry_date" required>
+          <input id="entry_date" type="date" name="entry_date" class="date-input-compact" required>
         </div>
       </div>
 
@@ -190,7 +190,7 @@
     <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-      <div class="profile-form-row profile-form-row-compact">
+      <div class="profile-form-row-compact">
         <div>
           <label for="meeting_date"><strong>Meeting Date</strong></label><br>
           <input id="meeting_date" type="date" name="meeting_date" class="date-input-compact">
