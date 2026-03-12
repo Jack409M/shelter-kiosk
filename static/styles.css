@@ -988,3 +988,9 @@ input[name="needed_at"] {
     display: block;
   }
 }
+
+input[type="date"] {
+  width: 120px !important;
+  max-width: 120px !important;
+  background: yellow !important;
+}
