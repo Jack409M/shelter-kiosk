@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
 from core.audit import log_action
 from core.auth import require_login, require_shelter
-from core.db import db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.rate_limit import (
     ban_ip,
     get_key_lock_seconds_remaining,
@@ -106,8 +109,10 @@ def staff_login():
         return render_template("staff_login.html", all_shelters=all_shelters), 401
 
     staff_user_id = row["id"] if isinstance(row, dict) else row[0]
-    is_active = bool(row["is_active"] if isinstance(row, dict) else row[4])
+    staff_username = row["username"] if isinstance(row, dict) else row[1]
     pw_hash = row["password_hash"] if isinstance(row, dict) else row[2]
+    staff_role = row["role"] if isinstance(row, dict) else row[3]
+    is_active = bool(row["is_active"] if isinstance(row, dict) else row[4])
 
     if not is_active or not check_password_hash(pw_hash, password):
         triggered_username_lock = is_rate_limited(
@@ -150,24 +155,60 @@ def staff_login():
         flash("Invalid login.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 401
 
-    shelter = (request.form.get("shelter") or "").strip()
-    if shelter not in all_shelters:
+    if staff_role in {"admin", "shelter_director"}:
+        allowed_shelters = list(all_shelters)
+    else:
+        shelter_rows = db_fetchall(
+            "SELECT shelter FROM staff_shelter_assignments WHERE staff_user_id = %s ORDER BY shelter"
+            if g.get("db_kind") == "pg"
+            else "SELECT shelter FROM staff_shelter_assignments WHERE staff_user_id = ? ORDER BY shelter",
+            (staff_user_id,),
+        )
+
+        allowed_shelters = []
+        seen = set()
+
+        for shelter_row in shelter_rows:
+            shelter_name = shelter_row["shelter"] if isinstance(shelter_row, dict) else shelter_row[0]
+            shelter_name = (shelter_name or "").strip()
+            if shelter_name and shelter_name in all_shelters and shelter_name not in seen:
+                allowed_shelters.append(shelter_name)
+                seen.add(shelter_name)
+
+    if not allowed_shelters:
         log_action(
             "auth",
             None,
             None,
             staff_user_id,
             "login_failed",
-            f"reason=invalid_shelter ip={ip} username={normalized_username} shelter={shelter}",
+            f"reason=no_assigned_shelters ip={ip} username={normalized_username}",
         )
-        flash("Select a valid shelter.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 400
+        flash("Your account does not have any shelter access assigned. Please contact an administrator.", "error")
+        return render_template("staff_login.html", all_shelters=all_shelters), 403
+
+    shelter = (request.form.get("shelter") or "").strip()
+    if shelter not in allowed_shelters:
+        log_action(
+            "auth",
+            None,
+            None,
+            staff_user_id,
+            "login_failed",
+            f"reason=invalid_shelter_for_user ip={ip} username={normalized_username} shelter={shelter}",
+        )
+        flash("You do not have access to that shelter.", "error")
+        return render_template(
+            "staff_login.html",
+            all_shelters=allowed_shelters,
+        ), 403
 
     session.clear()
     session["staff_user_id"] = staff_user_id
-    session["username"] = row["username"] if isinstance(row, dict) else row[1]
-    session["role"] = row["role"] if isinstance(row, dict) else row[3]
+    session["username"] = staff_username
+    session["role"] = staff_role
     session["shelter"] = shelter
+    session["allowed_shelters"] = allowed_shelters
     session.permanent = True
 
     log_action(
@@ -199,7 +240,10 @@ def staff_logout():
 def staff_select_shelter():
     from app import get_all_shelters
 
-    shelters = get_all_shelters()
+    all_shelters = get_all_shelters()
+    allowed_shelters = session.get("allowed_shelters") or all_shelters
+
+    shelters = [s for s in all_shelters if s in allowed_shelters]
 
     if request.method == "GET":
         return render_template("staff_select_shelter.html", shelters=shelters)
