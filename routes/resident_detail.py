@@ -35,6 +35,7 @@ def resident_profile(resident_id: int):
                 r.first_name,
                 r.last_name,
                 r.shelter AS resident_shelter,
+                r.is_active,
                 pe.id AS enrollment_id,
                 pe.shelter AS enrollment_shelter,
                 pe.program_status,
@@ -53,6 +54,7 @@ def resident_profile(resident_id: int):
                 r.first_name,
                 r.last_name,
                 r.shelter AS resident_shelter,
+                r.is_active,
                 pe.id AS enrollment_id,
                 pe.shelter AS enrollment_shelter,
                 pe.program_status,
@@ -79,7 +81,7 @@ def resident_profile(resident_id: int):
             appointment=None,
         )
 
-    enrollment_id = resident["enrollment_id"] if isinstance(resident, dict) else resident[4]
+    enrollment_id = resident["enrollment_id"] if isinstance(resident, dict) else resident[5]
 
     compliance = None
     goals = []
@@ -211,6 +213,103 @@ def resident_profile(resident_id: int):
         notes=notes,
         appointment=appointment,
     )
+
+
+@resident_detail.post("/<int:resident_id>/enroll")
+@require_login
+@require_shelter
+def create_enrollment(resident_id: int):
+    shelter = session.get("shelter")
+
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+    resident = db_fetchone(
+        _sql(
+            """
+            SELECT
+                id,
+                shelter
+            FROM residents
+            WHERE id = %s AND shelter = %s
+            """,
+            """
+            SELECT
+                id,
+                shelter
+            FROM residents
+            WHERE id = ? AND shelter = ?
+            """,
+        ),
+        (resident_id, shelter),
+    )
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("residents.staff_residents"))
+
+    existing = db_fetchone(
+        _sql(
+            """
+            SELECT
+                id
+            FROM program_enrollments
+            WHERE resident_id = %s AND program_status = %s
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            """
+            SELECT
+                id
+            FROM program_enrollments
+            WHERE resident_id = ? AND program_status = ?
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+        ),
+        (resident_id, "active"),
+    )
+
+    if existing:
+        flash("Resident already has an active enrollment.", "error")
+        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+    entry_date = (request.form.get("entry_date") or "").strip()
+
+    if not entry_date:
+        flash("Entry date required.", "error")
+        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+    now = utcnow_iso()
+
+    db_execute(
+        _sql(
+            """
+            INSERT INTO program_enrollments
+            (resident_id, shelter, entry_date, exit_date, program_status, case_manager_id, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            """
+            INSERT INTO program_enrollments
+            (resident_id, shelter, entry_date, exit_date, program_status, case_manager_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+        ),
+        (
+            resident_id,
+            shelter,
+            entry_date,
+            None,
+            "active",
+            session.get("staff_user_id"),
+            now,
+            now,
+        ),
+    )
+
+    flash("Program enrollment started.", "ok")
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
 
 @resident_detail.post("/<int:resident_id>/goals")
