@@ -331,6 +331,47 @@ def add_goal(resident_id: int):
 @require_shelter
 @require_roles("admin", "shelter_director", "case_manager")
 def complete_goal(goal_id: int):
+    shelter = session.get("shelter")
+
+    goal = db_fetchone(
+        _sql(
+            """
+            SELECT
+                g.id,
+                r.id AS resident_id
+            FROM goals g
+            JOIN program_enrollments pe
+                ON pe.id = g.enrollment_id
+            JOIN residents r
+                ON r.id = pe.resident_id
+            WHERE g.id = %s
+              AND r.shelter = %s
+            """,
+            """
+            SELECT
+                g.id,
+                r.id AS resident_id
+            FROM goals g
+            JOIN program_enrollments pe
+                ON pe.id = g.enrollment_id
+            JOIN residents r
+                ON r.id = pe.resident_id
+            WHERE g.id = ?
+              AND r.shelter = ?
+            """,
+        ),
+        (goal_id, shelter),
+    )
+
+    if not goal:
+        flash("Goal not found or not accessible.", "error")
+        return redirect(request.referrer or url_for("staff_portal.staff_home"))
+
+    if isinstance(goal, dict):
+        resident_id = goal.get("resident_id")
+    else:
+        resident_id = goal[1]
+
     now = datetime.utcnow().isoformat()
 
     db_execute(
@@ -359,4 +400,4 @@ def complete_goal(goal_id: int):
     )
 
     flash("Goal marked completed.", "success")
-    return redirect(request.referrer or url_for("staff_portal.staff_home"))
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
