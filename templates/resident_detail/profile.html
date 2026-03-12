@@ -85,22 +85,44 @@
     <ul>
       {% for goal in goals %}
         {% if goal is mapping %}
-          <li>
-            <strong>{{ goal["goal_text"] }}</strong><br>
-            Status: {{ goal["status"] or "active" }}<br>
-            {% if goal["target_date"] %}Target Date: {{ goal["target_date"] }}<br>{% endif %}
-            {% if goal["completed_date"] %}Completed: {{ goal["completed_date"] }}<br>{% endif %}
-            {% if goal["created_at"] %}<small>Created: {{ goal["created_at"] }}</small>{% endif %}
-          </li>
+          {% set goal_id = goal["id"] %}
+          {% set goal_text = goal["goal_text"] %}
+          {% set goal_status = goal["status"] %}
+          {% set goal_target = goal["target_date"] %}
+          {% set goal_created = goal["created_at"] %}
+          {% set goal_completed = goal["completed_date"] %}
         {% else %}
-          <li>
-            <strong>{{ goal[0] }}</strong><br>
-            Status: {{ goal[1] or "active" }}<br>
-            {% if goal[2] %}Target Date: {{ goal[2] }}<br>{% endif %}
-            {% if goal[4] %}Completed: {{ goal[4] }}<br>{% endif %}
-            {% if goal[3] %}<small>Created: {{ goal[3] }}</small>{% endif %}
-          </li>
+          {% set goal_id = goal[0] %}
+          {% set goal_text = goal[1] %}
+          {% set goal_status = goal[2] %}
+          {% set goal_target = goal[3] %}
+          {% set goal_created = goal[4] %}
+          {% set goal_completed = goal[5] %}
         {% endif %}
+
+        <li>
+          <strong>{{ goal_text }}</strong><br>
+          Status: {{ goal_status or "active" }}<br>
+
+          {% if goal_target %}
+            Target Date: {{ goal_target }}<br>
+          {% endif %}
+
+          {% if goal_completed %}
+            Completed: {{ goal_completed }}<br>
+          {% endif %}
+
+          {% if goal_created %}
+            <small>Created: {{ goal_created }}</small>
+          {% endif %}
+
+          {% if goal_status != "completed" %}
+            <form method="post" action="{{ url_for('resident_detail.complete_goal', goal_id=goal_id) }}" style="margin-top:6px;">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button type="submit">Mark Completed</button>
+            </form>
+          {% endif %}
+        </li>
       {% endfor %}
     </ul>
   {% else %}
