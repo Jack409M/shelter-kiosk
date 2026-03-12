@@ -324,3 +324,39 @@ def add_goal(resident_id: int):
 
     flash("Goal added.", "success")
     return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+
+@resident_detail.route("/goal/<int:goal_id>/complete", methods=["POST"])
+@require_login
+@require_shelter
+@require_roles("admin", "shelter_director", "case_manager")
+def complete_goal(goal_id: int):
+    now = datetime.utcnow().isoformat()
+
+    db_execute(
+        _sql(
+            """
+            UPDATE goals
+            SET status = %s,
+                completed_date = %s,
+                updated_at = %s
+            WHERE id = %s
+            """,
+            """
+            UPDATE goals
+            SET status = ?,
+                completed_date = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+        ),
+        (
+            "completed",
+            now,
+            now,
+            goal_id,
+        ),
+    )
+
+    flash("Goal marked completed.", "success")
+    return redirect(request.referrer or url_for("staff_portal.staff_home"))
