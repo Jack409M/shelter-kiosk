@@ -12,7 +12,7 @@
           <th class="col-name">Name</th>
           <th class="col-code">Resident Code</th>
           <th class="col-status">Status</th>
-          <th class="col-actions">Actions</th>
+          <th class="col-actions">Profile</th>
         </tr>
       </thead>
 
@@ -41,26 +41,9 @@
               </td>
 
               <td class="resident-actions">
-
                 <a class="btn" href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
-                  Open
+                  Open Profile
                 </a>
-
-                <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=r.id) }}">
-                  Transfer
-                </a>
-
-                <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=r.id) }}">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  {% if r.is_active %}
-                    <input type="hidden" name="active" value="0">
-                    <button class="btn" type="submit">Deactivate</button>
-                  {% else %}
-                    <input type="hidden" name="active" value="1">
-                    <button class="btn" type="submit">Activate</button>
-                  {% endif %}
-                </form>
-
               </td>
             </tr>
           {% endfor %}
@@ -102,3 +85,4 @@
 </div>
 
 {% endblock %}
+
