@@ -21,6 +21,36 @@ def _case_manager_allowed() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 
+def _resident_enrollment_for_shelter(resident_id: int, shelter: str):
+    return db_fetchone(
+        _sql(
+            """
+            SELECT
+                r.id,
+                pe.id AS enrollment_id
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = %s AND r.shelter = %s
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+            """
+            SELECT
+                r.id,
+                pe.id AS enrollment_id
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = ? AND r.shelter = ?
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+        ),
+        (resident_id, shelter),
+    )
+
+
 @resident_detail.route("/<int:resident_id>")
 @require_login
 @require_shelter
@@ -322,33 +352,7 @@ def add_goal(resident_id: int):
         flash("Case manager access required.", "error")
         return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
-    resident = db_fetchone(
-        _sql(
-            """
-            SELECT
-                r.id,
-                pe.id AS enrollment_id
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = %s AND r.shelter = %s
-            ORDER BY pe.id DESC
-            LIMIT 1
-            """,
-            """
-            SELECT
-                r.id,
-                pe.id AS enrollment_id
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = ? AND r.shelter = ?
-            ORDER BY pe.id DESC
-            LIMIT 1
-            """,
-        ),
-        (resident_id, shelter),
-    )
+    resident = _resident_enrollment_for_shelter(resident_id, shelter)
 
     if not resident:
         flash("Resident not found.", "error")
@@ -484,33 +488,7 @@ def add_case_note(resident_id: int):
         flash("Case manager access required.", "error")
         return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
-    resident = db_fetchone(
-        _sql(
-            """
-            SELECT
-                r.id,
-                pe.id AS enrollment_id
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = %s AND r.shelter = %s
-            ORDER BY pe.id DESC
-            LIMIT 1
-            """,
-            """
-            SELECT
-                r.id,
-                pe.id AS enrollment_id
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = ? AND r.shelter = ?
-            ORDER BY pe.id DESC
-            LIMIT 1
-            """,
-        ),
-        (resident_id, shelter),
-    )
+    resident = _resident_enrollment_for_shelter(resident_id, shelter)
 
     if not resident:
         flash("Resident not found.", "error")
@@ -563,4 +541,64 @@ def add_case_note(resident_id: int):
     )
 
     flash("Case manager note added.", "ok")
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+
+@resident_detail.post("/<int:resident_id>/appointments")
+@require_login
+@require_shelter
+def add_appointment(resident_id: int):
+    shelter = session.get("shelter")
+
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+    resident = _resident_enrollment_for_shelter(resident_id, shelter)
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("residents.staff_residents"))
+
+    enrollment_id = resident["enrollment_id"] if isinstance(resident, dict) else resident[1]
+
+    if not enrollment_id:
+        flash("Resident does not have an active enrollment record yet.", "error")
+        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+    appointment_date = (request.form.get("appointment_date") or "").strip()
+    appointment_type = (request.form.get("appointment_type") or "").strip()
+    notes = (request.form.get("notes") or "").strip()
+
+    if not appointment_date:
+        flash("Appointment date is required.", "error")
+        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+    now = utcnow_iso()
+
+    db_execute(
+        _sql(
+            """
+            INSERT INTO appointments
+            (enrollment_id, appointment_type, appointment_date, notes, reminder_sent, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            """
+            INSERT INTO appointments
+            (enrollment_id, appointment_type, appointment_date, notes, reminder_sent, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+        ),
+        (
+            enrollment_id,
+            appointment_type or None,
+            appointment_date,
+            notes or None,
+            0,
+            now,
+            now,
+        ),
+    )
+
+    flash("Appointment scheduled.", "ok")
     return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
