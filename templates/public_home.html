@@ -1,92 +1,97 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="landing-page">
+<div class="landing-header">
 
-  <div class="landing-header">
-    <img src="/static/logo.png" class="dwc-logo">
-    <h1>Downtown Women's Center</h1>
-    <p>Shelter Operations Portal</p>
+  <div class="landing-logo">
+    <img src="/static/logo.png">
   </div>
 
-  <div class="portal-container">
-
-    <a class="portal-card" href="{{ url_for('auth.staff_login') }}">
-      <img src="/static/admin_building.jpg">
-      <div class="portal-text">
-        <h2>Staff Portal</h2>
-        <p>Employees and administrators</p>
-      </div>
-    </a>
-
-    <a class="portal-card" href="{{ url_for('resident_requests.resident_leave') }}">
-      <img src="/static/shelter.jpg">
-      <div class="portal-text">
-        <h2>Resident Services</h2>
-        <p>Leave requests and resident forms</p>
-      </div>
-    </a>
-
-  </div>
+  <h1>Downtown Women's Center</h1>
+  <p>Shelter Operations Portal</p>
 
 </div>
 
 
+<div class="portal-container">
+
+  <a class="portal-card" href="{{ url_for('auth.staff_login') }}">
+    <img src="/static/admin_building.jpg">
+    <div class="portal-text">
+      <h2>Staff Portal</h2>
+      <p>Employees and administrators</p>
+    </div>
+  </a>
+
+  <a class="portal-card" href="{{ url_for('resident_requests.resident_leave') }}">
+    <img src="/static/shelter.jpg">
+    <div class="portal-text">
+      <h2>Resident Services</h2>
+      <p>Leave requests and resident forms</p>
+    </div>
+  </a>
+
+</div>
+
+
+
 <style>
 
-.landing-page{
-  min-height:80vh;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  background:#f5f7fb;
-  padding:40px 20px;
+body{
+  background:#f3f6fb;
 }
+
+/* HEADER */
 
 .landing-header{
   text-align:center;
+  padding:70px 20px 50px 20px;
+  background:linear-gradient(135deg,#2b3c55,#4a6fa5);
+  color:white;
   margin-bottom:40px;
 }
 
-.dwc-logo{
+.landing-logo img{
   width:120px;
-  margin-bottom:10px;
+  margin-bottom:15px;
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.25));
 }
 
 .landing-header h1{
-  font-size:30px;
   margin:0;
-  color:#2b3c55;
+  font-size:34px;
 }
 
 .landing-header p{
   margin-top:6px;
-  color:#6c7a8a;
   font-size:16px;
+  opacity:.9;
 }
 
+
+/* PORTAL CARDS */
+
 .portal-container{
+  max-width:950px;
+  margin:auto;
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:30px;
-  max-width:900px;
-  width:100%;
+  padding:0 20px 60px 20px;
 }
 
 .portal-card{
-  display:block;
   background:white;
   border-radius:14px;
   overflow:hidden;
   text-decoration:none;
-  box-shadow:0 8px 20px rgba(0,0,0,.08);
+  box-shadow:0 10px 25px rgba(0,0,0,.08);
   transition:all .2s ease;
 }
 
 .portal-card:hover{
   transform:translateY(-6px);
-  box-shadow:0 14px 32px rgba(0,0,0,.15);
+  box-shadow:0 18px 40px rgba(0,0,0,.18);
 }
 
 .portal-card img{
@@ -101,7 +106,6 @@
 
 .portal-text h2{
   margin:0;
-  font-size:22px;
   color:#2b3c55;
 }
 
@@ -111,10 +115,17 @@
   font-size:14px;
 }
 
-@media (max-width:720px){
+
+/* MOBILE */
+
+@media(max-width:750px){
 
   .portal-container{
     grid-template-columns:1fr;
+  }
+
+  .landing-header{
+    padding:60px 20px 40px 20px;
   }
 
 }
