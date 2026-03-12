@@ -1,0 +1,112 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="landing-wrap">
+
+  <div class="landing-header">
+    <img src="/static/logo.png" class="dwc-logo">
+    <h1>Downtown Women's Center</h1>
+    <p>Shelter Operations Portal</p>
+  </div>
+
+  <div class="portal-grid">
+
+    <a class="portal-card" href="{{ url_for('auth.staff_login') }}">
+      <img src="/static/admin_building.jpg" class="portal-image">
+      <div class="portal-label">
+        <h2>Staff Portal</h2>
+        <p>Employees and administrators</p>
+      </div>
+    </a>
+
+    <a class="portal-card" href="{{ url_for('resident_requests.resident_leave') }}">
+      <img src="/static/shelter.jpg" class="portal-image">
+      <div class="portal-label">
+        <h2>Resident Services</h2>
+        <p>Leave requests and resident forms</p>
+      </div>
+    </a>
+
+  </div>
+
+</div>
+
+
+<style>
+
+.landing-wrap{
+  max-width:1000px;
+  margin:auto;
+  padding:40px 20px;
+  text-align:center;
+}
+
+.landing-header{
+  margin-bottom:40px;
+}
+
+.dwc-logo{
+  width:120px;
+  margin-bottom:15px;
+}
+
+.landing-header h1{
+  font-size:30px;
+  margin:0;
+}
+
+.landing-header p{
+  color:#666;
+  margin-top:6px;
+}
+
+.portal-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+}
+
+.portal-card{
+  display:block;
+  text-decoration:none;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 6px 18px rgba(0,0,0,.12);
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+
+.portal-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 12px 28px rgba(0,0,0,.18);
+}
+
+.portal-image{
+  width:100%;
+  height:260px;
+  object-fit:cover;
+}
+
+.portal-label{
+  background:white;
+  padding:20px;
+}
+
+.portal-label h2{
+  margin:0;
+  font-size:22px;
+}
+
+.portal-label p{
+  margin-top:6px;
+  color:#666;
+}
+
+@media(max-width:700px){
+  .portal-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+</style>
+
+{% endblock %}
