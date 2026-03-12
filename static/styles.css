@@ -232,10 +232,6 @@ header.top,
 
 /* =========================================================
    Form Controls
-   Important:
-   Do NOT make every input full width globally.
-   Text style fields expand.
-   Date, time, and datetime fields stay compact by default.
 ========================================================= */
 label {
   display: block;
@@ -255,7 +251,6 @@ textarea {
   color: #000;
 }
 
-/* Full width text style controls */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -267,21 +262,18 @@ select {
   width: 100%;
 }
 
-/* Standard compact date controls across the whole system */
 input[type="date"] {
   width: 15ch;
   max-width: 15ch;
   display: inline-block;
 }
 
-/* Standard medium width datetime control */
 input[type="datetime-local"] {
   width: 24ch;
   max-width: 24ch;
   display: inline-block;
 }
 
-/* Standard compact time control */
 input[type="time"] {
   width: 11ch;
   max-width: 11ch;
@@ -779,6 +771,138 @@ input[name="needed_at"] {
 }
 
 /* =========================================================
+   Resident Profile Layout
+========================================================= */
+.profile-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.profile-actions form {
+  margin: 0;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 18px;
+  align-items: start;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.profile-form-row {
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.profile-form-row-compact {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profile-form-main,
+.profile-form-side {
+  min-width: 0;
+}
+
+.full-width-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.date-input-compact {
+  width: 15ch;
+  max-width: 15ch;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+.resident-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.resident-profile-main {
+  min-width: 0;
+}
+
+.resident-profile-sidebar {
+  position: sticky;
+  top: 14px;
+}
+
+.timeline-panel {
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid #000;
+  border-radius: var(--radius);
+}
+
+.timeline-panel h3 {
+  margin-top: 0;
+}
+
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.timeline-item:last-child {
+  border-bottom: 0;
+}
+
+.timeline-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.timeline-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.timeline-detail {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.timeline-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.profile-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+}
+
+.case-note-block {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.case-note-block:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* =========================================================
    Print
 ========================================================= */
 @media print {
@@ -812,6 +936,28 @@ input[name="needed_at"] {
 
   .card.tight {
     max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .profile-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-form-row-compact {
+    flex-direction: column;
+  }
+
+  .date-input-compact {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+}
+
+@media (max-width: 700px) {
+  .profile-meta-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -875,7 +1021,6 @@ input[name="needed_at"] {
     margin-top: 8px;
   }
 
-  /* On small screens, compact date and time fields expand to full width */
   input[type="date"],
   input[type="datetime-local"],
   input[type="time"] {
@@ -920,181 +1065,6 @@ input[name="needed_at"] {
   }
 }
 
-/* =========================================================
-   Resident Profile Layout
-========================================================= */
-.profile-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.profile-actions form {
-  margin: 0;
-}
-
-.profile-form-grid {
-  display: grid;
-  grid-template-columns: 1fr 220px;
-  gap: 18px;
-  align-items: start;
-  margin-top: 8px;
-  margin-bottom: 12px;
-}
-
-.profile-form-row {
-  margin-top: 8px;
-  margin-bottom: 12px;
-}
-
-.profile-form-row-compact {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.profile-form-main,
-.profile-form-side {
-  min-width: 0;
-}
-
-.full-width-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  resize: vertical;
-}
-
-.date-input-compact {
-  width: 15ch;
-  max-width: 15ch;
-  display: inline-block;
-  box-sizing: border-box;
-}
-
-@media (max-width: 760px) {
-  .profile-form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-form-row-compact {
-    flex-direction: column;
-  }
-
-  .date-input-compact {
-    width: 100%;
-    max-width: 100%;
-    display: block;
-  }
-}
-
-input[type="date"] {
-  width: 120px !important;
-  max-width: 120px !important;
-  background: yellow !important;
-}
-
-/* =========================================================
-   Date / Time Inputs (Development Highlight)
-   Yellow helps visually confirm date fields during build
-========================================================= */
-
-input[type="date"],
-input[type="datetime-local"],
-input[type="time"] {
-  background: #fff6a8;
-  border: 2px solid #000;
-
-  width: 15ch;
-  max-width: 15ch;
-  display: inline-block;
-}
-
-/* datetime needs slightly more room */
-input[type="datetime-local"] {
-  width: 24ch;
-  max-width: 24ch;
-}
-
-/* time fields smaller */
-input[type="time"] {
-  width: 11ch;
-  max-width: 11ch;
-}
-
-/* Mobile expands them normally */
-@media (max-width: 640px) {
-  input[type="date"],
-  input[type="datetime-local"],
-  input[type="time"] {
-    width: 100%;
-    max-width: 100%;
-    display: block;
-  }
-}
-
-/* =========================================================
-   Resident Profile Split Layout
-========================================================= */
-.resident-profile-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 24px;
-  align-items: start;
-}
-
-.resident-profile-main {
-  min-width: 0;
-}
-
-.resident-profile-sidebar {
-  position: sticky;
-  top: 14px;
-}
-
-.timeline-panel {
-  padding: 14px;
-  background: var(--card);
-  border: 1px solid #000;
-  border-radius: var(--radius);
-}
-
-.timeline-panel h3 {
-  margin-top: 0;
-}
-
-.timeline-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.timeline-item {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border-soft);
-}
-
-.timeline-item:last-child {
-  border-bottom: 0;
-}
-
-.timeline-time {
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 4px;
-}
-
-.timeline-title {
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.timeline-detail {
-  font-size: 14px;
-  line-height: 1.35;
-}
-
 @media (max-width: 1100px) {
   .resident-profile-layout {
     grid-template-columns: 1fr;
@@ -1102,101 +1072,5 @@ input[type="time"] {
 
   .resident-profile-sidebar {
     position: static;
-  }
-}
-
-/* Resident profile split layout */
-
-.resident-profile-layout{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 360px;
-  gap:24px;
-  align-items:start;
-}
-
-.resident-profile-main{
-  min-width:0;
-}
-
-.resident-profile-sidebar{
-  position:sticky;
-  top:14px;
-}
-
-.timeline-panel{
-  padding:14px;
-  background:var(--card);
-  border:1px solid #000;
-  border-radius:var(--radius);
-}
-
-.timeline-panel h3{
-  margin-top:0;
-}
-
-.timeline-list{
-  list-style:none;
-  margin:0;
-  padding:0;
-}
-
-.timeline-item{
-  padding:10px 0;
-  border-bottom:1px solid var(--border-soft);
-}
-
-.timeline-item:last-child{
-  border-bottom:0;
-}
-
-.timeline-time{
-  font-size:12px;
-  color:var(--text-muted);
-  margin-bottom:4px;
-}
-
-.timeline-title{
-  font-weight:700;
-  margin-bottom:4px;
-}
-
-.timeline-detail{
-  font-size:14px;
-}
-
-.timeline-empty{
-  color:var(--text-muted);
-  font-size:14px;
-}
-
-.profile-meta-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:10px 18px;
-}
-
-.case-note-block{
-  padding:12px 0;
-  border-top:1px solid var(--border-soft);
-}
-
-.case-note-block:first-child{
-  border-top:0;
-  padding-top:0;
-}
-
-@media (max-width:1100px){
-  .resident-profile-layout{
-    grid-template-columns:1fr;
-  }
-
-  .resident-profile-sidebar{
-    position:static;
-  }
-}
-
-@media (max-width:700px){
-  .profile-meta-grid{
-    grid-template-columns:1fr;
   }
 }
