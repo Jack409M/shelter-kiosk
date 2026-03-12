@@ -1,26 +1,39 @@
 {% extends "layout.html" %}
 {% block content %}
 <h1>Staff login</h1>
+
 <form method="post" class="card">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-  <label>Shelter</label>
-  <select name="shelter" required>
+  <label for="shelter">Shelter</label>
+  <select name="shelter" id="shelter" required>
     <option value="">Select…</option>
     {% for s in all_shelters %}
-      <option value="{{ s }}">{{ s }}</option>
+      <option value="{{ s }}" {% if request.form.get("shelter") == s %}selected{% endif %}>
+        {{ s }}
+      </option>
     {% endfor %}
   </select>
 
-  <label>Username</label>
-  <input name="username" required>
+  <label for="username">Username</label>
+  <input
+    id="username"
+    name="username"
+    value="{{ request.form.get('username', '') }}"
+    autocomplete="username"
+    required
+  >
 
-  <label>Password</label>
-  <input name="password" type="password" required>
+  <label for="password">Password</label>
+  <input
+    id="password"
+    name="password"
+    type="password"
+    autocomplete="current-password"
+    required
+  >
 
   <button type="submit">Login</button>
 </form>
 
 {% endblock %}
-
-
