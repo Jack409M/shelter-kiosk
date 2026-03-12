@@ -213,8 +213,9 @@ header.top,
    Cards
 ========================================================= */
 .card {
-  max-width: 920px;
-  margin: 18px auto;
+  width: 100%;
+  max-width: none;
+  margin: 18px 0;
   padding: 18px;
 
   background: var(--card);
@@ -226,6 +227,7 @@ header.top,
 
 .card.tight {
   max-width: 520px;
+  width: auto;
   margin: 0 0 14px 0;
   padding: 12px;
 }
@@ -823,11 +825,28 @@ input[name="needed_at"] {
   box-sizing: border-box;
 }
 
+.profile-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+}
+
+.case-note-block {
+  padding: 12px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.case-note-block:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .resident-profile-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: 1fr 360px;
   gap: 24px;
   align-items: start;
+  width: 100%;
 }
 
 .resident-profile-main {
@@ -835,29 +854,37 @@ input[name="needed_at"] {
 }
 
 .resident-profile-sidebar {
+  width: 360px;
+  max-width: 360px;
+  min-width: 0;
   position: sticky;
   top: 14px;
+  align-self: start;
 }
 
 .timeline-panel {
-  padding: 14px;
   background: var(--card);
   border: 1px solid #000;
   border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .timeline-panel h3 {
-  margin-top: 0;
+  margin: 0;
+  padding: 14px;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .timeline-list {
   list-style: none;
   margin: 0;
   padding: 0;
+  max-height: 72vh;
+  overflow-y: auto;
 }
 
 .timeline-item {
-  padding: 10px 0;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border-soft);
 }
 
@@ -879,27 +906,13 @@ input[name="needed_at"] {
 .timeline-detail {
   font-size: 14px;
   line-height: 1.35;
+  word-break: break-word;
 }
 
 .timeline-empty {
+  padding: 14px;
   color: var(--text-muted);
   font-size: 14px;
-}
-
-.profile-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 18px;
-}
-
-.case-note-block {
-  padding: 12px 0;
-  border-top: 1px solid var(--border-soft);
-}
-
-.case-note-block:first-child {
-  border-top: 0;
-  padding-top: 0;
 }
 
 /* =========================================================
@@ -913,7 +926,8 @@ input[name="needed_at"] {
   .menu,
   button,
   .btn,
-  a.btn {
+  a.btn,
+  .resident-profile-sidebar {
     display: none !important;
   }
 
@@ -925,6 +939,18 @@ input[name="needed_at"] {
 /* =========================================================
    Responsive
 ========================================================= */
+@media (max-width: 1100px) {
+  .resident-profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .resident-profile-sidebar {
+    width: 100%;
+    max-width: 100%;
+    position: static;
+  }
+}
+
 @media (max-width: 900px) {
   .residents-layout {
     grid-template-columns: 1fr;
@@ -1063,14 +1089,8 @@ input[name="needed_at"] {
     max-width: 100%;
     display: block;
   }
-}
 
-@media (max-width: 1100px) {
-  .resident-profile-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .resident-profile-sidebar {
-    position: static;
+  .timeline-list {
+    max-height: none;
   }
 }
