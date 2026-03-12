@@ -24,7 +24,11 @@
         {% else %}
           {% for r in residents %}
             <tr>
-              <td>{{ r.last_name }}, {{ r.first_name }}</td>
+              <td>
+                <a href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
+                  {{ r.last_name }}, {{ r.first_name }}
+                </a>
+              </td>
 
               <td><strong>{{ r.resident_code }}</strong></td>
 
@@ -37,6 +41,10 @@
               </td>
 
               <td class="resident-actions">
+
+                <a class="btn" href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
+                  Open
+                </a>
 
                 <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=r.id) }}">
                   Transfer
