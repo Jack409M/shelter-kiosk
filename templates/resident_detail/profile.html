@@ -1,345 +1,67 @@
-{% extends "layout.html" %}
-{% block content %}
+/* Resident profile split layout */
+.resident-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
 
-<h1>Resident Profile</h1>
+.resident-profile-main {
+  min-width: 0;
+}
 
-{% if not resident %}
-  <p>Resident not found.</p>
-{% else %}
+.resident-profile-sidebar {
+  position: sticky;
+  top: 14px;
+}
 
-  {% if resident is mapping %}
-    {% set resident_id = resident["id"] %}
-    {% set first_name = resident["first_name"] %}
-    {% set last_name = resident["last_name"] %}
-    {% set resident_shelter = resident["resident_shelter"] %}
-    {% set resident_active = resident["is_active"] %}
-    {% set enrollment_id = resident["enrollment_id"] %}
-    {% set enrollment_shelter = resident["enrollment_shelter"] %}
-    {% set program_status = resident["program_status"] %}
-    {% set entry_date = resident["entry_date"] %}
-    {% set exit_date = resident["exit_date"] %}
-  {% else %}
-    {% set resident_id = resident[0] %}
-    {% set first_name = resident[1] %}
-    {% set last_name = resident[2] %}
-    {% set resident_shelter = resident[3] %}
-    {% set resident_active = resident[4] %}
-    {% set enrollment_id = resident[5] %}
-    {% set enrollment_shelter = resident[6] %}
-    {% set program_status = resident[7] %}
-    {% set entry_date = resident[8] %}
-    {% set exit_date = resident[9] %}
-  {% endif %}
+.timeline-panel {
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid #000;
+  border-radius: var(--radius);
+}
 
-  <h2>{{ first_name }} {{ last_name }}</h2>
+.timeline-panel h3 {
+  margin-top: 0;
+}
 
-  <p><strong>Shelter:</strong> {{ enrollment_shelter or resident_shelter or "Not set" }}</p>
-  <p><strong>Status:</strong>
-    {% if resident_active %}
-      Active
-    {% else %}
-      Inactive
-    {% endif %}
-  </p>
-  <p><strong>Program Status:</strong> {{ program_status or "No enrollment yet" }}</p>
-  <p><strong>Entry Date:</strong> {{ entry_date or "Not set" }}</p>
-  <p><strong>Exit Date:</strong> {{ exit_date or "Active / not exited" }}</p>
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 
-  <hr>
+.timeline-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
 
-  <h3>Resident Actions</h3>
+.timeline-item:last-child {
+  border-bottom: 0;
+}
 
-  <div class="profile-actions">
-    <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id) }}">
-      Transfer Resident
-    </a>
+.timeline-time {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
 
-    <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-      {% if resident_active %}
-        <input type="hidden" name="active" value="0">
-        <button class="btn" type="submit">Deactivate Resident</button>
-      {% else %}
-        <input type="hidden" name="active" value="1">
-        <button class="btn" type="submit">Activate Resident</button>
-      {% endif %}
-    </form>
-  </div>
+.timeline-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
 
-  {% if not enrollment_id %}
-    <hr>
+.timeline-detail {
+  font-size: 14px;
+}
 
-    <h3>Program Enrollment</h3>
+@media (max-width: 1100px) {
+  .resident-profile-layout {
+    grid-template-columns: 1fr;
+  }
 
-    <form method="post" action="{{ url_for('resident_detail.create_enrollment', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <div class="profile-form-row-compact">
-        <div>
-          <label for="entry_date"><strong>Entry Date</strong></label><br>
-          <input id="entry_date" type="date" name="entry_date" class="date-input-compact" required>
-        </div>
-      </div>
-
-      <p>
-        <button type="submit">Start Program Enrollment</button>
-      </p>
-    </form>
-  {% endif %}
-
-  <hr>
-
-  <h3>Resident Timeline</h3>
-
-  {% if timeline %}
-    <ul>
-      {% for item in timeline %}
-        {% if item is mapping %}
-          {% set event_time = item["event_time"] %}
-          {% set event_type = item["event_type"] %}
-          {% set title = item["title"] %}
-          {% set detail = item["detail"] %}
-        {% else %}
-          {% set event_time = item[0] %}
-          {% set event_type = item[1] %}
-          {% set title = item[2] %}
-          {% set detail = item[3] %}
-        {% endif %}
-
-        <li>
-          <strong>{{ event_time or "Unknown date" }}</strong><br>
-          <strong>{{ title }}</strong><br>
-          {% if detail %}
-            {{ detail }}
-          {% endif %}
-          {% if event_type %}
-            <br><small>{{ event_type }}</small>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No timeline activity yet.</p>
-  {% endif %}
-
-  <hr>
-
-  <h3>Weekly Compliance</h3>
-  {% if compliance %}
-    {% if compliance is mapping %}
-      <p><strong>Productive Hours:</strong> {{ compliance["productive_hours"] or 0 }}</p>
-      <p><strong>Work Hours:</strong> {{ compliance["work_hours"] or 0 }}</p>
-      <p><strong>Meetings:</strong> {{ compliance["meeting_count"] or 0 }}</p>
-      <p><strong>Last Submitted:</strong> {{ compliance["submitted_at"] or "Unknown" }}</p>
-    {% else %}
-      <p><strong>Productive Hours:</strong> {{ compliance[0] or 0 }}</p>
-      <p><strong>Work Hours:</strong> {{ compliance[1] or 0 }}</p>
-      <p><strong>Meetings:</strong> {{ compliance[2] or 0 }}</p>
-      <p><strong>Last Submitted:</strong> {{ compliance[3] or "Unknown" }}</p>
-    {% endif %}
-  {% else %}
-    <p>No weekly submission yet.</p>
-  {% endif %}
-
-  <hr>
-
-  <h3>Goals</h3>
-
-  {% if enrollment_id %}
-    <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <div class="profile-form-grid">
-        <div class="profile-form-main">
-          <label for="goal_text"><strong>New Goal</strong></label><br>
-          <textarea id="goal_text" name="goal_text" rows="4" class="full-width-textarea" required></textarea>
-        </div>
-
-        <div class="profile-form-side">
-          <label for="target_date"><strong>Target Date</strong></label><br>
-          <input id="target_date" type="date" name="target_date" class="date-input-compact">
-        </div>
-      </div>
-
-      <p>
-        <button type="submit">Add Goal</button>
-      </p>
-    </form>
-  {% else %}
-    <p>This resident must have a program enrollment before goals can be added.</p>
-  {% endif %}
-
-  {% if goals %}
-    <ul>
-      {% for goal in goals %}
-        {% if goal is mapping %}
-          {% set goal_id = goal["id"] %}
-          {% set goal_text = goal["goal_text"] %}
-          {% set goal_status = goal["status"] %}
-          {% set goal_target = goal["target_date"] %}
-          {% set goal_created = goal["created_at"] %}
-          {% set goal_completed = goal["completed_date"] %}
-        {% else %}
-          {% set goal_id = goal[0] %}
-          {% set goal_text = goal[1] %}
-          {% set goal_status = goal[2] %}
-          {% set goal_target = goal[3] %}
-          {% set goal_created = goal[4] %}
-          {% set goal_completed = goal[5] %}
-        {% endif %}
-
-        <li>
-          <strong>{{ goal_text }}</strong><br>
-          Status: {{ goal_status or "active" }}<br>
-
-          {% if goal_target %}
-            Target Date: {{ goal_target }}<br>
-          {% endif %}
-
-          {% if goal_completed %}
-            Completed: {{ goal_completed }}<br>
-          {% endif %}
-
-          {% if goal_created %}
-            <small>Created: {{ goal_created }}</small>
-          {% endif %}
-
-          {% if goal_status != "completed" %}
-            <form method="post" action="{{ url_for('resident_detail.complete_goal', goal_id=goal_id) }}" style="margin-top:6px;">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">Mark Completed</button>
-            </form>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No goals recorded yet.</p>
-  {% endif %}
-
-  <hr>
-
-  <h3>Case Manager Notes</h3>
-
-  {% if enrollment_id %}
-    <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <div class="profile-form-row-compact">
-        <div>
-          <label for="meeting_date"><strong>Meeting Date</strong></label><br>
-          <input id="meeting_date" type="date" name="meeting_date" class="date-input-compact">
-        </div>
-      </div>
-
-      <p>
-        <label for="notes"><strong>Notes</strong></label><br>
-        <textarea id="notes" name="notes" rows="4" class="full-width-textarea"></textarea>
-      </p>
-
-      <p>
-        <label for="progress_notes"><strong>Progress Notes</strong></label><br>
-        <textarea id="progress_notes" name="progress_notes" rows="4" class="full-width-textarea"></textarea>
-      </p>
-
-      <p>
-        <label for="action_items"><strong>Action Items</strong></label><br>
-        <textarea id="action_items" name="action_items" rows="4" class="full-width-textarea"></textarea>
-      </p>
-
-      <p>
-        <button type="submit">Save Case Manager Note</button>
-      </p>
-    </form>
-  {% else %}
-    <p>This resident must have a program enrollment before case manager notes can be added.</p>
-  {% endif %}
-
-  <hr>
-
-  {% if notes %}
-    <ul>
-      {% for note in notes %}
-        {% if note is mapping %}
-          <li>
-            <strong>{{ note["meeting_date"] or note["created_at"] }}</strong><br>
-            {% if note["notes"] %}Notes: {{ note["notes"] }}<br>{% endif %}
-            {% if note["progress_notes"] %}Progress: {{ note["progress_notes"] }}<br>{% endif %}
-            {% if note["action_items"] %}Action Items: {{ note["action_items"] }}{% endif %}
-          </li>
-        {% else %}
-          <li>
-            <strong>{{ note[0] or note[4] }}</strong><br>
-            {% if note[1] %}Notes: {{ note[1] }}<br>{% endif %}
-            {% if note[2] %}Progress: {{ note[2] }}<br>{% endif %}
-            {% if note[3] %}Action Items: {{ note[3] }}{% endif %}
-          </li>
-        {% endif %}
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p>No case manager notes yet.</p>
-  {% endif %}
-
-  <hr>
-
-  <h3>Next Appointment</h3>
-  {% if appointment %}
-    {% if appointment is mapping %}
-      <p><strong>Date:</strong> {{ appointment["appointment_date"] }}</p>
-      <p><strong>Type:</strong> {{ appointment["appointment_type"] or "Not set" }}</p>
-      <p><strong>Notes:</strong> {{ appointment["notes"] or "None" }}</p>
-    {% else %}
-      <p><strong>Date:</strong> {{ appointment[0] }}</p>
-      <p><strong>Type:</strong> {{ appointment[1] or "Not set" }}</p>
-      <p><strong>Notes:</strong> {{ appointment[2] or "None" }}</p>
-    {% endif %}
-  {% else %}
-    <p>No appointment scheduled.</p>
-  {% endif %}
-
-  <hr>
-
-  <h3>Schedule Appointment</h3>
-
-  {% if enrollment_id %}
-    <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <div class="profile-form-grid">
-        <div class="profile-form-side">
-          <label for="appointment_date"><strong>Appointment Date</strong></label><br>
-          <input id="appointment_date" type="date" name="appointment_date" class="date-input-compact" required>
-        </div>
-
-        <div class="profile-form-side">
-          <label for="appointment_type"><strong>Appointment Type</strong></label><br>
-          <select id="appointment_type" name="appointment_type">
-            <option value="">Select</option>
-            <option value="Case Manager Meeting">Case Manager Meeting</option>
-            <option value="Program Review">Program Review</option>
-            <option value="Compliance Review">Compliance Review</option>
-            <option value="Housing">Housing</option>
-            <option value="Employment">Employment</option>
-            <option value="Medical">Medical</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-
-      <p>
-        <label for="appointment_notes"><strong>Notes</strong></label><br>
-        <textarea id="appointment_notes" name="notes" rows="3" class="full-width-textarea"></textarea>
-      </p>
-
-      <p>
-        <button type="submit">Schedule Appointment</button>
-      </p>
-    </form>
-  {% else %}
-    <p>This resident must have a program enrollment before appointments can be scheduled.</p>
-  {% endif %}
-
-{% endif %}
-
-{% endblock %}
+  .resident-profile-sidebar {
+    position: static;
+  }
+}
