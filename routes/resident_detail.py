@@ -535,17 +535,19 @@ def add_case_note(resident_id: int):
         flash("Enter at least one case manager note field.", "error")
         return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
+    now = utcnow_iso()
+
     db_execute(
         _sql(
             """
             INSERT INTO case_manager_updates
-            (enrollment_id, staff_user_id, meeting_date, notes, progress_notes, action_items, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            (enrollment_id, staff_user_id, meeting_date, notes, progress_notes, action_items, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             """
             INSERT INTO case_manager_updates
-            (enrollment_id, staff_user_id, meeting_date, notes, progress_notes, action_items, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (enrollment_id, staff_user_id, meeting_date, notes, progress_notes, action_items, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
         ),
         (
@@ -555,7 +557,8 @@ def add_case_note(resident_id: int):
             notes or None,
             progress_notes or None,
             action_items or None,
-            utcnow_iso(),
+            now,
+            now,
         ),
     )
 
