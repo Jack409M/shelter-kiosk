@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>Resident Profile</h1>
+
+{% if resident %}
+
+<h2>
+{{ resident["first_name"] }} {{ resident["last_name"] }}
+</h2>
+
+<p>
+Program Status: {{ resident["program_status"] }}
+</p>
+
+<p>
+Level: {{ resident["level"] }}
+</p>
+
+<hr>
+
+<h3>Weekly Compliance</h3>
+
+{% if compliance %}
+<p>Productive Hours: {{ compliance["productive_hours"] or 0 }}</p>
+<p>Work Hours: {{ compliance["work_hours"] or 0 }}</p>
+<p>Meetings: {{ compliance["meeting_count"] or 0 }}</p>
+{% else %}
+<p>No submission yet.</p>
+{% endif %}
+
+<hr>
+
+<h3>Goals</h3>
+
+<ul>
+{% for goal in goals %}
+<li>{{ goal["goal_text"] }} ({{ goal["status"] }})</li>
+{% endfor %}
+</ul>
+
+<hr>
+
+<h3>Case Manager Notes</h3>
+
+<ul>
+{% for note in notes %}
+<li>{{ note["note_text"] }}</li>
+{% endfor %}
+</ul>
+
+<hr>
+
+<h3>Next Appointment</h3>
+
+{% if appointment %}
+<p>{{ appointment["scheduled_at"] }}</p>
+{% else %}
+<p>No appointment scheduled</p>
+{% endif %}
+
+{% endif %}
+
+{% endblock %}
