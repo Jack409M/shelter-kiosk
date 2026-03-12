@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="landing-wrap">
+<div class="landing-page">
 
   <div class="landing-header">
     <img src="/static/logo.png" class="dwc-logo">
@@ -9,19 +9,19 @@
     <p>Shelter Operations Portal</p>
   </div>
 
-  <div class="portal-grid">
+  <div class="portal-container">
 
     <a class="portal-card" href="{{ url_for('auth.staff_login') }}">
-      <img src="/static/admin_building.jpg" class="portal-image">
-      <div class="portal-label">
+      <img src="/static/admin_building.jpg">
+      <div class="portal-text">
         <h2>Staff Portal</h2>
         <p>Employees and administrators</p>
       </div>
     </a>
 
     <a class="portal-card" href="{{ url_for('resident_requests.resident_leave') }}">
-      <img src="/static/shelter.jpg" class="portal-image">
-      <div class="portal-label">
+      <img src="/static/shelter.jpg">
+      <div class="portal-text">
         <h2>Resident Services</h2>
         <p>Leave requests and resident forms</p>
       </div>
@@ -34,77 +34,89 @@
 
 <style>
 
-.landing-wrap{
-  max-width:1000px;
-  margin:auto;
+.landing-page{
+  min-height:80vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:#f5f7fb;
   padding:40px 20px;
-  text-align:center;
 }
 
 .landing-header{
+  text-align:center;
   margin-bottom:40px;
 }
 
 .dwc-logo{
   width:120px;
-  margin-bottom:15px;
+  margin-bottom:10px;
 }
 
 .landing-header h1{
   font-size:30px;
   margin:0;
+  color:#2b3c55;
 }
 
 .landing-header p{
-  color:#666;
   margin-top:6px;
+  color:#6c7a8a;
+  font-size:16px;
 }
 
-.portal-grid{
+.portal-container{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:30px;
+  max-width:900px;
+  width:100%;
 }
 
 .portal-card{
   display:block;
-  text-decoration:none;
-  border-radius:12px;
+  background:white;
+  border-radius:14px;
   overflow:hidden;
-  box-shadow:0 6px 18px rgba(0,0,0,.12);
-  transition:transform .15s ease, box-shadow .15s ease;
+  text-decoration:none;
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+  transition:all .2s ease;
 }
 
 .portal-card:hover{
-  transform:translateY(-4px);
-  box-shadow:0 12px 28px rgba(0,0,0,.18);
+  transform:translateY(-6px);
+  box-shadow:0 14px 32px rgba(0,0,0,.15);
 }
 
-.portal-image{
+.portal-card img{
   width:100%;
   height:260px;
   object-fit:cover;
 }
 
-.portal-label{
-  background:white;
-  padding:20px;
+.portal-text{
+  padding:22px;
 }
 
-.portal-label h2{
+.portal-text h2{
   margin:0;
   font-size:22px;
+  color:#2b3c55;
 }
 
-.portal-label p{
+.portal-text p{
   margin-top:6px;
-  color:#666;
+  color:#6c7a8a;
+  font-size:14px;
 }
 
-@media(max-width:700px){
-  .portal-grid{
+@media (max-width:720px){
+
+  .portal-container{
     grid-template-columns:1fr;
   }
+
 }
 
 </style>
