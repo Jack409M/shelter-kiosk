@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from flask import Blueprint, g, render_template, session
+from datetime import datetime
+
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_fetchall, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone
 
 resident_detail = Blueprint(
     "resident_detail",
@@ -207,3 +209,115 @@ def resident_profile(resident_id: int):
         notes=notes,
         appointment=appointment,
     )
+
+
+@resident_detail.route("/<int:resident_id>/goals", methods=["POST"])
+@require_login
+@require_shelter
+def add_goal(resident_id: int):
+    shelter = session.get("shelter")
+
+    resident = db_fetchone(
+        _sql(
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter AS resident_shelter,
+                pe.id AS enrollment_id,
+                pe.shelter AS enrollment_shelter,
+                pe.program_status,
+                pe.entry_date,
+                pe.exit_date
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = %s AND r.shelter = %s
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter AS resident_shelter,
+                pe.id AS enrollment_id,
+                pe.shelter AS enrollment_shelter,
+                pe.program_status,
+                pe.entry_date,
+                pe.exit_date
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = ? AND r.shelter = ?
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+        ),
+        (resident_id, shelter),
+    )
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("residents.staff_residents"))
+
+    if isinstance(resident, dict):
+        enrollment_id = resident.get("enrollment_id")
+    else:
+        enrollment_id = resident[4]
+
+    if not enrollment_id:
+        flash("This resident does not have a program enrollment yet. Add enrollment before creating a goal.", "error")
+        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+    goal_text = (request.form.get("goal_text") or "").strip()
+    target_date = (request.form.get("target_date") or "").strip()
+
+    if not goal_text:
+        flash("Goal text is required.", "error")
+        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+
+    now = datetime.utcnow().isoformat()
+
+    db_execute(
+        _sql(
+            """
+            INSERT INTO goals (
+                enrollment_id,
+                goal_text,
+                status,
+                target_date,
+                completed_date,
+                created_at,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            """
+            INSERT INTO goals (
+                enrollment_id,
+                goal_text,
+                status,
+                target_date,
+                completed_date,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+        ),
+        (
+            enrollment_id,
+            goal_text,
+            "active",
+            target_date or None,
+            None,
+            now,
+            now,
+        ),
+    )
+
+    flash("Goal added.", "success")
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
