@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>Resident Weekly Compliance</h1>
+
+<table class="table">
+<thead>
+<tr>
+<th>Resident</th>
+<th>Productive Hours</th>
+<th>Work Hours</th>
+<th>Meetings</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for row, status in rows %}
+
+{% if row is mapping %}
+{% set name = row["first_name"] ~ " " ~ row["last_name"] %}
+{% set productive = row["productive_hours"] %}
+{% set work = row["work_hours"] %}
+{% set meetings = row["meeting_count"] %}
+{% else %}
+{% set name = row[1] ~ " " ~ row[2] %}
+{% set productive = row[3] %}
+{% set work = row[4] %}
+{% set meetings = row[5] %}
+{% endif %}
+
+<tr>
+
+<td>{{ name }}</td>
+<td>{{ productive or 0 }}</td>
+<td>{{ work or 0 }}</td>
+<td>{{ meetings or 0 }}</td>
+
+<td>
+
+{% if status == "compliant" %}
+<span style="color:green;">Compliant</span>
+{% elif status == "attention" %}
+<span style="color:orange;">Needs Attention</span>
+{% else %}
+<span style="color:red;">Missing</span>
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+</table>
+
+{% endblock %}
