@@ -158,7 +158,8 @@
             {% if note[2] %}Progress: {{ note[2] }}<br>{% endif %}
             {% if note[3] %}Action Items: {{ note[3] }}{% endif %}
           </li>
-        {% endfor %}
+        {% endif %}
+      {% endfor %}
     </ul>
   {% else %}
     <p>No case manager notes yet.</p>
