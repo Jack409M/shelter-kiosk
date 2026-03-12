@@ -12,6 +12,7 @@
     {% set first_name = resident["first_name"] %}
     {% set last_name = resident["last_name"] %}
     {% set resident_shelter = resident["resident_shelter"] %}
+    {% set enrollment_id = resident["enrollment_id"] %}
     {% set enrollment_shelter = resident["enrollment_shelter"] %}
     {% set program_status = resident["program_status"] %}
     {% set entry_date = resident["entry_date"] %}
@@ -21,6 +22,7 @@
     {% set first_name = resident[1] %}
     {% set last_name = resident[2] %}
     {% set resident_shelter = resident[3] %}
+    {% set enrollment_id = resident[4] %}
     {% set enrollment_shelter = resident[5] %}
     {% set program_status = resident[6] %}
     {% set entry_date = resident[7] %}
@@ -56,20 +58,47 @@
   <hr>
 
   <h3>Goals</h3>
+
+  {% if enrollment_id %}
+    <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <p>
+        <label for="goal_text"><strong>New Goal</strong></label><br>
+        <textarea id="goal_text" name="goal_text" rows="3" style="width:100%;" required></textarea>
+      </p>
+
+      <p>
+        <label for="target_date"><strong>Target Date</strong></label><br>
+        <input id="target_date" type="date" name="target_date">
+      </p>
+
+      <p>
+        <button type="submit">Add Goal</button>
+      </p>
+    </form>
+  {% else %}
+    <p>This resident must have a program enrollment before goals can be added.</p>
+  {% endif %}
+
   {% if goals %}
     <ul>
       {% for goal in goals %}
         {% if goal is mapping %}
           <li>
-            <strong>{{ goal["goal_text"] }}</strong>
-            — {{ goal["status"] }}
-            {% if goal["target_date"] %}(Target: {{ goal["target_date"] }}){% endif %}
+            <strong>{{ goal["goal_text"] }}</strong><br>
+            Status: {{ goal["status"] or "active" }}<br>
+            {% if goal["target_date"] %}Target Date: {{ goal["target_date"] }}<br>{% endif %}
+            {% if goal["completed_date"] %}Completed: {{ goal["completed_date"] }}<br>{% endif %}
+            {% if goal["created_at"] %}<small>Created: {{ goal["created_at"] }}</small>{% endif %}
           </li>
         {% else %}
           <li>
-            <strong>{{ goal[0] }}</strong>
-            — {{ goal[1] }}
-            {% if goal[2] %}(Target: {{ goal[2] }}){% endif %}
+            <strong>{{ goal[0] }}</strong><br>
+            Status: {{ goal[1] or "active" }}<br>
+            {% if goal[2] %}Target Date: {{ goal[2] }}<br>{% endif %}
+            {% if goal[4] %}Completed: {{ goal[4] }}<br>{% endif %}
+            {% if goal[3] %}<small>Created: {{ goal[3] }}</small>{% endif %}
           </li>
         {% endif %}
       {% endfor %}
@@ -129,8 +158,7 @@
             {% if note[2] %}Progress: {{ note[2] }}<br>{% endif %}
             {% if note[3] %}Action Items: {{ note[3] }}{% endif %}
           </li>
-        {% endif %}
-      {% endfor %}
+        {% endfor %}
     </ul>
   {% else %}
     <p>No case manager notes yet.</p>
