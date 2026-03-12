@@ -43,6 +43,7 @@
       {% set is_resident_signin_page = endpoint in ['resident_signin', 'resident_portal.signin'] %}
       {% set is_public_home = endpoint == 'public.public_home' %}
       {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) and (not is_public_home) %}
+      {% set residents_url = safe_url_for('residents.staff_residents') %}
 
       <nav>
         <div class="nav-mobile">
@@ -106,7 +107,9 @@
             <div class="nav-dd">
               <button type="button">Case Manager ▾</button>
               <div class="menu">
-                <a href="{{ url_for('residents.staff_residents') }}">Residents</a>
+                {% if residents_url %}
+                  <a href="{{ residents_url }}">Residents</a>
+                {% endif %}
                 <a href="{{ url_for('compliance.compliance_dashboard') }}">Compliance</a>
                 <a href="{{ url_for('forms_admin.forms_index') }}">Forms</a>
               </div>
