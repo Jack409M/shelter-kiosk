@@ -16,4 +16,4 @@ def terms_and_conditions():
 
 @public.route("/")
 def public_home():
-    return redirect(url_for("resident_requests.resident_leave"))
+    return render_template("public_home.html")
