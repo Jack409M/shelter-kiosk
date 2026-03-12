@@ -55,7 +55,7 @@
       </p>
       <p>
         <strong>E-mail</strong><br>
-        marcos@dwcenter.org
+        admin@dwcenter.org
       </p>
     </div>
 
@@ -72,6 +72,14 @@
 
   </div>
 
+  <div class="footer-links">
+    <a href="{{ url_for('public.privacy') }}">Privacy Policy</a>
+    <span>•</span>
+    <a href="{{ url_for('public.terms') }}">Terms of Service</a>
+    <span>•</span>
+    <a href="{{ url_for('public.sms_consent') }}">SMS Consent</a>
+  </div>
+
   <div class="footer-copyright">
     © Copyright 2025 Downtown Women's Center. All Rights Reserved.
   </div>
@@ -82,6 +90,14 @@
 
 body{
   background:#eef3f8;
+}
+
+
+/* hide top right layout buttons on this landing page */
+
+a[href="{{ url_for('resident_requests.resident_leave') }}"],
+a[href="{{ url_for('auth.staff_login') }}"]{
+  display:none;
 }
 
 
@@ -213,10 +229,34 @@ body{
   font-size:14px;
 }
 
-.footer-copyright{
-  margin-top:12px;
+.footer-links{
+  margin-top:8px;
   padding-top:18px;
   border-top:1px solid #d9e3ec;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  font-size:14px;
+}
+
+.footer-links a{
+  color:#35516d;
+  text-decoration:none;
+  font-weight:600;
+}
+
+.footer-links a:hover{
+  text-decoration:underline;
+}
+
+.footer-links span{
+  color:#8a99a8;
+}
+
+.footer-copyright{
+  margin-top:14px;
   color:#6c7a8a;
   font-size:13px;
   text-align:center;
