@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template
+from flask import Blueprint, g, render_template
 
 from core.auth import require_login
 from core.db import db_fetchall, db_fetchone
@@ -8,108 +8,193 @@ from core.db import db_fetchall, db_fetchone
 resident_detail = Blueprint(
     "resident_detail",
     __name__,
-    url_prefix="/staff/resident"
+    url_prefix="/staff/resident",
 )
+
+
+def _sql(pg_sql: str, sqlite_sql: str) -> str:
+    return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
 
 
 @resident_detail.route("/<int:resident_id>")
 @require_login
-def resident_profile(resident_id):
-
+def resident_profile(resident_id: int):
     resident = db_fetchone(
-        """
-        SELECT
-            r.id,
-            r.first_name,
-            r.last_name,
-            pe.program_status,
-            pe.level,
-            pe.enrolled_at
-        FROM residents r
-        LEFT JOIN program_enrollments pe
-            ON pe.resident_id = r.id
-        WHERE r.id = %s
-        """
-        if False else
-        """
-        SELECT
-            r.id,
-            r.first_name,
-            r.last_name,
-            pe.program_status,
-            pe.level,
-            pe.enrolled_at
-        FROM residents r
-        LEFT JOIN program_enrollments pe
-            ON pe.resident_id = r.id
-        WHERE r.id = ?
-        """,
-        (resident_id,)
+        _sql(
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter AS resident_shelter,
+                pe.id AS enrollment_id,
+                pe.shelter AS enrollment_shelter,
+                pe.program_status,
+                pe.entry_date,
+                pe.exit_date
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = %s
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter AS resident_shelter,
+                pe.id AS enrollment_id,
+                pe.shelter AS enrollment_shelter,
+                pe.program_status,
+                pe.entry_date,
+                pe.exit_date
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = ?
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+        ),
+        (resident_id,),
     )
 
-    compliance = db_fetchone(
-        """
-        SELECT
-            productive_hours,
-            work_hours,
-            meeting_count
-        FROM weekly_resident_summary
-        WHERE enrollment_id = (
-            SELECT id FROM program_enrollments
-            WHERE resident_id = %s
+    if not resident:
+        return render_template(
+            "resident_detail/profile.html",
+            resident=None,
+            compliance=None,
+            goals=[],
+            notes=[],
+            appointment=None,
         )
-        """
-        if False else
-        """
-        SELECT
-            productive_hours,
-            work_hours,
-            meeting_count
-        FROM weekly_resident_summary
-        WHERE enrollment_id = (
-            SELECT id FROM program_enrollments
-            WHERE resident_id = ?
+
+    if isinstance(resident, dict):
+        enrollment_id = resident.get("enrollment_id")
+    else:
+        enrollment_id = resident[4]
+
+    compliance = None
+    goals = []
+    notes = []
+    appointment = None
+
+    if enrollment_id:
+        compliance = db_fetchone(
+            _sql(
+                """
+                SELECT
+                    productive_hours,
+                    work_hours,
+                    meeting_count,
+                    submitted_at
+                FROM weekly_resident_summary
+                WHERE enrollment_id = %s
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                """
+                SELECT
+                    productive_hours,
+                    work_hours,
+                    meeting_count,
+                    submitted_at
+                FROM weekly_resident_summary
+                WHERE enrollment_id = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+            ),
+            (enrollment_id,),
         )
-        """,
-        (resident_id,)
-    )
 
-    goals = db_fetchall(
-        """
-        SELECT
-            goal_text,
-            status,
-            created_at
-        FROM goals
-        WHERE resident_id = ?
-        ORDER BY created_at DESC
-        """,
-        (resident_id,)
-    )
+        goals = db_fetchall(
+            _sql(
+                """
+                SELECT
+                    goal_text,
+                    status,
+                    target_date,
+                    created_at,
+                    completed_date
+                FROM goals
+                WHERE enrollment_id = %s
+                ORDER BY created_at DESC
+                """,
+                """
+                SELECT
+                    goal_text,
+                    status,
+                    target_date,
+                    created_at,
+                    completed_date
+                FROM goals
+                WHERE enrollment_id = ?
+                ORDER BY created_at DESC
+                """,
+            ),
+            (enrollment_id,),
+        )
 
-    notes = db_fetchall(
-        """
-        SELECT
-            note_text,
-            created_at
-        FROM case_manager_updates
-        WHERE resident_id = ?
-        ORDER BY created_at DESC
-        """,
-        (resident_id,)
-    )
+        notes = db_fetchall(
+            _sql(
+                """
+                SELECT
+                    meeting_date,
+                    notes,
+                    progress_notes,
+                    action_items,
+                    created_at
+                FROM case_manager_updates
+                WHERE enrollment_id = %s
+                ORDER BY meeting_date DESC, id DESC
+                """,
+                """
+                SELECT
+                    meeting_date,
+                    notes,
+                    progress_notes,
+                    action_items,
+                    created_at
+                FROM case_manager_updates
+                WHERE enrollment_id = ?
+                ORDER BY meeting_date DESC, id DESC
+                """,
+            ),
+            (enrollment_id,),
+        )
 
-    appointment = db_fetchone(
-        """
-        SELECT
-            scheduled_at
-        FROM appointments
-        WHERE resident_id = ?
-        ORDER BY scheduled_at ASC
-        LIMIT 1
-        """,
-        (resident_id,)
-    )
+        appointment = db_fetchone(
+            _sql(
+                """
+                SELECT
+                    appointment_date,
+                    appointment_type,
+                    notes,
+                    reminder_sent,
+                    created_at
+                FROM appointments
+                WHERE enrollment_id = %s
+                ORDER BY appointment_date ASC, id ASC
+                LIMIT 1
+                """,
+                """
+                SELECT
+                    appointment_date,
+                    appointment_type,
+                    notes,
+                    reminder_sent,
+                    created_at
+                FROM appointments
+                WHERE enrollment_id = ?
+                ORDER BY appointment_date ASC, id ASC
+                LIMIT 1
+                """,
+            ),
+            (enrollment_id,),
+        )
 
     return render_template(
         "resident_detail/profile.html",
@@ -117,5 +202,5 @@ def resident_profile(resident_id):
         compliance=compliance,
         goals=goals,
         notes=notes,
-        appointment=appointment
+        appointment=appointment,
     )
