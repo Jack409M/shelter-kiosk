@@ -165,12 +165,20 @@
 <div class="user-form-wrap">
   <div class="user-form-card">
 
+    {% set assigned = assigned_shelters if assigned_shelters is defined and assigned_shelters else set() %}
+
     {% if mode == "edit" and user %}
       <div class="summary-box">
         <strong>Current record</strong><br>
         {{ (user.first_name or "") ~ " " ~ (user.last_name or "") }}<br>
         Username: {{ user.username }}<br>
-        Role: {{ user.role }}<br>
+        Role:
+        {% if ROLE_LABELS is defined and ROLE_LABELS %}
+          {{ ROLE_LABELS.get(user.role, user.role) }}
+        {% else %}
+          {{ user.role }}
+        {% endif %}
+        <br>
         Active: {{ "Yes" if user.is_active else "No" }}
       </div>
     {% endif %}
@@ -178,6 +186,7 @@
     <form method="post" action="">
       <div class="form-block">
         <h3>Account</h3>
+
         <div class="user-form-grid">
           <div class="field">
             <label for="first_name">First Name</label>
@@ -186,6 +195,7 @@
               name="first_name"
               value="{{ user.first_name if user and user.first_name else '' }}"
               autocomplete="off"
+              required
             >
           </div>
 
@@ -196,6 +206,7 @@
               name="last_name"
               value="{{ user.last_name if user and user.last_name else '' }}"
               autocomplete="off"
+              required
             >
           </div>
 
@@ -206,23 +217,64 @@
               name="username"
               value="{{ user.username if user and user.username else '' }}"
               autocomplete="off"
+              required
+            >
+          </div>
+
+          <div class="field">
+            <label for="mobile_phone">Mobile Phone</label>
+            <input
+              id="mobile_phone"
+              name="mobile_phone"
+              value="{{ user.mobile_phone if user and user.mobile_phone else '' }}"
+              autocomplete="off"
             >
           </div>
 
           <div class="field">
             <label for="role">Role</label>
-            {% if current_role == "admin" %}
-              <select id="role" name="role">
+
+            {% if current_role is defined and current_role == "admin" and all_roles is defined and all_roles %}
+              <select id="role" name="role" required>
                 {% for r in all_roles %}
                   <option value="{{ r }}" {% if user and user.role == r %}selected{% endif %}>
-                    {{ ROLE_LABELS.get(r, r) if ROLE_LABELS else r }}
+                    {% if ROLE_LABELS is defined and ROLE_LABELS %}
+                      {{ ROLE_LABELS.get(r, r) }}
+                    {% else %}
+                      {{ r }}
+                    {% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            {% elif roles is defined and roles %}
+              <select id="role" name="role" required>
+                {% for r in roles %}
+                  <option value="{{ r }}" {% if user and user.role == r %}selected{% endif %}>
+                    {% if ROLE_LABELS is defined and ROLE_LABELS %}
+                      {{ ROLE_LABELS.get(r, r) }}
+                    {% else %}
+                      {{ r }}
+                    {% endif %}
                   </option>
                 {% endfor %}
               </select>
             {% else %}
               <div class="read-only">
-                {{ ROLE_LABELS.get(user.role, user.role) if user and ROLE_LABELS else (user.role if user else "Staff") }}
+                {% if user and user.role %}
+                  {% if ROLE_LABELS is defined and ROLE_LABELS %}
+                    {{ ROLE_LABELS.get(user.role, user.role) }}
+                  {% else %}
+                    {{ user.role }}
+                  {% endif %}
+                {% else %}
+                  Staff
+                {% endif %}
               </div>
+              <input
+                type="hidden"
+                name="role"
+                value="{{ user.role if user and user.role else 'staff' }}"
+              >
             {% endif %}
           </div>
         </div>
@@ -230,29 +282,48 @@
 
       <div class="form-block">
         <h3>Shelter Access</h3>
+
         <div class="shelter-list">
           <label class="shelter-item">
-            <input type="checkbox" name="shelters" value="abba">
+            <input
+              type="checkbox"
+              name="shelters"
+              value="abba"
+              {% if "abba" in assigned %}checked{% endif %}
+            >
             <span>Abba</span>
           </label>
 
           <label class="shelter-item">
-            <input type="checkbox" name="shelters" value="haven">
+            <input
+              type="checkbox"
+              name="shelters"
+              value="haven"
+              {% if "haven" in assigned %}checked{% endif %}
+            >
             <span>Haven</span>
           </label>
 
           <label class="shelter-item">
-            <input type="checkbox" name="shelters" value="gratitude">
+            <input
+              type="checkbox"
+              name="shelters"
+              value="gratitude"
+              {% if "gratitude" in assigned %}checked{% endif %}
+            >
             <span>Gratitude</span>
           </label>
         </div>
+
         <div class="subnote">
-          Shelter assignments are layout only for now. We will wire the data model next.
+          Shelter assignments now save to the staff shelter assignments table.
         </div>
       </div>
 
+      {% if mode == "edit" %}
       <div class="form-block">
         <h3>Status</h3>
+
         <div class="status-row">
           <label class="status-choice">
             <input
@@ -274,26 +345,34 @@
             <span>Inactive</span>
           </label>
         </div>
+
+        <div class="subnote">
+          Active status is still controlled by the dedicated actions on the users list page.
+        </div>
       </div>
+      {% endif %}
 
       <div class="form-block">
         <h3>{% if mode == "add" %}Password{% else %}Password Reset{% endif %}</h3>
+
         <div class="user-form-grid">
           <div class="field">
             <label for="password">
               {% if mode == "add" %}Temporary Password{% else %}New Password{% endif %}
             </label>
+
             <input
               id="password"
               name="password"
               type="password"
               {% if mode == "add" %}required{% endif %}
             >
+
             <div class="subnote">
               {% if mode == "add" %}
                 Set a starting password for the new user.
               {% else %}
-                Leave blank for now. We will wire real reset handling next.
+                Leave blank. Password resets still use the dedicated reset action.
               {% endif %}
             </div>
           </div>
