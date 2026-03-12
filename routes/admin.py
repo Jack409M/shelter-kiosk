@@ -75,14 +75,14 @@ def admin_users():
     return admin_users_view()
 
 
-@admin.route("/staff/admin/users/add", methods=["GET"])
+@admin.route("/staff/admin/users/add", methods=["GET", "POST"])
 @require_login
 @require_shelter
 def admin_add_user():
     return admin_add_user_view()
 
 
-@admin.route("/staff/admin/users/<int:user_id>/edit", methods=["GET"])
+@admin.route("/staff/admin/users/<int:user_id>/edit", methods=["GET", "POST"])
 @require_login
 @require_shelter
 def admin_edit_user(user_id: int):
