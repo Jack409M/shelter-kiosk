@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from flask import Blueprint, g, render_template
+from flask import Blueprint, g, render_template, session
 
-from core.auth import require_login
+from core.auth import require_login, require_shelter
 from core.db import db_fetchall, db_fetchone
 
 resident_detail = Blueprint(
@@ -18,7 +18,10 @@ def _sql(pg_sql: str, sqlite_sql: str) -> str:
 
 @resident_detail.route("/<int:resident_id>")
 @require_login
+@require_shelter
 def resident_profile(resident_id: int):
+    shelter = session.get("shelter")
+
     resident = db_fetchone(
         _sql(
             """
@@ -35,7 +38,7 @@ def resident_profile(resident_id: int):
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
-            WHERE r.id = %s
+            WHERE r.id = %s AND r.shelter = %s
             ORDER BY pe.id DESC
             LIMIT 1
             """,
@@ -53,12 +56,12 @@ def resident_profile(resident_id: int):
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
-            WHERE r.id = ?
+            WHERE r.id = ? AND r.shelter = ?
             ORDER BY pe.id DESC
             LIMIT 1
             """,
         ),
-        (resident_id,),
+        (resident_id, shelter),
     )
 
     if not resident:
