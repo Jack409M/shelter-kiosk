@@ -478,6 +478,7 @@ def complete_goal(goal_id: int):
 @require_shelter
 def add_case_note(resident_id: int):
     shelter = session.get("shelter")
+    staff_user_id = session.get("staff_user_id")
 
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -521,6 +522,10 @@ def add_case_note(resident_id: int):
         flash("Resident does not have an active enrollment record yet.", "error")
         return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
+    if not staff_user_id:
+        flash("Your session is missing a staff user id. Please log in again.", "error")
+        return redirect(url_for("auth.staff_login"))
+
     meeting_date = (request.form.get("meeting_date") or "").strip()
     notes = (request.form.get("notes") or "").strip()
     progress_notes = (request.form.get("progress_notes") or "").strip()
@@ -534,17 +539,18 @@ def add_case_note(resident_id: int):
         _sql(
             """
             INSERT INTO case_manager_updates
-            (enrollment_id, meeting_date, notes, progress_notes, action_items, created_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            (enrollment_id, staff_user_id, meeting_date, notes, progress_notes, action_items, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
             """
             INSERT INTO case_manager_updates
-            (enrollment_id, meeting_date, notes, progress_notes, action_items, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (enrollment_id, staff_user_id, meeting_date, notes, progress_notes, action_items, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
         ),
         (
             enrollment_id,
+            staff_user_id,
             meeting_date or None,
             notes or None,
             progress_notes or None,
