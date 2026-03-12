@@ -89,6 +89,41 @@
 
   <hr>
 
+  <h3>Resident Timeline</h3>
+
+  {% if timeline %}
+    <ul>
+      {% for item in timeline %}
+        {% if item is mapping %}
+          {% set event_time = item["event_time"] %}
+          {% set event_type = item["event_type"] %}
+          {% set title = item["title"] %}
+          {% set detail = item["detail"] %}
+        {% else %}
+          {% set event_time = item[0] %}
+          {% set event_type = item[1] %}
+          {% set title = item[2] %}
+          {% set detail = item[3] %}
+        {% endif %}
+
+        <li>
+          <strong>{{ event_time or "Unknown date" }}</strong><br>
+          <strong>{{ title }}</strong><br>
+          {% if detail %}
+            {{ detail }}
+          {% endif %}
+          {% if event_type %}
+            <br><small>{{ event_type }}</small>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No timeline activity yet.</p>
+  {% endif %}
+
+  <hr>
+
   <h3>Weekly Compliance</h3>
   {% if compliance %}
     {% if compliance is mapping %}
