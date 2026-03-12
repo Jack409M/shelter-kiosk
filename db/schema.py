@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import g
 
+from core.db import db_execute
 from . import schema_bootstrap
 from . import schema_case_management
 from . import schema_comms
@@ -15,6 +16,47 @@ from . import schema_requests
 from . import schema_shelters
 
 
+def _ensure_staff_shelter_assignments_table(kind: str) -> None:
+    if kind == "pg":
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS staff_shelter_assignments (
+                id SERIAL PRIMARY KEY,
+                staff_user_id INTEGER NOT NULL,
+                shelter TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+    else:
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS staff_shelter_assignments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                staff_user_id INTEGER NOT NULL,
+                shelter TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+
+
+def _ensure_staff_shelter_assignments_indexes() -> None:
+    db_execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_staff_shelter_assignments_user
+        ON staff_shelter_assignments (staff_user_id)
+        """
+    )
+
+    db_execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_staff_shelter_assignments_shelter
+        ON staff_shelter_assignments (shelter)
+        """
+    )
+
+
 def init_db() -> None:
     kind = g.get("db_kind")
     if not kind:
@@ -24,6 +66,9 @@ def init_db() -> None:
     schema_core.ensure_tables(kind)
     schema_shelters.ensure_tables(kind)
     schema_people.ensure_tables(kind)
+
+    # Staff to shelter assignments
+    _ensure_staff_shelter_assignments_table(kind)
 
     # Program participation
     schema_program.ensure_tables(kind)
@@ -51,6 +96,7 @@ def init_db() -> None:
 
     # Indexes
     schema_people.ensure_indexes()
+    _ensure_staff_shelter_assignments_indexes()
     schema_program.ensure_indexes()
     schema_outcomes.ensure_indexes()
     schema_goals.ensure_indexes()
