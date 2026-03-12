@@ -51,11 +51,11 @@
       <h3>Contact Us</h3>
       <p>
         <strong>Phone</strong><br>
-        (806) 372-3625
+        <a href="tel:18063723625">(806) 372-3625</a>
       </p>
       <p>
         <strong>E-mail</strong><br>
-        admin@dwcenter.org
+        <a href="mailto:admin@dwcenter.org">admin@dwcenter.org</a>
       </p>
     </div>
 
@@ -75,7 +75,7 @@
   <div class="footer-links">
     <a href="{{ url_for('public.privacy_policy') }}">Privacy Policy</a>
     <span>•</span>
-    <a href="{{ url_for('public.terms_and_conditions') }}">Terms of Service</a>
+    <a href="{{ url_for('public.terms_and_conditions') }}">Terms and Conditions</a>
     <span>•</span>
     <a href="{{ url_for('resident_requests.sms_consent_public_alias') }}">SMS Consent</a>
   </div>
@@ -218,6 +218,16 @@ body{
   color:#4e6074;
   line-height:1.7;
   font-size:14px;
+}
+
+.footer-block a{
+  color:#35516d;
+  text-decoration:none;
+  font-weight:500;
+}
+
+.footer-block a:hover{
+  text-decoration:underline;
 }
 
 .footer-links{
