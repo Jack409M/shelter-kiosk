@@ -52,3 +52,28 @@ def require_shelter(fn):
         return fn(*args, **kwargs)
 
     return wrapper
+
+
+def require_roles(*allowed_roles):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            role = (session.get("role") or "").strip()
+
+            if "staff_user_id" not in session:
+                return redirect(url_for("auth.staff_login"))
+
+            if _admin_only_mode_enabled() and role != "admin":
+                session.clear()
+                flash("System is currently restricted to administrators only.", "error")
+                return redirect(url_for("auth.staff_login"))
+
+            if role not in allowed_roles:
+                flash("You do not have permission to access that page.", "error")
+                return redirect(url_for("staff_portal.staff_home"))
+
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
