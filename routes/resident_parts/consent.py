@@ -25,15 +25,18 @@ def _client_ip() -> str:
 
 
 def sms_consent_public_alias_view():
-    return redirect("/resident/sms-consent", code=302)
+    return redirect(url_for("resident_requests.sms_consent"), code=302)
 
 
 def sms_consent_public_alias_slash_view():
-    return redirect("/sms-consent", code=301)
+    return redirect(url_for("resident_requests.sms_consent_public_alias"), code=301)
 
 
 def sms_consent_view():
-    return """
+    privacy_url = url_for("public.privacy_policy")
+    terms_url = url_for("public.terms_and_conditions")
+
+    return f"""
     <html>
         <head>
             <title>SMS Consent - Downtown Women’s Center</title>
@@ -42,8 +45,13 @@ def sms_consent_view():
             <h2>SMS Updates from Downtown Women’s Center</h2>
 
             <p>
-                To receive SMS updates regarding shelter leave approvals, transportation notifications,
-                and service reminders, text <strong>JOIN</strong> to <strong>+1 806 639 4503</strong>.
+                SMS updates are available for current Downtown Women’s Center residents regarding
+                shelter leave approvals, transportation notifications, and service reminders.
+            </p>
+
+            <p>
+                To receive SMS updates, a resident must complete the resident sign in and consent flow
+                through the DWC resident portal.
             </p>
 
             <p>
@@ -52,8 +60,8 @@ def sms_consent_view():
             </p>
 
             <p>
-                <a href="/privacy">Privacy Policy</a><br>
-                <a href="/terms">Terms and Conditions</a>
+                <a href="{privacy_url}">Privacy Policy</a><br>
+                <a href="{terms_url}">Terms and Conditions</a>
             </p>
         </body>
     </html>
