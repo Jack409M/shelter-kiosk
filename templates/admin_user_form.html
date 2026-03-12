@@ -165,7 +165,7 @@
 <div class="user-form-wrap">
   <div class="user-form-card">
 
-    {% set assigned = assigned_shelters if assigned_shelters is defined and assigned_shelters else set() %}
+    {% set assigned = assigned_shelters if assigned_shelters is defined and assigned_shelters else [] %}
 
     {% if mode == "edit" and user %}
       <div class="summary-box">
