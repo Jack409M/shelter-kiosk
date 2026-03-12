@@ -994,3 +994,42 @@ input[type="date"] {
   max-width: 120px !important;
   background: yellow !important;
 }
+
+/* =========================================================
+   Date / Time Inputs (Development Highlight)
+   Yellow helps visually confirm date fields during build
+========================================================= */
+
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  background: #fff6a8;
+  border: 2px solid #000;
+
+  width: 15ch;
+  max-width: 15ch;
+  display: inline-block;
+}
+
+/* datetime needs slightly more room */
+input[type="datetime-local"] {
+  width: 24ch;
+  max-width: 24ch;
+}
+
+/* time fields smaller */
+input[type="time"] {
+  width: 11ch;
+  max-width: 11ch;
+}
+
+/* Mobile expands them normally */
+@media (max-width: 640px) {
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+  }
+}
