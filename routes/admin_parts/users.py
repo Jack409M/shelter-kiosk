@@ -26,6 +26,19 @@ def _ph() -> str:
     return "%s" if _db_kind() == "pg" else "?"
 
 
+def _form_context(**extra):
+    from app import ROLE_LABELS
+
+    context = {
+        "roles": _ordered_roles(_allowed_roles_to_create()),
+        "all_roles": _ordered_roles(_all_roles()),
+        "ROLE_LABELS": ROLE_LABELS,
+        "current_role": _current_role(),
+    }
+    context.update(extra)
+    return context
+
+
 def _normalize_selected_shelters(values: list[str]) -> list[str]:
     cleaned: list[str] = []
     seen: set[str] = set()
@@ -179,52 +192,47 @@ def admin_add_user_view():
         password = (request.form.get("password") or "").strip()
         selected_shelters = request.form.getlist("shelters")
 
+        form_user = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "username": username,
+            "role": role,
+            "mobile_phone": mobile_phone,
+            "is_active": 1,
+        }
+        assigned_shelters = set(_normalize_selected_shelters(selected_shelters))
+
         if not first_name or not last_name or not username or not role or not password:
             flash("First name, last name, username, role, and password are required.", "error")
             return render_template(
                 "admin_user_form.html",
-                mode="add",
-                user={
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": role,
-                    "mobile_phone": mobile_phone,
-                    "is_active": 1,
-                },
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="add",
+                    user=form_user,
+                    assigned_shelters=assigned_shelters,
+                ),
             )
 
         if role not in allowed_roles:
             flash("You are not allowed to create that role.", "error")
             return render_template(
                 "admin_user_form.html",
-                mode="add",
-                user={
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": role,
-                    "mobile_phone": mobile_phone,
-                    "is_active": 1,
-                },
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="add",
+                    user=form_user,
+                    assigned_shelters=assigned_shelters,
+                ),
             )
 
         if len(password) < MIN_STAFF_PASSWORD_LEN:
             flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
             return render_template(
                 "admin_user_form.html",
-                mode="add",
-                user={
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": role,
-                    "mobile_phone": mobile_phone,
-                    "is_active": 1,
-                },
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="add",
+                    user=form_user,
+                    assigned_shelters=assigned_shelters,
+                ),
             )
 
         existing = db_fetchall(
@@ -235,16 +243,11 @@ def admin_add_user_view():
             flash("Username already exists.", "error")
             return render_template(
                 "admin_user_form.html",
-                mode="add",
-                user={
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": role,
-                    "mobile_phone": mobile_phone,
-                    "is_active": 1,
-                },
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="add",
+                    user=form_user,
+                    assigned_shelters=assigned_shelters,
+                ),
             )
 
         if _db_kind() == "pg":
@@ -303,9 +306,11 @@ def admin_add_user_view():
 
     return render_template(
         "admin_user_form.html",
-        mode="add",
-        user=None,
-        assigned_shelters=set(),
+        **_form_context(
+            mode="add",
+            user=None,
+            assigned_shelters=set(),
+        ),
     )
 
 
@@ -352,9 +357,11 @@ def admin_edit_user_view(user_id: int):
             )
             return render_template(
                 "admin_user_form.html",
-                mode="edit",
-                user=user,
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="edit",
+                    user=user,
+                    assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                ),
             )
 
         if role not in _all_roles():
@@ -370,9 +377,11 @@ def admin_edit_user_view(user_id: int):
             )
             return render_template(
                 "admin_user_form.html",
-                mode="edit",
-                user=user,
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="edit",
+                    user=user,
+                    assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                ),
             )
 
         if not _require_admin() and role != current_user_role:
@@ -388,9 +397,11 @@ def admin_edit_user_view(user_id: int):
             )
             return render_template(
                 "admin_user_form.html",
-                mode="edit",
-                user=user,
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="edit",
+                    user=user,
+                    assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                ),
             )
 
         if _require_admin() and role not in allowed_roles and role != current_user_role:
@@ -406,9 +417,11 @@ def admin_edit_user_view(user_id: int):
             )
             return render_template(
                 "admin_user_form.html",
-                mode="edit",
-                user=user,
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="edit",
+                    user=user,
+                    assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                ),
             )
 
         existing = db_fetchall(
@@ -428,9 +441,11 @@ def admin_edit_user_view(user_id: int):
             )
             return render_template(
                 "admin_user_form.html",
-                mode="edit",
-                user=user,
-                assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                **_form_context(
+                    mode="edit",
+                    user=user,
+                    assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                ),
             )
 
         final_role = role if _require_admin() else current_user_role
@@ -471,9 +486,11 @@ def admin_edit_user_view(user_id: int):
 
     return render_template(
         "admin_user_form.html",
-        mode="edit",
-        user=user,
-        assigned_shelters=_load_staff_shelter_assignments(user_id),
+        **_form_context(
+            mode="edit",
+            user=user,
+            assigned_shelters=_load_staff_shelter_assignments(user_id),
+        ),
     )
 
 
