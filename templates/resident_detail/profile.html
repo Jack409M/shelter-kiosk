@@ -12,6 +12,7 @@
     {% set first_name = resident["first_name"] %}
     {% set last_name = resident["last_name"] %}
     {% set resident_shelter = resident["resident_shelter"] %}
+    {% set resident_active = resident["is_active"] %}
     {% set enrollment_id = resident["enrollment_id"] %}
     {% set enrollment_shelter = resident["enrollment_shelter"] %}
     {% set program_status = resident["program_status"] %}
@@ -22,19 +23,67 @@
     {% set first_name = resident[1] %}
     {% set last_name = resident[2] %}
     {% set resident_shelter = resident[3] %}
-    {% set enrollment_id = resident[4] %}
-    {% set enrollment_shelter = resident[5] %}
-    {% set program_status = resident[6] %}
-    {% set entry_date = resident[7] %}
-    {% set exit_date = resident[8] %}
+    {% set resident_active = resident[4] %}
+    {% set enrollment_id = resident[5] %}
+    {% set enrollment_shelter = resident[6] %}
+    {% set program_status = resident[7] %}
+    {% set entry_date = resident[8] %}
+    {% set exit_date = resident[9] %}
   {% endif %}
 
   <h2>{{ first_name }} {{ last_name }}</h2>
 
   <p><strong>Shelter:</strong> {{ enrollment_shelter or resident_shelter or "Not set" }}</p>
+  <p><strong>Status:</strong>
+    {% if resident_active %}
+      Active
+    {% else %}
+      Inactive
+    {% endif %}
+  </p>
   <p><strong>Program Status:</strong> {{ program_status or "No enrollment yet" }}</p>
   <p><strong>Entry Date:</strong> {{ entry_date or "Not set" }}</p>
   <p><strong>Exit Date:</strong> {{ exit_date or "Active / not exited" }}</p>
+
+  <hr>
+
+  <h3>Resident Actions</h3>
+
+  <p>
+    <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id) }}">
+      Transfer Resident
+    </a>
+  </p>
+
+  <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    {% if resident_active %}
+      <input type="hidden" name="active" value="0">
+      <button class="btn" type="submit">Deactivate Resident</button>
+    {% else %}
+      <input type="hidden" name="active" value="1">
+      <button class="btn" type="submit">Activate Resident</button>
+    {% endif %}
+  </form>
+
+  {% if not enrollment_id %}
+    <hr>
+
+    <h3>Program Enrollment</h3>
+
+    <form method="post" action="{{ url_for('resident_detail.create_enrollment', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <p>
+        <label for="entry_date"><strong>Entry Date</strong></label><br>
+        <input id="entry_date" type="date" name="entry_date" required>
+      </p>
+
+      <p>
+        <button type="submit">Start Program Enrollment</button>
+      </p>
+    </form>
+  {% endif %}
 
   <hr>
 
@@ -133,33 +182,37 @@
 
   <h3>Case Manager Notes</h3>
 
-  <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  {% if enrollment_id %}
+    <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <p>
-      <label for="meeting_date"><strong>Meeting Date</strong></label><br>
-      <input id="meeting_date" type="date" name="meeting_date">
-    </p>
+      <p>
+        <label for="meeting_date"><strong>Meeting Date</strong></label><br>
+        <input id="meeting_date" type="date" name="meeting_date">
+      </p>
 
-    <p>
-      <label for="notes"><strong>Notes</strong></label><br>
-      <textarea id="notes" name="notes" rows="4" style="width:100%;"></textarea>
-    </p>
+      <p>
+        <label for="notes"><strong>Notes</strong></label><br>
+        <textarea id="notes" name="notes" rows="4" style="width:100%;"></textarea>
+      </p>
 
-    <p>
-      <label for="progress_notes"><strong>Progress Notes</strong></label><br>
-      <textarea id="progress_notes" name="progress_notes" rows="4" style="width:100%;"></textarea>
-    </p>
+      <p>
+        <label for="progress_notes"><strong>Progress Notes</strong></label><br>
+        <textarea id="progress_notes" name="progress_notes" rows="4" style="width:100%;"></textarea>
+      </p>
 
-    <p>
-      <label for="action_items"><strong>Action Items</strong></label><br>
-      <textarea id="action_items" name="action_items" rows="4" style="width:100%;"></textarea>
-    </p>
+      <p>
+        <label for="action_items"><strong>Action Items</strong></label><br>
+        <textarea id="action_items" name="action_items" rows="4" style="width:100%;"></textarea>
+      </p>
 
-    <p>
-      <button type="submit">Save Case Manager Note</button>
-    </p>
-  </form>
+      <p>
+        <button type="submit">Save Case Manager Note</button>
+      </p>
+    </form>
+  {% else %}
+    <p>This resident must have a program enrollment before case manager notes can be added.</p>
+  {% endif %}
 
   <hr>
 
