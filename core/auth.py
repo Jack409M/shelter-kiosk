@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import wraps
 
-from flask import flash, session, redirect, url_for
+from flask import flash, redirect, session, url_for
 
 from core.db import db_fetchone
 
@@ -38,9 +38,17 @@ def require_login(f):
 def require_shelter(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if "shelter" not in session:
-            return redirect(url_for("staff_select_shelter"))
+        shelter = session.get("shelter")
+        allowed_shelters = session.get("allowed_shelters")
+
+        if not shelter:
+            return redirect(url_for("auth.staff_select_shelter"))
+
+        if allowed_shelters and shelter not in allowed_shelters:
+            session.clear()
+            flash("Your session became invalid. Please log in again.", "error")
+            return redirect(url_for("auth.staff_login"))
+
         return fn(*args, **kwargs)
 
     return wrapper
-    
