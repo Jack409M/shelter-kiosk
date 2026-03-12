@@ -85,14 +85,14 @@
               </div>
             </div>
 
-            {# leave menu #}
+            {# passes menu #}
             <div class="nav-dd">
-              <button type="button">Leave ▾</button>
+              <button type="button">Passes ▾</button>
               <div class="menu">
-                <a href="{{ url_for('staff_portal.staff_leave_pending') }}">Leave pending</a>
-                <a href="{{ url_for('staff_portal.staff_leave_upcoming') }}">Upcoming leave</a>
-                <a href="{{ url_for('staff_portal.staff_leave_away_now') }}">Leave away</a>
-                <a href="{{ url_for('staff_portal.staff_leave_overdue') }}">Leave overdue</a>
+                <a href="{{ url_for('staff_portal.staff_leave_pending') }}">Pending Passes</a>
+                <a href="{{ url_for('staff_portal.staff_leave_upcoming') }}">Upcoming Passes</a>
+                <a href="{{ url_for('staff_portal.staff_leave_away_now') }}">Residents Away</a>
+                <a href="{{ url_for('staff_portal.staff_leave_overdue') }}">Overdue Passes</a>
               </div>
             </div>
 
@@ -100,23 +100,39 @@
             <div class="nav-dd">
               <button type="button">Transport ▾</button>
               <div class="menu">
-                <a href="{{ url_for('transport.staff_transport_pending') }}">Transport pending</a>
-                <a href="{{ url_for('transport.staff_transport_board') }}">Transport board</a>
-                <a href="{{ url_for('transport.staff_transport_print') }}" target="_blank">Transport print</a>
+                <a href="{{ url_for('transport.staff_transport_pending') }}">Pending Transport</a>
+                <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+                <a href="{{ url_for('transport.staff_transport_print') }}" target="_blank">Print Transport</a>
               </div>
             </div>
 
             {# core staff links #}
             <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-            <a href="{{ url_for('residents.staff_residents') }}">Residents</a>
-            <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
-            <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>          
 
+            {# case manager tools #}
+            <div class="nav-dd">
+              <button type="button">Case Manager ▾</button>
+              <div class="menu">
+                <a href="{{ url_for('residents.staff_residents') }}">Residents</a>
+                <a href="{{ url_for('compliance.compliance_dashboard') }}">Compliance</a>
+                <a href="{{ url_for('forms_admin.forms_index') }}">Forms</a>
+              </div>
+            </div>
+
+            {# admin tools #}
             {% if session.get("role") == "admin" %}
-              <a href="{{ url_for('admin.admin_users') }}">Users</a>
-              <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
+              <div class="nav-dd">
+                <button type="button">Admin ▾</button>
+                <div class="menu">
+                  <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
+                  <a href="{{ url_for('admin.admin_users') }}">Users</a>
+                  <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
+                  <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
+                </div>
+              </div>
             {% endif %}
 
+            <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
             <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
 
           {% elif show_logged_out_nav %}
@@ -142,7 +158,3 @@
     </main>
   </body>
 </html>
-
-
-
-
