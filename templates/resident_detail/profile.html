@@ -8,6 +8,7 @@
 {% else %}
 
   {% if resident is mapping %}
+    {% set resident_id = resident["id"] %}
     {% set first_name = resident["first_name"] %}
     {% set last_name = resident["last_name"] %}
     {% set resident_shelter = resident["resident_shelter"] %}
@@ -16,6 +17,7 @@
     {% set entry_date = resident["entry_date"] %}
     {% set exit_date = resident["exit_date"] %}
   {% else %}
+    {% set resident_id = resident[0] %}
     {% set first_name = resident[1] %}
     {% set last_name = resident[2] %}
     {% set resident_shelter = resident[3] %}
@@ -79,6 +81,37 @@
   <hr>
 
   <h3>Case Manager Notes</h3>
+
+  <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <p>
+      <label for="meeting_date"><strong>Meeting Date</strong></label><br>
+      <input id="meeting_date" type="date" name="meeting_date">
+    </p>
+
+    <p>
+      <label for="notes"><strong>Notes</strong></label><br>
+      <textarea id="notes" name="notes" rows="4" style="width:100%;"></textarea>
+    </p>
+
+    <p>
+      <label for="progress_notes"><strong>Progress Notes</strong></label><br>
+      <textarea id="progress_notes" name="progress_notes" rows="4" style="width:100%;"></textarea>
+    </p>
+
+    <p>
+      <label for="action_items"><strong>Action Items</strong></label><br>
+      <textarea id="action_items" name="action_items" rows="4" style="width:100%;"></textarea>
+    </p>
+
+    <p>
+      <button type="submit">Save Case Manager Note</button>
+    </p>
+  </form>
+
+  <hr>
+
   {% if notes %}
     <ul>
       {% for note in notes %}
