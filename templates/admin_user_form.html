@@ -184,6 +184,8 @@
     {% endif %}
 
     <form method="post" action="">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
       <div class="form-block">
         <h3>Account</h3>
 
