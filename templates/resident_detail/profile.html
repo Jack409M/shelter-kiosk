@@ -263,6 +263,48 @@
     <p>No appointment scheduled.</p>
   {% endif %}
 
+  <hr>
+
+  <h3>Schedule Appointment</h3>
+
+  {% if enrollment_id %}
+    <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div class="profile-form-grid">
+        <div class="profile-form-side">
+          <label for="appointment_date"><strong>Appointment Date</strong></label><br>
+          <input id="appointment_date" type="date" name="appointment_date" class="date-input-compact" required>
+        </div>
+
+        <div class="profile-form-side">
+          <label for="appointment_type"><strong>Appointment Type</strong></label><br>
+          <select id="appointment_type" name="appointment_type">
+            <option value="">Select</option>
+            <option value="Case Manager Meeting">Case Manager Meeting</option>
+            <option value="Program Review">Program Review</option>
+            <option value="Compliance Review">Compliance Review</option>
+            <option value="Housing">Housing</option>
+            <option value="Employment">Employment</option>
+            <option value="Medical">Medical</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <p>
+        <label for="appointment_notes"><strong>Notes</strong></label><br>
+        <textarea id="appointment_notes" name="notes" rows="3" class="full-width-textarea"></textarea>
+      </p>
+
+      <p>
+        <button type="submit">Schedule Appointment</button>
+      </p>
+    </form>
+  {% else %}
+    <p>This resident must have a program enrollment before appointments can be scheduled.</p>
+  {% endif %}
+
 {% endif %}
 
 {% endblock %}
