@@ -57,7 +57,15 @@ def _load_staff_shelter_assignments(staff_user_id: int) -> set[str]:
         f"SELECT shelter FROM staff_shelter_assignments WHERE staff_user_id = {_ph()} ORDER BY shelter",
         (staff_user_id,),
     )
-    return {((row.get("shelter") or "").strip().lower()) for row in rows if row.get("shelter")}
+
+    shelters: set[str] = set()
+
+    for row in rows:
+        shelter = (row["shelter"] or "").strip().lower()
+        if shelter:
+            shelters.add(shelter)
+
+    return shelters
 
 
 def _save_staff_shelter_assignments(staff_user_id: int, shelters: list[str]) -> None:
@@ -334,7 +342,7 @@ def admin_edit_user_view(user_id: int):
 
     user = rows[0]
     allowed_roles = set(_allowed_roles_to_create())
-    current_user_role = (user.get("role") or "").strip()
+    current_user_role = (user["role"] or "").strip()
 
     if request.method == "POST":
         first_name = (request.form.get("first_name") or "").strip()
@@ -346,15 +354,11 @@ def admin_edit_user_view(user_id: int):
 
         if not first_name or not last_name or not username or not role:
             flash("First name, last name, username, and role are required.", "error")
-            user.update(
-                {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": role,
-                    "mobile_phone": mobile_phone,
-                }
-            )
+            user["first_name"] = first_name
+            user["last_name"] = last_name
+            user["username"] = username
+            user["role"] = role
+            user["mobile_phone"] = mobile_phone
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -366,15 +370,11 @@ def admin_edit_user_view(user_id: int):
 
         if role not in _all_roles():
             flash("Invalid role.", "error")
-            user.update(
-                {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": role,
-                    "mobile_phone": mobile_phone,
-                }
-            )
+            user["first_name"] = first_name
+            user["last_name"] = last_name
+            user["username"] = username
+            user["role"] = role
+            user["mobile_phone"] = mobile_phone
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -386,15 +386,11 @@ def admin_edit_user_view(user_id: int):
 
         if not _require_admin() and role != current_user_role:
             flash("Only admins can change user roles.", "error")
-            user.update(
-                {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": current_user_role,
-                    "mobile_phone": mobile_phone,
-                }
-            )
+            user["first_name"] = first_name
+            user["last_name"] = last_name
+            user["username"] = username
+            user["role"] = current_user_role
+            user["mobile_phone"] = mobile_phone
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -406,15 +402,11 @@ def admin_edit_user_view(user_id: int):
 
         if _require_admin() and role not in allowed_roles and role != current_user_role:
             flash("You are not allowed to assign that role.", "error")
-            user.update(
-                {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": current_user_role,
-                    "mobile_phone": mobile_phone,
-                }
-            )
+            user["first_name"] = first_name
+            user["last_name"] = last_name
+            user["username"] = username
+            user["role"] = current_user_role
+            user["mobile_phone"] = mobile_phone
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -430,15 +422,11 @@ def admin_edit_user_view(user_id: int):
         )
         if existing:
             flash("Username already exists.", "error")
-            user.update(
-                {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "username": username,
-                    "role": role if _require_admin() else current_user_role,
-                    "mobile_phone": mobile_phone,
-                }
-            )
+            user["first_name"] = first_name
+            user["last_name"] = last_name
+            user["username"] = username
+            user["role"] = role if _require_admin() else current_user_role
+            user["mobile_phone"] = mobile_phone
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
