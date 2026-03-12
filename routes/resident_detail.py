@@ -4,7 +4,7 @@ from datetime import datetime
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
-from core.auth import require_login, require_shelter
+from core.auth import require_login, require_roles, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 
 resident_detail = Blueprint(
@@ -119,6 +119,7 @@ def resident_profile(resident_id: int):
             _sql(
                 """
                 SELECT
+                    id,
                     goal_text,
                     status,
                     target_date,
@@ -130,6 +131,7 @@ def resident_profile(resident_id: int):
                 """,
                 """
                 SELECT
+                    id,
                     goal_text,
                     status,
                     target_date,
@@ -214,6 +216,7 @@ def resident_profile(resident_id: int):
 @resident_detail.route("/<int:resident_id>/goals", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles("admin", "shelter_director", "case_manager")
 def add_goal(resident_id: int):
     shelter = session.get("shelter")
 
