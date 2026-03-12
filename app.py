@@ -205,6 +205,7 @@ def _csrf_protect():
         "resident_requests.sms_consent",
         "twilio.twilio_inbound",
         "twilio.twilio_status",
+        "forms_ingest.jotform_webhook",
     }
 
     if request.endpoint in exempt_endpoints:
@@ -468,4 +469,3 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
