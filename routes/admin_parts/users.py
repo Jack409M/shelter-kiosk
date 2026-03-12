@@ -78,7 +78,10 @@ def _save_staff_shelter_assignments(staff_user_id: int, shelters: list[str]) -> 
 
     for shelter in cleaned:
         db_execute(
-            f"INSERT INTO staff_shelter_assignments (staff_user_id, shelter) VALUES ({_ph()}, {_ph()})",
+            f"""
+            INSERT INTO staff_shelter_assignments (staff_user_id, shelter, created_at)
+            VALUES ({_ph()}, {_ph()}, CURRENT_TIMESTAMP)
+            """,
             (staff_user_id, shelter),
         )
 
