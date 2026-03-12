@@ -23,12 +23,12 @@ def require_login(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if "staff_user_id" not in session:
-            return redirect(url_for("staff_login"))
+            return redirect(url_for("auth.staff_login"))
 
         if _admin_only_mode_enabled() and (session.get("role") or "").strip() != "admin":
             session.clear()
             flash("System is currently restricted to administrators only.", "error")
-            return redirect(url_for("staff_login"))
+            return redirect(url_for("auth.staff_login"))
 
         return f(*args, **kwargs)
 
