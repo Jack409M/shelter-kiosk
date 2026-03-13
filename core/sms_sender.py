@@ -68,12 +68,12 @@ def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
     return count > limit
 
 
-def send_sms(to_number: str, message: str) -> None:
+def send_sms(to_number: str, message: str, enforce_consent: bool = True) -> None:
     """
     Outbound SMS sender with:
     global panic switch,
     Twilio enable gate,
-    consent enforcement,
+    optional consent enforcement,
     per number and global rate limiting.
     """
     if os.environ.get("SMS_SYSTEM_ENABLED", "true").lower() != "true":
@@ -82,11 +82,12 @@ def send_sms(to_number: str, message: str) -> None:
     if not TWILIO_ENABLED:
         return
 
-    try:
-        if not sms_is_allowed_for_number(to_number):
+    if enforce_consent:
+        try:
+            if not sms_is_allowed_for_number(to_number):
+                return
+        except Exception:
             return
-    except Exception:
-        return
 
     if not Client:
         return
