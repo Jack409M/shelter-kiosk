@@ -1,0 +1,110 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>Case Manager Dashboard</h1>
+
+<div class="dashboard-section">
+
+<h2>Missing Enrollment</h2>
+
+{% if missing_enrollment %}
+<ul>
+{% for r in missing_enrollment %}
+<li>
+<a href="/staff/resident/{{ r.id }}">
+{{ r.first_name }} {{ r.last_name }}
+</a>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>None</p>
+{% endif %}
+
+</div>
+
+
+<div class="dashboard-section">
+
+<h2>No Goals</h2>
+
+{% if no_goals %}
+<ul>
+{% for r in no_goals %}
+<li>
+<a href="/staff/resident/{{ r.id }}">
+{{ r.first_name }} {{ r.last_name }}
+</a>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>None</p>
+{% endif %}
+
+</div>
+
+
+<div class="dashboard-section">
+
+<h2>Compliance Missing This Week</h2>
+
+{% if compliance_missing %}
+<ul>
+{% for r in compliance_missing %}
+<li>
+<a href="/staff/resident/{{ r.id }}">
+{{ r.first_name }} {{ r.last_name }}
+</a>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>None</p>
+{% endif %}
+
+</div>
+
+
+<div class="dashboard-section">
+
+<h2>No Case Notes In 14 Days</h2>
+
+{% if notes_missing %}
+<ul>
+{% for r in notes_missing %}
+<li>
+<a href="/staff/resident/{{ r.id }}">
+{{ r.first_name }} {{ r.last_name }}
+</a>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>None</p>
+{% endif %}
+
+</div>
+
+
+<div class="dashboard-section">
+
+<h2>No Appointments Scheduled</h2>
+
+{% if no_appointments %}
+<ul>
+{% for r in no_appointments %}
+<li>
+<a href="/staff/resident/{{ r.id }}">
+{{ r.first_name }} {{ r.last_name }}
+</a>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<p>None</p>
+{% endif %}
+
+</div>
+
+{% endblock %}
