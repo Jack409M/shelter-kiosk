@@ -641,8 +641,7 @@ def maybe_send_security_alerts(
     if security_alert_cooldown_hit(alert_key, cooldown):
         return
 
-    print("ALERT_READY", alert_key, alert_message, numbers)
-
+    
     for number in numbers:
         try:
             send_sms(number, alert_message, enforce_consent=False)
