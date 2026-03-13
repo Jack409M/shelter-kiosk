@@ -61,11 +61,20 @@ def resident_signin():
         return render_template("resident_signin.html")
 
     ip = _client_ip()
+    resident_code = (request.form.get("resident_code") or "").strip()
+    safe_code = resident_code or "blank"
+
     if is_rate_limited(f"resident_signin:{ip}", limit=30, window_seconds=300):
+        log_action(
+            "security",
+            None,
+            None,
+            None,
+            "resident_signin_rate_limited",
+            f"ip={ip} resident_code={safe_code} next={next_url or ''}",
+        )
         flash("Too many sign in attempts. Please wait a few minutes and try again.", "error")
         return render_template("resident_signin.html"), 429
-
-    resident_code = (request.form.get("resident_code") or "").strip()
 
     row = db_fetchone(
         "SELECT * FROM residents WHERE resident_code = %s"
@@ -75,11 +84,28 @@ def resident_signin():
     )
 
     if not row:
+        log_action(
+            "security",
+            None,
+            None,
+            None,
+            "resident_signin_failed",
+            f"reason=invalid_resident_code ip={ip} resident_code={safe_code} next={next_url or ''}",
+        )
         flash("Invalid Resident Code.", "error")
         return render_template("resident_signin.html"), 401
 
     shelter = ((row.get("shelter") if isinstance(row, dict) else row[1]) or "").strip()
     resident_session_start(row, shelter, resident_code)
+
+    log_action(
+        "security",
+        None,
+        shelter or None,
+        None,
+        "resident_signin_success",
+        f"ip={ip} resident_code={resident_code}",
+    )
 
     allowed_next = {
         url_for("resident_requests.resident_leave"),
