@@ -585,7 +585,7 @@ def maybe_send_security_alerts(
 
     for number in numbers:
         try:
-            send_sms(number, alert_message)
+            send_sms(number, alert_message, enforce_consent=False)
         except Exception:
             continue
 
