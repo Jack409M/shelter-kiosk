@@ -1,10 +1,14 @@
 (function(){
   const config = window.adminDashboardConfig || {};
   const liveUrl = config.liveUrl;
+  const initialAttackMapPoints = Array.isArray(config.attackMapPoints) ? config.attackMapPoints : [];
 
   if(!liveUrl){
     return;
   }
+
+  let attackMap = null;
+  let attackMarkers = [];
 
   function escapeHtml(value){
     return String(value || "")
@@ -326,6 +330,99 @@
     `).join("");
   }
 
+  function ensureAttackMap(){
+    const mapEl = document.getElementById("attack-map");
+    if(!mapEl || typeof window.L === "undefined"){
+      return null;
+    }
+
+    if(!attackMap){
+      attackMap = window.L.map(mapEl, {
+        zoomControl: true,
+        attributionControl: true,
+      }).setView([25, 0], 2);
+
+      window.L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+          maxZoom: 6,
+          minZoom: 2,
+          attribution: "&copy; OpenStreetMap contributors",
+        }
+      ).addTo(attackMap);
+    }
+
+    return attackMap;
+  }
+
+  function updateAttackMap(data){
+    const map = ensureAttackMap();
+    const emptyEl = document.getElementById("attack-map-empty");
+
+    if(!map){
+      return;
+    }
+
+    attackMarkers.forEach(marker => map.removeLayer(marker));
+    attackMarkers = [];
+
+    const points = Array.isArray(data.attack_map_points) ? data.attack_map_points : [];
+
+    if(!points.length){
+      if(emptyEl){
+        emptyEl.style.display = "block";
+      }
+      map.setView([25, 0], 2);
+      setTimeout(() => map.invalidateSize(), 0);
+      return;
+    }
+
+    if(emptyEl){
+      emptyEl.style.display = "none";
+    }
+
+    const bounds = [];
+
+    points.forEach(point => {
+      const lat = Number(point.lat);
+      const lon = Number(point.lon);
+      const attempts = Number(point.attempts || 0);
+
+      if(Number.isNaN(lat) || Number.isNaN(lon)){
+        return;
+      }
+
+      bounds.push([lat, lon]);
+
+      const marker = window.L.circleMarker([lat, lon], {
+        radius: Math.min(16, Math.max(6, attempts + 2)),
+        color: "#ff6b6b",
+        weight: 2,
+        fillColor: "#ff3b3b",
+        fillOpacity: 0.7,
+      }).addTo(map);
+
+      marker.bindPopup(
+        `<strong>${escapeHtml(point.ip || "")}</strong><br>` +
+        `${escapeHtml(point.city || "")}${point.city && point.region ? ", " : ""}${escapeHtml(point.region || "")}<br>` +
+        `${escapeHtml(point.country || "")}<br>` +
+        `Attempts: ${escapeHtml(String(point.attempts || 0))}`
+      );
+
+      attackMarkers.push(marker);
+    });
+
+    if(bounds.length === 1){
+      map.setView(bounds[0], 4);
+    }else if(bounds.length > 1){
+      map.fitBounds(bounds, {padding: [30, 30]});
+    }else{
+      map.setView([25, 0], 2);
+    }
+
+    setTimeout(() => map.invalidateSize(), 0);
+  }
+
   async function refreshLive(){
     try{
       const res = await fetch(liveUrl, {
@@ -350,9 +447,16 @@
       updateStaffSessions(data);
       updateSecurityIncidents(data);
       updateLiveActivity(data);
+      updateAttackMap(data);
     }catch(err){
       console.error("Live dashboard refresh failed", err);
     }
+  }
+
+  if(initialAttackMapPoints.length){
+    updateAttackMap({attack_map_points: initialAttackMapPoints});
+  }else{
+    updateAttackMap({attack_map_points: []});
   }
 
   refreshLive();
@@ -364,13 +468,10 @@
 --------------------------------------- */
 
 document.addEventListener("DOMContentLoaded", function () {
-
   const securityForms = document.querySelectorAll(".security-control-actions form");
 
   securityForms.forEach(form => {
-
     form.addEventListener("submit", function (e) {
-
       const actionBtn = form.querySelector("button[type='submit']");
       const actionText = actionBtn ? actionBtn.innerText.trim() : "change this setting";
 
@@ -382,9 +483,6 @@ document.addEventListener("DOMContentLoaded", function () {
       if (!confirm(confirmMsg)) {
         e.preventDefault();
       }
-
     });
-
   });
-
 });
