@@ -778,7 +778,7 @@ def create_enrollment(resident_id: int):
     )
 
     flash("Program enrollment started.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#start-enrollment")
 
 
 @resident_detail.post("/<int:resident_id>/goals")
@@ -837,7 +837,7 @@ def add_goal(resident_id: int):
     )
 
     flash("Goal added.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-goal")
 
 
 @resident_detail.post("/goal/<int:goal_id>/complete")
@@ -913,7 +913,7 @@ def complete_goal(goal_id: int):
     )
 
     flash("Goal marked completed.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#goals")
 
 
 @resident_detail.post("/<int:resident_id>/case-note")
@@ -980,7 +980,7 @@ def add_case_note(resident_id: int):
     )
 
     flash("Case manager note added.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-case-note")
 
 
 @resident_detail.post("/<int:resident_id>/appointments")
@@ -1040,4 +1040,4 @@ def add_appointment(resident_id: int):
     )
 
     flash("Appointment scheduled.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-appointment")
