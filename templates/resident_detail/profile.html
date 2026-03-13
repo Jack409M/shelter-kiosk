@@ -77,11 +77,12 @@
   </div>
 
   {% if not enrollment_id %}
-    <div class="card" style="margin-bottom:16px;">
+    <div id="start-enrollment" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Start Enrollment</h2>
 
       <form method="post" action="{{ url_for('resident_detail.create_enrollment', resident_id=resident_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_anchor" value="start-enrollment">
 
         <label for="entry_date"><strong>Program Entry Date</strong></label>
         <input type="date" id="entry_date" name="entry_date" required>
@@ -94,11 +95,12 @@
   {% endif %}
 
   {% if enrollment_id %}
-    <div class="card" style="margin-bottom:16px;">
+    <div id="add-goal" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Add Goal</h2>
 
       <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_anchor" value="add-goal">
 
         <label for="goal_text"><strong>Goal</strong></label>
         <textarea id="goal_text" name="goal_text" rows="3" class="full-width-textarea" required></textarea>
@@ -112,7 +114,7 @@
       </form>
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
+    <div id="goals" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Goals</h2>
 
       {% if goals %}
@@ -155,6 +157,7 @@
                   {% if (goal_status or "")|lower != "completed" %}
                     <form method="post" action="{{ url_for('resident_detail.complete_goal', goal_id=goal_id) }}" style="margin:0;">
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="return_anchor" value="goals">
                       <button type="submit">Complete Goal</button>
                     </form>
                   {% else %}
@@ -170,11 +173,12 @@
       {% endif %}
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
+    <div id="add-case-note" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Add Case Note</h2>
 
       <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_anchor" value="add-case-note">
 
         <div class="profile-form-row-compact">
           <div>
@@ -198,7 +202,7 @@
       </form>
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
+    <div id="case-notes" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Case Manager Notes</h2>
 
       {% if notes %}
@@ -224,11 +228,12 @@
       {% endif %}
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
+    <div id="add-appointment" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Add Appointment</h2>
 
       <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_anchor" value="add-appointment">
 
         <div class="profile-form-row-compact">
           <div>
@@ -251,7 +256,7 @@
       </form>
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
+    <div id="appointments" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Upcoming Appointment</h2>
 
       {% if appointment %}
