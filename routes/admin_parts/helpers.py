@@ -18,6 +18,33 @@ from core.sms_sender import send_sms
 
 ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff"]
 
+DASHBOARD_ATTACK_ACTION_TYPES = (
+    "login_failed",
+    "resident_signin_failed",
+    "resident_signin_rate_limited",
+    "kiosk_manager_login_failed",
+    "kiosk_pin_failed",
+    "kiosk_pin_rate_limited",
+    "kiosk_checkout_failed",
+    "kiosk_checkout_rate_limited",
+    "kiosk_resident_code_locked",
+    "kiosk_resident_code_lock_started",
+    "login_rate_limited_ip",
+    "login_rate_limited_user",
+    "login_username_locked",
+    "login_ip_banned",
+    "login_blocked_banned_ip",
+    "cloudflare_bypass_blocked",
+    "banned_ip_blocked",
+    "bad_method_blocked",
+    "bad_user_agent_detected",
+    "bad_user_agent_banned",
+    "scanner_probe_detected",
+    "scanner_probe_banned",
+    "public_abuse_rate_limited",
+    "public_abuse_banned",
+)
+
 
 def current_role() -> str:
     return (session.get("role") or "").strip()
@@ -92,12 +119,31 @@ def extract_detail_value(details: str, key: str) -> str:
         return ""
 
     prefix = f"{key}="
+
     for line in details.splitlines():
         line = line.strip()
+        if not line:
+            continue
+
         if line.startswith(prefix):
             return line[len(prefix):].strip()
 
+        parts = line.split()
+        for part in parts:
+            if part.startswith(prefix):
+                return part[len(prefix):].strip()
+
     return ""
+
+
+def security_action_filter_sql(alias: str = "") -> tuple[str, tuple]:
+    prefix = f"{alias}." if alias else ""
+    placeholders = ", ".join(
+        ["%s"] * len(DASHBOARD_ATTACK_ACTION_TYPES)
+        if g.get("db_kind") == "pg"
+        else ["?"] * len(DASHBOARD_ATTACK_ACTION_TYPES)
+    )
+    return f"{prefix}action_type IN ({placeholders})", tuple(DASHBOARD_ATTACK_ACTION_TYPES)
 
 
 def build_attack_intelligence(rows):
@@ -105,7 +151,7 @@ def build_attack_intelligence(rows):
     username_counter = Counter()
 
     for row in rows or []:
-        details = row.get("action_details", "") if isinstance(row, dict) else ""
+        details = row.get("action_details", "") if isinstance(row, dict) else row_value(row, "action_details", "")
         ip = extract_detail_value(details, "ip")
         username = extract_detail_value(details, "username")
 
@@ -602,7 +648,7 @@ def maybe_create_security_incidents(
             "attacker_ip_threshold",
             "high",
             "Attacker IP Threshold Reached",
-            f"IP {row.get('ip', '')} reached {row.get('attempts', 0)} failed login attempts.",
+            f"IP {row.get('ip', '')} reached {row.get('attempts', 0)} hostile events.",
             related_ip=row.get("ip", ""),
         )
 
@@ -612,7 +658,7 @@ def maybe_create_security_incidents(
             "targeted_username_threshold",
             "high",
             "Username Targeting Threshold Reached",
-            f"Username {row.get('username', '')} reached {row.get('attempts', 0)} failed login attempts.",
+            f"Username {row.get('username', '')} reached {row.get('attempts', 0)} hostile events.",
             related_username=row.get("username", ""),
         )
 
@@ -621,7 +667,7 @@ def maybe_create_security_incidents(
             "failed_logins_threshold",
             "medium",
             "Failed Login Threshold Reached",
-            f"Failed logins reached {failed_login_count} in the last 24 hours.",
+            f"Hostile security events reached {failed_login_count} in the last 24 hours.",
         )
 
 
@@ -660,14 +706,14 @@ def maybe_send_security_alerts(
     elif top_attacking_ips and int(top_attacking_ips[0].get("attempts", 0)) >= settings["attacker_ip_alert_threshold"]:
         row = top_attacking_ips[0]
         alert_key = f"security_alert:attacker_ip:{row.get('ip', 'unknown')}"
-        alert_message = f"DWC security alert. High volume login failures detected from IP {row.get('ip', 'unknown')} with {row.get('attempts', 0)} attempts in the last 24 hours."
+        alert_message = f"DWC security alert. High volume hostile activity detected from IP {row.get('ip', 'unknown')} with {row.get('attempts', 0)} events in the last 24 hours."
     elif targeted_usernames and int(targeted_usernames[0].get("attempts", 0)) >= settings["targeted_username_alert_threshold"]:
         row = targeted_usernames[0]
         alert_key = f"security_alert:targeted_user:{row.get('username', 'unknown')}"
         alert_message = f"DWC security alert. Username {row.get('username', 'unknown')} has been targeted {row.get('attempts', 0)} times in the last 24 hours."
     elif failed_login_count >= settings["failed_login_alert_threshold"]:
         alert_key = "security_alert:failed_logins_24h"
-        alert_message = f"DWC security alert. Failed logins reached {failed_login_count} in the last 24 hours. Review the admin dashboard."
+        alert_message = f"DWC security alert. Hostile security events reached {failed_login_count} in the last 24 hours. Review the admin dashboard."
 
     if not alert_key or not alert_message:
         return
@@ -730,26 +776,30 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
         (10,),
     )
 
+    attack_where_sql, attack_where_params = security_action_filter_sql()
+    attack_where_sql_a, attack_where_params_a = security_action_filter_sql("a")
+
     failed_login_count = scalar_value(
         db_fetchall(
-            """
+            f"""
             SELECT COUNT(*) AS c
             FROM audit_log
-            WHERE action_type = 'login_failed'
+            WHERE {attack_where_sql}
               AND NULLIF(created_at, '')::timestamptz >= NOW() - INTERVAL '24 hours'
             """
             if is_pg
-            else """
+            else f"""
             SELECT COUNT(*) AS c
             FROM audit_log
-            WHERE action_type = 'login_failed'
+            WHERE {attack_where_sql}
               AND created_at >= datetime('now', '-24 hours')
-            """
+            """,
+            attack_where_params,
         )
     )
 
     failed_logins_24h = db_fetchall(
-        """
+        f"""
         SELECT
             a.id,
             a.action_type,
@@ -758,13 +808,13 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
             COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        WHERE a.action_type = 'login_failed'
+        WHERE {attack_where_sql_a}
           AND NULLIF(a.created_at, '')::timestamptz >= NOW() - INTERVAL '24 hours'
         ORDER BY a.id DESC
         LIMIT %s
         """
         if is_pg
-        else """
+        else f"""
         SELECT
             a.id,
             a.action_type,
@@ -773,12 +823,12 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
             COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        WHERE a.action_type = 'login_failed'
+        WHERE {attack_where_sql_a}
           AND a.created_at >= datetime('now', '-24 hours')
         ORDER BY a.id DESC
         LIMIT ?
         """,
-        (200,),
+        attack_where_params_a + (200,),
     )
 
     recent_failed_logins = failed_logins_24h[:10]
@@ -795,6 +845,7 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
         SELECT action_type, action_details, created_at
         FROM audit_log
         WHERE action_type LIKE 'kiosk_%%'
+           OR action_type LIKE 'resident_signin_%%'
         ORDER BY id DESC
         LIMIT %s
         """
@@ -803,6 +854,7 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
         SELECT action_type, action_details, created_at
         FROM audit_log
         WHERE action_type LIKE 'kiosk_%'
+           OR action_type LIKE 'resident_signin_%'
         ORDER BY id DESC
         LIMIT ?
         """,
