@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, deque
+from datetime import datetime, timezone
 
 from flask import current_app, g, session
 
@@ -148,6 +149,24 @@ def build_locked_username_snapshot():
     return rows
 
 
+def _expired_timestamp(value) -> bool:
+    if not value:
+        return False
+
+    raw = str(value).strip()
+    if not raw:
+        return False
+
+    try:
+        raw = raw.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(raw)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt <= datetime.now(timezone.utc)
+    except Exception:
+        return False
+
+
 def load_security_settings() -> dict:
     kind = g.get("db_kind")
     rows = db_fetchall("SELECT * FROM security_settings ORDER BY id ASC LIMIT 1")
@@ -209,6 +228,41 @@ def load_security_settings() -> dict:
         rows = db_fetchall("SELECT * FROM security_settings ORDER BY id ASC LIMIT 1")
         row = rows[0] if rows else {}
 
+    updates = []
+
+    if _expired_timestamp(row_value(row, "sms_system_expires_at", "")):
+        updates.append(("sms_system_enabled", True, "sms_system_expires_at"))
+
+    if _expired_timestamp(row_value(row, "kiosk_intake_expires_at", "")):
+        updates.append(("kiosk_intake_enabled", True, "kiosk_intake_expires_at"))
+
+    if _expired_timestamp(row_value(row, "admin_login_only_expires_at", "")):
+        updates.append(("admin_login_only_mode", False, "admin_login_only_expires_at"))
+
+    if _expired_timestamp(row_value(row, "security_alerts_expires_at", "")):
+        updates.append(("security_alerts_enabled", True, "security_alerts_expires_at"))
+
+    if updates:
+        now = utcnow_iso()
+
+        for field, value, expires_field in updates:
+            db_execute(
+                f"""
+                UPDATE security_settings
+                SET {field} = {("%s" if kind == "pg" else "?")},
+                    {expires_field} = NULL,
+                    updated_at = {("%s" if kind == "pg" else "?")}
+                WHERE id = (SELECT id FROM security_settings ORDER BY id ASC LIMIT 1)
+                """,
+                (
+                    value if kind == "pg" else (1 if value else 0),
+                    now,
+                ),
+            )
+
+        rows = db_fetchall("SELECT * FROM security_settings ORDER BY id ASC LIMIT 1")
+        row = rows[0] if rows else {}
+
     return {
         "sms_system_enabled": bool(row_value(row, "sms_system_enabled", True)),
         "kiosk_intake_enabled": bool(row_value(row, "kiosk_intake_enabled", True)),
@@ -220,6 +274,10 @@ def load_security_settings() -> dict:
         "lockout_seconds": int(row_value(row, "lockout_seconds", 900) or 900),
         "ip_ban_seconds": int(row_value(row, "ip_ban_seconds", 1800) or 1800),
         "alert_cooldown_seconds": int(row_value(row, "alert_cooldown_seconds", 1800) or 1800),
+        "sms_system_expires_at": row_value(row, "sms_system_expires_at", ""),
+        "kiosk_intake_expires_at": row_value(row, "kiosk_intake_expires_at", ""),
+        "admin_login_only_expires_at": row_value(row, "admin_login_only_expires_at", ""),
+        "security_alerts_expires_at": row_value(row, "security_alerts_expires_at", ""),
     }
 
 
@@ -375,8 +433,6 @@ def load_admin_alert_numbers() -> list[str]:
         if phone and phone not in numbers:
             numbers.append(phone)
 
-    print("ADMIN ALERT NUMBERS:", numbers)
-    
     return numbers
 
 
@@ -595,7 +651,6 @@ def maybe_send_security_alerts(
 def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
     is_pg = bool(current_app.config.get("DATABASE_URL"))
     settings = load_security_settings()
-    print("ADMIN DASHBOARD PAYLOAD BUILT")
 
     total_users = scalar_value(
         db_fetchall("SELECT COUNT(*) AS c FROM staff_users")
