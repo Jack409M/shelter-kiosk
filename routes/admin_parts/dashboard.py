@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from flask import (
     jsonify,
     redirect,
@@ -34,6 +36,32 @@ from routes.admin_parts.helpers import (
 # dashboard_metrics.py
 # security_controls.py
 # ------------------------------------------------------------
+
+
+AUTO_RESET_HOURS = 8
+
+SECURITY_FIELD_META = {
+    "sms_system_enabled": {
+        "expires_field": "sms_system_expires_at",
+        "default": True,
+    },
+    "kiosk_intake_enabled": {
+        "expires_field": "kiosk_intake_expires_at",
+        "default": True,
+    },
+    "admin_login_only_mode": {
+        "expires_field": "admin_login_only_expires_at",
+        "default": False,
+    },
+    "security_alerts_enabled": {
+        "expires_field": "security_alerts_expires_at",
+        "default": True,
+    },
+}
+
+
+def _temporary_expiration_iso() -> str:
+    return (datetime.now(timezone.utc) + timedelta(hours=AUTO_RESET_HOURS)).isoformat()
 
 
 def admin_dashboard_view():
@@ -92,17 +120,10 @@ def admin_update_security_settings_view():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
 
-    allowed_fields = {
-        "sms_system_enabled",
-        "kiosk_intake_enabled",
-        "admin_login_only_mode",
-        "security_alerts_enabled",
-    }
-
     field = (request.form.get("field") or "").strip()
     value = (request.form.get("value") or "").strip()
 
-    if field not in allowed_fields:
+    if field not in SECURITY_FIELD_META:
         flash("Invalid security setting.", "error")
         return redirect(url_for("admin.admin_dashboard"))
 
@@ -114,13 +135,27 @@ def admin_update_security_settings_view():
     kind = g.get("db_kind")
     now = utcnow_iso()
 
+    meta = SECURITY_FIELD_META[field]
+    expires_field = meta["expires_field"]
+    default_value = bool(meta["default"])
+
+    expires_at = None
+    if bool_value != default_value:
+        expires_at = _temporary_expiration_iso()
+
     db_execute(
-        f"UPDATE security_settings SET {field} = "
-        + ("%s" if kind == "pg" else "?")
-        + ", updated_at = "
-        + ("%s" if kind == "pg" else "?")
-        + " WHERE id = (SELECT id FROM security_settings ORDER BY id ASC LIMIT 1)",
-        (bool_value if kind == "pg" else (1 if bool_value else 0), now),
+        f"""
+        UPDATE security_settings
+        SET {field} = {("%s" if kind == "pg" else "?")},
+            {expires_field} = {("%s" if kind == "pg" else "?")},
+            updated_at = {("%s" if kind == "pg" else "?")}
+        WHERE id = (SELECT id FROM security_settings ORDER BY id ASC LIMIT 1)
+        """,
+        (
+            bool_value if kind == "pg" else (1 if bool_value else 0),
+            expires_at,
+            now,
+        ),
     )
 
     log_action(
@@ -129,9 +164,12 @@ def admin_update_security_settings_view():
         None,
         session.get("staff_user_id"),
         "security_setting_updated",
-        f"field={field}\nvalue={value}",
+        f"field={field}\nvalue={value}\nauto_reset_hours={AUTO_RESET_HOURS}\nexpires_at={expires_at or 'none'}",
     )
 
-    flash("Security setting updated.", "ok")
+    if expires_at:
+        flash(f"Security setting updated. Auto reset scheduled in {AUTO_RESET_HOURS} hours.", "ok")
+    else:
+        flash("Security setting updated.", "ok")
 
     return redirect(url_for("admin.admin_dashboard"))
