@@ -451,7 +451,7 @@ def incident_exists_recently(
         WHERE incident_type = %s
           AND COALESCE(related_ip, '') = %s
           AND COALESCE(related_username, '') = %s
-          AND created_at >= NOW() - (%s * INTERVAL '1 second')
+          AND NULLIF(created_at, '')::timestamptz >= NOW() - (%s * INTERVAL '1 second')
         ORDER BY id DESC
         LIMIT 1
         """
@@ -640,6 +640,8 @@ def maybe_send_security_alerts(
 
     if security_alert_cooldown_hit(alert_key, cooldown):
         return
+
+    print("ALERT_READY", alert_key, alert_message, numbers)
 
     for number in numbers:
         try:
