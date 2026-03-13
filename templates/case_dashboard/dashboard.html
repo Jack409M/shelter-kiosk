@@ -1,130 +1,216 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css', v='20260313b') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard.css', v='20260313c') }}">
 {% endblock %}
 
 {% block content %}
 
-<h1>Case Manager Dashboard</h1>
+<div class="case-page">
 
-<div class="case-dashboard-summary">
+  <div class="case-hero">
+    <div class="case-hero-copy">
+      <h1>Case Manager Dashboard</h1>
+      <p class="case-hero-subtitle">
+        Residents who need attention today.
+      </p>
+    </div>
 
-  <div class="case-summary-box">
-    <strong>Missing Enrollment</strong><br>
-    {{ missing_enrollment|length }}
+    <div class="case-hero-badge">
+      <span class="case-hero-badge-label">Active Shelter</span>
+      <span class="case-hero-badge-value">{{ shelter or "All Shelters" }}</span>
+    </div>
   </div>
 
-  <div class="case-summary-box">
-    <strong>No Goals</strong><br>
-    {{ no_goals|length }}
+  <div class="case-dashboard-summary">
+
+    <a class="case-summary-card urgent" href="#missing-enrollment">
+      <div class="case-summary-icon">📝</div>
+      <div class="case-summary-content">
+        <div class="case-summary-title">Needs Enrollment Started</div>
+        <div class="case-summary-count">{{ missing_enrollment|length }}</div>
+        <div class="case-summary-note">Residents need enrollment set up</div>
+      </div>
+    </a>
+
+    <a class="case-summary-card urgent" href="#no-goals">
+      <div class="case-summary-icon">🎯</div>
+      <div class="case-summary-content">
+        <div class="case-summary-title">Needs Goal Planning</div>
+        <div class="case-summary-count">{{ no_goals|length }}</div>
+        <div class="case-summary-note">Residents have no goals yet</div>
+      </div>
+    </a>
+
+    <a class="case-summary-card urgent" href="#compliance-missing">
+      <div class="case-summary-icon">📅</div>
+      <div class="case-summary-content">
+        <div class="case-summary-title">Needs Weekly Check In</div>
+        <div class="case-summary-count">{{ compliance_missing|length }}</div>
+        <div class="case-summary-note">Weekly summary is missing</div>
+      </div>
+    </a>
+
+    <a class="case-summary-card warn" href="#notes-missing">
+      <div class="case-summary-icon">🗒️</div>
+      <div class="case-summary-content">
+        <div class="case-summary-title">Needs Recent Case Note</div>
+        <div class="case-summary-count">{{ notes_missing|length }}</div>
+        <div class="case-summary-note">No note entered in 14 days</div>
+      </div>
+    </a>
+
+    <a class="case-summary-card warn" href="#no-appointments">
+      <div class="case-summary-icon">🕒</div>
+      <div class="case-summary-content">
+        <div class="case-summary-title">Needs Appointment Scheduled</div>
+        <div class="case-summary-count">{{ no_appointments|length }}</div>
+        <div class="case-summary-note">No appointment on file</div>
+      </div>
+    </a>
+
   </div>
 
-  <div class="case-summary-box">
-    <strong>Missing Weekly Summary</strong><br>
-    {{ compliance_missing|length }}
-  </div>
+  <section class="case-section" id="missing-enrollment">
+    <div class="case-section-header">
+      <div>
+        <h2>Needs Enrollment Started</h2>
+        <p>Residents with no enrollment record yet.</p>
+      </div>
+      <span class="case-pill urgent">{{ missing_enrollment|length }}</span>
+    </div>
 
-  <div class="case-summary-box">
-    <strong>No Case Notes</strong><br>
-    {{ notes_missing|length }}
-  </div>
+    {% if missing_enrollment %}
+      <ul class="case-list">
+        {% for r in missing_enrollment %}
+          <li class="case-list-item">
+            <div class="case-list-main">
+              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+                {{ r.first_name }} {{ r.last_name }}
+              </a>
+              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+            </div>
+            <a class="case-action-link" href="/staff/resident/{{ r.id }}#start-enrollment">Open File</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="case-empty good">Everything looks good here.</div>
+    {% endif %}
+  </section>
 
-  <div class="case-summary-box">
-    <strong>No Appointments</strong><br>
-    {{ no_appointments|length }}
-  </div>
+  <section class="case-section" id="no-goals">
+    <div class="case-section-header">
+      <div>
+        <h2>Needs Goal Planning</h2>
+        <p>Residents with enrollment but no goals yet.</p>
+      </div>
+      <span class="case-pill urgent">{{ no_goals|length }}</span>
+    </div>
 
-</div>
+    {% if no_goals %}
+      <ul class="case-list">
+        {% for r in no_goals %}
+          <li class="case-list-item">
+            <div class="case-list-main">
+              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+                {{ r.first_name }} {{ r.last_name }}
+              </a>
+              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+            </div>
+            <a class="case-action-link" href="/staff/resident/{{ r.id }}#add-goal">Open File</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="case-empty good">All enrolled residents have goals started.</div>
+    {% endif %}
+  </section>
 
-<div class="dashboard-section" id="missing-enrollment">
-  <h2>Missing Enrollment</h2>
+  <section class="case-section" id="compliance-missing">
+    <div class="case-section-header">
+      <div>
+        <h2>Needs Weekly Check In</h2>
+        <p>Residents missing a weekly summary in the last 7 days.</p>
+      </div>
+      <span class="case-pill urgent">{{ compliance_missing|length }}</span>
+    </div>
 
-  {% if missing_enrollment %}
-  <ul>
-    {% for r in missing_enrollment %}
-    <li>
-      <a href="/staff/resident/{{ r.id }}">
-        {{ r.first_name }} {{ r.last_name }}
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>None</p>
-  {% endif %}
-</div>
+    {% if compliance_missing %}
+      <ul class="case-list">
+        {% for r in compliance_missing %}
+          <li class="case-list-item">
+            <div class="case-list-main">
+              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+                {{ r.first_name }} {{ r.last_name }}
+              </a>
+              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+            </div>
+            <a class="case-action-link" href="/staff/resident/{{ r.id }}">Open File</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="case-empty good">Weekly summaries are up to date.</div>
+    {% endif %}
+  </section>
 
-<div class="dashboard-section" id="no-goals">
-  <h2>No Goals</h2>
+  <section class="case-section" id="notes-missing">
+    <div class="case-section-header">
+      <div>
+        <h2>Needs Recent Case Note</h2>
+        <p>Residents with no case note entered in the last 14 days.</p>
+      </div>
+      <span class="case-pill warn">{{ notes_missing|length }}</span>
+    </div>
 
-  {% if no_goals %}
-  <ul>
-    {% for r in no_goals %}
-    <li>
-      <a href="/staff/resident/{{ r.id }}">
-        {{ r.first_name }} {{ r.last_name }}
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>None</p>
-  {% endif %}
-</div>
+    {% if notes_missing %}
+      <ul class="case-list">
+        {% for r in notes_missing %}
+          <li class="case-list-item">
+            <div class="case-list-main">
+              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+                {{ r.first_name }} {{ r.last_name }}
+              </a>
+              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+            </div>
+            <a class="case-action-link" href="/staff/resident/{{ r.id }}#add-case-note">Open File</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="case-empty good">Recent case notes are in place.</div>
+    {% endif %}
+  </section>
 
-<div class="dashboard-section" id="compliance-missing">
-  <h2>Compliance Missing This Week</h2>
+  <section class="case-section" id="no-appointments">
+    <div class="case-section-header">
+      <div>
+        <h2>Needs Appointment Scheduled</h2>
+        <p>Residents with no appointment currently on file.</p>
+      </div>
+      <span class="case-pill warn">{{ no_appointments|length }}</span>
+    </div>
 
-  {% if compliance_missing %}
-  <ul>
-    {% for r in compliance_missing %}
-    <li>
-      <a href="/staff/resident/{{ r.id }}">
-        {{ r.first_name }} {{ r.last_name }}
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>None</p>
-  {% endif %}
-</div>
+    {% if no_appointments %}
+      <ul class="case-list">
+        {% for r in no_appointments %}
+          <li class="case-list-item">
+            <div class="case-list-main">
+              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+                {{ r.first_name }} {{ r.last_name }}
+              </a>
+              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+            </div>
+            <a class="case-action-link" href="/staff/resident/{{ r.id }}#add-appointment">Open File</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="case-empty good">Appointments are scheduled for everyone listed here.</div>
+    {% endif %}
+  </section>
 
-<div class="dashboard-section" id="notes-missing">
-  <h2>No Case Notes In 14 Days</h2>
-
-  {% if notes_missing %}
-  <ul>
-    {% for r in notes_missing %}
-    <li>
-      <a href="/staff/resident/{{ r.id }}">
-        {{ r.first_name }} {{ r.last_name }}
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>None</p>
-  {% endif %}
-</div>
-
-<div class="dashboard-section" id="no-appointments">
-  <h2>No Appointments Scheduled</h2>
-
-  {% if no_appointments %}
-  <ul>
-    {% for r in no_appointments %}
-    <li>
-      <a href="/staff/resident/{{ r.id }}">
-        {{ r.first_name }} {{ r.last_name }}
-      </a>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>None</p>
-  {% endif %}
 </div>
 
 {% endblock %}
