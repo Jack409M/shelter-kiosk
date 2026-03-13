@@ -45,6 +45,33 @@ DASHBOARD_ATTACK_ACTION_TYPES = (
     "public_abuse_banned",
 )
 
+THREAT_EVENT_SCORES = {
+    "login_failed": 2,
+    "resident_signin_failed": 1,
+    "resident_signin_rate_limited": 3,
+    "kiosk_manager_login_failed": 2,
+    "kiosk_pin_failed": 2,
+    "kiosk_pin_rate_limited": 4,
+    "kiosk_checkout_failed": 2,
+    "kiosk_checkout_rate_limited": 4,
+    "kiosk_resident_code_locked": 4,
+    "kiosk_resident_code_lock_started": 5,
+    "login_rate_limited_ip": 4,
+    "login_rate_limited_user": 4,
+    "login_username_locked": 5,
+    "login_ip_banned": 6,
+    "login_blocked_banned_ip": 5,
+    "cloudflare_bypass_blocked": 6,
+    "banned_ip_blocked": 5,
+    "bad_method_blocked": 5,
+    "bad_user_agent_detected": 5,
+    "bad_user_agent_banned": 6,
+    "scanner_probe_detected": 5,
+    "scanner_probe_banned": 7,
+    "public_abuse_rate_limited": 4,
+    "public_abuse_banned": 6,
+}
+
 
 def current_role() -> str:
     return (session.get("role") or "").strip()
@@ -172,6 +199,64 @@ def build_attack_intelligence(rows):
     ]
 
     return top_attacking_ips, targeted_usernames
+
+
+def build_threat_scores(rows):
+    per_ip = {}
+
+    for row in rows or []:
+        action_type = str(row_value(row, "action_type", "") or "").strip()
+        details = row_value(row, "action_details", "") or ""
+        ip = extract_detail_value(details, "ip")
+
+        if not ip:
+            continue
+
+        score = int(THREAT_EVENT_SCORES.get(action_type, 1) or 1)
+        item = per_ip.setdefault(
+            ip,
+            {
+                "ip": ip,
+                "score": 0,
+                "events": 0,
+                "types": Counter(),
+                "last_seen": "",
+            },
+        )
+
+        item["score"] += score
+        item["events"] += 1
+        item["types"][action_type] += 1
+
+        created_at = str(row_value(row, "created_at", "") or "")
+        if created_at > str(item["last_seen"]):
+            item["last_seen"] = created_at
+
+    top_threats = []
+    for ip, item in per_ip.items():
+        top_types = [event_type for event_type, _count in item["types"].most_common(3)]
+        summary = " | ".join(top_types).replace("_", " ")
+        top_threats.append(
+            {
+                "ip": ip,
+                "score": int(item["score"]),
+                "events": int(item["events"]),
+                "last_seen": item["last_seen"],
+                "summary": summary.title() if summary else "Suspicious repeated behavior detected",
+            }
+        )
+
+    top_threats.sort(
+        key=lambda item: (
+            int(item.get("score", 0)),
+            int(item.get("events", 0)),
+            str(item.get("last_seen", "")),
+        ),
+        reverse=True,
+    )
+
+    top_threat_score = int(top_threats[0]["score"]) if top_threats else 0
+    return top_threats[:10], top_threat_score
 
 
 def build_attack_map_points(top_attacking_ips: list[dict]) -> list[dict]:
@@ -617,10 +702,13 @@ def maybe_create_security_incidents(
     banned_ips: list[dict],
     locked_usernames: list[dict],
     settings: dict,
+    top_threat_score: int = 0,
+    top_threats: list[dict] | None = None,
 ) -> None:
     ip_threshold = settings["attacker_ip_alert_threshold"]
     user_threshold = settings["targeted_username_alert_threshold"]
     failed_threshold = settings["failed_login_alert_threshold"]
+    top_threats = top_threats or []
 
     if banned_ips:
         row = banned_ips[0]
@@ -670,6 +758,16 @@ def maybe_create_security_incidents(
             f"Hostile security events reached {failed_login_count} in the last 24 hours.",
         )
 
+    if top_threat_score >= 10 and top_threats:
+        row = top_threats[0]
+        create_security_incident(
+            "threat_score_threshold",
+            "high",
+            "Threat Score Threshold Reached",
+            f"IP {row.get('ip', '')} reached threat score {row.get('score', 0)} with {row.get('events', 0)} hostile events. {row.get('summary', '')}",
+            related_ip=row.get("ip", ""),
+        )
+
 
 def maybe_send_security_alerts(
     *,
@@ -679,6 +777,8 @@ def maybe_send_security_alerts(
     banned_ips: list[dict],
     locked_usernames: list[dict],
     settings: dict,
+    top_threat_score: int = 0,
+    top_threats: list[dict] | None = None,
 ) -> None:
     if not settings["security_alerts_enabled"]:
         return
@@ -691,6 +791,7 @@ def maybe_send_security_alerts(
         return
 
     cooldown = settings["alert_cooldown_seconds"]
+    top_threats = top_threats or []
 
     alert_key = ""
     alert_message = ""
@@ -703,6 +804,10 @@ def maybe_send_security_alerts(
         row = locked_usernames[0]
         alert_key = f"security_alert:locked_user:{row.get('username', 'unknown')}"
         alert_message = f"DWC security alert. A staff username is locked right now. Username {row.get('username', 'unknown')}. Review the admin dashboard immediately."
+    elif top_threat_score >= 10 and top_threats:
+        row = top_threats[0]
+        alert_key = f"security_alert:threat_score:{row.get('ip', 'unknown')}"
+        alert_message = f"DWC security alert. IP {row.get('ip', 'unknown')} reached threat score {row.get('score', 0)} with repeated hostile behavior. Review the admin dashboard immediately."
     elif top_attacking_ips and int(top_attacking_ips[0].get("attempts", 0)) >= settings["attacker_ip_alert_threshold"]:
         row = top_attacking_ips[0]
         alert_key = f"security_alert:attacker_ip:{row.get('ip', 'unknown')}"
@@ -833,6 +938,7 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
 
     recent_failed_logins = failed_logins_24h[:10]
     top_attacking_ips, targeted_usernames = build_attack_intelligence(failed_logins_24h)
+    top_threats, top_threat_score = build_threat_scores(failed_logins_24h)
     attack_map_points = build_attack_map_points(top_attacking_ips)
 
     banned_ips = get_banned_ips_snapshot()
@@ -868,6 +974,8 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
         banned_ips=banned_ips,
         locked_usernames=locked_usernames,
         settings=settings,
+        top_threat_score=top_threat_score,
+        top_threats=top_threats,
     )
 
     recent_security_incidents = load_recent_security_incidents()
@@ -880,6 +988,8 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
             banned_ips=banned_ips,
             locked_usernames=locked_usernames,
             settings=settings,
+            top_threat_score=top_threat_score,
+            top_threats=top_threats,
         )
 
     return {
@@ -891,6 +1001,8 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
         "recent_failed_logins": recent_failed_logins,
         "top_attacking_ips": top_attacking_ips,
         "targeted_usernames": targeted_usernames,
+        "top_threats": top_threats,
+        "top_threat_score": int(top_threat_score or 0),
         "attack_map_points": attack_map_points,
         "banned_ips": banned_ips,
         "locked_usernames": locked_usernames,
@@ -908,6 +1020,8 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
             "recent_security_incidents": recent_security_incidents,
             "top_attacking_ips": top_attacking_ips,
             "targeted_usernames": targeted_usernames,
+            "top_threats": top_threats,
+            "top_threat_score": int(top_threat_score or 0),
             "attack_map_points": attack_map_points,
             "banned_ips": banned_ips,
             "locked_usernames": locked_usernames,
