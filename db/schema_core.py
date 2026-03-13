@@ -50,6 +50,10 @@ def ensure_security_settings_table(kind: str) -> None:
             lockout_seconds INTEGER NOT NULL DEFAULT 900,
             ip_ban_seconds INTEGER NOT NULL DEFAULT 1800,
             alert_cooldown_seconds INTEGER NOT NULL DEFAULT 1800,
+            sms_system_expires_at TEXT,
+            kiosk_intake_expires_at TEXT,
+            admin_login_only_expires_at TEXT,
+            security_alerts_expires_at TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT
         )
@@ -67,6 +71,10 @@ def ensure_security_settings_table(kind: str) -> None:
             lockout_seconds INTEGER NOT NULL DEFAULT 900,
             ip_ban_seconds INTEGER NOT NULL DEFAULT 1800,
             alert_cooldown_seconds INTEGER NOT NULL DEFAULT 1800,
+            sms_system_expires_at TEXT,
+            kiosk_intake_expires_at TEXT,
+            admin_login_only_expires_at TEXT,
+            security_alerts_expires_at TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT
         )
@@ -128,6 +136,26 @@ def ensure_columns_and_security_upgrades(kind: str) -> None:
     except Exception:
         pass
 
+    try:
+        db_execute("ALTER TABLE security_settings ADD COLUMN sms_system_expires_at TEXT")
+    except Exception:
+        pass
+
+    try:
+        db_execute("ALTER TABLE security_settings ADD COLUMN kiosk_intake_expires_at TEXT")
+    except Exception:
+        pass
+
+    try:
+        db_execute("ALTER TABLE security_settings ADD COLUMN admin_login_only_expires_at TEXT")
+    except Exception:
+        pass
+
+    try:
+        db_execute("ALTER TABLE security_settings ADD COLUMN security_alerts_expires_at TEXT")
+    except Exception:
+        pass
+
 
 def ensure_organizations_table(kind: str) -> None:
     create_table(
@@ -168,3 +196,4 @@ def ensure_tables(kind: str) -> None:
     ensure_security_settings_table(kind)
     ensure_security_incidents_table(kind)
     ensure_organizations_table(kind)
+    ensure_columns_and_security_upgrades(kind)
