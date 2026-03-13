@@ -7,7 +7,8 @@
     <meta name="theme-color" content="#2c3e50">
 
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260312b') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260313a') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css', v='20260313a') }}">
   </head>
 
   <body>
@@ -44,6 +45,7 @@
       {% set is_public_home = endpoint == 'public.public_home' %}
       {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) and (not is_public_home) %}
       {% set residents_url = safe_url_for('residents.staff_residents') %}
+      {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
 
       <nav>
         <div class="nav-mobile">
@@ -109,6 +111,9 @@
               <div class="menu">
                 {% if residents_url %}
                   <a href="{{ residents_url }}">Residents</a>
+                {% endif %}
+                {% if case_dashboard_url %}
+                  <a href="{{ case_dashboard_url }}">Case Dashboard</a>
                 {% endif %}
                 <a href="{{ url_for('compliance.compliance_dashboard') }}">Compliance</a>
                 <a href="{{ url_for('forms_admin.forms_index') }}">Forms</a>
