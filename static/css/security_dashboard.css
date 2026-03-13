@@ -193,7 +193,8 @@ h1{
   border:1px solid #2c5f82;
   border-radius:10px;
   background:#0d2b40;
-  color:#7fd6ff;
+  color:#bfe8ff !important;
+  -webkit-text-fill-color:#bfe8ff !important;
   text-decoration:none;
   font-size:13px;
   font-weight:600;
@@ -201,6 +202,8 @@ h1{
 
 .quick-links a:hover{
   background:#153e5d;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
 }
 
 .dash-panel table.audit-table{
@@ -277,7 +280,7 @@ h1{
   letter-spacing:.04em;
   border:1px solid #31516b;
   background:#122435;
-  color:#cbe8ff;
+  color:#e7f6ff;
 }
 
 .event-pill.success{
@@ -295,7 +298,7 @@ h1{
 .event-pill.danger{
   border-color:#7c1e24;
   background:#2c1013;
-  color:#ff9da5;
+  color:#ffb2b8;
 }
 
 .event-pill.info{
@@ -333,7 +336,7 @@ h1{
 }
 
 .empty-state{
-  color:#9fcae8;
+  color:#b7dbf3;
   font-size:13px;
   padding:4px 0;
 }
@@ -348,7 +351,7 @@ h1{
 .subtle-note{
   margin-top:10px;
   font-size:12px;
-  color:#9fcae8;
+  color:#b7dbf3;
 }
 
 .control-btn{
@@ -357,33 +360,59 @@ h1{
   justify-content:center;
   min-height:42px;
   padding:10px 14px;
-  background:#0d2b40;
-  border:1px solid #2c5f82;
-  color:#ffffff;
   border-radius:10px;
-  font-weight:600;
-  cursor:pointer;
+  border:1px solid #2c5f82;
+  background:#0d2b40;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+  text-decoration:none;
+  font-weight:700;
   line-height:1.2;
   text-align:center;
   white-space:normal;
+  cursor:pointer;
+  transition:all .2s ease;
   appearance:none;
   -webkit-appearance:none;
 }
 
 .control-btn:hover{
-  background:#153e5d;
+  background:#123a57;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+}
+
+.control-btn:focus,
+.control-btn:active{
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+  outline:none;
 }
 
 .control-btn.danger{
-  border-color:#7c1e24;
-  color:#ffffff;
   background:#2c1013;
+  border-color:#7c1e24;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+}
+
+.control-btn.danger:hover{
+  background:#3a1318;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
 }
 
 .control-btn.warn{
-  border-color:#7b5a14;
-  color:#ffffff;
   background:#2b210a;
+  border-color:#7b5a14;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+}
+
+.control-btn.warn:hover{
+  background:#3a2d0d;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
 }
 
 .security-control-actions form{
@@ -486,6 +515,7 @@ h1{
 
 .timeline-title{
   margin-bottom:4px;
+  color:#eef8ff;
 }
 
 .radar-list{
