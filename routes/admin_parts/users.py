@@ -326,6 +326,9 @@ def admin_add_user_view():
 
 
 def admin_edit_user_view(user_id: int):
+    from app import MIN_STAFF_PASSWORD_LEN
+    from werkzeug.security import generate_password_hash
+
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -353,6 +356,7 @@ def admin_edit_user_view(user_id: int):
         username = (request.form.get("username") or "").strip()
         role = (request.form.get("role") or "").strip()
         mobile_phone = (request.form.get("mobile_phone") or "").strip()
+        password = (request.form.get("password") or "").strip()
         selected_shelters = request.form.getlist("shelters")
 
         if not first_name or not last_name or not username or not role:
@@ -419,6 +423,22 @@ def admin_edit_user_view(user_id: int):
                 ),
             )
 
+        if password and len(password) < MIN_STAFF_PASSWORD_LEN:
+            flash(f"Password must be at least {MIN_STAFF_PASSWORD_LEN} characters.", "error")
+            user["first_name"] = first_name
+            user["last_name"] = last_name
+            user["username"] = username
+            user["role"] = role if _require_admin() else current_user_role
+            user["mobile_phone"] = mobile_phone
+            return render_template(
+                "admin_user_form.html",
+                **_form_context(
+                    mode="edit",
+                    user=user,
+                    assigned_shelters=set(_normalize_selected_shelters(selected_shelters)),
+                ),
+            )
+
         existing = db_fetchall(
             f"SELECT id FROM staff_users WHERE username = {_ph()} AND id <> {_ph()}",
             (username, user_id),
@@ -441,25 +461,48 @@ def admin_edit_user_view(user_id: int):
 
         final_role = role if _require_admin() else current_user_role
 
-        db_execute(
-            f"""
-            UPDATE staff_users
-            SET first_name = {_ph()},
-                last_name = {_ph()},
-                username = {_ph()},
-                role = {_ph()},
-                mobile_phone = {_ph()}
-            WHERE id = {_ph()}
-            """,
-            (
-                first_name,
-                last_name,
-                username,
-                final_role,
-                mobile_phone or None,
-                user_id,
-            ),
-        )
+        if password:
+            db_execute(
+                f"""
+                UPDATE staff_users
+                SET first_name = {_ph()},
+                    last_name = {_ph()},
+                    username = {_ph()},
+                    role = {_ph()},
+                    mobile_phone = {_ph()},
+                    password_hash = {_ph()}
+                WHERE id = {_ph()}
+                """,
+                (
+                    first_name,
+                    last_name,
+                    username,
+                    final_role,
+                    mobile_phone or None,
+                    generate_password_hash(password),
+                    user_id,
+                ),
+            )
+        else:
+            db_execute(
+                f"""
+                UPDATE staff_users
+                SET first_name = {_ph()},
+                    last_name = {_ph()},
+                    username = {_ph()},
+                    role = {_ph()},
+                    mobile_phone = {_ph()}
+                WHERE id = {_ph()}
+                """,
+                (
+                    first_name,
+                    last_name,
+                    username,
+                    final_role,
+                    mobile_phone or None,
+                    user_id,
+                ),
+            )
 
         _save_staff_shelter_assignments(user_id, selected_shelters)
 
@@ -469,7 +512,7 @@ def admin_edit_user_view(user_id: int):
             None,
             session.get("staff_user_id"),
             "update",
-            f"Updated user username={username} role={final_role}",
+            f"Updated user username={username} role={final_role}" + (" password_changed=yes" if password else ""),
         )
 
         flash("User updated.", "ok")
