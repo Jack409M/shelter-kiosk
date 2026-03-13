@@ -15,6 +15,36 @@
 
 {% block content %}
 
+{% set _failed_login_count = failed_login_count|default(0, true)|int %}
+{% set _top_attacking_ips = top_attacking_ips|default([], true) %}
+{% set _recent_staff_sessions = recent_staff_sessions|default([], true) %}
+{% set _targeted_usernames = targeted_usernames|default([], true) %}
+{% set _locked_usernames = locked_usernames|default([], true) %}
+{% set _banned_ips = banned_ips|default([], true) %}
+{% set _recent_audit = recent_audit|default([], true) %}
+{% set _attack_map_points = attack_map_points|default([], true) %}
+{% set _kiosk_security_events = kiosk_security_events|default([], true) %}
+{% set _recent_security_incidents = recent_security_incidents|default([], true) %}
+{% set _rate_limit_activity = rate_limit_activity|default([], true) %}
+{% set _top_threats = top_threats|default([], true) %}
+{% set _top_threat_score = top_threat_score|default(0, true)|int %}
+{% set _incident_count = _recent_security_incidents|length %}
+{% set _defense_count = (_locked_usernames|length) + (_banned_ips|length) %}
+
+{% set _has_high_incident = false %}
+{% for row in _recent_security_incidents %}
+  {% if row.severity == 'high' and loop.first %}
+    {% set _has_high_incident = true %}
+  {% endif %}
+{% endfor %}
+
+{% set _status_level = "normal" %}
+{% if _top_threat_score >= 10 or _failed_login_count >= 15 or _has_high_incident %}
+  {% set _status_level = "critical" %}
+{% elif _top_threat_score >= 5 or _failed_login_count >= 8 or _incident_count > 0 %}
+  {% set _status_level = "elevated" %}
+{% endif %}
+
 <div class="scan-runner"></div>
 
 <div class="command-header">
@@ -24,47 +54,82 @@
   </div>
 
   <div id="security-status-pill" class="status-pill">
-    <span id="security-status-led" class="led green"></span>
-    <span id="security-status-text">Security Level NORMAL</span>
+    <span
+      id="security-status-led"
+      class="led {% if _status_level == 'critical' %}red{% elif _status_level == 'elevated' %}amber{% else %}green{% endif %}">
+    </span>
+    <span id="security-status-text">
+      {% if _status_level == 'critical' %}
+        Security Level CRITICAL
+      {% elif _status_level == 'elevated' %}
+        Security Level ELEVATED
+      {% else %}
+        Security Level NORMAL
+      {% endif %}
+    </span>
   </div>
 </div>
 
-<div id="security-banner" class="security-banner">
-  <div id="security-banner-title" class="security-banner-title">System Stable</div>
-  <div id="security-banner-copy" class="security-banner-copy">
-    No active threat indicators are currently above alert threshold.
+<div id="security-banner" class="security-banner {% if _status_level == 'critical' %}danger{% elif _status_level == 'elevated' %}warn{% endif %}">
+  <div id="security-banner-title" class="security-banner-title">
+    {% if _status_level == 'critical' %}
+      Active Threat Pressure Detected
+    {% elif _status_level == 'elevated' %}
+      Elevated Security Activity
+    {% else %}
+      System Stable
+    {% endif %}
   </div>
+  <div id="security-banner-copy" class="security-banner-copy">
+    {% if _status_level == 'critical' %}
+      The dashboard is seeing hostile activity patterns or recent high severity indicators inside the application layer.
+    {% elif _status_level == 'elevated' %}
+      Security activity is above normal baseline. Review active threats, rate limiting, and recent incidents.
+    {% else %}
+      No active threat indicators are currently above alert threshold inside the application layer.
+    {% endif %}
+  </div>
+</div>
+
+<div class="subtle-note" style="margin-bottom: 16px;">
+  This dashboard reflects security activity that reaches the application layer. Some scanner and exploit traffic may be blocked earlier by Cloudflare and will not appear here unless edge events are integrated separately.
 </div>
 
 <div class="dash-grid">
   <div class="dash-card">
-    <h3>Failed Logins</h3>
-    <div id="failed-logins-stat" class="dash-stat">{{ failed_login_count }}</div>
+    <h3>Hostile Events</h3>
+    <div id="failed-logins-stat" class="dash-stat">{{ _failed_login_count }}</div>
     <div class="dash-label">Last 24 Hours</div>
   </div>
 
   <div class="dash-card">
     <h3>Live Attackers</h3>
-    <div id="live-attackers-stat" class="dash-stat">{{ top_attacking_ips|length }}</div>
+    <div id="live-attackers-stat" class="dash-stat">{{ _top_attacking_ips|length }}</div>
     <div class="dash-label">Tracked IPs</div>
   </div>
 
   <div class="dash-card">
-    <h3>Staff Sessions</h3>
-    <div id="staff-sessions-stat" class="dash-stat">{{ recent_staff_sessions|length }}</div>
-    <div class="dash-label">Recent Active Sessions</div>
+    <h3>Threat Score</h3>
+    <div id="threat-score-stat" class="dash-stat">{{ _top_threat_score }}</div>
+    <div class="dash-label">Highest Active Score</div>
   </div>
 
   <div class="dash-card">
     <h3>Targeted Accounts</h3>
-    <div id="targeted-accounts-stat" class="dash-stat">{{ targeted_usernames|length }}</div>
+    <div id="targeted-accounts-stat" class="dash-stat">{{ _targeted_usernames|length }}</div>
     <div class="dash-label">Under Pressure</div>
   </div>
 
   <div class="dash-card">
     <h3>Active Defenses</h3>
-    <div id="active-defenses-stat" class="dash-stat">{{ locked_usernames|length + banned_ips|length }}</div>
+    <div id="active-defenses-stat" class="dash-stat">{{ _defense_count }}</div>
     <div class="dash-label">Locks and Bans</div>
+  </div>
+
+  <div class="dash-card">
+    <h3>Staff Sessions</h3>
+    <div id="staff-sessions-stat" class="dash-stat">{{ _recent_staff_sessions|length }}</div>
+    <div class="dash-label">Recent Active Sessions</div>
   </div>
 </div>
 
@@ -74,15 +139,25 @@
     <div class="dash-panel">
       <h3>Live Activity</h3>
       <div id="live-activity-list" class="live-feed">
-        {% if recent_audit %}
-          {% for row in recent_audit[:8] %}
+        {% if _recent_audit %}
+          {% for row in _recent_audit[:8] %}
+            {% set pill_class = "neutral" %}
+            {% if 'scanner' in row.action_type or 'banned' in row.action_type or 'block' in row.action_type %}
+              {% set pill_class = "danger" %}
+            {% elif 'rate_limited' in row.action_type or 'locked' in row.action_type %}
+              {% set pill_class = "warn" %}
+            {% elif row.action_type in ['login', 'logout'] %}
+              {% set pill_class = "success" %}
+            {% elif 'kiosk' in row.action_type or 'resident_signin' in row.action_type %}
+              {% set pill_class = "info" %}
+            {% endif %}
             <div class="live-feed-item">
               <div class="live-feed-top">
                 <div>Audit</div>
                 <div>{{ row.created_at }}</div>
               </div>
               <div class="live-feed-title">
-                <span class="event-pill neutral">{{ row.action_type|replace('_', ' ')|title }}</span>
+                <span class="event-pill {{ pill_class }}">{{ row.action_type|replace('_', ' ')|title }}</span>
               </div>
               <div class="detail-cell">{{ row.action_details }}</div>
             </div>
@@ -101,12 +176,12 @@
           <div class="security-control-title">Attacker Radar</div>
 
           <div class="radar-list">
-            {% if top_attacking_ips %}
-              {% for row in top_attacking_ips %}
+            {% if _top_attacking_ips %}
+              {% for row in _top_attacking_ips %}
                 <div class="radar-row">
                   <div class="radar-top">
                     <span>{{ row.ip }}</span>
-                    <span>{{ row.attempts }} attempts</span>
+                    <span>{{ row.attempts }} events</span>
                   </div>
                   <div class="bar {% if row.attempts >= security_settings.attacker_ip_alert_threshold %}danger{% elif row.attempts >= 5 %}warn{% endif %}">
                     <span style="width: {{ [row.attempts * 8, 100]|min }}%"></span>
@@ -123,12 +198,12 @@
           <div class="security-control-title">Targeted Usernames</div>
 
           <div class="radar-list">
-            {% if targeted_usernames %}
-              {% for row in targeted_usernames %}
+            {% if _targeted_usernames %}
+              {% for row in _targeted_usernames %}
                 <div class="radar-row">
                   <div class="radar-top">
                     <span>{{ row.username }}</span>
-                    <span>{{ row.attempts }} attempts</span>
+                    <span>{{ row.attempts }} events</span>
                   </div>
                   <div class="bar {% if row.attempts >= security_settings.targeted_username_alert_threshold %}danger{% elif row.attempts >= 6 %}warn{% endif %}">
                     <span style="width: {{ [row.attempts * 8, 100]|min }}%"></span>
@@ -144,17 +219,50 @@
     </div>
 
     <div class="dash-panel">
+      <h3>Active Threat Queue</h3>
+
+      <div id="active-threat-queue" class="live-feed">
+        {% if _top_threats %}
+          {% for row in _top_threats[:8] %}
+            <div class="live-feed-item">
+              <div class="live-feed-top">
+                <div>Threat Source</div>
+                <div>Score {{ row.score|default(0) }}</div>
+              </div>
+              <div class="live-feed-title">
+                <span class="event-pill {% if row.score|default(0)|int >= 10 %}danger{% elif row.score|default(0)|int >= 5 %}warn{% else %}info{% endif %}">
+                  {{ row.ip|default('Unknown IP') }}
+                </span>
+              </div>
+              <div class="detail-cell">
+                {{ row.summary|default('Suspicious repeated behavior detected from this source.') }}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            Threat scoring is not active yet or no scored threats are currently present.
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="subtle-note">
+        Threat score is intended to summarize repeated hostile behavior from the same source rather than isolated one off events.
+      </div>
+    </div>
+
+    <div class="dash-panel">
       <h3>Attack Map</h3>
 
       <div class="attack-map-wrap">
         <div id="attack-map"></div>
-        <div id="attack-map-empty" class="attack-map-empty {% if attack_map_points %}is-hidden{% endif %}">
+        <div id="attack-map-empty" class="attack-map-empty {% if _attack_map_points %}is-hidden{% endif %}">
           No geolocated attacker IPs available yet.
         </div>
       </div>
 
       <div class="subtle-note">
-        Approximate geolocation is based on attacking IP addresses seen in the live attack radar.
+        Approximate geolocation is based on application layer hostile activity from tracked IP addresses that produced mappable coordinates.
       </div>
     </div>
 
@@ -170,12 +278,18 @@
           </tr>
         </thead>
         <tbody id="kiosk-events-body">
-          {% if kiosk_security_events %}
-            {% for row in kiosk_security_events %}
+          {% if _kiosk_security_events %}
+            {% for row in _kiosk_security_events %}
+              {% set pill_class = "info" %}
+              {% if 'failed' in row.action_type or 'denied' in row.action_type or 'block' in row.action_type %}
+                {% set pill_class = "danger" %}
+              {% elif 'rate_limited' in row.action_type or 'locked' in row.action_type %}
+                {% set pill_class = "warn" %}
+              {% endif %}
               <tr>
                 <td>{{ row.created_at }}</td>
                 <td class="event-cell">
-                  <span class="event-pill {% if 'denied' in row.action_type or 'block' in row.action_type %}danger{% else %}info{% endif %}">
+                  <span class="event-pill {{ pill_class }}">
                     {{ row.action_type|replace('_', ' ')|title }}
                   </span>
                 </td>
@@ -204,8 +318,8 @@
           </tr>
         </thead>
         <tbody id="active-staff-session-body">
-          {% if recent_staff_sessions %}
-            {% for row in recent_staff_sessions %}
+          {% if _recent_staff_sessions %}
+            {% for row in _recent_staff_sessions %}
               <tr>
                 <td class="event-cell">{{ row.username }}</td>
                 <td><span class="event-pill success">Active</span></td>
@@ -313,9 +427,9 @@
     <div class="dash-panel">
       <h3>Security Incidents</h3>
       <div id="security-incidents-list">
-        {% if recent_security_incidents %}
+        {% if _recent_security_incidents %}
           <div class="incident-list">
-            {% for row in recent_security_incidents %}
+            {% for row in _recent_security_incidents %}
               <div class="incident-item">
                 <div class="incident-top">
                   <div>
@@ -341,6 +455,37 @@
     </div>
 
     <div class="dash-panel">
+      <h3>Rate Limit and Defense Activity</h3>
+
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Key</th>
+            <th>Remaining</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if _rate_limit_activity %}
+            {% for row in _rate_limit_activity[:12] %}
+              <tr>
+                <td class="event-cell">
+                  <span class="event-pill warn">Rate Control</span>
+                </td>
+                <td class="detail-cell">{{ row.key|default('Unknown') }}</td>
+                <td>{{ row.seconds_remaining|default('') }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3" class="empty-state">No active rate limit controls in memory.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="dash-panel">
       <h3>Audit Timeline</h3>
 
       <table class="audit-table">
@@ -353,13 +498,23 @@
           </tr>
         </thead>
         <tbody>
-          {% if recent_audit %}
-            {% for row in recent_audit %}
+          {% if _recent_audit %}
+            {% for row in _recent_audit %}
+              {% set pill_class = "neutral" %}
+              {% if 'scanner' in row.action_type or 'banned' in row.action_type or 'block' in row.action_type %}
+                {% set pill_class = "danger" %}
+              {% elif 'rate_limited' in row.action_type or 'locked' in row.action_type %}
+                {% set pill_class = "warn" %}
+              {% elif row.action_type in ['login', 'logout'] %}
+                {% set pill_class = "success" %}
+              {% elif 'kiosk' in row.action_type or 'resident_signin' in row.action_type %}
+                {% set pill_class = "info" %}
+              {% endif %}
               <tr>
                 <td>{{ row.created_at }}</td>
                 <td class="event-cell">{{ row.staff_username or "System" }}</td>
                 <td class="event-cell">
-                  <span class="event-pill {% if row.action_type == 'login_failed' %}danger{% elif row.action_type in ['login', 'logout'] %}success{% elif row.action_type == 'security_setting_updated' %}warn{% else %}neutral{% endif %}">
+                  <span class="event-pill {{ pill_class }}">
                     {{ row.action_type|replace('_', ' ')|title }}
                   </span>
                 </td>
@@ -381,7 +536,9 @@
 <script>
   window.adminDashboardConfig = {
     liveUrl: {{ dashboard_live_url|tojson }},
-    attackMapPoints: {{ attack_map_points|default([], true)|tojson }}
+    attackMapPoints: {{ _attack_map_points|tojson }},
+    topThreatScore: {{ _top_threat_score|tojson }},
+    topThreats: {{ _top_threats|tojson }}
   };
 </script>
 <script src="{{ url_for('static', filename='js/admin_dashboard_live.js') }}"></script>
