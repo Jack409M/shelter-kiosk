@@ -358,3 +358,33 @@
   refreshLive();
   setInterval(refreshLive, 10000);
 })();
+
+/* ---------------------------------------
+   Security Control Confirmation Guard
+--------------------------------------- */
+
+document.addEventListener("DOMContentLoaded", function () {
+
+  const securityForms = document.querySelectorAll(".security-control form");
+
+  securityForms.forEach(form => {
+
+    form.addEventListener("submit", function (e) {
+
+      const actionBtn = form.querySelector("button[type='submit']");
+      const actionText = actionBtn ? actionBtn.innerText.trim() : "change this setting";
+
+      const confirmMsg =
+        "Are you sure you want to " +
+        actionText.toLowerCase() +
+        "?\n\nThis affects live system operations.";
+
+      if (!confirm(confirmMsg)) {
+        e.preventDefault();
+      }
+
+    });
+
+  });
+
+});
