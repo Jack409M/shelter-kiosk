@@ -268,7 +268,7 @@ def load_security_settings() -> dict:
         "kiosk_intake_enabled": bool(row_value(row, "kiosk_intake_enabled", True)),
         "admin_login_only_mode": bool(row_value(row, "admin_login_only_mode", False)),
         "security_alerts_enabled": bool(row_value(row, "security_alerts_enabled", True)),
-        "failed_login_alert_threshold": int(row_value(row, "failed_login_alert_threshold", 1) or 1),
+        "failed_login_alert_threshold": 1,
         "attacker_ip_alert_threshold": int(row_value(row, "attacker_ip_alert_threshold", 10) or 10),
         "targeted_username_alert_threshold": int(row_value(row, "targeted_username_alert_threshold", 10) or 10),
         "lockout_seconds": int(row_value(row, "lockout_seconds", 900) or 900),
