@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, g, render_template, session
 
 from core.auth import require_login, require_shelter
@@ -22,38 +22,48 @@ def _parse_dt(value):
         return None
 
     if isinstance(value, datetime):
-        return value
+        dt = value
+    else:
+        text = str(value).strip()
+        if not text:
+            return None
 
-    text = str(value).strip()
-    if not text:
-        return None
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
 
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-
-    try:
-        return datetime.fromisoformat(text)
-    except ValueError:
-        pass
-
-    for fmt in (
-        "%Y-%m-%d",
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M:%S.%f",
-    ):
         try:
-            return datetime.strptime(text, fmt)
+            dt = datetime.fromisoformat(text)
         except ValueError:
-            continue
+            dt = None
 
-    return None
+        if dt is None:
+            for fmt in (
+                "%Y-%m-%d",
+                "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%d %H:%M:%S.%f",
+            ):
+                try:
+                    dt = datetime.strptime(text, fmt)
+                    break
+                except ValueError:
+                    continue
+
+        if dt is None:
+            return None
+
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+
+    return dt.astimezone(timezone.utc)
 
 
 def _is_recent(value, days: int) -> bool:
     dt = _parse_dt(value)
     if not dt:
         return False
-    return dt >= (datetime.utcnow() - timedelta(days=days))
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    return dt >= cutoff
 
 
 def _scope_filter_and_params(role: str | None, shelter: str | None):
