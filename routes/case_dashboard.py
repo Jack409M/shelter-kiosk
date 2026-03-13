@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from flask import Blueprint, g, render_template, session
 
 from core.auth import require_login, require_shelter
@@ -16,6 +17,53 @@ def _sql(pg_sql: str, sqlite_sql: str) -> str:
     return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
 
 
+def _parse_dt(value):
+    if value in (None, ""):
+        return None
+
+    if isinstance(value, datetime):
+        return value
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        pass
+
+    for fmt in (
+        "%Y-%m-%d",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+    ):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+
+    return None
+
+
+def _is_recent(value, days: int) -> bool:
+    dt = _parse_dt(value)
+    if not dt:
+        return False
+    return dt >= (datetime.utcnow() - timedelta(days=days))
+
+
+def _scope_filter_and_params(role: str | None, shelter: str | None):
+    if role in {"admin", "shelter_director", "supervisor"}:
+        return "", ()
+
+    filter_sql = "AND r.shelter = %s" if g.get("db_kind") == "pg" else "AND r.shelter = ?"
+    return filter_sql, (shelter,)
+
+
 @case_dashboard.route("")
 @require_login
 @require_shelter
@@ -23,14 +71,8 @@ def dashboard():
     shelter = session.get("shelter")
     role = session.get("role")
 
-    if role in {"admin", "shelter_director", "supervisor"}:
-        shelter_filter = ""
-        params: tuple = ()
-    else:
-        shelter_filter = "AND r.shelter = %s" if g.get("db_kind") == "pg" else "AND r.shelter = ?"
-        params = (shelter,)
+    shelter_filter, params = _scope_filter_and_params(role, shelter)
 
-    # Residents missing enrollment
     missing_enrollment = db_fetchall(
         _sql(
             f"""
@@ -57,7 +99,6 @@ def dashboard():
         params,
     )
 
-    # Residents with no goals
     no_goals = db_fetchall(
         _sql(
             f"""
@@ -88,73 +129,96 @@ def dashboard():
         params,
     )
 
-    # Compliance missing this week
-    compliance_missing = db_fetchall(
+    compliance_candidates = db_fetchall(
         _sql(
             f"""
-            SELECT DISTINCT r.id, r.first_name, r.last_name, r.shelter
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter,
+                MAX(wrs.submitted_at) AS last_submitted_at
             FROM residents r
             JOIN program_enrollments pe
               ON pe.resident_id = r.id
             LEFT JOIN weekly_resident_summary wrs
               ON wrs.enrollment_id = pe.id
-             AND wrs.submitted_at >= NOW() - INTERVAL '7 days'
-            WHERE wrs.submitted_at IS NULL
-              AND r.is_active = TRUE
+            WHERE r.is_active = TRUE
               {shelter_filter}
+            GROUP BY r.id, r.first_name, r.last_name, r.shelter
             ORDER BY r.shelter, r.last_name, r.first_name
             """,
             f"""
-            SELECT DISTINCT r.id, r.first_name, r.last_name, r.shelter
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter,
+                MAX(wrs.submitted_at) AS last_submitted_at
             FROM residents r
             JOIN program_enrollments pe
               ON pe.resident_id = r.id
             LEFT JOIN weekly_resident_summary wrs
               ON wrs.enrollment_id = pe.id
-             AND wrs.submitted_at >= DATE('now','-7 day')
-            WHERE wrs.submitted_at IS NULL
-              AND r.is_active = 1
+            WHERE r.is_active = 1
               {shelter_filter}
+            GROUP BY r.id, r.first_name, r.last_name, r.shelter
             ORDER BY r.shelter, r.last_name, r.first_name
             """,
         ),
         params,
     )
 
-    # No case notes recently
-    notes_missing = db_fetchall(
+    compliance_missing = [
+        row for row in compliance_candidates
+        if not _is_recent((row.get("last_submitted_at") if isinstance(row, dict) else row[4]), 7)
+    ]
+
+    notes_candidates = db_fetchall(
         _sql(
             f"""
-            SELECT DISTINCT r.id, r.first_name, r.last_name, r.shelter
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter,
+                MAX(cmu.created_at) AS last_note_at
             FROM residents r
             JOIN program_enrollments pe
               ON pe.resident_id = r.id
             LEFT JOIN case_manager_updates cmu
               ON cmu.enrollment_id = pe.id
-             AND cmu.created_at >= NOW() - INTERVAL '14 days'
-            WHERE cmu.id IS NULL
-              AND r.is_active = TRUE
+            WHERE r.is_active = TRUE
               {shelter_filter}
+            GROUP BY r.id, r.first_name, r.last_name, r.shelter
             ORDER BY r.shelter, r.last_name, r.first_name
             """,
             f"""
-            SELECT DISTINCT r.id, r.first_name, r.last_name, r.shelter
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter,
+                MAX(cmu.created_at) AS last_note_at
             FROM residents r
             JOIN program_enrollments pe
               ON pe.resident_id = r.id
             LEFT JOIN case_manager_updates cmu
               ON cmu.enrollment_id = pe.id
-             AND cmu.created_at >= DATE('now','-14 day')
-            WHERE cmu.id IS NULL
-              AND r.is_active = 1
+            WHERE r.is_active = 1
               {shelter_filter}
+            GROUP BY r.id, r.first_name, r.last_name, r.shelter
             ORDER BY r.shelter, r.last_name, r.first_name
             """,
         ),
         params,
     )
 
-    # No appointments scheduled
+    notes_missing = [
+        row for row in notes_candidates
+        if not _is_recent((row.get("last_note_at") if isinstance(row, dict) else row[4]), 14)
+    ]
+
     no_appointments = db_fetchall(
         _sql(
             f"""
