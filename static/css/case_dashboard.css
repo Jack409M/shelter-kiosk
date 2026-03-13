@@ -3,6 +3,10 @@ body{
   color:#1f2a33;
 }
 
+html{
+  scroll-behavior:smooth;
+}
+
 .case-page{
   max-width:1200px;
   margin:0 auto;
@@ -62,10 +66,15 @@ body{
 }
 
 .case-dashboard-summary{
+  position:sticky;
+  top:12px;
+  z-index:20;
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
   gap:16px;
   margin-bottom:24px;
+  padding:8px 0;
+  background:#f4f8fb;
 }
 
 .case-summary-card{
@@ -142,6 +151,7 @@ body{
   border:1px solid #d7e4ef;
   border-radius:18px;
   box-shadow:0 10px 24px rgba(36,59,83,.08);
+  scroll-margin-top:180px;
 }
 
 .case-section-header{
@@ -277,6 +287,11 @@ body{
     min-width:0;
     text-align:left;
   }
+
+  .case-dashboard-summary{
+    position:static;
+    top:auto;
+  }
 }
 
 @media (max-width:700px){
@@ -293,12 +308,4 @@ body{
   .case-action-link{
     width:100%;
   }
-}
-
-html{
-  scroll-behavior:smooth;
-}
-
-.case-section{
-  scroll-margin-top:140px;
 }
