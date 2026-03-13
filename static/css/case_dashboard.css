@@ -309,3 +309,37 @@ html{
     width:100%;
   }
 }
+
+.case-summary-card.active{
+  border-left-color:#6aa9e9;
+  background:#f7fbff;
+  box-shadow:0 0 0 2px rgba(106,169,233,.25);
+}
+
+.case-page{
+  max-width:1200px;
+  margin:0 auto;
+  padding:28px;
+  background:#ffffff;
+  border-radius:22px;
+  border:6px solid transparent;
+  background-clip:padding-box;
+
+  position:relative;
+}
+
+.case-page:before{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:22px;
+  background:
+    radial-gradient(circle at 10px 10px,#ffdbe8 4px,transparent 5px),
+    radial-gradient(circle at 30px 20px,#d7f1ff 4px,transparent 5px),
+    radial-gradient(circle at 20px 30px,#e6ffe9 4px,transparent 5px),
+    radial-gradient(circle at 40px 10px,#ffe7c7 4px,transparent 5px);
+
+  background-size:60px 60px;
+  opacity:.35;
+  z-index:-1;
+}
