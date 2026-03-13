@@ -294,3 +294,11 @@ body{
     width:100%;
   }
 }
+
+html{
+  scroll-behavior:smooth;
+}
+
+.case-section{
+  scroll-margin-top:140px;
+}
