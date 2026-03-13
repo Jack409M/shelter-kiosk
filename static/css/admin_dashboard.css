@@ -596,6 +596,77 @@ h1{
   line-height:1.5;
 }
 
+/* Case dashboard summary */
+
+.case-dashboard-summary{
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+  margin:0 0 24px 0;
+}
+
+.case-summary-box{
+  min-width:160px;
+  padding:14px 16px;
+  background:#101a26;
+  border:1px solid #1f3a55;
+  border-radius:14px;
+  box-shadow:0 0 12px rgba(0,200,255,.08);
+  color:#d8eeff;
+  text-align:center;
+}
+
+.case-summary-box strong{
+  display:block;
+  margin-bottom:8px;
+  color:#7fd6ff;
+  font-size:13px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.dashboard-section{
+  margin-bottom:18px;
+  padding:18px;
+  background:#101a26;
+  border:1px solid #1f3a55;
+  border-radius:14px;
+  box-shadow:0 0 12px rgba(0,200,255,.08);
+  color:#d8eeff;
+}
+
+.dashboard-section h2{
+  margin:0 0 12px 0;
+  color:#7fd6ff;
+  font-size:16px;
+  letter-spacing:.04em;
+}
+
+.dashboard-section ul{
+  list-style:none;
+  margin:0;
+  padding:0;
+}
+
+.dashboard-section li{
+  padding:10px 0;
+  border-bottom:1px solid #173044;
+}
+
+.dashboard-section li:last-child{
+  border-bottom:0;
+}
+
+.dashboard-section a{
+  color:#cfe7ff;
+  text-decoration:none;
+  font-weight:600;
+}
+
+.dashboard-section a:hover{
+  color:#7fd6ff;
+}
+
 /* Resident profile layout */
 
 .resident-profile-layout{
@@ -715,5 +786,13 @@ h1{
 
   .security-controls{
     grid-template-columns:1fr;
+  }
+
+  .case-dashboard-summary{
+    flex-direction:column;
+  }
+
+  .case-summary-box{
+    width:100%;
   }
 }
