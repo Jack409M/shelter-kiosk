@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard.css', v='20260313c') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard.css', v='20260313d') }}">
 {% endblock %}
 
 {% block content %}
@@ -24,7 +24,7 @@
 
   <div class="case-dashboard-summary">
 
-    <a class="case-summary-card urgent" href="#missing-enrollment">
+    <a class="case-summary-card urgent js-scroll-link" href="#missing-enrollment">
       <div class="case-summary-icon">📝</div>
       <div class="case-summary-content">
         <div class="case-summary-title">Needs Enrollment Started</div>
@@ -33,7 +33,7 @@
       </div>
     </a>
 
-    <a class="case-summary-card urgent" href="#no-goals">
+    <a class="case-summary-card urgent js-scroll-link" href="#no-goals">
       <div class="case-summary-icon">🎯</div>
       <div class="case-summary-content">
         <div class="case-summary-title">Needs Goal Planning</div>
@@ -42,7 +42,7 @@
       </div>
     </a>
 
-    <a class="case-summary-card urgent" href="#compliance-missing">
+    <a class="case-summary-card urgent js-scroll-link" href="#compliance-missing">
       <div class="case-summary-icon">📅</div>
       <div class="case-summary-content">
         <div class="case-summary-title">Needs Weekly Check In</div>
@@ -51,7 +51,7 @@
       </div>
     </a>
 
-    <a class="case-summary-card warn" href="#notes-missing">
+    <a class="case-summary-card warn js-scroll-link" href="#notes-missing">
       <div class="case-summary-icon">🗒️</div>
       <div class="case-summary-content">
         <div class="case-summary-title">Needs Recent Case Note</div>
@@ -60,7 +60,7 @@
       </div>
     </a>
 
-    <a class="case-summary-card warn" href="#no-appointments">
+    <a class="case-summary-card warn js-scroll-link" href="#no-appointments">
       <div class="case-summary-icon">🕒</div>
       <div class="case-summary-content">
         <div class="case-summary-title">Needs Appointment Scheduled</div>
@@ -212,5 +212,40 @@
   </section>
 
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const links = document.querySelectorAll(".js-scroll-link");
+
+  links.forEach(function (link) {
+    link.addEventListener("click", function (event) {
+      const targetId = this.getAttribute("href");
+      if (!targetId || !targetId.startsWith("#")) {
+        return;
+      }
+
+      const target = document.querySelector(targetId);
+      if (!target) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const summary = document.querySelector(".case-dashboard-summary");
+      const summaryHeight = summary ? summary.offsetHeight : 0;
+      const topOffset = summaryHeight + 28;
+
+      const targetTop = target.getBoundingClientRect().top + window.pageYOffset - topOffset;
+
+      window.scrollTo({
+        top: targetTop,
+        behavior: "smooth"
+      });
+
+      history.replaceState(null, "", targetId);
+    });
+  });
+});
+</script>
 
 {% endblock %}
