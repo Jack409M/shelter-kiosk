@@ -2,156 +2,18 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/security_dashboard.css', v='20260313a') }}">
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  crossorigin=""
+/>
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  crossorigin=""
+></script>
 {% endblock %}
 
 {% block content %}
-
-{# ------------------------------------------------------------------
-   Future extraction note
-
-   This template has been reorganized to behave more like a command
-   console instead of a static report page.
-
-   Current priority order:
-   1. Security posture
-   2. Live activity happening now
-   3. Headline metrics
-   4. Attack intelligence
-   5. Defensive posture
-   6. Historical and admin detail
-
-   Next safest front end refactor path:
-   1. Split body into includes:
-      admin_dashboard_parts/header.html
-      admin_dashboard_parts/live_activity.html
-      admin_dashboard_parts/stats_grid.html
-      admin_dashboard_parts/threat_analysis.html
-      admin_dashboard_parts/attacker_radar.html
-      admin_dashboard_parts/login_timeline.html
-      admin_dashboard_parts/active_defenses.html
-      admin_dashboard_parts/lockout_pressure.html
-      admin_dashboard_parts/security_incidents.html
-      admin_dashboard_parts/recent_audit.html
-      admin_dashboard_parts/staff_sessions.html
-      admin_dashboard_parts/kiosk_events.html
-      admin_dashboard_parts/security_controls.html
-      admin_dashboard_parts/communications_control.html
-      admin_dashboard_parts/quick_links.html
-
-   2. Move security posture computation into Python so this template
-      receives a precomputed dashboard status object.
-
-   3. Precompute event labels and classes server side so Jinja and JS
-      stop carrying duplicate display rules.
-
-   4. Keep POST forms CSRF protected. Hidden tokens have been added
-      below so this page does not trigger false session expired errors.
-------------------------------------------------------------------- #}
-
-{% macro pretty_label(value) -%}
-  {% if not value %}
-    Unknown Event
-  {% elif value == "login_failed" %}
-    Login Failed
-  {% elif value == "login" %}
-    Login Success
-  {% elif value == "logout" %}
-    Logout
-  {% elif value == "profile_update" %}
-    Profile Updated
-  {% elif value == "set_role" %}
-    Role Changed
-  {% elif value == "set_active" %}
-    Account Status Changed
-  {% elif value == "reset_password" %}
-    Password Reset
-  {% elif value == "wipe_all_data" %}
-    Data Wipe
-  {% elif value == "recreate_schema" %}
-    Schema Recreated
-  {% elif value == "security_setting_updated" %}
-    Security Setting Updated
-  {% elif value.startswith("kiosk_") %}
-    {{ value[6:]|replace('_', ' ')|title }}
-  {% else %}
-    {{ value|replace('_', ' ')|title }}
-  {% endif %}
-{%- endmacro %}
-
-{% macro event_class(value) -%}
-  {% if value in ["login_failed", "wipe_all_data", "recreate_schema"] or value.startswith("kiosk_block") or value.startswith("kiosk_denied") %}
-    danger
-  {% elif value in ["reset_password", "set_role", "set_active", "security_setting_updated"] %}
-    warn
-  {% elif value in ["login", "logout"] %}
-    success
-  {% elif value.startswith("kiosk_") %}
-    info
-  {% else %}
-    neutral
-  {% endif %}
-{%- endmacro %}
-
-{% set security_level = "NORMAL" %}
-{% set security_led = "green" %}
-{% set security_pill = "" %}
-{% set banner_class = "" %}
-{% set banner_title = "System Stable" %}
-{% set banner_copy = "No active threat indicators are currently above alert threshold." %}
-
-{% set attacker_ip_threshold = security_settings.attacker_ip_alert_threshold if security_settings else 10 %}
-{% set targeted_username_threshold = security_settings.targeted_username_alert_threshold if security_settings else 10 %}
-
-{% if banned_ips %}
-  {% set security_level = "ACTIVE ATTACK" %}
-  {% set security_led = "red" %}
-  {% set security_pill = "danger" %}
-  {% set banner_class = "danger" %}
-  {% set banner_title = "Active Defense Triggered" %}
-  {% set banner_copy = "One or more IP addresses are currently banned. Immediate hostile activity is being contained." %}
-{% elif locked_usernames %}
-  {% set security_level = "ACTIVE ATTACK" %}
-  {% set security_led = "red" %}
-  {% set security_pill = "danger" %}
-  {% set banner_class = "danger" %}
-  {% set banner_title = "Account Targeting Detected" %}
-  {% set banner_copy = "Username lockouts are active. Repeated credential attacks are in progress or were recently contained." %}
-{% elif top_attacking_ips and top_attacking_ips[0].attempts >= attacker_ip_threshold %}
-  {% set security_level = "ACTIVE ATTACK" %}
-  {% set security_led = "red" %}
-  {% set security_pill = "danger" %}
-  {% set banner_class = "danger" %}
-  {% set banner_title = "Active Attack Detected" %}
-  {% set banner_copy = "An IP has crossed high volume login failure thresholds. Review the attack radar and intrusion timeline." %}
-{% elif targeted_usernames and targeted_usernames[0].attempts >= targeted_username_threshold %}
-  {% set security_level = "ACTIVE ATTACK" %}
-  {% set security_led = "red" %}
-  {% set security_pill = "danger" %}
-  {% set banner_class = "danger" %}
-  {% set banner_title = "Focused Username Attack Detected" %}
-  {% set banner_copy = "One or more staff usernames are being repeatedly targeted. Review lockout pressure and affected accounts." %}
-{% elif top_attacking_ips and top_attacking_ips[0].attempts >= 5 %}
-  {% set security_level = "ELEVATED" %}
-  {% set security_led = "yellow" %}
-  {% set security_pill = "warn" %}
-  {% set banner_class = "warn" %}
-  {% set banner_title = "Elevated Threat Posture" %}
-  {% set banner_copy = "Failed login activity is elevated. Continue monitoring intrusion events and attacker concentration." %}
-{% elif targeted_usernames and targeted_usernames[0].attempts >= 6 %}
-  {% set security_level = "ELEVATED" %}
-  {% set security_led = "yellow" %}
-  {% set security_pill = "warn" %}
-  {% set banner_class = "warn" %}
-  {% set banner_title = "Targeted Login Pressure" %}
-  {% set banner_copy = "Repeated failures are clustering around specific usernames. Watch for lockouts and follow on activity." %}
-{% endif %}
-
-{% set ns = namespace(highest_attack=0) %}
-{% for row in top_attacking_ips %}
-  {% if row.attempts > ns.highest_attack %}
-    {% set ns.highest_attack = row.attempts %}
-  {% endif %}
-{% endfor %}
 
 <div class="scan-runner"></div>
 
@@ -160,512 +22,288 @@
     <h1>Operations Command Console</h1>
     <div class="command-subtitle">DWC shelter command layer</div>
   </div>
-  <div id="security-status-pill" class="status-pill {{ security_pill }}">
-    <span id="security-status-led" class="led {{ security_led }}"></span>
-    <span id="security-status-text">Security Level {{ security_level }}</span>
+
+  <div id="security-status-pill" class="status-pill">
+    <span id="security-status-led" class="led green"></span>
+    <span id="security-status-text">Security Level NORMAL</span>
   </div>
 </div>
 
-<div id="security-banner" class="security-banner {{ banner_class }}">
-  <div id="security-banner-title" class="security-banner-title">{{ banner_title }}</div>
-  <div id="security-banner-copy" class="security-banner-copy">{{ banner_copy }}</div>
-</div>
-
-{# ------------------------------------------------------------------
-   Live now belongs near the top because this is the operational feed.
-   Historical panels move lower.
-------------------------------------------------------------------- #}
-<div class="dash-panel" style="margin-bottom:20px;">
-  <h3>Live Activity</h3>
-  <div id="live-activity-list" class="live-feed">
-    <div class="empty-state">Waiting for live activity updates.</div>
-  </div>
-  <div class="subtle-note">
-    This panel refreshes automatically every 10 seconds while the dashboard is open.
+<div id="security-banner" class="security-banner">
+  <div id="security-banner-title" class="security-banner-title">System Stable</div>
+  <div id="security-banner-copy" class="security-banner-copy">
+    No active threat indicators are currently above alert threshold.
   </div>
 </div>
 
 <div class="dash-grid">
-
-  <div class="dash-card">
-    <h3>System Health</h3>
-    <div><span class="led green"></span>Operational</div>
-    <div class="dash-label">Core platform stable</div>
-  </div>
-
-  <div class="dash-card">
-    <h3>Total Users</h3>
-    <div class="dash-stat">{{ total_users }}</div>
-    <div class="dash-label">All staff accounts</div>
-  </div>
-
-  <div class="dash-card">
-    <h3>Active Users</h3>
-    <div class="dash-stat">{{ active_users }}</div>
-    <div class="dash-label">Currently enabled accounts</div>
-  </div>
-
   <div class="dash-card">
     <h3>Failed Logins</h3>
     <div id="failed-logins-stat" class="dash-stat">{{ failed_login_count }}</div>
-    <div class="dash-label">Last 24 hours</div>
+    <div class="dash-label">Last 24 Hours</div>
   </div>
 
   <div class="dash-card">
     <h3>Live Attackers</h3>
     <div id="live-attackers-stat" class="dash-stat">{{ top_attacking_ips|length }}</div>
-    <div class="dash-label">IPs in active radar</div>
-  </div>
-
-  <div class="dash-card">
-    <h3>Targeted Accounts</h3>
-    <div id="targeted-accounts-stat" class="dash-stat">{{ targeted_usernames|length }}</div>
-    <div class="dash-label">Usernames under pressure</div>
-  </div>
-
-  <div class="dash-card">
-    <h3>Active Defenses</h3>
-    <div id="active-defenses-stat" class="dash-stat">{{ locked_usernames|length + banned_ips|length }}</div>
-    <div class="dash-label">Locks and bans in place</div>
+    <div class="dash-label">Tracked IPs</div>
   </div>
 
   <div class="dash-card">
     <h3>Staff Sessions</h3>
     <div id="staff-sessions-stat" class="dash-stat">{{ recent_staff_sessions|length }}</div>
-    <div class="dash-label">Recent active sessions</div>
+    <div class="dash-label">Recent Active Sessions</div>
   </div>
 
+  <div class="dash-card">
+    <h3>Targeted Accounts</h3>
+    <div id="targeted-accounts-stat" class="dash-stat">{{ targeted_usernames|length }}</div>
+    <div class="dash-label">Under Pressure</div>
+  </div>
+
+  <div class="dash-card">
+    <h3>Active Defenses</h3>
+    <div id="active-defenses-stat" class="dash-stat">{{ locked_usernames|length + banned_ips|length }}</div>
+    <div class="dash-label">Locks and Bans</div>
+  </div>
 </div>
 
 <div class="dash-panels">
-
   <div class="dash-stack">
 
     <div class="dash-panel">
-      <h3>Threat Analysis</h3>
+      <h3>Live Activity</h3>
+      <div id="live-activity-list" class="live-feed">
+        {% if recent_audit %}
+          {% for row in recent_audit[:8] %}
+            <div class="live-feed-item">
+              <div class="live-feed-top">
+                <div>Audit</div>
+                <div>{{ row.created_at }}</div>
+              </div>
+              <div class="live-feed-title">
+                <span class="event-pill neutral">{{ row.action_type|replace('_', ' ')|title }}</span>
+              </div>
+              <div class="detail-cell">{{ row.action_details }}</div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">No live activity available.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="dash-panel">
+      <h3>Attack Intelligence</h3>
 
       <div class="intel-grid">
         <div>
-          <h3 style="margin-top:0;">Usernames Under Attack</h3>
-          {% if targeted_usernames %}
-            {% for row in targeted_usernames %}
-              {% set width = (row.attempts * 8) if (row.attempts * 8) < 100 else 100 %}
-              {% set bar_class = "bar" %}
-              {% if row.attempts >= targeted_username_threshold %}
-                {% set bar_class = "bar danger" %}
-              {% elif row.attempts >= 4 %}
-                {% set bar_class = "bar warn" %}
-              {% endif %}
-              <div style="margin-bottom:10px;">
-                <div class="event-cell">{{ row.username }} ({{ row.attempts }})</div>
-                <div class="{{ bar_class }}">
-                  <span style="width:{{ width }}%"></span>
+          <div class="security-control-title">Attacker Radar</div>
+
+          <div class="radar-list">
+            {% if top_attacking_ips %}
+              {% for row in top_attacking_ips %}
+                <div class="radar-row">
+                  <div class="radar-top">
+                    <span>{{ row.ip }}</span>
+                    <span>{{ row.attempts }} attempts</span>
+                  </div>
+                  <div class="bar {% if row.attempts >= security_settings.attacker_ip_alert_threshold %}danger{% elif row.attempts >= 5 %}warn{% endif %}">
+                    <span style="width: {{ [row.attempts * 8, 100]|min }}%"></span>
+                  </div>
                 </div>
-              </div>
-            {% endfor %}
-          {% else %}
-            <div class="empty-state">No targeted username data available.</div>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="subtle-note">
-        This panel is intentionally focused on account targeting so the attack radar can own the IP view without duplicating the same information twice.
-      </div>
-    </div>
-
-    <div class="dash-panel">
-      <h3>Attacker Radar</h3>
-
-      {% if top_attacking_ips %}
-        <div class="radar-list">
-          {% for row in top_attacking_ips %}
-            {% set width = ((row.attempts / ns.highest_attack) * 100) if ns.highest_attack else 0 %}
-            {% set bar_class = "bar" %}
-            {% if row.attempts >= attacker_ip_threshold %}
-              {% set bar_class = "bar danger" %}
-            {% elif row.attempts >= 4 %}
-              {% set bar_class = "bar warn" %}
+              {% endfor %}
+            {% else %}
+              <div class="empty-state">No attacker IP concentration detected.</div>
             {% endif %}
-            <div class="radar-row">
-              <div class="radar-top">
-                <div class="event-cell">{{ row.ip }}</div>
-                <div>{{ row.attempts }} attempts</div>
-              </div>
-              <div class="{{ bar_class }}">
-                <span style="width:{{ width }}%"></span>
-              </div>
-            </div>
-          {% endfor %}
+          </div>
         </div>
-      {% else %}
-        <div class="empty-state">No attacker IPs are active in the radar.</div>
-      {% endif %}
-    </div>
 
-    <div class="dash-panel">
-      <h3>Login Timeline</h3>
+        <div>
+          <div class="security-control-title">Targeted Usernames</div>
 
-      {% if recent_failed_logins %}
-        <ul class="timeline">
-          {% for row in recent_failed_logins %}
-            <li>
-              <div class="timeline-time">{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</div>
-              <div class="timeline-title">
-                <span class="event-pill {{ event_class(row.action_type or 'login_failed') }}">{{ pretty_label(row.action_type or "login_failed") }}</span>
-              </div>
-              <div class="detail-cell">{{ row.action_details or "" }}</div>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <div class="empty-state">No failed login timeline events in the last 24 hours.</div>
-      {% endif %}
-    </div>
-
-    <div class="dash-panel">
-      <h3>Recent Audit Activity</h3>
-
-      {% if recent_audit %}
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th style="width:24%;">Time</th>
-              <th style="width:14%;">User</th>
-              <th style="width:18%;">Action</th>
-              <th style="width:44%;">Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in recent_audit %}
-              <tr>
-                <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
-                <td>{{ r.staff_username or "" }}</td>
-                <td class="event-cell">
-                  <span class="event-pill {{ event_class(r.action_type or '') }}">{{ pretty_label(r.action_type or "") }}</span>
-                </td>
-                <td class="detail-cell">{{ r.action_details or "" }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div class="empty-state">No audit activity.</div>
-      {% endif %}
-    </div>
-
-  </div>
-
-  <div class="dash-stack">
-
-    <div class="dash-panel">
-      <h3>Active Defenses</h3>
-
-      <h3 style="margin-top:14px;">Locked Usernames</h3>
-      {% if locked_usernames %}
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Seconds Left</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in locked_usernames %}
-              <tr>
-                <td class="event-cell">{{ row.username }}</td>
-                <td>{{ row.seconds_remaining }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div class="empty-state">No usernames currently locked.</div>
-      {% endif %}
-
-      <h3 style="margin-top:18px;">Banned IPs</h3>
-      {% if banned_ips %}
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th>IP</th>
-              <th>Seconds Left</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in banned_ips %}
-              <tr>
-                <td class="event-cell">{{ row.ip }}</td>
-                <td>{{ row.seconds_remaining }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div class="empty-state">No active bans.</div>
-      {% endif %}
-
-      <h3 style="margin-top:18px;">Rate Limit Activity</h3>
-      {% if rate_limit_activity %}
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Hits</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in rate_limit_activity %}
-              <tr>
-                <td class="detail-cell">{{ row.key }}</td>
-                <td>{{ row.hits }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div class="empty-state">No rate limit pressure.</div>
-      {% endif %}
-    </div>
-
-    <div class="dash-panel">
-      <h3>Lockout Pressure</h3>
-
-      <div style="margin-bottom:14px;">
-        <div>Locked usernames ({{ locked_usernames|length }})</div>
-        <div class="{% if locked_usernames|length >= 3 %}bar danger{% elif locked_usernames|length >= 1 %}bar warn{% else %}bar{% endif %}">
-          <span style="width:{{ (locked_usernames|length * 25) if (locked_usernames|length * 25) < 100 else 100 }}%"></span>
-        </div>
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <div>Banned IPs ({{ banned_ips|length }})</div>
-        <div class="{% if banned_ips|length >= 3 %}bar danger{% elif banned_ips|length >= 1 %}bar warn{% else %}bar{% endif %}">
-          <span style="width:{{ (banned_ips|length * 25) if (banned_ips|length * 25) < 100 else 100 }}%"></span>
-        </div>
-      </div>
-
-      <div style="margin-bottom:14px;">
-        <div>Rate limit keys ({{ rate_limit_activity|length }})</div>
-        <div class="{% if rate_limit_activity|length >= 6 %}bar danger{% elif rate_limit_activity|length >= 2 %}bar warn{% else %}bar{% endif %}">
-          <span style="width:{{ (rate_limit_activity|length * 12) if (rate_limit_activity|length * 12) < 100 else 100 }}%"></span>
-        </div>
-      </div>
-
-      <div class="subtle-note">
-        This panel shows current defense pressure across account lockouts, IP bans, and rate limiting.
-      </div>
-    </div>
-
-    <div class="dash-panel">
-      <h3>Security Incidents</h3>
-
-      {% if recent_security_incidents %}
-        <div id="security-incidents-list" class="incident-list">
-          {% for row in recent_security_incidents %}
-            <div class="incident-item">
-              <div class="incident-top">
-                <div>
-                  <span class="event-pill {{ row.severity or 'neutral' }}">{{ (row.severity or 'unknown')|title }}</span>
+          <div class="radar-list">
+            {% if targeted_usernames %}
+              {% for row in targeted_usernames %}
+                <div class="radar-row">
+                  <div class="radar-top">
+                    <span>{{ row.username }}</span>
+                    <span>{{ row.attempts }} attempts</span>
+                  </div>
+                  <div class="bar {% if row.attempts >= security_settings.targeted_username_alert_threshold %}danger{% elif row.attempts >= 6 %}warn{% endif %}">
+                    <span style="width: {{ [row.attempts * 8, 100]|min }}%"></span>
+                  </div>
                 </div>
-                <div class="timeline-time">{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</div>
-              </div>
-              <div class="incident-title">{{ row.title or "Security Incident" }}</div>
-              <div class="detail-cell">{{ row.details or "" }}</div>
-              <div class="incident-meta">
-                {% if row.related_ip %}IP: {{ row.related_ip }}{% endif %}
-                {% if row.related_ip and row.related_username %}<br>{% endif %}
-                {% if row.related_username %}Username: {{ row.related_username }}{% endif %}
-                {% if row.status %}<br>Status: {{ row.status|title }}{% endif %}
-              </div>
-            </div>
-          {% endfor %}
+              {% endfor %}
+            {% else %}
+              <div class="empty-state">No focused username targeting detected.</div>
+            {% endif %}
+          </div>
         </div>
-      {% else %}
-        <div id="security-incidents-list" class="empty-state">No security incidents recorded.</div>
-      {% endif %}
+      </div>
     </div>
 
     <div class="dash-panel">
-      <h3>Active Staff Sessions</h3>
+      <h3>Attack Map</h3>
 
-      {% if recent_staff_sessions %}
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th style="width:28%;">User</th>
-              <th style="width:22%;">Status</th>
-              <th style="width:25%;">Last Action</th>
-              <th style="width:25%;">Last Seen</th>
-            </tr>
-          </thead>
-          <tbody id="active-staff-session-body">
-            {% for row in recent_staff_sessions %}
-              <tr>
-                <td class="event-cell">{{ row.username }}</td>
-                <td><span class="event-pill success">Active</span></td>
-                <td class="event-cell">{{ pretty_label(row.last_action or "login") }}</td>
-                <td>{{ fmt_dt(row.last_seen) if fmt_dt else row.last_seen }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div id="active-staff-session-body" class="empty-state">No recent active staff sessions detected.</div>
-      {% endif %}
+      <div class="attack-map-wrap">
+        <div id="attack-map"></div>
+        <div id="attack-map-empty" class="attack-map-empty {% if attack_map_points %}is-hidden{% endif %}">
+          No geolocated attacker IPs available yet.
+        </div>
+      </div>
 
       <div class="subtle-note">
-        This panel is based on recent login and logout activity, not a dedicated server side session registry.
+        Approximate geolocation is based on attacking IP addresses seen in the live attack radar.
       </div>
     </div>
 
     <div class="dash-panel">
       <h3>Kiosk Security Events</h3>
 
-      {% if kiosk_security_events %}
-        <table class="audit-table">
-          <thead>
-            <tr>
-              <th style="width:28%;">Time</th>
-              <th style="width:24%;">Event</th>
-              <th style="width:48%;">Details</th>
-            </tr>
-          </thead>
-          <tbody id="kiosk-events-body">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Event</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="kiosk-events-body">
+          {% if kiosk_security_events %}
             {% for row in kiosk_security_events %}
               <tr>
-                <td>{{ fmt_dt(row.created_at) if fmt_dt else row.created_at }}</td>
+                <td>{{ row.created_at }}</td>
                 <td class="event-cell">
-                  <span class="event-pill {{ event_class(row.action_type or '') }}">{{ pretty_label(row.action_type or "") }}</span>
+                  <span class="event-pill {% if 'denied' in row.action_type or 'block' in row.action_type %}danger{% else %}info{% endif %}">
+                    {{ row.action_type|replace('_', ' ')|title }}
+                  </span>
                 </td>
-                <td class="detail-cell">{{ row.action_details or "" }}</td>
+                <td class="detail-cell">{{ row.action_details }}</td>
               </tr>
             {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <div id="kiosk-events-body" class="empty-state">No kiosk security activity recorded.</div>
-      {% endif %}
+          {% else %}
+            <tr>
+              <td colspan="3" class="empty-state">No kiosk security activity recorded.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
     </div>
 
     <div class="dash-panel">
-      <h3>Security Controls</h3>
+      <h3>Recent Staff Sessions</h3>
+
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Status</th>
+            <th>Last Action</th>
+            <th>Last Seen</th>
+          </tr>
+        </thead>
+        <tbody id="active-staff-session-body">
+          {% if recent_staff_sessions %}
+            {% for row in recent_staff_sessions %}
+              <tr>
+                <td class="event-cell">{{ row.username }}</td>
+                <td><span class="event-pill success">Active</span></td>
+                <td class="event-cell">{{ row.last_action|replace('_', ' ')|title }}</td>
+                <td>{{ row.last_seen }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="empty-state">No recent active staff sessions detected.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="dash-stack">
+
+    <div class="dash-panel">
+      <h3>Operational Controls</h3>
 
       <div class="security-controls">
 
         <div class="security-control-card">
           <div class="security-control-title">SMS System</div>
-          <div class="security-control-copy">
-            Controls outbound SMS alerts and messaging at the security layer.
-          </div>
+          <div class="security-control-copy">Master outbound text messaging switch for the shelter system.</div>
           <div class="security-control-actions">
+            <span class="status-indicator {% if security_settings.sms_system_enabled %}enabled{% else %}disabled{% endif %}">
+              {% if security_settings.sms_system_enabled %}Enabled{% else %}Disabled{% endif %}
+            </span>
+
             <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="field" value="sms_system_enabled">
-              <input type="hidden" name="value" value="1">
-              <button class="control-btn" type="submit">Enable SMS</button>
+              <input type="hidden" name="value" value="{% if security_settings.sms_system_enabled %}0{% else %}1{% endif %}">
+              <button type="submit" class="control-btn {% if security_settings.sms_system_enabled %}danger{% else %}warn{% endif %}">
+                {% if security_settings.sms_system_enabled %}Disable SMS{% else %}Enable SMS{% endif %}
+              </button>
             </form>
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="field" value="sms_system_enabled">
-              <input type="hidden" name="value" value="0">
-              <button class="control-btn danger" type="submit">Disable SMS</button>
-            </form>
-          </div>
-          <div class="subtle-note">
-            Current status:
-            {% if security_settings.sms_system_enabled %}
-              <span class="status-indicator enabled">Enabled</span>
-            {% else %}
-              <span class="status-indicator disabled">Disabled</span>
-            {% endif %}
           </div>
         </div>
 
         <div class="security-control-card">
           <div class="security-control-title">Kiosk Intake</div>
-          <div class="security-control-copy">
-            Stops resident kiosk activity without taking the admin console offline.
-          </div>
+          <div class="security-control-copy">Controls whether kiosk intake and resident check in actions remain available.</div>
           <div class="security-control-actions">
+            <span class="status-indicator {% if security_settings.kiosk_intake_enabled %}enabled{% else %}disabled{% endif %}">
+              {% if security_settings.kiosk_intake_enabled %}Enabled{% else %}Disabled{% endif %}
+            </span>
+
             <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="field" value="kiosk_intake_enabled">
-              <input type="hidden" name="value" value="1">
-              <button class="control-btn" type="submit">Enable Kiosk</button>
+              <input type="hidden" name="value" value="{% if security_settings.kiosk_intake_enabled %}0{% else %}1{% endif %}">
+              <button type="submit" class="control-btn {% if security_settings.kiosk_intake_enabled %}danger{% else %}warn{% endif %}">
+                {% if security_settings.kiosk_intake_enabled %}Disable Kiosk{% else %}Enable Kiosk{% endif %}
+              </button>
             </form>
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="field" value="kiosk_intake_enabled">
-              <input type="hidden" name="value" value="0">
-              <button class="control-btn danger" type="submit">Disable Kiosk</button>
-            </form>
-          </div>
-          <div class="subtle-note">
-            Current status:
-            {% if security_settings.kiosk_intake_enabled %}
-              <span class="status-indicator enabled">Enabled</span>
-            {% else %}
-              <span class="status-indicator disabled">Disabled</span>
-            {% endif %}
           </div>
         </div>
 
         <div class="security-control-card">
           <div class="security-control-title">Admin Only Mode</div>
-          <div class="security-control-copy">
-            Restricts the platform to admin managed access posture.
-          </div>
+          <div class="security-control-copy">Emergency lockdown mode that restricts access to admin users only.</div>
           <div class="security-control-actions">
+            <span class="status-indicator {% if security_settings.admin_login_only_mode %}enabled{% else %}disabled{% endif %}">
+              {% if security_settings.admin_login_only_mode %}Enabled{% else %}Disabled{% endif %}
+            </span>
+
             <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="field" value="admin_login_only_mode">
-              <input type="hidden" name="value" value="1">
-              <button class="control-btn warn" type="submit">Enable Admin Only</button>
+              <input type="hidden" name="value" value="{% if security_settings.admin_login_only_mode %}0{% else %}1{% endif %}">
+              <button type="submit" class="control-btn {% if security_settings.admin_login_only_mode %}danger{% else %}warn{% endif %}">
+                {% if security_settings.admin_login_only_mode %}Disable Admin Only{% else %}Enable Admin Only{% endif %}
+              </button>
             </form>
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="field" value="admin_login_only_mode">
-              <input type="hidden" name="value" value="0">
-              <button class="control-btn" type="submit">Disable Admin Only</button>
-            </form>
-          </div>
-          <div class="subtle-note">
-            Current status:
-            {% if security_settings.admin_login_only_mode %}
-              <span class="status-indicator enabled">Enabled</span>
-            {% else %}
-              <span class="status-indicator disabled">Disabled</span>
-            {% endif %}
           </div>
         </div>
 
         <div class="security-control-card">
           <div class="security-control-title">Security Alerts</div>
-          <div class="security-control-copy">
-            Controls whether threshold events generate outbound security alerts.
-          </div>
+          <div class="security-control-copy">Controls whether live security conditions generate administrative SMS alerts.</div>
           <div class="security-control-actions">
+            <span class="status-indicator {% if security_settings.security_alerts_enabled %}enabled{% else %}disabled{% endif %}">
+              {% if security_settings.security_alerts_enabled %}Enabled{% else %}Disabled{% endif %}
+            </span>
+
             <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
               <input type="hidden" name="field" value="security_alerts_enabled">
-              <input type="hidden" name="value" value="1">
-              <button class="control-btn" type="submit">Enable Alerts</button>
+              <input type="hidden" name="value" value="{% if security_settings.security_alerts_enabled %}0{% else %}1{% endif %}">
+              <button type="submit" class="control-btn {% if security_settings.security_alerts_enabled %}danger{% else %}warn{% endif %}">
+                {% if security_settings.security_alerts_enabled %}Disable Alerts{% else %}Enable Alerts{% endif %}
+              </button>
             </form>
-            <form method="POST" action="{{ url_for('admin.admin_update_security_settings') }}">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="field" value="security_alerts_enabled">
-              <input type="hidden" name="value" value="0">
-              <button class="control-btn danger" type="submit">Disable Alerts</button>
-            </form>
-          </div>
-          <div class="subtle-note">
-            Current status:
-            {% if security_settings.security_alerts_enabled %}
-              <span class="status-indicator enabled">Enabled</span>
-            {% else %}
-              <span class="status-indicator disabled">Disabled</span>
-            {% endif %}
           </div>
         </div>
 
@@ -673,51 +311,77 @@
     </div>
 
     <div class="dash-panel">
-      <h3>Communications Control</h3>
-
-      <div style="margin-top:8px;">
-        <div><span class="led green"></span>Twilio Operational</div>
-
-        <div style="margin-top:12px;">
-          <button class="control-btn" type="button">
-            Twilio Circuit Breaker
-          </button>
-        </div>
-
-        <div class="subtle-note">
-          Suspends outbound SMS messaging if activated.
-        </div>
-      </div>
-
-      <div class="subtle-note">
-        SMS security alerts will send only to active admin accounts with a mobile phone saved in staff profile.
+      <h3>Security Incidents</h3>
+      <div id="security-incidents-list">
+        {% if recent_security_incidents %}
+          <div class="incident-list">
+            {% for row in recent_security_incidents %}
+              <div class="incident-item">
+                <div class="incident-top">
+                  <div>
+                    <span class="event-pill {{ row.severity }}">{{ row.severity|title }}</span>
+                  </div>
+                  <div class="timeline-time">{{ row.created_at }}</div>
+                </div>
+                <div class="incident-title">{{ row.title }}</div>
+                <div class="detail-cell">{{ row.details }}</div>
+                <div class="incident-meta">
+                  {% if row.related_ip %}IP: {{ row.related_ip }}{% endif %}
+                  {% if row.related_ip and row.related_username %}<br>{% endif %}
+                  {% if row.related_username %}Username: {{ row.related_username }}{% endif %}
+                  {% if row.status %}<br>Status: {{ row.status }}{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state">No security incidents recorded.</div>
+        {% endif %}
       </div>
     </div>
 
     <div class="dash-panel">
-      <h3>Quick Links</h3>
-      <div class="quick-links">
-        <a href="{{ url_for('admin.admin_users') }}">Users</a>
-        <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
-        <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
-        <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-      </div>
+      <h3>Audit Timeline</h3>
 
-      <div style="margin-top:18px;">
-        <h3 style="margin-bottom:8px;">What comes next</h3>
-        <div class="small-note">
-          Next dashboard upgrades should include database connectivity, application uptime, worker health, and resident kiosk flow analytics.
-        </div>
-      </div>
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>User</th>
+            <th>Event</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if recent_audit %}
+            {% for row in recent_audit %}
+              <tr>
+                <td>{{ row.created_at }}</td>
+                <td class="event-cell">{{ row.staff_username or "System" }}</td>
+                <td class="event-cell">
+                  <span class="event-pill {% if row.action_type == 'login_failed' %}danger{% elif row.action_type in ['login', 'logout'] %}success{% elif row.action_type == 'security_setting_updated' %}warn{% else %}neutral{% endif %}">
+                    {{ row.action_type|replace('_', ' ')|title }}
+                  </span>
+                </td>
+                <td class="detail-cell">{{ row.action_details }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="4" class="empty-state">No audit records available.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
     </div>
 
   </div>
-
 </div>
 
 <script>
   window.adminDashboardConfig = {
-    liveUrl: {{ dashboard_live_url|tojson }}
+    liveUrl: {{ dashboard_live_url|tojson }},
+    attackMapPoints: {{ attack_map_points|default([], true)|tojson }}
   };
 </script>
 <script src="{{ url_for('static', filename='js/admin_dashboard_live.js') }}"></script>
