@@ -140,9 +140,7 @@ def _next_appointment_for_enrollment(enrollment_id: int):
             FROM appointments
             WHERE enrollment_id = %s
             ORDER BY
-                CASE WHEN appointment_date >= CURRENT_DATE THEN 0 ELSE 1 END,
-                CASE WHEN appointment_date >= CURRENT_DATE THEN appointment_date END ASC,
-                CASE WHEN appointment_date < CURRENT_DATE THEN appointment_date END DESC,
+                created_at DESC,
                 id DESC
             LIMIT 1
             """,
@@ -156,9 +154,7 @@ def _next_appointment_for_enrollment(enrollment_id: int):
             FROM appointments
             WHERE enrollment_id = ?
             ORDER BY
-                CASE WHEN appointment_date >= DATE('now') THEN 0 ELSE 1 END,
-                CASE WHEN appointment_date >= DATE('now') THEN appointment_date END ASC,
-                CASE WHEN appointment_date < DATE('now') THEN appointment_date END DESC,
+                created_at DESC,
                 id DESC
             LIMIT 1
             """,
