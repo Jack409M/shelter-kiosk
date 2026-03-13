@@ -41,8 +41,11 @@ body{
 }
 
 h1{
-  color:#7fd6ff;
+  color:#bfe8ff;
   margin:0 0 18px 0;
+  font-weight:700;
+  letter-spacing:.03em;
+  text-shadow:0 0 6px rgba(0,180,255,.35);
 }
 
 .dash-card h3,
