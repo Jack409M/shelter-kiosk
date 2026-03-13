@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 
 from flask import current_app, g, session
 
+from core.geoip import lookup_ip
+
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
 from core.rate_limit import (
