@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from flask import g
+from flask import current_app, g, url_for
+
+
+APP_TIMEZONE = ZoneInfo("America/Chicago")
 
 
 def is_postgres():
@@ -19,58 +24,74 @@ def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def fmt_date(dt_iso: Optional[str]) -> str:
-    if not dt_iso:
-        return ""
-    try:
-        dt = datetime.fromisoformat(dt_iso)
+def _coerce_datetime(value: Optional[str | datetime]) -> Optional[datetime]:
+    if not value:
+        return None
+
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        raw = str(value).strip()
+        if not raw:
+            return None
+
+        try:
+            raw = raw.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(raw)
+        except Exception:
+            return None
+
+    if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-        return local_dt.strftime("%m/%d/%Y")
-    except Exception:
-        return dt_iso
+
+    return dt
 
 
-def fmt_dt(dt_iso: Optional[str]) -> str:
-    if not dt_iso:
+def to_app_tz(value: Optional[str | datetime]) -> Optional[datetime]:
+    dt = _coerce_datetime(value)
+    if not dt:
+        return None
+    return dt.astimezone(APP_TIMEZONE)
+
+
+def fmt_date(dt_value: Optional[str | datetime]) -> str:
+    dt = to_app_tz(dt_value)
+    if not dt:
         return ""
-    try:
-        dt = datetime.fromisoformat(dt_iso)
-        dt = dt.replace(tzinfo=timezone.utc)
-        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-        return local_dt.strftime("%m/%d/%Y %I:%M %p")
-    except Exception:
-        return dt_iso
+    return dt.strftime("%m/%d/%Y")
 
 
-def fmt_time_only(dt_iso: Optional[str]) -> str:
-    if not dt_iso:
+def fmt_dt(dt_value: Optional[str | datetime]) -> str:
+    dt = to_app_tz(dt_value)
+    if not dt:
         return ""
-    try:
-        dt = datetime.fromisoformat(dt_iso)
-        dt = dt.replace(tzinfo=timezone.utc)
-        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-        return local_dt.strftime("%I:%M %p")
-    except Exception:
+    return dt.strftime("%m/%d/%Y %I:%M %p")
+
+
+def fmt_time_only(dt_value: Optional[str | datetime]) -> str:
+    dt = to_app_tz(dt_value)
+    if not dt:
         return ""
+    return dt.strftime("%I:%M %p")
 
 
-def fmt_pretty_date(dt_iso: Optional[str]) -> str:
-    if not dt_iso:
+def fmt_pretty_date(dt_value: Optional[str | datetime]) -> str:
+    dt = to_app_tz(dt_value)
+    if not dt:
         return ""
-    try:
-        dt = datetime.fromisoformat(dt_iso)
-        dt = dt.replace(tzinfo=timezone.utc)
-        local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
-        return local_dt.strftime("%B %d, %Y")
-    except Exception:
-        return dt_iso
+    return dt.strftime("%B %d, %Y")
 
-from flask import url_for, current_app
+
+def fmt_pretty_dt(dt_value: Optional[str | datetime]) -> str:
+    dt = to_app_tz(dt_value)
+    if not dt:
+        return ""
+    return dt.strftime("%B %d, %Y %I:%M %p")
+
 
 def safe_url_for(endpoint, **values):
     try:
         return url_for(endpoint, **values)
-    except Exception as e:
+    except Exception:
         current_app.logger.error(f"URL BUILD ERROR: {endpoint} {values}")
         return "#"
