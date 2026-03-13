@@ -27,7 +27,17 @@ def staff_login():
     from app import _client_ip, get_all_shelters, init_db
 
     init_db()
-    all_shelters = get_all_shelters()
+
+    all_shelters_raw = get_all_shelters()
+    all_shelters = []
+    all_shelters_lower = set()
+
+    for shelter_name in all_shelters_raw:
+        cleaned = (shelter_name or "").strip()
+        if not cleaned:
+            continue
+        all_shelters.append(cleaned)
+        all_shelters_lower.add(cleaned.lower())
 
     if request.method == "GET":
         return render_template("staff_login.html", all_shelters=all_shelters)
@@ -170,8 +180,9 @@ def staff_login():
 
         for shelter_row in shelter_rows:
             shelter_name = shelter_row["shelter"] if isinstance(shelter_row, dict) else shelter_row[0]
-            shelter_name = (shelter_name or "").strip()
-            if shelter_name and shelter_name in all_shelters and shelter_name not in seen:
+            shelter_name = (shelter_name or "").strip().lower()
+
+            if shelter_name and shelter_name in all_shelters_lower and shelter_name not in seen:
                 allowed_shelters.append(shelter_name)
                 seen.add(shelter_name)
 
@@ -187,7 +198,7 @@ def staff_login():
         flash("Your account does not have any shelter access assigned. Please contact an administrator.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 403
 
-    shelter = (request.form.get("shelter") or "").strip()
+    shelter = (request.form.get("shelter") or "").strip().lower()
     if shelter not in allowed_shelters:
         log_action(
             "auth",
@@ -240,15 +251,24 @@ def staff_logout():
 def staff_select_shelter():
     from app import get_all_shelters
 
-    all_shelters = get_all_shelters()
-    allowed_shelters = session.get("allowed_shelters") or all_shelters
+    all_shelters_raw = get_all_shelters()
+    all_shelters = []
+    all_shelters_lower = []
 
-    shelters = [s for s in all_shelters if s in allowed_shelters]
+    for shelter_name in all_shelters_raw:
+        cleaned = (shelter_name or "").strip()
+        if not cleaned:
+            continue
+        all_shelters.append(cleaned)
+        all_shelters_lower.append(cleaned.lower())
+
+    allowed_shelters = session.get("allowed_shelters") or all_shelters_lower
+    shelters = [s for s in all_shelters_lower if s in allowed_shelters]
 
     if request.method == "GET":
         return render_template("staff_select_shelter.html", shelters=shelters)
 
-    shelter = (request.form.get("shelter") or "").strip()
+    shelter = (request.form.get("shelter") or "").strip().lower()
     if shelter not in shelters:
         flash("Select a valid shelter.", "error")
         return redirect(url_for("auth.staff_select_shelter"))
