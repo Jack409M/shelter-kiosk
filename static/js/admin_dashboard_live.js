@@ -365,7 +365,7 @@
 
 document.addEventListener("DOMContentLoaded", function () {
 
-  const securityForms = document.querySelectorAll(".security-control form");
+  const securityForms = document.querySelectorAll(".security-control-actions form");
 
   securityForms.forEach(form => {
 
