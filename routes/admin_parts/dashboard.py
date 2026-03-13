@@ -24,20 +24,6 @@ from routes.admin_parts.helpers import (
 )
 
 
-# ------------------------------------------------------------
-# Admin Dashboard
-# ------------------------------------------------------------
-# This module holds dashboard and security related logic.
-#
-# Keeping it isolated prevents admin.py from becoming a large
-# operational file again.
-#
-# Future possible splits:
-# dashboard_metrics.py
-# security_controls.py
-# ------------------------------------------------------------
-
-
 AUTO_RESET_HOURS = 8
 
 SECURITY_FIELD_META = {
@@ -65,7 +51,6 @@ def _temporary_expiration_iso() -> str:
 
 
 def admin_dashboard_view():
-
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -81,6 +66,7 @@ def admin_dashboard_view():
         recent_failed_logins=payload["recent_failed_logins"],
         top_attacking_ips=payload["top_attacking_ips"],
         targeted_usernames=payload["targeted_usernames"],
+        attack_map_points=payload["attack_map_points"],
         banned_ips=payload["banned_ips"],
         locked_usernames=payload["locked_usernames"],
         rate_limit_activity=payload["rate_limit_activity"],
@@ -94,12 +80,7 @@ def admin_dashboard_view():
     )
 
 
-# ------------------------------------------------------------
-# Live dashboard polling endpoint
-# ------------------------------------------------------------
-
 def admin_dashboard_live_view():
-
     if not _require_admin():
         return jsonify({"ok": False, "error": "forbidden"}), 403
 
@@ -110,12 +91,7 @@ def admin_dashboard_live_view():
     return jsonify(live_payload)
 
 
-# ------------------------------------------------------------
-# Security settings update
-# ------------------------------------------------------------
-
 def admin_update_security_settings_view():
-
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
