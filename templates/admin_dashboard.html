@@ -1,4 +1,9 @@
 {% extends "layout.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/security_dashboard.css', v='20260313a') }}">
+{% endblock %}
+
 {% block content %}
 
 {# ------------------------------------------------------------------
@@ -42,8 +47,6 @@
    4. Keep POST forms CSRF protected. Hidden tokens have been added
       below so this page does not trigger false session expired errors.
 ------------------------------------------------------------------- #}
-
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
 
 {% macro pretty_label(value) -%}
   {% if not value %}
