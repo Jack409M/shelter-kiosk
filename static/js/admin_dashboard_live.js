@@ -1,16 +1,18 @@
-(function(){
+(function () {
   const config = window.adminDashboardConfig || {};
   const liveUrl = config.liveUrl;
   const initialAttackMapPoints = Array.isArray(config.attackMapPoints) ? config.attackMapPoints : [];
+  const initialTopThreats = Array.isArray(config.topThreats) ? config.topThreats : [];
+  const initialTopThreatScore = Number(config.topThreatScore || 0);
 
-  if(!liveUrl){
+  if (!liveUrl) {
     return;
   }
 
   let attackMap = null;
   let attackMarkers = [];
 
-  function escapeHtml(value){
+  function escapeHtml(value) {
     return String(value || "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -19,112 +21,131 @@
       .replace(/'/g, "&#39;");
   }
 
-  function prettyLabel(value){
+  function prettyLabel(value) {
     const raw = String(value || "");
-    if(!raw) return "Unknown Event";
-    if(raw === "login_failed") return "Login Failed";
-    if(raw === "login") return "Login Success";
-    if(raw === "logout") return "Logout";
-    if(raw === "profile_update") return "Profile Updated";
-    if(raw === "set_role") return "Role Changed";
-    if(raw === "set_active") return "Account Status Changed";
-    if(raw === "reset_password") return "Password Reset";
-    if(raw === "wipe_all_data") return "Data Wipe";
-    if(raw === "recreate_schema") return "Schema Recreated";
-    if(raw === "security_setting_updated") return "Security Setting Updated";
-    if(raw.startsWith("kiosk_")){
+    if (!raw) return "Unknown Event";
+
+    const directMap = {
+      login_failed: "Login Failed",
+      login: "Login Success",
+      logout: "Logout",
+      profile_update: "Profile Updated",
+      set_role: "Role Changed",
+      set_active: "Account Status Changed",
+      reset_password: "Password Reset",
+      wipe_all_data: "Data Wipe",
+      recreate_schema: "Schema Recreated",
+      security_setting_updated: "Security Setting Updated",
+      resident_signin_failed: "Resident Sign In Failed",
+      resident_signin_rate_limited: "Resident Sign In Rate Limited",
+      scanner_probe_detected: "Scanner Probe Detected",
+      scanner_probe_banned: "Scanner Probe Banned",
+      public_abuse_rate_limited: "Public Abuse Rate Limited",
+      public_abuse_banned: "Public Abuse Banned",
+      banned_ip_blocked: "Banned IP Blocked",
+      cloudflare_bypass_blocked: "Cloudflare Bypass Blocked",
+      bad_method_blocked: "Bad Method Blocked",
+      bad_user_agent_detected: "Bad User Agent Detected",
+      bad_user_agent_banned: "Bad User Agent Banned",
+      login_rate_limited_ip: "Staff Login Rate Limited By IP",
+      login_rate_limited_user: "Staff Login Rate Limited By User",
+      login_username_locked: "Staff Username Locked",
+      login_ip_banned: "Staff Login IP Banned",
+      login_blocked_banned_ip: "Staff Login Blocked Banned IP"
+    };
+
+    if (directMap[raw]) {
+      return directMap[raw];
+    }
+
+    if (raw.startsWith("kiosk_")) {
       return raw.slice(6).replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
     }
+
     return raw.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
   }
 
-  function eventClass(value){
+  function eventClass(value) {
     const raw = String(value || "");
-    if(["login_failed", "wipe_all_data", "recreate_schema"].includes(raw) || raw.startsWith("kiosk_block") || raw.startsWith("kiosk_denied")){
+
+    if (
+      raw.includes("scanner") ||
+      raw.includes("banned") ||
+      raw.includes("block") ||
+      raw === "login_failed" ||
+      raw === "wipe_all_data" ||
+      raw === "recreate_schema" ||
+      raw.endsWith("_failed")
+    ) {
       return "danger";
     }
-    if(["reset_password", "set_role", "set_active", "security_setting_updated"].includes(raw)){
+
+    if (
+      raw.includes("rate_limited") ||
+      raw.includes("locked") ||
+      raw === "reset_password" ||
+      raw === "set_role" ||
+      raw === "set_active" ||
+      raw === "security_setting_updated"
+    ) {
       return "warn";
     }
-    if(["login", "logout"].includes(raw)){
+
+    if (raw === "login" || raw === "logout") {
       return "success";
     }
-    if(raw.startsWith("kiosk_")){
+
+    if (raw.startsWith("kiosk_") || raw.startsWith("resident_signin_")) {
       return "info";
     }
+
     return "neutral";
   }
 
-  function computeSecurityState(data){
+  function computeSecurityState(data) {
     const settings = data.settings || {};
     const ipThreshold = Number(settings.attacker_ip_alert_threshold || 10);
     const userThreshold = Number(settings.targeted_username_alert_threshold || 10);
-    const topIpAttempts = data.top_attacking_ips && data.top_attacking_ips.length ? Number(data.top_attacking_ips[0].attempts || 0) : 0;
-    const topUserAttempts = data.targeted_usernames && data.targeted_usernames.length ? Number(data.targeted_usernames[0].attempts || 0) : 0;
+    const topIpAttempts = data.top_attacking_ips && data.top_attacking_ips.length
+      ? Number(data.top_attacking_ips[0].attempts || 0)
+      : 0;
+    const topUserAttempts = data.targeted_usernames && data.targeted_usernames.length
+      ? Number(data.targeted_usernames[0].attempts || 0)
+      : 0;
+    const topThreatScore = Number(data.top_threat_score || 0);
+    const incidents = Array.isArray(data.recent_security_incidents) ? data.recent_security_incidents : [];
+    const hasHighIncident = incidents.some(row => String(row.severity || "").toLowerCase() === "high");
 
-    if((data.banned_ips || []).length){
+    if ((data.banned_ips || []).length || (data.locked_usernames || []).length || topThreatScore >= 10 || hasHighIncident) {
       return {
-        level: "ACTIVE ATTACK",
+        level: "CRITICAL",
         led: "red",
         pill: "danger",
         banner: "danger",
-        title: "Active Defense Triggered",
-        copy: "One or more IP addresses are currently banned. Immediate hostile activity is being contained."
+        title: "Active Threat Pressure Detected",
+        copy: "The application layer is seeing hostile activity patterns, active defenses, or recent high severity indicators."
       };
     }
 
-    if((data.locked_usernames || []).length){
+    if (topIpAttempts >= ipThreshold || topUserAttempts >= userThreshold) {
       return {
-        level: "ACTIVE ATTACK",
-        led: "red",
-        pill: "danger",
-        banner: "danger",
-        title: "Account Targeting Detected",
-        copy: "Username lockouts are active. Repeated credential attacks are in progress or were recently contained."
-      };
-    }
-
-    if(topIpAttempts >= ipThreshold){
-      return {
-        level: "ACTIVE ATTACK",
+        level: "CRITICAL",
         led: "red",
         pill: "danger",
         banner: "danger",
         title: "Active Attack Detected",
-        copy: "An IP has crossed high volume login failure thresholds. Review the attack radar and intrusion timeline."
+        copy: "One or more sources are above defined hostile activity thresholds. Review the attack radar and threat queue."
       };
     }
 
-    if(topUserAttempts >= userThreshold){
-      return {
-        level: "ACTIVE ATTACK",
-        led: "red",
-        pill: "danger",
-        banner: "danger",
-        title: "Focused Username Attack Detected",
-        copy: "One or more staff usernames are being repeatedly targeted. Review lockout pressure and affected accounts."
-      };
-    }
-
-    if(topIpAttempts >= 5){
+    if (topThreatScore >= 5 || topIpAttempts >= 5 || topUserAttempts >= 6 || incidents.length > 0) {
       return {
         level: "ELEVATED",
-        led: "yellow",
+        led: "amber",
         pill: "warn",
         banner: "warn",
-        title: "Elevated Threat Posture",
-        copy: "Failed login activity is elevated. Continue monitoring intrusion events and attacker concentration."
-      };
-    }
-
-    if(topUserAttempts >= 6){
-      return {
-        level: "ELEVATED",
-        led: "yellow",
-        pill: "warn",
-        banner: "warn",
-        title: "Targeted Login Pressure",
-        copy: "Repeated failures are clustering around specific usernames. Watch for lockouts and follow on activity."
+        title: "Elevated Security Activity",
+        copy: "Security activity is above normal baseline. Review active threats, rate limiting, and recent incidents."
       };
     }
 
@@ -134,11 +155,11 @@
       pill: "",
       banner: "",
       title: "System Stable",
-      copy: "No active threat indicators are currently above alert threshold."
+      copy: "No active threat indicators are currently above alert threshold inside the application layer."
     };
   }
 
-  function updateSecurityBanner(data){
+  function updateSecurityBanner(data) {
     const state = computeSecurityState(data);
 
     const pill = document.getElementById("security-status-pill");
@@ -148,52 +169,56 @@
     const bannerTitle = document.getElementById("security-banner-title");
     const bannerCopy = document.getElementById("security-banner-copy");
 
-    if(pill){
+    if (pill) {
       pill.className = "status-pill" + (state.pill ? " " + state.pill : "");
     }
-    if(pillLed){
+    if (pillLed) {
       pillLed.className = "led " + state.led;
     }
-    if(pillText){
+    if (pillText) {
       pillText.textContent = "Security Level " + state.level;
     }
-    if(banner){
+    if (banner) {
       banner.className = "security-banner" + (state.banner ? " " + state.banner : "");
     }
-    if(bannerTitle){
+    if (bannerTitle) {
       bannerTitle.textContent = state.title;
     }
-    if(bannerCopy){
+    if (bannerCopy) {
       bannerCopy.textContent = state.copy;
     }
   }
 
-  function updateTopStats(data){
-    const failed = document.getElementById("failed-logins-stat");
+  function updateTopStats(data) {
+    const hostileEvents = document.getElementById("failed-logins-stat");
     const attackers = document.getElementById("live-attackers-stat");
     const sessions = document.getElementById("staff-sessions-stat");
     const targeted = document.getElementById("targeted-accounts-stat");
     const defenses = document.getElementById("active-defenses-stat");
+    const threatScore = document.getElementById("threat-score-stat");
 
-    if(failed) failed.textContent = String(data.failed_login_count || 0);
-    if(attackers) attackers.textContent = String((data.top_attacking_ips || []).length);
-    if(sessions) sessions.textContent = String((data.recent_staff_sessions || []).length);
-    if(targeted) targeted.textContent = String((data.targeted_usernames || []).length);
-    if(defenses) defenses.textContent = String((data.locked_usernames || []).length + (data.banned_ips || []).length);
+    if (hostileEvents) hostileEvents.textContent = String(data.failed_login_count || 0);
+    if (attackers) attackers.textContent = String((data.top_attacking_ips || []).length);
+    if (sessions) sessions.textContent = String((data.recent_staff_sessions || []).length);
+    if (targeted) targeted.textContent = String((data.targeted_usernames || []).length);
+    if (defenses) defenses.textContent = String((data.locked_usernames || []).length + (data.banned_ips || []).length);
+    if (threatScore) threatScore.textContent = String(data.top_threat_score || 0);
   }
 
-  function updateKioskPanel(data){
+  function updateKioskPanel(data) {
     const el = document.getElementById("kiosk-events-body");
-    if(!el) return;
+    if (!el) return;
 
     const rows = data.kiosk_security_events || [];
-    if(!rows.length){
-      el.className = "empty-state";
-      el.innerHTML = "No kiosk security activity recorded.";
+    if (!rows.length) {
+      el.innerHTML = `
+        <tr>
+          <td colspan="3" class="empty-state">No kiosk security activity recorded.</td>
+        </tr>
+      `;
       return;
     }
 
-    el.className = "";
     el.innerHTML = rows.map(row => `
       <tr>
         <td>${escapeHtml(row.created_at || "")}</td>
@@ -207,18 +232,20 @@
     `).join("");
   }
 
-  function updateStaffSessions(data){
+  function updateStaffSessions(data) {
     const el = document.getElementById("active-staff-session-body");
-    if(!el) return;
+    if (!el) return;
 
     const rows = data.recent_staff_sessions || [];
-    if(!rows.length){
-      el.className = "empty-state";
-      el.innerHTML = "No recent active staff sessions detected.";
+    if (!rows.length) {
+      el.innerHTML = `
+        <tr>
+          <td colspan="4" class="empty-state">No recent active staff sessions detected.</td>
+        </tr>
+      `;
       return;
     }
 
-    el.className = "";
     el.innerHTML = rows.map(row => `
       <tr>
         <td class="event-cell">${escapeHtml(row.username || "")}</td>
@@ -229,14 +256,14 @@
     `).join("");
   }
 
-  function updateSecurityIncidents(data){
+  function updateSecurityIncidents(data) {
     const el = document.getElementById("security-incidents-list");
-    if(!el) return;
+    if (!el) return;
 
     const rows = data.recent_security_incidents || [];
-    if(!rows.length){
-      el.className = "empty-state";
-      el.innerHTML = "No security incidents recorded.";
+    if (!rows.length) {
+      el.className = "";
+      el.innerHTML = `<div class="empty-state">No security incidents recorded.</div>`;
       return;
     }
 
@@ -245,7 +272,9 @@
       <div class="incident-item">
         <div class="incident-top">
           <div>
-            <span class="event-pill ${escapeHtml(row.severity || "neutral")}">${escapeHtml(String(row.severity || "unknown").replace(/^./, c => c.toUpperCase()))}</span>
+            <span class="event-pill ${escapeHtml(row.severity || "neutral")}">
+              ${escapeHtml(String(row.severity || "unknown").replace(/^./, c => c.toUpperCase()))}
+            </span>
           </div>
           <div class="timeline-time">${escapeHtml(row.created_at || "")}</div>
         </div>
@@ -261,7 +290,42 @@
     `).join("");
   }
 
-  function buildLiveActivityRows(data){
+  function updateThreatQueue(data) {
+    const el = document.getElementById("active-threat-queue");
+    if (!el) return;
+
+    const rows = Array.isArray(data.top_threats) ? data.top_threats : [];
+    if (!rows.length) {
+      el.innerHTML = `<div class="empty-state">Threat scoring is not active yet or no scored threats are currently present.</div>`;
+      return;
+    }
+
+    el.innerHTML = rows.slice(0, 8).map(row => {
+      const score = Number(row.score || 0);
+      let cls = "info";
+      if (score >= 10) cls = "danger";
+      else if (score >= 5) cls = "warn";
+
+      return `
+        <div class="live-feed-item">
+          <div class="live-feed-top">
+            <div>Threat Source</div>
+            <div>Score ${escapeHtml(String(score))}</div>
+          </div>
+          <div class="live-feed-title">
+            <span class="event-pill ${cls}">
+              ${escapeHtml(row.ip || "Unknown IP")}
+            </span>
+          </div>
+          <div class="detail-cell">
+            ${escapeHtml(row.summary || "Suspicious repeated behavior detected from this source.")}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function buildLiveActivityRows(data) {
     const combined = [];
 
     (data.recent_audit || []).slice(0, 4).forEach(row => {
@@ -275,7 +339,7 @@
 
     (data.recent_failed_logins || []).slice(0, 4).forEach(row => {
       combined.push({
-        source: "Intrusion",
+        source: "Threat",
         created_at: row.created_at || "",
         action_type: row.action_type || "",
         action_details: row.action_details || "",
@@ -304,12 +368,12 @@
     return combined.slice(0, 8);
   }
 
-  function updateLiveActivity(data){
+  function updateLiveActivity(data) {
     const el = document.getElementById("live-activity-list");
-    if(!el) return;
+    if (!el) return;
 
     const rows = buildLiveActivityRows(data);
-    if(!rows.length){
+    if (!rows.length) {
       el.innerHTML = `<div class="empty-state">No live activity available.</div>`;
       return;
     }
@@ -330,13 +394,13 @@
     `).join("");
   }
 
-  function ensureAttackMap(){
+  function ensureAttackMap() {
     const mapEl = document.getElementById("attack-map");
-    if(!mapEl || typeof window.L === "undefined"){
+    if (!mapEl || typeof window.L === "undefined") {
       return null;
     }
 
-    if(!attackMap){
+    if (!attackMap) {
       attackMap = window.L.map(mapEl, {
         zoomControl: true,
         attributionControl: true,
@@ -355,11 +419,11 @@
     return attackMap;
   }
 
-  function updateAttackMap(data){
+  function updateAttackMap(data) {
     const map = ensureAttackMap();
     const emptyEl = document.getElementById("attack-map-empty");
 
-    if(!map){
+    if (!map) {
       return;
     }
 
@@ -368,8 +432,8 @@
 
     const points = Array.isArray(data.attack_map_points) ? data.attack_map_points : [];
 
-    if(!points.length){
-      if(emptyEl){
+    if (!points.length) {
+      if (emptyEl) {
         emptyEl.style.display = "block";
       }
       map.setView([25, 0], 2);
@@ -377,7 +441,7 @@
       return;
     }
 
-    if(emptyEl){
+    if (emptyEl) {
       emptyEl.style.display = "none";
     }
 
@@ -388,7 +452,7 @@
       const lon = Number(point.lon);
       const attempts = Number(point.attempts || 0);
 
-      if(Number.isNaN(lat) || Number.isNaN(lon)){
+      if (Number.isNaN(lat) || Number.isNaN(lon)) {
         return;
       }
 
@@ -406,38 +470,49 @@
         `<strong>${escapeHtml(point.ip || "")}</strong><br>` +
         `${escapeHtml(point.city || "")}${point.city && point.region ? ", " : ""}${escapeHtml(point.region || "")}<br>` +
         `${escapeHtml(point.country || "")}<br>` +
-        `Attempts: ${escapeHtml(String(point.attempts || 0))}`
+        `Events: ${escapeHtml(String(point.attempts || 0))}`
       );
 
       attackMarkers.push(marker);
     });
 
-    if(bounds.length === 1){
+    if (bounds.length === 1) {
       map.setView(bounds[0], 4);
-    }else if(bounds.length > 1){
-      map.fitBounds(bounds, {padding: [30, 30]});
-    }else{
+    } else if (bounds.length > 1) {
+      map.fitBounds(bounds, { padding: [30, 30] });
+    } else {
       map.setView([25, 0], 2);
     }
 
     setTimeout(() => map.invalidateSize(), 0);
   }
 
-  async function refreshLive(){
-    try{
+  function hydrateInitialThreatQueue() {
+    updateThreatQueue({
+      top_threats: initialTopThreats
+    });
+
+    const threatScore = document.getElementById("threat-score-stat");
+    if (threatScore) {
+      threatScore.textContent = String(initialTopThreatScore || 0);
+    }
+  }
+
+  async function refreshLive() {
+    try {
       const res = await fetch(liveUrl, {
         method: "GET",
-        headers: {"X-Requested-With": "XMLHttpRequest"},
+        headers: { "X-Requested-With": "XMLHttpRequest" },
         credentials: "same-origin",
         cache: "no-store"
       });
 
-      if(!res.ok){
+      if (!res.ok) {
         return;
       }
 
       const data = await res.json();
-      if(!data.ok){
+      if (!data.ok) {
         return;
       }
 
@@ -446,19 +521,21 @@
       updateKioskPanel(data);
       updateStaffSessions(data);
       updateSecurityIncidents(data);
+      updateThreatQueue(data);
       updateLiveActivity(data);
       updateAttackMap(data);
-    }catch(err){
+    } catch (err) {
       console.error("Live dashboard refresh failed", err);
     }
   }
 
-  if(initialAttackMapPoints.length){
-    updateAttackMap({attack_map_points: initialAttackMapPoints});
-  }else{
-    updateAttackMap({attack_map_points: []});
+  if (initialAttackMapPoints.length) {
+    updateAttackMap({ attack_map_points: initialAttackMapPoints });
+  } else {
+    updateAttackMap({ attack_map_points: [] });
   }
 
+  hydrateInitialThreatQueue();
   refreshLive();
   setInterval(refreshLive, 10000);
 })();
