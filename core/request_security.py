@@ -52,7 +52,8 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
         if reason:
             parts.append(f"reason={reason}")
         if ua:
-            parts.append(f"ua={ua[:200]}")
+            safe_ua = ua[:200].replace(" ", "_")
+            parts.append(f"ua={safe_ua}")
         return " ".join(parts)
 
     @app.before_request
