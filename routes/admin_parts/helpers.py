@@ -375,6 +375,8 @@ def load_admin_alert_numbers() -> list[str]:
         if phone and phone not in numbers:
             numbers.append(phone)
 
+    print("ADMIN ALERT NUMBERS:", numbers)
+    
     return numbers
 
 
