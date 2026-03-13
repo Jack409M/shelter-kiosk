@@ -606,6 +606,84 @@ def resident_profile(resident_id: int):
     )
 
 
+@resident_detail.route("/<int:resident_id>/timeline")
+@require_login
+@require_shelter
+def resident_timeline(resident_id: int):
+    shelter = session.get("shelter")
+
+    resident = db_fetchone(
+        _sql(
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter AS resident_shelter,
+                r.is_active,
+                pe.id AS enrollment_id,
+                pe.shelter AS enrollment_shelter,
+                pe.program_status,
+                pe.entry_date,
+                pe.exit_date
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = %s AND r.shelter = %s
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter AS resident_shelter,
+                r.is_active,
+                pe.id AS enrollment_id,
+                pe.shelter AS enrollment_shelter,
+                pe.program_status,
+                pe.entry_date,
+                pe.exit_date
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = ? AND r.shelter = ?
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+        ),
+        (resident_id, shelter),
+    )
+
+    if not resident:
+        return render_template(
+            "resident_detail/timeline.html",
+            resident=None,
+            timeline=[],
+            snapshot=None,
+        )
+
+    enrollment_id = _row_value(resident, "enrollment_id", 5)
+
+    timeline = []
+    snapshot = None
+
+    if enrollment_id:
+        timeline = _normalize_timeline(_load_timeline(enrollment_id))
+        snapshot = {
+            "program_status": str(_row_value(resident, "program_status", 7, "—") or "—").replace("_", " ").title(),
+            "days_in_program": _days_in_program(_row_value(resident, "entry_date", 8)),
+        }
+
+    return render_template(
+        "resident_detail/timeline.html",
+        resident=resident,
+        timeline=timeline,
+        snapshot=snapshot,
+    )
+
+
 @resident_detail.post("/<int:resident_id>/enroll")
 @require_login
 @require_shelter
