@@ -26,7 +26,6 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from core.auth import require_login
 from core.auth import require_shelter
 from core.db import close_db, db_fetchall, get_db
-
 from core.helpers import (
     fmt_date,
     fmt_dt,
@@ -36,7 +35,6 @@ from core.helpers import (
     safe_url_for,
     utcnow_iso,
 )
-
 from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 from core.request_security import register_request_security
 from core.request_utils import client_ip
@@ -100,6 +98,11 @@ app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
 app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", SQLITE_PATH)
 app.config["CLOUDFLARE_ONLY"] = os.environ.get("CLOUDFLARE_ONLY", "")
 app.jinja_env.globals["safe_url_for"] = safe_url_for
+app.jinja_env.filters["app_date"] = fmt_date
+app.jinja_env.filters["app_dt"] = fmt_dt
+app.jinja_env.filters["app_time"] = fmt_time_only
+app.jinja_env.filters["app_pretty_date"] = fmt_pretty_date
+app.jinja_env.filters["app_pretty_dt"] = fmt_pretty_dt
 app.teardown_appcontext(close_db)
 app.logger.setLevel(logging.DEBUG)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
@@ -460,9 +463,11 @@ def add_cache_headers(response):
 
     csp = (
         "default-src 'self'; "
-        "img-src 'self' data:; "
-        "style-src 'self' 'unsafe-inline'; "
-        "script-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline' https://unpkg.com; "
+        "script-src 'self' 'unsafe-inline' https://unpkg.com; "
+        "connect-src 'self'; "
+        "font-src 'self' data: https://unpkg.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
         "form-action 'self'"
@@ -479,5 +484,4 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
 
