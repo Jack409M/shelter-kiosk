@@ -69,6 +69,7 @@ def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
 
 
 def send_sms(to_number: str, message: str, enforce_consent: bool = True) -> None:
+    print("SEND_SMS_CALLED", to_number, "consent=", enforce_consent)
     """
     Outbound SMS sender with:
     global panic switch,
