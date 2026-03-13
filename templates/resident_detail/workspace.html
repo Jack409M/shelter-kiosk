@@ -3,107 +3,75 @@
 {% block content %}
 
 {% if not resident %}
-
-<h1>Resident Profile</h1>
-<p>Resident not found.</p>
+  <h1>Resident Profile</h1>
+  <p>Resident not found.</p>
 {% else %}
 
-{% if resident is mapping %}
-{% set resident_id = resident["id"] %}
-{% set first_name = resident["first_name"] %}
-{% set last_name = resident["last_name"] %}
-{% set shelter = resident["resident_shelter"] %}
-{% set program_status = resident["program_status"] %}
-{% set entry_date = resident["entry_date"] %}
-{% else %}
-{% set resident_id = resident[0] %}
-{% set first_name = resident[1] %}
-{% set last_name = resident[2] %}
-{% set shelter = resident[3] %}
-{% set program_status = resident[7] %}
-{% set entry_date = resident[8] %}
-{% endif %}
+  {% if resident is mapping %}
+    {% set resident_id = resident["id"] %}
+    {% set first_name = resident["first_name"] %}
+    {% set last_name = resident["last_name"] %}
+    {% set shelter = resident["resident_shelter"] %}
+    {% set program_status = resident["program_status"] %}
+  {% else %}
+    {% set resident_id = resident[0] %}
+    {% set first_name = resident[1] %}
+    {% set last_name = resident[2] %}
+    {% set shelter = resident[3] %}
+    {% set program_status = resident[7] %}
+  {% endif %}
 
-<div class="resident-workspace">
+  <div class="resident-workspace">
 
-<!-- ========================= -->
+    <div class="resident-header">
+      <div class="resident-title">
+        <h1>{{ first_name }} {{ last_name }}</h1>
+      </div>
 
-<!-- Resident Header -->
+      <div class="resident-meta">
+        <span class="meta-pill">{{ shelter or "—" }}</span>
 
-<!-- ========================= -->
+        {% if snapshot %}
+          <span class="meta-pill">{{ snapshot.program_status }}</span>
+          <span class="meta-pill">{{ snapshot.days_in_program }} days</span>
+        {% elif program_status %}
+          <span class="meta-pill">{{ program_status }}</span>
+        {% endif %}
+      </div>
 
-<div class="resident-header">
+      <div class="resident-actions">
+        <a class="btn-small" href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">Snapshot</a>
+        <a class="btn-small" href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">Edit</a>
+      </div>
+    </div>
 
-<div class="resident-title">
-<h1>{{ first_name }} {{ last_name }}</h1>
-</div>
+    <div class="resident-tabs">
+      <a class="resident-tab active" href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">Snapshot</a>
+      <a class="resident-tab disabled" href="#">Intake</a>
+      <a class="resident-tab disabled" href="#">Enrollment</a>
+      <a class="resident-tab disabled" href="#">Case Work</a>
+      <a class="resident-tab disabled" href="#">Missing Info</a>
+      <a class="resident-tab disabled" href="#">Timeline</a>
+    </div>
 
-<div class="resident-meta">
+    <div class="resident-layout">
+      <div class="resident-rail">
+        <h3>Resident Progress</h3>
 
-<span class="meta-pill">
-{{ shelter }}
-</span>
+        <ul class="progress-list">
+          <li>Enrollment</li>
+          <li>Goals</li>
+          <li>Compliance</li>
+          <li>Case Notes</li>
+        </ul>
+      </div>
 
-{% if snapshot %} <span class="meta-pill">
-{{ snapshot.program_status }} </span>
+      <div class="resident-main">
+        {% block resident_workspace_content %}{% endblock %}
+      </div>
+    </div>
 
-<span class="meta-pill">
-{{ snapshot.days_in_program }} days
-</span>
-{% endif %}
-
-</div>
-
-<div class="resident-actions">
-
-<a class="btn-small"
-href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">
-Snapshot </a>
-
-<a class="btn-small"
-href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">
-Edit </a>
-
-</div>
-
-</div>
-
-<!-- ========================= -->
-
-<!-- Workspace Layout -->
-
-<!-- ========================= -->
-
-<div class="resident-layout">
-
-<!-- LEFT STATUS RAIL -->
-
-<div class="resident-rail">
-
-<h3>Resident Progress</h3>
-
-<ul class="progress-list">
-
-<li>Enrollment</li>
-<li>Goals</li>
-<li>Compliance</li>
-<li>Case Notes</li>
-
-</ul>
-
-</div>
-
-<!-- MAIN PANEL -->
-
-<div class="resident-main">
-
-{% block resident_workspace_content %}{% endblock %}
-
-</div>
-
-</div>
-
-</div>
+  </div>
 
 {% endif %}
 
