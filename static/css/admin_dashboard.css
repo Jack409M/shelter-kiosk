@@ -354,11 +354,26 @@ h1{
 .control-btn{
   background:#0d2b40;
   border:1px solid #2c5f82;
-  color:#ffffff;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
   padding:10px 14px;
   border-radius:10px;
   font-weight:600;
   cursor:pointer;
+}
+
+.control-btn.danger{
+  border-color:#7c1e24;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+  background:#2c1013;
+}
+
+.control-btn.warn{
+  border-color:#7b5a14;
+  color:#ffffff !important;
+  -webkit-text-fill-color:#ffffff !important;
+  background:#2b210a;
 }
 
 .control-btn:hover{
