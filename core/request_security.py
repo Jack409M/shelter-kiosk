@@ -37,32 +37,47 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
         try:
             log_action("security", None, None, None, action_type, details)
         except Exception:
-            current_app.logger.exception("request security audit write failed action_type=%s", action_type)
+            current_app.logger.exception(
+                "request security audit write failed action_type=%s",
+                action_type,
+            )
 
     def _base_details(*, ip: str | None = None, reason: str = "") -> str:
         actual_ip = (ip or client_ip_func() or "unknown").strip() or "unknown"
         method = (request.method or "").strip()
         path = (request.path or "").strip()
         ua = (request.headers.get("User-Agent") or "").strip()
+
         parts = [
             f"ip={actual_ip}",
             f"method={method}",
             f"path={path}",
         ]
+
         if reason:
             parts.append(f"reason={reason}")
+
         if ua:
             safe_ua = ua[:200].replace(" ", "_")
             parts.append(f"ua={safe_ua}")
+
         return " ".join(parts)
 
     @app.before_request
     def require_cloudflare_proxy():
-        if (current_app.config.get("CLOUDFLARE_ONLY") or "").strip().lower() not in {"1", "true", "yes", "on"}:
+        if (current_app.config.get("CLOUDFLARE_ONLY") or "").strip().lower() not in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
             return None
 
         if not request.headers.get("CF-Connecting-IP"):
-            details = _base_details(ip=request.remote_addr, reason="missing_cf_connecting_ip")
+            details = _base_details(
+                ip=request.remote_addr,
+                reason="missing_cf_connecting_ip",
+            )
             _audit("cloudflare_bypass_blocked", details)
             current_app.logger.warning(
                 "BLOCK non-cloudflare request remote_addr=%s path=%s",
@@ -76,6 +91,7 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
     @app.before_request
     def block_banned_ips():
         ip = client_ip_func()
+
         if ip != "unknown" and is_ip_banned_func(ip):
             _audit("banned_ip_blocked", _base_details(ip=ip, reason="ip_already_banned"))
             abort(403)
@@ -85,8 +101,12 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
     @app.before_request
     def block_bad_methods_and_agents():
         bad_methods = {"TRACE", "TRACK", "CONNECT"}
+
         if request.method in bad_methods:
-            _audit("bad_method_blocked", _base_details(reason=f"method_{request.method.lower()}"))
+            _audit(
+                "bad_method_blocked",
+                _base_details(reason=f"method_{request.method.lower()}"),
+            )
             abort(405)
 
         user_agent = (request.headers.get("User-Agent") or "").lower()
@@ -114,16 +134,24 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
 
         if any(marker in user_agent for marker in bad_agent_markers):
             ip = client_ip_func()
-            _audit("bad_user_agent_detected", _base_details(ip=ip, reason="matched_bad_agent_marker"))
+            _audit(
+                "bad_user_agent_detected",
+                _base_details(ip=ip, reason="matched_bad_agent_marker"),
+            )
+
             if ip != "unknown":
                 ban_ip_func(ip, 3600)
-                _audit("bad_user_agent_banned", _base_details(ip=ip, reason="auto_ban_3600"))
+                _audit(
+                    "bad_user_agent_banned",
+                    _base_details(ip=ip, reason="auto_ban_3600"),
+                )
                 current_app.logger.warning(
                     "AUTO BAN bad user agent ip=%s ua=%s path=%s",
                     ip,
                     request.headers.get("User-Agent"),
                     request.path,
                 )
+
             abort(403)
 
         return None
@@ -151,12 +179,26 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
             return None
 
         ip = client_ip_func()
-        _audit("scanner_probe_detected", _base_details(ip=ip, reason="matched_scanner_marker"))
+        _audit(
+            "scanner_probe_detected",
+            _base_details(ip=ip, reason="matched_scanner_marker"),
+        )
 
-        if ip != "unknown" and is_rate_limited_func(f"scanner_probe:{ip}", limit=3, window_seconds=600):
+        if ip != "unknown" and is_rate_limited_func(
+            f"scanner_probe:{ip}",
+            limit=3,
+            window_seconds=600,
+        ):
             ban_ip_func(ip, 3600)
-            _audit("scanner_probe_banned", _base_details(ip=ip, reason="auto_ban_3600"))
-            current_app.logger.warning("AUTO BAN scanner probe ip=%s path=%s", ip, request.path)
+            _audit(
+                "scanner_probe_banned",
+                _base_details(ip=ip, reason="auto_ban_3600"),
+            )
+            current_app.logger.warning(
+                "AUTO BAN scanner probe ip=%s path=%s",
+                ip,
+                request.path,
+            )
             abort(403)
 
         abort(404)
@@ -178,16 +220,33 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
 
         ip = client_ip_func()
 
-        if is_rate_limited_func(f"public_post:{request.path}:{ip}", limit=20, window_seconds=300):
-            _audit("public_abuse_rate_limited", _base_details(ip=ip, reason="public_post_limit_exceeded"))
+        if is_rate_limited_func(
+            f"public_post:{request.path}:{ip}",
+            limit=20,
+            window_seconds=300,
+        ):
+            _audit(
+                "public_abuse_rate_limited",
+                _base_details(ip=ip, reason="public_post_limit_exceeded"),
+            )
 
             if ip != "unknown":
                 ban_ip_func(ip, 1800)
-                _audit("public_abuse_banned", _base_details(ip=ip, reason="auto_ban_1800"))
-                current_app.logger.warning("AUTO BAN public abuse ip=%s path=%s", ip, request.path)
+                _audit(
+                    "public_abuse_banned",
+                    _base_details(ip=ip, reason="auto_ban_1800"),
+                )
+                current_app.logger.warning(
+                    "AUTO BAN public abuse ip=%s path=%s",
+                    ip,
+                    request.path,
+                )
 
             if request.path == "/resident":
-                flash("Too many requests. Please wait a few minutes and try again.", "error")
+                flash(
+                    "Too many requests. Please wait a few minutes and try again.",
+                    "error",
+                )
                 return render_template("resident_signin.html"), 429
 
             return "Too many requests. Please wait a few minutes and try again.", 429
