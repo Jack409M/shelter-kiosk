@@ -1,5 +1,5 @@
 body{
-  background:#f4f8fb;
+  background:linear-gradient(180deg,#f7fbff 0%,#eef4fa 100%);
   color:#1f2a33;
 }
 
@@ -10,6 +10,10 @@ html{
 .case-page{
   max-width:1200px;
   margin:0 auto;
+  padding:28px;
+  background:#ffffff;
+  border-radius:22px;
+  position:relative;
 }
 
 .case-hero{
@@ -74,7 +78,7 @@ html{
   gap:16px;
   margin-bottom:24px;
   padding:8px 0;
-  background:#f4f8fb;
+  background:linear-gradient(180deg,#f7fbff 0%,#eef4fa 100%);
 }
 
 .case-summary-card{
@@ -89,7 +93,7 @@ html{
   box-shadow:0 10px 24px rgba(36,59,83,.08);
   text-decoration:none;
   color:#1f2a33;
-  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease, background .12s ease;
 }
 
 .case-summary-card:hover{
@@ -103,6 +107,16 @@ html{
 
 .case-summary-card.warn{
   border-left-color:#d49a25;
+}
+
+.case-summary-card.good{
+  border-left-color:#7cc9a7;
+}
+
+.case-summary-card.active{
+  border-left-color:#6aa9e9;
+  background:#f7fbff;
+  box-shadow:0 0 0 2px rgba(106,169,233,.25);
 }
 
 .case-summary-icon{
@@ -202,6 +216,12 @@ html{
   color:#976a00;
 }
 
+.case-pill.good{
+  background:#eef9f4;
+  border-color:#cde8dc;
+  color:#2c7a57;
+}
+
 .case-list{
   list-style:none;
   margin:0;
@@ -215,11 +235,17 @@ html{
   gap:16px;
   padding:14px 0;
   border-top:1px solid #e6eef5;
+  transition:background .12s ease;
 }
 
 .case-list-item:first-child{
   border-top:0;
   padding-top:0;
+}
+
+.case-list-item:hover{
+  background:#f7fbff;
+  border-radius:10px;
 }
 
 .case-list-main{
@@ -236,6 +262,7 @@ html{
 
 .case-list-link:hover{
   color:#4a90e2;
+  text-decoration:none;
 }
 
 .case-list-meta{
@@ -308,66 +335,4 @@ html{
   .case-action-link{
     width:100%;
   }
-}
-
-.case-summary-card.active{
-  border-left-color:#6aa9e9;
-  background:#f7fbff;
-  box-shadow:0 0 0 2px rgba(106,169,233,.25);
-}
-
-.case-page{
-  max-width:1200px;
-  margin:0 auto;
-  padding:28px;
-  background:#ffffff;
-  border-radius:22px;
-  border:6px solid transparent;
-  background-clip:padding-box;
-
-  position:relative;
-}
-
-.case-page:before{
-  content:"";
-  position:absolute;
-  inset:-6px;
-  border-radius:22px;
-  background:
-    radial-gradient(circle at 10px 10px,#ffdbe8 4px,transparent 5px),
-    radial-gradient(circle at 30px 20px,#d7f1ff 4px,transparent 5px),
-    radial-gradient(circle at 20px 30px,#e6ffe9 4px,transparent 5px),
-    radial-gradient(circle at 40px 10px,#ffe7c7 4px,transparent 5px);
-
-  background-size:60px 60px;
-  opacity:.35;
-  z-index:-1;
-}
-
-.case-page{
-  position:relative;
-  border-radius:22px;
-  overflow:hidden;
-}
-
-.case-page::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  padding:10px;
-  border-radius:22px;
-
-  background:
-  url("/static/floral_border.png");
-
-  background-size:180px;
-  opacity:.35;
-
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite:xor;
-          mask-composite:exclude;
-
-  pointer-events:none;
 }
