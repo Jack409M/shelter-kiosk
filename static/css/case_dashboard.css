@@ -343,3 +343,31 @@ html{
   opacity:.35;
   z-index:-1;
 }
+
+.case-page{
+  position:relative;
+  border-radius:22px;
+  overflow:hidden;
+}
+
+.case-page::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  padding:10px;
+  border-radius:22px;
+
+  background:
+  url("/static/floral_border.png");
+
+  background-size:180px;
+  opacity:.35;
+
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+          mask-composite:exclude;
+
+  pointer-events:none;
+}
