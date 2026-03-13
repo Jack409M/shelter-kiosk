@@ -675,3 +675,41 @@ h1{
     width:100%;
   }
 }
+
+.attack-map-wrap{
+  position:relative;
+  width:100%;
+  min-height:320px;
+  border:1px solid #173044;
+  border-radius:12px;
+  overflow:hidden;
+  background:#0b1621;
+}
+
+#attack-map{
+  width:100%;
+  height:320px;
+  min-height:320px;
+}
+
+.attack-map-empty{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:20px;
+  color:#b7dbf3;
+  font-size:13px;
+  background:rgba(11,22,33,.88);
+  z-index:500;
+}
+
+.attack-map-empty.is-hidden{
+  display:none;
+}
+
+.leaflet-container{
+  background:#0b1621;
+}
