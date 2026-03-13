@@ -3,6 +3,36 @@
 
 <h1>Case Manager Dashboard</h1>
 
+<div class="case-dashboard-summary">
+
+  <div class="case-summary-box">
+    <strong>Missing Enrollment</strong><br>
+    {{ missing_enrollment|length }}
+  </div>
+
+  <div class="case-summary-box">
+    <strong>No Goals</strong><br>
+    {{ no_goals|length }}
+  </div>
+
+  <div class="case-summary-box">
+    <strong>Missing Weekly Summary</strong><br>
+    {{ compliance_missing|length }}
+  </div>
+
+  <div class="case-summary-box">
+    <strong>No Case Notes</strong><br>
+    {{ notes_missing|length }}
+  </div>
+
+  <div class="case-summary-box">
+    <strong>No Appointments</strong><br>
+    {{ no_appointments|length }}
+  </div>
+
+</div>
+
+
 <div class="dashboard-section">
 
 <h2>Missing Enrollment</h2>
