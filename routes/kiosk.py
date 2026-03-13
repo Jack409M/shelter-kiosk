@@ -76,6 +76,14 @@ def kiosk_checkout(shelter: str):
                     session.permanent = True
                     return redirect(url_for("kiosk.kiosk_checkout", shelter=shelter))
 
+                log_action(
+                    "kiosk",
+                    None,
+                    shelter,
+                    None,
+                    "kiosk_manager_login_failed",
+                    f"ip={ip} username={entered_user or 'blank'}",
+                )
                 flash("Invalid kiosk manager login.", "error")
 
             return render_template("kiosk_manager_login.html", shelter=shelter), 401
@@ -85,7 +93,14 @@ def kiosk_checkout(shelter: str):
             if is_rate_limited(f"kiosk_pin_ip:{ip}", limit=10, window_seconds=300) or is_rate_limited(
                 f"kiosk_pin_shelter:{shelter}", limit=40, window_seconds=300
             ):
-                log_action("kiosk", None, shelter, None, "kiosk_pin_rate_limited", f"ip={ip}")
+                log_action(
+                    "kiosk",
+                    None,
+                    shelter,
+                    None,
+                    "kiosk_pin_rate_limited",
+                    f"ip={ip}",
+                )
                 flash("Too many PIN attempts. Please wait and try again.", "error")
                 return render_template("kiosk_pin.html", shelter=shelter), 429
 
@@ -97,7 +112,14 @@ def kiosk_checkout(shelter: str):
                     session.permanent = True
                     return redirect(url_for("kiosk.kiosk_checkout", shelter=shelter))
 
-                log_action("kiosk", None, shelter, None, "kiosk_pin_failed", f"ip={ip}")
+                log_action(
+                    "kiosk",
+                    None,
+                    shelter,
+                    None,
+                    "kiosk_pin_failed",
+                    f"ip={ip}",
+                )
                 flash("Invalid PIN.", "error")
 
             return render_template("kiosk_pin.html", shelter=shelter), 401
@@ -140,7 +162,11 @@ def kiosk_checkout(shelter: str):
         flash("That Resident Code is temporarily locked. Please wait and try again.", "error")
         return render_template("kiosk_checkout.html", shelter=shelter), 429
 
-    if is_rate_limited(f"kiosk_checkout_cooldown_trigger:{shelter}:{ip}", limit=30, window_seconds=30):
+    if is_rate_limited(
+        f"kiosk_checkout_cooldown_trigger:{shelter}:{ip}",
+        limit=30,
+        window_seconds=30,
+    ):
         lock_key(kiosk_cooldown_key, 30)
         log_action(
             "kiosk",
@@ -185,7 +211,11 @@ def kiosk_checkout(shelter: str):
 
     if not row:
         errors.append("Invalid Resident Code.")
-        if is_rate_limited(f"kiosk_resident_code_fail:{shelter}:{code_key}", limit=5, window_seconds=300):
+        if is_rate_limited(
+            f"kiosk_resident_code_fail:{shelter}:{code_key}",
+            limit=5,
+            window_seconds=300,
+        ):
             lock_key(resident_code_lock_key, 180)
             log_action(
                 "kiosk",
@@ -199,8 +229,14 @@ def kiosk_checkout(shelter: str):
     expected_back_value = None
     if expected_back:
         try:
-            local_dt = datetime.fromisoformat(expected_back).replace(tzinfo=ZoneInfo("America/Chicago"))
-            expected_back_value = local_dt.astimezone(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+            local_dt = datetime.fromisoformat(expected_back).replace(
+                tzinfo=ZoneInfo("America/Chicago")
+            )
+            expected_back_value = (
+                local_dt.astimezone(timezone.utc)
+                .replace(tzinfo=None)
+                .isoformat(timespec="seconds")
+            )
         except Exception:
             errors.append("Invalid expected back time.")
 
