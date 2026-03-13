@@ -595,6 +595,7 @@ def maybe_send_security_alerts(
 def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
     is_pg = bool(current_app.config.get("DATABASE_URL"))
     settings = load_security_settings()
+    print("ADMIN DASHBOARD PAYLOAD BUILT")
 
     total_users = scalar_value(
         db_fetchall("SELECT COUNT(*) AS c FROM staff_users")
