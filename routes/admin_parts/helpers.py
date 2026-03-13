@@ -72,6 +72,42 @@ THREAT_EVENT_SCORES = {
     "public_abuse_banned": 6,
 }
 
+INCIDENT_DEDUPE_WINDOWS = {
+    "banned_ip": 3600,
+    "locked_username": 3600,
+    "attacker_ip_threshold": 3600,
+    "targeted_username_threshold": 3600,
+    "failed_logins_threshold": 7200,
+    "threat_score_threshold": 7200,
+}
+
+THREAT_SUMMARY_LABELS = {
+    "login_failed": "repeated staff login failures",
+    "resident_signin_failed": "repeated resident sign in failures",
+    "resident_signin_rate_limited": "resident sign in rate limiting",
+    "kiosk_manager_login_failed": "repeated kiosk manager login failures",
+    "kiosk_pin_failed": "repeated kiosk PIN failures",
+    "kiosk_pin_rate_limited": "kiosk PIN rate limiting",
+    "kiosk_checkout_failed": "repeated kiosk checkout failures",
+    "kiosk_checkout_rate_limited": "kiosk checkout rate limiting",
+    "kiosk_resident_code_locked": "resident code lock activity",
+    "kiosk_resident_code_lock_started": "resident code lock started",
+    "login_rate_limited_ip": "staff login IP rate limiting",
+    "login_rate_limited_user": "staff login username rate limiting",
+    "login_username_locked": "staff username lockouts",
+    "login_ip_banned": "staff login IP bans",
+    "login_blocked_banned_ip": "blocked banned IP login attempts",
+    "cloudflare_bypass_blocked": "cloudflare bypass attempts",
+    "banned_ip_blocked": "banned IP blocking activity",
+    "bad_method_blocked": "blocked suspicious request methods",
+    "bad_user_agent_detected": "suspicious user agent detection",
+    "bad_user_agent_banned": "suspicious user agent bans",
+    "scanner_probe_detected": "scanner probe activity",
+    "scanner_probe_banned": "scanner probe bans",
+    "public_abuse_rate_limited": "public form abuse rate limiting",
+    "public_abuse_banned": "public form abuse bans",
+}
+
 
 def current_role() -> str:
     return (session.get("role") or "").strip()
@@ -201,6 +237,31 @@ def build_attack_intelligence(rows):
     return top_attacking_ips, targeted_usernames
 
 
+def _human_threat_summary(type_counter: Counter) -> str:
+    if not type_counter:
+        return "Suspicious repeated behavior detected"
+
+    ordered = [event_type for event_type, _count in type_counter.most_common()]
+    top_types = ordered[:3]
+
+    if len(top_types) == 1:
+        return THREAT_SUMMARY_LABELS.get(top_types[0], top_types[0].replace("_", " ")).capitalize()
+
+    labels = [THREAT_SUMMARY_LABELS.get(event_type, event_type.replace("_", " ")) for event_type in top_types]
+
+    if len(set(labels)) == 1:
+        return labels[0].capitalize()
+
+    if len(type_counter) >= 3:
+        first_two = labels[:2]
+        return f"Mixed hostile activity including {first_two[0]} and {first_two[1]}"
+
+    if len(labels) == 2:
+        return f"Mixed hostile activity including {labels[0]} and {labels[1]}"
+
+    return f"Mixed hostile activity including {labels[0]} and {labels[1]}"
+
+
 def build_threat_scores(rows):
     per_ip = {}
 
@@ -234,15 +295,13 @@ def build_threat_scores(rows):
 
     top_threats = []
     for ip, item in per_ip.items():
-        top_types = [event_type for event_type, _count in item["types"].most_common(3)]
-        summary = " | ".join(top_types).replace("_", " ")
         top_threats.append(
             {
                 "ip": ip,
                 "score": int(item["score"]),
                 "events": int(item["events"]),
                 "last_seen": item["last_seen"],
-                "summary": summary.title() if summary else "Suspicious repeated behavior detected",
+                "summary": _human_threat_summary(item["types"]),
             }
         )
 
@@ -605,9 +664,10 @@ def incident_exists_recently(
     incident_type: str,
     related_ip: str = "",
     related_username: str = "",
-    window_seconds: int = 1800,
+    window_seconds: int | None = None,
 ) -> bool:
     kind = g.get("db_kind")
+    effective_window = int(window_seconds or INCIDENT_DEDUPE_WINDOWS.get(incident_type, 1800))
 
     rows = db_fetchall(
         """
@@ -631,7 +691,7 @@ def incident_exists_recently(
         ORDER BY id DESC
         LIMIT 1
         """,
-        (incident_type, related_ip or "", related_username or "", window_seconds),
+        (incident_type, related_ip or "", related_username or "", effective_window),
     )
     return bool(rows)
 
@@ -643,8 +703,9 @@ def create_security_incident(
     details: str,
     related_ip: str = "",
     related_username: str = "",
+    dedupe_window_seconds: int | None = None,
 ) -> None:
-    if incident_exists_recently(incident_type, related_ip, related_username):
+    if incident_exists_recently(incident_type, related_ip, related_username, dedupe_window_seconds):
         return
 
     now = utcnow_iso()
@@ -736,7 +797,7 @@ def maybe_create_security_incidents(
             "attacker_ip_threshold",
             "high",
             "Attacker IP Threshold Reached",
-            f"IP {row.get('ip', '')} reached {row.get('attempts', 0)} hostile events.",
+            f"IP {row.get('ip', '')} reached {row.get('attempts', 0)} hostile events in the last 24 hours.",
             related_ip=row.get("ip", ""),
         )
 
@@ -746,7 +807,7 @@ def maybe_create_security_incidents(
             "targeted_username_threshold",
             "high",
             "Username Targeting Threshold Reached",
-            f"Username {row.get('username', '')} reached {row.get('attempts', 0)} hostile events.",
+            f"Username {row.get('username', '')} reached {row.get('attempts', 0)} hostile events in the last 24 hours.",
             related_username=row.get("username", ""),
         )
 
@@ -764,7 +825,7 @@ def maybe_create_security_incidents(
             "threat_score_threshold",
             "high",
             "Threat Score Threshold Reached",
-            f"IP {row.get('ip', '')} reached threat score {row.get('score', 0)} with {row.get('events', 0)} hostile events. {row.get('summary', '')}",
+            f"IP {row.get('ip', '')} reached threat score {row.get('score', 0)} with {row.get('events', 0)} hostile events. {row.get('summary', '')}.",
             related_ip=row.get("ip", ""),
         )
 
