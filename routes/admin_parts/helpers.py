@@ -5,9 +5,8 @@ from datetime import datetime, timezone
 
 from flask import current_app, g, session
 
-from core.geoip import lookup_ip
-
 from core.db import db_execute, db_fetchall
+from core.geoip import lookup_ip
 from core.helpers import utcnow_iso
 from core.rate_limit import (
     get_banned_ips_snapshot,
@@ -127,6 +126,39 @@ def build_attack_intelligence(rows):
     ]
 
     return top_attacking_ips, targeted_usernames
+
+
+def build_attack_map_points(top_attacking_ips: list[dict]) -> list[dict]:
+    points = []
+
+    for row in top_attacking_ips or []:
+        ip = str(row.get("ip", "") or "").strip()
+        attempts = int(row.get("attempts", 0) or 0)
+
+        if not ip:
+            continue
+
+        geo = lookup_ip(ip)
+
+        lat = geo.get("lat")
+        lon = geo.get("lon")
+
+        if lat is None or lon is None:
+            continue
+
+        points.append(
+            {
+                "ip": ip,
+                "attempts": attempts,
+                "lat": lat,
+                "lon": lon,
+                "city": geo.get("city", ""),
+                "region": geo.get("region", ""),
+                "country": geo.get("country", ""),
+            }
+        )
+
+    return points
 
 
 def build_locked_username_snapshot():
@@ -643,7 +675,6 @@ def maybe_send_security_alerts(
     if security_alert_cooldown_hit(alert_key, cooldown):
         return
 
-    
     for number in numbers:
         try:
             send_sms(number, alert_message, enforce_consent=False)
@@ -752,6 +783,7 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
 
     recent_failed_logins = failed_logins_24h[:10]
     top_attacking_ips, targeted_usernames = build_attack_intelligence(failed_logins_24h)
+    attack_map_points = build_attack_map_points(top_attacking_ips)
 
     banned_ips = get_banned_ips_snapshot()
     locked_usernames = build_locked_username_snapshot()
@@ -807,6 +839,7 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
         "recent_failed_logins": recent_failed_logins,
         "top_attacking_ips": top_attacking_ips,
         "targeted_usernames": targeted_usernames,
+        "attack_map_points": attack_map_points,
         "banned_ips": banned_ips,
         "locked_usernames": locked_usernames,
         "rate_limit_activity": rate_limit_activity,
@@ -823,6 +856,7 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
             "recent_security_incidents": recent_security_incidents,
             "top_attacking_ips": top_attacking_ips,
             "targeted_usernames": targeted_usernames,
+            "attack_map_points": attack_map_points,
             "banned_ips": banned_ips,
             "locked_usernames": locked_usernames,
             "rate_limit_activity": rate_limit_activity,
