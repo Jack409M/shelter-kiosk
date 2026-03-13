@@ -21,6 +21,35 @@
       .replace(/'/g, "&#39;");
   }
 
+  function formatAmarilloTime(value) {
+    if (!value) return "";
+
+    const raw = String(value).trim();
+    if (!raw) return "";
+
+    let normalized = raw;
+    if (normalized.endsWith("Z")) {
+      normalized = normalized.replace("Z", "+00:00");
+    } else if (!/[zZ]|[+\-]\d{2}:\d{2}$/.test(normalized)) {
+      normalized = normalized + "Z";
+    }
+
+    const dt = new Date(normalized);
+    if (Number.isNaN(dt.getTime())) {
+      return raw;
+    }
+
+    return dt.toLocaleString("en-US", {
+      timeZone: "America/Chicago",
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true
+    });
+  }
+
   function prettyLabel(value) {
     const raw = String(value || "");
     if (!raw) return "Unknown Event";
@@ -221,7 +250,7 @@
 
     el.innerHTML = rows.map(row => `
       <tr>
-        <td>${escapeHtml(row.created_at || "")}</td>
+        <td>${escapeHtml(formatAmarilloTime(row.created_at || ""))}</td>
         <td class="event-cell">
           <span class="event-pill ${escapeHtml(eventClass(row.action_type || ""))}">
             ${escapeHtml(prettyLabel(row.action_type || ""))}
@@ -251,7 +280,7 @@
         <td class="event-cell">${escapeHtml(row.username || "")}</td>
         <td><span class="event-pill success">Active</span></td>
         <td class="event-cell">${escapeHtml(prettyLabel(row.last_action || "login"))}</td>
-        <td>${escapeHtml(row.last_seen || "")}</td>
+        <td>${escapeHtml(formatAmarilloTime(row.last_seen || ""))}</td>
       </tr>
     `).join("");
   }
@@ -276,7 +305,7 @@
               ${escapeHtml(String(row.severity || "unknown").replace(/^./, c => c.toUpperCase()))}
             </span>
           </div>
-          <div class="timeline-time">${escapeHtml(row.created_at || "")}</div>
+          <div class="timeline-time">${escapeHtml(formatAmarilloTime(row.created_at || ""))}</div>
         </div>
         <div class="incident-title">${escapeHtml(row.title || "Security Incident")}</div>
         <div class="detail-cell">${escapeHtml(row.details || "")}</div>
@@ -382,7 +411,7 @@
       <div class="live-feed-item">
         <div class="live-feed-top">
           <div>${escapeHtml(row.source)}</div>
-          <div>${escapeHtml(row.created_at || "")}</div>
+          <div>${escapeHtml(formatAmarilloTime(row.created_at || ""))}</div>
         </div>
         <div class="live-feed-title">
           <span class="event-pill ${escapeHtml(eventClass(row.action_type || ""))}">
