@@ -132,10 +132,11 @@ h1{
 }
 
 .command-subtitle{
-  color:#9fcae8;
+  color:#7fd6ff;
   font-size:12px;
   text-transform:uppercase;
-  letter-spacing:.08em;
+  letter-spacing:.12em;
+  opacity:.95;
 }
 
 .security-banner{
