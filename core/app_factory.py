@@ -2,8 +2,20 @@ from __future__ import annotations
 
 import importlib
 import os
+import logging
 
 from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+from core.db import close_db
+from core.helpers import (
+    safe_url_for,
+    fmt_date,
+    fmt_dt,
+    fmt_time_only,
+    fmt_pretty_date,
+    fmt_pretty_dt,
+)
 
 
 # ------------------------------------------------------------
@@ -47,10 +59,40 @@ def create_app() -> Flask:
 
     app = Flask(__name__)
 
-    # Load environment configuration
-    app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev")
+    # ------------------------------------------------------------
+    # Basic configuration
+    # ------------------------------------------------------------
 
+    app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
+    app.config["DATABASE_URL"] = os.getenv("DATABASE_URL")
+
+    # Trust Cloudflare proxy headers
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
+    # Logging
+    app.logger.setLevel(logging.DEBUG)
+
+    # ------------------------------------------------------------
+    # Template helpers
+    # ------------------------------------------------------------
+
+    app.jinja_env.globals["safe_url_for"] = safe_url_for
+    app.jinja_env.filters["app_date"] = fmt_date
+    app.jinja_env.filters["app_dt"] = fmt_dt
+    app.jinja_env.filters["app_time"] = fmt_time_only
+    app.jinja_env.filters["app_pretty_date"] = fmt_pretty_date
+    app.jinja_env.filters["app_pretty_dt"] = fmt_pretty_dt
+
+    # ------------------------------------------------------------
+    # Database teardown
+    # ------------------------------------------------------------
+
+    app.teardown_appcontext(close_db)
+
+    # ------------------------------------------------------------
     # Register route blueprints
+    # ------------------------------------------------------------
+
     register_blueprints(app)
 
     return app
