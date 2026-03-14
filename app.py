@@ -461,15 +461,14 @@ def add_cache_headers(response):
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     response.headers.setdefault("X-XSS-Protection", "1; mode=block")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+    response.headers.setdefault("Origin-Agent-Cluster", "?1")
+    response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
 
     response.headers.setdefault(
         "Permissions-Policy",
-        "geolocation=(), camera=(), microphone=(), payment=()"
-    )
-
-    response.headers.setdefault(
-        "Cross-Origin-Opener-Policy",
-        "same-origin"
+        "geolocation=(), camera=(), microphone=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()"
     )
 
     csp = (
@@ -486,11 +485,10 @@ def add_cache_headers(response):
     )
     response.headers.setdefault("Content-Security-Policy", csp)
 
-    if request.is_secure:
-        response.headers.setdefault(
-            "Strict-Transport-Security",
-            "max-age=31536000; includeSubDomains"
-        )
+    response.headers.setdefault(
+        "Strict-Transport-Security",
+        "max-age=31536000; includeSubDomains; preload"
+    )
 
     return response
 
