@@ -720,7 +720,6 @@ def resident_profile(resident_id: int):
             goals=[],
             notes=[],
             appointment=None,
-            timeline=[],
             snapshot=None,
         )
 
@@ -730,7 +729,6 @@ def resident_profile(resident_id: int):
     goals = []
     notes = []
     appointment = None
-    timeline = []
     snapshot = None
 
     if enrollment_id:
@@ -821,7 +819,6 @@ def resident_profile(resident_id: int):
         )
 
         appointment = _next_appointment_for_enrollment(enrollment_id)
-        timeline = _normalize_timeline(_load_timeline(enrollment_id))
         snapshot = _build_snapshot(resident, goals, compliance, appointment)
 
     return render_template(
@@ -831,7 +828,6 @@ def resident_profile(resident_id: int):
         goals=goals,
         notes=notes,
         appointment=appointment,
-        timeline=timeline,
         snapshot=snapshot,
     )
 
