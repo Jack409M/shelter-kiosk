@@ -92,6 +92,12 @@ h1{
   animation:pulse 1.8s infinite;
 }
 
+.led.amber{
+  background:#ffc400;
+  box-shadow:0 0 10px #ffc400;
+  animation:pulse 1.8s infinite;
+}
+
 .led.red{
   background:#ff4040;
   box-shadow:0 0 10px #ff4040;
@@ -170,6 +176,43 @@ h1{
 .security-banner-copy{
   font-size:13px;
   line-height:1.45;
+  margin-bottom:12px;
+}
+
+.security-banner-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+  margin-top:10px;
+}
+
+.security-banner-card{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  padding:12px;
+  min-width:0;
+}
+
+.security-banner-card-wide{
+  grid-column:span 1;
+}
+
+.security-banner-label{
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  margin-bottom:6px;
+  opacity:.88;
+}
+
+.security-banner-value{
+  font-size:14px;
+  font-weight:700;
+  line-height:1.45;
+  word-break:break-word;
+  overflow-wrap:anywhere;
 }
 
 .dash-panels{
@@ -650,6 +693,14 @@ h1{
 
   .intel-grid{
     grid-template-columns:1fr;
+  }
+
+  .security-banner-grid{
+    grid-template-columns:1fr;
+  }
+
+  .security-banner-card-wide{
+    grid-column:span 1;
   }
 }
 
