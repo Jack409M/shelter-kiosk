@@ -1,116 +1,11 @@
 {% extends "layout.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/staff_resident_history.css', v='20260314a') }}">
+<script src="{{ url_for('static', filename='js/print_page.js', v='20260314a') }}" defer></script>
+{% endblock %}
+
 {% block content %}
-
-<style>
-  .hist_header {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 14px;
-  }
-
-  .hist_title {
-    margin: 0;
-  }
-
-  .hist_actions {
-    display: inline-flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  .hist_btn {
-    display: inline-block;
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 1px solid #333;
-    background: #fff;
-    cursor: pointer;
-    color: #111;
-    text-decoration: none;
-    font-size: 14px;
-    line-height: 1;
-  }
-
-  .hist_section {
-    margin-top: 18px;
-  }
-
-  .hist_card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 14px;
-    border: 1px solid rgba(0,0,0,0.15);
-  }
-
-  table.compact {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  table.compact th,
-  table.compact td {
-    border: 1px solid rgba(0,0,0,0.18);
-    padding: 8px 10px;
-    font-size: 13px;
-    vertical-align: top;
-  }
-
-  table.compact thead th {
-    font-weight: 700;
-    background: rgba(0,0,0,0.04);
-  }
-
-  .muted {
-    opacity: 0.75;
-  }
-
-  .nowrap {
-    white-space: nowrap;
-  }
-
-  @media (max-width: 900px) {
-    .hist_header {
-      align-items: flex-start;
-    }
-    table.compact th,
-    table.compact td {
-      font-size: 12px;
-      padding: 7px 8px;
-    }
-  }
-
-  @media print {
-    .topnav,
-    .hist_actions,
-    .flash,
-    .nav,
-    .toolbar,
-    button,
-    a.hist_btn {
-      display: none !important;
-    }
-
-    body {
-      margin: 0.5in !important;
-      background: #fff !important;
-    }
-
-    .hist_card {
-      border: 1px solid #000;
-      box-shadow: none !important;
-    }
-  }
-</style>
-
-<script>
-  function printThisPage() {
-    window.print();
-  }
-</script>
 
 {% set display_name = resident_name
   if resident_name is defined and resident_name
@@ -118,16 +13,16 @@
 %}
 
 <div class="hist_header">
-  <h1 class="hist_title">Resident History <span style="font-weight: normal;">{{ display_name }}</span></h1>
+  <h1 class="hist_title">Resident History <span class="hist_name">{{ display_name }}</span></h1>
 
   <div class="hist_actions">
-    <button type="button" class="hist_btn" onclick="printThisPage()">Print this page</button>
+    <button type="button" class="hist_btn js-print-page">Print this page</button>
     <a class="hist_btn" href="{{ url_for('staff_residents') }}">Back</a>
   </div>
 </div>
 
 <div class="hist_section hist_card">
-  <h2 style="margin: 0 0 10px 0;">Leave Requests</h2>
+  <h2 class="hist_section_title">Leave Requests</h2>
 
   <table class="compact">
     <thead>
@@ -156,8 +51,7 @@
             <td class="nowrap">{{ r.decided_by_name if r.decided_by_name else "" }}</td>
             <td class="nowrap">{{ fmt_dt(r.decided_at) if r.decided_at else "" }}</td>
             <td class="nowrap">
-              {# Safe for now: print the page. Do not call a missing endpoint. #}
-              <button type="button" class="hist_btn" onclick="printThisPage()">Print</button>
+              <button type="button" class="hist_btn js-print-page">Print</button>
             </td>
           </tr>
         {% endfor %}
@@ -166,14 +60,14 @@
   </table>
 
   {% if leave_rows %}
-    <div class="muted" style="margin-top: 8px; font-size: 12px;">
+    <div class="muted hist_note">
       Note: This print button prints the full resident history page. If you want per leave request printing, add a dedicated print route and we will wire it into the Print column.
     </div>
   {% endif %}
 </div>
 
 <div class="hist_section hist_card">
-  <h2 style="margin: 0 0 10px 0;">Attendance History</h2>
+  <h2 class="hist_section_title">Attendance History</h2>
 
   <table class="compact">
     <thead>
@@ -206,7 +100,7 @@
 </div>
 
 <div class="hist_section hist_card">
-  <h2 style="margin: 0 0 10px 0;">Transport Requests</h2>
+  <h2 class="hist_section_title">Transport Requests</h2>
 
   <table class="compact">
     <thead>
