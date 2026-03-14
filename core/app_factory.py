@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import importlib
-import os
 import logging
+import os
 
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -21,7 +21,6 @@ from core.helpers import (
 # ------------------------------------------------------------
 # Blueprint loader
 # ------------------------------------------------------------
-
 def register_blueprints(app: Flask) -> None:
     """
     Automatically load all route blueprints inside /routes.
@@ -33,7 +32,6 @@ def register_blueprints(app: Flask) -> None:
     routes_dir = os.path.join(os.path.dirname(__file__), "..", "routes")
 
     for filename in os.listdir(routes_dir):
-
         if not filename.endswith(".py"):
             continue
 
@@ -41,12 +39,10 @@ def register_blueprints(app: Flask) -> None:
             continue
 
         module_name = filename[:-3]
-
         module = importlib.import_module(f"routes.{module_name}")
 
         if hasattr(module, "bp"):
             app.register_blueprint(module.bp)
-
         elif hasattr(module, "admin"):
             app.register_blueprint(module.admin)
 
@@ -54,15 +50,16 @@ def register_blueprints(app: Flask) -> None:
 # ------------------------------------------------------------
 # Application factory
 # ------------------------------------------------------------
-
 def create_app() -> Flask:
-
-    app = Flask(__name__)
+    app = Flask(
+        __name__,
+        template_folder="../templates",
+        static_folder="../static",
+    )
 
     # ------------------------------------------------------------
     # Basic configuration
     # ------------------------------------------------------------
-
     app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
     app.config["DATABASE_URL"] = os.getenv("DATABASE_URL")
 
@@ -75,7 +72,6 @@ def create_app() -> Flask:
     # ------------------------------------------------------------
     # Template helpers
     # ------------------------------------------------------------
-
     app.jinja_env.globals["safe_url_for"] = safe_url_for
     app.jinja_env.filters["app_date"] = fmt_date
     app.jinja_env.filters["app_dt"] = fmt_dt
@@ -86,13 +82,11 @@ def create_app() -> Flask:
     # ------------------------------------------------------------
     # Database teardown
     # ------------------------------------------------------------
-
     app.teardown_appcontext(close_db)
 
     # ------------------------------------------------------------
     # Register route blueprints
     # ------------------------------------------------------------
-
     register_blueprints(app)
 
     return app
