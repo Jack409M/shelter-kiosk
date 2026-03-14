@@ -9,6 +9,7 @@ from core.audit import log_action
 from core.db import db_execute, db_fetchone, get_db
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
+from core.runtime import init_db
 from routes.resident_parts.consent import (
     resident_consent_view,
     sms_consent_public_alias_slash_view,
@@ -33,9 +34,8 @@ resident_requests = Blueprint("resident_requests", __name__)
 # routes/resident_parts/consent.py
 # routes/resident_parts/leave.py
 #
-# Additional app level imports like init_db, require_resident, and
-# get_all_shelters should eventually stop coming from app.py and move
-# into dedicated core modules or resident service helpers.
+# Additional app level imports like require_resident should eventually stop
+# coming from app.py and move into dedicated core modules.
 
 
 def _client_ip() -> str:
@@ -50,7 +50,6 @@ def _client_ip() -> str:
 def resident_signin():
     # Future extraction note
     # Move signin and logout together into resident_parts/signin.py.
-    from app import init_db
     from core.residents import resident_session_start
 
     init_db()
@@ -149,7 +148,7 @@ def resident_leave():
 def resident_transport():
     # Future extraction note
     # Move this full transport workflow into resident_parts/transport.py.
-    from app import init_db, require_resident
+    from app import require_resident
 
     @require_resident
     def _inner():
