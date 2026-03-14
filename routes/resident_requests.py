@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
+from core.access import require_resident
 from core.audit import log_action
 from core.db import db_execute, db_fetchone, get_db
 from core.helpers import utcnow_iso
@@ -22,34 +23,12 @@ from routes.resident_parts.leave import resident_leave_view
 resident_requests = Blueprint("resident_requests", __name__)
 
 
-# Future extraction note
-# This file is still a mixed workflow route file.
-# The next clean split should continue like this:
-#
-# routes/resident_parts/signin.py
-# routes/resident_parts/transport.py
-#
-# Already extracted:
-# routes/resident_parts/helpers.py
-# routes/resident_parts/consent.py
-# routes/resident_parts/leave.py
-#
-# Additional app level imports like require_resident should eventually stop
-# coming from app.py and move into dedicated core modules.
-
-
 def _client_ip() -> str:
-    """
-    Use Flask's normalized remote address.
-    Falls back to a stable placeholder if missing.
-    """
     return (request.remote_addr or "").strip() or "unknown"
 
 
 @resident_requests.route("/resident", methods=["GET", "POST"])
 def resident_signin():
-    # Future extraction note
-    # Move signin and logout together into resident_parts/signin.py.
     from core.residents import resident_session_start
 
     init_db()
@@ -146,9 +125,6 @@ def resident_leave():
 
 @resident_requests.route("/transport", methods=["GET", "POST"])
 def resident_transport():
-    # Future extraction note
-    # Move this full transport workflow into resident_parts/transport.py.
-    from app import require_resident
 
     @require_resident
     def _inner():
