@@ -1,0 +1,12 @@
+.resident-workspace.timeline-mode .resident-layout {
+  display: block;
+}
+
+.resident-workspace.timeline-mode .resident-rail {
+  display: none;
+}
+
+.resident-workspace.timeline-mode .resident-main {
+  width: 100%;
+  max-width: 100%;
+}
