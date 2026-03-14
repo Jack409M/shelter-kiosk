@@ -2,12 +2,48 @@
   margin-bottom: 16px;
 }
 
+.resident-notebook-section {
+  margin-bottom: 22px;
+}
+
+.resident-notebook-section-head {
+  margin-bottom: 12px;
+}
+
+.resident-notebook-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(15, 47, 74, 0.62);
+  margin-bottom: 0.25rem;
+}
+
+.resident-notebook-section-title {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.15;
+  color: #0f2f4a;
+}
+
+.resident-notebook-section-copy {
+  margin-top: 0.3rem;
+  font-size: 0.92rem;
+  color: rgba(0, 0, 0, 0.62);
+  line-height: 1.35;
+}
+
 .resident-profile-columns {
   display: grid;
   grid-template-columns: 1.05fr 1fr;
   gap: 16px;
   align-items: start;
   margin-bottom: 16px;
+}
+
+.resident-profile-columns-overview,
+.resident-profile-columns-actions {
+  margin-bottom: 0;
 }
 
 .resident-profile-column {
@@ -19,6 +55,7 @@
 
 .resident-profile-card-title {
   margin-top: 0;
+  margin-bottom: 0.75rem;
 }
 
 .resident-profile-actions-top {
@@ -35,6 +72,10 @@
 
 .resident-profile-inline-form {
   margin: 0;
+}
+
+.resident-profile-empty-card {
+  min-height: 100%;
 }
 
 @media (max-width: 980px) {
