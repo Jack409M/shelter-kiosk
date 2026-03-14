@@ -1,5 +1,10 @@
 {% extends "resident_detail/workspace.html" %}
 
+{% block extra_head %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_timeline.css') }}">
+{% endblock %}
+
 {% block resident_workspace_content %}
 
 {% if resident is mapping %}
