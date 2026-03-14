@@ -148,7 +148,7 @@ def scalar_value(rows, default=0):
     row = rows[0]
 
     if isinstance(row, dict):
-        return next(iter(row.values()), default))
+        return next(iter(row.values()), default)
 
     if isinstance(row, (list, tuple)) and row:
         return row[0]
