@@ -148,7 +148,7 @@ def scalar_value(rows, default=0):
     row = rows[0]
 
     if isinstance(row, dict):
-        return next(iter(row.values()), default)
+        return next(iter(row.values()), default))
 
     if isinstance(row, (list, tuple)) and row:
         return row[0]
@@ -679,6 +679,7 @@ def load_recent_security_incidents(limit: int = 10) -> list[dict]:
 
 def build_recent_staff_sessions(limit: int = 12) -> list[dict]:
     kind = g.get("db_kind")
+    query_limit = max(int(limit or 12) * 20, 100)
 
     rows = db_fetchall(
         """
@@ -708,7 +709,7 @@ def build_recent_staff_sessions(limit: int = 12) -> list[dict]:
         ORDER BY a.id DESC
         LIMIT ?
         """,
-        (250,),
+        (query_limit,),
     )
 
     sessions = {}
@@ -1027,53 +1028,58 @@ def maybe_send_security_alerts(
             continue
 
 
-def build_admin_dashboard_payload(*, send_alerts: bool = False) -> dict:
+def build_admin_dashboard_payload(*, send_alerts: bool = False, include_static: bool = True) -> dict:
     is_pg = bool(current_app.config.get("DATABASE_URL"))
     settings = load_security_settings()
 
-    total_users = scalar_value(
-        db_fetchall("SELECT COUNT(*) AS c FROM staff_users")
-    )
+    total_users = 0
+    active_users = 0
+    recent_audit = []
 
-    active_users = scalar_value(
-        db_fetchall(
-            "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = %s"
-            if is_pg
-            else "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = ?",
-            (True if is_pg else 1,),
+    if include_static:
+        total_users = scalar_value(
+            db_fetchall("SELECT COUNT(*) AS c FROM staff_users")
         )
-    )
 
-    recent_audit = db_fetchall(
-        """
-        SELECT
-            a.id,
-            a.entity_type,
-            a.action_type,
-            a.action_details,
-            a.created_at,
-            COALESCE(su.username, '') AS staff_username
-        FROM audit_log a
-        LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        ORDER BY a.id DESC
-        LIMIT %s
-        """
-        if is_pg
-        else """
-        SELECT
-            a.id,
-            a.entity_type,
-            a.action_type,
-            a.action_details,
-            a.created_at,
-            COALESCE(su.username, '') AS staff_username
-        FROM audit_log a
-        LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        ORDER BY a.id DESC
-        LIMIT ?
-        """,
-        (10,),
-    )
+        active_users = scalar_value(
+            db_fetchall(
+                "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = %s"
+                if is_pg
+                else "SELECT COUNT(*) AS c FROM staff_users WHERE is_active = ?",
+                (True if is_pg else 1,),
+            )
+        )
+
+        recent_audit = db_fetchall(
+            """
+            SELECT
+                a.id,
+                a.entity_type,
+                a.action_type,
+                a.action_details,
+                a.created_at,
+                COALESCE(su.username, '') AS staff_username
+            FROM audit_log a
+            LEFT JOIN staff_users su ON su.id = a.staff_user_id
+            ORDER BY a.id DESC
+            LIMIT %s
+            """
+            if is_pg
+            else """
+            SELECT
+                a.id,
+                a.entity_type,
+                a.action_type,
+                a.action_details,
+                a.created_at,
+                COALESCE(su.username, '') AS staff_username
+            FROM audit_log a
+            LEFT JOIN staff_users su ON su.id = a.staff_user_id
+            ORDER BY a.id DESC
+            LIMIT ?
+            """,
+            (10,),
+        )
 
     attack_where_sql, attack_where_params = security_action_filter_sql()
     attack_where_sql_a, attack_where_params_a = security_action_filter_sql("a")
