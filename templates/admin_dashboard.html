@@ -28,8 +28,15 @@
 {% set _rate_limit_activity = rate_limit_activity|default([], true) %}
 {% set _top_threats = top_threats|default([], true) %}
 {% set _top_threat_score = top_threat_score|default(0, true)|int %}
+{% set _security_banner = security_banner|default({}, true) %}
 {% set _incident_count = _recent_security_incidents|length %}
 {% set _defense_count = (_locked_usernames|length) + (_banned_ips|length) %}
+
+{% set _banner_status = _security_banner.status|default('', true) %}
+{% set _banner_headline = _security_banner.headline|default('', true) %}
+{% set _banner_primary_risk = _security_banner.primary_risk|default('', true) %}
+{% set _banner_recommended_action = _security_banner.recommended_action|default('', true) %}
+{% set _banner_recommended_reason = _security_banner.recommended_reason|default('', true) %}
 
 {% set _has_high_incident = false %}
 {% for row in _recent_security_incidents %}
@@ -39,10 +46,62 @@
 {% endfor %}
 
 {% set _status_level = "normal" %}
-{% if _top_threat_score >= 10 or _failed_login_count >= 15 or _has_high_incident %}
-  {% set _status_level = "critical" %}
-{% elif _top_threat_score >= 5 or _failed_login_count >= 8 or _incident_count > 0 %}
-  {% set _status_level = "elevated" %}
+{% if _banner_status %}
+  {% if _banner_status == 'critical' %}
+    {% set _status_level = "critical" %}
+  {% elif _banner_status == 'elevated' %}
+    {% set _status_level = "elevated" %}
+  {% elif _banner_status == 'guarded' %}
+    {% set _status_level = "elevated" %}
+  {% else %}
+    {% set _status_level = "normal" %}
+  {% endif %}
+{% else %}
+  {% if _top_threat_score >= 10 or _failed_login_count >= 15 or _has_high_incident %}
+    {% set _status_level = "critical" %}
+  {% elif _top_threat_score >= 5 or _failed_login_count >= 8 or _incident_count > 0 %}
+    {% set _status_level = "elevated" %}
+  {% endif %}
+{% endif %}
+
+{% if not _banner_headline %}
+  {% if _status_level == 'critical' %}
+    {% set _banner_headline = 'Security Status: Critical threat level' %}
+  {% elif _status_level == 'elevated' %}
+    {% set _banner_headline = 'Security Status: Elevated threat level' %}
+  {% else %}
+    {% set _banner_headline = 'Security Status: Normal' %}
+  {% endif %}
+{% endif %}
+
+{% if not _banner_primary_risk %}
+  {% if _status_level == 'critical' %}
+    {% set _banner_primary_risk = 'Hostile activity patterns or recent high severity indicators are active inside the application layer.' %}
+  {% elif _status_level == 'elevated' %}
+    {% set _banner_primary_risk = 'Security activity is above normal baseline.' %}
+  {% else %}
+    {% set _banner_primary_risk = 'No active hostile pattern detected.' %}
+  {% endif %}
+{% endif %}
+
+{% if not _banner_recommended_action %}
+  {% if _status_level == 'critical' %}
+    {% set _banner_recommended_action = 'Review active threats, locked usernames, banned IPs, and incident queue now.' %}
+  {% elif _status_level == 'elevated' %}
+    {% set _banner_recommended_action = 'Review recent hostile activity and monitor top offenders.' %}
+  {% else %}
+    {% set _banner_recommended_action = 'Continue monitoring.' %}
+  {% endif %}
+{% endif %}
+
+{% if not _banner_recommended_reason %}
+  {% if _status_level == 'critical' %}
+    {% set _banner_recommended_reason = 'The dashboard is seeing hostile activity patterns or recent high severity indicators inside the application layer.' %}
+  {% elif _status_level == 'elevated' %}
+    {% set _banner_recommended_reason = 'Security activity is above normal baseline. Review active threats, rate limiting, and recent incidents.' %}
+  {% else %}
+    {% set _banner_recommended_reason = 'No bans, lockouts, or major hostile clusters are active right now.' %}
+  {% endif %}
 {% endif %}
 
 <div class="scan-runner"></div>
@@ -71,23 +130,30 @@
 </div>
 
 <div id="security-banner" class="security-banner {% if _status_level == 'critical' %}danger{% elif _status_level == 'elevated' %}warn{% endif %}">
-  <div id="security-banner-title" class="security-banner-title">
-    {% if _status_level == 'critical' %}
-      Active Threat Pressure Detected
-    {% elif _status_level == 'elevated' %}
-      Elevated Security Activity
-    {% else %}
-      System Stable
-    {% endif %}
-  </div>
-  <div id="security-banner-copy" class="security-banner-copy">
-    {% if _status_level == 'critical' %}
-      The dashboard is seeing hostile activity patterns or recent high severity indicators inside the application layer.
-    {% elif _status_level == 'elevated' %}
-      Security activity is above normal baseline. Review active threats, rate limiting, and recent incidents.
-    {% else %}
-      No active threat indicators are currently above alert threshold inside the application layer.
-    {% endif %}
+  <div id="security-banner-title" class="security-banner-title">{{ _banner_headline }}</div>
+  <div id="security-banner-copy" class="security-banner-copy">{{ _banner_primary_risk }}</div>
+
+  <div class="security-banner-grid">
+    <div class="security-banner-card">
+      <div class="security-banner-label">Primary Risk</div>
+      <div id="security-primary-risk" class="security-banner-value">
+        {{ _banner_primary_risk }}
+      </div>
+    </div>
+
+    <div class="security-banner-card">
+      <div class="security-banner-label">Recommended Action</div>
+      <div id="security-recommended-action" class="security-banner-value">
+        {{ _banner_recommended_action }}
+      </div>
+    </div>
+
+    <div class="security-banner-card security-banner-card-wide">
+      <div class="security-banner-label">Reason</div>
+      <div id="security-recommended-reason" class="security-banner-value">
+        {{ _banner_recommended_reason }}
+      </div>
+    </div>
   </div>
 </div>
 
@@ -617,7 +683,8 @@
   data-live-url="{{ dashboard_live_url }}"
   data-attack-map-points='{{ _attack_map_points|tojson }}'
   data-top-threat-score="{{ _top_threat_score }}"
-  data-top-threats='{{ _top_threats|tojson }}'>
+  data-top-threats='{{ _top_threats|tojson }}'
+  data-security-banner='{{ _security_banner|tojson }}'>
 </div>
 
 <script src="{{ url_for('static', filename='js/admin_dashboard_live.js') }}"></script>
