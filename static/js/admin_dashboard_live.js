@@ -1,9 +1,26 @@
 (function () {
-  const config = window.adminDashboardConfig || {};
-  const liveUrl = config.liveUrl;
-  const initialAttackMapPoints = Array.isArray(config.attackMapPoints) ? config.attackMapPoints : [];
-  const initialTopThreats = Array.isArray(config.topThreats) ? config.topThreats : [];
-  const initialTopThreatScore = Number(config.topThreatScore || 0);
+  const configEl = document.getElementById("admin-dashboard-config");
+  const liveUrl = configEl ? configEl.dataset.liveUrl : null;
+
+  let initialAttackMapPoints = [];
+  let initialTopThreats = [];
+  let initialTopThreatScore = 0;
+
+  if (configEl) {
+    try {
+      initialAttackMapPoints = JSON.parse(configEl.dataset.attackMapPoints || "[]");
+    } catch (err) {
+      initialAttackMapPoints = [];
+    }
+
+    try {
+      initialTopThreats = JSON.parse(configEl.dataset.topThreats || "[]");
+    } catch (err) {
+      initialTopThreats = [];
+    }
+
+    initialTopThreatScore = Number(configEl.dataset.topThreatScore || 0);
+  }
 
   if (!liveUrl) {
     return;
