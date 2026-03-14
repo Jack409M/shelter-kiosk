@@ -110,7 +110,7 @@ def admin_dashboard_live_view():
     if not _require_admin():
         return jsonify({"ok": False, "error": "forbidden"}), 403
 
-    payload = _build_admin_dashboard_payload(send_alerts=True)
+    payload = _build_admin_dashboard_payload(send_alerts=True, include_static=False)
     live_payload = payload["live_payload"]
     live_payload["ok"] = True
 
