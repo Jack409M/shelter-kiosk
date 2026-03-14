@@ -3,97 +3,149 @@
 {% block resident_workspace_content %}
 
 <style>
-.timeline-wrap {
-  margin-top: 1rem;
-  width: 100%;
+
+.timeline-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:20px;
 }
 
-.timeline-empty {
-  padding: 0.75rem 0;
-  color: rgba(0, 0, 0, 0.72);
+.timeline-view-toggle{
+display:flex;
+gap:10px;
 }
 
-.timeline-list {
-  width: 100%;
-  border-top: 1px solid rgba(15, 47, 74, 0.14);
+.view-btn{
+padding:6px 12px;
+border-radius:6px;
+border:1px solid #ccc;
+background:#fff;
+cursor:pointer;
+font-size:14px;
 }
 
-.timeline-row {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 1.25rem;
-  align-items: start;
-  padding: 0.9rem 0;
-  border-bottom: 1px solid rgba(15, 47, 74, 0.10);
+.view-btn.active{
+background:#0f2f4a;
+color:white;
+border-color:#0f2f4a;
 }
 
-.timeline-time {
-  font-size: 0.92rem;
-  line-height: 1.35;
-  color: rgba(0, 0, 0, 0.62);
-  white-space: nowrap;
+.calendar{
+display:grid;
+grid-template-columns:repeat(7,1fr);
+gap:12px;
 }
 
-.timeline-main {
-  min-width: 0;
+.calendar-day{
+border:1px solid #ddd;
+border-radius:10px;
+padding:8px;
+min-height:120px;
+background:#fafafa;
+display:flex;
+flex-direction:column;
 }
 
-.timeline-title {
-  font-size: 1.08rem;
-  font-weight: 700;
-  line-height: 1.25;
-  color: #0f2f4a;
+.day-label{
+font-weight:700;
+font-size:13px;
+margin-bottom:6px;
+color:#333;
 }
 
-.timeline-detail {
-  margin-top: 0.2rem;
-  font-size: 0.98rem;
-  line-height: 1.4;
-  color: rgba(0, 0, 0, 0.82);
-  white-space: pre-wrap;
-  word-break: break-word;
+.event-card{
+background:white;
+border-radius:6px;
+padding:6px 8px;
+margin-bottom:6px;
+font-size:12px;
+border-left:4px solid #0f2f4a;
+box-shadow:0 1px 2px rgba(0,0,0,0.08);
 }
 
-@media (max-width: 900px) {
-  .timeline-row {
-    grid-template-columns: 1fr;
-    gap: 0.2rem;
-  }
-
-  .timeline-time {
-    white-space: normal;
-  }
+.event-title{
+font-weight:600;
 }
+
+.event-detail{
+font-size:11px;
+opacity:.8;
+}
+
+.empty-state{
+padding:20px;
+color:#777;
+}
+
 </style>
 
-<h2>Resident Timeline</h2>
+<h2>Resident Activity</h2>
 
-<div class="timeline-wrap">
-  {% if not timeline %}
-    <div class="timeline-empty">No activity recorded yet.</div>
-  {% else %}
-    <div class="timeline-list">
-      {% for item in timeline %}
-        <div class="timeline-row">
-          <div class="timeline-time">
-            {{ item.event_time_display }}
-          </div>
+<div class="timeline-header">
 
-          <div class="timeline-main">
-            <div class="timeline-title">
-              {{ item.title }}
-            </div>
+<div class="timeline-view-toggle">
 
-            {% if item.detail %}
-              <div class="timeline-detail">
-                {{ item.detail }}
-              </div>
-            {% endif %}
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+<button class="view-btn active">Month</button>
+<button class="view-btn">Week</button>
+<button class="view-btn">Day</button>
+
 </div>
+
+</div>
+
+{% if not timeline %}
+
+<div class="empty-state">
+No activity recorded yet.
+</div>
+
+{% else %}
+
+{% set grouped = {} %}
+
+{% for item in timeline %}
+
+{% set date_key = item.event_time_display.split(' ')[0] ~ ' ' ~ item.event_time_display.split(' ')[1] ~ ' ' ~ item.event_time_display.split(' ')[2] %}
+
+{% if grouped.update({date_key:(grouped.get(date_key,[])+[item])}) %}{% endif %}
+
+{% endfor %}
+
+<div class="calendar">
+
+{% for day, events in grouped.items() %}
+
+<div class="calendar-day">
+
+<div class="day-label">
+{{ day }}
+</div>
+
+{% for e in events %}
+
+<div class="event-card">
+
+<div class="event-title">
+{{ e.title }}
+</div>
+
+{% if e.detail %}
+<div class="event-detail">
+{{ e.detail }}
+</div>
+{% endif %}
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endif %}
 
 {% endblock %}
