@@ -40,6 +40,7 @@ from core.request_security import register_request_security
 from core.request_utils import client_ip
 from core.shelters import get_all_shelters as load_all_shelters
 from db import schema
+from core.app_factory import create_app
 
 try:
     from twilio.request_validator import RequestValidator
@@ -92,7 +93,7 @@ TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
-app = Flask(__name__)
+app = create_app()
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
 app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", SQLITE_PATH)
