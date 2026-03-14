@@ -3,8 +3,9 @@ from __future__ import annotations
 import importlib
 import logging
 import os
+import pkgutil
 
-from flask import Flask
+from flask import Flask, Blueprint
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core.db import close_db
@@ -22,29 +23,15 @@ from core.helpers import (
 # Blueprint loader
 # ------------------------------------------------------------
 def register_blueprints(app: Flask) -> None:
-    """
-    Automatically load all route blueprints inside /routes.
+    import routes
 
-    Each module must expose a variable named `bp` or `admin`
-    which is the Flask Blueprint instance.
-    """
-
-    routes_dir = os.path.join(os.path.dirname(__file__), "..", "routes")
-
-    for filename in os.listdir(routes_dir):
-        if not filename.endswith(".py"):
-            continue
-
-        if filename.startswith("_"):
-            continue
-
-        module_name = filename[:-3]
+    for _, module_name, _ in pkgutil.iter_modules(routes.__path__):
         module = importlib.import_module(f"routes.{module_name}")
 
-        if hasattr(module, "bp"):
-            app.register_blueprint(module.bp)
-        elif hasattr(module, "admin"):
-            app.register_blueprint(module.admin)
+        for attr_name in dir(module):
+            obj = getattr(module, attr_name)
+            if isinstance(obj, Blueprint) and obj.name not in app.blueprints:
+                app.register_blueprint(obj)
 
 
 # ------------------------------------------------------------
