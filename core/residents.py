@@ -9,6 +9,10 @@ from core.audit import log_action
 from core.db import db_execute, db_fetchone
 
 
+def _normalize_shelter_name(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
 def make_resident_code(length: int = 8) -> str:
     return "".join(secrets.choice("0123456789") for _ in range(length))
 
@@ -50,12 +54,14 @@ def resident_session_start(resident_row: Any, shelter: str, resident_code: str) 
     session["resident_phone"] = (
         (resident_row["phone"] if isinstance(resident_row, dict) else resident_row[6]) or ""
     )
-    session["resident_shelter"] = shelter
+    session["resident_shelter"] = _normalize_shelter_name(shelter)
     session["resident_code"] = resident_code
 
 
 def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: str, note: str = ""):
     actor = session.get("username") or "unknown"
+    normalized_from_shelter = _normalize_shelter_name(from_shelter)
+    normalized_to_shelter = _normalize_shelter_name(to_shelter)
 
     if current_app.config.get("DATABASE_URL"):
         db_execute(
@@ -64,7 +70,7 @@ def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: st
               (resident_id, from_shelter, to_shelter, transferred_by, note)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            (resident_id, from_shelter, to_shelter, actor, note or None),
+            (resident_id, normalized_from_shelter, normalized_to_shelter, actor, note or None),
         )
     else:
         db_execute(
@@ -73,15 +79,15 @@ def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: st
               (resident_id, from_shelter, to_shelter, transferred_by, transferred_at, note)
             VALUES (?, ?, ?, ?, datetime('now'), ?)
             """,
-            (resident_id, from_shelter, to_shelter, actor, note or None),
+            (resident_id, normalized_from_shelter, normalized_to_shelter, actor, note or None),
         )
 
     staff_id = session.get("staff_user_id")
     log_action(
         "resident",
         resident_id,
-        from_shelter,
+        normalized_from_shelter,
         staff_id,
         "resident_transfer",
-        f"from={from_shelter} to={to_shelter} note={note}".strip(),
+        f"from={normalized_from_shelter} to={normalized_to_shelter} note={note}".strip(),
     )
