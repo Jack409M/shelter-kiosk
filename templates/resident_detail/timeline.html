@@ -5,14 +5,12 @@
 <style>
 .timeline-wrap {
   margin-top: 1rem;
-  max-width: 980px;
+  max-width: 1100px;
 }
 
 .timeline-empty {
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 14px;
-  padding: 1rem 1.25rem;
+  padding: 0.9rem 0;
+  color: rgba(0, 0, 0, 0.72);
 }
 
 .timeline {
@@ -21,85 +19,99 @@
 }
 
 .timeline-item {
-  position: relative;
   display: grid;
-  grid-template-columns: 34px 1fr;
-  gap: 1rem;
-  padding: 0 0 1.2rem 0;
+  grid-template-columns: 22px 1fr;
+  gap: 0.9rem;
+  align-items: start;
+  padding-bottom: 1rem;
 }
 
 .timeline-rail {
   position: relative;
-  display: flex;
-  justify-content: center;
+  min-height: 100%;
 }
 
 .timeline-rail::before {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: -1.2rem;
+  left: 10px;
+  top: 0.2rem;
+  bottom: -1rem;
   width: 2px;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(63, 127, 179, 0.25);
 }
 
 .timeline-item:last-child .timeline-rail::before {
-  bottom: 0.85rem;
+  display: none;
 }
 
 .timeline-dot {
   position: relative;
   z-index: 1;
-  width: 14px;
-  height: 14px;
-  margin-top: 0.45rem;
+  width: 10px;
+  height: 10px;
+  margin-top: 0.35rem;
+  margin-left: 6px;
   border-radius: 999px;
   background: #3f7fb3;
-  border: 3px solid #d8e8f5;
-  box-shadow: 0 0 0 2px rgba(63, 127, 179, 0.16);
+  box-shadow: 0 0 0 3px #b8d0e4;
 }
 
 .timeline-body {
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 14px;
-  padding: 0.9rem 1rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 0.85rem 1rem 0.8rem 1rem;
+  line-height: 1.35;
+}
+
+.timeline-body * {
+  margin: 0;
 }
 
 .timeline-time {
   font-size: 0.9rem;
   color: rgba(0, 0, 0, 0.62);
-  margin-bottom: 0.25rem;
 }
 
 .timeline-title {
-  font-size: 1.35rem;
+  margin-top: 0.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
-  line-height: 1.2;
   color: #0f2f4a;
 }
 
 .timeline-detail {
-  margin-top: 0.45rem;
-  font-size: 1rem;
-  line-height: 1.45;
+  margin-top: 0.35rem;
+  font-size: 0.98rem;
   color: rgba(0, 0, 0, 0.82);
   white-space: pre-wrap;
 }
 
 @media (max-width: 640px) {
   .timeline-item {
-    grid-template-columns: 24px 1fr;
-    gap: 0.75rem;
+    grid-template-columns: 18px 1fr;
+    gap: 0.7rem;
   }
 
-  .timeline-title {
-    font-size: 1.1rem;
+  .timeline-rail::before {
+    left: 8px;
+  }
+
+  .timeline-dot {
+    margin-left: 4px;
   }
 
   .timeline-body {
-    padding: 0.8rem 0.85rem;
+    padding: 0.8rem 0.85rem 0.75rem 0.85rem;
+  }
+
+  .timeline-title {
+    font-size: 1rem;
+  }
+
+  .timeline-detail {
+    font-size: 0.95rem;
   }
 }
 </style>
@@ -108,9 +120,7 @@
 
 <div class="timeline-wrap">
   {% if not timeline %}
-    <div class="timeline-empty">
-      No activity recorded yet.
-    </div>
+    <div class="timeline-empty">No activity recorded yet.</div>
   {% else %}
     <div class="timeline">
       {% for item in timeline %}
@@ -120,18 +130,10 @@
           </div>
 
           <div class="timeline-body">
-            <div class="timeline-time">
-              {{ item.event_time_display }}
-            </div>
-
-            <div class="timeline-title">
-              {{ item.title }}
-            </div>
-
+            <div class="timeline-time">{{ item.event_time_display }}</div>
+            <div class="timeline-title">{{ item.title }}</div>
             {% if item.detail %}
-              <div class="timeline-detail">
-                {{ item.detail }}
-              </div>
+              <div class="timeline-detail">{{ item.detail }}</div>
             {% endif %}
           </div>
         </div>
