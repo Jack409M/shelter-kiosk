@@ -1,0 +1,3 @@
+function printThisPage() {
+  window.print();
+}
