@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import importlib
-import logging
 import os
-import pkgutil
 import secrets
 
 from datetime import datetime, timedelta
@@ -11,7 +8,6 @@ from functools import wraps
 from typing import Optional
 
 from flask import (
-    Flask,
     current_app,
     flash,
     g,
@@ -21,26 +17,17 @@ from flask import (
     session,
     url_for,
 )
-from werkzeug.middleware.proxy_fix import ProxyFix
 
+from core.app_factory import create_app
 from core.auth import require_login
 from core.auth import require_shelter
-from core.db import close_db, db_fetchall, get_db
-from core.helpers import (
-    fmt_date,
-    fmt_dt,
-    fmt_pretty_date,
-    fmt_pretty_dt,
-    fmt_time_only,
-    safe_url_for,
-    utcnow_iso,
-)
+from core.db import db_fetchall, get_db
+from core.helpers import fmt_dt, safe_url_for, utcnow_iso
 from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 from core.request_security import register_request_security
 from core.request_utils import client_ip
 from core.shelters import get_all_shelters as load_all_shelters
 from db import schema
-from core.app_factory import create_app
 
 try:
     from twilio.request_validator import RequestValidator
@@ -94,38 +81,8 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 app = create_app()
-app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
-app.config["DATABASE_URL"] = os.environ.get("DATABASE_URL")
 app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", SQLITE_PATH)
 app.config["CLOUDFLARE_ONLY"] = os.environ.get("CLOUDFLARE_ONLY", "")
-app.jinja_env.globals["safe_url_for"] = safe_url_for
-app.jinja_env.filters["app_date"] = fmt_date
-app.jinja_env.filters["app_dt"] = fmt_dt
-app.jinja_env.filters["app_time"] = fmt_time_only
-app.jinja_env.filters["app_pretty_date"] = fmt_pretty_date
-app.jinja_env.filters["app_pretty_dt"] = fmt_pretty_dt
-app.teardown_appcontext(close_db)
-app.logger.setLevel(logging.DEBUG)
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
-
-
-# ------------------------------------------------------------
-# Blueprint registration
-# ------------------------------------------------------------
-# Future extraction note
-# This can eventually move into a dedicated app factory module
-# after more setup code is extracted from this file.
-def register_blueprints(app: Flask) -> None:
-    import routes
-    from flask import Blueprint
-
-    for _, module_name, _ in pkgutil.iter_modules(routes.__path__):
-        module = importlib.import_module(f"routes.{module_name}")
-
-        for attr_name in dir(module):
-            obj = getattr(module, attr_name)
-            if isinstance(obj, Blueprint) and obj.name not in app.blueprints:
-                app.register_blueprint(obj)
 
 
 # ------------------------------------------------------------
@@ -136,8 +93,6 @@ def register_blueprints(app: Flask) -> None:
 def _client_ip() -> str:
     return client_ip()
 
-
-register_blueprints(app)
 
 # Centralized request security middleware now lives in core.request_security.
 # Keep request level defense registered here, but keep the actual logic out
