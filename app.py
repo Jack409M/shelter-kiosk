@@ -1,88 +1,29 @@
 from __future__ import annotations
 
 import os
-import secrets
+from datetime import timedelta
 
-from datetime import datetime, timedelta
-from functools import wraps
-from typing import Optional
-
-from flask import (
-    flash,
-    g,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
+from flask import flash, redirect, render_template, request, session, url_for
 
 from core.app_factory import create_app
-from core.auth import require_login
-from core.auth import require_shelter
-from core.db import db_fetchall, get_db
-from core.helpers import fmt_dt, safe_url_for, utcnow_iso
 from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 from core.request_security import register_request_security
 from core.request_utils import client_ip
-from core.shelters import get_all_shelters as load_all_shelters
-from db import schema
-
-try:
-    from twilio.request_validator import RequestValidator
-    from twilio.rest import Client
-except Exception:
-    Client = None
-    RequestValidator = None
+from core.runtime import init_db
+from core.helpers import utcnow_iso
 
 
 # ------------------------------------------------------------
-# Environment flags and constants
+# Create application
 # ------------------------------------------------------------
-TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
-TWILIO_INBOUND_ENABLED = (os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true")
-TWILIO_STATUS_ENABLED = (os.environ.get("TWILIO_STATUS_ENABLED", "false").strip().lower() == "true")
-TWILIO_STATUS_CALLBACK_URL = (os.environ.get("TWILIO_STATUS_CALLBACK_URL") or "").strip()
-
-MIN_STAFF_PASSWORD_LEN = 8
-
-USER_ROLES = {"admin", "shelter_director", "staff", "case_manager", "ra"}
-
-ROLE_LABELS = {
-    "admin": "Admin",
-    "shelter_director": "Shelter Director",
-    "staff": "Staff",
-    "ra": "RA DESK",
-    "case_manager": "Case Mgr",
-}
-
-STAFF_ROLES = {"admin", "shelter_director", "staff", "case_manager", "ra"}
-TRANSFER_ROLES = {"admin", "shelter_director", "case_manager"}
-
-APP_DIR = os.path.abspath(os.path.dirname(__file__))
-SQLITE_PATH = os.path.join(APP_DIR, "shelter_operations.db")
-
-DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
-ENABLE_DEBUG_ROUTES = (os.environ.get("ENABLE_DEBUG_ROUTES") or "").strip().lower() in {"1", "true", "yes", "on"}
-KIOSK_PIN = (os.environ.get("KIOSK_PIN") or "").strip()
-ENABLE_DANGEROUS_ADMIN_ROUTES = (os.environ.get("ENABLE_DANGEROUS_ADMIN_ROUTES") or "").strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
-TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
-TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 app = create_app()
-app.config["SQLITE_PATH"] = os.environ.get("SQLITE_PATH", SQLITE_PATH)
-app.config["CLOUDFLARE_ONLY"] = os.environ.get("CLOUDFLARE_ONLY", "")
 
 
 # ------------------------------------------------------------
-# Request utility delegation
+# Request security wiring
 # ------------------------------------------------------------
+
 def _client_ip() -> str:
     return client_ip()
 
@@ -96,13 +37,23 @@ register_request_security(
 )
 
 
+# ------------------------------------------------------------
+# Secret key / session configuration
+# ------------------------------------------------------------
+
 secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
 if not secret:
     raise RuntimeError("FLASK_SECRET_KEY is required and must be set in the environment.")
-app.secret_key = secret
 
+app.secret_key = secret
 app.permanent_session_lifetime = timedelta(hours=8)
-COOKIE_SECURE = (os.environ.get("COOKIE_SECURE") or "").strip().lower() in {"1", "true", "yes", "on"}
+
+COOKIE_SECURE = (os.environ.get("COOKIE_SECURE") or "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 app.config.update(
     SESSION_COOKIE_SECURE=COOKIE_SECURE,
@@ -114,6 +65,10 @@ app.config.update(
 # ------------------------------------------------------------
 # CSRF
 # ------------------------------------------------------------
+
+import secrets
+
+
 def _csrf_token() -> str:
     tok = session.get("_csrf_token")
     if not tok:
@@ -146,6 +101,7 @@ def _csrf_protect():
         flash("Session expired. Please retry.", "error")
 
         fallback = url_for("auth.staff_login")
+
         if request.endpoint and (
             str(request.endpoint).startswith("resident_")
             or str(request.endpoint).startswith("resident_requests.")
@@ -165,196 +121,20 @@ def _csrf_before_request():
 
 
 # ------------------------------------------------------------
-# Shelter helpers
+# Error handlers
 # ------------------------------------------------------------
-def get_all_shelters() -> list[str]:
-    return load_all_shelters(init_db)
-
-
-@app.context_processor
-def inject_shelters():
-    return {
-        "all_shelters": get_all_shelters(),
-        "current_shelter": session.get("shelter"),
-    }
-
-
-@app.context_processor
-def inject_resident_dashboard_status():
-    if (request.endpoint or "") != "resident_portal.home":
-        return {}
-
-    if "resident_id" not in session:
-        return {}
-
-    init_db()
-
-    resident_identifier = (session.get("resident_identifier") or "").strip()
-    if not resident_identifier:
-        return {}
-
-    all_leave_rows = db_fetchall(
-        """
-        SELECT status, shelter, resident_identifier, leave_at, return_at
-        FROM leave_requests
-        WHERE resident_identifier = %s
-        ORDER BY leave_at ASC
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        SELECT status, shelter, resident_identifier, leave_at, return_at
-        FROM leave_requests
-        WHERE resident_identifier = ?
-        ORDER BY leave_at ASC
-        """,
-        (resident_identifier,),
-    )
-
-    all_transport_rows = db_fetchall(
-        """
-        SELECT status, shelter, resident_identifier, needed_at, driver_name
-        FROM transport_requests
-        WHERE resident_identifier = %s
-        ORDER BY needed_at ASC
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        SELECT status, shelter, resident_identifier, needed_at, driver_name
-        FROM transport_requests
-        WHERE resident_identifier = ?
-        ORDER BY needed_at ASC
-        """,
-        (resident_identifier,),
-    )
-
-    leave_items = []
-    for row in all_leave_rows:
-        if isinstance(row, dict):
-            status = (row.get("status") or "").lower()
-            leave_at = row.get("leave_at")
-            return_at = row.get("return_at")
-        else:
-            status = (row[0] or "").lower()
-            leave_at = row[3]
-            return_at = row[4]
-
-        if status in ["pending", "approved"]:
-            leave_items.append(
-                {
-                    "status": status.capitalize(),
-                    "leave_at": fmt_dt(leave_at),
-                    "return_at": fmt_dt(return_at),
-                }
-            )
-
-    transport_items = []
-    for row in all_transport_rows:
-        if isinstance(row, dict):
-            status = (row.get("status") or "").lower()
-            needed_at = row.get("needed_at")
-            driver_name = row.get("driver_name") or ""
-        else:
-            status = (row[0] or "").lower()
-            needed_at = row[3]
-            driver_name = row[4] or ""
-
-        if status in ["pending", "scheduled"]:
-            transport_items.append(
-                {
-                    "status": status.capitalize(),
-                    "needed_at": fmt_dt(needed_at),
-                    "driver_name": driver_name,
-                }
-            )
-
-    return {
-        "leave_items": leave_items,
-        "transport_items": transport_items,
-    }
-
-
-def parse_dt(dt_str: str) -> datetime:
-    return datetime.fromisoformat(dt_str)
-
-
-# ------------------------------------------------------------
-# Database initialization
-# ------------------------------------------------------------
-def legacy_init_db() -> None:
-    get_db()
-    schema.init_db()
-
-
-init_db = legacy_init_db
-app.config["INIT_DB_FUNC"] = init_db
-app.config["UTCNOW_ISO_FUNC"] = utcnow_iso
-app.config["ADMIN_USERNAME"] = os.environ.get("ADMIN_USERNAME")
-app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
-
-
-# ------------------------------------------------------------
-# Decorators
-# ------------------------------------------------------------
-def require_staff_or_admin(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if session.get("role") not in STAFF_ROLES:
-            flash("Staff only.", "error")
-            return redirect(url_for("auth.staff_home"))
-        return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def require_admin(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if session.get("role") != "admin":
-            flash("Admin only.", "error")
-            return redirect(url_for("auth.staff_home"))
-        return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def require_resident(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if "resident_id" not in session:
-            return redirect(url_for("resident_requests.resident_signin", next=request.path))
-        return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def require_transfer(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if session.get("role") not in TRANSFER_ROLES:
-            flash("Admin or case manager only.", "error")
-            return redirect(url_for("auth.staff_home"))
-        return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def require_resident_create(fn):
-    @wraps(fn)
-    def wrapper(*args, **kwargs):
-        if session.get("role") not in {"admin", "case_manager"}:
-            flash("Admin or case manager only.", "error")
-            return redirect(safe_url_for("residents.staff_residents") or url_for("auth.staff_home"))
-        return fn(*args, **kwargs)
-
-    return wrapper
-
 
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
 
 
+# ------------------------------------------------------------
+# Dev entrypoint
+# ------------------------------------------------------------
+
 if __name__ == "__main__":
     with app.app_context():
         init_db()
+
     app.run(host="127.0.0.1", port=5000)
