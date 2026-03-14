@@ -1,21 +1,11 @@
 {% extends "layout.html" %}
 
+{% block extra_head %}
+  {{ super() }}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_workspace.css') }}">
+{% endblock %}
+
 {% block content %}
-
-<style>
-  .resident-workspace.timeline-mode .resident-layout {
-    display: block;
-  }
-
-  .resident-workspace.timeline-mode .resident-rail {
-    display: none;
-  }
-
-  .resident-workspace.timeline-mode .resident-main {
-    width: 100%;
-    max-width: 100%;
-  }
-</style>
 
 {% if not resident %}
   <h1>Resident Profile</h1>
