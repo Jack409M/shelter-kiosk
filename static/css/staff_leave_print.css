@@ -1,0 +1,93 @@
+.print-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0 18px;
+}
+
+.box {
+  border: 1px solid #999;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.label {
+  font-size: 12px;
+  color: #444;
+  margin-bottom: 4px;
+}
+
+.label-spaced {
+  margin-top: 10px;
+}
+
+.value {
+  font-size: 14px;
+  color: #111;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+th,
+td {
+  border: 1px solid #999;
+  padding: 8px;
+  font-size: 13px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.toolbar {
+  margin: 10px 0 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.print-title {
+  margin: 0;
+}
+
+.print-subtitle {
+  margin: 6px 0 0;
+  color: #444;
+  font-size: 13px;
+}
+
+.printed-on {
+  margin-left: 10px;
+}
+
+.muted-inline {
+  color: #444;
+}
+
+.w-22 {
+  width: 22%;
+}
+
+.w-28 {
+  width: 28%;
+}
+
+.box-spaced {
+  margin-top: 12px;
+}
+
+@media print {
+  .toolbar {
+    display: none;
+  }
+
+  body {
+    margin: 0.5in;
+  }
+}
