@@ -1,33 +1,24 @@
 {% extends "layout.html" %}
-{% block content %}
 
-<style>
-  .print-wrap { max-width: 900px; margin: 0 auto; }
-  .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 18px; }
-  .box { border: 1px solid #999; border-radius: 10px; padding: 12px; }
-  .label { font-size: 12px; color: #444; margin-bottom: 4px; }
-  .value { font-size: 14px; color: #111; }
-  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-  th, td { border: 1px solid #999; padding: 8px; font-size: 13px; vertical-align: top; text-align: left; }
-  .toolbar { margin: 10px 0 14px; display: flex; gap: 10px; }
-  @media print {
-    .toolbar { display: none; }
-    body { margin: 0.5in; }
-  }
-</style>
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/staff_leave_print.css', v='20260314a') }}">
+<script src="{{ url_for('static', filename='js/print_close.js', v='20260314a') }}" defer></script>
+{% endblock %}
+
+{% block content %}
 
 <div class="print-wrap">
 
   <div class="toolbar">
-    <button onclick="window.print()">Print</button>
-    <button onclick="window.close()">Close</button>
+    <button type="button" class="js-print-page">Print</button>
+    <button type="button" class="js-close-page">Close</button>
   </div>
 
-  <h1 style="margin:0;">Leave Request</h1>
-  <div style="margin:6px 0 0; color:#444; font-size:13px;">
+  <h1 class="print-title">Leave Request</h1>
+  <div class="print-subtitle">
     Shelter: <strong>{{ shelter }}</strong>
     {% if printed_on %}
-      <span style="margin-left:10px;">Printed: <strong>{{ printed_on }}</strong></span>
+      <span class="printed-on">Printed: <strong>{{ printed_on }}</strong></span>
     {% endif %}
   </div>
 
@@ -36,10 +27,10 @@
       <div class="label">Requested by</div>
       <div class="value"><strong>{{ row.last_name }}, {{ row.first_name }}</strong></div>
 
-      <div class="label" style="margin-top:10px;">Submitted</div>
+      <div class="label label-spaced">Submitted</div>
       <div class="value">{{ fmt_dt(row.submitted_at) }}</div>
 
-      <div class="label" style="margin-top:10px;">Resident phone</div>
+      <div class="label label-spaced">Resident phone</div>
       <div class="value">{{ row.resident_phone or "" }}</div>
     </div>
 
@@ -47,28 +38,28 @@
       <div class="label">Status</div>
       <div class="value"><strong>{{ (row.status or "")|upper }}</strong></div>
 
-      <div class="label" style="margin-top:10px;">Approved or denied by</div>
+      <div class="label label-spaced">Approved or denied by</div>
       <div class="value">
         {% if row.decided_by_name %}
           <strong>{{ row.decided_by_name }}</strong>
           {% if row.decided_by_role %}
-            <span style="color:#444;">({{ row.decided_by_role }})</span>
+            <span class="muted-inline">({{ row.decided_by_role }})</span>
           {% endif %}
         {% else %}
-          <span style="color:#444;">Not decided yet</span>
+          <span class="muted-inline">Not decided yet</span>
         {% endif %}
       </div>
 
-      <div class="label" style="margin-top:10px;">Decision time</div>
+      <div class="label label-spaced">Decision time</div>
       <div class="value">
         {% if row.decided_at %}
           {{ fmt_dt(row.decided_at) }}
         {% else %}
-          <span style="color:#444;">Not decided yet</span>
+          <span class="muted-inline">Not decided yet</span>
         {% endif %}
       </div>
 
-      <div class="label" style="margin-top:10px;">Decision note</div>
+      <div class="label label-spaced">Decision note</div>
       <div class="value">{{ row.decision_note or "" }}</div>
     </div>
   </div>
@@ -76,10 +67,10 @@
   <table>
     <thead>
       <tr>
-        <th style="width:22%;">Leave date</th>
-        <th style="width:22%;">Return date</th>
-        <th style="width:28%;">Destination</th>
-        <th style="width:28%;">Reason</th>
+        <th class="w-22">Leave date</th>
+        <th class="w-22">Return date</th>
+        <th class="w-28">Destination</th>
+        <th class="w-28">Reason</th>
       </tr>
     </thead>
     <tbody>
@@ -92,7 +83,7 @@
     </tbody>
   </table>
 
-  <div class="box" style="margin-top:12px;">
+  <div class="box box-spaced">
     <div class="label">Resident notes</div>
     <div class="value">{{ row.resident_notes or "" }}</div>
   </div>
