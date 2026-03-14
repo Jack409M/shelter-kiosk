@@ -30,7 +30,7 @@ def _confirm_phrase_valid(expected: str) -> bool:
 def wipe_all_data_view():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     if not ENABLE_DANGEROUS_ADMIN_ROUTES:
         abort(404)
@@ -40,7 +40,7 @@ def wipe_all_data_view():
 
     if not _confirm_phrase_valid("WIPE ALL DATA"):
         flash("Confirmation phrase did not match.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
@@ -95,7 +95,7 @@ def wipe_all_data_view():
 def recreate_schema_view():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     if not ENABLE_DANGEROUS_ADMIN_ROUTES:
         abort(404)
@@ -105,7 +105,7 @@ def recreate_schema_view():
 
     if not _confirm_phrase_valid("RECREATE SCHEMA"):
         flash("Confirmation phrase did not match.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
