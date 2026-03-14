@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from flask import abort, g, redirect, session, url_for, flash
+from flask import abort, flash, g, redirect, request, session, url_for
 
 from core.audit import log_action
 from core.db import db_execute
+from core.runtime import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
 from routes.admin_parts.helpers import require_admin_role as _require_admin
 
 
@@ -12,27 +13,34 @@ from routes.admin_parts.helpers import require_admin_role as _require_admin
 # ------------------------------------------------------------
 # These routes perform destructive database operations.
 #
-# Keeping them isolated protects the rest of the admin code
-# from accidental edits and makes future permission layers
-# easier to add.
-#
 # Future hardening ideas:
 # require dual confirmation
 # require special admin flag
 # require time based approval token
+# require re entry of admin password
+# require production off switch
 # ------------------------------------------------------------
 
 
+def _confirm_phrase_valid(expected: str) -> bool:
+    entered = (request.form.get("confirm_phrase") or "").strip()
+    return entered == expected
+
+
 def wipe_all_data_view():
-
-    from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
-
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
 
     if not ENABLE_DANGEROUS_ADMIN_ROUTES:
         abort(404)
+
+    if request.method != "POST":
+        abort(405)
+
+    if not _confirm_phrase_valid("WIPE ALL DATA"):
+        flash("Confirmation phrase did not match.", "error")
+        return redirect(url_for("auth.staff_home"))
 
     init_db()
 
@@ -85,9 +93,6 @@ def wipe_all_data_view():
 
 
 def recreate_schema_view():
-
-    from app import ENABLE_DANGEROUS_ADMIN_ROUTES, init_db
-
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -95,10 +100,16 @@ def recreate_schema_view():
     if not ENABLE_DANGEROUS_ADMIN_ROUTES:
         abort(404)
 
+    if request.method != "POST":
+        abort(405)
+
+    if not _confirm_phrase_valid("RECREATE SCHEMA"):
+        flash("Confirmation phrase did not match.", "error")
+        return redirect(url_for("auth.staff_home"))
+
     init_db()
 
     if g.get("db_kind") == "pg":
-
         db_execute("DROP TABLE IF EXISTS attendance_events CASCADE")
         db_execute("DROP TABLE IF EXISTS leave_requests CASCADE")
         db_execute("DROP TABLE IF EXISTS transport_requests CASCADE")
@@ -108,9 +119,7 @@ def recreate_schema_view():
         db_execute("DROP TABLE IF EXISTS rate_limit_events CASCADE")
         db_execute("DROP TABLE IF EXISTS security_incidents CASCADE")
         db_execute("DROP TABLE IF EXISTS security_settings CASCADE")
-
     else:
-
         db_execute("DROP TABLE IF EXISTS attendance_events")
         db_execute("DROP TABLE IF EXISTS leave_requests")
         db_execute("DROP TABLE IF EXISTS transport_requests")
