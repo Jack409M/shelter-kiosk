@@ -2,10 +2,27 @@
 
 {% block content %}
 
+<style>
+  .resident-workspace.timeline-mode .resident-layout {
+    display: block;
+  }
+
+  .resident-workspace.timeline-mode .resident-rail {
+    display: none;
+  }
+
+  .resident-workspace.timeline-mode .resident-main {
+    width: 100%;
+    max-width: 100%;
+  }
+</style>
+
 {% if not resident %}
   <h1>Resident Profile</h1>
   <p>Resident not found.</p>
 {% else %}
+
+  {% set is_timeline_view = request.endpoint == "resident_detail.resident_timeline" %}
 
   {% if resident is mapping %}
     {% set resident_id = resident["id"] %}
@@ -21,7 +38,7 @@
     {% set program_status = resident[7] %}
   {% endif %}
 
-  <div class="resident-workspace">
+  <div class="resident-workspace{% if is_timeline_view %} timeline-mode{% endif %}">
 
     <!-- Resident Header -->
 
@@ -55,12 +72,12 @@
 
     <div class="resident-tabs">
 
-      <a class="resident-tab active"
+      <a class="resident-tab{% if not is_timeline_view %} active{% endif %}"
          href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">
         Snapshot
       </a>
 
-      <a class="resident-tab"
+      <a class="resident-tab{% if is_timeline_view %} active{% endif %}"
          href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id) }}">
         Timeline
       </a>
@@ -72,6 +89,7 @@
 
     <div class="resident-layout">
 
+      {% if not is_timeline_view %}
       <!-- Left Rail -->
 
       <div class="resident-rail">
@@ -110,6 +128,7 @@
         </ul>
 
       </div>
+      {% endif %}
 
 
       <!-- Main Content -->
