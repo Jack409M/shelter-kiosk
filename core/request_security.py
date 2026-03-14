@@ -8,24 +8,23 @@ from core.audit import log_action
 # ------------------------------------------------------------
 # Request Security Middleware Registration
 # ------------------------------------------------------------
-# This module centralizes request level security hooks that were
-# previously living inline in app.py.
-#
 # Current responsibilities:
 # cloudflare only enforcement
 # banned IP blocking
 # bad method and bad user agent blocking
 # scanner probe auto blocking
 # public form abuse throttling
-#
-# Future extraction ideas:
-# split scanner logic into scanner_defense.py
-# split public abuse throttling into abuse_controls.py
-# move marker lists into config
 # ------------------------------------------------------------
 
 
-def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate_limited_func, ban_ip_func) -> None:
+def register_request_security(
+    app,
+    *,
+    client_ip_func,
+    is_ip_banned_func,
+    is_rate_limited_func,
+    ban_ip_func,
+) -> None:
     """
     Register request security before_request handlers onto the Flask app.
 
@@ -42,10 +41,21 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
                 action_type,
             )
 
+    def _truthy_config(value) -> bool:
+        return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+    def _normalized_path() -> str:
+        raw = (request.path or "").strip()
+        if not raw:
+            return "/"
+        if raw != "/" and raw.endswith("/"):
+            raw = raw[:-1]
+        return raw
+
     def _base_details(*, ip: str | None = None, reason: str = "") -> str:
         actual_ip = (ip or client_ip_func() or "unknown").strip() or "unknown"
         method = (request.method or "").strip()
-        path = (request.path or "").strip()
+        path = _normalized_path()
         ua = (request.headers.get("User-Agent") or "").strip()
 
         parts = [
@@ -65,28 +75,23 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
 
     @app.before_request
     def require_cloudflare_proxy():
-        if (current_app.config.get("CLOUDFLARE_ONLY") or "").strip().lower() not in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }:
+        if not _truthy_config(current_app.config.get("CLOUDFLARE_ONLY")):
             return None
 
-        if not request.headers.get("CF-Connecting-IP"):
-            details = _base_details(
-                ip=request.remote_addr,
-                reason="missing_cf_connecting_ip",
-            )
-            _audit("cloudflare_bypass_blocked", details)
-            current_app.logger.warning(
-                "BLOCK non-cloudflare request remote_addr=%s path=%s",
-                request.remote_addr,
-                request.path,
-            )
-            abort(403)
+        if request.headers.get("CF-Connecting-IP"):
+            return None
 
-        return None
+        details = _base_details(
+            ip=request.remote_addr,
+            reason="missing_cf_connecting_ip",
+        )
+        _audit("cloudflare_bypass_blocked", details)
+        current_app.logger.warning(
+            "BLOCK non-cloudflare request remote_addr=%s path=%s",
+            request.remote_addr,
+            request.path,
+        )
+        abort(403)
 
     @app.before_request
     def block_banned_ips():
@@ -158,7 +163,7 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
 
     @app.before_request
     def auto_ban_scanner_probes():
-        path = (request.path or "").lower()
+        path = _normalized_path().lower()
 
         scanner_markers = (
             ".env",
@@ -205,6 +210,8 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
 
     @app.before_request
     def public_bot_throttle():
+        path = _normalized_path()
+
         public_paths = {
             "/resident",
             "/leave",
@@ -212,16 +219,16 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
             "/resident/consent",
         }
 
-        if request.path not in public_paths:
+        if path not in public_paths:
             return None
 
-        if request.method == "GET":
+        if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
             return None
 
         ip = client_ip_func()
 
         if is_rate_limited_func(
-            f"public_post:{request.path}:{ip}",
+            f"public_post:{path}:{ip}",
             limit=20,
             window_seconds=300,
         ):
@@ -239,10 +246,10 @@ def register_request_security(app, *, client_ip_func, is_ip_banned_func, is_rate
                 current_app.logger.warning(
                     "AUTO BAN public abuse ip=%s path=%s",
                     ip,
-                    request.path,
+                    path,
                 )
 
-            if request.path == "/resident":
+            if path == "/resident":
                 flash(
                     "Too many requests. Please wait a few minutes and try again.",
                     "error",
