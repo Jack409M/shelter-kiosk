@@ -2,6 +2,12 @@
 
 {% block resident_workspace_content %}
 
+{% if resident is mapping %}
+  {% set timeline_resident_id = resident["id"] %}
+{% else %}
+  {% set timeline_resident_id = resident[0] %}
+{% endif %}
+
 <style>
   .activity-calendar {
     width: 100%;
@@ -490,15 +496,15 @@
     <div class="activity-calendar-controls">
       <div class="calendar-toggle">
         <a class="calendar-toggle-link{% if calendar.view == 'month' %} active{% endif %}"
-           href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view='month', anchor=calendar.anchor) }}">
+           href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view='month', anchor=calendar.anchor) }}">
           Month
         </a>
         <a class="calendar-toggle-link{% if calendar.view == 'week' %} active{% endif %}"
-           href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view='week', anchor=calendar.anchor) }}">
+           href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view='week', anchor=calendar.anchor) }}">
           Week
         </a>
         <a class="calendar-toggle-link{% if calendar.view == 'day' %} active{% endif %}"
-           href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view='day', anchor=calendar.anchor) }}">
+           href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view='day', anchor=calendar.anchor) }}">
           Day
         </a>
       </div>
@@ -507,7 +513,7 @@
 
   <div class="calendar-nav">
     <a class="calendar-nav-link"
-       href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view=calendar.view, anchor=calendar.prev_anchor) }}">
+       href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view=calendar.view, anchor=calendar.prev_anchor) }}">
       Previous
     </a>
 
@@ -516,13 +522,13 @@
     </div>
 
     <a class="calendar-nav-link"
-       href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view=calendar.view, anchor=calendar.next_anchor) }}">
+       href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view=calendar.view, anchor=calendar.next_anchor) }}">
       Next
     </a>
 
     <form class="calendar-jump"
           method="get"
-          action="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id) }}">
+          action="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id) }}">
       <input type="hidden" name="view" value="{{ calendar.view }}">
 
       {% if calendar.view == "month" %}
