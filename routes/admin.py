@@ -25,8 +25,11 @@ from routes.admin_parts.audit import (
 )
 
 from routes.admin_parts.dashboard import (
+    admin_ban_ip_view,
     admin_dashboard_live_view,
     admin_dashboard_view,
+    admin_unban_ip_view,
+    admin_unlock_username_view,
     admin_update_security_settings_view,
 )
 
@@ -66,6 +69,27 @@ def admin_dashboard_live():
 @require_shelter
 def admin_update_security_settings():
     return admin_update_security_settings_view()
+
+
+@admin.post("/staff/admin/security/ban-ip")
+@require_login
+@require_shelter
+def admin_ban_ip():
+    return admin_ban_ip_view()
+
+
+@admin.post("/staff/admin/security/unban-ip")
+@require_login
+@require_shelter
+def admin_unban_ip():
+    return admin_unban_ip_view()
+
+
+@admin.post("/staff/admin/security/unlock-username")
+@require_login
+@require_shelter
+def admin_unlock_username():
+    return admin_unlock_username_view()
 
 
 @admin.route("/staff/admin/users", methods=["GET"])
