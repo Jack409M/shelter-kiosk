@@ -6,6 +6,7 @@ from core.audit import log_action
 from core.db import db_execute
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
+from core.runtime import get_all_shelters, init_db
 
 
 # Resident SMS consent flows
@@ -14,10 +15,6 @@ from core.rate_limit import is_rate_limited
 # If this area grows, split into:
 # public_consent_pages.py
 # resident_consent_flow.py
-#
-# Another future cleanup:
-# stop importing shelter and init helpers from app.py
-# by moving those into dedicated core or resident service modules.
 
 
 def _client_ip() -> str:
@@ -69,8 +66,6 @@ def sms_consent_view():
 
 
 def resident_consent_view():
-    from app import get_all_shelters, init_db
-
     init_db()
 
     next_url = (request.args.get("next") or request.form.get("next") or "").strip()
@@ -85,9 +80,9 @@ def resident_consent_view():
         next_url = url_for("resident_portal.home")
 
     resident_id = session.get("resident_id")
-    resident_identifier = session.get("resident_identifier") or ""
-    shelter = session.get("resident_shelter") or ""
-    all_shelters = get_all_shelters()
+    resident_identifier = (session.get("resident_identifier") or "").strip()
+    shelter = (session.get("resident_shelter") or "").strip()
+    all_shelters = set(get_all_shelters())
 
     if not resident_id or shelter not in all_shelters:
         flash("Please sign in again.", "error")
