@@ -5,6 +5,7 @@ from flask import current_app, flash, redirect, render_template, request, sessio
 from core.audit import log_action
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt
+from core.runtime import MIN_STAFF_PASSWORD_LEN, ROLE_LABELS, init_db
 from routes.admin_parts.helpers import (
     all_roles as _all_roles,
     allowed_roles_to_create as _allowed_roles_to_create,
@@ -27,8 +28,6 @@ def _ph() -> str:
 
 
 def _form_context(**extra):
-    from app import ROLE_LABELS
-
     context = {
         "roles": _ordered_roles(_allowed_roles_to_create()),
         "all_roles": _ordered_roles(_all_roles()),
@@ -86,9 +85,19 @@ def _save_staff_shelter_assignments(staff_user_id: int, shelters: list[str]) -> 
         )
 
 
-def admin_users_view():
-    from app import ROLE_LABELS, init_db
+def _can_manage_target_role(target_role: str) -> bool:
+    role = _current_role()
 
+    if role == "admin":
+        return True
+
+    if role == "shelter_director":
+        return target_role in {"staff", "case_manager", "ra"}
+
+    return False
+
+
+def admin_users_view():
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -115,6 +124,9 @@ def admin_users_view():
         )
         pattern = f"%{q}%"
         params.extend([pattern, pattern])
+
+    if not _require_admin():
+        where.append("role IN ('staff', 'case_manager', 'ra')")
 
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
 
@@ -185,12 +197,13 @@ def admin_users_view():
 
 
 def admin_add_user_view():
-    from app import MIN_STAFF_PASSWORD_LEN
     from werkzeug.security import generate_password_hash
 
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
         return redirect(url_for("auth.staff_home"))
+
+    init_db()
 
     allowed_roles = set(_allowed_roles_to_create())
 
@@ -326,12 +339,13 @@ def admin_add_user_view():
 
 
 def admin_edit_user_view(user_id: int):
-    from app import MIN_STAFF_PASSWORD_LEN
     from werkzeug.security import generate_password_hash
 
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
         return redirect(url_for("auth.staff_home"))
+
+    init_db()
 
     rows = db_fetchall(
         f"""
@@ -349,6 +363,10 @@ def admin_edit_user_view(user_id: int):
     user = rows[0]
     allowed_roles = set(_allowed_roles_to_create())
     current_user_role = (user["role"] or "").strip()
+
+    if not _can_manage_target_role(current_user_role):
+        flash("You are not allowed to manage that user.", "error")
+        return redirect(url_for("admin.admin_users"))
 
     if request.method == "POST":
         first_name = (request.form.get("first_name") or "").strip()
@@ -529,11 +547,27 @@ def admin_edit_user_view(user_id: int):
 
 
 def admin_set_user_active_view(user_id: int):
+    init_db()
+
     role = _current_role()
 
     if role not in {"admin", "shelter_director"}:
         flash("Not allowed.", "error")
         return redirect(url_for("auth.staff_home"))
+
+    rows = db_fetchall(
+        f"SELECT id, role FROM staff_users WHERE id = {_ph()}",
+        (user_id,),
+    )
+    if not rows:
+        flash("User not found.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    target_role = (rows[0]["role"] or "").strip()
+
+    if not _can_manage_target_role(target_role):
+        flash("You are not allowed to manage that user.", "error")
+        return redirect(url_for("admin.admin_users"))
 
     active = (request.form.get("active") or "").strip()
     if active not in ["0", "1"]:
@@ -561,13 +595,30 @@ def admin_set_user_active_view(user_id: int):
 
 
 def admin_set_user_role_view(user_id: int):
+    init_db()
+
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
 
+    rows = db_fetchall(
+        f"SELECT id, role FROM staff_users WHERE id = {_ph()}",
+        (user_id,),
+    )
+    if not rows:
+        flash("User not found.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    current_user_role = (rows[0]["role"] or "").strip()
+
     new_role = (request.form.get("role") or "").strip()
     if new_role not in _all_roles():
         flash("Invalid role.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    allowed_roles = set(_allowed_roles_to_create())
+    if new_role not in allowed_roles and new_role != current_user_role:
+        flash("You are not allowed to assign that role.", "error")
         return redirect(url_for("admin.admin_users"))
 
     db_execute(
@@ -589,12 +640,21 @@ def admin_set_user_role_view(user_id: int):
 
 
 def admin_reset_user_password_view(user_id: int):
-    from app import MIN_STAFF_PASSWORD_LEN
     from werkzeug.security import generate_password_hash
+
+    init_db()
 
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("auth.staff_home"))
+
+    rows = db_fetchall(
+        f"SELECT id, role FROM staff_users WHERE id = {_ph()}",
+        (user_id,),
+    )
+    if not rows:
+        flash("User not found.", "error")
+        return redirect(url_for("admin.admin_users"))
 
     password = (request.form.get("password") or "").strip()
     if len(password) < MIN_STAFF_PASSWORD_LEN:
