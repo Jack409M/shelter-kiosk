@@ -92,7 +92,7 @@ def require_roles(*allowed_roles):
             role = _current_role()
             if role not in normalized_allowed_roles:
                 flash("You do not have permission to access that page.", "error")
-                return redirect(url_for("auth.staff_home"))
+                return redirect(url_for("attendance.staff_attendance"))
 
             return fn(*args, **kwargs)
 
