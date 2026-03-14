@@ -76,18 +76,21 @@
     align-items: center;
     gap: 0.32rem;
     font-size: 0.76rem;
-    color: rgba(0, 0, 0, 0.72);
-    background: rgba(255, 255, 255, 0.72);
+    font-weight: 700;
+    color: #0f2f4a;
     border: 1px solid rgba(15, 47, 74, 0.08);
     border-radius: 999px;
-    padding: 0.22rem 0.5rem;
+    padding: 0.28rem 0.58rem;
     line-height: 1;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
   }
 
   .legend-swatch {
     width: 8px;
     height: 8px;
     border-radius: 999px;
+    background: rgba(15, 47, 74, 0.28);
+    flex: 0 0 auto;
   }
 
   .theme-blue {
@@ -123,16 +126,6 @@
   .theme-rose {
     background: #ffe4e6;
     border-left-color: #e11d48;
-  }
-
-  .legend-swatch.theme-blue,
-  .legend-swatch.theme-green,
-  .legend-swatch.theme-green-dark,
-  .legend-swatch.theme-slate,
-  .legend-swatch.theme-amber,
-  .legend-swatch.theme-purple,
-  .legend-swatch.theme-rose {
-    border-left-width: 0;
   }
 
   .month-grid {
@@ -469,32 +462,32 @@
   </div>
 
   <div class="calendar-legend">
-    <div class="calendar-legend-item">
-      <span class="legend-swatch theme-blue"></span>
+    <div class="calendar-legend-item theme-blue">
+      <span class="legend-swatch"></span>
       Enrollment
     </div>
-    <div class="calendar-legend-item">
-      <span class="legend-swatch theme-green"></span>
+    <div class="calendar-legend-item theme-green">
+      <span class="legend-swatch"></span>
       Goal
     </div>
-    <div class="calendar-legend-item">
-      <span class="legend-swatch theme-green-dark"></span>
+    <div class="calendar-legend-item theme-green-dark">
+      <span class="legend-swatch"></span>
       Completed Goal
     </div>
-    <div class="calendar-legend-item">
-      <span class="legend-swatch theme-slate"></span>
+    <div class="calendar-legend-item theme-slate">
+      <span class="legend-swatch"></span>
       Case Note
     </div>
-    <div class="calendar-legend-item">
-      <span class="legend-swatch theme-amber"></span>
+    <div class="calendar-legend-item theme-amber">
+      <span class="legend-swatch"></span>
       Compliance
     </div>
-    <div class="calendar-legend-item">
-      <span class="legend-swatch theme-purple"></span>
+    <div class="calendar-legend-item theme-purple">
+      <span class="legend-swatch"></span>
       Scheduled
     </div>
-    <div class="calendar-legend-item">
-      <span class="legend-swatch theme-rose"></span>
+    <div class="calendar-legend-item theme-rose">
+      <span class="legend-swatch"></span>
       Appointment
     </div>
   </div>
