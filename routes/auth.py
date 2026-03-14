@@ -30,14 +30,16 @@ def staff_login():
 
     all_shelters_raw = get_all_shelters()
     all_shelters = []
-    all_shelters_lower = set()
+    all_shelters_lower = []
 
     for shelter_name in all_shelters_raw:
         cleaned = (shelter_name or "").strip()
         if not cleaned:
             continue
         all_shelters.append(cleaned)
-        all_shelters_lower.add(cleaned.lower())
+        all_shelters_lower.append(cleaned.lower())
+
+    all_shelters_lower_set = set(all_shelters_lower)
 
     if request.method == "GET":
         return render_template("staff_login.html", all_shelters=all_shelters)
@@ -166,7 +168,7 @@ def staff_login():
         return render_template("staff_login.html", all_shelters=all_shelters), 401
 
     if staff_role in {"admin", "shelter_director"}:
-        allowed_shelters = list(all_shelters)
+        allowed_shelters = list(all_shelters_lower)
     else:
         shelter_rows = db_fetchall(
             "SELECT shelter FROM staff_shelter_assignments WHERE staff_user_id = %s ORDER BY shelter"
@@ -182,7 +184,7 @@ def staff_login():
             shelter_name = shelter_row["shelter"] if isinstance(shelter_row, dict) else shelter_row[0]
             shelter_name = (shelter_name or "").strip().lower()
 
-            if shelter_name and shelter_name in all_shelters_lower and shelter_name not in seen:
+            if shelter_name and shelter_name in all_shelters_lower_set and shelter_name not in seen:
                 allowed_shelters.append(shelter_name)
                 seen.add(shelter_name)
 
@@ -209,10 +211,7 @@ def staff_login():
             f"reason=invalid_shelter_for_user ip={ip} username={normalized_username} shelter={shelter}",
         )
         flash("You do not have access to that shelter.", "error")
-        return render_template(
-            "staff_login.html",
-            all_shelters=allowed_shelters,
-        ), 403
+        return render_template("staff_login.html", all_shelters=all_shelters), 403
 
     session.clear()
     session["staff_user_id"] = staff_user_id
