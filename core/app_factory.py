@@ -5,17 +5,18 @@ import logging
 import os
 import pkgutil
 
-from flask import Flask, Blueprint
+from flask import Blueprint, Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from core.app_hooks import register_app_hooks
 from core.db import close_db
 from core.helpers import (
-    safe_url_for,
     fmt_date,
     fmt_dt,
-    fmt_time_only,
     fmt_pretty_date,
     fmt_pretty_dt,
+    fmt_time_only,
+    safe_url_for,
 )
 
 
@@ -75,5 +76,10 @@ def create_app() -> Flask:
     # Register route blueprints
     # ------------------------------------------------------------
     register_blueprints(app)
+
+    # ------------------------------------------------------------
+    # Register request hooks and security headers
+    # ------------------------------------------------------------
+    register_app_hooks(app)
 
     return app
