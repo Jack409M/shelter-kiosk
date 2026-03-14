@@ -460,6 +460,7 @@ def add_cache_headers(response):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("X-XSS-Protection", "1; mode=block")
 
     response.headers.setdefault(
         "Permissions-Policy",
@@ -472,7 +473,7 @@ def add_cache_headers(response):
     )
 
     csp = (
-        "default-src 'self'; "
+        "default-src 'none'; "
         "img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com; "
         "style-src 'self' 'unsafe-inline' https://unpkg.com; "
         "script-src 'self' 'unsafe-inline' https://unpkg.com; "
