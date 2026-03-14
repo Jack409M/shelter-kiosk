@@ -263,6 +263,16 @@ def _resident_enrollment_for_shelter(resident_id: int, shelter: str):
     )
 
 
+def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict[str, object]:
+    resident = _resident_enrollment_for_shelter(resident_id, shelter)
+    enrollment_id = _row_value(resident, "enrollment_id", 1) if resident else None
+
+    return {
+        "resident": resident,
+        "enrollment_id": enrollment_id,
+    }
+
+
 def _load_timeline(enrollment_id: int):
     return db_fetchall(
         _sql(
@@ -985,13 +995,13 @@ def add_goal(resident_id: int):
         flash("Case manager access required.", "error")
         return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
-    resident = _resident_enrollment_for_shelter(resident_id, shelter)
+    context = _load_enrollment_context_for_shelter(resident_id, shelter)
+    resident = context["resident"]
+    enrollment_id = context["enrollment_id"]
 
     if not resident:
         flash("Resident not found.", "error")
         return redirect(url_for("residents.staff_residents"))
-
-    enrollment_id = _row_value(resident, "enrollment_id", 1)
 
     if not enrollment_id:
         flash("This resident does not have an active enrollment record yet.", "error")
@@ -1121,13 +1131,13 @@ def add_case_note(resident_id: int):
         flash("Case manager access required.", "error")
         return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
-    resident = _resident_enrollment_for_shelter(resident_id, shelter)
+    context = _load_enrollment_context_for_shelter(resident_id, shelter)
+    resident = context["resident"]
+    enrollment_id = context["enrollment_id"]
 
     if not resident:
         flash("Resident not found.", "error")
         return redirect(url_for("residents.staff_residents"))
-
-    enrollment_id = _row_value(resident, "enrollment_id", 1)
 
     if not enrollment_id:
         flash("Resident does not have an active enrollment record yet.", "error")
@@ -1187,13 +1197,13 @@ def add_appointment(resident_id: int):
         flash("Case manager access required.", "error")
         return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
-    resident = _resident_enrollment_for_shelter(resident_id, shelter)
+    context = _load_enrollment_context_for_shelter(resident_id, shelter)
+    resident = context["resident"]
+    enrollment_id = context["enrollment_id"]
 
     if not resident:
         flash("Resident not found.", "error")
         return redirect(url_for("residents.staff_residents"))
-
-    enrollment_id = _row_value(resident, "enrollment_id", 1)
 
     if not enrollment_id:
         flash("Resident does not have an active enrollment record yet.", "error")
