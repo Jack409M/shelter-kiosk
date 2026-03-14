@@ -12,6 +12,10 @@ from core.runtime import get_all_shelters, init_db
 residents = Blueprint("residents", __name__)
 
 
+def _normalize_shelter_name(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
 def _require_staff_or_admin() -> bool:
     return session.get("role") in {"admin", "staff", "case_manager", "ra"}
 
@@ -24,49 +28,41 @@ def _require_resident_create_role() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 
+def _shelter_equals_sql(column_name: str) -> str:
+    if g.get("db_kind") == "pg":
+        return f"LOWER(COALESCE({column_name}, '')) = %s"
+    return f"LOWER(COALESCE({column_name}, '')) = ?"
+
+
 @residents.get("/staff/residents")
 @require_login
 @require_shelter
 def staff_residents():
     if not _require_staff_or_admin():
         flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-    shelter = session["shelter"]
+    shelter = _normalize_shelter_name(session.get("shelter"))
 
     show = (request.args.get("show") or "active").strip().lower()
 
     if show == "all":
         rows = db_fetchall(
-            """
+            f"""
             SELECT *
             FROM residents
-            WHERE shelter = %s
-            ORDER BY is_active DESC, last_name ASC, first_name ASC
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            SELECT *
-            FROM residents
-            WHERE shelter = ?
+            WHERE {_shelter_equals_sql("shelter")}
             ORDER BY is_active DESC, last_name ASC, first_name ASC
             """,
             (shelter,),
         )
     else:
         rows = db_fetchall(
-            """
+            f"""
             SELECT *
             FROM residents
-            WHERE shelter = %s AND is_active = TRUE
-            ORDER BY last_name ASC, first_name ASC
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            SELECT *
-            FROM residents
-            WHERE shelter = ? AND is_active = 1
+            WHERE {_shelter_equals_sql("shelter")} AND is_active = {("TRUE" if g.get("db_kind") == "pg" else "1")}
             ORDER BY last_name ASC, first_name ASC
             """,
             (shelter,),
@@ -86,7 +82,7 @@ def staff_residents_post():
         return redirect(url_for("residents.staff_residents"))
 
     init_db()
-    shelter = session["shelter"]
+    shelter = _normalize_shelter_name(session.get("shelter"))
 
     first = (request.form.get("first_name") or "").strip()
     last = (request.form.get("last_name") or "").strip()
@@ -124,26 +120,25 @@ def staff_resident_transfer(resident_id: int):
 
     if not _require_transfer_role():
         flash("Admin, shelter director, or case manager only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-    all_shelters = get_all_shelters()
+    all_shelters = [_normalize_shelter_name(s) for s in get_all_shelters()]
+    current_shelter = _normalize_shelter_name(session.get("shelter"))
 
     resident = db_fetchone(
-        "SELECT * FROM residents WHERE id = %s AND shelter = %s"
-        if g.get("db_kind") == "pg"
-        else "SELECT * FROM residents WHERE id = ? AND shelter = ?",
-        (resident_id, session["shelter"]),
+        f"SELECT * FROM residents WHERE id = {('%s' if g.get('db_kind') == 'pg' else '?')} AND {_shelter_equals_sql('shelter')}",
+        (resident_id, current_shelter),
     )
 
     if not resident:
         flash("Resident not found.", "error")
         return redirect(url_for("residents.staff_residents"))
 
-    from_shelter = resident["shelter"] if isinstance(resident, dict) else resident[1]
+    from_shelter = _normalize_shelter_name(resident["shelter"] if isinstance(resident, dict) else resident[1])
 
     if request.method == "POST":
-        to_shelter = (request.form.get("to_shelter") or "").strip()
+        to_shelter = _normalize_shelter_name(request.form.get("to_shelter"))
         note = (request.form.get("note") or "").strip()
 
         if to_shelter not in all_shelters:
@@ -184,31 +179,19 @@ def staff_resident_transfer(resident_id: int):
         resident_identifier = resident["resident_identifier"] if isinstance(resident, dict) else resident[2]
 
         db_execute(
-            """
+            f"""
             UPDATE leave_requests
-            SET shelter = %s
-            WHERE shelter = %s AND resident_identifier = %s AND status = 'pending'
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            UPDATE leave_requests
-            SET shelter = ?
-            WHERE shelter = ? AND resident_identifier = ? AND status = 'pending'
+            SET shelter = {('%s' if g.get('db_kind') == 'pg' else '?')}
+            WHERE {_shelter_equals_sql('shelter')} AND resident_identifier = {('%s' if g.get('db_kind') == 'pg' else '?')} AND status = 'pending'
             """,
             (to_shelter, from_shelter, resident_identifier),
         )
 
         db_execute(
-            """
+            f"""
             UPDATE transport_requests
-            SET shelter = %s
-            WHERE shelter = %s AND resident_identifier = %s AND status = 'pending'
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            UPDATE transport_requests
-            SET shelter = ?
-            WHERE shelter = ? AND resident_identifier = ? AND status = 'pending'
+            SET shelter = {('%s' if g.get('db_kind') == 'pg' else '?')}
+            WHERE {_shelter_equals_sql('shelter')} AND resident_identifier = {('%s' if g.get('db_kind') == 'pg' else '?')} AND status = 'pending'
             """,
             (to_shelter, from_shelter, resident_identifier),
         )
@@ -246,11 +229,11 @@ def staff_resident_transfer(resident_id: int):
 def staff_resident_set_active(resident_id: int):
     if not _require_staff_or_admin():
         flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    staff_id = session.get("staff_user_id")
     active = (request.form.get("active") or "").strip()
 
     if active not in ["0", "1"]:
@@ -258,9 +241,7 @@ def staff_resident_set_active(resident_id: int):
         return redirect(url_for("residents.staff_residents"))
 
     resident = db_fetchone(
-        "SELECT id FROM residents WHERE id = %s AND shelter = %s"
-        if g.get("db_kind") == "pg"
-        else "SELECT id FROM residents WHERE id = ? AND shelter = ?",
+        f"SELECT id FROM residents WHERE id = {('%s' if g.get('db_kind') == 'pg' else '?')} AND {_shelter_equals_sql('shelter')}",
         (resident_id, shelter),
     )
     if not resident:
@@ -269,16 +250,15 @@ def staff_resident_set_active(resident_id: int):
 
     if g.get("db_kind") == "pg":
         db_execute(
-            "UPDATE residents SET is_active = %s WHERE id = %s AND shelter = %s",
+            f"UPDATE residents SET is_active = %s WHERE id = %s AND {_shelter_equals_sql('shelter')}",
             (active == "1", resident_id, shelter),
         )
     else:
         db_execute(
-            "UPDATE residents SET is_active = ? WHERE id = ? AND shelter = ?",
+            f"UPDATE residents SET is_active = ? WHERE id = ? AND {_shelter_equals_sql('shelter')}",
             (1 if active == "1" else 0, resident_id, shelter),
         )
 
     log_action("resident", resident_id, shelter, staff_id, "set_active", f"active={active}")
     flash("Updated.", "ok")
-    return redirect(url_for("residents.staff_residents"))
-    
+    return redirect(url_for("residents.staff_residents"))   
