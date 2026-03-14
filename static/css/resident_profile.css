@@ -1,0 +1,44 @@
+.resident-profile-page {
+  margin-bottom: 16px;
+}
+
+.resident-profile-columns {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+
+.resident-profile-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.resident-profile-card-title {
+  margin-top: 0;
+}
+
+.resident-profile-actions-top {
+  margin-top: 14px;
+}
+
+.resident-profile-appointment-type {
+  min-width: 240px;
+}
+
+.resident-profile-section-card {
+  margin-bottom: 16px;
+}
+
+.resident-profile-inline-form {
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .resident-profile-columns {
+    grid-template-columns: 1fr;
+  }
+}
