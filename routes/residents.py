@@ -6,6 +6,7 @@ from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
+from core.runtime import get_all_shelters, init_db
 
 
 residents = Blueprint("residents", __name__)
@@ -18,15 +19,15 @@ def _require_staff_or_admin() -> bool:
 def _require_transfer_role() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
+
 def _require_resident_create_role() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
+
 
 @residents.get("/staff/residents")
 @require_login
 @require_shelter
 def staff_residents():
-    from app import init_db
-
     if not _require_staff_or_admin():
         flash("Staff only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -78,11 +79,10 @@ def staff_residents():
 @require_login
 @require_shelter
 def staff_residents_post():
-    from app import init_db
     from core.residents import generate_resident_code, generate_resident_identifier
 
     if not _require_resident_create_role():
-        flash("Admin or case manager only.", "error")
+        flash("Admin, shelter director, or case manager only.", "error")
         return redirect(url_for("residents.staff_residents"))
 
     init_db()
@@ -101,10 +101,17 @@ def staff_residents_post():
     db_execute(
         "INSERT INTO residents (resident_identifier, resident_code, first_name, last_name, shelter, is_active, created_at) "
         + ("VALUES (%s, %s, %s, %s, %s, %s, %s)" if g.get("db_kind") == "pg" else "VALUES (?, ?, ?, ?, ?, ?, ?)"),
-        (resident_identifier, resident_code, first, last, shelter, True, utcnow_iso()),
+        (resident_identifier, resident_code, first, last, shelter, True if g.get("db_kind") == "pg" else 1, utcnow_iso()),
     )
 
-    log_action("resident", None, shelter, session.get("staff_user_id"), "create", f"code={resident_code} {first} {last}")
+    log_action(
+        "resident",
+        None,
+        shelter,
+        session.get("staff_user_id"),
+        "create",
+        f"code={resident_code} {first} {last}",
+    )
     flash("Resident created.", "ok")
     return redirect(url_for("residents.staff_residents"))
 
@@ -113,11 +120,10 @@ def staff_residents_post():
 @require_login
 @require_shelter
 def staff_resident_transfer(resident_id: int):
-    from app import get_all_shelters, init_db
     from core.residents import record_resident_transfer
 
     if not _require_transfer_role():
-        flash("Admin or case manager only.", "error")
+        flash("Admin, shelter director, or case manager only.", "error")
         return redirect(url_for("auth.staff_home"))
 
     init_db()
@@ -214,6 +220,15 @@ def staff_resident_transfer(resident_id: int):
             (to_shelter, resident_id),
         )
 
+        log_action(
+            "resident",
+            resident_id,
+            to_shelter,
+            session.get("staff_user_id"),
+            "transfer",
+            f"from={from_shelter} to={to_shelter} note={note}",
+        )
+
         flash(f"Resident transferred from {from_shelter} to {to_shelter}.", "ok")
         return redirect(url_for("residents.staff_residents"))
 
@@ -229,8 +244,6 @@ def staff_resident_transfer(resident_id: int):
 @require_login
 @require_shelter
 def staff_resident_set_active(resident_id: int):
-    from app import init_db
-
     if not _require_staff_or_admin():
         flash("Staff only.", "error")
         return redirect(url_for("auth.staff_home"))
@@ -242,6 +255,16 @@ def staff_resident_set_active(resident_id: int):
 
     if active not in ["0", "1"]:
         flash("Invalid action.", "error")
+        return redirect(url_for("residents.staff_residents"))
+
+    resident = db_fetchone(
+        "SELECT id FROM residents WHERE id = %s AND shelter = %s"
+        if g.get("db_kind") == "pg"
+        else "SELECT id FROM residents WHERE id = ? AND shelter = ?",
+        (resident_id, shelter),
+    )
+    if not resident:
+        flash("Resident not found.", "error")
         return redirect(url_for("residents.staff_residents"))
 
     if g.get("db_kind") == "pg":
@@ -258,3 +281,4 @@ def staff_resident_set_active(resident_id: int):
     log_action("resident", resident_id, shelter, staff_id, "set_active", f"active={active}")
     flash("Updated.", "ok")
     return redirect(url_for("residents.staff_residents"))
+    
