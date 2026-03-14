@@ -612,14 +612,15 @@
   </div>
 </div>
 
-<script>
-  window.adminDashboardConfig = {
-    liveUrl: {{ dashboard_live_url|tojson }},
-    attackMapPoints: {{ _attack_map_points|tojson }},
-    topThreatScore: {{ _top_threat_score|tojson }},
-    topThreats: {{ _top_threats|tojson }}
-  };
-</script>
+<div
+  id="admin-dashboard-config"
+  data-live-url="{{ dashboard_live_url }}"
+  data-attack-map-points='{{ _attack_map_points|tojson }}'
+  data-top-threat-score="{{ _top_threat_score }}"
+  data-top-threats='{{ _top_threats|tojson }}'>
+</div>
+
+<script src="{{ url_for('static', filename='js/admin_dashboard_live.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin_dashboard_live.js') }}"></script>
 
 {% endblock %}
