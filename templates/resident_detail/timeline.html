@@ -3,149 +3,716 @@
 {% block resident_workspace_content %}
 
 <style>
+  .activity-calendar {
+    width: 100%;
+  }
 
-.timeline-header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:20px;
-}
+  .activity-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
 
-.timeline-view-toggle{
-display:flex;
-gap:10px;
-}
+  .activity-calendar-title h2 {
+    margin: 0;
+  }
 
-.view-btn{
-padding:6px 12px;
-border-radius:6px;
-border:1px solid #ccc;
-background:#fff;
-cursor:pointer;
-font-size:14px;
-}
+  .activity-calendar-subtitle {
+    margin-top: 0.2rem;
+    font-size: 0.95rem;
+    color: rgba(0, 0, 0, 0.62);
+  }
 
-.view-btn.active{
-background:#0f2f4a;
-color:white;
-border-color:#0f2f4a;
-}
+  .activity-calendar-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
 
-.calendar{
-display:grid;
-grid-template-columns:repeat(7,1fr);
-gap:12px;
-}
+  .calendar-toggle {
+    display: inline-flex;
+    gap: 0.35rem;
+    padding: 0.25rem;
+    border-radius: 999px;
+    background: rgba(15, 47, 74, 0.08);
+  }
 
-.calendar-day{
-border:1px solid #ddd;
-border-radius:10px;
-padding:8px;
-min-height:120px;
-background:#fafafa;
-display:flex;
-flex-direction:column;
-}
+  .calendar-toggle-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 78px;
+    padding: 0.5rem 0.85rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f2f4a;
+  }
 
-.day-label{
-font-weight:700;
-font-size:13px;
-margin-bottom:6px;
-color:#333;
-}
+  .calendar-toggle-link.active {
+    background: #0f2f4a;
+    color: #fff;
+  }
 
-.event-card{
-background:white;
-border-radius:6px;
-padding:6px 8px;
-margin-bottom:6px;
-font-size:12px;
-border-left:4px solid #0f2f4a;
-box-shadow:0 1px 2px rgba(0,0,0,0.08);
-}
+  .calendar-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
 
-.event-title{
-font-weight:600;
-}
+  .calendar-nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.55rem 0.85rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 700;
+    color: #0f2f4a;
+    background: rgba(15, 47, 74, 0.06);
+    border: 1px solid rgba(15, 47, 74, 0.10);
+  }
 
-.event-detail{
-font-size:11px;
-opacity:.8;
-}
+  .calendar-nav-label {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f2f4a;
+    padding: 0 0.35rem;
+  }
 
-.empty-state{
-padding:20px;
-color:#777;
-}
+  .calendar-jump {
+    display: flex;
+    align-items: end;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
 
+  .calendar-jump-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .calendar-jump-group label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.66);
+  }
+
+  .calendar-jump select,
+  .calendar-jump input {
+    min-width: 120px;
+    padding: 0.55rem 0.65rem;
+    border-radius: 10px;
+    border: 1px solid rgba(15, 47, 74, 0.16);
+    background: #fff;
+    font: inherit;
+  }
+
+  .calendar-jump button {
+    padding: 0.58rem 0.9rem;
+    border: 0;
+    border-radius: 10px;
+    background: #0f2f4a;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .calendar-legend {
+    display: flex;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+
+  .calendar-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.84rem;
+    color: rgba(0, 0, 0, 0.72);
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(15, 47, 74, 0.08);
+    border-radius: 999px;
+    padding: 0.35rem 0.65rem;
+  }
+
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+  }
+
+  .theme-blue {
+    background: #dbeafe;
+    border-left-color: #2563eb;
+  }
+
+  .theme-green {
+    background: #dcfce7;
+    border-left-color: #16a34a;
+  }
+
+  .theme-green-dark {
+    background: #bbf7d0;
+    border-left-color: #15803d;
+  }
+
+  .theme-slate {
+    background: #e2e8f0;
+    border-left-color: #475569;
+  }
+
+  .theme-amber {
+    background: #fef3c7;
+    border-left-color: #d97706;
+  }
+
+  .theme-purple {
+    background: #ede9fe;
+    border-left-color: #7c3aed;
+  }
+
+  .theme-rose {
+    background: #ffe4e6;
+    border-left-color: #e11d48;
+  }
+
+  .legend-swatch.theme-blue,
+  .legend-swatch.theme-green,
+  .legend-swatch.theme-green-dark,
+  .legend-swatch.theme-slate,
+  .legend-swatch.theme-amber,
+  .legend-swatch.theme-purple,
+  .legend-swatch.theme-rose {
+    border-left-width: 0;
+  }
+
+  .month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  .month-weekday {
+    font-size: 0.84rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: rgba(0, 0, 0, 0.62);
+    padding: 0 0.2rem;
+  }
+
+  .month-cell {
+    min-height: 170px;
+    border: 1px solid rgba(15, 47, 74, 0.10);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.78);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .month-cell.outside-month {
+    background: rgba(15, 47, 74, 0.04);
+    color: rgba(0, 0, 0, 0.48);
+  }
+
+  .month-cell.today {
+    border-color: rgba(37, 99, 235, 0.34);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10);
+  }
+
+  .month-cell-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.7rem 0.8rem 0.45rem 0.8rem;
+  }
+
+  .month-cell-day {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #0f2f4a;
+  }
+
+  .month-cell.outside-month .month-cell-day {
+    color: rgba(0, 0, 0, 0.45);
+  }
+
+  .month-cell-count {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.54);
+  }
+
+  .month-cell-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0 0.65rem 0.7rem 0.65rem;
+    min-height: 0;
+  }
+
+  .event-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 12px;
+    border-left: 4px solid transparent;
+    color: #0f172a;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  }
+
+  .event-card-time {
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: rgba(0, 0, 0, 0.62);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .event-card-title {
+    font-size: 0.88rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .event-card-type {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.60);
+  }
+
+  .event-card-detail {
+    font-size: 0.78rem;
+    line-height: 1.3;
+    color: rgba(0, 0, 0, 0.74);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .month-cell-more {
+    margin-top: auto;
+    padding-top: 0.15rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: rgba(15, 47, 74, 0.72);
+  }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+
+  .week-column {
+    min-height: 420px;
+    border: 1px solid rgba(15, 47, 74, 0.10);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.82);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .week-column.today {
+    border-color: rgba(37, 99, 235, 0.34);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10);
+  }
+
+  .week-column-head {
+    padding: 0.8rem 0.85rem 0.55rem 0.85rem;
+    border-bottom: 1px solid rgba(15, 47, 74, 0.08);
+    background: rgba(15, 47, 74, 0.03);
+  }
+
+  .week-column-name {
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: rgba(0, 0, 0, 0.60);
+  }
+
+  .week-column-date {
+    margin-top: 0.15rem;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f2f4a;
+  }
+
+  .week-column-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    min-height: 0;
+  }
+
+  .day-panel {
+    border: 1px solid rgba(15, 47, 74, 0.10);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.82);
+    overflow: hidden;
+  }
+
+  .day-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.1rem 0.8rem 1.1rem;
+    border-bottom: 1px solid rgba(15, 47, 74, 0.08);
+    background: rgba(15, 47, 74, 0.03);
+  }
+
+  .day-panel-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f2f4a;
+  }
+
+  .day-panel-count {
+    font-size: 0.9rem;
+    color: rgba(0, 0, 0, 0.60);
+    font-weight: 700;
+  }
+
+  .day-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem 1.1rem 1.1rem;
+  }
+
+  .day-row {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 0.9rem;
+    align-items: start;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(15, 47, 74, 0.08);
+  }
+
+  .day-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .day-row-time {
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: rgba(0, 0, 0, 0.58);
+    padding-top: 0.2rem;
+  }
+
+  .empty-state {
+    padding: 1.25rem 1rem;
+    border: 1px dashed rgba(15, 47, 74, 0.16);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.62);
+    color: rgba(0, 0, 0, 0.62);
+    text-align: center;
+  }
+
+  .quiet-cell {
+    margin-top: 0.1rem;
+    font-size: 0.78rem;
+    color: rgba(0, 0, 0, 0.42);
+  }
+
+  @media (max-width: 1180px) {
+    .month-grid,
+    .week-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .month-weekday {
+      display: none;
+    }
+  }
+
+  @media (max-width: 800px) {
+    .calendar-nav {
+      align-items: stretch;
+    }
+
+    .calendar-jump {
+      margin-left: 0;
+      width: 100%;
+    }
+
+    .calendar-jump select,
+    .calendar-jump input {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .month-grid,
+    .week-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .month-cell,
+    .week-column {
+      min-height: 0;
+    }
+
+    .day-row {
+      grid-template-columns: 1fr;
+      gap: 0.35rem;
+    }
+  }
 </style>
 
-<h2>Resident Activity</h2>
+<div class="activity-calendar">
+  <div class="activity-calendar-header">
+    <div class="activity-calendar-title">
+      <h2>Resident Activity Calendar</h2>
+      <div class="activity-calendar-subtitle">
+        Track appointments, goals, compliance, enrollment, and case notes by date.
+      </div>
+    </div>
 
-<div class="timeline-header">
+    <div class="activity-calendar-controls">
+      <div class="calendar-toggle">
+        <a class="calendar-toggle-link{% if calendar.view == 'month' %} active{% endif %}"
+           href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view='month', anchor=calendar.anchor) }}">
+          Month
+        </a>
+        <a class="calendar-toggle-link{% if calendar.view == 'week' %} active{% endif %}"
+           href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view='week', anchor=calendar.anchor) }}">
+          Week
+        </a>
+        <a class="calendar-toggle-link{% if calendar.view == 'day' %} active{% endif %}"
+           href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view='day', anchor=calendar.anchor) }}">
+          Day
+        </a>
+      </div>
+    </div>
+  </div>
 
-<div class="timeline-view-toggle">
+  <div class="calendar-nav">
+    <a class="calendar-nav-link"
+       href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view=calendar.view, anchor=calendar.prev_anchor) }}">
+      Previous
+    </a>
 
-<button class="view-btn active">Month</button>
-<button class="view-btn">Week</button>
-<button class="view-btn">Day</button>
+    <div class="calendar-nav-label">
+      {{ calendar.label }}
+    </div>
 
+    <a class="calendar-nav-link"
+       href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id, view=calendar.view, anchor=calendar.next_anchor) }}">
+      Next
+    </a>
+
+    <form class="calendar-jump"
+          method="get"
+          action="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id) }}">
+      <input type="hidden" name="view" value="{{ calendar.view }}">
+
+      {% if calendar.view == "month" %}
+        <div class="calendar-jump-group">
+          <label for="month-select">Month</label>
+          <select id="month-select" name="month">
+            {% for month_value, month_label in calendar.month_names %}
+              <option value="{{ month_value }}" {% if month_value == calendar.selected_month %}selected{% endif %}>
+                {{ month_label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="calendar-jump-group">
+          <label for="year-select">Year</label>
+          <select id="year-select" name="year">
+            {% for year_value in calendar.year_options %}
+              <option value="{{ year_value }}" {% if year_value == calendar.selected_year %}selected{% endif %}>
+                {{ year_value }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="calendar-jump-group">
+          <label>&nbsp;</label>
+          <button type="submit">Go</button>
+        </div>
+      {% else %}
+        <div class="calendar-jump-group">
+          <label for="anchor-date">Choose date</label>
+          <input id="anchor-date" type="date" name="anchor" value="{{ calendar.anchor }}">
+        </div>
+
+        <div class="calendar-jump-group">
+          <label>&nbsp;</label>
+          <button type="submit">Go</button>
+        </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <div class="calendar-legend">
+    <div class="calendar-legend-item">
+      <span class="legend-swatch theme-blue"></span>
+      Enrollment
+    </div>
+    <div class="calendar-legend-item">
+      <span class="legend-swatch theme-green"></span>
+      Goal
+    </div>
+    <div class="calendar-legend-item">
+      <span class="legend-swatch theme-green-dark"></span>
+      Completed Goal
+    </div>
+    <div class="calendar-legend-item">
+      <span class="legend-swatch theme-slate"></span>
+      Case Note
+    </div>
+    <div class="calendar-legend-item">
+      <span class="legend-swatch theme-amber"></span>
+      Compliance
+    </div>
+    <div class="calendar-legend-item">
+      <span class="legend-swatch theme-purple"></span>
+      Scheduled
+    </div>
+    <div class="calendar-legend-item">
+      <span class="legend-swatch theme-rose"></span>
+      Appointment
+    </div>
+  </div>
+
+  {% if not timeline %}
+    <div class="empty-state">
+      No activity recorded yet.
+    </div>
+  {% elif calendar.view == "month" %}
+    <div class="month-grid">
+      {% for weekday_name in calendar.weekday_names %}
+        <div class="month-weekday">{{ weekday_name }}</div>
+      {% endfor %}
+
+      {% for day in calendar.month_days %}
+        <div class="month-cell{% if not day.is_current_month %} outside-month{% endif %}{% if day.is_today %} today{% endif %}">
+          <div class="month-cell-head">
+            <div class="month-cell-day">
+              {{ day.day_number }}
+            </div>
+            <div class="month-cell-count">
+              {% if day.events %}
+                {{ day.events|length }} item{% if day.events|length != 1 %}s{% endif %}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="month-cell-body">
+            {% if day.events %}
+              {% for event in day.events[:4] %}
+                <div class="event-card {{ event.badge_class }}">
+                  <div class="event-card-time">{{ event.time_label }}</div>
+                  <div class="event-card-title">{{ event.title }}</div>
+                  <div class="event-card-type">{{ event.type_label }}</div>
+                  {% if event.detail %}
+                    <div class="event-card-detail">{{ event.detail }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+
+              {% if day.events|length > 4 %}
+                <div class="month-cell-more">
+                  + {{ day.events|length - 4 }} more
+                </div>
+              {% endif %}
+            {% else %}
+              <div class="quiet-cell">No activity</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% elif calendar.view == "week" %}
+    <div class="activity-calendar-subtitle" style="margin-bottom: 1rem;">
+      {{ calendar.week_range_label }}
+    </div>
+
+    <div class="week-grid">
+      {% for day in calendar.week_days %}
+        <div class="week-column{% if day.is_today %} today{% endif %}">
+          <div class="week-column-head">
+            <div class="week-column-name">{{ day.day_name }}</div>
+            <div class="week-column-date">{{ day.month_name }} {{ day.day_number }}</div>
+          </div>
+
+          <div class="week-column-body">
+            {% if day.events %}
+              {% for event in day.events %}
+                <div class="event-card {{ event.badge_class }}">
+                  <div class="event-card-time">{{ event.time_label }}</div>
+                  <div class="event-card-title">{{ event.title }}</div>
+                  <div class="event-card-type">{{ event.type_label }}</div>
+                  {% if event.detail %}
+                    <div class="event-card-detail">{{ event.detail }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="quiet-cell">No activity</div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div class="day-panel">
+      <div class="day-panel-head">
+        <div class="day-panel-title">{{ calendar.label }}</div>
+        <div class="day-panel-count">
+          {{ calendar.day_events|length }} item{% if calendar.day_events|length != 1 %}s{% endif %}
+        </div>
+      </div>
+
+      <div class="day-list">
+        {% if calendar.day_events %}
+          {% for event in calendar.day_events %}
+            <div class="day-row">
+              <div class="day-row-time">
+                {{ event.time_label }}
+              </div>
+
+              <div class="event-card {{ event.badge_class }}">
+                <div class="event-card-title">{{ event.title }}</div>
+                <div class="event-card-type">{{ event.type_label }}</div>
+                {% if event.detail %}
+                  <div class="event-card-detail">{{ event.detail }}</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            No activity recorded for this date.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
 </div>
-
-</div>
-
-{% if not timeline %}
-
-<div class="empty-state">
-No activity recorded yet.
-</div>
-
-{% else %}
-
-{% set grouped = {} %}
-
-{% for item in timeline %}
-
-{% set date_key = item.event_time_display.split(' ')[0] ~ ' ' ~ item.event_time_display.split(' ')[1] ~ ' ' ~ item.event_time_display.split(' ')[2] %}
-
-{% if grouped.update({date_key:(grouped.get(date_key,[])+[item])}) %}{% endif %}
-
-{% endfor %}
-
-<div class="calendar">
-
-{% for day, events in grouped.items() %}
-
-<div class="calendar-day">
-
-<div class="day-label">
-{{ day }}
-</div>
-
-{% for e in events %}
-
-<div class="event-card">
-
-<div class="event-title">
-{{ e.title }}
-</div>
-
-{% if e.detail %}
-<div class="event-detail">
-{{ e.detail }}
-</div>
-{% endif %}
-
-</div>
-
-{% endfor %}
-
-</div>
-
-{% endfor %}
-
-</div>
-
-{% endif %}
 
 {% endblock %}
