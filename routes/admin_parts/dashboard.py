@@ -13,9 +13,11 @@ from flask import (
     g,
 )
 
+from core import rate_limit as rate_limit_store
 from core.audit import log_action
 from core.db import db_execute
 from core.helpers import fmt_dt, utcnow_iso
+from core.rate_limit import ban_ip
 
 from routes.admin_parts.helpers import (
     build_admin_dashboard_payload as _build_admin_dashboard_payload,
@@ -25,6 +27,7 @@ from routes.admin_parts.helpers import (
 
 
 AUTO_RESET_HOURS = 8
+MANUAL_IP_BAN_SECONDS = 3600
 
 SECURITY_FIELD_META = {
     "sms_system_enabled": {
@@ -50,6 +53,27 @@ def _temporary_expiration_iso() -> str:
     return (datetime.now(timezone.utc) + timedelta(hours=AUTO_RESET_HOURS)).isoformat()
 
 
+def _manual_unban_ip(ip: str) -> bool:
+    ip = (ip or "").strip()
+    if not ip:
+        return False
+
+    removed = ip in rate_limit_store._BANNED_IPS
+    rate_limit_store._BANNED_IPS.pop(ip, None)
+    return removed
+
+
+def _manual_unlock_username(username: str) -> bool:
+    username = (username or "").strip().lower()
+    if not username:
+        return False
+
+    key = f"staff_login_username_lock:{username}"
+    removed = key in rate_limit_store._LOCKED_KEYS
+    rate_limit_store._LOCKED_KEYS.pop(key, None)
+    return removed
+
+
 def admin_dashboard_view():
     if not _require_admin():
         flash("Admin only.", "error")
@@ -66,6 +90,8 @@ def admin_dashboard_view():
         recent_failed_logins=payload["recent_failed_logins"],
         top_attacking_ips=payload["top_attacking_ips"],
         targeted_usernames=payload["targeted_usernames"],
+        top_threats=payload["top_threats"],
+        top_threat_score=payload["top_threat_score"],
         attack_map_points=payload["attack_map_points"],
         banned_ips=payload["banned_ips"],
         locked_usernames=payload["locked_usernames"],
@@ -147,5 +173,91 @@ def admin_update_security_settings_view():
         flash(f"Security setting updated. Auto reset scheduled in {AUTO_RESET_HOURS} hours.", "ok")
     else:
         flash("Security setting updated.", "ok")
+
+    return redirect(url_for("admin.admin_dashboard"))
+
+
+def admin_ban_ip_view():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    ip = (request.form.get("ip") or "").strip()
+
+    if not ip:
+        flash("IP address is required.", "error")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    ban_ip(ip, MANUAL_IP_BAN_SECONDS)
+
+    log_action(
+        "security",
+        None,
+        None,
+        session.get("staff_user_id"),
+        "manual_ip_ban",
+        f"ip={ip}\nseconds={MANUAL_IP_BAN_SECONDS}",
+    )
+
+    flash("IP banned.", "ok")
+    return redirect(url_for("admin.admin_dashboard"))
+
+
+def admin_unban_ip_view():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    ip = (request.form.get("ip") or "").strip()
+
+    if not ip:
+        flash("IP address is required.", "error")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    removed = _manual_unban_ip(ip)
+
+    log_action(
+        "security",
+        None,
+        None,
+        session.get("staff_user_id"),
+        "manual_ip_unban",
+        f"ip={ip}\nremoved={'yes' if removed else 'no'}",
+    )
+
+    if removed:
+        flash("IP unbanned.", "ok")
+    else:
+        flash("IP was not currently banned.", "error")
+
+    return redirect(url_for("admin.admin_dashboard"))
+
+
+def admin_unlock_username_view():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
+    username = (request.form.get("username") or "").strip()
+
+    if not username:
+        flash("Username is required.", "error")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    removed = _manual_unlock_username(username)
+
+    log_action(
+        "security",
+        None,
+        None,
+        session.get("staff_user_id"),
+        "manual_username_unlock",
+        f"username={username.lower()}\nremoved={'yes' if removed else 'no'}",
+    )
+
+    if removed:
+        flash("Username unlocked.", "ok")
+    else:
+        flash("Username was not currently locked.", "error")
 
     return redirect(url_for("admin.admin_dashboard"))
