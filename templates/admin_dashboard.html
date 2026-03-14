@@ -425,6 +425,85 @@
     </div>
 
     <div class="dash-panel">
+      <h3>Active Defenses and Response</h3>
+
+      <div class="security-controls">
+
+        <div class="security-control-card">
+          <div class="security-control-title">Manual IP Ban</div>
+          <div class="security-control-copy">Immediately ban a hostile source by IP address.</div>
+          <form method="POST" action="{{ url_for('admin.admin_ban_ip') }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input
+              type="text"
+              name="ip"
+              placeholder="Enter IP address"
+              autocomplete="off"
+              required
+              style="width: 100%; margin-bottom: 10px;"
+            >
+            <button type="submit" class="control-btn danger">Ban IP</button>
+          </form>
+        </div>
+
+        <div class="security-control-card">
+          <div class="security-control-title">Banned IPs</div>
+          <div class="security-control-copy">Currently blocked addresses at the application layer.</div>
+
+          {% if _banned_ips %}
+            <div class="live-feed" style="margin-top: 12px;">
+              {% for row in _banned_ips %}
+                <div class="live-feed-item" style="padding: 10px 12px;">
+                  <div class="live-feed-top">
+                    <div>{{ row.ip|default('Unknown IP') }}</div>
+                    <div>{{ row.seconds_remaining|default('') }}</div>
+                  </div>
+                  <div class="security-control-actions" style="margin-top: 10px;">
+                    <form method="POST" action="{{ url_for('admin.admin_unban_ip') }}">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="ip" value="{{ row.ip }}">
+                      <button type="submit" class="control-btn warn">Unban IP</button>
+                    </form>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state" style="margin-top: 12px;">No active banned IPs.</div>
+          {% endif %}
+        </div>
+
+        <div class="security-control-card">
+          <div class="security-control-title">Locked Usernames</div>
+          <div class="security-control-copy">Usernames currently locked by repeated failed login attempts.</div>
+
+          {% if _locked_usernames %}
+            <div class="live-feed" style="margin-top: 12px;">
+              {% for row in _locked_usernames %}
+                <div class="live-feed-item" style="padding: 10px 12px;">
+                  <div class="live-feed-top">
+                    <div>{{ row.username|default('Unknown Username') }}</div>
+                    <div>{{ row.seconds_remaining|default('') }}</div>
+                  </div>
+                  <div class="security-control-actions" style="margin-top: 10px;">
+                    <form method="POST" action="{{ url_for('admin.admin_unlock_username') }}">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="username" value="{{ row.username }}">
+                      <button type="submit" class="control-btn warn">Unlock Username</button>
+                    </form>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty-state" style="margin-top: 12px;">No locked usernames.</div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+
+    <div class="dash-panel">
       <h3>Security Incidents</h3>
       <div id="security-incidents-list">
         {% if _recent_security_incidents %}
