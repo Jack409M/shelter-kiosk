@@ -49,6 +49,88 @@
     </nav>
 
     <section id="overview" class="resident-notebook-section">
+      <div class="resident-summary-panel card">
+        <div class="resident-summary-panel-head">
+          <div>
+            <div class="resident-summary-panel-eyebrow">Case Actions</div>
+            <h2 class="resident-summary-panel-title">Resident Overview</h2>
+          </div>
+
+          <div class="resident-summary-status-stack">
+            <div class="resident-summary-status-label">Program Status</div>
+            <div class="resident-summary-status-value">
+              {% if snapshot %}
+                {{ snapshot["program_status"] }}
+              {% else %}
+                {{ program_status or "Not Enrolled" }}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="resident-summary-grid resident-summary-grid-primary">
+          <div class="resident-summary-tile">
+            <div class="resident-summary-tile-label">Resident Active</div>
+            <div class="resident-summary-tile-value">{{ "Yes" if resident_active else "No" }}</div>
+          </div>
+
+          <div class="resident-summary-tile">
+            <div class="resident-summary-tile-label">Next Appointment</div>
+            <div class="resident-summary-tile-value">
+              {% if snapshot %}
+                {{ snapshot["next_appointment"] }}
+              {% else %}
+                None scheduled
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="resident-summary-tile">
+            <div class="resident-summary-tile-label">Active Goals</div>
+            <div class="resident-summary-tile-value">
+              {% if snapshot %}
+                {{ snapshot["goal_count"] }}
+              {% else %}
+                0
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="resident-summary-tile">
+            <div class="resident-summary-tile-label">Compliance</div>
+            <div class="resident-summary-tile-value resident-summary-tile-value-compact">
+              {% if snapshot %}
+                {{ snapshot["compliance_status"] }}
+              {% else %}
+                No enrollment yet
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="resident-summary-grid resident-summary-grid-secondary">
+          <div class="resident-summary-tile">
+            <div class="resident-summary-tile-label">Resident ID</div>
+            <div class="resident-summary-tile-value">{{ resident_id }}</div>
+          </div>
+
+          <div class="resident-summary-tile">
+            <div class="resident-summary-tile-label">Enrollment ID</div>
+            <div class="resident-summary-tile-value">{{ enrollment_id or "—" }}</div>
+          </div>
+
+          <div class="resident-summary-tile">
+            <div class="resident-summary-tile-label">Shelter</div>
+            <div class="resident-summary-tile-value">{{ resident_shelter or "—" }}</div>
+          </div>
+
+          <div class="resident-summary-tile">
+            <div class="resident-summary-tile-label">Entry Date</div>
+            <div class="resident-summary-tile-value">{{ entry_date or "—" }}</div>
+          </div>
+        </div>
+      </div>
+
       <div class="resident-notebook-section-head">
         <div class="resident-notebook-eyebrow">Snapshot</div>
         <h2 class="resident-notebook-section-title">Overview</h2>
