@@ -32,88 +32,201 @@
     {% set exit_date = resident[9] %}
   {% endif %}
 
-  {% if snapshot %}
-    <div class="card" style="margin-bottom:16px;">
-      <h2 style="margin-top:0;">Program Snapshot</h2>
+  <div style="display:grid; grid-template-columns: 1.05fr 1fr; gap:16px; align-items:start; margin-bottom:16px;">
 
-      <div class="profile-meta-grid">
-        <div>
-          <strong>Program Status</strong><br>
-          {{ snapshot["program_status"] }}
+    <div style="display:flex; flex-direction:column; gap:16px;">
+
+      {% if snapshot %}
+        <div class="card">
+          <h2 style="margin-top:0;">Program Snapshot</h2>
+
+          <div class="profile-meta-grid">
+            <div>
+              <strong>Program Status</strong><br>
+              {{ snapshot["program_status"] }}
+            </div>
+            <div>
+              <strong>Current Goal Count</strong><br>
+              {{ snapshot["goal_count"] }}
+            </div>
+            <div>
+              <strong>Next Appointment</strong><br>
+              {{ snapshot["next_appointment"] }}
+            </div>
+            <div>
+              <strong>Compliance This Week</strong><br>
+              {{ snapshot["compliance_status"] }}
+            </div>
+            <div>
+              <strong>Days in Program</strong><br>
+              {{ snapshot["days_in_program"] }}
+            </div>
+          </div>
         </div>
-        <div>
-          <strong>Current Goal Count</strong><br>
-          {{ snapshot["goal_count"] }}
-        </div>
-        <div>
-          <strong>Next Appointment</strong><br>
-          {{ snapshot["next_appointment"] }}
-        </div>
-        <div>
-          <strong>Compliance This Week</strong><br>
-          {{ snapshot["compliance_status"] }}
-        </div>
-        <div>
-          <strong>Days in Program</strong><br>
-          {{ snapshot["days_in_program"] }}
+      {% endif %}
+
+      <div class="card">
+        <h2 style="margin-top:0;">Resident Summary</h2>
+
+        <div class="profile-meta-grid">
+          <div><strong>Resident ID:</strong> {{ resident_id }}</div>
+          <div><strong>Resident Shelter:</strong> {{ resident_shelter or "—" }}</div>
+          <div><strong>Active:</strong> {{ "Yes" if resident_active else "No" }}</div>
+          <div><strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}</div>
+          <div><strong>Enrollment Shelter:</strong> {{ enrollment_shelter or "—" }}</div>
+          <div><strong>Program Status:</strong> {{ program_status or "—" }}</div>
+          <div><strong>Entry Date:</strong> {{ entry_date or "—" }}</div>
+          <div><strong>Exit Date:</strong> {{ exit_date or "—" }}</div>
         </div>
       </div>
-    </div>
-  {% endif %}
 
-  <div class="card" style="margin-bottom:16px;">
-    <h2 style="margin-top:0;">Resident Summary</h2>
+      {% if enrollment_id %}
+        <div id="appointments" class="card">
+          <h2 style="margin-top:0;">Upcoming Appointment</h2>
 
-    <div class="profile-meta-grid">
-      <div><strong>Resident ID:</strong> {{ resident_id }}</div>
-      <div><strong>Resident Shelter:</strong> {{ resident_shelter or "—" }}</div>
-      <div><strong>Active:</strong> {{ "Yes" if resident_active else "No" }}</div>
-      <div><strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}</div>
-      <div><strong>Enrollment Shelter:</strong> {{ enrollment_shelter or "—" }}</div>
-      <div><strong>Program Status:</strong> {{ program_status or "—" }}</div>
-      <div><strong>Entry Date:</strong> {{ entry_date or "—" }}</div>
-      <div><strong>Exit Date:</strong> {{ exit_date or "—" }}</div>
+          {% if appointment %}
+            {% if appointment is mapping %}
+              <p><strong>Date:</strong> {{ appointment["appointment_date"] or "—" }}</p>
+              <p><strong>Type:</strong> {{ appointment["appointment_type"] or "—" }}</p>
+              <p><strong>Notes:</strong> {{ appointment["notes"] or "—" }}</p>
+              <p><strong>Reminder Sent:</strong> {{ "Yes" if appointment["reminder_sent"] else "No" }}</p>
+            {% else %}
+              <p><strong>Date:</strong> {{ appointment[0] or "—" }}</p>
+              <p><strong>Type:</strong> {{ appointment[1] or "—" }}</p>
+              <p><strong>Notes:</strong> {{ appointment[2] or "—" }}</p>
+              <p><strong>Reminder Sent:</strong> {{ "Yes" if appointment[3] else "No" }}</p>
+            {% endif %}
+          {% else %}
+            <p>No appointment scheduled.</p>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <h2 style="margin-top:0;">Latest Compliance Summary</h2>
+
+          {% if compliance %}
+            {% if compliance is mapping %}
+              <p><strong>Productive Hours:</strong> {{ compliance["productive_hours"] or 0 }}</p>
+              <p><strong>Work Hours:</strong> {{ compliance["work_hours"] or 0 }}</p>
+              <p><strong>Meetings:</strong> {{ compliance["meeting_count"] or 0 }}</p>
+              <p><strong>Submitted:</strong> {{ compliance["submitted_at"] or "—" }}</p>
+            {% else %}
+              <p><strong>Productive Hours:</strong> {{ compliance[0] or 0 }}</p>
+              <p><strong>Work Hours:</strong> {{ compliance[1] or 0 }}</p>
+              <p><strong>Meetings:</strong> {{ compliance[2] or 0 }}</p>
+              <p><strong>Submitted:</strong> {{ compliance[3] or "—" }}</p>
+            {% endif %}
+          {% else %}
+            <p>No weekly compliance summary yet.</p>
+          {% endif %}
+        </div>
+      {% endif %}
+
     </div>
+
+    <div style="display:flex; flex-direction:column; gap:16px;">
+
+      {% if not enrollment_id %}
+        <div id="start-enrollment" class="card">
+          <h2 style="margin-top:0;">Start Enrollment</h2>
+
+          <form method="post" action="{{ url_for('resident_detail.create_enrollment', resident_id=resident_id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_anchor" value="start-enrollment">
+
+            <label for="entry_date"><strong>Program Entry Date</strong></label>
+            <input type="date" id="entry_date" name="entry_date" required>
+
+            <div class="profile-actions" style="margin-top:14px;">
+              <button type="submit">Start Enrollment</button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+
+      {% if enrollment_id %}
+        <div id="add-goal" class="card">
+          <h2 style="margin-top:0;">Add Goal</h2>
+
+          <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_anchor" value="add-goal">
+
+            <label for="goal_text"><strong>Goal</strong></label>
+            <textarea id="goal_text" name="goal_text" rows="3" class="full-width-textarea" required></textarea>
+
+            <label for="target_date"><strong>Target Date</strong></label>
+            <input type="date" id="target_date" name="target_date" class="date-input-compact">
+
+            <div class="profile-actions" style="margin-top:14px;">
+              <button type="submit">Add Goal</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="add-case-note" class="card">
+          <h2 style="margin-top:0;">Add Case Note</h2>
+
+          <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_anchor" value="add-case-note">
+
+            <div class="profile-form-row-compact">
+              <div>
+                <label for="meeting_date"><strong>Meeting Date</strong></label>
+                <input type="date" id="meeting_date" name="meeting_date" class="date-input-compact">
+              </div>
+            </div>
+
+            <label for="notes"><strong>Notes</strong></label>
+            <textarea id="notes" name="notes" rows="4" class="full-width-textarea"></textarea>
+
+            <label for="progress_notes"><strong>Progress Notes</strong></label>
+            <textarea id="progress_notes" name="progress_notes" rows="4" class="full-width-textarea"></textarea>
+
+            <label for="action_items"><strong>Action Items</strong></label>
+            <textarea id="action_items" name="action_items" rows="4" class="full-width-textarea"></textarea>
+
+            <div class="profile-actions" style="margin-top:14px;">
+              <button type="submit">Add Case Note</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="add-appointment" class="card">
+          <h2 style="margin-top:0;">Add Appointment</h2>
+
+          <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="return_anchor" value="add-appointment">
+
+            <div class="profile-form-row-compact">
+              <div>
+                <label for="appointment_date"><strong>Appointment Date</strong></label>
+                <input type="date" id="appointment_date" name="appointment_date" class="date-input-compact" required>
+              </div>
+
+              <div style="min-width:240px;">
+                <label for="appointment_type"><strong>Appointment Type</strong></label>
+                <input type="text" id="appointment_type" name="appointment_type">
+              </div>
+            </div>
+
+            <label for="appointment_notes"><strong>Notes</strong></label>
+            <textarea id="appointment_notes" name="notes" rows="4" class="full-width-textarea"></textarea>
+
+            <div class="profile-actions" style="margin-top:14px;">
+              <button type="submit">Add Appointment</button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+
+    </div>
+
   </div>
 
-  {% if not enrollment_id %}
-    <div id="start-enrollment" class="card" style="margin-bottom:16px;">
-      <h2 style="margin-top:0;">Start Enrollment</h2>
-
-      <form method="post" action="{{ url_for('resident_detail.create_enrollment', resident_id=resident_id) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="return_anchor" value="start-enrollment">
-
-        <label for="entry_date"><strong>Program Entry Date</strong></label>
-        <input type="date" id="entry_date" name="entry_date" required>
-
-        <div class="profile-actions" style="margin-top:14px;">
-          <button type="submit">Start Enrollment</button>
-        </div>
-      </form>
-    </div>
-  {% endif %}
-
   {% if enrollment_id %}
-    <div id="add-goal" class="card" style="margin-bottom:16px;">
-      <h2 style="margin-top:0;">Add Goal</h2>
-
-      <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="return_anchor" value="add-goal">
-
-        <label for="goal_text"><strong>Goal</strong></label>
-        <textarea id="goal_text" name="goal_text" rows="3" class="full-width-textarea" required></textarea>
-
-        <label for="target_date"><strong>Target Date</strong></label>
-        <input type="date" id="target_date" name="target_date" class="date-input-compact">
-
-        <div class="profile-actions" style="margin-top:14px;">
-          <button type="submit">Add Goal</button>
-        </div>
-      </form>
-    </div>
-
     <div id="goals" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Goals</h2>
 
@@ -173,35 +286,6 @@
       {% endif %}
     </div>
 
-    <div id="add-case-note" class="card" style="margin-bottom:16px;">
-      <h2 style="margin-top:0;">Add Case Note</h2>
-
-      <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="return_anchor" value="add-case-note">
-
-        <div class="profile-form-row-compact">
-          <div>
-            <label for="meeting_date"><strong>Meeting Date</strong></label>
-            <input type="date" id="meeting_date" name="meeting_date" class="date-input-compact">
-          </div>
-        </div>
-
-        <label for="notes"><strong>Notes</strong></label>
-        <textarea id="notes" name="notes" rows="4" class="full-width-textarea"></textarea>
-
-        <label for="progress_notes"><strong>Progress Notes</strong></label>
-        <textarea id="progress_notes" name="progress_notes" rows="4" class="full-width-textarea"></textarea>
-
-        <label for="action_items"><strong>Action Items</strong></label>
-        <textarea id="action_items" name="action_items" rows="4" class="full-width-textarea"></textarea>
-
-        <div class="profile-actions" style="margin-top:14px;">
-          <button type="submit">Add Case Note</button>
-        </div>
-      </form>
-    </div>
-
     <div id="case-notes" class="card" style="margin-bottom:16px;">
       <h2 style="margin-top:0;">Case Manager Notes</h2>
 
@@ -225,74 +309,6 @@
         {% endfor %}
       {% else %}
         <p>No case manager notes recorded.</p>
-      {% endif %}
-    </div>
-
-    <div id="add-appointment" class="card" style="margin-bottom:16px;">
-      <h2 style="margin-top:0;">Add Appointment</h2>
-
-      <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="return_anchor" value="add-appointment">
-
-        <div class="profile-form-row-compact">
-          <div>
-            <label for="appointment_date"><strong>Appointment Date</strong></label>
-            <input type="date" id="appointment_date" name="appointment_date" class="date-input-compact" required>
-          </div>
-
-          <div style="min-width:240px;">
-            <label for="appointment_type"><strong>Appointment Type</strong></label>
-            <input type="text" id="appointment_type" name="appointment_type">
-          </div>
-        </div>
-
-        <label for="appointment_notes"><strong>Notes</strong></label>
-        <textarea id="appointment_notes" name="notes" rows="4" class="full-width-textarea"></textarea>
-
-        <div class="profile-actions" style="margin-top:14px;">
-          <button type="submit">Add Appointment</button>
-        </div>
-      </form>
-    </div>
-
-    <div id="appointments" class="card" style="margin-bottom:16px;">
-      <h2 style="margin-top:0;">Upcoming Appointment</h2>
-
-      {% if appointment %}
-        {% if appointment is mapping %}
-          <p><strong>Date:</strong> {{ appointment["appointment_date"] or "—" }}</p>
-          <p><strong>Type:</strong> {{ appointment["appointment_type"] or "—" }}</p>
-          <p><strong>Notes:</strong> {{ appointment["notes"] or "—" }}</p>
-          <p><strong>Reminder Sent:</strong> {{ "Yes" if appointment["reminder_sent"] else "No" }}</p>
-        {% else %}
-          <p><strong>Date:</strong> {{ appointment[0] or "—" }}</p>
-          <p><strong>Type:</strong> {{ appointment[1] or "—" }}</p>
-          <p><strong>Notes:</strong> {{ appointment[2] or "—" }}</p>
-          <p><strong>Reminder Sent:</strong> {{ "Yes" if appointment[3] else "No" }}</p>
-        {% endif %}
-      {% else %}
-        <p>No appointment scheduled.</p>
-      {% endif %}
-    </div>
-
-    <div class="card" style="margin-bottom:16px;">
-      <h2 style="margin-top:0;">Latest Compliance Summary</h2>
-
-      {% if compliance %}
-        {% if compliance is mapping %}
-          <p><strong>Productive Hours:</strong> {{ compliance["productive_hours"] or 0 }}</p>
-          <p><strong>Work Hours:</strong> {{ compliance["work_hours"] or 0 }}</p>
-          <p><strong>Meetings:</strong> {{ compliance["meeting_count"] or 0 }}</p>
-          <p><strong>Submitted:</strong> {{ compliance["submitted_at"] or "—" }}</p>
-        {% else %}
-          <p><strong>Productive Hours:</strong> {{ compliance[0] or 0 }}</p>
-          <p><strong>Work Hours:</strong> {{ compliance[1] or 0 }}</p>
-          <p><strong>Meetings:</strong> {{ compliance[2] or 0 }}</p>
-          <p><strong>Submitted:</strong> {{ compliance[3] or "—" }}</p>
-        {% endif %}
-      {% else %}
-        <p>No weekly compliance summary yet.</p>
       {% endif %}
     </div>
   {% endif %}
