@@ -3,52 +3,100 @@
 
 <h1>My Profile</h1>
 
-<div style="max-width:720px;background:#f7fbff;border:1px solid #cfd9e3;border-radius:16px;padding:24px;">
-
-<form method="post">
+<form method="POST">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+  <div style="max-width:700px; display:grid; gap:14px;">
 
     <div>
-      <label>First Name</label>
-      <input name="first_name" value="{{ user.first_name or '' }}" style="width:100%;">
+      <label for="first_name">First Name</label><br>
+      <input
+        id="first_name"
+        name="first_name"
+        type="text"
+        value="{{ user.first_name or '' }}"
+        required
+        style="width:100%; padding:10px;"
+      >
     </div>
 
     <div>
-      <label>Last Name</label>
-      <input name="last_name" value="{{ user.last_name or '' }}" style="width:100%;">
+      <label for="last_name">Last Name</label><br>
+      <input
+        id="last_name"
+        name="last_name"
+        type="text"
+        value="{{ user.last_name or '' }}"
+        required
+        style="width:100%; padding:10px;"
+      >
     </div>
 
     <div>
-      <label>Email</label>
-      <input name="email" value="{{ user.email or '' }}" style="width:100%;">
+      <label for="username">Username</label><br>
+      <input
+        id="username"
+        type="text"
+        value="{{ user.username or '' }}"
+        disabled
+        style="width:100%; padding:10px; background:#f3f4f6;"
+      >
     </div>
 
     <div>
-      <label>Mobile Phone</label>
-      <input name="mobile_phone" value="{{ user.mobile_phone or '' }}" style="width:100%;">
+      <label for="role">Role</label><br>
+      <input
+        id="role"
+        type="text"
+        value="{{ user.role or '' }}"
+        disabled
+        style="width:100%; padding:10px; background:#f3f4f6;"
+      >
+    </div>
+
+    <div>
+      <label for="email">Email</label><br>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        value="{{ user.email or '' }}"
+        style="width:100%; padding:10px;"
+      >
+    </div>
+
+    <div>
+      <label for="mobile_phone">Mobile Phone</label><br>
+      <input
+        id="mobile_phone"
+        name="mobile_phone"
+        type="text"
+        value="{{ user.mobile_phone or '' }}"
+        style="width:100%; padding:10px;"
+      >
+    </div>
+
+    <div>
+      <label for="password">New Password</label><br>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        value=""
+        autocomplete="new-password"
+        style="width:100%; padding:10px;"
+      >
+      <div style="font-size:12px; color:#6b7280; margin-top:6px;">
+        Leave blank to keep your current password.
+      </div>
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <button type="submit">Save Changes</button>
+      <a href="{{ url_for('attendance.staff_attendance') }}" style="margin-left:10px;">Cancel</a>
     </div>
 
   </div>
-
-  <div style="margin-top:20px;">
-    <label>Change Password</label>
-    <input type="password" name="password" placeholder="Leave blank to keep current password" style="width:100%;">
-  </div>
-
-  <div style="margin-top:20px;">
-    <strong>Username:</strong> {{ user.username }}<br>
-    <strong>Role:</strong> {{ user.role }}
-  </div>
-
-  <div style="margin-top:24px;">
-    <button type="submit">Save Profile</button>
-    <a href="{{ url_for('auth.staff_home') }}" style="margin-left:10px;">Cancel</a>
-  </div>
-
 </form>
-
-</div>
 
 {% endblock %}
