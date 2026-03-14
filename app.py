@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import importlib
@@ -460,7 +459,17 @@ def add_cache_headers(response):
 
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "geolocation=(), camera=(), microphone=(), payment=()"
+    )
+
+    response.headers.setdefault(
+        "Cross-Origin-Opener-Policy",
+        "same-origin"
+    )
 
     csp = (
         "default-src 'self'; "
@@ -471,12 +480,16 @@ def add_cache_headers(response):
         "font-src 'self' data: https://unpkg.com; "
         "frame-ancestors 'none'; "
         "base-uri 'self'; "
-        "form-action 'self'"
+        "form-action 'self'; "
+        "object-src 'none'"
     )
     response.headers.setdefault("Content-Security-Policy", csp)
 
     if request.is_secure:
-        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains"
+        )
 
     return response
 
@@ -485,4 +498,3 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="127.0.0.1", port=5000)
-
