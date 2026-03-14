@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -17,6 +19,7 @@ from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
+from core.sms_sender import send_sms
 
 
 staff_portal = Blueprint("staff_portal", __name__)
@@ -24,6 +27,10 @@ staff_portal = Blueprint("staff_portal", __name__)
 
 def _is_pg() -> bool:
     return bool(current_app.config.get("DATABASE_URL"))
+
+
+def _can_manage_leave() -> bool:
+    return session.get("role") in {"admin", "shelter_director", "staff", "case_manager", "ra"}
 
 
 # -----------------------------------------------------
@@ -34,6 +41,10 @@ def _is_pg() -> bool:
 @require_login
 @require_shelter
 def staff_leave_pending():
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
     shelter = session["shelter"]
 
     rows = db_fetchall(
@@ -56,6 +67,10 @@ def staff_leave_pending():
 @require_login
 @require_shelter
 def staff_leave_upcoming():
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
     shelter = session["shelter"]
     now = utcnow_iso()
 
@@ -90,6 +105,10 @@ def staff_leave_upcoming():
 @require_login
 @require_shelter
 def staff_leave_away_now():
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
     shelter = session["shelter"]
     now = utcnow_iso()
 
@@ -123,6 +142,10 @@ def staff_leave_away_now():
 @require_login
 @require_shelter
 def staff_leave_overdue():
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
     shelter = session["shelter"]
 
     rows = db_fetchall(
@@ -178,7 +201,9 @@ def staff_leave_overdue():
 @require_login
 @require_shelter
 def staff_leave_approve(req_id: int):
-    from app import send_sms
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
 
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
@@ -247,12 +272,27 @@ def staff_leave_approve(req_id: int):
 @require_login
 @require_shelter
 def staff_leave_deny(req_id: int):
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
 
     if not note:
         flash("Denial note required.", "error")
+        return redirect(url_for("staff_portal.staff_leave_pending"))
+
+    row = db_fetchone(
+        "SELECT id, status FROM leave_requests WHERE id = %s AND shelter = %s"
+        if _is_pg()
+        else "SELECT id, status FROM leave_requests WHERE id = ? AND shelter = ?",
+        (req_id, shelter),
+    )
+
+    if not row or ((row["status"] if isinstance(row, dict) else row[1]) != "pending"):
+        flash("Not pending.", "error")
         return redirect(url_for("staff_portal.staff_leave_pending"))
 
     db_execute(
@@ -280,9 +320,31 @@ def staff_leave_deny(req_id: int):
 @require_login
 @require_shelter
 def staff_leave_check_in(req_id: int):
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
+
+    row = db_fetchone(
+        "SELECT id, status, check_in_at FROM leave_requests WHERE id = %s AND shelter = %s"
+        if _is_pg()
+        else "SELECT id, status, check_in_at FROM leave_requests WHERE id = ? AND shelter = ?",
+        (req_id, shelter),
+    )
+
+    if not row:
+        flash("Request not found.", "error")
+        return redirect(url_for("staff_portal.staff_leave_away_now"))
+
+    row_status = row["status"] if isinstance(row, dict) else row[1]
+    row_check_in_at = row["check_in_at"] if isinstance(row, dict) else row[2]
+
+    if row_status != "approved" or row_check_in_at is not None:
+        flash("Leave request cannot be checked in.", "error")
+        return redirect(url_for("staff_portal.staff_leave_away_now"))
 
     db_execute(
         """
@@ -313,6 +375,10 @@ def staff_leave_check_in(req_id: int):
 @require_login
 @require_shelter
 def staff_leave_print(req_id: int):
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
+
     shelter = session["shelter"]
 
     row = db_fetchone(
@@ -362,4 +428,3 @@ def staff_leave_print(req_id: int):
         fmt_dt=fmt_dt,
         fmt_date=fmt_date,
     )
-    
