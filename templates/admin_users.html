@@ -99,122 +99,88 @@ table.compact tbody tr:hover {
 }
 </style>
 
-
 <div class="users-page-header">
+  <div class="small-note">
+    Search or sort users. Add or edit on a separate page.
+  </div>
 
-<div class="small-note">
-Search or sort users. Add or edit on a separate page.
+  <div class="page-actions">
+    <a href="{{ url_for('admin.admin_add_user') }}">Add User</a>
+    <a href="{{ done_url or url_for('attendance.staff_attendance') }}">Done</a>
+  </div>
 </div>
-
-<div class="page-actions">
-<a href="{{ url_for('admin.admin_add_user') }}">Add User</a>
-<a href="{{ url_for('auth.staff_home') }}">Done</a>
-</div>
-
-</div>
-
 
 <form method="get">
+  <div class="users-controls">
+    <input
+      type="text"
+      name="q"
+      placeholder="Search name..."
+      value="{{ q or '' }}"
+    >
 
-<div class="users-controls">
+    <select name="sort">
+      <option value="last_name" {% if sort == "last_name" %}selected{% endif %}>
+        Sort: Last Name
+      </option>
 
-<input
-type="text"
-name="q"
-placeholder="Search name..."
-value="{{ q or '' }}"
->
+      <option value="first_name" {% if sort == "first_name" %}selected{% endif %}>
+        Sort: First Name
+      </option>
 
-<select name="sort">
+      <option value="role" {% if sort == "role" %}selected{% endif %}>
+        Sort: Role
+      </option>
+    </select>
 
-<option value="last_name" {% if sort=="last_name" %}selected{% endif %}>
-Sort: Last Name
-</option>
-
-<option value="first_name" {% if sort=="first_name" %}selected{% endif %}>
-Sort: First Name
-</option>
-
-<option value="role" {% if sort=="role" %}selected{% endif %}>
-Sort: Role
-</option>
-
-</select>
-
-<button class="search-btn">Apply</button>
-
-</div>
-
+    <button class="search-btn" type="submit">Apply</button>
+  </div>
 </form>
-
 
 <br>
 
 <div class="users-results">
+  <table class="compact">
+    <thead>
+      <tr>
+        <th>Last Name</th>
+        <th>First Name</th>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Active</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
 
-<table class="compact">
-
-<thead>
-<tr>
-<th>Last Name</th>
-<th>First Name</th>
-<th>Username</th>
-<th>Role</th>
-<th>Active</th>
-<th>Created</th>
-<th>Actions</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% if users %}
-
-{% for u in users %}
-
-<tr>
-
-<td>{{ u.last_name or "" }}</td>
-
-<td>{{ u.first_name or "" }}</td>
-
-<td class="username-cell">{{ u.username }}</td>
-
-<td>{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}</td>
-
-<td>{{ "Yes" if u.is_active else "No" }}</td>
-
-<td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
-
-<td>
-
-{% if u.username == session.get("username") %}
-<span>You</span>
-{% else %}
-<a class="action-link"
-href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}">
-Edit
-</a>
-{% endif %}
-
-</td>
-
-</tr>
-
-{% endfor %}
-
-{% else %}
-
-<tr>
-<td colspan="7">No users found.</td>
-</tr>
-
-{% endif %}
-
-</tbody>
-
-</table>
-
+    <tbody>
+      {% if users %}
+        {% for u in users %}
+          <tr>
+            <td>{{ u.last_name or "" }}</td>
+            <td>{{ u.first_name or "" }}</td>
+            <td class="username-cell">{{ u.username }}</td>
+            <td>{{ ROLE_LABELS.get(u.role, u.role) if ROLE_LABELS else u.role }}</td>
+            <td>{{ "Yes" if u.is_active else "No" }}</td>
+            <td>{{ fmt_dt(u.created_at) if fmt_dt else u.created_at }}</td>
+            <td>
+              {% if u.username == session.get("username") %}
+                <span>You</span>
+              {% else %}
+                <a class="action-link" href="{{ url_for('admin.admin_edit_user', user_id=u.id) }}">
+                  Edit
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="7">No users found.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
 </div>
 
 {% endblock %}
