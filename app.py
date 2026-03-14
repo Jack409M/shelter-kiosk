@@ -8,7 +8,6 @@ from functools import wraps
 from typing import Optional
 
 from flask import (
-    current_app,
     flash,
     g,
     redirect,
@@ -40,10 +39,6 @@ except Exception:
 # ------------------------------------------------------------
 # Environment flags and constants
 # ------------------------------------------------------------
-# Future extraction note
-# These environment values should eventually move into core.config
-# so this file becomes app wiring only.
-
 TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
 TWILIO_INBOUND_ENABLED = (os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true")
 TWILIO_STATUS_ENABLED = (os.environ.get("TWILIO_STATUS_ENABLED", "false").strip().lower() == "true")
@@ -88,15 +83,10 @@ app.config["CLOUDFLARE_ONLY"] = os.environ.get("CLOUDFLARE_ONLY", "")
 # ------------------------------------------------------------
 # Request utility delegation
 # ------------------------------------------------------------
-# Future extraction note
-# Additional request parsing helpers can move into core.request_utils.
 def _client_ip() -> str:
     return client_ip()
 
 
-# Centralized request security middleware now lives in core.request_security.
-# Keep request level defense registered here, but keep the actual logic out
-# of app.py so this file does not become a god file again.
 register_request_security(
     app,
     client_ip_func=_client_ip,
@@ -104,35 +94,6 @@ register_request_security(
     is_rate_limited_func=is_rate_limited,
     ban_ip_func=ban_ip,
 )
-
-
-@app.before_request
-def log_request_info():
-    try:
-        app.logger.debug(
-            f"REQUEST method={request.method} path={request.path} endpoint={request.endpoint}"
-        )
-        app.logger.debug(f"URL RULE {request.url_rule}")
-
-        if request.method == "POST":
-            app.logger.debug(f"FORM KEYS {list(request.form.keys())}")
-
-    except Exception as e:
-        app.logger.debug(f"LOGGING ERROR {e}")
-
-
-@app.before_request
-def force_https_redirect():
-    if current_app.debug:
-        return None
-
-    if request.headers.get("X-Forwarded-Proto", "").lower() == "https":
-        return None
-
-    if request.is_secure:
-        return None
-
-    return redirect(request.url.replace("http://", "https://", 1), code=301)
 
 
 secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
@@ -153,8 +114,6 @@ app.config.update(
 # ------------------------------------------------------------
 # CSRF
 # ------------------------------------------------------------
-# Future extraction note
-# These CSRF helpers can move into core.csrf later.
 def _csrf_token() -> str:
     tok = session.get("_csrf_token")
     if not tok:
@@ -208,8 +167,6 @@ def _csrf_before_request():
 # ------------------------------------------------------------
 # Shelter helpers
 # ------------------------------------------------------------
-# Future extraction note
-# Additional shelter query helpers can move into core.shelters.
 def get_all_shelters() -> list[str]:
     return load_all_shelters(init_db)
 
@@ -323,11 +280,6 @@ def parse_dt(dt_str: str) -> datetime:
 # ------------------------------------------------------------
 # Database initialization
 # ------------------------------------------------------------
-# Current state
-# schema mutations and indexes are mostly delegated to db/schema.py.
-# Future extraction targets
-# 1. move remaining initialization wiring into db/schema.py
-# 2. collapse legacy_init_db into schema.init_db once callers are aligned
 def legacy_init_db() -> None:
     get_db()
     schema.init_db()
@@ -343,8 +295,6 @@ app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
 # ------------------------------------------------------------
 # Decorators
 # ------------------------------------------------------------
-# Future extraction note
-# These should eventually move into core.decorators.
 def require_staff_or_admin(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -402,51 +352,6 @@ def require_resident_create(fn):
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template("404.html"), 404
-
-
-@app.after_request
-def add_cache_headers(response):
-    if request.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=86400"
-    else:
-        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private, max-age=0"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-
-    response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
-    response.headers.setdefault("X-XSS-Protection", "1; mode=block")
-    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
-    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
-    response.headers.setdefault("Origin-Agent-Cluster", "?1")
-    response.headers.setdefault("X-Permitted-Cross-Domain-Policies", "none")
-
-    response.headers.setdefault(
-        "Permissions-Policy",
-        "geolocation=(), camera=(), microphone=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()"
-    )
-
-    csp = (
-        "default-src 'none'; "
-        "img-src 'self' data: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com; "
-        "style-src 'self' 'unsafe-inline' https://unpkg.com; "
-        "script-src 'self' 'unsafe-inline' https://unpkg.com; "
-        "connect-src 'self'; "
-        "font-src 'self' data: https://unpkg.com; "
-        "frame-ancestors 'none'; "
-        "base-uri 'self'; "
-        "form-action 'self'; "
-        "object-src 'none'"
-    )
-    response.headers.setdefault("Content-Security-Policy", csp)
-
-    response.headers.setdefault(
-        "Strict-Transport-Security",
-        "max-age=31536000; includeSubDomains; preload"
-    )
-
-    return response
 
 
 if __name__ == "__main__":
