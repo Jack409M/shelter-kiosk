@@ -272,7 +272,7 @@ def staff_select_shelter():
     if nxt and nxt.startswith("/staff"):
         return redirect(nxt)
 
-    return redirect(url_for("auth.staff_home"))
+    return redirect(url_for("attendance.staff_attendance"))
 
 
 @auth.route("/staff/profile", methods=["GET", "POST"])
@@ -294,7 +294,7 @@ def staff_profile():
 
     if not row:
         flash("User record not found.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     if request.method == "POST":
         first_name = (request.form.get("first_name") or "").strip()
