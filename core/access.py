@@ -7,6 +7,10 @@ from flask import flash, redirect, request, session, url_for
 from core.runtime import STAFF_ROLES, TRANSFER_ROLES
 
 
+def _staff_home_redirect():
+    return redirect(url_for("attendance.staff_attendance"))
+
+
 # ------------------------------------------------------------
 # Staff / admin access control
 # ------------------------------------------------------------
@@ -16,7 +20,7 @@ def require_staff_or_admin(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") not in STAFF_ROLES:
             flash("Staff only.", "error")
-            return redirect(url_for("auth.staff_home"))
+            return _staff_home_redirect()
         return fn(*args, **kwargs)
 
     return wrapper
@@ -27,7 +31,7 @@ def require_admin(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") != "admin":
             flash("Admin only.", "error")
-            return redirect(url_for("auth.staff_home"))
+            return _staff_home_redirect()
         return fn(*args, **kwargs)
 
     return wrapper
@@ -61,7 +65,7 @@ def require_transfer(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") not in TRANSFER_ROLES:
             flash("Admin or case manager only.", "error")
-            return redirect(url_for("auth.staff_home"))
+            return _staff_home_redirect()
         return fn(*args, **kwargs)
 
     return wrapper
@@ -76,7 +80,7 @@ def require_resident_create(fn):
     def wrapper(*args, **kwargs):
         if session.get("role") not in {"admin", "case_manager"}:
             flash("Admin or case manager only.", "error")
-            return redirect(url_for("auth.staff_home"))
+            return _staff_home_redirect()
         return fn(*args, **kwargs)
 
     return wrapper
