@@ -2,39 +2,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard.css', v='20260313e') }}">
-<style>
-.case-page{
-  max-width:1200px;
-  margin:0 auto;
-  padding:28px;
-  background:#ffffff;
-  border-radius:22px;
-  border:6px solid transparent;
-  background-clip:padding-box;
-  position:relative;
-}
-
-.case-page:before{
-  content:"";
-  position:absolute;
-  inset:-6px;
-  border-radius:22px;
-  background:
-    radial-gradient(circle at 10px 10px,#ffdbe8 4px,transparent 5px),
-    radial-gradient(circle at 30px 20px,#d7f1ff 4px,transparent 5px),
-    radial-gradient(circle at 20px 30px,#e6ffe9 4px,transparent 5px),
-    radial-gradient(circle at 40px 10px,#ffe7c7 4px,transparent 5px);
-  background-size:60px 60px;
-  opacity:.35;
-  z-index:-1;
-}
-
-.case-summary-card.active{
-  border-left-color:#6aa9e9;
-  background:#f7fbff;
-  box-shadow:0 0 0 2px rgba(106,169,233,.25);
-}
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard_page.css', v='20260314a') }}">
 {% endblock %}
 
 {% block content %}
@@ -246,48 +214,6 @@
 
 </div>
 
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  const links = document.querySelectorAll(".js-scroll-link");
-
-  links.forEach(function (link) {
-    link.addEventListener("click", function (event) {
-      const targetId = this.getAttribute("href");
-      if (!targetId || !targetId.startsWith("#")) {
-        return;
-      }
-
-      const target = document.querySelector(targetId);
-      if (!target) {
-        return;
-      }
-
-      event.preventDefault();
-
-      document.querySelectorAll(".case-summary-card").forEach(function(card){
-        card.classList.remove("active");
-      });
-
-      this.classList.add("active");
-
-      const summary = document.querySelector(".case-dashboard-summary");
-      const summaryHeight = summary ? summary.offsetHeight : 0;
-      const offset = summaryHeight + 28;
-
-      const targetTop =
-        target.getBoundingClientRect().top +
-        window.pageYOffset -
-        offset;
-
-      window.scrollTo({
-        top: targetTop,
-        behavior: "smooth"
-      });
-
-      history.replaceState(null, "", targetId);
-    });
-  });
-});
-</script>
+<script src="{{ url_for('static', filename='js/case_dashboard_scroll.js', v='20260314a') }}"></script>
 
 {% endblock %}
