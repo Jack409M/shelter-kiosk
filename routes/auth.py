@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
-
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
@@ -18,14 +15,13 @@ from core.rate_limit import (
     is_rate_limited,
     lock_key,
 )
+from core.runtime import get_all_shelters, get_client_ip, init_db
 
 auth = Blueprint("auth", __name__)
 
 
 @auth.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
-    from app import _client_ip, get_all_shelters, init_db
-
     init_db()
 
     all_shelters_raw = get_all_shelters()
@@ -47,7 +43,7 @@ def staff_login():
     username = (request.form.get("username") or "").strip()
     password = (request.form.get("password") or "").strip()
 
-    ip = _client_ip()
+    ip = get_client_ip()
     normalized_username = username.lower() or "blank"
     username_lock_key = f"staff_login_username_lock:{normalized_username}"
 
@@ -248,8 +244,6 @@ def staff_logout():
 @auth.route("/staff/select-shelter", methods=["GET", "POST"])
 @require_login
 def staff_select_shelter():
-    from app import get_all_shelters
-
     all_shelters_raw = get_all_shelters()
     all_shelters = []
     all_shelters_lower = []
@@ -285,7 +279,6 @@ def staff_select_shelter():
 @require_login
 @require_shelter
 def staff_profile():
-    from core.db import db_execute
     from werkzeug.security import generate_password_hash
 
     staff_id = session.get("staff_user_id")
@@ -338,13 +331,3 @@ def staff_profile():
         return redirect(url_for("auth.staff_profile"))
 
     return render_template("staff_profile.html", user=row)
-
-
-@auth.route("/staff")
-@require_login
-@require_shelter
-def staff_home():
-    if (session.get("role") or "").strip() == "admin":
-        return redirect(url_for("admin.admin_dashboard"))
-
-    return redirect(url_for("attendance.staff_attendance"))
