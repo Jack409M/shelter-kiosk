@@ -5,6 +5,7 @@
   let initialAttackMapPoints = [];
   let initialTopThreats = [];
   let initialTopThreatScore = 0;
+  let initialSecurityBanner = {};
 
   if (configEl) {
     try {
@@ -17,6 +18,12 @@
       initialTopThreats = JSON.parse(configEl.dataset.topThreats || "[]");
     } catch (err) {
       initialTopThreats = [];
+    }
+
+    try {
+      initialSecurityBanner = JSON.parse(configEl.dataset.securityBanner || "{}");
+    } catch (err) {
+      initialSecurityBanner = {};
     }
 
     initialTopThreatScore = Number(configEl.dataset.topThreatScore || 0);
@@ -168,8 +175,6 @@
         led: "red",
         pill: "danger",
         banner: "danger",
-        title: "Active Threat Pressure Detected",
-        copy: "The application layer is seeing hostile activity patterns, active defenses, or recent high severity indicators."
       };
     }
 
@@ -179,8 +184,6 @@
         led: "red",
         pill: "danger",
         banner: "danger",
-        title: "Active Attack Detected",
-        copy: "One or more sources are above defined hostile activity thresholds. Review the attack radar and threat queue."
       };
     }
 
@@ -190,8 +193,6 @@
         led: "amber",
         pill: "warn",
         banner: "warn",
-        title: "Elevated Security Activity",
-        copy: "Security activity is above normal baseline. Review active threats, rate limiting, and recent incidents."
       };
     }
 
@@ -200,13 +201,12 @@
       led: "green",
       pill: "",
       banner: "",
-      title: "System Stable",
-      copy: "No active threat indicators are currently above alert threshold inside the application layer."
     };
   }
 
   function updateSecurityBanner(data) {
     const state = computeSecurityState(data);
+    const payload = data && data.security_banner ? data.security_banner : {};
 
     const pill = document.getElementById("security-status-pill");
     const pillLed = document.getElementById("security-status-led");
@@ -214,6 +214,14 @@
     const banner = document.getElementById("security-banner");
     const bannerTitle = document.getElementById("security-banner-title");
     const bannerCopy = document.getElementById("security-banner-copy");
+    const primaryRisk = document.getElementById("security-primary-risk");
+    const recommendedAction = document.getElementById("security-recommended-action");
+    const recommendedReason = document.getElementById("security-recommended-reason");
+
+    const headline = String(payload.headline || "");
+    const risk = String(payload.primary_risk || "");
+    const action = String(payload.recommended_action || "");
+    const reason = String(payload.recommended_reason || "");
 
     if (pill) {
       pill.className = "status-pill" + (state.pill ? " " + state.pill : "");
@@ -228,10 +236,31 @@
       banner.className = "security-banner" + (state.banner ? " " + state.banner : "");
     }
     if (bannerTitle) {
-      bannerTitle.textContent = state.title;
+      bannerTitle.textContent = headline || (
+        state.level === "CRITICAL"
+          ? "Security Status: Critical threat level"
+          : state.level === "ELEVATED"
+            ? "Security Status: Elevated threat level"
+            : "Security Status: Normal"
+      );
     }
     if (bannerCopy) {
-      bannerCopy.textContent = state.copy;
+      bannerCopy.textContent = risk || (
+        state.level === "CRITICAL"
+          ? "The application layer is seeing hostile activity patterns, active defenses, or recent high severity indicators."
+          : state.level === "ELEVATED"
+            ? "Security activity is above normal baseline."
+            : "No active hostile pattern detected."
+      );
+    }
+    if (primaryRisk) {
+      primaryRisk.textContent = risk || "No active hostile pattern detected.";
+    }
+    if (recommendedAction) {
+      recommendedAction.textContent = action || "Continue monitoring.";
+    }
+    if (recommendedReason) {
+      recommendedReason.textContent = reason || "No bans, lockouts, or major hostile clusters are active right now.";
     }
   }
 
@@ -544,6 +573,14 @@
     }
   }
 
+  function hydrateInitialSecurityBanner() {
+    updateSecurityBanner({
+      security_banner: initialSecurityBanner,
+      top_threat_score: initialTopThreatScore,
+      top_threats: initialTopThreats
+    });
+  }
+
   async function refreshLive() {
     try {
       const res = await fetch(liveUrl, {
@@ -582,6 +619,7 @@
   }
 
   hydrateInitialThreatQueue();
+  hydrateInitialSecurityBanner();
   refreshLive();
   setInterval(refreshLive, 10000);
 })();
