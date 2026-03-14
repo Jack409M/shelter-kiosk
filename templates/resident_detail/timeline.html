@@ -33,7 +33,7 @@
 
   .calendar-nav {
     display: flex;
-    align-items: end;
+    align-items: center;
     gap: 0.45rem;
     flex-wrap: wrap;
     margin-bottom: 0.55rem;
@@ -61,56 +61,7 @@
     font-size: 0.98rem;
     font-weight: 800;
     color: #0f2f4a;
-    padding: 0 0.2rem 0.2rem 0.2rem;
-  }
-
-  .calendar-jump {
-    display: flex;
-    align-items: end;
-    gap: 0.45rem;
-    flex-wrap: wrap;
-    margin-left: auto;
-  }
-
-  .calendar-jump-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.18rem;
-  }
-
-  .calendar-jump-group label {
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: rgba(0, 0, 0, 0.64);
-    line-height: 1;
-  }
-
-  .calendar-jump select,
-  .calendar-jump input {
-    min-width: 112px;
-    padding: 0.42rem 0.55rem;
-    border-radius: 10px;
-    border: 1px solid rgba(15, 47, 74, 0.16);
-    background: #fff;
-    font: inherit;
-    font-size: 0.92rem;
-  }
-
-  .calendar-jump button {
-    padding: 0.42rem 0.72rem;
-    border-radius: 10px;
-    border: 1px solid rgba(15, 47, 74, 0.10);
-    background: rgba(15, 47, 74, 0.06);
-    color: #0f2f4a;
-    font: inherit;
-    font-size: 0.92rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s ease;
-  }
-
-  .calendar-jump button:hover {
-    background: rgba(15, 47, 74, 0.12);
+    padding: 0 0.2rem;
   }
 
   .calendar-legend {
@@ -325,114 +276,6 @@
     line-height: 1;
   }
 
-  .week-grid {
-    display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-
-  .week-column {
-    min-height: 420px;
-    border: 1px solid rgba(15, 47, 74, 0.10);
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.82);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .week-column.today {
-    border-color: rgba(37, 99, 235, 0.34);
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.10);
-  }
-
-  .week-column-head {
-    padding: 0.8rem 0.85rem 0.55rem 0.85rem;
-    border-bottom: 1px solid rgba(15, 47, 74, 0.08);
-    background: rgba(15, 47, 74, 0.03);
-  }
-
-  .week-column-name {
-    font-size: 0.88rem;
-    font-weight: 800;
-    color: rgba(0, 0, 0, 0.60);
-  }
-
-  .week-column-date {
-    margin-top: 0.15rem;
-    font-size: 1rem;
-    font-weight: 800;
-    color: #0f2f4a;
-  }
-
-  .week-column-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    min-height: 0;
-  }
-
-  .day-panel {
-    border: 1px solid rgba(15, 47, 74, 0.10);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.82);
-    overflow: hidden;
-  }
-
-  .day-panel-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    padding: 1rem 1.1rem 0.8rem 1.1rem;
-    border-bottom: 1px solid rgba(15, 47, 74, 0.08);
-    background: rgba(15, 47, 74, 0.03);
-  }
-
-  .day-panel-title {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #0f2f4a;
-  }
-
-  .day-panel-count {
-    font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.60);
-    font-weight: 700;
-  }
-
-  .day-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    padding: 1rem 1.1rem 1.1rem 1.1rem;
-  }
-
-  .day-row {
-    display: grid;
-    grid-template-columns: 110px minmax(0, 1fr);
-    gap: 0.9rem;
-    align-items: start;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid rgba(15, 47, 74, 0.08);
-  }
-
-  .day-row:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  .day-row-time {
-    font-size: 0.82rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: rgba(0, 0, 0, 0.58);
-    padding-top: 0.2rem;
-  }
-
   .empty-state {
     padding: 1rem 0.9rem;
     border: 1px dashed rgba(15, 47, 74, 0.16);
@@ -566,8 +409,7 @@
   }
 
   @media (max-width: 1180px) {
-    .month-grid,
-    .week-grid {
+    .month-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -577,36 +419,14 @@
   }
 
   @media (max-width: 800px) {
-    .calendar-nav {
-      align-items: stretch;
-    }
-
-    .calendar-jump {
-      margin-left: 0;
-      width: 100%;
-    }
-
-    .calendar-jump select,
-    .calendar-jump input {
-      min-width: 0;
-      width: 100%;
-    }
-
-    .month-grid,
-    .week-grid {
+    .month-grid {
       grid-template-columns: 1fr;
-    }
-
-    .month-cell,
-    .week-column {
-      min-height: 0;
     }
 
     .month-cell {
       height: 170px;
     }
 
-    .day-row,
     .day-modal-row {
       grid-template-columns: 1fr;
       gap: 0.35rem;
@@ -646,39 +466,6 @@
        href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view='month', anchor=calendar.next_anchor) }}">
       Next
     </a>
-
-    <form class="calendar-jump"
-          method="get"
-          action="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id) }}">
-      <input type="hidden" name="view" value="month">
-
-      <div class="calendar-jump-group">
-        <label for="month-select">Month</label>
-        <select id="month-select" name="month">
-          {% for month_value, month_label in calendar.month_names %}
-            <option value="{{ month_value }}" {% if month_value == calendar.selected_month %}selected{% endif %}>
-              {{ month_label }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="calendar-jump-group">
-        <label for="year-select">Year</label>
-        <select id="year-select" name="year">
-          {% for year_value in calendar.year_options %}
-            <option value="{{ year_value }}" {% if year_value == calendar.selected_year %}selected{% endif %}>
-              {{ year_value }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="calendar-jump-group">
-        <label>&nbsp;</label>
-        <button type="submit">Go</button>
-      </div>
-    </form>
   </div>
 
   <div class="calendar-legend">
