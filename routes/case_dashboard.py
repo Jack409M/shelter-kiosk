@@ -66,10 +66,7 @@ def _is_recent(value, days: int) -> bool:
     return dt >= cutoff
 
 
-def _scope_filter_and_params(role: str | None, shelter: str | None):
-    if role in {"admin", "shelter_director", "supervisor"}:
-        return "", ()
-
+def _scope_filter_and_params(shelter: str | None):
     filter_sql = "AND r.shelter = %s" if g.get("db_kind") == "pg" else "AND r.shelter = ?"
     return filter_sql, (shelter,)
 
@@ -81,7 +78,7 @@ def dashboard():
     shelter = session.get("shelter")
     role = session.get("role")
 
-    shelter_filter, params = _scope_filter_and_params(role, shelter)
+    shelter_filter, params = _scope_filter_and_params(shelter)
 
     missing_enrollment = db_fetchall(
         _sql(
