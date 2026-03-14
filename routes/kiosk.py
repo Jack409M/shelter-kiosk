@@ -10,6 +10,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from core.audit import log_action
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
+from core.runtime import KIOSK_PIN, get_all_shelters, get_client_ip, init_db
 
 kiosk = Blueprint("kiosk", __name__)
 
@@ -28,7 +29,6 @@ def _kiosk_enabled() -> bool:
 
 @kiosk.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
 def kiosk_checkout(shelter: str):
-    from app import KIOSK_PIN, _client_ip, get_all_shelters, init_db
     from core.rate_limit import (
         get_key_lock_seconds_remaining,
         is_key_locked,
@@ -46,7 +46,7 @@ def kiosk_checkout(shelter: str):
         return "Invalid shelter", 404
 
     shelter = matched_shelter
-    ip = _client_ip()
+    ip = get_client_ip()
 
     if not _kiosk_enabled():
         log_action(
