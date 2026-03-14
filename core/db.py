@@ -6,8 +6,9 @@ from typing import Any
 from flask import current_app, g
 
 try:
-    from psycopg2.pool import SimpleConnectionPool
+    from psycopg2.pool import PoolError, SimpleConnectionPool
 except Exception:
+    PoolError = Exception
     SimpleConnectionPool = None
 
 
@@ -77,7 +78,12 @@ def close_db(e: Exception | None = None) -> None:
     if kind == "pg":
         global PG_POOL
         if PG_POOL is not None:
-            PG_POOL.putconn(conn)
+            try:
+                PG_POOL.putconn(conn)
+            except PoolError:
+                current_app.logger.warning(
+                    "Postgres pool ignored duplicate or unknown connection return."
+                )
         return
 
     conn.close()
