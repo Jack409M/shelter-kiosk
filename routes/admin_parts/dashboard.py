@@ -77,7 +77,7 @@ def _manual_unlock_username(username: str) -> bool:
 def admin_dashboard_view():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     payload = _build_admin_dashboard_payload(send_alerts=True)
 
@@ -120,7 +120,7 @@ def admin_dashboard_live_view():
 def admin_update_security_settings_view():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     field = (request.form.get("field") or "").strip()
     value = (request.form.get("value") or "").strip()
@@ -180,7 +180,7 @@ def admin_update_security_settings_view():
 def admin_ban_ip_view():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     ip = (request.form.get("ip") or "").strip()
 
@@ -206,7 +206,7 @@ def admin_ban_ip_view():
 def admin_unban_ip_view():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     ip = (request.form.get("ip") or "").strip()
 
@@ -236,7 +236,7 @@ def admin_unban_ip_view():
 def admin_unlock_username_view():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     username = (request.form.get("username") or "").strip()
 
