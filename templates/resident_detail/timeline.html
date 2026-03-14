@@ -86,6 +86,10 @@
     border: 1px solid rgba(15, 47, 74, 0.10);
   }
 
+  .calendar-nav-link:hover {
+    background: rgba(15, 47, 74, 0.12);
+  }
+
   .calendar-nav-label {
     font-size: 1.05rem;
     font-weight: 800;
@@ -124,14 +128,19 @@
   }
 
   .calendar-jump button {
-    padding: 0.58rem 0.9rem;
-    border: 0;
+    padding: 0.55rem 0.85rem;
     border-radius: 10px;
-    background: #0f2f4a;
-    color: #fff;
+    border: 1px solid rgba(15, 47, 74, 0.10);
+    background: rgba(15, 47, 74, 0.06);
+    color: #0f2f4a;
     font: inherit;
     font-weight: 700;
     cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .calendar-jump button:hover {
+    background: rgba(15, 47, 74, 0.12);
   }
 
   .calendar-legend {
