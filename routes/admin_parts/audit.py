@@ -19,7 +19,7 @@ def staff_audit_log_view():
     # audit_exports.py
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     sql = (
         """
@@ -46,7 +46,7 @@ def staff_audit_log_view():
 def staff_audit_log_csv_view():
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     where_sql, params = _audit_where_from_request(request)
     created_expr = "a.created_at::text" if g.get("db_kind") == "pg" else "a.created_at"
