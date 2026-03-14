@@ -39,7 +39,16 @@
 
   <div class="resident-profile-page">
 
-    <section class="resident-notebook-section">
+    <nav class="resident-profile-section-nav" aria-label="Snapshot sections">
+      <a class="resident-profile-section-link" href="#overview">Overview</a>
+      <a class="resident-profile-section-link" href="#casework-actions">Casework</a>
+      {% if enrollment_id %}
+        <a class="resident-profile-section-link" href="#goals">Goals</a>
+        <a class="resident-profile-section-link" href="#case-notes">Notes</a>
+      {% endif %}
+    </nav>
+
+    <section id="overview" class="resident-notebook-section">
       <div class="resident-notebook-section-head">
         <div class="resident-notebook-eyebrow">Snapshot</div>
         <h2 class="resident-notebook-section-title">Overview</h2>
@@ -152,7 +161,7 @@
       </div>
     </section>
 
-    <section class="resident-notebook-section">
+    <section id="casework-actions" class="resident-notebook-section">
       <div class="resident-notebook-section-head">
         <div class="resident-notebook-eyebrow">Casework</div>
         <h2 class="resident-notebook-section-title">Casework Actions</h2>
