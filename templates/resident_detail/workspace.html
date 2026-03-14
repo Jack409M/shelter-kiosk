@@ -23,7 +23,10 @@
 
   <div class="resident-workspace">
 
+    <!-- Resident Header -->
+
     <div class="resident-header">
+
       <div class="resident-title">
         <h1>{{ first_name }} {{ last_name }}</h1>
       </div>
@@ -40,35 +43,81 @@
       </div>
 
       <div class="resident-actions">
-        <a class="btn-small" href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">Snapshot</a>
-        <a class="btn-small" href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">Edit</a>
+        <a class="btn-small" href="{{ url_for('residents.staff_residents') }}">
+          Back to Residents
+        </a>
       </div>
+
     </div>
+
+
+    <!-- Workspace Navigation -->
 
     <div class="resident-tabs">
-      <a class="resident-tab active" href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">Snapshot</a>
-      <a class="resident-tab disabled" href="#">Intake</a>
-      <a class="resident-tab disabled" href="#">Enrollment</a>
-      <a class="resident-tab disabled" href="#">Case Work</a>
-      <a class="resident-tab disabled" href="#">Missing Info</a>
-      <a class="resident-tab disabled" href="#">Timeline</a>
+
+      <a class="resident-tab active"
+         href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">
+        Snapshot
+      </a>
+
+      <a class="resident-tab"
+         href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id) }}">
+        Timeline
+      </a>
+
     </div>
 
+
+    <!-- Workspace Layout -->
+
     <div class="resident-layout">
+
+      <!-- Left Rail -->
+
       <div class="resident-rail">
-        <h3>Resident Progress</h3>
+
+        <h3>Resident Info</h3>
 
         <ul class="progress-list">
-          <li>Enrollment</li>
-          <li>Goals</li>
-          <li>Compliance</li>
-          <li>Case Notes</li>
+
+          <li>
+            <strong>Shelter</strong><br>
+            {{ shelter or "—" }}
+          </li>
+
+          {% if snapshot %}
+            <li>
+              <strong>Status</strong><br>
+              {{ snapshot.program_status }}
+            </li>
+
+            <li>
+              <strong>Days in Program</strong><br>
+              {{ snapshot.days_in_program }}
+            </li>
+          {% elif program_status %}
+            <li>
+              <strong>Status</strong><br>
+              {{ program_status }}
+            </li>
+          {% endif %}
+
+          <li>
+            <strong>Resident ID</strong><br>
+            {{ resident_id }}
+          </li>
+
         </ul>
+
       </div>
+
+
+      <!-- Main Content -->
 
       <div class="resident-main">
         {% block resident_workspace_content %}{% endblock %}
       </div>
+
     </div>
 
   </div>
