@@ -100,7 +100,7 @@ def _can_manage_target_role(target_role: str) -> bool:
 def admin_users_view():
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
@@ -201,7 +201,7 @@ def admin_add_user_view():
 
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
@@ -343,7 +343,7 @@ def admin_edit_user_view(user_id: int):
 
     if not _require_admin_or_shelter_director():
         flash("Admin or Shelter Director only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
@@ -553,7 +553,7 @@ def admin_set_user_active_view(user_id: int):
 
     if role not in {"admin", "shelter_director"}:
         flash("Not allowed.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     rows = db_fetchall(
         f"SELECT id, role FROM staff_users WHERE id = {_ph()}",
@@ -599,7 +599,7 @@ def admin_set_user_role_view(user_id: int):
 
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     rows = db_fetchall(
         f"SELECT id, role FROM staff_users WHERE id = {_ph()}",
@@ -646,7 +646,7 @@ def admin_reset_user_password_view(user_id: int):
 
     if not _require_admin():
         flash("Admin only.", "error")
-        return redirect(url_for("auth.staff_home"))
+        return redirect(url_for("attendance.staff_attendance"))
 
     rows = db_fetchall(
         f"SELECT id, role FROM staff_users WHERE id = {_ph()}",
