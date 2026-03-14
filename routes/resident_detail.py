@@ -18,6 +18,16 @@ def _sql(pg_sql: str, sqlite_sql: str) -> str:
     return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
 
 
+def _normalize_shelter_name(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+def _shelter_equals_sql(column_name: str) -> str:
+    if g.get("db_kind") == "pg":
+        return f"LOWER(COALESCE({column_name}, '')) = %s"
+    return f"LOWER(COALESCE({column_name}, '')) = ?"
+
+
 def _case_manager_allowed() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
@@ -166,25 +176,25 @@ def _next_appointment_for_enrollment(enrollment_id: int):
 def _resident_enrollment_for_shelter(resident_id: int, shelter: str):
     return db_fetchone(
         _sql(
-            """
+            f"""
             SELECT
                 r.id,
                 pe.id AS enrollment_id
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
-            WHERE r.id = %s AND r.shelter = %s
+            WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
             ORDER BY pe.id DESC
             LIMIT 1
             """,
-            """
+            f"""
             SELECT
                 r.id,
                 pe.id AS enrollment_id
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
-            WHERE r.id = ? AND r.shelter = ?
+            WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
             ORDER BY pe.id DESC
             LIMIT 1
             """,
@@ -436,11 +446,11 @@ def _build_snapshot(resident, goals, compliance, appointment):
 @require_login
 @require_shelter
 def resident_profile(resident_id: int):
-    shelter = session.get("shelter")
+    shelter = _normalize_shelter_name(session.get("shelter"))
 
     resident = db_fetchone(
         _sql(
-            """
+            f"""
             SELECT
                 r.id,
                 r.first_name,
@@ -455,11 +465,11 @@ def resident_profile(resident_id: int):
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
-            WHERE r.id = %s AND r.shelter = %s
+            WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
             ORDER BY pe.id DESC
             LIMIT 1
             """,
-            """
+            f"""
             SELECT
                 r.id,
                 r.first_name,
@@ -474,7 +484,7 @@ def resident_profile(resident_id: int):
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
-            WHERE r.id = ? AND r.shelter = ?
+            WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
             ORDER BY pe.id DESC
             LIMIT 1
             """,
@@ -610,11 +620,11 @@ def resident_profile(resident_id: int):
 @require_login
 @require_shelter
 def resident_timeline(resident_id: int):
-    shelter = session.get("shelter")
+    shelter = _normalize_shelter_name(session.get("shelter"))
 
     resident = db_fetchone(
         _sql(
-            """
+            f"""
             SELECT
                 r.id,
                 r.first_name,
@@ -629,11 +639,11 @@ def resident_timeline(resident_id: int):
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
-            WHERE r.id = %s AND r.shelter = %s
+            WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
             ORDER BY pe.id DESC
             LIMIT 1
             """,
-            """
+            f"""
             SELECT
                 r.id,
                 r.first_name,
@@ -648,7 +658,7 @@ def resident_timeline(resident_id: int):
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
-            WHERE r.id = ? AND r.shelter = ?
+            WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
             ORDER BY pe.id DESC
             LIMIT 1
             """,
@@ -688,7 +698,7 @@ def resident_timeline(resident_id: int):
 @require_login
 @require_shelter
 def create_enrollment(resident_id: int):
-    shelter = session.get("shelter")
+    shelter = _normalize_shelter_name(session.get("shelter"))
 
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -696,19 +706,19 @@ def create_enrollment(resident_id: int):
 
     resident = db_fetchone(
         _sql(
-            """
+            f"""
             SELECT
                 id,
                 shelter
             FROM residents
-            WHERE id = %s AND shelter = %s
+            WHERE id = %s AND {_shelter_equals_sql("shelter")}
             """,
-            """
+            f"""
             SELECT
                 id,
                 shelter
             FROM residents
-            WHERE id = ? AND shelter = ?
+            WHERE id = ? AND {_shelter_equals_sql("shelter")}
             """,
         ),
         (resident_id, shelter),
@@ -785,7 +795,7 @@ def create_enrollment(resident_id: int):
 @require_login
 @require_shelter
 def add_goal(resident_id: int):
-    shelter = session.get("shelter")
+    shelter = _normalize_shelter_name(session.get("shelter"))
 
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -844,7 +854,7 @@ def add_goal(resident_id: int):
 @require_login
 @require_shelter
 def complete_goal(goal_id: int):
-    shelter = session.get("shelter")
+    shelter = _normalize_shelter_name(session.get("shelter"))
 
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -852,7 +862,7 @@ def complete_goal(goal_id: int):
 
     goal = db_fetchone(
         _sql(
-            """
+            f"""
             SELECT
                 g.id,
                 r.id AS resident_id
@@ -862,9 +872,9 @@ def complete_goal(goal_id: int):
             JOIN residents r
                 ON r.id = pe.resident_id
             WHERE g.id = %s
-              AND r.shelter = %s
+              AND {_shelter_equals_sql("r.shelter")}
             """,
-            """
+            f"""
             SELECT
                 g.id,
                 r.id AS resident_id
@@ -874,7 +884,7 @@ def complete_goal(goal_id: int):
             JOIN residents r
                 ON r.id = pe.resident_id
             WHERE g.id = ?
-              AND r.shelter = ?
+              AND {_shelter_equals_sql("r.shelter")}
             """,
         ),
         (goal_id, shelter),
@@ -920,7 +930,7 @@ def complete_goal(goal_id: int):
 @require_login
 @require_shelter
 def add_case_note(resident_id: int):
-    shelter = session.get("shelter")
+    shelter = _normalize_shelter_name(session.get("shelter"))
     staff_user_id = session.get("staff_user_id")
 
     if not _case_manager_allowed():
@@ -987,7 +997,7 @@ def add_case_note(resident_id: int):
 @require_login
 @require_shelter
 def add_appointment(resident_id: int):
-    shelter = session.get("shelter")
+    shelter = _normalize_shelter_name(session.get("shelter"))
 
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
