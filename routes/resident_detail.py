@@ -151,6 +151,52 @@ def _compliance_snapshot_text(compliance) -> str:
     return "Not submitted this week"
 
 
+def _load_resident_for_shelter(resident_id: int, shelter: str):
+    return db_fetchone(
+        _sql(
+            f"""
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter AS resident_shelter,
+                r.is_active,
+                pe.id AS enrollment_id,
+                pe.shelter AS enrollment_shelter,
+                pe.program_status,
+                pe.entry_date,
+                pe.exit_date
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+            f"""
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter AS resident_shelter,
+                r.is_active,
+                pe.id AS enrollment_id,
+                pe.shelter AS enrollment_shelter,
+                pe.program_status,
+                pe.entry_date,
+                pe.exit_date
+            FROM residents r
+            LEFT JOIN program_enrollments pe
+                ON pe.resident_id = r.id
+            WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
+            ORDER BY pe.id DESC
+            LIMIT 1
+            """,
+        ),
+        (resident_id, shelter),
+    )
+
+
 def _next_appointment_for_enrollment(enrollment_id: int):
     return db_fetchone(
         _sql(
@@ -667,50 +713,7 @@ def _build_calendar_context(timeline, selected_view: str, anchor: date):
 @require_shelter
 def resident_profile(resident_id: int):
     shelter = _normalize_shelter_name(session.get("shelter"))
-
-    resident = db_fetchone(
-        _sql(
-            f"""
-            SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter AS resident_shelter,
-                r.is_active,
-                pe.id AS enrollment_id,
-                pe.shelter AS enrollment_shelter,
-                pe.program_status,
-                pe.entry_date,
-                pe.exit_date
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY pe.id DESC
-            LIMIT 1
-            """,
-            f"""
-            SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter AS resident_shelter,
-                r.is_active,
-                pe.id AS enrollment_id,
-                pe.shelter AS enrollment_shelter,
-                pe.program_status,
-                pe.entry_date,
-                pe.exit_date
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY pe.id DESC
-            LIMIT 1
-            """,
-        ),
-        (resident_id, shelter),
-    )
+    resident = _load_resident_for_shelter(resident_id, shelter)
 
     if not resident:
         return render_template(
@@ -837,50 +840,7 @@ def resident_profile(resident_id: int):
 @require_shelter
 def resident_timeline(resident_id: int):
     shelter = _normalize_shelter_name(session.get("shelter"))
-
-    resident = db_fetchone(
-        _sql(
-            f"""
-            SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter AS resident_shelter,
-                r.is_active,
-                pe.id AS enrollment_id,
-                pe.shelter AS enrollment_shelter,
-                pe.program_status,
-                pe.entry_date,
-                pe.exit_date
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY pe.id DESC
-            LIMIT 1
-            """,
-            f"""
-            SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter AS resident_shelter,
-                r.is_active,
-                pe.id AS enrollment_id,
-                pe.shelter AS enrollment_shelter,
-                pe.program_status,
-                pe.entry_date,
-                pe.exit_date
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY pe.id DESC
-            LIMIT 1
-            """,
-        ),
-        (resident_id, shelter),
-    )
+    resident = _load_resident_for_shelter(resident_id, shelter)
 
     selected_view = _coerce_calendar_view(request.args.get("view"))
     anchor_date = _parse_anchor_date(request.args.get("anchor"))
