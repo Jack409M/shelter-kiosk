@@ -9,7 +9,8 @@
   <select name="shelter" id="shelter" required>
     <option value="">Select…</option>
     {% for s in all_shelters %}
-      <option value="{{ s }}" {% if request.form.get("shelter") == s %}selected{% endif %}>
+      {% set shelter_value = (s or "")|lower %}
+      <option value="{{ shelter_value }}" {% if (request.form.get("shelter", "")|lower) == shelter_value %}selected{% endif %}>
         {{ s }}
       </option>
     {% endfor %}
