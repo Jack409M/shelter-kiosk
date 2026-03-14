@@ -5,10 +5,12 @@ from zoneinfo import ZoneInfo
 
 from flask import flash, g, redirect, render_template, request, session, url_for
 
+from core.access import require_resident
 from core.audit import log_action
 from core.db import get_db
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
+from core.runtime import init_db
 
 
 # Resident leave workflow
@@ -17,10 +19,6 @@ from core.rate_limit import is_rate_limited
 # If this area grows, split into:
 # leave_validation.py
 # leave_queries.py
-#
-# Another future cleanup:
-# stop importing init_db and require_resident from app.py
-# by moving those into core modules or resident service helpers.
 
 
 def _client_ip() -> str:
@@ -28,7 +26,6 @@ def _client_ip() -> str:
 
 
 def resident_leave_view():
-    from app import init_db, require_resident
 
     @require_resident
     def _inner():
@@ -39,10 +36,10 @@ def resident_leave_view():
         if request.method == "GET":
             return render_template("resident_leave.html", shelter=shelter)
 
-        resident_identifier = session.get("resident_identifier") or ""
-        first = session.get("resident_first") or ""
-        last = session.get("resident_last") or ""
-        resident_phone = session.get("resident_phone") or ""
+        resident_identifier = (session.get("resident_identifier") or "").strip()
+        first = (session.get("resident_first") or "").strip()
+        last = (session.get("resident_last") or "").strip()
+        resident_phone = (session.get("resident_phone") or "").strip()
 
         ip = _client_ip()
         rl_key = f"resident_leave:{ip}:{resident_identifier or 'unknown'}"
@@ -60,6 +57,9 @@ def resident_leave_view():
 
         if not first or not last or not leave_date_raw or not return_date_raw or not destination:
             errors.append("Complete all required fields.")
+
+        leave_dt = None
+        return_dt = None
 
         try:
             leave_local_date = datetime.strptime(leave_date_raw, "%Y-%m-%d").date()
@@ -79,6 +79,10 @@ def resident_leave_view():
             return_dt = return_local_dt.astimezone(timezone.utc).replace(tzinfo=None)
         except Exception:
             errors.append("Invalid date.")
+
+        if leave_dt and return_dt:
+            if return_dt < leave_dt:
+                errors.append("Return date cannot be earlier than leave date.")
 
         if errors:
             for e in errors:
