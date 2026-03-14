@@ -108,6 +108,8 @@ THREAT_SUMMARY_LABELS = {
     "public_abuse_banned": "public form abuse bans",
 }
 
+SECURITY_INCIDENT_LOOKBACK_HOURS = 24
+
 
 def current_role() -> str:
     return (session.get("role") or "").strip()
@@ -512,6 +514,7 @@ def load_recent_security_incidents(limit: int = 10) -> list[dict]:
         """
         SELECT id, incident_type, severity, title, details, related_ip, related_username, status, created_at
         FROM security_incidents
+        WHERE NULLIF(created_at, '')::timestamptz >= NOW() - INTERVAL '24 hours'
         ORDER BY id DESC
         LIMIT %s
         """
@@ -519,6 +522,7 @@ def load_recent_security_incidents(limit: int = 10) -> list[dict]:
         else """
         SELECT id, incident_type, severity, title, details, related_ip, related_username, status, created_at
         FROM security_incidents
+        WHERE created_at >= datetime('now', '-24 hours')
         ORDER BY id DESC
         LIMIT ?
         """,
