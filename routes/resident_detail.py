@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
@@ -108,6 +108,20 @@ def _format_dt(value, *, prefer_date_only: bool = False) -> str:
 
     time_text = dt.strftime("%I:%M %p").lstrip("0")
     return f"{date_text} {time_text}"
+
+
+def _format_time_only(value) -> str:
+    if value in (None, ""):
+        return ""
+
+    dt = _parse_dt(value)
+    if not dt:
+        return ""
+
+    if _is_date_only(value):
+        return "All day"
+
+    return dt.strftime("%I:%M %p").lstrip("0")
 
 
 def _days_in_program(entry_date_value) -> str:
@@ -408,6 +422,7 @@ def _normalize_timeline(rows):
             {
                 "event_time": raw_time,
                 "event_time_display": _format_dt(raw_time),
+                "event_time_only": _format_time_only(raw_time),
                 "event_type": _row_value(row, "event_type", 1, "activity"),
                 "title": _row_value(row, "title", 2, "Activity"),
                 "detail": _row_value(row, "detail", 3, "—"),
@@ -440,6 +455,211 @@ def _build_snapshot(resident, goals, compliance, appointment):
         "compliance_status": _compliance_snapshot_text(compliance),
         "days_in_program": _days_in_program(entry_date),
     }
+
+
+def _coerce_calendar_view(value: str | None) -> str:
+    view = (value or "").strip().lower()
+    if view in {"month", "week", "day"}:
+        return view
+    return "month"
+
+
+def _parse_anchor_date(value: str | None) -> date:
+    text = (value or "").strip()
+    if text:
+        try:
+            return datetime.strptime(text, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    return datetime.utcnow().date()
+
+
+def _start_of_week(value: date) -> date:
+    offset = (value.weekday() + 1) % 7
+    return value - timedelta(days=offset)
+
+
+def _add_months(value: date, months: int) -> date:
+    month_index = (value.month - 1) + months
+    year = value.year + (month_index // 12)
+    month = (month_index % 12) + 1
+    return date(year, month, 1)
+
+
+def _event_type_theme(event_type: str) -> dict[str, str]:
+    themes = {
+        "enrollment_started": {
+            "badge_class": "theme-blue",
+            "label": "Enrollment",
+        },
+        "goal_created": {
+            "badge_class": "theme-green",
+            "label": "Goal",
+        },
+        "goal_completed": {
+            "badge_class": "theme-green-dark",
+            "label": "Completed Goal",
+        },
+        "case_note": {
+            "badge_class": "theme-slate",
+            "label": "Case Note",
+        },
+        "compliance_submitted": {
+            "badge_class": "theme-amber",
+            "label": "Compliance",
+        },
+        "appointment_scheduled": {
+            "badge_class": "theme-purple",
+            "label": "Scheduled",
+        },
+        "appointment_due": {
+            "badge_class": "theme-rose",
+            "label": "Appointment",
+        },
+    }
+    return themes.get(
+        event_type,
+        {
+            "badge_class": "theme-slate",
+            "label": "Activity",
+        },
+    )
+
+
+def _prepare_calendar_events(timeline):
+    prepared = []
+
+    for item in timeline or []:
+        event_dt = _parse_dt(item.get("event_time"))
+        if not event_dt:
+            continue
+
+        theme = _event_type_theme(item.get("event_type", "activity"))
+
+        prepared.append(
+            {
+                **item,
+                "event_dt": event_dt,
+                "event_date": event_dt.date(),
+                "time_label": item.get("event_time_only") or "All day",
+                "badge_class": theme["badge_class"],
+                "type_label": theme["label"],
+            }
+        )
+
+    prepared.sort(
+        key=lambda entry: (
+            entry["event_date"],
+            entry["event_dt"].time(),
+            entry.get("title", ""),
+        )
+    )
+
+    return prepared
+
+
+def _build_calendar_context(timeline, selected_view: str, anchor: date):
+    events = _prepare_calendar_events(timeline)
+    events_by_date: dict[date, list[dict]] = {}
+
+    for event in events:
+        events_by_date.setdefault(event["event_date"], []).append(event)
+
+    today = datetime.utcnow().date()
+    month_names = [
+        (1, "January"),
+        (2, "February"),
+        (3, "March"),
+        (4, "April"),
+        (5, "May"),
+        (6, "June"),
+        (7, "July"),
+        (8, "August"),
+        (9, "September"),
+        (10, "October"),
+        (11, "November"),
+        (12, "December"),
+    ]
+    year_options = list(range(anchor.year - 3, anchor.year + 4))
+    weekday_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+    calendar = {
+        "view": selected_view,
+        "anchor": anchor.isoformat(),
+        "anchor_date": anchor,
+        "label": "",
+        "prev_anchor": anchor.isoformat(),
+        "next_anchor": anchor.isoformat(),
+        "weekday_names": weekday_names,
+        "month_names": month_names,
+        "year_options": year_options,
+        "selected_month": anchor.month,
+        "selected_year": anchor.year,
+        "month_days": [],
+        "week_days": [],
+        "day_events": [],
+        "today_iso": today.isoformat(),
+    }
+
+    if selected_view == "month":
+        month_start = date(anchor.year, anchor.month, 1)
+        start_offset = (month_start.weekday() + 1) % 7
+        grid_start = month_start - timedelta(days=start_offset)
+
+        month_days = []
+        for i in range(42):
+            current_day = grid_start + timedelta(days=i)
+            month_days.append(
+                {
+                    "date": current_day,
+                    "date_iso": current_day.isoformat(),
+                    "day_number": current_day.day,
+                    "is_current_month": current_day.month == anchor.month,
+                    "is_today": current_day == today,
+                    "events": events_by_date.get(current_day, []),
+                }
+            )
+
+        calendar["label"] = anchor.strftime("%B %Y")
+        calendar["prev_anchor"] = _add_months(month_start, -1).isoformat()
+        calendar["next_anchor"] = _add_months(month_start, 1).isoformat()
+        calendar["month_days"] = month_days
+        return calendar
+
+    if selected_view == "week":
+        week_start = _start_of_week(anchor)
+        week_days = []
+
+        for i in range(7):
+            current_day = week_start + timedelta(days=i)
+            week_days.append(
+                {
+                    "date": current_day,
+                    "date_iso": current_day.isoformat(),
+                    "day_name": current_day.strftime("%A"),
+                    "short_day_name": current_day.strftime("%a"),
+                    "day_number": current_day.day,
+                    "month_name": current_day.strftime("%b"),
+                    "is_today": current_day == today,
+                    "events": events_by_date.get(current_day, []),
+                }
+            )
+
+        week_end = week_start + timedelta(days=6)
+        calendar["label"] = f"Week of {week_start.strftime('%b')} {week_start.day}, {week_start.year}"
+        calendar["prev_anchor"] = (anchor - timedelta(days=7)).isoformat()
+        calendar["next_anchor"] = (anchor + timedelta(days=7)).isoformat()
+        calendar["week_days"] = week_days
+        calendar["week_range_label"] = f"{week_start.strftime('%b')} {week_start.day} to {week_end.strftime('%b')} {week_end.day}, {week_end.year}"
+        return calendar
+
+    current_day = anchor
+    calendar["label"] = f"{current_day.strftime('%A')}, {current_day.strftime('%B')} {current_day.day}, {current_day.year}"
+    calendar["prev_anchor"] = (current_day - timedelta(days=1)).isoformat()
+    calendar["next_anchor"] = (current_day + timedelta(days=1)).isoformat()
+    calendar["day_events"] = events_by_date.get(current_day, [])
+    calendar["day_date_iso"] = current_day.isoformat()
+    return calendar
 
 
 @resident_detail.route("/<int:resident_id>")
@@ -666,18 +886,24 @@ def resident_timeline(resident_id: int):
         (resident_id, shelter),
     )
 
+    selected_view = _coerce_calendar_view(request.args.get("view"))
+    anchor_date = _parse_anchor_date(request.args.get("anchor"))
+    empty_calendar = _build_calendar_context([], selected_view, anchor_date)
+
     if not resident:
         return render_template(
             "resident_detail/timeline.html",
             resident=None,
             timeline=[],
             snapshot=None,
+            calendar=empty_calendar,
         )
 
     enrollment_id = _row_value(resident, "enrollment_id", 5)
 
     timeline = []
     snapshot = None
+    calendar = empty_calendar
 
     if enrollment_id:
         timeline = _normalize_timeline(_load_timeline(enrollment_id))
@@ -685,12 +911,14 @@ def resident_timeline(resident_id: int):
             "program_status": str(_row_value(resident, "program_status", 7, "—") or "—").replace("_", " ").title(),
             "days_in_program": _days_in_program(_row_value(resident, "entry_date", 8)),
         }
+        calendar = _build_calendar_context(timeline, selected_view, anchor_date)
 
     return render_template(
         "resident_detail/timeline.html",
         resident=resident,
         timeline=timeline,
         snapshot=snapshot,
+        calendar=calendar,
     )
 
 
