@@ -1,5 +1,6 @@
 .resident-profile-page {
   margin-bottom: 16px;
+  padding-bottom: 180px;
 }
 
 .resident-profile-section-nav {
@@ -94,6 +95,7 @@
 
 .resident-profile-section-card {
   margin-bottom: 16px;
+  scroll-margin-top: 96px;
 }
 
 .resident-profile-inline-form {
