@@ -49,31 +49,6 @@
   justify-content: flex-start;
 }
 
-.preset-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.preset-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 32px;
-  padding: 0 11px;
-  border: 1px solid #cfd7df;
-  border-radius: 999px;
-  text-decoration: none;
-  background: #fff;
-  color: inherit;
-  font-size: 12px;
-}
-
-.preset-link:hover {
-  background: #f5f8fb;
-}
-
 .section-card {
   padding: 14px;
 }
@@ -87,6 +62,49 @@
   font-size: 1.05rem;
 }
 
+.top-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.top-stat-card {
+  border: 1px solid #d7dce2;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.top-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.72);
+  line-height: 1.15;
+}
+
+.stat-star {
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  color: #b38b00;
+  flex: 0 0 auto;
+}
+
+.top-stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 8px;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -94,7 +112,7 @@
 }
 
 .compact-grid {
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .stat-tile {
@@ -126,6 +144,84 @@
   margin-top: 4px;
   font-size: 10px;
   color: rgba(0, 0, 0, 0.58);
+}
+
+.capacity-bars {
+  display: grid;
+  gap: 14px;
+}
+
+.capacity-row {
+  display: grid;
+  gap: 6px;
+}
+
+.capacity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.capacity-name {
+  font-weight: 700;
+}
+
+.capacity-meta {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.78);
+  white-space: nowrap;
+}
+
+.capacity-bar-wrap {
+  height: 14px;
+  background: #e5e9ef;
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.capacity-bar {
+  height: 100%;
+  background: #4f81bd;
+}
+
+.distribution-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.distribution-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 120px;
+  align-items: center;
+  gap: 10px;
+}
+
+.distribution-label {
+  font-weight: 600;
+}
+
+.distribution-bar-wrap {
+  height: 12px;
+  background: #e4e8ed;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.distribution-bar {
+  height: 100%;
+  background: #4f81bd;
+}
+
+.distribution-value {
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.distribution-empty {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.66);
 }
 
 .two-col-grid {
@@ -173,28 +269,48 @@
   color: rgba(0, 0, 0, 0.62);
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .filter-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .stats-grid,
-  .compact-grid {
+  .top-stats-grid,
+  .stats-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .distribution-row {
+    grid-template-columns: 140px 1fr 110px;
+  }
+}
+
+@media (max-width: 900px) {
   .two-col-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .distribution-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .distribution-value {
+    text-align: left;
+  }
+
+  .capacity-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
 @media (max-width: 720px) {
   .filter-grid,
-  .two-col-grid {
-    grid-template-columns: 1fr;
+  .top-stats-grid,
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .stats-grid,
   .compact-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -205,5 +321,23 @@
 
   .filter-actions .btn {
     width: 100%;
+  }
+
+  .top-stat-value {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  .filter-grid,
+  .top-stats-grid,
+  .stats-grid,
+  .compact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .top-stat-card,
+  .stat-tile {
+    min-height: auto;
   }
 }
