@@ -50,6 +50,8 @@
       {% set residents_url = safe_url_for('residents.staff_residents') %}
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
       {% set case_management_url = safe_url_for('case_management.index') %}
+      {% set reports_url = safe_url_for('reports.demographics_dashboard') %}
+      {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
 
       <nav>
         <div class="nav-mobile">
@@ -122,6 +124,10 @@
                 <a href="{{ url_for('forms_admin.forms_index') }}">Forms</a>
               </div>
             </div>
+
+            {% if reports_url and can_view_reports %}
+              <a href="{{ reports_url }}">Reports</a>
+            {% endif %}
 
             {% if session.get("role") == "admin" %}
               <div class="nav-dd">
