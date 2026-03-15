@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
@@ -169,7 +170,16 @@ def _load_resident_for_shelter(resident_id: int, shelter: str):
                 pe.shelter AS enrollment_shelter,
                 pe.program_status,
                 pe.entry_date,
-                pe.exit_date
+                pe.exit_date,
+                r.resident_code,
+                r.dob,
+                r.phone,
+                r.email,
+                r.emergency_contact_name,
+                r.emergency_contact_relationship,
+                r.emergency_contact_phone,
+                r.medical_alerts,
+                r.medical_notes
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
@@ -188,7 +198,16 @@ def _load_resident_for_shelter(resident_id: int, shelter: str):
                 pe.shelter AS enrollment_shelter,
                 pe.program_status,
                 pe.entry_date,
-                pe.exit_date
+                pe.exit_date,
+                r.resident_code,
+                r.dob,
+                r.phone,
+                r.email,
+                r.emergency_contact_name,
+                r.emergency_contact_relationship,
+                r.emergency_contact_phone,
+                r.medical_alerts,
+                r.medical_notes
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
@@ -744,112 +763,14 @@ def resident_profile(resident_id: int):
             snapshot=None,
         )
 
-    enrollment_id = _row_value(resident, "enrollment_id", 5)
-
-    compliance = None
-    goals = []
-    notes = []
-    appointment = None
-    snapshot = None
-
-    if enrollment_id:
-        compliance = db_fetchone(
-            _sql(
-                """
-                SELECT
-                    productive_hours,
-                    work_hours,
-                    meeting_count,
-                    submitted_at
-                FROM weekly_resident_summary
-                WHERE enrollment_id = %s
-                ORDER BY id DESC
-                LIMIT 1
-                """,
-                """
-                SELECT
-                    productive_hours,
-                    work_hours,
-                    meeting_count,
-                    submitted_at
-                FROM weekly_resident_summary
-                WHERE enrollment_id = ?
-                ORDER BY id DESC
-                LIMIT 1
-                """,
-            ),
-            (enrollment_id,),
-        )
-
-        goals = db_fetchall(
-            _sql(
-                """
-                SELECT
-                    id,
-                    goal_text,
-                    status,
-                    target_date,
-                    created_at,
-                    completed_date
-                FROM goals
-                WHERE enrollment_id = %s
-                ORDER BY created_at DESC
-                """,
-                """
-                SELECT
-                    id,
-                    goal_text,
-                    status,
-                    target_date,
-                    created_at,
-                    completed_date
-                FROM goals
-                WHERE enrollment_id = ?
-                ORDER BY created_at DESC
-                """,
-            ),
-            (enrollment_id,),
-        )
-
-        notes = db_fetchall(
-            _sql(
-                """
-                SELECT
-                    meeting_date,
-                    notes,
-                    progress_notes,
-                    action_items,
-                    created_at
-                FROM case_manager_updates
-                WHERE enrollment_id = %s
-                ORDER BY meeting_date DESC, id DESC
-                """,
-                """
-                SELECT
-                    meeting_date,
-                    notes,
-                    progress_notes,
-                    action_items,
-                    created_at
-                FROM case_manager_updates
-                WHERE enrollment_id = ?
-                ORDER BY meeting_date DESC, id DESC
-                """,
-            ),
-            (enrollment_id,),
-        )
-
-        appointment = _next_appointment_for_enrollment(enrollment_id)
-        snapshot = _build_snapshot(resident, goals, compliance, appointment)
-
     return render_template(
         "resident_detail/profile.html",
         resident=resident,
-        compliance=compliance,
-        goals=goals,
-        notes=notes,
-        appointment=appointment,
-        snapshot=snapshot,
+        compliance=None,
+        goals=[],
+        notes=[],
+        appointment=None,
+        snapshot=None,
     )
 
 
