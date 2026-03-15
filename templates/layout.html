@@ -46,6 +46,7 @@
       {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) and (not is_public_home) %}
       {% set residents_url = safe_url_for('residents.staff_residents') %}
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
+      {% set case_management_url = safe_url_for('case_management.index') %}
 
       <nav>
         <div class="nav-mobile">
@@ -114,6 +115,9 @@
                 {% endif %}
                 {% if case_dashboard_url %}
                   <a href="{{ case_dashboard_url }}">Case Dashboard</a>
+                {% endif %}
+                {% if case_management_url %}
+                  <a href="{{ case_management_url }}">Case Management</a>
                 {% endif %}
                 <a href="{{ url_for('compliance.compliance_dashboard') }}">Compliance</a>
                 <a href="{{ url_for('forms_admin.forms_index') }}">Forms</a>
