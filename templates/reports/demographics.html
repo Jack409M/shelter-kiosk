@@ -112,13 +112,13 @@
                 <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
               {% endif %}
               <button
-                type="submit"
-                class="stat-star-button is-favorite"
-                title="Remove from My Top Stats"
-                aria-label="Remove {{ stat.label }} from My Top Stats"
-              >
-                ★
-              </button>
+  type="submit"
+  class="stat-star-button {% if stat.is_favorite %}is-favorite{% endif %}"
+  title="{% if stat.is_favorite %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
+  aria-label="{% if stat.is_favorite %}Remove {{ stat.label }} from My Top Stats{% else %}Add {{ stat.label }} to My Top Stats{% endif %}"
+>
+  {% if stat.is_favorite %}★{% else %}☆{% endif %}
+</button>
             </form>
           </div>
 
