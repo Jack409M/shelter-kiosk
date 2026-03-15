@@ -40,7 +40,7 @@
         </div>
 
         <div class="resident-meta resident-meta-slim">
-          <span class="meta-pill">{{ shelter|title if shelter else "—" }}</span>
+          <span class="meta-pill">{{ shelter | shelter if shelter else "—" }}</span>
           <span class="meta-pill">{{ "Active" if resident_active else "Inactive" }}</span>
 
           {% if program_status %}
