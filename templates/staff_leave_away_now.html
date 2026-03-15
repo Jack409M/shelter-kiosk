@@ -1,6 +1,18 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>Leave away now for {{ shelter }}</h1>
+
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
+<h1>Leave away now for {{ shelter_label }}</h1>
 
 <table>
   <thead>
@@ -18,10 +30,10 @@
       <td>{{ r["destination"] }}</td>
       <td>
         <form method="post" action="{{ url_for('staff_portal.staff_leave_check_in', req_id=r['id']) }}" class="inline">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <input name="note" placeholder="Optional note">
-  <button type="submit">Check in</button>
-</form>
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input name="note" placeholder="Optional note">
+          <button type="submit">Check in</button>
+        </form>
       </td>
     </tr>
   {% endfor %}
@@ -29,4 +41,3 @@
 </table>
 
 {% endblock %}
-
