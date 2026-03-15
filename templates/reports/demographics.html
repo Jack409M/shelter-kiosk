@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315b') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315c') }}">
 {% endblock %}
 
 {% block content %}
@@ -94,26 +94,27 @@
         <div class="stat-label">Women Served</div>
         <div class="stat-value">{{ program_snapshot.women_served_display }}</div>
       </div>
-      <div class="stat-tile">
-        <div class="stat-label">Women Admitted</div>
-        <div class="stat-value">{{ program_snapshot.women_admitted_display }}</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-label">Women Exited</div>
-        <div class="stat-value">{{ program_snapshot.women_exited_display }}</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-label">Graduates</div>
-        <div class="stat-value">{{ program_snapshot.graduates_display }}</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-label">Graduation Rate</div>
-        <div class="stat-value">{{ program_snapshot.graduation_rate }}%</div>
-      </div>
+
       <div class="stat-tile">
         <div class="stat-label">Currently Active</div>
         <div class="stat-value">{{ program_snapshot.active_residents_current_display }}</div>
       </div>
+
+      <div class="stat-tile">
+        <div class="stat-label">Women Admitted</div>
+        <div class="stat-value">{{ program_snapshot.women_admitted_display }}</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-label">Women Exited</div>
+        <div class="stat-value">{{ program_snapshot.women_exited_display }}</div>
+      </div>
+
+      <div class="stat-tile">
+        <div class="stat-label">Graduates</div>
+        <div class="stat-value">{{ program_snapshot.graduates_display }}</div>
+      </div>
+
       <div class="stat-tile">
         <div class="stat-label">Average Length of Stay</div>
         <div class="stat-value">{{ program_snapshot.average_length_of_stay_days }}</div>
@@ -124,83 +125,18 @@
 
   <section class="card section-card">
     <div class="section-head">
-      <h2>Selected Scope vs Total Program</h2>
+      <h2>Shelter Capacity</h2>
     </div>
 
-    <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-label">{{ scope_comparison.selected_scope_label }}</div>
-        <div class="stat-value">{{ scope_comparison.selected_scope_display }}</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-label">Share of Program</div>
-        <div class="stat-value">{{ scope_comparison.selected_scope_share_of_program }}%</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-label">Total Program</div>
-        <div class="stat-value">{{ scope_comparison.total_program_display }}</div>
-      </div>
-    </div>
-
-    <div class="table-wrap top-space">
-      <table class="stats-table">
-        <thead>
-          <tr>
-            <th>Shelter</th>
-            <th>Women Served</th>
-            <th>Share of Program</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in scope_comparison.shelters %}
-            <tr>
-              <td>{{ item.label }}</td>
-              <td>{{ item.display_value }}</td>
-              <td>{{ item.share_of_program }}%</td>
-            </tr>
-          {% else %}
-            <tr>
-              <td colspan="3">No data available for the selected filters.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="card section-card">
-    <div class="section-head">
-      <h2>Capacity Snapshot</h2>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-label">Total Capacity</div>
-        <div class="stat-value">{{ capacity_snapshot.total_capacity }}</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-label">Currently Occupied</div>
-        <div class="stat-value">{{ capacity_snapshot.total_occupied_display }}</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-label">Open Spaces</div>
-        <div class="stat-value">{{ capacity_snapshot.total_open_spaces_display }}</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-label">Occupancy Rate</div>
-        <div class="stat-value">{{ capacity_snapshot.total_occupancy_rate }}%</div>
-      </div>
-    </div>
-
-    <div class="table-wrap top-space">
+    <div class="table-wrap">
       <table class="stats-table">
         <thead>
           <tr>
             <th>Shelter</th>
             <th>Capacity</th>
             <th>Occupied</th>
-            <th>Open Spaces</th>
-            <th>Occupancy Rate</th>
+            <th>Open</th>
+            <th>Occupancy</th>
           </tr>
         </thead>
         <tbody>
@@ -222,7 +158,7 @@
     </div>
 
     <div class="capacity-note">
-      Capacity assumptions currently set to Abba House 10, Haven House 18, and Gratitude House 34.
+      Abba House 10 apartments • Haven House 18 beds • Gratitude House 34 apartments
     </div>
   </section>
 
@@ -231,29 +167,22 @@
       <h2>Shelter Distribution</h2>
     </div>
 
-    <div class="table-wrap">
-      <table class="stats-table">
-        <thead>
-          <tr>
-            <th>Shelter</th>
-            <th>Total</th>
-            <th>Percent</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in shelter_distribution %}
-            <tr>
-              <td>{{ item.label }}</td>
-              <td>{{ item.display_value }}</td>
-              <td>{{ item.percentage }}%</td>
-            </tr>
-          {% else %}
-            <tr>
-              <td colspan="3">No data available for the selected filters.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="distribution-bars">
+      {% for item in shelter_distribution %}
+        <div class="distribution-row">
+          <div class="distribution-label">{{ item.label }}</div>
+
+          <div class="distribution-bar-wrap">
+            <div class="distribution-bar" style="width: {{ item.percentage }}%"></div>
+          </div>
+
+          <div class="distribution-value">
+            {{ item.display_value }} ({{ item.percentage }}%)
+          </div>
+        </div>
+      {% else %}
+        <div class="distribution-empty">No data available for the selected filters.</div>
+      {% endfor %}
     </div>
   </section>
 
@@ -367,18 +296,22 @@
         <div class="stat-label">Residents With Children</div>
         <div class="stat-value">{{ family_composition.residents_with_children_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Children In Shelter</div>
         <div class="stat-value">{{ family_composition.children_in_shelter_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Children Out Of Shelter</div>
         <div class="stat-value">{{ family_composition.children_out_of_shelter_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Children Reunited</div>
         <div class="stat-value">{{ family_composition.children_reunited_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Healthy Babies Born</div>
         <div class="stat-value">{{ family_composition.healthy_babies_born_display }}</div>
@@ -455,14 +388,17 @@
         <div class="stat-label">Average ACE Score</div>
         <div class="stat-value">{{ trauma_and_vulnerability.ace_score_average }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Sexual Survivor</div>
         <div class="stat-value">{{ trauma_and_vulnerability.sexual_survivor_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Domestic Violence Survivor</div>
         <div class="stat-value">{{ trauma_and_vulnerability.dv_survivor_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Human Trafficking Survivor</div>
         <div class="stat-value">{{ trauma_and_vulnerability.human_trafficking_survivor_display }}</div>
@@ -480,10 +416,12 @@
         <div class="stat-label">Entry Felony Conviction</div>
         <div class="stat-value">{{ barriers_to_stability.entry_felony_conviction_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Entry Parole Or Probation</div>
         <div class="stat-value">{{ barriers_to_stability.entry_parole_probation_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Drug Court</div>
         <div class="stat-value">{{ barriers_to_stability.drug_court_display }}</div>
@@ -501,10 +439,12 @@
         <div class="stat-label">Average Income At Entry</div>
         <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_at_entry) }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Average Income At Exit</div>
         <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_at_exit) }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Average Income Improvement</div>
         <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_improvement) }}</div>
@@ -576,10 +516,12 @@
         <div class="stat-label">Graduates</div>
         <div class="stat-value">{{ exit_outcomes.graduates_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Leave AMA</div>
         <div class="stat-value">{{ exit_outcomes.leave_ama_display }}</div>
       </div>
+
       <div class="stat-tile">
         <div class="stat-label">Total Exit Records</div>
         <div class="stat-value">{{ exit_outcomes.total_exit_records_display }}</div>
@@ -625,6 +567,7 @@
       if (startWrap) {
         startWrap.style.display = isCustom ? "" : "none";
       }
+
       if (endWrap) {
         endWrap.style.display = isCustom ? "" : "none";
       }
