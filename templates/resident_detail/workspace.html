@@ -30,35 +30,32 @@
 
   <div class="resident-workspace{% if is_timeline_view %} timeline-mode{% endif %}">
 
-    <!-- Resident Header -->
+    <div class="resident-header resident-header-slim">
 
-    <div class="resident-header">
+      <div class="resident-header-main">
+        <div class="resident-title">
+          <h1>{{ first_name }} {{ last_name }}</h1>
+        </div>
 
-      <div class="resident-title">
-        <h1>{{ first_name }} {{ last_name }}</h1>
+        <div class="resident-meta resident-meta-slim">
+          <span class="meta-pill">{{ shelter|title if shelter else "—" }}</span>
+
+          {% if snapshot %}
+            <span class="meta-pill">{{ snapshot.program_status }}</span>
+            <span class="meta-pill">{{ snapshot.days_in_program }} days</span>
+          {% elif program_status %}
+            <span class="meta-pill">{{ program_status }}</span>
+          {% endif %}
+        </div>
       </div>
 
-      <div class="resident-meta">
-        <span class="meta-pill">{{ shelter or "—" }}</span>
-
-        {% if snapshot %}
-          <span class="meta-pill">{{ snapshot.program_status }}</span>
-          <span class="meta-pill">{{ snapshot.days_in_program }} days</span>
-        {% elif program_status %}
-          <span class="meta-pill">{{ program_status }}</span>
-        {% endif %}
-      </div>
-
-      <div class="resident-actions">
+      <div class="resident-actions resident-actions-slim">
         <a class="btn-small" href="{{ url_for('residents.staff_residents') }}">
           Back to Residents
         </a>
       </div>
 
     </div>
-
-
-    <!-- Workspace Navigation -->
 
     <div class="resident-tabs">
 
@@ -74,59 +71,10 @@
 
     </div>
 
-
-    <!-- Workspace Layout -->
-
-    <div class="resident-layout">
-
-      {% if not is_timeline_view %}
-      <!-- Left Rail -->
-
-      <div class="resident-rail">
-
-        <h3>Resident Info</h3>
-
-        <ul class="progress-list">
-
-          <li>
-            <strong>Shelter</strong><br>
-            {{ shelter or "—" }}
-          </li>
-
-          {% if snapshot %}
-            <li>
-              <strong>Status</strong><br>
-              {{ snapshot.program_status }}
-            </li>
-
-            <li>
-              <strong>Days in Program</strong><br>
-              {{ snapshot.days_in_program }}
-            </li>
-          {% elif program_status %}
-            <li>
-              <strong>Status</strong><br>
-              {{ program_status }}
-            </li>
-          {% endif %}
-
-          <li>
-            <strong>Resident ID</strong><br>
-            {{ resident_id }}
-          </li>
-
-        </ul>
-
-      </div>
-      {% endif %}
-
-
-      <!-- Main Content -->
-
-      <div class="resident-main">
+    <div class="resident-layout resident-layout-single">
+      <div class="resident-main resident-main-full">
         {% block resident_workspace_content %}{% endblock %}
       </div>
-
     </div>
 
   </div>
