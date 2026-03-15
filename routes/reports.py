@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
+from core.audit import log_action
 from core.auth import require_login, require_roles, require_shelter
+from core.db import db_execute, db_fetchall
 from core.program_statistics import get_dashboard_statistics
 from core.runtime import init_db
 
@@ -21,6 +23,9 @@ _ALLOWED_DATE_RANGES = {
     "all_time",
     "custom",
 }
+
+_DASHBOARD_KEY = "demographics_dashboard"
+_MAX_FAVORITES = 6
 
 TOP_METRICS = {
     "women_served": {
@@ -54,6 +59,15 @@ TOP_METRICS = {
         "value_key": "average_length_of_stay_days",
     },
 }
+
+_DEFAULT_TOP_METRIC_KEYS = [
+    "women_served",
+    "active_residents",
+    "women_admitted",
+    "women_exited",
+    "graduates",
+    "avg_stay",
+]
 
 
 def _clean_scope(value: str | None) -> str:
@@ -96,19 +110,78 @@ def _clean_iso_date(value: str | None) -> str | None:
     return text
 
 
-def _build_default_top_stats(stats: dict) -> list[dict]:
-    default_top_metrics = [
-        "women_served",
-        "active_residents",
-        "women_admitted",
-        "women_exited",
-        "graduates",
-        "avg_stay",
-    ]
+def _current_staff_user_id() -> int | None:
+    raw_value = session.get("staff_user_id")
+    if raw_value is None:
+        return None
 
+    try:
+        return int(raw_value)
+    except Exception:
+        return None
+
+
+def _favorite_redirect_response():
+    scope = _clean_scope(request.values.get("scope"))
+    population = _clean_population(request.values.get("population"))
+    date_range = _clean_date_range(request.values.get("date_range"))
+    start_date = _clean_iso_date(request.values.get("start_date"))
+    end_date = _clean_iso_date(request.values.get("end_date"))
+
+    query_args: dict[str, str] = {
+        "scope": scope,
+        "population": population,
+        "date_range": date_range,
+    }
+
+    if date_range == "custom":
+        if start_date:
+            query_args["start_date"] = start_date
+        if end_date:
+            query_args["end_date"] = end_date
+
+    return redirect(url_for("reports.demographics_dashboard", **query_args))
+
+
+def _get_saved_favorite_metric_keys(staff_user_id: int) -> list[str]:
+    rows = db_fetchall(
+        """
+        SELECT metric_key
+        FROM user_dashboard_favorites
+        WHERE user_id = ?
+          AND dashboard_key = ?
+        ORDER BY display_order ASC, id ASC
+        """,
+        (staff_user_id, _DASHBOARD_KEY),
+    )
+
+    metric_keys: list[str] = []
+
+    for row in rows:
+        metric_key = row["metric_key"] if isinstance(row, dict) else row[0]
+        metric_key = (metric_key or "").strip()
+
+        if metric_key in TOP_METRICS and metric_key not in metric_keys:
+            metric_keys.append(metric_key)
+
+    return metric_keys
+
+
+def _get_effective_top_metric_keys(staff_user_id: int | None) -> list[str]:
+    if not staff_user_id:
+        return list(_DEFAULT_TOP_METRIC_KEYS)
+
+    saved_metric_keys = _get_saved_favorite_metric_keys(staff_user_id)
+    if saved_metric_keys:
+        return saved_metric_keys[:_MAX_FAVORITES]
+
+    return list(_DEFAULT_TOP_METRIC_KEYS)
+
+
+def _build_top_stats(stats: dict, metric_keys: list[str]) -> list[dict]:
     top_stats: list[dict] = []
 
-    for metric_key in default_top_metrics:
+    for metric_key in metric_keys:
         metric = TOP_METRICS.get(metric_key)
         if not metric:
             continue
@@ -123,10 +196,111 @@ def _build_default_top_stats(stats: dict) -> list[dict]:
                 "key": metric_key,
                 "label": metric["label"],
                 "value": value,
+                "is_favorite": metric_key in metric_keys,
             }
         )
 
     return top_stats
+
+
+def _resequence_favorites(staff_user_id: int) -> None:
+    rows = db_fetchall(
+        """
+        SELECT id
+        FROM user_dashboard_favorites
+        WHERE user_id = ?
+          AND dashboard_key = ?
+        ORDER BY display_order ASC, id ASC
+        """,
+        (staff_user_id, _DASHBOARD_KEY),
+    )
+
+    for index, row in enumerate(rows, start=1):
+        favorite_id = row["id"] if isinstance(row, dict) else row[0]
+        db_execute(
+            """
+            UPDATE user_dashboard_favorites
+            SET display_order = ?
+            WHERE id = ?
+            """,
+            (index, favorite_id),
+        )
+
+
+@reports.route("/staff/reports/demographics/favorites/toggle", methods=["POST"])
+@require_login
+@require_shelter
+@require_roles("admin", "shelter_director", "case_manager", "demographics_viewer")
+def toggle_demographics_favorite():
+    init_db()
+
+    staff_user_id = _current_staff_user_id()
+    if not staff_user_id:
+        flash("Unable to save favorite stats for this session.", "error")
+        return _favorite_redirect_response()
+
+    metric_key = (request.form.get("metric_key") or "").strip()
+
+    if metric_key not in TOP_METRICS:
+        flash("That metric cannot be pinned.", "error")
+        return _favorite_redirect_response()
+
+    existing_metric_keys = _get_saved_favorite_metric_keys(staff_user_id)
+
+    if metric_key in existing_metric_keys:
+        db_execute(
+            """
+            DELETE FROM user_dashboard_favorites
+            WHERE user_id = ?
+              AND dashboard_key = ?
+              AND metric_key = ?
+            """,
+            (staff_user_id, _DASHBOARD_KEY, metric_key),
+        )
+
+        _resequence_favorites(staff_user_id)
+
+        log_action(
+            "dashboard_favorite",
+            None,
+            session.get("shelter"),
+            staff_user_id,
+            "favorite_removed",
+            f"dashboard_key={_DASHBOARD_KEY} metric_key={metric_key}",
+        )
+
+        return _favorite_redirect_response()
+
+    if len(existing_metric_keys) >= _MAX_FAVORITES:
+        flash("You can pin up to six stats.", "error")
+        return _favorite_redirect_response()
+
+    next_display_order = len(existing_metric_keys) + 1
+
+    db_execute(
+        """
+        INSERT INTO user_dashboard_favorites (
+            user_id,
+            dashboard_key,
+            metric_key,
+            display_order,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """,
+        (staff_user_id, _DASHBOARD_KEY, metric_key, next_display_order),
+    )
+
+    log_action(
+        "dashboard_favorite",
+        None,
+        session.get("shelter"),
+        staff_user_id,
+        "favorite_added",
+        f"dashboard_key={_DASHBOARD_KEY} metric_key={metric_key} display_order={next_display_order}",
+    )
+
+    return _favorite_redirect_response()
 
 
 @reports.route("/staff/reports/demographics", methods=["GET"])
@@ -154,13 +328,17 @@ def demographics_dashboard():
         end=end_date,
     )
 
-    top_stats = _build_default_top_stats(stats)
+    staff_user_id = _current_staff_user_id()
+    favorite_metric_keys = _get_effective_top_metric_keys(staff_user_id)
+    top_stats = _build_top_stats(stats, favorite_metric_keys)
 
     return render_template(
         "reports/demographics.html",
         title="Demographics and Statistics",
         filters=stats["filters"],
         top_stats=top_stats,
+        favorite_metric_keys=favorite_metric_keys,
+        top_metric_definitions=TOP_METRICS,
         program_snapshot=stats["program_snapshot"],
         scope_comparison=stats["scope_comparison"],
         capacity_snapshot=stats["capacity_snapshot"],
