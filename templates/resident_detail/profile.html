@@ -40,70 +40,12 @@
   <div class="resident-profile-page">
 
     <nav class="resident-profile-section-nav" aria-label="Snapshot sections">
-      <a class="resident-profile-section-link" href="#overview">Overview</a>
       <a class="resident-profile-section-link" href="#casework-actions">Casework</a>
       {% if enrollment_id %}
         <a class="resident-profile-section-link" href="#goals">Goals</a>
         <a class="resident-profile-section-link" href="#case-notes">Notes</a>
       {% endif %}
     </nav>
-
-    <section id="overview" class="resident-notebook-section">
-      <div class="resident-summary-panel card">
-        <div class="resident-summary-panel-head">
-          <div>
-            <div class="resident-summary-panel-eyebrow">Case Actions</div>
-            <h2 class="resident-summary-panel-title">Resident Overview</h2>
-          </div>
-
-          <div class="resident-summary-status-stack">
-            <div class="resident-summary-status-label">Program Status</div>
-            <div class="resident-summary-status-value">
-              {% if snapshot %}
-                {{ snapshot["program_status"] }}
-              {% else %}
-                {{ program_status or "Not Enrolled" }}
-              {% endif %}
-            </div>
-          </div>
-        </div>
-
-        <div class="resident-summary-grid resident-summary-grid-primary">
-          <div class="resident-summary-tile">
-            <div class="resident-summary-tile-label">Next Appointment</div>
-            <div class="resident-summary-tile-value">
-              {% if snapshot %}
-                {{ snapshot["next_appointment"] }}
-              {% else %}
-                None scheduled
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="resident-summary-tile">
-            <div class="resident-summary-tile-label">Active Goals</div>
-            <div class="resident-summary-tile-value">
-              {% if snapshot %}
-                {{ snapshot["goal_count"] }}
-              {% else %}
-                0
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="resident-summary-tile">
-            <div class="resident-summary-tile-label">Compliance</div>
-            <div class="resident-summary-tile-value resident-summary-tile-value-compact">
-              {% if snapshot %}
-                {{ snapshot["compliance_status"] }}
-              {% else %}
-                No enrollment yet
-              {% endif %}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <section id="casework-actions" class="resident-notebook-section">
       <div class="resident-notebook-section-head">
@@ -232,12 +174,10 @@
 
     {% if enrollment_id %}
       <section class="resident-notebook-section">
+
         <div class="resident-notebook-section-head">
           <div class="resident-notebook-eyebrow">Record</div>
           <h2 class="resident-notebook-section-title">Active Record</h2>
-          <div class="resident-notebook-section-copy">
-            Current goals and case manager notes for this resident.
-          </div>
         </div>
 
         <div id="goals" class="card resident-profile-section-card">
@@ -324,6 +264,7 @@
             <p>No case manager notes recorded.</p>
           {% endif %}
         </div>
+
       </section>
     {% endif %}
 
