@@ -19,7 +19,6 @@
 <h1>Case Management</h1>
 
 <div class="card">
-
   <h2>{{ first_name }} {{ last_name }}</h2>
 
   <p>
@@ -28,24 +27,81 @@
     <strong>Shelter:</strong> {{ shelter|title if shelter else "—" }}
   </p>
 
+  <a class="btn" href="{{ url_for('case_management.index') }}">
+    Back to Case List
+  </a>
 </div>
 
 
 <div class="card">
-  <h2>Goals</h2>
-  <p>Goals will be managed here.</p>
+
+  <h2>Add Goal</h2>
+
+  <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label>Goal</label>
+    <textarea name="goal_text" rows="3" required></textarea>
+
+    <label>Target Date</label>
+    <input type="date" name="target_date">
+
+    <div style="margin-top:10px;">
+      <button type="submit">Add Goal</button>
+    </div>
+  </form>
+
 </div>
 
 
 <div class="card">
-  <h2>Appointments</h2>
-  <p>Appointments will be scheduled here.</p>
+
+  <h2>Add Appointment</h2>
+
+  <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label>Appointment Date</label>
+    <input type="date" name="appointment_date" required>
+
+    <label>Appointment Type</label>
+    <input type="text" name="appointment_type">
+
+    <label>Notes</label>
+    <textarea name="notes" rows="3"></textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Add Appointment</button>
+    </div>
+  </form>
+
 </div>
 
 
 <div class="card">
-  <h2>Case Notes</h2>
-  <p>Case manager notes will be recorded here.</p>
+
+  <h2>Add Case Note</h2>
+
+  <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label>Meeting Date</label>
+    <input type="date" name="meeting_date">
+
+    <label>Notes</label>
+    <textarea name="notes" rows="4"></textarea>
+
+    <label>Progress Notes</label>
+    <textarea name="progress_notes" rows="4"></textarea>
+
+    <label>Action Items</label>
+    <textarea name="action_items" rows="4"></textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Add Case Note</button>
+    </div>
+  </form>
+
 </div>
 
 {% endblock %}
