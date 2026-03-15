@@ -125,6 +125,14 @@ def staff_residents_post():
     shelter = _normalize_shelter_name(session.get("shelter"))
     first = (request.form.get("first_name") or "").strip()
     last = (request.form.get("last_name") or "").strip()
+    dob = (request.form.get("dob") or "").strip()
+    phone = (request.form.get("phone") or "").strip()
+    email = (request.form.get("email") or "").strip()
+    emergency_contact_name = (request.form.get("emergency_contact_name") or "").strip()
+    emergency_contact_relationship = (request.form.get("emergency_contact_relationship") or "").strip()
+    emergency_contact_phone = (request.form.get("emergency_contact_phone") or "").strip()
+    medical_alerts = (request.form.get("medical_alerts") or "").strip()
+    medical_notes = (request.form.get("medical_notes") or "").strip()
 
     if not first or not last:
         flash("First and last name required.", "error")
@@ -134,13 +142,35 @@ def staff_residents_post():
     resident_identifier = generate_resident_identifier()
 
     db_execute(
-        "INSERT INTO residents (resident_identifier, resident_code, first_name, last_name, shelter, is_active, created_at) "
-        + ("VALUES (%s, %s, %s, %s, %s, %s, %s)" if g.get("db_kind") == "pg" else "VALUES (?, ?, ?, ?, ?, ?, ?)"),
+        (
+            "INSERT INTO residents ("
+            "resident_identifier, resident_code, first_name, last_name, dob, phone, email, "
+            "emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, "
+            "medical_alerts, medical_notes, shelter, is_active, created_at"
+            ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        )
+        if g.get("db_kind") == "pg"
+        else
+        (
+            "INSERT INTO residents ("
+            "resident_identifier, resident_code, first_name, last_name, dob, phone, email, "
+            "emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, "
+            "medical_alerts, medical_notes, shelter, is_active, created_at"
+            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ),
         (
             resident_identifier,
             resident_code,
             first,
             last,
+            dob or None,
+            phone or None,
+            email or None,
+            emergency_contact_name or None,
+            emergency_contact_relationship or None,
+            emergency_contact_phone or None,
+            medical_alerts or None,
+            medical_notes or None,
             shelter,
             True if g.get("db_kind") == "pg" else 1,
             utcnow_iso(),
@@ -153,7 +183,12 @@ def staff_residents_post():
         shelter,
         session.get("staff_user_id"),
         "create",
-        f"code={resident_code} {first} {last}",
+        (
+            f"code={resident_code} "
+            f"name={first} {last} "
+            f"dob={dob or ''} "
+            f"emergency_contact={emergency_contact_name or ''}"
+        ).strip(),
     )
     flash("Resident created.", "ok")
     return redirect(url_for("residents.staff_residents"))
