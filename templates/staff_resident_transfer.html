@@ -9,16 +9,16 @@
   </strong><br>
   Resident Code:
   <strong>{{ resident["resident_code"] if resident is mapping else resident[3] }}</strong><br>
-  From shelter: <strong>{{ from_shelter }}</strong>
+  From shelter: <strong>{{ from_shelter | shelter }}</strong>
 </p>
 
 <form method="post">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <label for="to_shelter">To shelter</label><br>
   <select name="to_shelter" id="to_shelter" required>
     <option value="">Select…</option>
     {% for s in shelters %}
-      <option value="{{ s }}">{{ s }}</option>
+      <option value="{{ s }}">{{ s | shelter }}</option>
     {% endfor %}
   </select>
 
