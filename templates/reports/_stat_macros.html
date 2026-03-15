@@ -45,9 +45,24 @@
 {% endmacro %}
 
 {% macro top_stat_tile(stat, favorite_metric_keys, filters) %}
-<div class="top-stat-card">
+<div
+  class="top-stat-card"
+  data-metric-key="{{ stat.key }}"
+  draggable="true"
+>
   <div class="top-stat-header">
-    <span>{{ stat.label }}</span>
+    <div class="top-stat-header-main">
+      <button
+        type="button"
+        class="top-stat-drag-handle"
+        title="Drag to reorder"
+        aria-label="Drag to reorder {{ stat.label }}"
+      >
+        ⋮⋮
+      </button>
+
+      <span class="top-stat-label">{{ stat.label }}</span>
+    </div>
 
     <form
       method="post"
