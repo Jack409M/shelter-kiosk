@@ -276,7 +276,7 @@ def _get_saved_favorite_metric_keys(staff_user_id: int) -> list[str]:
     return metric_keys
 
 
-def _get_effective_top_metric_keys(staff_user_id: int | None) -> list[str]:
+def _get_display_top_metric_keys(staff_user_id: int | None) -> list[str]:
     if not staff_user_id:
         return list(_DEFAULT_TOP_METRIC_KEYS)
 
@@ -310,7 +310,7 @@ def _format_top_stat_value(raw_value, metric: dict) -> str:
     return f"{prefix}{text}{suffix}"
 
 
-def _build_top_stats(stats: dict, metric_keys: list[str]) -> list[dict]:
+def _build_top_stats(stats: dict, metric_keys: list[str], saved_metric_keys: list[str]) -> list[dict]:
     top_stats: list[dict] = []
 
     for metric_key in metric_keys:
@@ -329,7 +329,7 @@ def _build_top_stats(stats: dict, metric_keys: list[str]) -> list[dict]:
                 "key": metric_key,
                 "label": metric["label"],
                 "value": value,
-                "is_favorite": metric_key in metric_keys,
+                "is_favorite": metric_key in saved_metric_keys,
             }
         )
 
@@ -462,15 +462,16 @@ def demographics_dashboard():
     )
 
     staff_user_id = _current_staff_user_id()
-    favorite_metric_keys = _get_effective_top_metric_keys(staff_user_id)
-    top_stats = _build_top_stats(stats, favorite_metric_keys)
+    saved_favorite_metric_keys = _get_saved_favorite_metric_keys(staff_user_id) if staff_user_id else []
+    display_top_metric_keys = _get_display_top_metric_keys(staff_user_id)
+    top_stats = _build_top_stats(stats, display_top_metric_keys, saved_favorite_metric_keys)
 
     return render_template(
         "reports/demographics.html",
         title="Demographics and Statistics",
         filters=stats["filters"],
         top_stats=top_stats,
-        favorite_metric_keys=favorite_metric_keys,
+        favorite_metric_keys=saved_favorite_metric_keys,
         top_metric_definitions=TOP_METRICS,
         program_snapshot=stats["program_snapshot"],
         scope_comparison=stats["scope_comparison"],
