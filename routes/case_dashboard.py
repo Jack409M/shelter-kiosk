@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
-from flask import Blueprint, g, render_template, session
+
+from flask import Blueprint, g, render_template, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_fetchall
+from core.db import db_fetchall, db_fetchone
 
 case_dashboard = Blueprint(
     "case_dashboard",
@@ -71,6 +72,10 @@ def _scope_filter_and_params(shelter: str | None):
     return filter_sql, (shelter,)
 
 
+def _request_placeholder() -> str:
+    return "%s" if g.get("db_kind") == "pg" else "?"
+
+
 @case_dashboard.route("")
 @require_login
 @require_shelter
@@ -79,6 +84,7 @@ def dashboard():
     role = session.get("role")
 
     shelter_filter, params = _scope_filter_and_params(shelter)
+    placeholder = _request_placeholder()
 
     missing_enrollment = db_fetchall(
         _sql(
@@ -256,6 +262,35 @@ def dashboard():
         params,
     )
 
+    pending_pass_count_row = db_fetchone(
+        f"""
+        SELECT COUNT(*)
+        FROM leave_requests
+        WHERE status = {placeholder}
+          AND shelter = {placeholder}
+        """,
+        ("pending", shelter),
+    )
+    pending_transport_count_row = db_fetchone(
+        f"""
+        SELECT COUNT(*)
+        FROM transport_requests
+        WHERE status = {placeholder}
+          AND shelter = {placeholder}
+        """,
+        ("pending", shelter),
+    )
+
+    pending_pass_count = (
+        pending_pass_count_row["count"] if isinstance(pending_pass_count_row, dict) and "count" in pending_pass_count_row
+        else pending_pass_count_row[0] if pending_pass_count_row else 0
+    )
+    pending_transport_count = (
+        pending_transport_count_row["count"] if isinstance(pending_transport_count_row, dict) and "count" in pending_transport_count_row
+        else pending_transport_count_row[0] if pending_transport_count_row else 0
+    )
+    pending_request_total = int(pending_pass_count or 0) + int(pending_transport_count or 0)
+
     return render_template(
         "case_dashboard/dashboard.html",
         missing_enrollment=missing_enrollment,
@@ -263,6 +298,9 @@ def dashboard():
         compliance_missing=compliance_missing,
         notes_missing=notes_missing,
         no_appointments=no_appointments,
+        pending_pass_count=pending_pass_count,
+        pending_transport_count=pending_transport_count,
+        pending_request_total=pending_request_total,
         role=role,
         shelter=shelter,
     )
