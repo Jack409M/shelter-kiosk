@@ -120,26 +120,32 @@
   flex: 1 1 auto;
 }
 
+.top-stat-drag-zone {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  cursor: grab;
+  user-select: none;
+  padding-right: 4px;
+}
+
+.top-stat-drag-zone:active,
+.top-stat-card.is-dragging .top-stat-drag-zone {
+  cursor: grabbing;
+}
+
 .top-stat-drag-handle {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  padding: 0;
-  margin: 0;
   font-size: 16px;
   line-height: 1;
   color: rgba(0, 0, 0, 0.34);
-  cursor: grab;
   flex: 0 0 auto;
+  pointer-events: none;
 }
 
-.top-stat-drag-handle:hover {
+.top-stat-drag-zone:hover .top-stat-drag-handle {
   color: rgba(0, 0, 0, 0.58);
-}
-
-.top-stat-drag-handle:active,
-.top-stat-card.is-dragging .top-stat-drag-handle {
-  cursor: grabbing;
 }
 
 .top-stat-label {
@@ -149,6 +155,8 @@
 .favorite-form {
   margin: 0;
   flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
 }
 
 .stat-star-button {
