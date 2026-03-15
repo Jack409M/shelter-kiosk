@@ -8,12 +8,28 @@
   {% set last_name = resident["last_name"] %}
   {% set resident_code = resident["resident_code"] %}
   {% set shelter = resident["shelter"] %}
+  {% set resident_active = resident["is_active"] %}
 {% else %}
   {% set resident_id = resident[0] %}
   {% set first_name = resident[1] %}
   {% set last_name = resident[2] %}
   {% set resident_code = resident[3] %}
   {% set shelter = resident[4] %}
+  {% set resident_active = resident[5] %}
+{% endif %}
+
+{% if enrollment is mapping %}
+  {% set enrollment_program_status = enrollment["program_status"] %}
+  {% set enrollment_entry_date = enrollment["entry_date"] %}
+  {% set enrollment_exit_date = enrollment["exit_date"] %}
+{% elif enrollment %}
+  {% set enrollment_program_status = enrollment[1] %}
+  {% set enrollment_entry_date = enrollment[2] %}
+  {% set enrollment_exit_date = enrollment[3] %}
+{% else %}
+  {% set enrollment_program_status = "" %}
+  {% set enrollment_entry_date = "" %}
+  {% set enrollment_exit_date = "" %}
 {% endif %}
 
 <h1>Case Management</h1>
@@ -23,7 +39,9 @@
 
   <p>
     <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
-    <strong>Shelter:</strong> {{ shelter|title if shelter else "—" }}
+    <strong>Shelter:</strong> {{ shelter|title if shelter else "—" }}<br>
+    <strong>Status:</strong> {{ "Active" if resident_active else "Inactive" }}<br>
+    <strong>Program Status:</strong> {{ enrollment_program_status|replace("_", " ")|title if enrollment_program_status else "Not enrolled" }}
   </p>
 
   <a class="btn" href="{{ url_for('case_management.index') }}">
@@ -31,160 +49,195 @@
   </a>
 </div>
 
+{% if not enrollment_id %}
+  <div class="card">
+    <h2>Start Program Enrollment</h2>
 
-<div class="card">
+    <form method="post" action="{{ url_for('resident_detail.create_enrollment', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-<h2>Add Goal</h2>
+      <label for="entry_date"><strong>Program Entry Date</strong></label>
+      <input id="entry_date" type="date" name="entry_date" required>
 
-<form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-<label>Goal</label>
-<textarea name="goal_text" rows="3" required></textarea>
-
-<label>Target Date</label>
-<input type="date" name="target_date">
-
-<div style="margin-top:10px;">
-<button type="submit">Add Goal</button>
-</div>
-
-</form>
-
-</div>
-
-
-<div class="card">
-
-<h2>Existing Goals</h2>
-
-{% if goals %}
-<table class="table-compact">
-<tr>
-<th>Goal</th>
-<th>Status</th>
-<th>Target</th>
-<th>Created</th>
-</tr>
-
-{% for g in goals %}
-<tr>
-<td>{{ g[0] }}</td>
-<td>{{ g[1] }}</td>
-<td>{{ g[2] }}</td>
-<td>{{ g[3] }}</td>
-</tr>
-{% endfor %}
-
-</table>
+      <div style="margin-top:10px;">
+        <button type="submit">Start Enrollment</button>
+      </div>
+    </form>
+  </div>
 {% else %}
-<p>No goals recorded.</p>
+  <div class="card">
+    <h2>Program Information</h2>
+
+    <p>
+      <strong>Enrollment ID:</strong> {{ enrollment_id }}<br>
+      <strong>Entry Date:</strong> {{ enrollment_entry_date or "—" }}<br>
+      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Add Goal</h2>
+
+    <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <label for="goal_text"><strong>Goal</strong></label>
+      <textarea id="goal_text" name="goal_text" rows="3" required></textarea>
+
+      <label for="target_date"><strong>Target Date</strong></label>
+      <input id="target_date" type="date" name="target_date">
+
+      <div style="margin-top:10px;">
+        <button type="submit">Add Goal</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Existing Goals</h2>
+
+    {% if goals %}
+      <table class="table-compact">
+        <thead>
+          <tr>
+            <th>Goal</th>
+            <th>Status</th>
+            <th>Target</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for goal in goals %}
+            {% if goal is mapping %}
+              <tr>
+                <td>{{ goal["goal_text"] or "—" }}</td>
+                <td>{{ goal["status"] or "—" }}</td>
+                <td>{{ goal["target_date"] or "—" }}</td>
+                <td>{{ goal["created_at"] or "—" }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td>{{ goal[0] or "—" }}</td>
+                <td>{{ goal[1] or "—" }}</td>
+                <td>{{ goal[2] or "—" }}</td>
+                <td>{{ goal[3] or "—" }}</td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No goals recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Add Appointment</h2>
+
+    <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <label for="appointment_date"><strong>Appointment Date</strong></label>
+      <input id="appointment_date" type="date" name="appointment_date" required>
+
+      <label for="appointment_type"><strong>Appointment Type</strong></label>
+      <input id="appointment_type" type="text" name="appointment_type">
+
+      <label for="appointment_notes"><strong>Notes</strong></label>
+      <textarea id="appointment_notes" name="notes" rows="3"></textarea>
+
+      <div style="margin-top:10px;">
+        <button type="submit">Add Appointment</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Appointments</h2>
+
+    {% if appointments %}
+      <table class="table-compact">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Type</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for appointment in appointments %}
+            {% if appointment is mapping %}
+              <tr>
+                <td>{{ appointment["appointment_date"] or "—" }}</td>
+                <td>{{ appointment["appointment_type"] or "—" }}</td>
+                <td>{{ appointment["notes"] or "—" }}</td>
+              </tr>
+            {% else %}
+              <tr>
+                <td>{{ appointment[0] or "—" }}</td>
+                <td>{{ appointment[1] or "—" }}</td>
+                <td>{{ appointment[2] or "—" }}</td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No appointments recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Add Case Note</h2>
+
+    <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <label for="meeting_date"><strong>Meeting Date</strong></label>
+      <input id="meeting_date" type="date" name="meeting_date">
+
+      <label for="notes"><strong>Notes</strong></label>
+      <textarea id="notes" name="notes" rows="4"></textarea>
+
+      <label for="progress_notes"><strong>Progress Notes</strong></label>
+      <textarea id="progress_notes" name="progress_notes" rows="4"></textarea>
+
+      <label for="action_items"><strong>Action Items</strong></label>
+      <textarea id="action_items" name="action_items" rows="4"></textarea>
+
+      <div style="margin-top:10px;">
+        <button type="submit">Add Case Note</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Case Notes History</h2>
+
+    {% if notes %}
+      {% for note in notes %}
+        {% if note is mapping %}
+          <div style="margin-bottom:20px;">
+            <strong>Meeting:</strong> {{ note["meeting_date"] or "—" }}<br>
+            <strong>Notes:</strong> {{ note["notes"] or "—" }}<br>
+            <strong>Progress:</strong> {{ note["progress_notes"] or "—" }}<br>
+            <strong>Actions:</strong> {{ note["action_items"] or "—" }}<br>
+            <em>Created {{ note["created_at"] or "—" }}</em>
+          </div>
+        {% else %}
+          <div style="margin-bottom:20px;">
+            <strong>Meeting:</strong> {{ note[0] or "—" }}<br>
+            <strong>Notes:</strong> {{ note[1] or "—" }}<br>
+            <strong>Progress:</strong> {{ note[2] or "—" }}<br>
+            <strong>Actions:</strong> {{ note[3] or "—" }}<br>
+            <em>Created {{ note[4] or "—" }}</em>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <p>No case notes recorded.</p>
+    {% endif %}
+  </div>
 {% endif %}
-
-</div>
-
-
-<div class="card">
-
-<h2>Add Appointment</h2>
-
-<form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-<label>Date</label>
-<input type="date" name="appointment_date" required>
-
-<label>Type</label>
-<input type="text" name="appointment_type">
-
-<label>Notes</label>
-<textarea name="notes" rows="3"></textarea>
-
-<div style="margin-top:10px;">
-<button type="submit">Add Appointment</button>
-</div>
-
-</form>
-
-</div>
-
-
-<div class="card">
-
-<h2>Appointments</h2>
-
-{% if appointments %}
-<table class="table-compact">
-<tr>
-<th>Date</th>
-<th>Type</th>
-<th>Notes</th>
-</tr>
-
-{% for a in appointments %}
-<tr>
-<td>{{ a[0] }}</td>
-<td>{{ a[1] }}</td>
-<td>{{ a[2] }}</td>
-</tr>
-{% endfor %}
-
-</table>
-{% else %}
-<p>No appointments recorded.</p>
-{% endif %}
-
-</div>
-
-
-<div class="card">
-
-<h2>Add Case Note</h2>
-
-<form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
-<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-<label>Meeting Date</label>
-<input type="date" name="meeting_date">
-
-<label>Notes</label>
-<textarea name="notes" rows="4"></textarea>
-
-<label>Progress</label>
-<textarea name="progress_notes" rows="4"></textarea>
-
-<label>Action Items</label>
-<textarea name="action_items" rows="4"></textarea>
-
-<div style="margin-top:10px;">
-<button type="submit">Add Case Note</button>
-</div>
-
-</form>
-
-</div>
-
-
-<div class="card">
-
-<h2>Case Notes History</h2>
-
-{% if notes %}
-{% for n in notes %}
-<div style="margin-bottom:20px;">
-
-<strong>Meeting:</strong> {{ n[0] }}<br>
-<strong>Notes:</strong> {{ n[1] }}<br>
-<strong>Progress:</strong> {{ n[2] }}<br>
-<strong>Actions:</strong> {{ n[3] }}<br>
-<em>Created {{ n[4] }}</em>
-
-</div>
-{% endfor %}
-{% else %}
-<p>No case notes recorded.</p>
-{% endif %}
-
-</div>
 
 {% endblock %}
