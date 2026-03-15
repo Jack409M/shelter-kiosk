@@ -39,7 +39,7 @@
 
   <p>
     <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
-    <strong>Shelter:</strong> {{ shelter|title if shelter else "—" }}<br>
+    <strong>Shelter:</strong> {{ shelter | shelter if shelter else "—" }}<br>
     <strong>Status:</strong> {{ "Active" if resident_active else "Inactive" }}<br>
     <strong>Program Status:</strong> {{ enrollment_program_status|replace("_", " ")|title if enrollment_program_status else "Not enrolled" }}
   </p>
