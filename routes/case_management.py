@@ -28,11 +28,14 @@ def _shelter_equals_sql(column_name: str) -> str:
     return f"LOWER(COALESCE({column_name}, '')) = ?"
 
 
+def _placeholder() -> str:
+    return "%s" if g.get("db_kind") == "pg" else "?"
+
+
 @case_management.get("")
 @require_login
 @require_shelter
 def index():
-
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
@@ -67,14 +70,14 @@ def index():
 @require_login
 @require_shelter
 def resident_case(resident_id: int):
-
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    placeholder = "%s" if g.get("db_kind") == "pg" else "?"
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    placeholder = _placeholder()
 
     resident = db_fetchone(
         f"""
@@ -87,47 +90,86 @@ def resident_case(resident_id: int):
             is_active
         FROM residents
         WHERE id = {placeholder}
+          AND {_shelter_equals_sql("shelter")}
         """,
-        (resident_id,),
+        (resident_id, shelter),
     )
 
     if not resident:
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    goals = db_fetchall(
+    enrollment = db_fetchone(
         f"""
-        SELECT goal_text, status, target_date, created_at
-        FROM goals
+        SELECT
+            id,
+            program_status,
+            entry_date,
+            exit_date
+        FROM program_enrollments
         WHERE resident_id = {placeholder}
-        ORDER BY created_at DESC
+        ORDER BY id DESC
+        LIMIT 1
         """,
         (resident_id,),
     )
 
-    appointments = db_fetchall(
-        f"""
-        SELECT appointment_date, appointment_type, notes
-        FROM appointments
-        WHERE resident_id = {placeholder}
-        ORDER BY appointment_date DESC
-        """,
-        (resident_id,),
-    )
+    enrollment_id = None
+    if enrollment:
+        enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
 
-    notes = db_fetchall(
-        f"""
-        SELECT meeting_date, notes, progress_notes, action_items, created_at
-        FROM case_notes
-        WHERE resident_id = {placeholder}
-        ORDER BY created_at DESC
-        """,
-        (resident_id,),
-    )
+    goals = []
+    appointments = []
+    notes = []
+
+    if enrollment_id:
+        goals = db_fetchall(
+            f"""
+            SELECT
+                goal_text,
+                status,
+                target_date,
+                created_at
+            FROM goals
+            WHERE enrollment_id = {placeholder}
+            ORDER BY created_at DESC
+            """,
+            (enrollment_id,),
+        )
+
+        appointments = db_fetchall(
+            f"""
+            SELECT
+                appointment_date,
+                appointment_type,
+                notes
+            FROM appointments
+            WHERE enrollment_id = {placeholder}
+            ORDER BY appointment_date DESC, id DESC
+            """,
+            (enrollment_id,),
+        )
+
+        notes = db_fetchall(
+            f"""
+            SELECT
+                meeting_date,
+                notes,
+                progress_notes,
+                action_items,
+                created_at
+            FROM case_manager_updates
+            WHERE enrollment_id = {placeholder}
+            ORDER BY meeting_date DESC, id DESC
+            """,
+            (enrollment_id,),
+        )
 
     return render_template(
         "case_management/resident_case.html",
         resident=resident,
+        enrollment=enrollment,
+        enrollment_id=enrollment_id,
         goals=goals,
         appointments=appointments,
         notes=notes,
