@@ -32,6 +32,10 @@ def _case_manager_allowed() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 
+def _resident_detail_view_allowed() -> bool:
+    return session.get("role") in {"admin", "shelter_director", "case_manager"}
+
+
 def _row_value(row, key: str, index: int | None = None, default=None):
     if row is None:
         return default
@@ -722,6 +726,10 @@ def _build_calendar_context(timeline, selected_view: str, anchor: date):
 @require_login
 @require_shelter
 def resident_profile(resident_id: int):
+    if not _resident_detail_view_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("residents.staff_residents"))
+
     shelter = _normalize_shelter_name(session.get("shelter"))
     resident = _load_resident_for_shelter(resident_id, shelter)
 
@@ -849,6 +857,10 @@ def resident_profile(resident_id: int):
 @require_login
 @require_shelter
 def resident_timeline(resident_id: int):
+    if not _resident_detail_view_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("residents.staff_residents"))
+
     shelter = _normalize_shelter_name(session.get("shelter"))
     resident = _load_resident_for_shelter(resident_id, shelter)
 
