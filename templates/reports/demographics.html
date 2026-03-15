@@ -2,7 +2,7 @@
 {% from "reports/_stat_macros.html" import stat_tile, top_stat_tile %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315n') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315o') }}">
 {% endblock %}
 
 {% block content %}
@@ -621,8 +621,19 @@
       targetCard.classList.add("is-drag-over");
 
       const targetRect = targetCard.getBoundingClientRect();
-      const midpoint = targetRect.top + (targetRect.height / 2);
-      const shouldInsertAfter = event.clientY > midpoint;
+      const draggedRect = draggedCard.getBoundingClientRect();
+      const halfwayX = targetRect.left + (targetRect.width / 2);
+      const halfwayY = targetRect.top + (targetRect.height / 2);
+
+      const sameRow = Math.abs(draggedRect.top - targetRect.top) < (targetRect.height / 2);
+
+      let shouldInsertAfter;
+
+      if (sameRow) {
+        shouldInsertAfter = event.clientX > halfwayX;
+      } else {
+        shouldInsertAfter = event.clientY > halfwayY;
+      }
 
       if (shouldInsertAfter) {
         grid.insertBefore(draggedCard, targetCard.nextSibling);
