@@ -1,12 +1,24 @@
 {% extends "layout.html" %}
 {% block content %}
+
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
 <h1>Leave request</h1>
 
 <form method="post" class="card">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
   <label for="shelter">Shelter</label>
-  <input id="shelter" name="shelter" value="{{ shelter }}" readonly class="w-shelter">
+  <input id="shelter" name="shelter" value="{{ shelter_label }}" readonly class="w-shelter">
 
   <label for="resident_phone">Phone number for text updates (optional)</label>
   <input
@@ -59,4 +71,3 @@
 </form>
 
 {% endblock %}
-
