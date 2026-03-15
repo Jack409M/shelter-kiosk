@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+{% if resident is mapping %}
+  {% set resident_id = resident["id"] %}
+  {% set first_name = resident["first_name"] %}
+  {% set last_name = resident["last_name"] %}
+  {% set resident_code = resident["resident_code"] %}
+  {% set shelter = resident["shelter"] %}
+{% else %}
+  {% set resident_id = resident[0] %}
+  {% set first_name = resident[1] %}
+  {% set last_name = resident[2] %}
+  {% set resident_code = resident[3] %}
+  {% set shelter = resident[4] %}
+{% endif %}
+
+<h1>Case Management</h1>
+
+<div class="card">
+
+  <h2>{{ first_name }} {{ last_name }}</h2>
+
+  <p>
+    <strong>Resident Code:</strong> {{ resident_code or "—" }}
+    <br>
+    <strong>Shelter:</strong> {{ shelter|title if shelter else "—" }}
+  </p>
+
+</div>
+
+
+<div class="card">
+  <h2>Goals</h2>
+  <p>Goals will be managed here.</p>
+</div>
+
+
+<div class="card">
+  <h2>Appointments</h2>
+  <p>Appointments will be scheduled here.</p>
+</div>
+
+
+<div class="card">
+  <h2>Case Notes</h2>
+  <p>Case manager notes will be recorded here.</p>
+</div>
+
+{% endblock %}
