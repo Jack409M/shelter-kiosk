@@ -2,7 +2,7 @@
 {% from "reports/_stat_macros.html" import stat_tile, top_stat_tile %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315j') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315k') }}">
 {% endblock %}
 
 {% block content %}
@@ -578,8 +578,12 @@
     }
 
     grid.addEventListener("dragstart", (event) => {
-      const card = event.target.closest("[data-metric-key]");
+      const handle = event.target.closest(".top-stat-drag-handle");
+      if (!handle) {
+        return;
+      }
 
+      const card = handle.closest("[data-metric-key]");
       if (!card) {
         return;
       }
@@ -605,7 +609,7 @@
 
       event.preventDefault();
 
-      const targetCard = event.target.closest("[data-metric-key]");
+      const targetCard = event.target.closest(".top-stat-card");
 
       clearDragState();
 
