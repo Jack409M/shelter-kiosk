@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315c') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315d') }}">
 {% endblock %}
 
 {% block content %}
@@ -86,6 +86,26 @@
 
   <section class="card section-card">
     <div class="section-head">
+      <h2>My Top Stats</h2>
+    </div>
+
+    <div class="top-stats-grid">
+      {% for stat in top_stats %}
+        <div class="top-stat-card">
+          <div class="top-stat-header">
+            <span>{{ stat.label }}</span>
+            <span class="stat-star">☆</span>
+          </div>
+          <div class="top-stat-value">{{ stat.value }}</div>
+        </div>
+      {% else %}
+        <div class="distribution-empty">No top stats available.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
       <h2>Program Snapshot</h2>
     </div>
 
@@ -128,33 +148,23 @@
       <h2>Shelter Capacity</h2>
     </div>
 
-    <div class="table-wrap">
-      <table class="stats-table">
-        <thead>
-          <tr>
-            <th>Shelter</th>
-            <th>Capacity</th>
-            <th>Occupied</th>
-            <th>Open</th>
-            <th>Occupancy</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in capacity_snapshot.shelters %}
-            <tr>
-              <td>{{ item.label }}</td>
-              <td>{{ item.capacity }}</td>
-              <td>{{ item.occupied_display }}</td>
-              <td>{{ item.open_spaces_display }}</td>
-              <td>{{ item.occupancy_rate }}%</td>
-            </tr>
-          {% else %}
-            <tr>
-              <td colspan="5">No capacity data available.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="capacity-bars">
+      {% for item in capacity_snapshot.shelters %}
+        <div class="capacity-row">
+          <div class="capacity-header">
+            <div class="capacity-name">{{ item.label }}</div>
+            <div class="capacity-meta">
+              {{ item.occupied_display }} / {{ item.capacity }} ({{ item.occupancy_rate }}%)
+            </div>
+          </div>
+
+          <div class="capacity-bar-wrap">
+            <div class="capacity-bar" style="width: {{ item.occupancy_rate }}%;"></div>
+          </div>
+        </div>
+      {% else %}
+        <div class="distribution-empty">No capacity data available.</div>
+      {% endfor %}
     </div>
 
     <div class="capacity-note">
@@ -173,7 +183,7 @@
           <div class="distribution-label">{{ item.label }}</div>
 
           <div class="distribution-bar-wrap">
-            <div class="distribution-bar" style="width: {{ item.percentage }}%"></div>
+            <div class="distribution-bar" style="width: {{ item.percentage }}%;"></div>
           </div>
 
           <div class="distribution-value">
@@ -277,6 +287,7 @@
             <div class="stat-label">Veteran</div>
             <div class="stat-value">{{ demographics.veteran_yes_display }}</div>
           </div>
+
           <div class="stat-tile">
             <div class="stat-label">Disability</div>
             <div class="stat-value">{{ demographics.disability_yes_display }}</div>
