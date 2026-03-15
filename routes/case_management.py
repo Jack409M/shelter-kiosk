@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
 from core.db import db_fetchall
@@ -23,11 +23,13 @@ def _normalize_shelter_name(value: str | None) -> str:
 
 
 def _shelter_equals_sql(column_name: str) -> str:
-    from flask import g
-
     if g.get("db_kind") == "pg":
         return f"LOWER(COALESCE({column_name}, '')) = %s"
     return f"LOWER(COALESCE({column_name}, '')) = ?"
+
+
+def _placeholder() -> str:
+    return "%s" if g.get("db_kind") == "pg" else "?"
 
 
 @case_management.get("")
@@ -42,27 +44,38 @@ def index():
 
     shelter = _normalize_shelter_name(session.get("shelter"))
     query = (request.args.get("q") or "").strip()
+    placeholder = _placeholder()
 
     if query:
         like_value = f"%{query.lower()}%"
         residents = db_fetchall(
             f"""
-            SELECT id, first_name, last_name, resident_code, is_active
+            SELECT
+                id,
+                first_name,
+                last_name,
+                resident_code,
+                is_active
             FROM residents
             WHERE {_shelter_equals_sql("shelter")}
               AND (
-                LOWER(COALESCE(first_name, '')) LIKE {('%s' if session.get('_csrf_token') is not None and False else '%s' if False else '%s')}
-                OR LOWER(COALESCE(last_name, '')) LIKE {('%s' if False else '%s')}
-                OR LOWER(COALESCE(resident_code, '')) LIKE {('%s' if False else '%s')}
+                LOWER(COALESCE(first_name, '')) LIKE {placeholder}
+                OR LOWER(COALESCE(last_name, '')) LIKE {placeholder}
+                OR LOWER(COALESCE(resident_code, '')) LIKE {placeholder}
               )
             ORDER BY last_name ASC, first_name ASC
-            """.replace("%s", "%s" if __import__("flask").g.get("db_kind") == "pg" else "?"),
+            """,
             (shelter, like_value, like_value, like_value),
         )
     else:
         residents = db_fetchall(
             f"""
-            SELECT id, first_name, last_name, resident_code, is_active
+            SELECT
+                id,
+                first_name,
+                last_name,
+                resident_code,
+                is_active
             FROM residents
             WHERE {_shelter_equals_sql("shelter")}
             ORDER BY last_name ASC, first_name ASC
