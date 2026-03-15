@@ -70,6 +70,14 @@
         <button type="submit" class="btn btn-primary">Apply Filters</button>
       </div>
     </div>
+
+    <div class="preset-row">
+      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=this_month">This Month</a>
+      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=this_quarter">This Quarter</a>
+      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=this_year">This Year</a>
+      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=last_year">Last Year</a>
+      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=all_time">All Time</a>
+    </div>
   </form>
 
   <section class="card section-card">
@@ -107,6 +115,110 @@
         <div class="stat-value">{{ program_snapshot.average_length_of_stay_days }}</div>
         <div class="stat-foot">days</div>
       </div>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Selected Scope vs Total Program</h2>
+    </div>
+
+    <div class="stats-grid compact-grid">
+      <div class="stat-tile">
+        <div class="stat-label">{{ scope_comparison.selected_scope_label }}</div>
+        <div class="stat-value">{{ scope_comparison.selected_scope_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Share of Program</div>
+        <div class="stat-value">{{ scope_comparison.selected_scope_share_of_program }}%</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Total Program</div>
+        <div class="stat-value">{{ scope_comparison.total_program_display }}</div>
+      </div>
+    </div>
+
+    <div class="table-wrap top-space">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Shelter</th>
+            <th>Women Served</th>
+            <th>Share of Program</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in scope_comparison.shelters %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td>{{ item.display_value }}</td>
+              <td>{{ item.share_of_program }}%</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="3">No data available for the selected filters.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Capacity Snapshot</h2>
+    </div>
+
+    <div class="stats-grid compact-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Total Capacity</div>
+        <div class="stat-value">{{ capacity_snapshot.total_capacity }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Currently Occupied</div>
+        <div class="stat-value">{{ capacity_snapshot.total_occupied_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Open Spaces</div>
+        <div class="stat-value">{{ capacity_snapshot.total_open_spaces_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Occupancy Rate</div>
+        <div class="stat-value">{{ capacity_snapshot.total_occupancy_rate }}%</div>
+      </div>
+    </div>
+
+    <div class="table-wrap top-space">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Shelter</th>
+            <th>Capacity</th>
+            <th>Occupied</th>
+            <th>Open Spaces</th>
+            <th>Occupancy Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in capacity_snapshot.shelters %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td>{{ item.capacity }}</td>
+              <td>{{ item.occupied_display }}</td>
+              <td>{{ item.open_spaces_display }}</td>
+              <td>{{ item.occupancy_rate }}%</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5">No capacity data available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="capacity-note">
+      Capacity assumptions currently set to Abba House 10, Haven House 18, and Gratitude House 34.
     </div>
   </section>
 
@@ -547,6 +659,31 @@
     justify-content: flex-start;
   }
 
+  .preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .preset-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid #cfd7df;
+    border-radius: 999px;
+    text-decoration: none;
+    background: #fff;
+    color: inherit;
+    font-size: 13px;
+  }
+
+  .preset-link:hover {
+    background: #f5f8fb;
+  }
+
   .section-card {
     padding: 16px;
   }
@@ -633,6 +770,12 @@
 
   .top-space {
     margin-top: 14px;
+  }
+
+  .capacity-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.62);
   }
 
   @media (max-width: 1100px) {
