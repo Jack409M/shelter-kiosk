@@ -87,7 +87,7 @@
               </div>
               <div><strong>Phone:</strong> {{ phone or "—" }}</div>
               <div><strong>Email:</strong> {{ email or "—" }}</div>
-              <div><strong>Shelter:</strong> {{ resident_shelter|title if resident_shelter else "—" }}</div>
+              <div><strong>Shelter:</strong> {{ resident_shelter | shelter if resident_shelter else "—" }}</div>
               <div><strong>Status:</strong> {{ "Active" if resident_active else "Inactive" }}</div>
               <div><strong>Program Status:</strong> {{ program_status or "Not enrolled" }}</div>
               <div>
@@ -159,7 +159,7 @@
 
             <div class="profile-meta-grid">
               <div><strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}</div>
-              <div><strong>Enrollment Shelter:</strong> {{ enrollment_shelter|title if enrollment_shelter else "—" }}</div>
+              <div><strong>Enrollment Shelter:</strong> {{ enrollment_shelter | shelter if enrollment_shelter else "—" }}</div>
               <div>
                 <strong>Exit Date:</strong>
                 {% if exit_date %}
