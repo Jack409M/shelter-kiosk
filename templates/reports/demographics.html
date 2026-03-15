@@ -1,0 +1,690 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="reports-header card">
+    <div>
+      <h1>{{ title or "Demographics and Statistics" }}</h1>
+      <p class="reports-subtitle">
+        Aggregate program reporting only. No resident level information is displayed.
+      </p>
+    </div>
+  </div>
+
+  <form method="get" class="card filter-card">
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label for="scope">Scope</label>
+        <select id="scope" name="scope">
+          {% for option in scope_options %}
+            <option value="{{ option.value }}" {% if filters.scope == option.value %}selected{% endif %}>
+              {{ option.label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="population">Population</label>
+        <select id="population" name="population">
+          {% for option in population_options %}
+            <option value="{{ option.value }}" {% if filters.population == option.value %}selected{% endif %}>
+              {{ option.label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="date_range">Date Range</label>
+        <select id="date_range" name="date_range">
+          {% for option in date_range_options %}
+            <option value="{{ option.value }}" {% if filters.date_range == option.value %}selected{% endif %}>
+              {{ option.label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group custom-date">
+        <label for="start_date">Custom Start</label>
+        <input
+          id="start_date"
+          name="start_date"
+          type="date"
+          value="{{ filters.start_date or '' }}"
+        >
+      </div>
+
+      <div class="filter-group custom-date">
+        <label for="end_date">Custom End</label>
+        <input
+          id="end_date"
+          name="end_date"
+          type="date"
+          value="{{ filters.end_date or '' }}"
+        >
+      </div>
+
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+      </div>
+    </div>
+  </form>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Program Snapshot</h2>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Women Served</div>
+        <div class="stat-value">{{ program_snapshot.women_served_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Women Admitted</div>
+        <div class="stat-value">{{ program_snapshot.women_admitted_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Women Exited</div>
+        <div class="stat-value">{{ program_snapshot.women_exited_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Graduates</div>
+        <div class="stat-value">{{ program_snapshot.graduates_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Graduation Rate</div>
+        <div class="stat-value">{{ program_snapshot.graduation_rate }}%</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Currently Active</div>
+        <div class="stat-value">{{ program_snapshot.active_residents_current_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Average Length of Stay</div>
+        <div class="stat-value">{{ program_snapshot.average_length_of_stay_days }}</div>
+        <div class="stat-foot">days</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Shelter Distribution</h2>
+    </div>
+
+    <div class="table-wrap">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Shelter</th>
+            <th>Total</th>
+            <th>Percent</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in shelter_distribution %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td>{{ item.display_value }}</td>
+              <td>{{ item.percentage }}%</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="3">No data available for the selected filters.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Demographics</h2>
+    </div>
+
+    <div class="two-col-grid">
+      <div class="subsection">
+        <h3>Gender</h3>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in demographics.gender %}
+                <tr>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.display_value }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="2">No data available.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <h3>Race</h3>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in demographics.race %}
+                <tr>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.display_value }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="2">No data available.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <h3>Marital Status</h3>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in demographics.marital_status %}
+                <tr>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.display_value }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="2">No data available.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <h3>Key Indicators</h3>
+        <div class="stats-grid compact-grid">
+          <div class="stat-tile">
+            <div class="stat-label">Veteran</div>
+            <div class="stat-value">{{ demographics.veteran_yes_display }}</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-label">Disability</div>
+            <div class="stat-value">{{ demographics.disability_yes_display }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Family Composition</h2>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Residents With Children</div>
+        <div class="stat-value">{{ family_composition.residents_with_children_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Children In Shelter</div>
+        <div class="stat-value">{{ family_composition.children_in_shelter_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Children Out Of Shelter</div>
+        <div class="stat-value">{{ family_composition.children_out_of_shelter_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Children Reunited</div>
+        <div class="stat-value">{{ family_composition.children_reunited_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Healthy Babies Born</div>
+        <div class="stat-value">{{ family_composition.healthy_babies_born_display }}</div>
+      </div>
+    </div>
+
+    <div class="table-wrap top-space">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Child Age Group</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in family_composition.child_age_groups %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td>{{ item.display_value }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="2">No data available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Recovery and Sobriety</h2>
+    </div>
+
+    <div class="stats-grid compact-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Average Days Sober At Entry</div>
+        <div class="stat-value">{{ recovery_and_sobriety.average_days_sober_at_entry }}</div>
+      </div>
+    </div>
+
+    <div class="table-wrap top-space">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Primary Substance</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in recovery_and_sobriety.primary_substances %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td>{{ item.display_value }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="2">No data available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Trauma and Vulnerability</h2>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Average ACE Score</div>
+        <div class="stat-value">{{ trauma_and_vulnerability.ace_score_average }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Sexual Survivor</div>
+        <div class="stat-value">{{ trauma_and_vulnerability.sexual_survivor_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Domestic Violence Survivor</div>
+        <div class="stat-value">{{ trauma_and_vulnerability.dv_survivor_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Human Trafficking Survivor</div>
+        <div class="stat-value">{{ trauma_and_vulnerability.human_trafficking_survivor_display }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Barriers to Stability</h2>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Entry Felony Conviction</div>
+        <div class="stat-value">{{ barriers_to_stability.entry_felony_conviction_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Entry Parole Or Probation</div>
+        <div class="stat-value">{{ barriers_to_stability.entry_parole_probation_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Drug Court</div>
+        <div class="stat-value">{{ barriers_to_stability.drug_court_display }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Education and Income</h2>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Average Income At Entry</div>
+        <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_at_entry) }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Average Income At Exit</div>
+        <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_at_exit) }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Average Income Improvement</div>
+        <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_improvement) }}</div>
+      </div>
+    </div>
+
+    <div class="two-col-grid top-space">
+      <div class="subsection">
+        <h3>Education At Entry</h3>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in education_and_income.education_at_entry %}
+                <tr>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.display_value }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="2">No data available.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <h3>Education At Exit</h3>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in education_and_income.education_at_exit %}
+                <tr>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.display_value }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="2">No data available.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Exit Outcomes</h2>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Graduates</div>
+        <div class="stat-value">{{ exit_outcomes.graduates_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Leave AMA</div>
+        <div class="stat-value">{{ exit_outcomes.leave_ama_display }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Total Exit Records</div>
+        <div class="stat-value">{{ exit_outcomes.total_exit_records_display }}</div>
+      </div>
+    </div>
+
+    <div class="table-wrap top-space">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Exit Reason</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in exit_outcomes.exit_reasons %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td>{{ item.display_value }}</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="2">No data available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<style>
+  .reports-page {
+    display: grid;
+    gap: 16px;
+  }
+
+  .reports-header h1 {
+    margin: 0 0 6px 0;
+  }
+
+  .reports-subtitle {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.68);
+  }
+
+  .filter-card {
+    padding: 14px;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+
+  .filter-group {
+    display: grid;
+    gap: 6px;
+  }
+
+  .filter-group label {
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .filter-group select,
+  .filter-group input {
+    width: 100%;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid #b9c2cc;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .filter-actions {
+    display: flex;
+    align-items: end;
+    justify-content: flex-start;
+  }
+
+  .section-card {
+    padding: 16px;
+  }
+
+  .section-head {
+    margin-bottom: 12px;
+  }
+
+  .section-head h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .compact-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .stat-tile {
+    border: 1px solid #d7dce2;
+    border-radius: 10px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.75);
+  }
+
+  .stat-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.68);
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 1.65rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .stat-foot {
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(0, 0, 0, 0.60);
+  }
+
+  .two-col-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .subsection h3 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #dfe5eb;
+    font-size: 14px;
+  }
+
+  .stats-table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(0, 0, 0, 0.62);
+  }
+
+  .top-space {
+    margin-top: 14px;
+  }
+
+  @media (max-width: 1100px) {
+    .filter-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .stats-grid,
+    .compact-grid,
+    .two-col-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .filter-grid,
+    .stats-grid,
+    .compact-grid,
+    .two-col-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .filter-actions {
+      justify-content: stretch;
+    }
+
+    .filter-actions .btn {
+      width: 100%;
+    }
+  }
+</style>
+
+<script>
+  (function () {
+    const dateRange = document.getElementById("date_range");
+    const startDate = document.getElementById("start_date");
+    const endDate = document.getElementById("end_date");
+
+    function syncCustomDateState() {
+      const isCustom = dateRange && dateRange.value === "custom";
+      if (startDate) {
+        startDate.disabled = !isCustom;
+      }
+      if (endDate) {
+        endDate.disabled = !isCustom;
+      }
+    }
+
+    if (dateRange) {
+      dateRange.addEventListener("change", syncCustomDateState);
+      syncCustomDateState();
+    }
+  })();
+</script>
+{% endblock %}
