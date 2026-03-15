@@ -74,8 +74,10 @@ def resident_case(resident_id: int):
 
     init_db()
 
+    placeholder = "%s" if g.get("db_kind") == "pg" else "?"
+
     resident = db_fetchone(
-        """
+        f"""
         SELECT
             id,
             first_name,
@@ -84,17 +86,7 @@ def resident_case(resident_id: int):
             shelter,
             is_active
         FROM residents
-        WHERE id = %s
-        """ if g.get("db_kind") == "pg" else """
-        SELECT
-            id,
-            first_name,
-            last_name,
-            resident_code,
-            shelter,
-            is_active
-        FROM residents
-        WHERE id = ?
+        WHERE id = {placeholder}
         """,
         (resident_id,),
     )
@@ -103,7 +95,40 @@ def resident_case(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
+    goals = db_fetchall(
+        f"""
+        SELECT goal_text, status, target_date, created_at
+        FROM goals
+        WHERE resident_id = {placeholder}
+        ORDER BY created_at DESC
+        """,
+        (resident_id,),
+    )
+
+    appointments = db_fetchall(
+        f"""
+        SELECT appointment_date, appointment_type, notes
+        FROM appointments
+        WHERE resident_id = {placeholder}
+        ORDER BY appointment_date DESC
+        """,
+        (resident_id,),
+    )
+
+    notes = db_fetchall(
+        f"""
+        SELECT meeting_date, notes, progress_notes, action_items, created_at
+        FROM case_notes
+        WHERE resident_id = {placeholder}
+        ORDER BY created_at DESC
+        """,
+        (resident_id,),
+    )
+
     return render_template(
         "case_management/resident_case.html",
         resident=resident,
+        goals=goals,
+        appointments=appointments,
+        notes=notes,
     )
