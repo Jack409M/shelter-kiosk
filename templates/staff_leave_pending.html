@@ -1,6 +1,17 @@
 {% extends "layout.html" %}
 {% block content %}
 
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
 <style>
   .page-head {
     display: flex;
@@ -157,7 +168,7 @@
 
 <div class="page-head">
   <h1>Leave pending</h1>
-  <div class="muted">Shelter: <strong>{{ shelter }}</strong></div>
+  <div class="muted">Shelter: <strong>{{ shelter_label }}</strong></div>
 </div>
 
 <div class="table-wrap">
