@@ -19,6 +19,15 @@
     {% set last_name = resident["last_name"] %}
     {% set resident_shelter = resident["resident_shelter"] %}
     {% set resident_active = resident["is_active"] %}
+    {% set resident_code = resident["resident_code"] if "resident_code" in resident else "" %}
+    {% set dob = resident["dob"] if "dob" in resident else "" %}
+    {% set phone = resident["phone"] if "phone" in resident else "" %}
+    {% set email = resident["email"] if "email" in resident else "" %}
+    {% set emergency_contact_name = resident["emergency_contact_name"] if "emergency_contact_name" in resident else "" %}
+    {% set emergency_contact_relationship = resident["emergency_contact_relationship"] if "emergency_contact_relationship" in resident else "" %}
+    {% set emergency_contact_phone = resident["emergency_contact_phone"] if "emergency_contact_phone" in resident else "" %}
+    {% set medical_alerts = resident["medical_alerts"] if "medical_alerts" in resident else "" %}
+    {% set medical_notes = resident["medical_notes"] if "medical_notes" in resident else "" %}
     {% set enrollment_id = resident["enrollment_id"] %}
     {% set enrollment_shelter = resident["enrollment_shelter"] %}
     {% set program_status = resident["program_status"] %}
@@ -30,6 +39,15 @@
     {% set last_name = resident[2] %}
     {% set resident_shelter = resident[3] %}
     {% set resident_active = resident[4] %}
+    {% set resident_code = resident[10] if resident|length > 10 else "" %}
+    {% set dob = resident[11] if resident|length > 11 else "" %}
+    {% set phone = resident[12] if resident|length > 12 else "" %}
+    {% set email = resident[13] if resident|length > 13 else "" %}
+    {% set emergency_contact_name = resident[14] if resident|length > 14 else "" %}
+    {% set emergency_contact_relationship = resident[15] if resident|length > 15 else "" %}
+    {% set emergency_contact_phone = resident[16] if resident|length > 16 else "" %}
+    {% set medical_alerts = resident[17] if resident|length > 17 else "" %}
+    {% set medical_notes = resident[18] if resident|length > 18 else "" %}
     {% set enrollment_id = resident[5] %}
     {% set enrollment_shelter = resident[6] %}
     {% set program_status = resident[7] %}
@@ -39,234 +57,124 @@
 
   <div class="resident-profile-page">
 
-    <nav class="resident-profile-section-nav" aria-label="Snapshot sections">
-      <a class="resident-profile-section-link" href="#casework-actions">Casework</a>
-      {% if enrollment_id %}
-        <a class="resident-profile-section-link" href="#goals">Goals</a>
-        <a class="resident-profile-section-link" href="#case-notes">Notes</a>
-      {% endif %}
-    </nav>
-
-    <section id="casework-actions" class="resident-notebook-section">
+    <section class="resident-notebook-section">
       <div class="resident-notebook-section-head">
-        <div class="resident-notebook-eyebrow">Casework</div>
-        <h2 class="resident-notebook-section-title">Casework Actions</h2>
+        <div class="resident-notebook-eyebrow">Resident Record</div>
+        <h2 class="resident-notebook-section-title">Basic Information</h2>
         <div class="resident-notebook-section-copy">
-          Start enrollment, add goals, write case notes, and schedule appointments.
+          Core resident information, emergency details, medical information, and resident management actions.
         </div>
       </div>
 
-      <div class="resident-profile-columns resident-profile-columns-actions">
+      <div class="resident-profile-columns">
 
         <div class="resident-profile-column">
 
-          {% if not enrollment_id %}
-            <div id="start-enrollment" class="card">
-              <h3 class="resident-profile-card-title">Start Enrollment</h3>
+          <div class="card resident-profile-section-card">
+            <h3 class="resident-profile-card-title">Basic Information</h3>
 
-              <form method="post" action="{{ url_for('resident_detail.create_enrollment', resident_id=resident_id) }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="return_anchor" value="start-enrollment">
-
-                <label for="entry_date"><strong>Program Entry Date</strong></label>
-                <input type="date" id="entry_date" name="entry_date" required>
-
-                <div class="profile-actions resident-profile-actions-top">
-                  <button type="submit">Start Enrollment</button>
-                </div>
-              </form>
+            <div class="profile-meta-grid">
+              <div><strong>Name:</strong> {{ first_name }} {{ last_name }}</div>
+              <div><strong>Resident ID:</strong> {{ resident_id }}</div>
+              <div><strong>Resident Code:</strong> {{ resident_code or "—" }}</div>
+              <div>
+                <strong>Date of Birth:</strong>
+                {% if dob %}
+                  {{ dob }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+              <div><strong>Phone:</strong> {{ phone or "—" }}</div>
+              <div><strong>Email:</strong> {{ email or "—" }}</div>
+              <div><strong>Shelter:</strong> {{ resident_shelter|title if resident_shelter else "—" }}</div>
+              <div><strong>Status:</strong> {{ "Active" if resident_active else "Inactive" }}</div>
+              <div><strong>Program Status:</strong> {{ program_status or "Not enrolled" }}</div>
+              <div>
+                <strong>Entry Date:</strong>
+                {% if entry_date %}
+                  {{ entry_date }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
             </div>
-          {% endif %}
+          </div>
 
-          {% if enrollment_id %}
-            <div id="add-goal" class="card">
-              <h3 class="resident-profile-card-title">Add Goal</h3>
+          <div class="card resident-profile-section-card">
+            <h3 class="resident-profile-card-title">Emergency Contact</h3>
 
-              <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="return_anchor" value="add-goal">
-
-                <label for="goal_text"><strong>Goal</strong></label>
-                <textarea id="goal_text" name="goal_text" rows="3" class="full-width-textarea" required></textarea>
-
-                <label for="target_date"><strong>Target Date</strong></label>
-                <input type="date" id="target_date" name="target_date" class="date-input-compact">
-
-                <div class="profile-actions resident-profile-actions-top">
-                  <button type="submit">Add Goal</button>
-                </div>
-              </form>
+            <div class="profile-meta-grid">
+              <div><strong>Name:</strong> {{ emergency_contact_name or "—" }}</div>
+              <div><strong>Relationship:</strong> {{ emergency_contact_relationship or "—" }}</div>
+              <div><strong>Phone:</strong> {{ emergency_contact_phone or "—" }}</div>
             </div>
-
-            <div id="add-case-note" class="card">
-              <h3 class="resident-profile-card-title">Add Case Note</h3>
-
-              <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="return_anchor" value="add-case-note">
-
-                <div class="profile-form-row-compact">
-                  <div>
-                    <label for="meeting_date"><strong>Meeting Date</strong></label>
-                    <input type="date" id="meeting_date" name="meeting_date" class="date-input-compact">
-                  </div>
-                </div>
-
-                <label for="notes"><strong>Notes</strong></label>
-                <textarea id="notes" name="notes" rows="4" class="full-width-textarea"></textarea>
-
-                <label for="progress_notes"><strong>Progress Notes</strong></label>
-                <textarea id="progress_notes" name="progress_notes" rows="4" class="full-width-textarea"></textarea>
-
-                <label for="action_items"><strong>Action Items</strong></label>
-                <textarea id="action_items" name="action_items" rows="4" class="full-width-textarea"></textarea>
-
-                <div class="profile-actions resident-profile-actions-top">
-                  <button type="submit">Add Case Note</button>
-                </div>
-              </form>
-            </div>
-          {% endif %}
+          </div>
 
         </div>
 
         <div class="resident-profile-column">
 
-          {% if enrollment_id %}
-            <div id="add-appointment" class="card">
-              <h3 class="resident-profile-card-title">Add Appointment</h3>
+          <div class="card resident-profile-section-card">
+            <h3 class="resident-profile-card-title">Medical Information</h3>
 
-              <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="return_anchor" value="add-appointment">
-
-                <div class="profile-form-row-compact">
-                  <div>
-                    <label for="appointment_date"><strong>Appointment Date</strong></label>
-                    <input type="date" id="appointment_date" name="appointment_date" class="date-input-compact" required>
-                  </div>
-
-                  <div class="resident-profile-appointment-type">
-                    <label for="appointment_type"><strong>Appointment Type</strong></label>
-                    <input type="text" id="appointment_type" name="appointment_type">
-                  </div>
-                </div>
-
-                <label for="appointment_notes"><strong>Notes</strong></label>
-                <textarea id="appointment_notes" name="notes" rows="4" class="full-width-textarea"></textarea>
-
-                <div class="profile-actions resident-profile-actions-top">
-                  <button type="submit">Add Appointment</button>
-                </div>
-              </form>
+            <div class="profile-meta-grid">
+              <div>
+                <strong>Medical Alerts:</strong><br>
+                {{ medical_alerts or "—" }}
+              </div>
+              <div>
+                <strong>Medical Notes:</strong><br>
+                {{ medical_notes or "—" }}
+              </div>
             </div>
-          {% else %}
-            <div class="card resident-profile-empty-card">
-              <h3 class="resident-profile-card-title">Casework Actions</h3>
-              <p>Start enrollment before adding goals, case notes, or appointments.</p>
+          </div>
+
+          <div class="card resident-profile-section-card">
+            <h3 class="resident-profile-card-title">Resident Controls</h3>
+
+            <div class="profile-actions resident-profile-actions-top">
+              {% if resident_active %}
+                <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" class="resident-profile-inline-form">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="active" value="0">
+                  <button type="submit">Deactivate</button>
+                </form>
+              {% else %}
+                <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" class="resident-profile-inline-form">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="active" value="1">
+                  <button type="submit">Activate</button>
+                </form>
+              {% endif %}
+
+              <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id) }}">
+                Transfer Shelter
+              </a>
             </div>
-          {% endif %}
+          </div>
+
+          <div class="card resident-profile-section-card">
+            <h3 class="resident-profile-card-title">Program Information</h3>
+
+            <div class="profile-meta-grid">
+              <div><strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}</div>
+              <div><strong>Enrollment Shelter:</strong> {{ enrollment_shelter|title if enrollment_shelter else "—" }}</div>
+              <div>
+                <strong>Exit Date:</strong>
+                {% if exit_date %}
+                  {{ exit_date }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+          </div>
 
         </div>
 
       </div>
     </section>
-
-    {% if enrollment_id %}
-      <section class="resident-notebook-section">
-
-        <div class="resident-notebook-section-head">
-          <div class="resident-notebook-eyebrow">Record</div>
-          <h2 class="resident-notebook-section-title">Active Record</h2>
-        </div>
-
-        <div id="goals" class="card resident-profile-section-card">
-          <h3 class="resident-profile-card-title">Goals</h3>
-
-          {% if goals %}
-            <table>
-              <thead>
-                <tr>
-                  <th>Goal</th>
-                  <th>Status</th>
-                  <th>Target Date</th>
-                  <th>Created</th>
-                  <th>Completed</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for goal in goals %}
-                  {% if goal is mapping %}
-                    {% set goal_id = goal["id"] %}
-                    {% set goal_text = goal["goal_text"] %}
-                    {% set goal_status = goal["status"] %}
-                    {% set goal_target_date = goal["target_date"] %}
-                    {% set goal_created_at = goal["created_at"] %}
-                    {% set goal_completed_date = goal["completed_date"] %}
-                  {% else %}
-                    {% set goal_id = goal[0] %}
-                    {% set goal_text = goal[1] %}
-                    {% set goal_status = goal[2] %}
-                    {% set goal_target_date = goal[3] %}
-                    {% set goal_created_at = goal[4] %}
-                    {% set goal_completed_date = goal[5] %}
-                  {% endif %}
-
-                  <tr>
-                    <td>{{ goal_text }}</td>
-                    <td>{{ goal_status or "—" }}</td>
-                    <td>{{ goal_target_date or "—" }}</td>
-                    <td>{{ goal_created_at or "—" }}</td>
-                    <td>{{ goal_completed_date or "—" }}</td>
-                    <td>
-                      {% if (goal_status or "")|lower != "completed" %}
-                        <form method="post" action="{{ url_for('resident_detail.complete_goal', goal_id=goal_id) }}" class="resident-profile-inline-form">
-                          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                          <input type="hidden" name="return_anchor" value="goals">
-                          <button type="submit">Complete Goal</button>
-                        </form>
-                      {% else %}
-                        Completed
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% else %}
-            <p>No goals recorded.</p>
-          {% endif %}
-        </div>
-
-        <div id="case-notes" class="card resident-profile-section-card">
-          <h3 class="resident-profile-card-title">Case Manager Notes</h3>
-
-          {% if notes %}
-            {% for note in notes %}
-              <div class="case-note-block">
-                {% if note is mapping %}
-                  <div><strong>Meeting Date:</strong> {{ note["meeting_date"] or "—" }}</div>
-                  <div><strong>Notes:</strong> {{ note["notes"] or "—" }}</div>
-                  <div><strong>Progress:</strong> {{ note["progress_notes"] or "—" }}</div>
-                  <div><strong>Action Items:</strong> {{ note["action_items"] or "—" }}</div>
-                  <div><strong>Created:</strong> {{ note["created_at"] or "—" }}</div>
-                {% else %}
-                  <div><strong>Meeting Date:</strong> {{ note[0] or "—" }}</div>
-                  <div><strong>Notes:</strong> {{ note[1] or "—" }}</div>
-                  <div><strong>Progress:</strong> {{ note[2] or "—" }}</div>
-                  <div><strong>Action Items:</strong> {{ note[3] or "—" }}</div>
-                  <div><strong>Created:</strong> {{ note[4] or "—" }}</div>
-                {% endif %}
-              </div>
-            {% endfor %}
-          {% else %}
-            <p>No case manager notes recorded.</p>
-          {% endif %}
-        </div>
-
-      </section>
-    {% endif %}
 
   </div>
 
