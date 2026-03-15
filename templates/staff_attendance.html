@@ -1,6 +1,17 @@
 {% extends "layout.html" %}
 {% block content %}
 
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
 <style>
   .att_wrap {
     display: flex;
@@ -188,7 +199,7 @@
   }
 </style>
 
-<h1>Attendance for {{ shelter }}</h1>
+<h1>Attendance for {{ shelter_label }}</h1>
 
 <div class="att_actions" style="margin: 10px 0 14px 0;">
   <a class="att_link_btn" target="_blank"
