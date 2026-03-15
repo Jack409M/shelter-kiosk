@@ -5,28 +5,8 @@
 <h1>Case Management</h1>
 
 <div class="card">
-  <h2>Select Resident</h2>
-
-  <form method="get" action="{{ url_for('case_management.index') }}">
-    <div>
-      <label for="resident_search">Resident Name or Code</label>
-      <input
-        type="text"
-        id="resident_search"
-        name="q"
-        value="{{ query or '' }}"
-        placeholder="Search resident..."
-      >
-    </div>
-
-    <div style="margin-top: 10px;">
-      <button type="submit">Search</button>
-    </div>
-  </form>
-</div>
-
-<div class="card">
-  <h2>Search Results{% if shelter %} for {{ shelter|title }}{% endif %}</h2>
+  <h2>Residents{% if shelter %} for {{ shelter|title }}{% endif %}</h2>
+  <p>Select a resident to open the case management workspace.</p>
 
   {% if residents %}
     <table class="table-compact">
@@ -35,11 +15,12 @@
           <th>Name</th>
           <th>Resident Code</th>
           <th>Status</th>
-          <th>Actions</th>
+          <th>Case Management</th>
         </tr>
       </thead>
       <tbody>
         {% for r in residents %}
+          {% set case_url = safe_url_for('case_management.resident_case', resident_id=r.id) %}
           <tr>
             <td>{{ r.last_name }}, {{ r.first_name }}</td>
             <td>{{ r.resident_code or "—" }}</td>
@@ -51,7 +32,11 @@
               {% endif %}
             </td>
             <td>
-              <a href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">Open Profile</a>
+              {% if case_url %}
+                <a class="btn" href="{{ case_url }}">Open Case</a>
+              {% else %}
+                <span>Case page not set up yet</span>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}
@@ -60,11 +45,6 @@
   {% else %}
     <p>No residents found.</p>
   {% endif %}
-</div>
-
-<div class="card">
-  <h2>Case Management Tools</h2>
-  <p>This page will become the case manager workspace for goals, objectives, appointments, and case notes.</p>
 </div>
 
 {% endblock %}
