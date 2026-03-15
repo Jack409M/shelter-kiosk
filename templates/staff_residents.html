@@ -1,7 +1,18 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<h1>Residents for {{ shelter }}</h1>
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
+<h1>Residents for {{ shelter_label }}</h1>
 
 <div class="residents-layout">
 
