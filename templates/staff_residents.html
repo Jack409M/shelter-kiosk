@@ -70,6 +70,48 @@
         </div>
       </div>
 
+      <div style="margin-top: 10px;">
+        <label for="dob">Date of birth</label>
+        <input id="dob" name="dob" type="date">
+      </div>
+
+      <div class="grid grid-names" style="gap: 10px; margin-top: 10px;">
+        <div>
+          <label for="phone">Phone</label>
+          <input id="phone" name="phone" type="tel">
+        </div>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email">
+        </div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <label for="emergency_contact_name">Emergency contact name</label>
+        <input id="emergency_contact_name" name="emergency_contact_name">
+      </div>
+
+      <div class="grid grid-names" style="gap: 10px; margin-top: 10px;">
+        <div>
+          <label for="emergency_contact_relationship">Emergency contact relationship</label>
+          <input id="emergency_contact_relationship" name="emergency_contact_relationship">
+        </div>
+        <div>
+          <label for="emergency_contact_phone">Emergency contact phone</label>
+          <input id="emergency_contact_phone" name="emergency_contact_phone" type="tel">
+        </div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <label for="medical_alerts">Medical alerts</label>
+        <textarea id="medical_alerts" name="medical_alerts" rows="2"></textarea>
+      </div>
+
+      <div style="margin-top: 10px;">
+        <label for="medical_notes">Medical notes</label>
+        <textarea id="medical_notes" name="medical_notes" rows="3"></textarea>
+      </div>
+
       <button class="btn btn-top" type="submit">Add</button>
     </form>
 
@@ -85,4 +127,3 @@
 </div>
 
 {% endblock %}
-
