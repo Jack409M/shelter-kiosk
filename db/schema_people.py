@@ -1,179 +1,382 @@
 """
-DWC Shelter Operations System
-People Schema
-
-This module defines tables related to residents and their family structure.
-
-Tables
-------
-
-residents
-Primary resident record.
-
-resident_children
-Child records associated with a resident.
-
-resident_substances
-Substance history records for a resident.
+Resident identity and resident centered schema logic.
 """
 
-from core.db import db_execute
+from __future__ import annotations
+
+import secrets
+
+from core.db import db_execute, db_fetchall, db_fetchone
+
+from .schema_helpers import create_table
 
 
-def init_schema_people():
-    """
-    Initialize people related database tables.
-    """
+def _make_resident_code(length: int = 8) -> str:
+    return "".join(secrets.choice("0123456789") for _ in range(length))
 
-    # ------------------------------------------------------------------
-    # Residents
-    # ------------------------------------------------------------------
 
-    db_execute(
+def ensure_residents_table(kind: str) -> None:
+    create_table(
+        kind,
         """
         CREATE TABLE IF NOT EXISTS residents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             shelter TEXT NOT NULL,
-            resident_identifier TEXT,
+            resident_identifier TEXT NOT NULL,
             resident_code TEXT,
-
-            first_name TEXT,
-            last_name TEXT,
-
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
             dob TEXT,
-            birth_year INTEGER,
-
             phone TEXT,
             email TEXT,
-
             emergency_contact_name TEXT,
             emergency_contact_relationship TEXT,
             emergency_contact_phone TEXT,
-
             medical_alerts TEXT,
             medical_notes TEXT,
-
-            gender TEXT,
-            race TEXT,
-            veteran INTEGER DEFAULT 0,
-            disability INTEGER DEFAULT 0,
-            marital_status TEXT,
-
-            city TEXT,
-            last_zipcode_of_residence TEXT,
-
-            place_staying_before_entry TEXT,
-            length_of_time_in_amarillo_upon_entry TEXT,
-
-            date_entered TEXT,
-            date_exit_dwc TEXT,
-
-            graduate_dwc INTEGER DEFAULT 0,
-            reason_for_exit TEXT,
-            leave_ama_upon_exit INTEGER DEFAULT 0,
-
-            status TEXT,
-
-            is_active INTEGER DEFAULT 1,
-
-            created_at TEXT,
-            updated_at TEXT
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS residents (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL,
+            resident_code TEXT,
+            first_name TEXT NOT NULL,
+            last_name TEXT NOT NULL,
+            dob TEXT,
+            phone TEXT,
+            email TEXT,
+            emergency_contact_name TEXT,
+            emergency_contact_relationship TEXT,
+            emergency_contact_phone TEXT,
+            medical_alerts TEXT,
+            medical_notes TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT NOT NULL
+        )
+        """,
     )
 
-    # Indexes for reporting performance
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_residents_shelter
-        ON residents (shelter)
-        """
-    )
 
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_residents_status
-        ON residents (status)
-        """
-    )
-
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_residents_entry
-        ON residents (date_entered)
-        """
-    )
-
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_residents_exit
-        ON residents (date_exit_dwc)
-        """
-    )
-
-    # ------------------------------------------------------------------
-    # Resident Children
-    # ------------------------------------------------------------------
-
-    db_execute(
+def ensure_resident_children_table(kind: str) -> None:
+    create_table(
+        kind,
         """
         CREATE TABLE IF NOT EXISTS resident_children (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             resident_id INTEGER NOT NULL,
-
             child_name TEXT,
             birth_year INTEGER,
-
             relationship TEXT,
-
             living_status TEXT,
-
-            is_active INTEGER DEFAULT 1,
-
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
             notes TEXT,
-
             created_at TEXT,
             updated_at TEXT,
-
             FOREIGN KEY (resident_id) REFERENCES residents(id)
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS resident_children (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            child_name TEXT,
+            birth_year INTEGER,
+            relationship TEXT,
+            living_status TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
     )
 
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_children_resident
-        ON resident_children (resident_id)
-        """
-    )
 
-    # ------------------------------------------------------------------
-    # Resident Substances
-    # ------------------------------------------------------------------
-
-    db_execute(
+def ensure_resident_substances_table(kind: str) -> None:
+    create_table(
+        kind,
         """
         CREATE TABLE IF NOT EXISTS resident_substances (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             resident_id INTEGER NOT NULL,
-
             substance TEXT,
-            is_primary INTEGER DEFAULT 0,
-
+            is_primary BOOLEAN NOT NULL DEFAULT FALSE,
             created_at TEXT,
             updated_at TEXT,
-
             FOREIGN KEY (resident_id) REFERENCES residents(id)
         )
+        """,
         """
+        CREATE TABLE IF NOT EXISTS resident_substances (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            substance TEXT,
+            is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
     )
 
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS idx_substances_resident
-        ON resident_substances (resident_id)
-        """
+
+def ensure_basic_profile_columns(kind: str) -> None:
+    if kind == "pg":
+        statements = [
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS dob TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS email TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS emergency_contact_name TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS emergency_contact_relationship TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS emergency_contact_phone TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS medical_alerts TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS medical_notes TEXT",
+        ]
+    else:
+        statements = [
+            "ALTER TABLE residents ADD COLUMN dob TEXT",
+            "ALTER TABLE residents ADD COLUMN email TEXT",
+            "ALTER TABLE residents ADD COLUMN emergency_contact_name TEXT",
+            "ALTER TABLE residents ADD COLUMN emergency_contact_relationship TEXT",
+            "ALTER TABLE residents ADD COLUMN emergency_contact_phone TEXT",
+            "ALTER TABLE residents ADD COLUMN medical_alerts TEXT",
+            "ALTER TABLE residents ADD COLUMN medical_notes TEXT",
+        ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_reporting_columns(kind: str) -> None:
+    if kind == "pg":
+        statements = [
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS birth_year INTEGER",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS gender TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS race TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS veteran BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS disability BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS marital_status TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS city TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS last_zipcode_of_residence TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS place_staying_before_entry TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS length_of_time_in_amarillo_upon_entry TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS date_entered TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS date_exit_dwc TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS graduate_dwc BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS reason_for_exit TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS leave_ama_upon_exit BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS status TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS updated_at TEXT",
+        ]
+    else:
+        statements = [
+            "ALTER TABLE residents ADD COLUMN birth_year INTEGER",
+            "ALTER TABLE residents ADD COLUMN gender TEXT",
+            "ALTER TABLE residents ADD COLUMN race TEXT",
+            "ALTER TABLE residents ADD COLUMN veteran INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE residents ADD COLUMN disability INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE residents ADD COLUMN marital_status TEXT",
+            "ALTER TABLE residents ADD COLUMN city TEXT",
+            "ALTER TABLE residents ADD COLUMN last_zipcode_of_residence TEXT",
+            "ALTER TABLE residents ADD COLUMN place_staying_before_entry TEXT",
+            "ALTER TABLE residents ADD COLUMN length_of_time_in_amarillo_upon_entry TEXT",
+            "ALTER TABLE residents ADD COLUMN date_entered TEXT",
+            "ALTER TABLE residents ADD COLUMN date_exit_dwc TEXT",
+            "ALTER TABLE residents ADD COLUMN graduate_dwc INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE residents ADD COLUMN reason_for_exit TEXT",
+            "ALTER TABLE residents ADD COLUMN leave_ama_upon_exit INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE residents ADD COLUMN status TEXT",
+            "ALTER TABLE residents ADD COLUMN updated_at TEXT",
+        ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_sms_consent_columns(kind: str) -> None:
+    if kind == "pg":
+        try:
+            db_execute(
+                "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_source TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_source TEXT")
+        except Exception:
+            pass
+    else:
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_source TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_at TEXT")
+        except Exception:
+            pass
+        try:
+            db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_source TEXT")
+        except Exception:
+            pass
+
+
+def ensure_resident_code_schema(kind: str) -> None:
+    try:
+        if kind == "pg":
+            db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS resident_code TEXT")
+        else:
+            db_execute("ALTER TABLE residents ADD COLUMN resident_code TEXT")
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq "
+            "ON residents (resident_code)"
+        )
+    except Exception:
+        pass
+
+
+def ensure_indexes() -> None:
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_shelter_active_name_idx "
+            "ON residents (shelter, is_active, last_name, first_name)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_resident_identifier_idx "
+            "ON residents (resident_identifier)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_status_idx "
+            "ON residents (status)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_date_entered_idx "
+            "ON residents (date_entered)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_date_exit_dwc_idx "
+            "ON residents (date_exit_dwc)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_children_resident_idx "
+            "ON resident_children (resident_id)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_children_living_status_idx "
+            "ON resident_children (living_status)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_substances_resident_idx "
+            "ON resident_substances (resident_id)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_substances_primary_idx "
+            "ON resident_substances (is_primary)"
+        )
+    except Exception:
+        pass
+
+
+def backfill_resident_codes(kind: str) -> None:
+    rows = db_fetchall(
+        "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
     )
+
+    for row in rows or []:
+        resident_id = row["id"] if isinstance(row, dict) else row[0]
+        code = _make_resident_code()
+
+        for _ in range(10):
+            exists = db_fetchone(
+                "SELECT id FROM residents WHERE resident_code = %s"
+                if kind == "pg"
+                else "SELECT id FROM residents WHERE resident_code = ?",
+                (code,),
+            )
+            if not exists:
+                break
+            code = _make_resident_code()
+
+        db_execute(
+            "UPDATE residents SET resident_code = %s WHERE id = %s"
+            if kind == "pg"
+            else "UPDATE residents SET resident_code = ? WHERE id = ?",
+            (code, resident_id),
+        )
+
+
+def ensure_tables(kind: str) -> None:
+    ensure_residents_table(kind)
+    ensure_resident_children_table(kind)
+    ensure_resident_substances_table(kind)
+
+
+def ensure_columns_and_constraints(kind: str) -> None:
+    ensure_basic_profile_columns(kind)
+    ensure_reporting_columns(kind)
+    ensure_sms_consent_columns(kind)
+    ensure_resident_code_schema(kind)
+    backfill_resident_codes(kind)
