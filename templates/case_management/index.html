@@ -8,23 +8,25 @@
   <h2>Select Resident</h2>
 
   <form method="get" action="{{ url_for('case_management.index') }}">
-    <label for="resident_search">Resident Name or Code</label>
-    <input
-      type="text"
-      id="resident_search"
-      name="q"
-      value="{{ query or '' }}"
-      placeholder="Search resident..."
-    >
+    <div>
+      <label for="resident_search">Resident Name or Code</label>
+      <input
+        type="text"
+        id="resident_search"
+        name="q"
+        value="{{ query or '' }}"
+        placeholder="Search resident..."
+      >
+    </div>
 
-    <div style="margin-top:10px;">
+    <div style="margin-top: 10px;">
       <button type="submit">Search</button>
     </div>
   </form>
 </div>
 
 <div class="card">
-  <h2>Residents{% if shelter %} for {{ shelter|title }}{% endif %}</h2>
+  <h2>Search Results{% if shelter %} for {{ shelter|title }}{% endif %}</h2>
 
   {% if residents %}
     <table class="table-compact">
@@ -33,7 +35,7 @@
           <th>Name</th>
           <th>Resident Code</th>
           <th>Status</th>
-          <th>Profile</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -43,15 +45,13 @@
             <td>{{ r.resident_code or "—" }}</td>
             <td>
               {% if r.is_active %}
-                Active
+                <span class="badge badge-active">Active</span>
               {% else %}
-                Inactive
+                <span class="badge badge-inactive">Inactive</span>
               {% endif %}
             </td>
             <td>
-              <a class="btn" href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
-                Open Profile
-              </a>
+              <a href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">Open Profile</a>
             </td>
           </tr>
         {% endfor %}
@@ -60,6 +60,11 @@
   {% else %}
     <p>No residents found.</p>
   {% endif %}
+</div>
+
+<div class="card">
+  <h2>Case Management Tools</h2>
+  <p>This page will become the case manager workspace for goals, objectives, appointments, and case notes.</p>
 </div>
 
 {% endblock %}
