@@ -7,6 +7,17 @@
 
 {% block content %}
 
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
 <div class="print-wrap">
 
   <div class="toolbar">
@@ -16,7 +27,7 @@
 
   <h1 class="print-title">Leave Request</h1>
   <div class="print-subtitle">
-    Shelter: <strong>{{ shelter }}</strong>
+    Shelter: <strong>{{ shelter_label }}</strong>
     {% if printed_on %}
       <span class="printed-on">Printed: <strong>{{ printed_on }}</strong></span>
     {% endif %}
