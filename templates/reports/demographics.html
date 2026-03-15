@@ -2,7 +2,7 @@
 {% from "reports/_stat_macros.html" import stat_tile, top_stat_tile %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315l') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315m') }}">
 {% endblock %}
 
 {% block content %}
@@ -536,7 +536,7 @@
     let draggedCard = null;
 
     function getCards() {
-      return Array.from(grid.querySelectorAll("[data-metric-key]"));
+      return Array.from(grid.querySelectorAll(".top-stat-card[data-metric-key]"));
     }
 
     function clearDragState() {
@@ -578,12 +578,13 @@
     }
 
     grid.addEventListener("dragstart", (event) => {
-      const dragZone = event.target.closest(".top-stat-drag-zone");
-      if (!dragZone) {
+      const starArea = event.target.closest(".favorite-form, .stat-star-button");
+      if (starArea) {
+        event.preventDefault();
         return;
       }
 
-      const card = dragZone.closest("[data-metric-key]");
+      const card = event.target.closest(".top-stat-card[data-metric-key]");
       if (!card) {
         return;
       }
@@ -609,7 +610,7 @@
 
       event.preventDefault();
 
-      const targetCard = event.target.closest(".top-stat-card");
+      const targetCard = event.target.closest(".top-stat-card[data-metric-key]");
 
       clearDragState();
 
@@ -620,7 +621,8 @@
       targetCard.classList.add("is-drag-over");
 
       const targetRect = targetCard.getBoundingClientRect();
-      const shouldInsertAfter = event.clientX > targetRect.left + (targetRect.width / 2);
+      const midpoint = targetRect.top + (targetRect.height / 2);
+      const shouldInsertAfter = event.clientY > midpoint;
 
       if (shouldInsertAfter) {
         grid.insertBefore(draggedCard, targetCard.nextSibling);
