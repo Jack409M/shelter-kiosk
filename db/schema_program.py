@@ -43,8 +43,36 @@ def ensure_program_enrollments_table(kind: str) -> None:
     )
 
 
+def ensure_user_dashboard_favorites_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS user_dashboard_favorites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            dashboard_key TEXT NOT NULL,
+            metric_key TEXT NOT NULL,
+            display_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE (user_id, dashboard_key, metric_key)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS user_dashboard_favorites (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            dashboard_key TEXT NOT NULL,
+            metric_key TEXT NOT NULL,
+            display_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            UNIQUE (user_id, dashboard_key, metric_key)
+        )
+        """,
+    )
+
+
 def ensure_indexes() -> None:
-    # Fast lookup for active and historical enrollments by resident
     try:
         from core.db import db_execute
 
@@ -65,6 +93,28 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        from core.db import db_execute
+
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS user_dashboard_favorites_user_dashboard_idx "
+            "ON user_dashboard_favorites (user_id, dashboard_key, display_order)"
+        )
+    except Exception:
+        pass
+
+    try:
+        from core.db import db_execute
+
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS user_dashboard_favorites_metric_idx "
+            "ON user_dashboard_favorites (dashboard_key, metric_key)"
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_program_enrollments_table(kind)
+    ensure_user_dashboard_favorites_table(kind)
+    ensure_indexes()
