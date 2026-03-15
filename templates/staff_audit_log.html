@@ -111,7 +111,6 @@
   }
 </style>
 
-{# current filter values #}
 {% set q_val = request.args.get('q', '') %}
 {% set shelter_val = request.args.get('shelter', '') %}
 {% set staff_user_id_val = request.args.get('staff_user_id', '') %}
@@ -120,7 +119,6 @@
 
 <div class="audit-layout">
 
-  {# left side: results table #}
   <div class="audit-results">
     <table class="compact">
       <thead>
@@ -141,7 +139,7 @@
             <tr>
               <td>{{ r.id }}</td>
               <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
-              <td>{{ r.shelter or "" }}</td>
+              <td>{{ r.shelter | shelter if r.shelter else "" }}</td>
               <td>{{ r.staff_username or "" }}</td>
               <td>{{ r.entity_type or "" }}</td>
               <td>{{ r.entity_id or "" }}</td>
@@ -158,12 +156,12 @@
     </table>
   </div>
 
-  {# right side: filters panel #}
   <aside class="audit-filters">
     <div class="filter-card">
       <h3>Filter</h3>
 
       <form method="get" action="{{ url_for('admin.staff_audit_log') }}">
+
         <div class="filter-row">
           <label for="q">Search text</label>
           <input id="q" name="q" type="text" value="{{ q_val }}" placeholder="Name, action, details">
@@ -174,7 +172,7 @@
           <select id="shelter" name="shelter">
             <option value="">All</option>
             {% for s in all_shelters %}
-              <option value="{{ s }}" {% if shelter_val == s %}selected{% endif %}>{{ s }}</option>
+              <option value="{{ s }}" {% if shelter_val == s %}selected{% endif %}>{{ s | shelter }}</option>
             {% endfor %}
           </select>
         </div>
@@ -248,6 +246,7 @@
         <div class="small-note">
           Filters run on the server and affect export.
         </div>
+
       </form>
     </div>
   </aside>
