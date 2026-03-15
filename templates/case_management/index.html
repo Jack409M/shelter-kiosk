@@ -5,19 +5,49 @@
 <h1>Case Management</h1>
 
 <div class="card">
-  <h2>Case Management Workspace</h2>
-  <p>This page will hold case management tools such as goals, objectives, appointments, and case notes.</p>
+
+  <h2>Select Resident</h2>
+
+  <form method="get" action="{{ url_for('residents.staff_residents') }}">
+
+    <div class="form-row">
+
+      <label for="resident_search">Resident Name</label>
+
+      <input
+        type="text"
+        id="resident_search"
+        name="q"
+        placeholder="Search resident..."
+      >
+
+    </div>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Search Residents</button>
+    </div>
+
+  </form>
+
 </div>
 
+
 <div class="card">
-  <h3>Planned Sections</h3>
+
+  <h2>Case Management Tools</h2>
+
+  <p>
+    Once a resident is selected, you will be able to:
+  </p>
+
   <ul>
-    <li>Resident lookup</li>
-    <li>Goals and objectives</li>
-    <li>Appointments</li>
-    <li>Case notes</li>
-    <li>Follow up actions</li>
+    <li>Add goals</li>
+    <li>Add objectives</li>
+    <li>Schedule appointments</li>
+    <li>Write case notes</li>
+    <li>Review program progress</li>
   </ul>
+
 </div>
 
 {% endblock %}
