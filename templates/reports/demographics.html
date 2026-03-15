@@ -1,8 +1,8 @@
 {% extends "layout.html" %}
-{% from "reports/_stat_macros.html" import stat_tile %}
+{% from "reports/_stat_macros.html" import stat_tile, top_stat_tile %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315h') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315i') }}">
 {% endblock %}
 
 {% block content %}
@@ -95,36 +95,7 @@
 
     <div class="top-stats-grid">
       {% for stat in top_stats %}
-        <div class="top-stat-card">
-          <div class="top-stat-header">
-            <span>{{ stat.label }}</span>
-
-            <form
-              method="post"
-              action="{{ url_for('reports.toggle_demographics_favorite') }}"
-              class="favorite-form"
-            >
-              <input type="hidden" name="metric_key" value="{{ stat.key }}">
-              <input type="hidden" name="scope" value="{{ filters.scope }}">
-              <input type="hidden" name="population" value="{{ filters.population }}">
-              <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-              {% if filters.date_range == "custom" %}
-                <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-                <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-              {% endif %}
-              <button
-                type="submit"
-                class="stat-star-button {% if stat.is_favorite %}is-favorite{% endif %}"
-                title="{% if stat.is_favorite %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-                aria-label="{% if stat.is_favorite %}Remove {{ stat.label }} from My Top Stats{% else %}Add {{ stat.label }} to My Top Stats{% endif %}"
-              >
-                {% if stat.is_favorite %}★{% else %}☆{% endif %}
-              </button>
-            </form>
-          </div>
-
-          <div class="top-stat-value">{{ stat.value }}</div>
-        </div>
+        {{ top_stat_tile(stat, favorite_metric_keys, filters) }}
       {% else %}
         <div class="distribution-empty">No top stats available.</div>
       {% endfor %}
