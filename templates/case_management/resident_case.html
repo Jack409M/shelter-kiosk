@@ -22,8 +22,7 @@
   <h2>{{ first_name }} {{ last_name }}</h2>
 
   <p>
-    <strong>Resident Code:</strong> {{ resident_code or "—" }}
-    <br>
+    <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
     <strong>Shelter:</strong> {{ shelter|title if shelter else "—" }}
   </p>
 
@@ -35,72 +34,156 @@
 
 <div class="card">
 
-  <h2>Add Goal</h2>
+<h2>Add Goal</h2>
 
-  <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+<form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <label>Goal</label>
-    <textarea name="goal_text" rows="3" required></textarea>
+<label>Goal</label>
+<textarea name="goal_text" rows="3" required></textarea>
 
-    <label>Target Date</label>
-    <input type="date" name="target_date">
+<label>Target Date</label>
+<input type="date" name="target_date">
 
-    <div style="margin-top:10px;">
-      <button type="submit">Add Goal</button>
-    </div>
-  </form>
+<div style="margin-top:10px;">
+<button type="submit">Add Goal</button>
+</div>
+
+</form>
 
 </div>
 
 
 <div class="card">
 
-  <h2>Add Appointment</h2>
+<h2>Existing Goals</h2>
 
-  <form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+{% if goals %}
+<table class="table-compact">
+<tr>
+<th>Goal</th>
+<th>Status</th>
+<th>Target</th>
+<th>Created</th>
+</tr>
 
-    <label>Appointment Date</label>
-    <input type="date" name="appointment_date" required>
+{% for g in goals %}
+<tr>
+<td>{{ g[0] }}</td>
+<td>{{ g[1] }}</td>
+<td>{{ g[2] }}</td>
+<td>{{ g[3] }}</td>
+</tr>
+{% endfor %}
 
-    <label>Appointment Type</label>
-    <input type="text" name="appointment_type">
-
-    <label>Notes</label>
-    <textarea name="notes" rows="3"></textarea>
-
-    <div style="margin-top:10px;">
-      <button type="submit">Add Appointment</button>
-    </div>
-  </form>
+</table>
+{% else %}
+<p>No goals recorded.</p>
+{% endif %}
 
 </div>
 
 
 <div class="card">
 
-  <h2>Add Case Note</h2>
+<h2>Add Appointment</h2>
 
-  <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+<form method="post" action="{{ url_for('resident_detail.add_appointment', resident_id=resident_id) }}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <label>Meeting Date</label>
-    <input type="date" name="meeting_date">
+<label>Date</label>
+<input type="date" name="appointment_date" required>
 
-    <label>Notes</label>
-    <textarea name="notes" rows="4"></textarea>
+<label>Type</label>
+<input type="text" name="appointment_type">
 
-    <label>Progress Notes</label>
-    <textarea name="progress_notes" rows="4"></textarea>
+<label>Notes</label>
+<textarea name="notes" rows="3"></textarea>
 
-    <label>Action Items</label>
-    <textarea name="action_items" rows="4"></textarea>
+<div style="margin-top:10px;">
+<button type="submit">Add Appointment</button>
+</div>
 
-    <div style="margin-top:10px;">
-      <button type="submit">Add Case Note</button>
-    </div>
-  </form>
+</form>
+
+</div>
+
+
+<div class="card">
+
+<h2>Appointments</h2>
+
+{% if appointments %}
+<table class="table-compact">
+<tr>
+<th>Date</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+
+{% for a in appointments %}
+<tr>
+<td>{{ a[0] }}</td>
+<td>{{ a[1] }}</td>
+<td>{{ a[2] }}</td>
+</tr>
+{% endfor %}
+
+</table>
+{% else %}
+<p>No appointments recorded.</p>
+{% endif %}
+
+</div>
+
+
+<div class="card">
+
+<h2>Add Case Note</h2>
+
+<form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
+<input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+<label>Meeting Date</label>
+<input type="date" name="meeting_date">
+
+<label>Notes</label>
+<textarea name="notes" rows="4"></textarea>
+
+<label>Progress</label>
+<textarea name="progress_notes" rows="4"></textarea>
+
+<label>Action Items</label>
+<textarea name="action_items" rows="4"></textarea>
+
+<div style="margin-top:10px;">
+<button type="submit">Add Case Note</button>
+</div>
+
+</form>
+
+</div>
+
+
+<div class="card">
+
+<h2>Case Notes History</h2>
+
+{% if notes %}
+{% for n in notes %}
+<div style="margin-bottom:20px;">
+
+<strong>Meeting:</strong> {{ n[0] }}<br>
+<strong>Notes:</strong> {{ n[1] }}<br>
+<strong>Progress:</strong> {{ n[2] }}<br>
+<strong>Actions:</strong> {{ n[3] }}<br>
+<em>Created {{ n[4] }}</em>
+
+</div>
+{% endfor %}
+{% else %}
+<p>No case notes recorded.</p>
+{% endif %}
 
 </div>
 
