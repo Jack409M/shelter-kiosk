@@ -70,11 +70,6 @@
 
         <div class="resident-summary-grid resident-summary-grid-primary">
           <div class="resident-summary-tile">
-            <div class="resident-summary-tile-label">Resident Active</div>
-            <div class="resident-summary-tile-value">{{ "Yes" if resident_active else "No" }}</div>
-          </div>
-
-          <div class="resident-summary-tile">
             <div class="resident-summary-tile-label">Next Appointment</div>
             <div class="resident-summary-tile-value">
               {% if snapshot %}
@@ -103,34 +98,6 @@
                 {{ snapshot["compliance_status"] }}
               {% else %}
                 No enrollment yet
-              {% endif %}
-            </div>
-          </div>
-        </div>
-
-        <div class="resident-summary-grid resident-summary-grid-secondary">
-          <div class="resident-summary-tile">
-            <div class="resident-summary-tile-label">Resident ID</div>
-            <div class="resident-summary-tile-value">{{ resident_id }}</div>
-          </div>
-
-          <div class="resident-summary-tile">
-            <div class="resident-summary-tile-label">Enrollment ID</div>
-            <div class="resident-summary-tile-value">{{ enrollment_id or "—" }}</div>
-          </div>
-
-          <div class="resident-summary-tile">
-            <div class="resident-summary-tile-label">Shelter</div>
-            <div class="resident-summary-tile-value">{{ resident_shelter|title if resident_shelter else "—" }}</div>
-          </div>
-
-          <div class="resident-summary-tile">
-            <div class="resident-summary-tile-label">Entry Date</div>
-            <div class="resident-summary-tile-value">
-              {% if entry_date %}
-                {{ entry_date|replace("-", " ") }}
-              {% else %}
-                —
               {% endif %}
             </div>
           </div>
