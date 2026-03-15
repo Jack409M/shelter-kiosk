@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_fetchall
+from core.db import db_fetchall, db_fetchone
 from core.runtime import init_db
 
 
@@ -28,14 +28,11 @@ def _shelter_equals_sql(column_name: str) -> str:
     return f"LOWER(COALESCE({column_name}, '')) = ?"
 
 
-def _placeholder() -> str:
-    return "%s" if g.get("db_kind") == "pg" else "?"
-
-
 @case_management.get("")
 @require_login
 @require_shelter
 def index():
+
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
@@ -43,50 +40,70 @@ def index():
     init_db()
 
     shelter = _normalize_shelter_name(session.get("shelter"))
-    query = (request.args.get("q") or "").strip()
-    placeholder = _placeholder()
 
-    if query:
-        like_value = f"%{query.lower()}%"
-        residents = db_fetchall(
-            f"""
-            SELECT
-                id,
-                first_name,
-                last_name,
-                resident_code,
-                is_active
-            FROM residents
-            WHERE {_shelter_equals_sql("shelter")}
-              AND (
-                LOWER(COALESCE(first_name, '')) LIKE {placeholder}
-                OR LOWER(COALESCE(last_name, '')) LIKE {placeholder}
-                OR LOWER(COALESCE(resident_code, '')) LIKE {placeholder}
-              )
-            ORDER BY last_name ASC, first_name ASC
-            """,
-            (shelter, like_value, like_value, like_value),
-        )
-    else:
-        residents = db_fetchall(
-            f"""
-            SELECT
-                id,
-                first_name,
-                last_name,
-                resident_code,
-                is_active
-            FROM residents
-            WHERE {_shelter_equals_sql("shelter")}
-            ORDER BY last_name ASC, first_name ASC
-            LIMIT 25
-            """,
-            (shelter,),
-        )
+    residents = db_fetchall(
+        f"""
+        SELECT
+            id,
+            first_name,
+            last_name,
+            resident_code,
+            is_active
+        FROM residents
+        WHERE {_shelter_equals_sql("shelter")}
+        ORDER BY last_name ASC, first_name ASC
+        """,
+        (shelter,),
+    )
 
     return render_template(
         "case_management/index.html",
         residents=residents,
-        query=query,
         shelter=shelter,
+    )
+
+
+@case_management.get("/<int:resident_id>")
+@require_login
+@require_shelter
+def resident_case(resident_id: int):
+
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    resident = db_fetchone(
+        """
+        SELECT
+            id,
+            first_name,
+            last_name,
+            resident_code,
+            shelter,
+            is_active
+        FROM residents
+        WHERE id = %s
+        """ if g.get("db_kind") == "pg" else """
+        SELECT
+            id,
+            first_name,
+            last_name,
+            resident_code,
+            shelter,
+            is_active
+        FROM residents
+        WHERE id = ?
+        """,
+        (resident_id,),
+    )
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    return render_template(
+        "case_management/resident_case.html",
+        resident=resident,
     )
