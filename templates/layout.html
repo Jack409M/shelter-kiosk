@@ -26,19 +26,17 @@
 
         {% set shelter_raw = session.get('shelter', '') %}
         {% set resident_shelter_raw = session.get('resident_shelter', '') %}
-        {% set shelter_key = shelter_raw|string|lower %}
-        {% set resident_shelter_key = resident_shelter_raw|string|lower %}
 
         <div class="top-user">
           {% if session.get('staff_user_id') %}
             Signed in:
             <strong>{{ session.get('username') }}</strong>
             ({{ session.get('role')|capitalize }})
-            {% if shelter_key == 'gratitude' %} | Gratitude House{% elif shelter_key == 'haven' %} | Haven House{% elif shelter_key == 'abba' %} | Abba House{% elif shelter_raw %} | {{ shelter_raw }}{% endif %}
+            {% if shelter_raw %} | {{ shelter_display(shelter_raw) }}{% endif %}
           {% elif session.get('resident_id') %}
             Signed in:
             <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
-            {% if resident_shelter_key == 'gratitude' %} | Gratitude House{% elif resident_shelter_key == 'haven' %} | Haven House{% elif resident_shelter_key == 'abba' %} | Abba House{% elif resident_shelter_raw %} | {{ resident_shelter_raw }}{% endif %}
+            {% if resident_shelter_raw %} | {{ shelter_display(resident_shelter_raw) }}{% endif %}
           {% else %}
             Not signed in
           {% endif %}
@@ -68,12 +66,8 @@
 
             <div class="nav-dd">
               <button type="button">
-                {% if shelter_key == "gratitude" %}
-                  Gratitude House
-                {% elif shelter_key == "haven" %}
-                  Haven House
-                {% elif shelter_key == "abba" %}
-                  Abba House
+                {% if shelter_raw %}
+                  {{ shelter_display(shelter_raw) }}
                 {% else %}
                   Select Shelter
                 {% endif %}
