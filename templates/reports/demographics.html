@@ -2,7 +2,7 @@
 {% from "reports/_stat_macros.html" import stat_tile, top_stat_tile %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315i') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315j') }}">
 {% endblock %}
 
 {% block content %}
@@ -93,7 +93,12 @@
       </div>
     </div>
 
-    <div class="top-stats-grid">
+    <div
+      id="top-stats-grid"
+      class="top-stats-grid"
+      data-reorder-url="{{ url_for('reports.update_demographics_favorite_order') }}"
+      data-csrf-token="{{ csrf_token() }}"
+    >
       {% for stat in top_stats %}
         {{ top_stat_tile(stat, favorite_metric_keys, filters) }}
       {% else %}
@@ -517,6 +522,118 @@
       dateRange.addEventListener("change", syncCustomDateState);
       syncCustomDateState();
     }
+  })();
+
+  (function () {
+    const grid = document.getElementById("top-stats-grid");
+
+    if (!grid) {
+      return;
+    }
+
+    const reorderUrl = grid.dataset.reorderUrl;
+    const csrfToken = grid.dataset.csrfToken;
+    let draggedCard = null;
+
+    function getCards() {
+      return Array.from(grid.querySelectorAll("[data-metric-key]"));
+    }
+
+    function clearDragState() {
+      getCards().forEach((card) => {
+        card.classList.remove("is-dragging");
+        card.classList.remove("is-drag-over");
+      });
+    }
+
+    function buildPayload() {
+      return getCards().map((card, index) => {
+        return {
+          metric_key: card.dataset.metricKey,
+          display_order: index + 1
+        };
+      });
+    }
+
+    async function saveOrder() {
+      if (!reorderUrl || !csrfToken) {
+        return;
+      }
+
+      try {
+        await fetch(reorderUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            ordered_metrics: buildPayload()
+          })
+        });
+      } catch (error) {
+        console.error("Unable to save top stat order.", error);
+      }
+    }
+
+    grid.addEventListener("dragstart", (event) => {
+      const card = event.target.closest("[data-metric-key]");
+
+      if (!card) {
+        return;
+      }
+
+      draggedCard = card;
+      card.classList.add("is-dragging");
+
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", card.dataset.metricKey || "");
+      }
+    });
+
+    grid.addEventListener("dragend", () => {
+      draggedCard = null;
+      clearDragState();
+    });
+
+    grid.addEventListener("dragover", (event) => {
+      if (!draggedCard) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const targetCard = event.target.closest("[data-metric-key]");
+
+      clearDragState();
+
+      if (!targetCard || targetCard === draggedCard) {
+        return;
+      }
+
+      targetCard.classList.add("is-drag-over");
+
+      const targetRect = targetCard.getBoundingClientRect();
+      const shouldInsertAfter = event.clientX > targetRect.left + (targetRect.width / 2);
+
+      if (shouldInsertAfter) {
+        grid.insertBefore(draggedCard, targetCard.nextSibling);
+      } else {
+        grid.insertBefore(draggedCard, targetCard);
+      }
+    });
+
+    grid.addEventListener("drop", async (event) => {
+      if (!draggedCard) {
+        return;
+      }
+
+      event.preventDefault();
+      clearDragState();
+      await saveOrder();
+    });
   })();
 </script>
 {% endblock %}
