@@ -5,7 +5,7 @@
 <h1>Case Management</h1>
 
 <div class="card">
-  <h2>Residents{% if shelter %} for {{ shelter|title }}{% endif %}</h2>
+  <h2>Residents{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
   <p>Select a resident to open the case management workspace.</p>
 
   {% if residents %}
