@@ -1,5 +1,17 @@
 {% extends "layout.html" %}
 {% block content %}
+
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
 <h1>Transportation request</h1>
 
 <form method="post" class="card">
@@ -8,7 +20,7 @@
   <div class="grid tight-row">
     <div>
       <label>Shelter</label>
-      <input value="{{ shelter }}" readonly class="w-shelter">
+      <input value="{{ shelter_label }}" readonly class="w-shelter">
     </div>
 
     <div>
