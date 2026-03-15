@@ -54,14 +54,14 @@ def ensure_user_dashboard_favorites_table(kind: str) -> None:
             metric_key TEXT NOT NULL,
             display_order INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (user_id) REFERENCES staff_users(id),
             UNIQUE (user_id, dashboard_key, metric_key)
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS user_dashboard_favorites (
             id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL REFERENCES users(id),
+            user_id INTEGER NOT NULL REFERENCES staff_users(id),
             dashboard_key TEXT NOT NULL,
             metric_key TEXT NOT NULL,
             display_order INTEGER NOT NULL DEFAULT 0,
