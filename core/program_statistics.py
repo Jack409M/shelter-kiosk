@@ -134,7 +134,7 @@ def _normalize_date_range_key(date_range: str | None) -> str:
 def _scope_clause(alias: str, scope: str) -> tuple[str, list[Any]]:
     if scope == "total_program":
         return "", []
-    return f" AND {_shelter_expr(alias)} = ?", [scope]
+    return f" AND {_shelter_expr(alias)} IN (?, ?)", [scope, f"{scope} house"]
 
 
 def _window_dates(date_range: str, start: str | None = None, end: str | None = None) -> tuple[str | None, str | None]:
@@ -406,12 +406,18 @@ def get_shelter_distribution(
         tuple(where_params),
     ) or []
 
-    total = sum(_to_int(_row_get(row, "total", 1, 0), 0) for row in rows) or 0
+    merged: dict[str, int] = {}
+    for row in rows:
+        raw_key = _row_get(row, "shelter_key", 0, "")
+        normalized_key = _normalize_shelter_value(raw_key)
+        value = _to_int(_row_get(row, "total", 1, 0), 0)
+        merged[normalized_key] = merged.get(normalized_key, 0) + value
+
+    total = sum(merged.values()) or 0
     output: list[dict[str, Any]] = []
 
-    for row in rows:
-        shelter_key = _normalize_shelter_value(_row_get(row, "shelter_key", 0, ""))
-        value = _to_int(_row_get(row, "total", 1, 0), 0)
+    for shelter_key in sorted(merged.keys()):
+        value = merged[shelter_key]
         pct = round((value / total) * 100, 1) if total else 0.0
         output.append(
             {
@@ -422,6 +428,7 @@ def get_shelter_distribution(
             }
         )
 
+    output.sort(key=lambda item: (-item["value"], item["label"]))
     return output
 
 
