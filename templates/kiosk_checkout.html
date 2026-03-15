@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Kiosk Checkout Log - {{ shelter }}</title>
+  <title>Kiosk Checkout Log - {{ shelter | shelter }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <style>
@@ -14,39 +14,40 @@
 </head>
 <body>
   <div class="kiosk-wrap">
-    <h2>Checkout Log (Kiosk) — {{ shelter }}</h2>
+    <h2>Checkout Log (Kiosk) — {{ shelter | shelter }}</h2>
     <p>This page is kiosk-only. Residents list is shown below.</p>
 
     <table>
       <thead>
-  <tr>
-    <th>Name</th>
-    <th>Action</th>
-  </tr>
-</thead>
+        <tr>
+          <th>Name</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+
       <tbody>
-  <tr>
-    <td>
-      <form method="post" action="{{ url_for('kiosk.kiosk_checkout', shelter=shelter) }}" class="kiosk-form">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <tr>
+          <td>
+            <form method="post" action="{{ url_for('kiosk.kiosk_checkout', shelter=shelter) }}" class="kiosk-form">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-        <label>Resident Code</label>
-        <input name="resident_code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 digit code" required>
+              <label>Resident Code</label>
+              <input name="resident_code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 digit code" required>
 
-        <label>Destination</label>
-        <input name="destination" placeholder="Where are you going" required>
+              <label>Destination</label>
+              <input name="destination" placeholder="Where are you going" required>
 
-        <label>Expected back</label>
-        <input type="datetime-local" name="expected_back_time" required>
+              <label>Expected back</label>
+              <input type="datetime-local" name="expected_back_time" required>
 
-        <label>Note (optional)</label>
-        <input name="note" placeholder="Optional">
+              <label>Note (optional)</label>
+              <input name="note" placeholder="Optional">
 
-        <button type="submit">Check out</button>
-      </form>
-    </td>
-  </tr>
-</tbody>
+              <button type="submit">Check out</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
     </table>
   </div>
 </body>
