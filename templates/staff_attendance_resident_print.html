@@ -24,6 +24,17 @@
 </head>
 <body>
 
+  {% set shelter_key = shelter|string|lower %}
+  {% if shelter_key == "abba" %}
+    {% set shelter_label = "Abba House" %}
+  {% elif shelter_key == "haven" %}
+    {% set shelter_label = "Haven House" %}
+  {% elif shelter_key == "gratitude" %}
+    {% set shelter_label = "Gratitude House" %}
+  {% else %}
+    {% set shelter_label = shelter %}
+  {% endif %}
+
   <div class="toolbar">
     <form method="get" action="{{ url_for('staff_attendance_resident_print', resident_id=resident_id) }}">
       <label>Start</label>
@@ -38,39 +49,37 @@
 
   <h1>{{ resident_name }} Attendance Log</h1>
   <div class="meta">
-    Shelter: {{ shelter }}<br>
+    Shelter: {{ shelter_label }}<br>
     Range: {{ start }} to {{ end }}
   </div>
 
   <table>
     <thead>
-  <tr>
-    <th>Date</th>
-    <th>Checked out</th>
-    <th>Checked in</th>
-    <th>Late</th>
-    <th>Notes</th>
-  </tr>
-</thead>
+      <tr>
+        <th>Date</th>
+        <th>Checked out</th>
+        <th>Checked in</th>
+        <th>Late</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
     <tbody>
       {% if events and events|length > 0 %}
-  
         {% for e in events %}
         <tr>
-  <td>{{ e.date }}</td>
-  <td>{{ fmt_dt(e.checked_out_at) }}</td>
-  <td>{{ fmt_dt(e.checked_in_at) }}</td>
-  <td>
-    {% if e.late is sameas true %}
-      YES
-    {% elif e.late is sameas false %}
-      NO
-    {% else %}
-      
-    {% endif %}
-  </td>
-  <td>{{ e.note or "" }}</td>
-</tr>
+          <td>{{ e.date }}</td>
+          <td>{{ fmt_dt(e.checked_out_at) }}</td>
+          <td>{{ fmt_dt(e.checked_in_at) }}</td>
+          <td>
+            {% if e.late is sameas true %}
+              YES
+            {% elif e.late is sameas false %}
+              NO
+            {% else %}
+            {% endif %}
+          </td>
+          <td>{{ e.note or "" }}</td>
+        </tr>
         {% endfor %}
       {% else %}
         <tr>
