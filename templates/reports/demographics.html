@@ -2,7 +2,7 @@
 {% from "reports/_stat_macros.html" import stat_tile, top_stat_tile %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315m') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315n') }}">
 {% endblock %}
 
 {% block content %}
@@ -565,7 +565,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-CSRFToken": csrfToken
+            "X-CSRF-Token": csrfToken
           },
           credentials: "same-origin",
           body: JSON.stringify({
