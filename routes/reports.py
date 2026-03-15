@@ -5,6 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from core.audit import log_action
 from core.auth import require_login, require_roles, require_shelter
 from core.db import db_execute, db_fetchall
+from core.metrics_registry import PROGRAM_METRICS
 from core.program_statistics import get_dashboard_statistics
 from core.runtime import init_db
 
@@ -310,7 +311,24 @@ def _format_top_stat_value(raw_value, metric: dict) -> str:
     return f"{prefix}{text}{suffix}"
 
 
-def _build_top_stats(stats: dict, metric_keys: list[str], saved_metric_keys: list[str]) -> list[dict]:
+def _build_metrics_values(stats: dict) -> dict[str, str]:
+    metrics_values: dict[str, str] = {}
+
+    for metric_key, metric in TOP_METRICS.items():
+        section_name = metric["section"]
+        value_key = metric["value_key"]
+        section_data = stats.get(section_name, {}) or {}
+        raw_value = section_data.get(value_key)
+        metrics_values[metric_key] = _format_top_stat_value(raw_value, metric)
+
+    return metrics_values
+
+
+def _build_top_stats(
+    metric_keys: list[str],
+    saved_metric_keys: list[str],
+    metrics_values: dict[str, str],
+) -> list[dict]:
     top_stats: list[dict] = []
 
     for metric_key in metric_keys:
@@ -318,16 +336,14 @@ def _build_top_stats(stats: dict, metric_keys: list[str], saved_metric_keys: lis
         if not metric:
             continue
 
-        section_name = metric["section"]
-        value_key = metric["value_key"]
-        section_data = stats.get(section_name, {}) or {}
-        raw_value = section_data.get(value_key, "-")
-        value = _format_top_stat_value(raw_value, metric)
+        registry_metric = PROGRAM_METRICS.get(metric_key, {})
+        label = registry_metric.get("label") or metric["label"]
+        value = metrics_values.get(metric_key, "-")
 
         top_stats.append(
             {
                 "key": metric_key,
-                "label": metric["label"],
+                "label": label,
                 "value": value,
                 "is_favorite": metric_key in saved_metric_keys,
             }
@@ -464,7 +480,12 @@ def demographics_dashboard():
     staff_user_id = _current_staff_user_id()
     saved_favorite_metric_keys = _get_saved_favorite_metric_keys(staff_user_id) if staff_user_id else []
     display_top_metric_keys = _get_display_top_metric_keys(staff_user_id)
-    top_stats = _build_top_stats(stats, display_top_metric_keys, saved_favorite_metric_keys)
+    metrics_values = _build_metrics_values(stats)
+    top_stats = _build_top_stats(
+        display_top_metric_keys,
+        saved_favorite_metric_keys,
+        metrics_values,
+    )
 
     return render_template(
         "reports/demographics.html",
