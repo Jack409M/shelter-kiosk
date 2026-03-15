@@ -28,148 +28,6 @@ _ALLOWED_DATE_RANGES = {
 _DASHBOARD_KEY = "demographics_dashboard"
 _MAX_FAVORITES = 6
 
-TOP_METRICS = {
-    "women_served": {
-        "label": "Women Served",
-        "section": "program_snapshot",
-        "value_key": "women_served_display",
-    },
-    "active_residents": {
-        "label": "Currently Active",
-        "section": "program_snapshot",
-        "value_key": "active_residents_current_display",
-    },
-    "women_admitted": {
-        "label": "Women Admitted",
-        "section": "program_snapshot",
-        "value_key": "women_admitted_display",
-    },
-    "women_exited": {
-        "label": "Women Exited",
-        "section": "program_snapshot",
-        "value_key": "women_exited_display",
-    },
-    "graduates": {
-        "label": "Graduates",
-        "section": "program_snapshot",
-        "value_key": "graduates_display",
-    },
-    "avg_stay": {
-        "label": "Average Length of Stay",
-        "section": "program_snapshot",
-        "value_key": "average_length_of_stay_days",
-        "suffix": " days",
-    },
-    "veteran": {
-        "label": "Veteran",
-        "section": "demographics",
-        "value_key": "veteran_yes_display",
-    },
-    "disability": {
-        "label": "Disability",
-        "section": "demographics",
-        "value_key": "disability_yes_display",
-    },
-    "residents_with_children": {
-        "label": "Residents With Children",
-        "section": "family_composition",
-        "value_key": "residents_with_children_display",
-    },
-    "children_in_shelter": {
-        "label": "Children In Shelter",
-        "section": "family_composition",
-        "value_key": "children_in_shelter_display",
-    },
-    "children_out_of_shelter": {
-        "label": "Children Out Of Shelter",
-        "section": "family_composition",
-        "value_key": "children_out_of_shelter_display",
-    },
-    "children_reunited": {
-        "label": "Children Reunited",
-        "section": "family_composition",
-        "value_key": "children_reunited_display",
-    },
-    "healthy_babies_born": {
-        "label": "Healthy Babies Born",
-        "section": "family_composition",
-        "value_key": "healthy_babies_born_display",
-    },
-    "avg_days_sober_entry": {
-        "label": "Average Days Sober At Entry",
-        "section": "recovery_and_sobriety",
-        "value_key": "average_days_sober_at_entry",
-    },
-    "ace_score_average": {
-        "label": "Average ACE Score",
-        "section": "trauma_and_vulnerability",
-        "value_key": "ace_score_average",
-    },
-    "sexual_survivor": {
-        "label": "Sexual Survivor",
-        "section": "trauma_and_vulnerability",
-        "value_key": "sexual_survivor_display",
-    },
-    "dv_survivor": {
-        "label": "Domestic Violence Survivor",
-        "section": "trauma_and_vulnerability",
-        "value_key": "dv_survivor_display",
-    },
-    "human_trafficking_survivor": {
-        "label": "Human Trafficking Survivor",
-        "section": "trauma_and_vulnerability",
-        "value_key": "human_trafficking_survivor_display",
-    },
-    "entry_felony_conviction": {
-        "label": "Entry Felony Conviction",
-        "section": "barriers_to_stability",
-        "value_key": "entry_felony_conviction_display",
-    },
-    "entry_parole_probation": {
-        "label": "Entry Parole Or Probation",
-        "section": "barriers_to_stability",
-        "value_key": "entry_parole_probation_display",
-    },
-    "drug_court": {
-        "label": "Drug Court",
-        "section": "barriers_to_stability",
-        "value_key": "drug_court_display",
-    },
-    "avg_income_entry": {
-        "label": "Average Income At Entry",
-        "section": "education_and_income",
-        "value_key": "average_income_at_entry",
-        "currency": True,
-    },
-    "avg_income_exit": {
-        "label": "Average Income At Exit",
-        "section": "education_and_income",
-        "value_key": "average_income_at_exit",
-        "currency": True,
-    },
-    "avg_income_improvement": {
-        "label": "Average Income Improvement",
-        "section": "education_and_income",
-        "value_key": "average_income_improvement",
-        "currency": True,
-    },
-    "exit_graduates": {
-        "label": "Graduates",
-        "section": "exit_outcomes",
-        "value_key": "graduates_display",
-    },
-    "leave_ama": {
-        "label": "Leave AMA",
-        "section": "exit_outcomes",
-        "value_key": "leave_ama_display",
-    },
-    "total_exit_records": {
-        "label": "Total Exit Records",
-        "section": "exit_outcomes",
-        "value_key": "total_exit_records_display",
-    },
-}
-
 _DEFAULT_TOP_METRIC_KEYS = [
     "women_served",
     "active_residents",
@@ -271,7 +129,7 @@ def _get_saved_favorite_metric_keys(staff_user_id: int) -> list[str]:
         metric_key = row["metric_key"] if isinstance(row, dict) else row[0]
         metric_key = (metric_key or "").strip()
 
-        if metric_key in TOP_METRICS and metric_key not in metric_keys:
+        if metric_key in PROGRAM_METRICS and metric_key not in metric_keys:
             metric_keys.append(metric_key)
 
     return metric_keys
@@ -288,11 +146,11 @@ def _get_display_top_metric_keys(staff_user_id: int | None) -> list[str]:
     return list(_DEFAULT_TOP_METRIC_KEYS)
 
 
-def _format_top_stat_value(raw_value, metric: dict) -> str:
+def _format_value(raw_value, *, currency: bool = False, suffix: str = "") -> str:
     if raw_value is None:
         return "-"
 
-    if metric.get("currency"):
+    if currency:
         try:
             return f"${float(raw_value):,.2f}"
         except Exception:
@@ -305,21 +163,89 @@ def _format_top_stat_value(raw_value, metric: dict) -> str:
     else:
         text = str(raw_value)
 
-    suffix = metric.get("suffix", "")
-    prefix = metric.get("prefix", "")
+    return f"{text}{suffix}"
 
-    return f"{prefix}{text}{suffix}"
+
+def _metric_display_value(stats: dict, metric_key: str) -> str:
+    program_snapshot = stats.get("program_snapshot", {}) or {}
+    demographics = stats.get("demographics", {}) or {}
+    family_composition = stats.get("family_composition", {}) or {}
+    recovery_and_sobriety = stats.get("recovery_and_sobriety", {}) or {}
+    trauma_and_vulnerability = stats.get("trauma_and_vulnerability", {}) or {}
+    barriers_to_stability = stats.get("barriers_to_stability", {}) or {}
+    education_and_income = stats.get("education_and_income", {}) or {}
+    exit_outcomes = stats.get("exit_outcomes", {}) or {}
+
+    if metric_key == "women_served":
+        return _format_value(program_snapshot.get("women_served_display"))
+    if metric_key == "active_residents":
+        return _format_value(program_snapshot.get("active_residents_current_display"))
+    if metric_key == "women_admitted":
+        return _format_value(program_snapshot.get("women_admitted_display"))
+    if metric_key == "women_exited":
+        return _format_value(program_snapshot.get("women_exited_display"))
+    if metric_key == "graduates":
+        return _format_value(program_snapshot.get("graduates_display"))
+    if metric_key == "avg_stay":
+        return _format_value(program_snapshot.get("average_length_of_stay_days"), suffix=" days")
+
+    if metric_key == "veteran":
+        return _format_value(demographics.get("veteran_yes_display"))
+    if metric_key == "disability":
+        return _format_value(demographics.get("disability_yes_display"))
+
+    if metric_key == "residents_with_children":
+        return _format_value(family_composition.get("residents_with_children_display"))
+    if metric_key == "children_in_shelter":
+        return _format_value(family_composition.get("children_in_shelter_display"))
+    if metric_key == "children_out_of_shelter":
+        return _format_value(family_composition.get("children_out_of_shelter_display"))
+    if metric_key == "children_reunited":
+        return _format_value(family_composition.get("children_reunited_display"))
+    if metric_key == "healthy_babies_born":
+        return _format_value(family_composition.get("healthy_babies_born_display"))
+
+    if metric_key == "avg_days_sober_entry":
+        return _format_value(recovery_and_sobriety.get("average_days_sober_at_entry"))
+
+    if metric_key == "ace_score_average":
+        return _format_value(trauma_and_vulnerability.get("ace_score_average"))
+    if metric_key == "sexual_survivor":
+        return _format_value(trauma_and_vulnerability.get("sexual_survivor_display"))
+    if metric_key == "dv_survivor":
+        return _format_value(trauma_and_vulnerability.get("dv_survivor_display"))
+    if metric_key == "human_trafficking_survivor":
+        return _format_value(trauma_and_vulnerability.get("human_trafficking_survivor_display"))
+
+    if metric_key == "entry_felony_conviction":
+        return _format_value(barriers_to_stability.get("entry_felony_conviction_display"))
+    if metric_key == "entry_parole_probation":
+        return _format_value(barriers_to_stability.get("entry_parole_probation_display"))
+    if metric_key == "drug_court":
+        return _format_value(barriers_to_stability.get("drug_court_display"))
+
+    if metric_key == "avg_income_entry":
+        return _format_value(education_and_income.get("average_income_at_entry"), currency=True)
+    if metric_key == "avg_income_exit":
+        return _format_value(education_and_income.get("average_income_at_exit"), currency=True)
+    if metric_key == "avg_income_improvement":
+        return _format_value(education_and_income.get("average_income_improvement"), currency=True)
+
+    if metric_key == "exit_graduates":
+        return _format_value(exit_outcomes.get("graduates_display"))
+    if metric_key == "leave_ama":
+        return _format_value(exit_outcomes.get("leave_ama_display"))
+    if metric_key == "total_exit_records":
+        return _format_value(exit_outcomes.get("total_exit_records_display"))
+
+    return "-"
 
 
 def _build_metrics_values(stats: dict) -> dict[str, str]:
     metrics_values: dict[str, str] = {}
 
-    for metric_key, metric in TOP_METRICS.items():
-        section_name = metric["section"]
-        value_key = metric["value_key"]
-        section_data = stats.get(section_name, {}) or {}
-        raw_value = section_data.get(value_key)
-        metrics_values[metric_key] = _format_top_stat_value(raw_value, metric)
+    for metric_key in PROGRAM_METRICS:
+        metrics_values[metric_key] = _metric_display_value(stats, metric_key)
 
     return metrics_values
 
@@ -332,19 +258,15 @@ def _build_top_stats(
     top_stats: list[dict] = []
 
     for metric_key in metric_keys:
-        metric = TOP_METRICS.get(metric_key)
+        metric = PROGRAM_METRICS.get(metric_key)
         if not metric:
             continue
-
-        registry_metric = PROGRAM_METRICS.get(metric_key, {})
-        label = registry_metric.get("label") or metric["label"]
-        value = metrics_values.get(metric_key, "-")
 
         top_stats.append(
             {
                 "key": metric_key,
-                "label": label,
-                "value": value,
+                "label": metric.get("label", metric_key),
+                "value": metrics_values.get(metric_key, "-"),
                 "is_favorite": metric_key in saved_metric_keys,
             }
         )
@@ -390,7 +312,7 @@ def toggle_demographics_favorite():
 
     metric_key = (request.form.get("metric_key") or "").strip()
 
-    if metric_key not in TOP_METRICS:
+    if metric_key not in PROGRAM_METRICS:
         flash("That metric cannot be pinned.", "error")
         return _favorite_redirect_response()
 
@@ -493,7 +415,6 @@ def demographics_dashboard():
         filters=stats["filters"],
         top_stats=top_stats,
         favorite_metric_keys=saved_favorite_metric_keys,
-        top_metric_definitions=TOP_METRICS,
         program_snapshot=stats["program_snapshot"],
         scope_comparison=stats["scope_comparison"],
         capacity_snapshot=stats["capacity_snapshot"],
