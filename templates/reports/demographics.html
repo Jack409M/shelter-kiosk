@@ -2,7 +2,7 @@
 {% from "reports/_stat_macros.html" import stat_tile %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315g') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315h') }}">
 {% endblock %}
 
 {% block content %}
@@ -143,6 +143,24 @@
       {{ stat_tile("Women Exited", program_snapshot.women_exited_display, "women_exited", favorite_metric_keys, filters) }}
       {{ stat_tile("Graduates", program_snapshot.graduates_display, "graduates", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Length of Stay", program_snapshot.average_length_of_stay_days, "avg_stay", favorite_metric_keys, filters, "days") }}
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <div>
+        <h2>Program Impact Highlights</h2>
+        <p class="section-note">
+          Key outcome indicators reflecting recovery, stability, and economic progress.
+        </p>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      {{ stat_tile("Average Days Sober At Entry", recovery_and_sobriety.average_days_sober_at_entry, "avg_days_sober_entry", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Income At Entry", "$" ~ "%.2f"|format(education_and_income.average_income_at_entry), "avg_income_entry", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Income At Exit", "$" ~ "%.2f"|format(education_and_income.average_income_at_exit), "avg_income_exit", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Income Improvement", "$" ~ "%.2f"|format(education_and_income.average_income_improvement), "avg_income_improvement", favorite_metric_keys, filters) }}
     </div>
   </section>
 
