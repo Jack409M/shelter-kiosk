@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315a') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315b') }}">
 {% endblock %}
 
 {% block content %}
@@ -50,37 +50,37 @@
         </select>
       </div>
 
-      <div class="filter-group custom-date">
+      <div
+        class="filter-group custom-date"
+        id="custom-start-wrap"
+        {% if filters.date_range != "custom" %}style="display:none;"{% endif %}
+      >
         <label for="start_date">Custom Start</label>
         <input
           id="start_date"
           name="start_date"
           type="date"
-          value="{{ filters.start_date or '' }}"
+          value="{% if filters.date_range == 'custom' %}{{ filters.start_date or '' }}{% endif %}"
         >
       </div>
 
-      <div class="filter-group custom-date">
+      <div
+        class="filter-group custom-date"
+        id="custom-end-wrap"
+        {% if filters.date_range != "custom" %}style="display:none;"{% endif %}
+      >
         <label for="end_date">Custom End</label>
         <input
           id="end_date"
           name="end_date"
           type="date"
-          value="{{ filters.end_date or '' }}"
+          value="{% if filters.date_range == 'custom' %}{{ filters.end_date or '' }}{% endif %}"
         >
       </div>
 
       <div class="filter-actions">
         <button type="submit" class="btn btn-primary">Apply Filters</button>
       </div>
-    </div>
-
-    <div class="preset-row">
-      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=this_month">This Month</a>
-      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=this_quarter">This Quarter</a>
-      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=this_year">This Year</a>
-      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=last_year">Last Year</a>
-      <a class="preset-link" href="?scope={{ filters.scope }}&population={{ filters.population }}&date_range=all_time">All Time</a>
     </div>
   </form>
 
@@ -614,16 +614,33 @@
 <script>
   (function () {
     const dateRange = document.getElementById("date_range");
+    const startWrap = document.getElementById("custom-start-wrap");
+    const endWrap = document.getElementById("custom-end-wrap");
     const startDate = document.getElementById("start_date");
     const endDate = document.getElementById("end_date");
 
     function syncCustomDateState() {
       const isCustom = dateRange && dateRange.value === "custom";
+
+      if (startWrap) {
+        startWrap.style.display = isCustom ? "" : "none";
+      }
+      if (endWrap) {
+        endWrap.style.display = isCustom ? "" : "none";
+      }
+
       if (startDate) {
         startDate.disabled = !isCustom;
+        if (!isCustom) {
+          startDate.value = "";
+        }
       }
+
       if (endDate) {
         endDate.disabled = !isCustom;
+        if (!isCustom) {
+          endDate.value = "";
+        }
       }
     }
 
