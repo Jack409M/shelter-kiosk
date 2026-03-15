@@ -89,6 +89,20 @@ def fmt_pretty_dt(dt_value: Optional[str | datetime]) -> str:
     return dt.strftime("%B %d, %Y %I:%M %p")
 
 
+def shelter_display(value: Optional[str]) -> str:
+    raw = str(value or "").strip()
+    key = raw.lower()
+
+    if key == "abba":
+        return "Abba House"
+    if key == "haven":
+        return "Haven House"
+    if key == "gratitude":
+        return "Gratitude House"
+
+    return raw
+
+
 def safe_url_for(endpoint, **values):
     try:
         return url_for(endpoint, **values)
