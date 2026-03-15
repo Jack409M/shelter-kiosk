@@ -1,16 +1,27 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="card">
-  <h2>Transportation Board, {{ shelter }}</h2>
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
 
-<form method="get" action="{{ url_for('transport.staff_transport_board') }}" style="margin-bottom:12px;">
-  <label>Select date:</label>
-  <input type="date" name="date" class="date-box" value="{{ request.args.get('date', '') }}">
-  <button type="submit">View</button>
-  <a href="{{ url_for('transport.staff_transport_print', date=request.args.get('date')) }}" target="_blank">Print sheet</a>
-</form>
-  </div>
+<div class="card">
+  <h2>Transportation Board, {{ shelter_label }}</h2>
+
+  <form method="get" action="{{ url_for('transport.staff_transport_board') }}" style="margin-bottom:12px;">
+    <label>Select date:</label>
+    <input type="date" name="date" class="date-box" value="{{ request.args.get('date', '') }}">
+    <button type="submit">View</button>
+    <a href="{{ url_for('transport.staff_transport_print', date=request.args.get('date')) }}" target="_blank">Print sheet</a>
+  </form>
+</div>
 
 <div class="card">
   <table>
