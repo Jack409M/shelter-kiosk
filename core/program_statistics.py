@@ -8,6 +8,13 @@ from core.helpers import shelter_display
 from core.report_filters import mask_small_counts, resolve_date_range
 
 
+_SHELTER_CAPACITY = {
+    "abba": 10,
+    "haven": 18,
+    "gratitude": 34,
+}
+
+
 def _row_get(row: Any, key: str, index: int | None = None, default: Any = None) -> Any:
     if row is None:
         return default
@@ -261,6 +268,151 @@ def _fetch_grouped_rows(sql: str, params: list[Any]) -> list[dict[str, Any]]:
         )
 
     return output
+
+
+def _get_filtered_served_total(
+    scope: str,
+    population: str,
+    date_range: str,
+    start: str | None = None,
+    end: str | None = None,
+) -> int:
+    where_sql, where_params, _, _ = _base_enrollment_where(
+        _normalize_scope(scope),
+        _normalize_population(population),
+        _normalize_date_range_key(date_range),
+        start,
+        end,
+        alias="pe",
+    )
+
+    return _fetch_count(
+        f"""
+        SELECT COUNT(DISTINCT pe.resident_id) AS total
+        FROM program_enrollments pe
+        {where_sql}
+        """,
+        where_params,
+    )
+
+
+def _get_current_active_count_for_scope(scope: str) -> int:
+    normalized_scope = _normalize_scope(scope)
+    scope_sql, scope_params = _scope_clause("pe", normalized_scope)
+
+    return _fetch_count(
+        f"""
+        SELECT COUNT(DISTINCT pe.resident_id) AS total
+        FROM program_enrollments pe
+        WHERE 1=1
+        {scope_sql}
+        AND pe.entry_date <= ?
+        AND (pe.exit_date IS NULL OR pe.exit_date = '' OR pe.exit_date >= ?)
+        """,
+        scope_params + [_iso_today(), _iso_today()],
+    )
+
+
+def get_capacity_snapshot() -> dict[str, Any]:
+    shelters: list[dict[str, Any]] = []
+    total_capacity = sum(_SHELTER_CAPACITY.values())
+    total_occupied = 0
+
+    for shelter_key in ("abba", "haven", "gratitude"):
+        capacity = _SHELTER_CAPACITY[shelter_key]
+        occupied = _get_current_active_count_for_scope(shelter_key)
+        open_spaces = max(capacity - occupied, 0)
+        occupancy_rate = round((occupied / capacity) * 100, 1) if capacity else 0.0
+
+        shelters.append(
+            {
+                "key": shelter_key,
+                "label": shelter_display(shelter_key),
+                "capacity": capacity,
+                "occupied": occupied,
+                "occupied_display": mask_small_counts(occupied),
+                "open_spaces": open_spaces,
+                "open_spaces_display": mask_small_counts(open_spaces) if open_spaces else "0",
+                "occupancy_rate": occupancy_rate,
+            }
+        )
+        total_occupied += occupied
+
+    total_open = max(total_capacity - total_occupied, 0)
+    total_rate = round((total_occupied / total_capacity) * 100, 1) if total_capacity else 0.0
+
+    return {
+        "total_capacity": total_capacity,
+        "total_occupied": total_occupied,
+        "total_occupied_display": mask_small_counts(total_occupied),
+        "total_open_spaces": total_open,
+        "total_open_spaces_display": mask_small_counts(total_open) if total_open else "0",
+        "total_occupancy_rate": total_rate,
+        "shelters": shelters,
+    }
+
+
+def get_scope_comparison(
+    scope: str = "total_program",
+    population: str = "all",
+    date_range: str = "all_time",
+    start: str | None = None,
+    end: str | None = None,
+) -> dict[str, Any]:
+    normalized_scope = _normalize_scope(scope)
+
+    total_program_served = _get_filtered_served_total(
+        "total_program",
+        population,
+        date_range,
+        start,
+        end,
+    )
+
+    shelter_rows: list[dict[str, Any]] = []
+
+    for shelter_key in ("abba", "haven", "gratitude"):
+        value = _get_filtered_served_total(
+            shelter_key,
+            population,
+            date_range,
+            start,
+            end,
+        )
+        share = round((value / total_program_served) * 100, 1) if total_program_served else 0.0
+        shelter_rows.append(
+            {
+                "key": shelter_key,
+                "label": shelter_display(shelter_key),
+                "value": value,
+                "display_value": mask_small_counts(value),
+                "share_of_program": share,
+            }
+        )
+
+    selected_value = total_program_served if normalized_scope == "total_program" else _get_filtered_served_total(
+        normalized_scope,
+        population,
+        date_range,
+        start,
+        end,
+    )
+
+    selected_share = 100.0 if normalized_scope == "total_program" else (
+        round((selected_value / total_program_served) * 100, 1) if total_program_served else 0.0
+    )
+
+    selected_label = "Total Program" if normalized_scope == "total_program" else shelter_display(normalized_scope)
+
+    return {
+        "selected_scope_label": selected_label,
+        "selected_scope_value": selected_value,
+        "selected_scope_display": mask_small_counts(selected_value),
+        "selected_scope_share_of_program": selected_share,
+        "total_program_value": total_program_served,
+        "total_program_display": mask_small_counts(total_program_served),
+        "shelters": shelter_rows,
+    }
 
 
 def get_program_snapshot(
@@ -939,6 +1091,10 @@ def get_dashboard_statistics(
         "program_snapshot": get_program_snapshot(
             normalized_scope, normalized_population, normalized_date_range, start, end
         ),
+        "scope_comparison": get_scope_comparison(
+            normalized_scope, normalized_population, normalized_date_range, start, end
+        ),
+        "capacity_snapshot": get_capacity_snapshot(),
         "shelter_distribution": get_shelter_distribution(
             normalized_population, normalized_date_range, start, end
         ),
