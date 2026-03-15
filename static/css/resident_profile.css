@@ -1,293 +1,72 @@
-.resident-profile-page {
-  margin-bottom: 16px;
-  padding-bottom: 180px;
-}
-
-.resident-profile-section-nav {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  margin-bottom: 20px;
-  padding: 0 14px;
-  min-height: 54px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.40);
-  border: 1px solid rgba(15, 47, 74, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-
-.resident-profile-section-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.resident-profile-section-link {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  text-decoration: none;
-  font-weight: 800;
-  font-size: 0.9rem;
-  line-height: 1;
-  white-space: nowrap;
-  color: rgba(15, 47, 74, 0.74);
-  background: transparent;
-  border: 0;
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.resident-profile-section-link:hover {
-  color: #0f2f4a;
-  background: rgba(15, 47, 74, 0.06);
-}
-
-.resident-profile-section-link:first-child {
-  color: #ffffff;
-  background: #4a6f95;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.10);
-}
-
-.resident-profile-section-link:first-child::after {
-  content: "";
-  position: absolute;
-  left: 26px;
-  bottom: -18px;
-  width: 0;
-  height: 0;
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-top: 9px solid #4a6f95;
-}
+/* Resident summary panel — compact status strip */
 
 .resident-summary-panel {
-  margin-bottom: 18px;
-  padding: 18px;
+  padding: 12px 16px;
 }
 
 .resident-summary-panel-head {
   display: flex;
   justify-content: space-between;
-  align-items: start;
-  gap: 16px;
-  margin-bottom: 16px;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .resident-summary-panel-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: 11px;
   text-transform: uppercase;
-  color: rgba(15, 47, 74, 0.62);
-  margin-bottom: 0.35rem;
+  letter-spacing: .06em;
+  color: #6b7280;
+  margin-bottom: 2px;
 }
 
 .resident-summary-panel-title {
+  font-size: 18px;
   margin: 0;
-  font-size: 1.9rem;
-  line-height: 1.05;
-  color: #0f2f4a;
 }
 
 .resident-summary-status-stack {
-  min-width: 220px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(15, 47, 74, 0.04);
-  border: 1px solid rgba(15, 47, 74, 0.10);
+  text-align: right;
 }
 
 .resident-summary-status-label {
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(15, 47, 74, 0.62);
-  margin-bottom: 0.45rem;
+  font-size: 11px;
+  color: #6b7280;
 }
 
 .resident-summary-status-value {
-  font-size: 1.4rem;
-  font-weight: 800;
-  line-height: 1.05;
-  color: #0f2f4a;
+  font-size: 14px;
+  font-weight: 600;
 }
+
+/* summary grids */
 
 .resident-summary-grid {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .resident-summary-grid-primary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-bottom: 14px;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 6px;
 }
 
 .resident-summary-grid-secondary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, 1fr);
 }
 
-.resident-summary-tile {
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(15, 47, 74, 0.10);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  min-width: 0;
-}
+/* summary tiles */
 
 .resident-summary-tile-label {
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(15, 47, 74, 0.60);
-  margin-bottom: 0.45rem;
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 2px;
 }
 
 .resident-summary-tile-value {
-  font-size: 1.1rem;
-  font-weight: 800;
-  line-height: 1.15;
-  color: #0f2f4a;
-  word-break: break-word;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .resident-summary-tile-value-compact {
-  font-size: 0.98rem;
-  line-height: 1.3;
-}
-
-.resident-notebook-section {
-  margin-bottom: 22px;
-  scroll-margin-top: 96px;
-}
-
-.resident-notebook-section-head {
-  margin-bottom: 12px;
-}
-
-.resident-notebook-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(15, 47, 74, 0.62);
-  margin-bottom: 0.25rem;
-}
-
-.resident-notebook-section-title {
-  margin: 0;
-  font-size: 1.2rem;
-  line-height: 1.15;
-  color: #0f2f4a;
-}
-
-.resident-notebook-section-copy {
-  margin-top: 0.3rem;
-  font-size: 0.92rem;
-  color: rgba(0, 0, 0, 0.62);
-  line-height: 1.35;
-}
-
-.resident-profile-columns {
-  display: grid;
-  grid-template-columns: 1.05fr 1fr;
-  gap: 16px;
-  align-items: start;
-  margin-bottom: 16px;
-}
-
-.resident-profile-columns-overview,
-.resident-profile-columns-actions {
-  margin-bottom: 0;
-}
-
-.resident-profile-column {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-.resident-profile-card-title {
-  margin-top: 0;
-  margin-bottom: 0.75rem;
-}
-
-.resident-profile-actions-top {
-  margin-top: 14px;
-}
-
-.resident-profile-appointment-type {
-  min-width: 240px;
-}
-
-.resident-profile-section-card {
-  margin-bottom: 16px;
-  scroll-margin-top: 96px;
-}
-
-.resident-profile-inline-form {
-  margin: 0;
-}
-
-.resident-profile-empty-card {
-  min-height: 100%;
-}
-
-@media (max-width: 1100px) {
-  .resident-summary-grid-primary,
-  .resident-summary-grid-secondary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 980px) {
-  .resident-profile-columns {
-    grid-template-columns: 1fr;
-  }
-
-  .resident-summary-panel-head {
-    flex-direction: column;
-  }
-
-  .resident-summary-status-stack {
-    width: 100%;
-    min-width: 0;
-  }
-}
-
-@media (max-width: 720px) {
-  .resident-profile-section-nav {
-    padding: 0 10px;
-    min-height: 48px;
-  }
-
-  .resident-profile-section-link {
-    font-size: 0.84rem;
-    padding: 0.45rem 0.8rem;
-  }
-
-  .resident-profile-section-link:first-child::after {
-    left: 22px;
-  }
-
-  .resident-summary-panel {
-    padding: 14px;
-  }
-
-  .resident-summary-panel-title {
-    font-size: 1.55rem;
-  }
-
-  .resident-summary-grid-primary,
-  .resident-summary-grid-secondary {
-    grid-template-columns: 1fr;
-  }
+  font-size: 13px;
 }
