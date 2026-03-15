@@ -20,11 +20,13 @@
     {% set last_name = resident["last_name"] %}
     {% set shelter = resident["resident_shelter"] %}
     {% set program_status = resident["program_status"] %}
+    {% set resident_active = resident["is_active"] %}
   {% else %}
     {% set resident_id = resident[0] %}
     {% set first_name = resident[1] %}
     {% set last_name = resident[2] %}
     {% set shelter = resident[3] %}
+    {% set resident_active = resident[4] %}
     {% set program_status = resident[7] %}
   {% endif %}
 
@@ -39,12 +41,10 @@
 
         <div class="resident-meta resident-meta-slim">
           <span class="meta-pill">{{ shelter|title if shelter else "—" }}</span>
+          <span class="meta-pill">{{ "Active" if resident_active else "Inactive" }}</span>
 
-          {% if snapshot %}
-            <span class="meta-pill">{{ snapshot.program_status }}</span>
-            <span class="meta-pill">{{ snapshot.days_in_program }} days</span>
-          {% elif program_status %}
-            <span class="meta-pill">{{ program_status }}</span>
+          {% if program_status %}
+            <span class="meta-pill">{{ program_status|replace("_", " ")|title }}</span>
           {% endif %}
         </div>
       </div>
@@ -61,7 +61,7 @@
 
       <a class="resident-tab{% if not is_timeline_view %} active{% endif %}"
          href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">
-        Summary
+        Profile
       </a>
 
       <a class="resident-tab{% if is_timeline_view %} active{% endif %}"
