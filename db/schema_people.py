@@ -26,7 +26,14 @@ def ensure_residents_table(kind: str) -> None:
             resident_code TEXT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
+            dob TEXT,
             phone TEXT,
+            email TEXT,
+            emergency_contact_name TEXT,
+            emergency_contact_relationship TEXT,
+            emergency_contact_phone TEXT,
+            medical_alerts TEXT,
+            medical_notes TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
@@ -39,12 +46,48 @@ def ensure_residents_table(kind: str) -> None:
             resident_code TEXT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
+            dob TEXT,
             phone TEXT,
+            email TEXT,
+            emergency_contact_name TEXT,
+            emergency_contact_relationship TEXT,
+            emergency_contact_phone TEXT,
+            medical_alerts TEXT,
+            medical_notes TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
         """,
     )
+
+
+def ensure_basic_profile_columns(kind: str) -> None:
+    if kind == "pg":
+        statements = [
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS dob TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS email TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS emergency_contact_name TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS emergency_contact_relationship TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS emergency_contact_phone TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS medical_alerts TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS medical_notes TEXT",
+        ]
+    else:
+        statements = [
+            "ALTER TABLE residents ADD COLUMN dob TEXT",
+            "ALTER TABLE residents ADD COLUMN email TEXT",
+            "ALTER TABLE residents ADD COLUMN emergency_contact_name TEXT",
+            "ALTER TABLE residents ADD COLUMN emergency_contact_relationship TEXT",
+            "ALTER TABLE residents ADD COLUMN emergency_contact_phone TEXT",
+            "ALTER TABLE residents ADD COLUMN medical_alerts TEXT",
+            "ALTER TABLE residents ADD COLUMN medical_notes TEXT",
+        ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
 
 
 def ensure_sms_consent_columns(kind: str) -> None:
@@ -121,6 +164,14 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_resident_identifier_idx "
+            "ON residents (resident_identifier)"
+        )
+    except Exception:
+        pass
+
 
 def backfill_resident_codes(kind: str) -> None:
     rows = db_fetchall(
@@ -155,5 +206,7 @@ def ensure_tables(kind: str) -> None:
 
 
 def ensure_columns_and_constraints(kind: str) -> None:
+    ensure_basic_profile_columns(kind)
     ensure_sms_consent_columns(kind)
     ensure_resident_code_schema(kind)
+    ensure_indexes()
