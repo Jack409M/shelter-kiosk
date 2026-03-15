@@ -19,6 +19,7 @@ from core.helpers import (
     fmt_pretty_dt,
     fmt_time_only,
     safe_url_for,
+    shelter_display,
     utcnow_iso,
 )
 from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
@@ -137,6 +138,7 @@ def _configure_app(app: Flask) -> None:
 
 def _register_template_helpers(app: Flask) -> None:
     app.jinja_env.globals["safe_url_for"] = safe_url_for
+    app.jinja_env.globals["shelter_display"] = shelter_display
     app.jinja_env.filters["app_date"] = fmt_date
     app.jinja_env.filters["app_dt"] = fmt_dt
     app.jinja_env.filters["app_time"] = fmt_time_only
