@@ -146,11 +146,11 @@ def _get_display_top_metric_keys(staff_user_id: int | None) -> list[str]:
     return list(_DEFAULT_TOP_METRIC_KEYS)
 
 
-def _format_value(raw_value, *, currency: bool = False, suffix: str = "") -> str:
+def _format_metric_value(raw_value, metric: dict) -> str:
     if raw_value is None:
         return "-"
 
-    if currency:
+    if metric.get("currency"):
         try:
             return f"${float(raw_value):,.2f}"
         except Exception:
@@ -163,89 +163,24 @@ def _format_value(raw_value, *, currency: bool = False, suffix: str = "") -> str
     else:
         text = str(raw_value)
 
+    suffix = metric.get("suffix", "")
     return f"{text}{suffix}"
-
-
-def _metric_display_value(stats: dict, metric_key: str) -> str:
-    program_snapshot = stats.get("program_snapshot", {}) or {}
-    demographics = stats.get("demographics", {}) or {}
-    family_composition = stats.get("family_composition", {}) or {}
-    recovery_and_sobriety = stats.get("recovery_and_sobriety", {}) or {}
-    trauma_and_vulnerability = stats.get("trauma_and_vulnerability", {}) or {}
-    barriers_to_stability = stats.get("barriers_to_stability", {}) or {}
-    education_and_income = stats.get("education_and_income", {}) or {}
-    exit_outcomes = stats.get("exit_outcomes", {}) or {}
-
-    if metric_key == "women_served":
-        return _format_value(program_snapshot.get("women_served_display"))
-    if metric_key == "active_residents":
-        return _format_value(program_snapshot.get("active_residents_current_display"))
-    if metric_key == "women_admitted":
-        return _format_value(program_snapshot.get("women_admitted_display"))
-    if metric_key == "women_exited":
-        return _format_value(program_snapshot.get("women_exited_display"))
-    if metric_key == "graduates":
-        return _format_value(program_snapshot.get("graduates_display"))
-    if metric_key == "avg_stay":
-        return _format_value(program_snapshot.get("average_length_of_stay_days"), suffix=" days")
-
-    if metric_key == "veteran":
-        return _format_value(demographics.get("veteran_yes_display"))
-    if metric_key == "disability":
-        return _format_value(demographics.get("disability_yes_display"))
-
-    if metric_key == "residents_with_children":
-        return _format_value(family_composition.get("residents_with_children_display"))
-    if metric_key == "children_in_shelter":
-        return _format_value(family_composition.get("children_in_shelter_display"))
-    if metric_key == "children_out_of_shelter":
-        return _format_value(family_composition.get("children_out_of_shelter_display"))
-    if metric_key == "children_reunited":
-        return _format_value(family_composition.get("children_reunited_display"))
-    if metric_key == "healthy_babies_born":
-        return _format_value(family_composition.get("healthy_babies_born_display"))
-
-    if metric_key == "avg_days_sober_entry":
-        return _format_value(recovery_and_sobriety.get("average_days_sober_at_entry"))
-
-    if metric_key == "ace_score_average":
-        return _format_value(trauma_and_vulnerability.get("ace_score_average"))
-    if metric_key == "sexual_survivor":
-        return _format_value(trauma_and_vulnerability.get("sexual_survivor_display"))
-    if metric_key == "dv_survivor":
-        return _format_value(trauma_and_vulnerability.get("dv_survivor_display"))
-    if metric_key == "human_trafficking_survivor":
-        return _format_value(trauma_and_vulnerability.get("human_trafficking_survivor_display"))
-
-    if metric_key == "entry_felony_conviction":
-        return _format_value(barriers_to_stability.get("entry_felony_conviction_display"))
-    if metric_key == "entry_parole_probation":
-        return _format_value(barriers_to_stability.get("entry_parole_probation_display"))
-    if metric_key == "drug_court":
-        return _format_value(barriers_to_stability.get("drug_court_display"))
-
-    if metric_key == "avg_income_entry":
-        return _format_value(education_and_income.get("average_income_at_entry"), currency=True)
-    if metric_key == "avg_income_exit":
-        return _format_value(education_and_income.get("average_income_at_exit"), currency=True)
-    if metric_key == "avg_income_improvement":
-        return _format_value(education_and_income.get("average_income_improvement"), currency=True)
-
-    if metric_key == "exit_graduates":
-        return _format_value(exit_outcomes.get("graduates_display"))
-    if metric_key == "leave_ama":
-        return _format_value(exit_outcomes.get("leave_ama_display"))
-    if metric_key == "total_exit_records":
-        return _format_value(exit_outcomes.get("total_exit_records_display"))
-
-    return "-"
 
 
 def _build_metrics_values(stats: dict) -> dict[str, str]:
     metrics_values: dict[str, str] = {}
 
-    for metric_key in PROGRAM_METRICS:
-        metrics_values[metric_key] = _metric_display_value(stats, metric_key)
+    for metric_key, metric in PROGRAM_METRICS.items():
+        section_name = metric.get("section")
+        field_name = metric.get("field")
+
+        if not section_name or not field_name:
+            metrics_values[metric_key] = "-"
+            continue
+
+        section_data = stats.get(section_name, {}) or {}
+        raw_value = section_data.get(field_name)
+        metrics_values[metric_key] = _format_metric_value(raw_value, metric)
 
     return metrics_values
 
