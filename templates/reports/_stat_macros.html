@@ -1,0 +1,40 @@
+{% macro stat_tile(label, value, metric_key, favorite_metric_keys, filters, foot=None) %}
+<div class="stat-tile">
+
+  <div class="stat-tile-head">
+    <div class="stat-label">{{ label }}</div>
+
+    <form method="post"
+          action="{{ url_for('reports.toggle_demographics_favorite') }}"
+          class="favorite-form">
+
+      <input type="hidden" name="metric_key" value="{{ metric_key }}">
+      <input type="hidden" name="scope" value="{{ filters.scope }}">
+      <input type="hidden" name="population" value="{{ filters.population }}">
+      <input type="hidden" name="date_range" value="{{ filters.date_range }}">
+
+      {% if filters.date_range == "custom" %}
+        <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
+        <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
+      {% endif %}
+
+      <button
+        type="submit"
+        class="stat-star-button {% if metric_key in favorite_metric_keys %}is-favorite{% endif %}"
+        title="{% if metric_key in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
+        aria-label="{% if metric_key in favorite_metric_keys %}Remove {{ label }} from My Top Stats{% else %}Add {{ label }} to My Top Stats{% endif %}"
+      >
+        {% if metric_key in favorite_metric_keys %}★{% else %}☆{% endif %}
+      </button>
+
+    </form>
+  </div>
+
+  <div class="stat-value">{{ value }}</div>
+
+  {% if foot %}
+  <div class="stat-foot">{{ foot }}</div>
+  {% endif %}
+
+</div>
+{% endmacro %}
