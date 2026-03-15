@@ -19,7 +19,7 @@
 
     <div class="case-hero-badge">
       <span class="case-hero-badge-label">Active Shelter</span>
-      <span class="case-hero-badge-value">{{ shelter or "All Shelters" }}</span>
+      <span class="case-hero-badge-value">{{ shelter | shelter if shelter else "All Shelters" }}</span>
     </div>
   </div>
 
@@ -126,7 +126,7 @@
               <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
-              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
             </div>
             <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
@@ -154,7 +154,7 @@
               <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
-              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
             </div>
             <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
@@ -182,7 +182,7 @@
               <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
-              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
             </div>
             <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
@@ -210,7 +210,7 @@
               <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
-              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
             </div>
             <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
@@ -238,7 +238,7 @@
               <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
-              <div class="case-list-meta">{{ r.shelter or "—" }}</div>
+              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
             </div>
             <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
