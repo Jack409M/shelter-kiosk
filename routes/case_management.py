@@ -20,6 +20,7 @@ def _case_manager_allowed() -> bool:
 @require_login
 @require_shelter
 def index():
+
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
