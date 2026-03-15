@@ -93,6 +93,8 @@ def demographics_dashboard():
         title="Demographics and Statistics",
         filters=stats["filters"],
         program_snapshot=stats["program_snapshot"],
+        scope_comparison=stats["scope_comparison"],
+        capacity_snapshot=stats["capacity_snapshot"],
         shelter_distribution=stats["shelter_distribution"],
         demographics=stats["demographics"],
         family_composition=stats["family_composition"],
@@ -103,9 +105,9 @@ def demographics_dashboard():
         exit_outcomes=stats["exit_outcomes"],
         scope_options=[
             {"value": "total_program", "label": "Total Program"},
-            {"value": "abba", "label": "Abba"},
-            {"value": "haven", "label": "Haven"},
-            {"value": "gratitude", "label": "Gratitude"},
+            {"value": "abba", "label": "Abba House"},
+            {"value": "haven", "label": "Haven House"},
+            {"value": "gratitude", "label": "Gratitude House"},
         ],
         population_options=[
             {"value": "active", "label": "Active Residents"},
