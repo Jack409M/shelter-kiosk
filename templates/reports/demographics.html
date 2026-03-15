@@ -1,7 +1,8 @@
 {% extends "layout.html" %}
+{% from "reports/_stat_macros.html" import stat_tile %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315f') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315g') }}">
 {% endblock %}
 
 {% block content %}
@@ -112,13 +113,13 @@
                 <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
               {% endif %}
               <button
-  type="submit"
-  class="stat-star-button {% if stat.is_favorite %}is-favorite{% endif %}"
-  title="{% if stat.is_favorite %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-  aria-label="{% if stat.is_favorite %}Remove {{ stat.label }} from My Top Stats{% else %}Add {{ stat.label }} to My Top Stats{% endif %}"
->
-  {% if stat.is_favorite %}★{% else %}☆{% endif %}
-</button>
+                type="submit"
+                class="stat-star-button {% if stat.is_favorite %}is-favorite{% endif %}"
+                title="{% if stat.is_favorite %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
+                aria-label="{% if stat.is_favorite %}Remove {{ stat.label }} from My Top Stats{% else %}Add {{ stat.label }} to My Top Stats{% endif %}"
+              >
+                {% if stat.is_favorite %}★{% else %}☆{% endif %}
+              </button>
             </form>
           </div>
 
@@ -136,156 +137,12 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Women Served</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="women_served">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'women_served' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'women_served' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'women_served' in favorite_metric_keys %}Remove Women Served from My Top Stats{% else %}Add Women Served to My Top Stats{% endif %}"
-            >
-              {% if 'women_served' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ program_snapshot.women_served_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Currently Active</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="active_residents">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'active_residents' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'active_residents' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'active_residents' in favorite_metric_keys %}Remove Currently Active from My Top Stats{% else %}Add Currently Active to My Top Stats{% endif %}"
-            >
-              {% if 'active_residents' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ program_snapshot.active_residents_current_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Women Admitted</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="women_admitted">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'women_admitted' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'women_admitted' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'women_admitted' in favorite_metric_keys %}Remove Women Admitted from My Top Stats{% else %}Add Women Admitted to My Top Stats{% endif %}"
-            >
-              {% if 'women_admitted' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ program_snapshot.women_admitted_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Women Exited</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="women_exited">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'women_exited' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'women_exited' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'women_exited' in favorite_metric_keys %}Remove Women Exited from My Top Stats{% else %}Add Women Exited to My Top Stats{% endif %}"
-            >
-              {% if 'women_exited' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ program_snapshot.women_exited_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Graduates</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="graduates">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'graduates' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'graduates' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'graduates' in favorite_metric_keys %}Remove Graduates from My Top Stats{% else %}Add Graduates to My Top Stats{% endif %}"
-            >
-              {% if 'graduates' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ program_snapshot.graduates_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Average Length of Stay</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="avg_stay">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'avg_stay' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'avg_stay' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'avg_stay' in favorite_metric_keys %}Remove Average Length of Stay from My Top Stats{% else %}Add Average Length of Stay to My Top Stats{% endif %}"
-            >
-              {% if 'avg_stay' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ program_snapshot.average_length_of_stay_days }}</div>
-        <div class="stat-foot">days</div>
-      </div>
+      {{ stat_tile("Women Served", program_snapshot.women_served_display, "women_served", favorite_metric_keys, filters) }}
+      {{ stat_tile("Currently Active", program_snapshot.active_residents_current_display, "active_residents", favorite_metric_keys, filters) }}
+      {{ stat_tile("Women Admitted", program_snapshot.women_admitted_display, "women_admitted", favorite_metric_keys, filters) }}
+      {{ stat_tile("Women Exited", program_snapshot.women_exited_display, "women_exited", favorite_metric_keys, filters) }}
+      {{ stat_tile("Graduates", program_snapshot.graduates_display, "graduates", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Length of Stay", program_snapshot.average_length_of_stay_days, "avg_stay", favorite_metric_keys, filters, "days") }}
     </div>
   </section>
 
@@ -429,55 +286,8 @@
       <div class="subsection">
         <h3>Key Indicators</h3>
         <div class="stats-grid compact-grid">
-          <div class="stat-tile">
-            <div class="stat-tile-head">
-              <div class="stat-label">Veteran</div>
-              <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-                <input type="hidden" name="metric_key" value="veteran">
-                <input type="hidden" name="scope" value="{{ filters.scope }}">
-                <input type="hidden" name="population" value="{{ filters.population }}">
-                <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-                {% if filters.date_range == "custom" %}
-                  <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-                  <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-                {% endif %}
-                <button
-                  type="submit"
-                  class="stat-star-button {% if 'veteran' in favorite_metric_keys %}is-favorite{% endif %}"
-                  title="{% if 'veteran' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-                  aria-label="{% if 'veteran' in favorite_metric_keys %}Remove Veteran from My Top Stats{% else %}Add Veteran to My Top Stats{% endif %}"
-                >
-                  {% if 'veteran' in favorite_metric_keys %}★{% else %}☆{% endif %}
-                </button>
-              </form>
-            </div>
-            <div class="stat-value">{{ demographics.veteran_yes_display }}</div>
-          </div>
-
-          <div class="stat-tile">
-            <div class="stat-tile-head">
-              <div class="stat-label">Disability</div>
-              <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-                <input type="hidden" name="metric_key" value="disability">
-                <input type="hidden" name="scope" value="{{ filters.scope }}">
-                <input type="hidden" name="population" value="{{ filters.population }}">
-                <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-                {% if filters.date_range == "custom" %}
-                  <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-                  <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-                {% endif %}
-                <button
-                  type="submit"
-                  class="stat-star-button {% if 'disability' in favorite_metric_keys %}is-favorite{% endif %}"
-                  title="{% if 'disability' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-                  aria-label="{% if 'disability' in favorite_metric_keys %}Remove Disability from My Top Stats{% else %}Add Disability to My Top Stats{% endif %}"
-                >
-                  {% if 'disability' in favorite_metric_keys %}★{% else %}☆{% endif %}
-                </button>
-              </form>
-            </div>
-            <div class="stat-value">{{ demographics.disability_yes_display }}</div>
-          </div>
+          {{ stat_tile("Veteran", demographics.veteran_yes_display, "veteran", favorite_metric_keys, filters) }}
+          {{ stat_tile("Disability", demographics.disability_yes_display, "disability", favorite_metric_keys, filters) }}
         </div>
       </div>
     </div>
@@ -489,130 +299,11 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Residents With Children</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="residents_with_children">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'residents_with_children' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'residents_with_children' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'residents_with_children' in favorite_metric_keys %}Remove Residents With Children from My Top Stats{% else %}Add Residents With Children to My Top Stats{% endif %}"
-            >
-              {% if 'residents_with_children' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ family_composition.residents_with_children_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Children In Shelter</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="children_in_shelter">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'children_in_shelter' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'children_in_shelter' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'children_in_shelter' in favorite_metric_keys %}Remove Children In Shelter from My Top Stats{% else %}Add Children In Shelter to My Top Stats{% endif %}"
-            >
-              {% if 'children_in_shelter' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ family_composition.children_in_shelter_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Children Out Of Shelter</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="children_out_of_shelter">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'children_out_of_shelter' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'children_out_of_shelter' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'children_out_of_shelter' in favorite_metric_keys %}Remove Children Out Of Shelter from My Top Stats{% else %}Add Children Out Of Shelter to My Top Stats{% endif %}"
-            >
-              {% if 'children_out_of_shelter' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ family_composition.children_out_of_shelter_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Children Reunited</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="children_reunited">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'children_reunited' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'children_reunited' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'children_reunited' in favorite_metric_keys %}Remove Children Reunited from My Top Stats{% else %}Add Children Reunited to My Top Stats{% endif %}"
-            >
-              {% if 'children_reunited' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ family_composition.children_reunited_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Healthy Babies Born</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="healthy_babies_born">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'healthy_babies_born' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'healthy_babies_born' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'healthy_babies_born' in favorite_metric_keys %}Remove Healthy Babies Born from My Top Stats{% else %}Add Healthy Babies Born to My Top Stats{% endif %}"
-            >
-              {% if 'healthy_babies_born' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ family_composition.healthy_babies_born_display }}</div>
-      </div>
+      {{ stat_tile("Residents With Children", family_composition.residents_with_children_display, "residents_with_children", favorite_metric_keys, filters) }}
+      {{ stat_tile("Children In Shelter", family_composition.children_in_shelter_display, "children_in_shelter", favorite_metric_keys, filters) }}
+      {{ stat_tile("Children Out Of Shelter", family_composition.children_out_of_shelter_display, "children_out_of_shelter", favorite_metric_keys, filters) }}
+      {{ stat_tile("Children Reunited", family_composition.children_reunited_display, "children_reunited", favorite_metric_keys, filters) }}
+      {{ stat_tile("Healthy Babies Born", family_composition.healthy_babies_born_display, "healthy_babies_born", favorite_metric_keys, filters) }}
     </div>
 
     <div class="table-wrap top-space">
@@ -645,30 +336,7 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Average Days Sober At Entry</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="avg_days_sober_entry">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'avg_days_sober_entry' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'avg_days_sober_entry' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'avg_days_sober_entry' in favorite_metric_keys %}Remove Average Days Sober At Entry from My Top Stats{% else %}Add Average Days Sober At Entry to My Top Stats{% endif %}"
-            >
-              {% if 'avg_days_sober_entry' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ recovery_and_sobriety.average_days_sober_at_entry }}</div>
-      </div>
+      {{ stat_tile("Average Days Sober At Entry", recovery_and_sobriety.average_days_sober_at_entry, "avg_days_sober_entry", favorite_metric_keys, filters) }}
     </div>
 
     <div class="table-wrap top-space">
@@ -701,105 +369,10 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Average ACE Score</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="ace_score_average">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'ace_score_average' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'ace_score_average' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'ace_score_average' in favorite_metric_keys %}Remove Average ACE Score from My Top Stats{% else %}Add Average ACE Score to My Top Stats{% endif %}"
-            >
-              {% if 'ace_score_average' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ trauma_and_vulnerability.ace_score_average }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Sexual Survivor</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="sexual_survivor">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'sexual_survivor' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'sexual_survivor' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'sexual_survivor' in favorite_metric_keys %}Remove Sexual Survivor from My Top Stats{% else %}Add Sexual Survivor to My Top Stats{% endif %}"
-            >
-              {% if 'sexual_survivor' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ trauma_and_vulnerability.sexual_survivor_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Domestic Violence Survivor</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="dv_survivor">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'dv_survivor' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'dv_survivor' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'dv_survivor' in favorite_metric_keys %}Remove Domestic Violence Survivor from My Top Stats{% else %}Add Domestic Violence Survivor to My Top Stats{% endif %}"
-            >
-              {% if 'dv_survivor' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ trauma_and_vulnerability.dv_survivor_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Human Trafficking Survivor</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="human_trafficking_survivor">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'human_trafficking_survivor' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'human_trafficking_survivor' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'human_trafficking_survivor' in favorite_metric_keys %}Remove Human Trafficking Survivor from My Top Stats{% else %}Add Human Trafficking Survivor to My Top Stats{% endif %}"
-            >
-              {% if 'human_trafficking_survivor' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ trauma_and_vulnerability.human_trafficking_survivor_display }}</div>
-      </div>
+      {{ stat_tile("Average ACE Score", trauma_and_vulnerability.ace_score_average, "ace_score_average", favorite_metric_keys, filters) }}
+      {{ stat_tile("Sexual Survivor", trauma_and_vulnerability.sexual_survivor_display, "sexual_survivor", favorite_metric_keys, filters) }}
+      {{ stat_tile("Domestic Violence Survivor", trauma_and_vulnerability.dv_survivor_display, "dv_survivor", favorite_metric_keys, filters) }}
+      {{ stat_tile("Human Trafficking Survivor", trauma_and_vulnerability.human_trafficking_survivor_display, "human_trafficking_survivor", favorite_metric_keys, filters) }}
     </div>
   </section>
 
@@ -809,80 +382,9 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Entry Felony Conviction</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="entry_felony_conviction">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'entry_felony_conviction' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'entry_felony_conviction' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'entry_felony_conviction' in favorite_metric_keys %}Remove Entry Felony Conviction from My Top Stats{% else %}Add Entry Felony Conviction to My Top Stats{% endif %}"
-            >
-              {% if 'entry_felony_conviction' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ barriers_to_stability.entry_felony_conviction_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Entry Parole Or Probation</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="entry_parole_probation">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'entry_parole_probation' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'entry_parole_probation' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'entry_parole_probation' in favorite_metric_keys %}Remove Entry Parole Or Probation from My Top Stats{% else %}Add Entry Parole Or Probation to My Top Stats{% endif %}"
-            >
-              {% if 'entry_parole_probation' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ barriers_to_stability.entry_parole_probation_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Drug Court</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="drug_court">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'drug_court' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'drug_court' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'drug_court' in favorite_metric_keys %}Remove Drug Court from My Top Stats{% else %}Add Drug Court to My Top Stats{% endif %}"
-            >
-              {% if 'drug_court' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ barriers_to_stability.drug_court_display }}</div>
-      </div>
+      {{ stat_tile("Entry Felony Conviction", barriers_to_stability.entry_felony_conviction_display, "entry_felony_conviction", favorite_metric_keys, filters) }}
+      {{ stat_tile("Entry Parole Or Probation", barriers_to_stability.entry_parole_probation_display, "entry_parole_probation", favorite_metric_keys, filters) }}
+      {{ stat_tile("Drug Court", barriers_to_stability.drug_court_display, "drug_court", favorite_metric_keys, filters) }}
     </div>
   </section>
 
@@ -892,80 +394,9 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Average Income At Entry</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="avg_income_entry">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'avg_income_entry' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'avg_income_entry' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'avg_income_entry' in favorite_metric_keys %}Remove Average Income At Entry from My Top Stats{% else %}Add Average Income At Entry to My Top Stats{% endif %}"
-            >
-              {% if 'avg_income_entry' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_at_entry) }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Average Income At Exit</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="avg_income_exit">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'avg_income_exit' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'avg_income_exit' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'avg_income_exit' in favorite_metric_keys %}Remove Average Income At Exit from My Top Stats{% else %}Add Average Income At Exit to My Top Stats{% endif %}"
-            >
-              {% if 'avg_income_exit' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_at_exit) }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Average Income Improvement</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="avg_income_improvement">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'avg_income_improvement' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'avg_income_improvement' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'avg_income_improvement' in favorite_metric_keys %}Remove Average Income Improvement from My Top Stats{% else %}Add Average Income Improvement to My Top Stats{% endif %}"
-            >
-              {% if 'avg_income_improvement' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">${{ "%.2f"|format(education_and_income.average_income_improvement) }}</div>
-      </div>
+      {{ stat_tile("Average Income At Entry", "$" ~ "%.2f"|format(education_and_income.average_income_at_entry), "avg_income_entry", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Income At Exit", "$" ~ "%.2f"|format(education_and_income.average_income_at_exit), "avg_income_exit", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Income Improvement", "$" ~ "%.2f"|format(education_and_income.average_income_improvement), "avg_income_improvement", favorite_metric_keys, filters) }}
     </div>
 
     <div class="two-col-grid top-space">
@@ -1029,80 +460,9 @@
     </div>
 
     <div class="stats-grid">
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Graduates</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="exit_graduates">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'exit_graduates' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'exit_graduates' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'exit_graduates' in favorite_metric_keys %}Remove Exit Graduates from My Top Stats{% else %}Add Exit Graduates to My Top Stats{% endif %}"
-            >
-              {% if 'exit_graduates' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ exit_outcomes.graduates_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Leave AMA</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="leave_ama">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'leave_ama' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'leave_ama' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'leave_ama' in favorite_metric_keys %}Remove Leave AMA from My Top Stats{% else %}Add Leave AMA to My Top Stats{% endif %}"
-            >
-              {% if 'leave_ama' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ exit_outcomes.leave_ama_display }}</div>
-      </div>
-
-      <div class="stat-tile">
-        <div class="stat-tile-head">
-          <div class="stat-label">Total Exit Records</div>
-          <form method="post" action="{{ url_for('reports.toggle_demographics_favorite') }}" class="favorite-form">
-            <input type="hidden" name="metric_key" value="total_exit_records">
-            <input type="hidden" name="scope" value="{{ filters.scope }}">
-            <input type="hidden" name="population" value="{{ filters.population }}">
-            <input type="hidden" name="date_range" value="{{ filters.date_range }}">
-            {% if filters.date_range == "custom" %}
-              <input type="hidden" name="start_date" value="{{ filters.start_date or '' }}">
-              <input type="hidden" name="end_date" value="{{ filters.end_date or '' }}">
-            {% endif %}
-            <button
-              type="submit"
-              class="stat-star-button {% if 'total_exit_records' in favorite_metric_keys %}is-favorite{% endif %}"
-              title="{% if 'total_exit_records' in favorite_metric_keys %}Remove from My Top Stats{% else %}Add to My Top Stats{% endif %}"
-              aria-label="{% if 'total_exit_records' in favorite_metric_keys %}Remove Total Exit Records from My Top Stats{% else %}Add Total Exit Records to My Top Stats{% endif %}"
-            >
-              {% if 'total_exit_records' in favorite_metric_keys %}★{% else %}☆{% endif %}
-            </button>
-          </form>
-        </div>
-        <div class="stat-value">{{ exit_outcomes.total_exit_records_display }}</div>
-      </div>
+      {{ stat_tile("Graduates", exit_outcomes.graduates_display, "exit_graduates", favorite_metric_keys, filters) }}
+      {{ stat_tile("Leave AMA", exit_outcomes.leave_ama_display, "leave_ama", favorite_metric_keys, filters) }}
+      {{ stat_tile("Total Exit Records", exit_outcomes.total_exit_records_display, "total_exit_records", favorite_metric_keys, filters) }}
     </div>
 
     <div class="table-wrap top-space">
