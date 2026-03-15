@@ -34,17 +34,17 @@ TOP_METRICS = {
         "value_key": "women_served_display",
     },
     "active_residents": {
-        "label": "Active Residents",
+        "label": "Currently Active",
         "section": "program_snapshot",
         "value_key": "active_residents_current_display",
     },
     "women_admitted": {
-        "label": "Admissions",
+        "label": "Women Admitted",
         "section": "program_snapshot",
         "value_key": "women_admitted_display",
     },
     "women_exited": {
-        "label": "Exits",
+        "label": "Women Exited",
         "section": "program_snapshot",
         "value_key": "women_exited_display",
     },
@@ -54,9 +54,118 @@ TOP_METRICS = {
         "value_key": "graduates_display",
     },
     "avg_stay": {
-        "label": "Avg Stay",
+        "label": "Average Length of Stay",
         "section": "program_snapshot",
         "value_key": "average_length_of_stay_days",
+        "suffix": " days",
+    },
+    "veteran": {
+        "label": "Veteran",
+        "section": "demographics",
+        "value_key": "veteran_yes_display",
+    },
+    "disability": {
+        "label": "Disability",
+        "section": "demographics",
+        "value_key": "disability_yes_display",
+    },
+    "residents_with_children": {
+        "label": "Residents With Children",
+        "section": "family_composition",
+        "value_key": "residents_with_children_display",
+    },
+    "children_in_shelter": {
+        "label": "Children In Shelter",
+        "section": "family_composition",
+        "value_key": "children_in_shelter_display",
+    },
+    "children_out_of_shelter": {
+        "label": "Children Out Of Shelter",
+        "section": "family_composition",
+        "value_key": "children_out_of_shelter_display",
+    },
+    "children_reunited": {
+        "label": "Children Reunited",
+        "section": "family_composition",
+        "value_key": "children_reunited_display",
+    },
+    "healthy_babies_born": {
+        "label": "Healthy Babies Born",
+        "section": "family_composition",
+        "value_key": "healthy_babies_born_display",
+    },
+    "avg_days_sober_entry": {
+        "label": "Average Days Sober At Entry",
+        "section": "recovery_and_sobriety",
+        "value_key": "average_days_sober_at_entry",
+    },
+    "ace_score_average": {
+        "label": "Average ACE Score",
+        "section": "trauma_and_vulnerability",
+        "value_key": "ace_score_average",
+    },
+    "sexual_survivor": {
+        "label": "Sexual Survivor",
+        "section": "trauma_and_vulnerability",
+        "value_key": "sexual_survivor_display",
+    },
+    "dv_survivor": {
+        "label": "Domestic Violence Survivor",
+        "section": "trauma_and_vulnerability",
+        "value_key": "dv_survivor_display",
+    },
+    "human_trafficking_survivor": {
+        "label": "Human Trafficking Survivor",
+        "section": "trauma_and_vulnerability",
+        "value_key": "human_trafficking_survivor_display",
+    },
+    "entry_felony_conviction": {
+        "label": "Entry Felony Conviction",
+        "section": "barriers_to_stability",
+        "value_key": "entry_felony_conviction_display",
+    },
+    "entry_parole_probation": {
+        "label": "Entry Parole Or Probation",
+        "section": "barriers_to_stability",
+        "value_key": "entry_parole_probation_display",
+    },
+    "drug_court": {
+        "label": "Drug Court",
+        "section": "barriers_to_stability",
+        "value_key": "drug_court_display",
+    },
+    "avg_income_entry": {
+        "label": "Average Income At Entry",
+        "section": "education_and_income",
+        "value_key": "average_income_at_entry",
+        "currency": True,
+    },
+    "avg_income_exit": {
+        "label": "Average Income At Exit",
+        "section": "education_and_income",
+        "value_key": "average_income_at_exit",
+        "currency": True,
+    },
+    "avg_income_improvement": {
+        "label": "Average Income Improvement",
+        "section": "education_and_income",
+        "value_key": "average_income_improvement",
+        "currency": True,
+    },
+    "exit_graduates": {
+        "label": "Graduates",
+        "section": "exit_outcomes",
+        "value_key": "graduates_display",
+    },
+    "leave_ama": {
+        "label": "Leave AMA",
+        "section": "exit_outcomes",
+        "value_key": "leave_ama_display",
+    },
+    "total_exit_records": {
+        "label": "Total Exit Records",
+        "section": "exit_outcomes",
+        "value_key": "total_exit_records_display",
     },
 }
 
@@ -178,6 +287,29 @@ def _get_effective_top_metric_keys(staff_user_id: int | None) -> list[str]:
     return list(_DEFAULT_TOP_METRIC_KEYS)
 
 
+def _format_top_stat_value(raw_value, metric: dict) -> str:
+    if raw_value is None:
+        return "-"
+
+    if metric.get("currency"):
+        try:
+            return f"${float(raw_value):,.2f}"
+        except Exception:
+            return str(raw_value)
+
+    if isinstance(raw_value, float):
+        text = f"{raw_value:.1f}"
+        if text.endswith(".0"):
+            text = text[:-2]
+    else:
+        text = str(raw_value)
+
+    suffix = metric.get("suffix", "")
+    prefix = metric.get("prefix", "")
+
+    return f"{prefix}{text}{suffix}"
+
+
 def _build_top_stats(stats: dict, metric_keys: list[str]) -> list[dict]:
     top_stats: list[dict] = []
 
@@ -189,7 +321,8 @@ def _build_top_stats(stats: dict, metric_keys: list[str]) -> list[dict]:
         section_name = metric["section"]
         value_key = metric["value_key"]
         section_data = stats.get(section_name, {}) or {}
-        value = section_data.get(value_key, "-")
+        raw_value = section_data.get(value_key, "-")
+        value = _format_top_stat_value(raw_value, metric)
 
         top_stats.append(
             {
