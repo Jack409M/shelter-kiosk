@@ -13,7 +13,7 @@
     <div class="case-hero-copy">
       <h1>Case Manager Dashboard</h1>
       <p class="case-hero-subtitle">
-        Residents who need attention today.
+        Residents requiring action.
       </p>
     </div>
 
@@ -24,6 +24,15 @@
   </div>
 
   <div class="case-dashboard-summary">
+
+    <a class="case-summary-card urgent js-scroll-link" href="#requests-pending">
+      <div class="case-summary-icon">📥</div>
+      <div class="case-summary-content">
+        <div class="case-summary-title">Requests Pending</div>
+        <div class="case-summary-count">{{ pending_request_total }}</div>
+        <div class="case-summary-note">Pass and transport requests awaiting approval</div>
+      </div>
+    </a>
 
     <a class="case-summary-card urgent js-scroll-link" href="#missing-enrollment">
       <div class="case-summary-icon">📝</div>
@@ -72,6 +81,34 @@
 
   </div>
 
+  <section class="case-section" id="requests-pending">
+    <div class="case-section-header">
+      <div>
+        <h2>Requests Pending</h2>
+        <p>Pending pass and transport requests that need approval or denial.</p>
+      </div>
+      <span class="case-pill urgent">{{ pending_request_total }}</span>
+    </div>
+
+    <div class="case-list">
+      <div class="case-list-item">
+        <div class="case-list-main">
+          <div class="case-list-link">Pending Pass Requests</div>
+          <div class="case-list-meta">{{ pending_pass_count }} awaiting review</div>
+        </div>
+        <a class="case-action-link" href="{{ url_for('staff_portal.staff_leave_pending') }}">Review Passes</a>
+      </div>
+
+      <div class="case-list-item">
+        <div class="case-list-main">
+          <div class="case-list-link">Pending Transport Requests</div>
+          <div class="case-list-meta">{{ pending_transport_count }} awaiting review</div>
+        </div>
+        <a class="case-action-link" href="{{ url_for('transport.staff_transport_pending') }}">Review Transport</a>
+      </div>
+    </div>
+  </section>
+
   <section class="case-section" id="missing-enrollment">
     <div class="case-section-header">
       <div>
@@ -86,12 +123,12 @@
         {% for r in missing_enrollment %}
           <li class="case-list-item">
             <div class="case-list-main">
-              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
               <div class="case-list-meta">{{ r.shelter or "—" }}</div>
             </div>
-            <a class="case-action-link" href="/staff/resident/{{ r.id }}#start-enrollment">Open File</a>
+            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
         {% endfor %}
       </ul>
@@ -114,12 +151,12 @@
         {% for r in no_goals %}
           <li class="case-list-item">
             <div class="case-list-main">
-              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
               <div class="case-list-meta">{{ r.shelter or "—" }}</div>
             </div>
-            <a class="case-action-link" href="/staff/resident/{{ r.id }}#add-goal">Open File</a>
+            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
         {% endfor %}
       </ul>
@@ -142,12 +179,12 @@
         {% for r in compliance_missing %}
           <li class="case-list-item">
             <div class="case-list-main">
-              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
               <div class="case-list-meta">{{ r.shelter or "—" }}</div>
             </div>
-            <a class="case-action-link" href="/staff/resident/{{ r.id }}">Open File</a>
+            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
         {% endfor %}
       </ul>
@@ -170,12 +207,12 @@
         {% for r in notes_missing %}
           <li class="case-list-item">
             <div class="case-list-main">
-              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
               <div class="case-list-meta">{{ r.shelter or "—" }}</div>
             </div>
-            <a class="case-action-link" href="/staff/resident/{{ r.id }}#add-case-note">Open File</a>
+            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
         {% endfor %}
       </ul>
@@ -198,12 +235,12 @@
         {% for r in no_appointments %}
           <li class="case-list-item">
             <div class="case-list-main">
-              <a class="case-list-link" href="/staff/resident/{{ r.id }}">
+              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                 {{ r.first_name }} {{ r.last_name }}
               </a>
               <div class="case-list-meta">{{ r.shelter or "—" }}</div>
             </div>
-            <a class="case-action-link" href="/staff/resident/{{ r.id }}#add-appointment">Open File</a>
+            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
           </li>
         {% endfor %}
       </ul>
