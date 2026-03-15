@@ -52,12 +52,23 @@ button{display:none;}
 
 <body>
 
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
 <button onclick="window.print()">Print</button>
 
 <h1>Shelter Attendance Verification</h1>
 
 <div>
-Shelter: {{ shelter }}<br>
+Shelter: {{ shelter_label }}<br>
 Printed: {{ printed_on }}
 </div>
 
