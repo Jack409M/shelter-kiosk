@@ -50,17 +50,15 @@
   data-metric-key="{{ stat.key }}"
 >
   <div class="top-stat-header">
-    <div class="top-stat-header-main">
-      <button
-        type="button"
-        class="top-stat-drag-handle"
-        title="Drag to reorder"
-        aria-label="Drag to reorder {{ stat.label }}"
-        draggable="true"
-      >
-        ⋮⋮
-      </button>
-
+    <div
+      class="top-stat-header-main top-stat-drag-zone"
+      draggable="true"
+      title="Drag to reorder"
+      aria-label="Drag to reorder {{ stat.label }}"
+      role="button"
+      tabindex="0"
+    >
+      <span class="top-stat-drag-handle" aria-hidden="true">⋮⋮</span>
       <span class="top-stat-label">{{ stat.label }}</span>
     </div>
 
