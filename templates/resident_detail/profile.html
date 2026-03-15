@@ -121,12 +121,18 @@
 
           <div class="resident-summary-tile">
             <div class="resident-summary-tile-label">Shelter</div>
-            <div class="resident-summary-tile-value">{{ resident_shelter or "—" }}</div>
+            <div class="resident-summary-tile-value">{{ resident_shelter|title if resident_shelter else "—" }}</div>
           </div>
 
           <div class="resident-summary-tile">
             <div class="resident-summary-tile-label">Entry Date</div>
-            <div class="resident-summary-tile-value">{{ entry_date or "—" }}</div>
+            <div class="resident-summary-tile-value">
+              {% if entry_date %}
+                {{ entry_date|replace("-", " ") }}
+              {% else %}
+                —
+              {% endif %}
+            </div>
           </div>
         </div>
       </div>
@@ -177,13 +183,27 @@
 
             <div class="profile-meta-grid">
               <div><strong>Resident ID:</strong> {{ resident_id }}</div>
-              <div><strong>Resident Shelter:</strong> {{ resident_shelter or "—" }}</div>
+              <div><strong>Resident Shelter:</strong> {{ resident_shelter|title if resident_shelter else "—" }}</div>
               <div><strong>Active:</strong> {{ "Yes" if resident_active else "No" }}</div>
               <div><strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}</div>
-              <div><strong>Enrollment Shelter:</strong> {{ enrollment_shelter or "—" }}</div>
+              <div><strong>Enrollment Shelter:</strong> {{ enrollment_shelter|title if enrollment_shelter else "—" }}</div>
               <div><strong>Program Status:</strong> {{ program_status or "—" }}</div>
-              <div><strong>Entry Date:</strong> {{ entry_date or "—" }}</div>
-              <div><strong>Exit Date:</strong> {{ exit_date or "—" }}</div>
+              <div>
+                <strong>Entry Date:</strong>
+                {% if entry_date %}
+                  {{ entry_date|replace("-", " ") }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+              <div>
+                <strong>Exit Date:</strong>
+                {% if exit_date %}
+                  {{ exit_date|replace("-", " ") }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
             </div>
           </div>
 
