@@ -65,66 +65,19 @@
 
   <div class="residents-side">
 
-    <form method="post" class="card tight" action="{{ url_for('residents.staff_residents_post') }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <div class="card tight">
 
-      <h2 class="h2-tight">Add resident</h2>
+      <h2 class="h2-tight">Resident Intake</h2>
 
-      <div class="grid grid-names" style="gap: 10px;">
-        <div>
-          <label for="first_name">First name</label>
-          <input id="first_name" name="first_name" required>
-        </div>
-        <div>
-          <label for="last_name">Last name</label>
-          <input id="last_name" name="last_name" required>
-        </div>
-      </div>
+      <p>
+        New residents must now be created using the Intake and Assessment workflow.
+      </p>
 
-      <div style="margin-top: 10px;">
-        <label for="dob">Date of birth</label>
-        <input id="dob" name="dob" type="date">
-      </div>
+      <a class="btn btn-primary" href="{{ url_for('case_management.intake_assessment') }}">
+        Start Intake
+      </a>
 
-      <div class="grid grid-names" style="gap: 10px; margin-top: 10px;">
-        <div>
-          <label for="phone">Phone</label>
-          <input id="phone" name="phone" type="tel">
-        </div>
-        <div>
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email">
-        </div>
-      </div>
-
-      <div style="margin-top: 14px;">
-        <label for="emergency_contact_name">Emergency contact name</label>
-        <input id="emergency_contact_name" name="emergency_contact_name">
-      </div>
-
-      <div class="grid grid-names" style="gap: 10px; margin-top: 10px;">
-        <div>
-          <label for="emergency_contact_relationship">Emergency contact relationship</label>
-          <input id="emergency_contact_relationship" name="emergency_contact_relationship">
-        </div>
-        <div>
-          <label for="emergency_contact_phone">Emergency contact phone</label>
-          <input id="emergency_contact_phone" name="emergency_contact_phone" type="tel">
-        </div>
-      </div>
-
-      <div style="margin-top: 14px;">
-        <label for="medical_alerts">Medical alerts</label>
-        <textarea id="medical_alerts" name="medical_alerts" rows="2"></textarea>
-      </div>
-
-      <div style="margin-top: 10px;">
-        <label for="medical_notes">Medical notes</label>
-        <textarea id="medical_notes" name="medical_notes" rows="3"></textarea>
-      </div>
-
-      <button class="btn btn-top" type="submit">Add</button>
-    </form>
+    </div>
 
     <div class="card tight">
       <strong>View:</strong>
