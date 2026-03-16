@@ -48,6 +48,7 @@
       {% set is_public_home = endpoint == 'public.public_home' %}
       {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) and (not is_public_home) %}
 
+      {% set residents_url = safe_url_for('residents.staff_residents') %}
       {% set intake_assessment_url = safe_url_for('case_management.intake_assessment') %}
       {% set case_management_url = safe_url_for('case_management.index') %}
       {% set compliance_url = safe_url_for('compliance.compliance_dashboard') %}
@@ -116,6 +117,9 @@
               <div class="menu">
                 {% if intake_assessment_url %}
                   <a href="{{ intake_assessment_url }}">Intake and Assessment</a>
+                {% endif %}
+                {% if residents_url %}
+                  <a href="{{ residents_url }}">Residents</a>
                 {% endif %}
                 {% if case_management_url %}
                   <a href="{{ case_management_url }}">Case Mgmt</a>
