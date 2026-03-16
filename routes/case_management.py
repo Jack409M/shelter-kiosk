@@ -455,13 +455,15 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
                 shelter,
                 program_status,
                 entry_date,
-                created_at
+                created_at,
+                updated_at
             )
             VALUES (
                 {placeholder},
                 {placeholder},
                 {placeholder},
                 {placeholder},
+                NOW(),
                 NOW()
             )
             """,
@@ -482,13 +484,15 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
             shelter,
             program_status,
             entry_date,
-            created_at
+            created_at,
+            updated_at
         )
         VALUES (
             {placeholder},
             {placeholder},
             {placeholder},
             {placeholder},
+            CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP
         )
         """,
