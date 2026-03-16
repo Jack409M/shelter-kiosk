@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from datetime import date
-import secrets
 from typing import Any
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
+from core.residents import generate_resident_code, generate_resident_identifier
 from core.runtime import init_db
 
 
@@ -73,28 +73,6 @@ def _parse_money(value: str | None) -> float | None:
         return float(value)
     except ValueError:
         return None
-
-
-def _generate_resident_identifier() -> str:
-    placeholder = _placeholder()
-
-    for _ in range(25):
-        candidate = str(secrets.randbelow(90000000) + 10000000)
-
-        existing = db_fetchone(
-            f"""
-            SELECT id
-            FROM residents
-            WHERE resident_identifier = {placeholder}
-            LIMIT 1
-            """,
-            (candidate,),
-        )
-
-        if not existing:
-            return candidate
-
-    raise RuntimeError("Could not generate a unique resident identifier.")
 
 
 def _intake_template_context(
@@ -358,9 +336,10 @@ def _find_possible_duplicate(
     return None
 
 
-def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
+def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]:
     placeholder = _placeholder()
-    resident_identifier = _generate_resident_identifier()
+    resident_identifier = generate_resident_identifier()
+    resident_code = generate_resident_code()
 
     if g.get("db_kind") == "pg":
         row = db_fetchone(
@@ -368,6 +347,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
             INSERT INTO residents
             (
                 resident_identifier,
+                resident_code,
                 first_name,
                 last_name,
                 dob,
@@ -385,6 +365,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
                 {placeholder},
                 {placeholder},
                 {placeholder},
+                {placeholder},
                 TRUE,
                 NOW()
             )
@@ -392,6 +373,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
             """,
             (
                 resident_identifier,
+                resident_code,
                 data["first_name"],
                 data["last_name"],
                 data["dob"],
@@ -400,13 +382,14 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
                 shelter,
             ),
         )
-        return int(row["id"]), resident_identifier
+        return int(row["id"]), resident_identifier, resident_code
 
     db_execute(
         f"""
         INSERT INTO residents
         (
             resident_identifier,
+            resident_code,
             first_name,
             last_name,
             dob,
@@ -424,12 +407,14 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
             {placeholder},
             {placeholder},
             {placeholder},
+            {placeholder},
             1,
             CURRENT_TIMESTAMP
         )
         """,
         (
             resident_identifier,
+            resident_code,
             data["first_name"],
             data["last_name"],
             data["dob"],
@@ -440,7 +425,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
     )
 
     row = db_fetchone("SELECT last_insert_rowid() AS id")
-    return int(row["id"]), resident_identifier
+    return int(row["id"]), resident_identifier, resident_code
 
 
 def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: str) -> None:
@@ -605,11 +590,11 @@ def submit_intake_assessment():
             ),
         )
 
-    resident_id, resident_identifier = _insert_resident(data, current_shelter)
+    resident_id, resident_identifier, resident_code = _insert_resident(data, current_shelter)
     _insert_program_enrollment(resident_id, data, current_shelter)
 
     flash(
-        f"Resident created successfully. Resident ID: {resident_identifier}",
+        f"Resident created successfully. Resident ID: {resident_identifier}. Resident Code: {resident_code}",
         "success",
     )
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
