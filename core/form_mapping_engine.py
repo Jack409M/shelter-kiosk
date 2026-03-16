@@ -6,48 +6,58 @@ MAPPING_FILE = Path("docs/dwc_jotform_to_dataset_mapping.csv")
 
 
 class FormMappingEngine:
-    def __init__(self):
+    def __init__(self, mapping_file: Path | None = None):
+        self.mapping_file = mapping_file or MAPPING_FILE
         self.mappings = self._load_mapping()
 
-    def _load_mapping(self):
-        mappings = []
+    def _load_mapping(self) -> list[dict[str, str]]:
+        if not self.mapping_file.exists():
+            raise FileNotFoundError(f"Mapping file not found: {self.mapping_file}")
 
-        if not MAPPING_FILE.exists():
-            raise FileNotFoundError(f"Mapping file not found: {MAPPING_FILE}")
-
-        with open(MAPPING_FILE, newline="", encoding="utf-8") as f:
+        with self.mapping_file.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            for row in reader:
-                mappings.append(row)
+            return [row for row in reader]
 
-        return mappings
-
-    def get_updates(self, form_name, submission_data):
+    def get_updates(self, form_name: str, submission_data: dict) -> list[dict[str, str]]:
         """
-        Returns a list of safe database updates based on the mapping file.
+        Return safe dataset updates allowed by the mapping CSV.
+
+        Expected CSV columns:
+        - form_name
+        - jotform_field_label
+        - jotform_field_key
+        - dataset_field
+        - update_database
+        - store_in_pdf_only
+        - notes
         """
 
-        updates = []
+        updates: list[dict[str, str]] = []
 
         for mapping in self.mappings:
-
-            if mapping["form_name"] != form_name:
+            if (mapping.get("form_name") or "").strip() != form_name:
                 continue
 
-            if mapping["update_database"].lower() != "yes":
+            if (mapping.get("update_database") or "").strip().lower() != "yes":
                 continue
 
-            field_key = mapping["jotform_field_key"]
+            field_key = (mapping.get("jotform_field_key") or "").strip()
+            dataset_field = (mapping.get("dataset_field") or "").strip()
+
+            if not field_key or not dataset_field:
+                continue
 
             if field_key not in submission_data:
                 continue
 
             value = submission_data[field_key]
 
+            if value in (None, ""):
+                continue
+
             updates.append(
                 {
-                    "table": mapping["dataset_table"],
-                    "column": mapping["dataset_field"],
+                    "dataset_field": dataset_field,
                     "value": value,
                 }
             )
