@@ -40,6 +40,18 @@ def _prune_lock_history(now: float, window_seconds: int = 86400) -> None:
         del _LOCK_HISTORY[key]
 
 
+def _prune_stale_rate_limit_buckets(now: float, max_window_seconds: int = 86400) -> None:
+    empty_keys: list[str] = []
+
+    for key, bucket in _BUCKETS.items():
+        _prune_bucket(bucket, max_window_seconds, now)
+        if not bucket:
+            empty_keys.append(key)
+
+    for key in empty_keys:
+        del _BUCKETS[key]
+
+
 def ban_ip(ip: str, seconds: int) -> None:
     _BANNED_IPS[ip] = time.time() + seconds
 
@@ -113,6 +125,8 @@ def get_progressive_lock_seconds(key: str) -> int:
 
 def is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
     now = time.time()
+    _prune_stale_rate_limit_buckets(now)
+
     bucket = _BUCKETS.get(key)
 
     if bucket is None:
