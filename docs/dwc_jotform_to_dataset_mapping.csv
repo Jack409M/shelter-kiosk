@@ -1,5 +1,4 @@
 form_name,jotform_field_label,jotform_field_key,dataset_field,update_database,store_in_pdf_only,notes
-form_name,jotform_field_label,jotform_field_key,dataset_field,update_database,store_in_pdf_only,notes
 Case Management Sheet,Name,name,Name (Last, First),yes,no,
 Case Management Sheet,Date,date,Last updated,yes,no,use submission date if needed
 Case Management Sheet,Level,level,DWC Level Today or Exit,yes,no,
