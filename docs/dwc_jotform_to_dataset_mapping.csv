@@ -10,7 +10,7 @@ Case Management Sheet,Do you take the bus,takes_bus,,no,yes,operational field no
 Case Management Sheet,Do you need bus tickets,needs_bus_tickets,,no,yes,operational field not in approved dataset
 Case Management Sheet,RHN Physical,rhn_physical,,no,yes,not in approved dataset unless later promoted
 Case Management Sheet,Pap Smear,pap_smear,,no,yes,not in approved dataset unless later promoted
-Case Management Sheet,Glasses,glasses,Need Vision on Entry,yes,no,only if this form is allowed to update current vision need status
+Case Management Sheet,Glasses,glasses,,no,yes,weekly glasses need is not the same as intake vision need
 Case Management Sheet,Mental Health Evaluation,mental_health_eval,MH Exam,yes,no,
 Case Management Sheet,Birth Certificate,birth_certificate,,no,yes,not in approved dataset
 Case Management Sheet,Social Security Card,social_security_card,,no,yes,not in approved dataset
