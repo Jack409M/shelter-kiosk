@@ -95,7 +95,8 @@ def register_app_hooks(app):
         if not current_app.debug:
             response.headers.setdefault(
                 "Strict-Transport-Security",
-                "max-age=31536000; includeSubDomains; preload"
+                "max-age=31536000; includeSubDomains"
             )
 
         return response
+        
