@@ -147,9 +147,9 @@ Core fields:
 - deep_clean
 - extra_classes
 - other_appointments
-- total_work_hours
-- total_productive_hours
-- total_meetings
+- total_work_hours_cached
+- total_productive_hours_cached
+- total_meetings_cached
 - submitted_at
 - created_at
 - updated_at
