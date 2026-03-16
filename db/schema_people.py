@@ -307,7 +307,7 @@ def backfill_birth_year_from_legacy_dob(kind: str) -> None:
     rows = db_fetchall(
         "SELECT id, dob, birth_year FROM residents "
         "WHERE dob IS NOT NULL AND dob <> '' "
-        "AND (birth_year IS NULL OR birth_year = '')"
+        "AND birth_year IS NULL"
     )
 
     for row in rows or []:
