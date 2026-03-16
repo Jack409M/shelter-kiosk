@@ -75,6 +75,10 @@ def _parse_money(value: str | None) -> float | None:
         return None
 
 
+def _yes_no_to_int(value: str | None) -> int:
+    return 1 if (value or "").strip().lower() == "yes" else 0
+
+
 def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
@@ -353,11 +357,17 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
                 dob,
                 phone,
                 email,
+                emergency_contact_name,
+                emergency_contact_relationship,
+                emergency_contact_phone,
                 shelter,
                 is_active,
                 created_at
             )
             VALUES (
+                {placeholder},
+                {placeholder},
+                {placeholder},
                 {placeholder},
                 {placeholder},
                 {placeholder},
@@ -379,6 +389,9 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
                 data["dob"],
                 data["phone"],
                 data["email"],
+                data["emergency_contact_name"],
+                data["emergency_contact_relationship"],
+                data["emergency_contact_phone"],
                 shelter,
             ),
         )
@@ -395,11 +408,17 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
             dob,
             phone,
             email,
+            emergency_contact_name,
+            emergency_contact_relationship,
+            emergency_contact_phone,
             shelter,
             is_active,
             created_at
         )
         VALUES (
+            {placeholder},
+            {placeholder},
+            {placeholder},
             {placeholder},
             {placeholder},
             {placeholder},
@@ -420,6 +439,9 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
             data["dob"],
             data["phone"],
             data["email"],
+            data["emergency_contact_name"],
+            data["emergency_contact_relationship"],
+            data["emergency_contact_phone"],
             shelter,
         ),
     )
@@ -428,11 +450,11 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
     return int(row["id"]), resident_identifier, resident_code
 
 
-def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: str) -> None:
+def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: str) -> int:
     placeholder = _placeholder()
 
     if g.get("db_kind") == "pg":
-        db_execute(
+        row = db_fetchone(
             f"""
             INSERT INTO program_enrollments
             (
@@ -451,6 +473,7 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
                 NOW(),
                 NOW()
             )
+            RETURNING id
             """,
             (
                 resident_id,
@@ -459,7 +482,7 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
                 data["entry_date"],
             ),
         )
-        return
+        return int(row["id"])
 
     db_execute(
         f"""
@@ -486,6 +509,194 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
             shelter,
             data["program_status"] or "active",
             data["entry_date"],
+        ),
+    )
+
+    row = db_fetchone("SELECT last_insert_rowid() AS id")
+    return int(row["id"])
+
+
+def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
+    placeholder = _placeholder()
+
+    if g.get("db_kind") == "pg":
+        db_execute(
+            f"""
+            INSERT INTO intake_assessments
+            (
+                enrollment_id,
+                income_at_entry,
+                education_at_entry,
+                sobriety_date,
+                drug_of_choice,
+                ace_score,
+                grit_score,
+                veteran,
+                disability,
+                place_staying_before_entry,
+                entry_felony_conviction,
+                entry_parole_probation,
+                dv_survivor,
+                human_trafficking_survivor,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                NOW(),
+                NOW()
+            )
+            """,
+            (
+                enrollment_id,
+                data["income_at_entry"],
+                data["education_at_entry"],
+                data["sobriety_date"],
+                data["drug_of_choice"],
+                data["ace_score"],
+                data["grit_score"],
+                _yes_no_to_int(data["veteran"]),
+                _yes_no_to_int(data["disability"]),
+                data["prior_living"],
+                _yes_no_to_int(data["felony_history"]),
+                _yes_no_to_int(data["probation_parole"]),
+                _yes_no_to_int(data["domestic_violence_history"]),
+                _yes_no_to_int(data["human_trafficking_history"]),
+            ),
+        )
+        return
+
+    db_execute(
+        f"""
+        INSERT INTO intake_assessments
+        (
+            enrollment_id,
+            income_at_entry,
+            education_at_entry,
+            sobriety_date,
+            drug_of_choice,
+            ace_score,
+            grit_score,
+            veteran,
+            disability,
+            place_staying_before_entry,
+            entry_felony_conviction,
+            entry_parole_probation,
+            dv_survivor,
+            human_trafficking_survivor,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        """,
+        (
+            enrollment_id,
+            data["income_at_entry"],
+            data["education_at_entry"],
+            data["sobriety_date"],
+            data["drug_of_choice"],
+            data["ace_score"],
+            data["grit_score"],
+            _yes_no_to_int(data["veteran"]),
+            _yes_no_to_int(data["disability"]),
+            data["prior_living"],
+            _yes_no_to_int(data["felony_history"]),
+            _yes_no_to_int(data["probation_parole"]),
+            _yes_no_to_int(data["domestic_violence_history"]),
+            _yes_no_to_int(data["human_trafficking_history"]),
+        ),
+    )
+
+
+def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
+    placeholder = _placeholder()
+
+    kids_at_dwc = data["children_count"] if data["has_children"] == "yes" and data["children_count"] is not None else 0
+    healthy_babies_born_at_dwc = 1 if data["newborn_at_dwc"] == "yes" else 0
+
+    if g.get("db_kind") == "pg":
+        db_execute(
+            f"""
+            INSERT INTO family_snapshots
+            (
+                enrollment_id,
+                kids_at_dwc,
+                healthy_babies_born_at_dwc,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                NOW(),
+                NOW()
+            )
+            """,
+            (
+                enrollment_id,
+                kids_at_dwc,
+                healthy_babies_born_at_dwc,
+            ),
+        )
+        return
+
+    db_execute(
+        f"""
+        INSERT INTO family_snapshots
+        (
+            enrollment_id,
+            kids_at_dwc,
+            healthy_babies_born_at_dwc,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        """,
+        (
+            enrollment_id,
+            kids_at_dwc,
+            healthy_babies_born_at_dwc,
         ),
     )
 
@@ -591,7 +802,9 @@ def submit_intake_assessment():
         )
 
     resident_id, resident_identifier, resident_code = _insert_resident(data, current_shelter)
-    _insert_program_enrollment(resident_id, data, current_shelter)
+    enrollment_id = _insert_program_enrollment(resident_id, data, current_shelter)
+    _insert_intake_assessment(enrollment_id, data)
+    _insert_family_snapshot(enrollment_id, data)
 
     flash(
         f"Resident created successfully. Resident ID: {resident_identifier}. Resident Code: {resident_code}",
