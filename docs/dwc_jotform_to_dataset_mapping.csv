@@ -1,1 +1,55 @@
-
+form_name,jotform_field_label,jotform_field_key,dataset_field,update_database,store_in_pdf_only,notes
+form_name,jotform_field_label,jotform_field_key,dataset_field,update_database,store_in_pdf_only,notes
+Case Management Sheet,Name,name,Name (Last, First),yes,no,
+Case Management Sheet,Date,date,Last updated,yes,no,use submission date if needed
+Case Management Sheet,Level,level,DWC Level Today or Exit,yes,no,
+Case Management Sheet,Are you employed,employed,Current income,yes,no,only if form is being used as current status update
+Case Management Sheet,Do you have a sponsor,has_sponsor,,no,yes,keep on PDF unless promoted into dataset
+Case Management Sheet,Case manager,case_manager,,no,yes,operational field not in approved dataset
+Case Management Sheet,Did you meet one on one this week,met_one_on_one,,no,yes,operational field not in approved dataset
+Case Management Sheet,Do you take the bus,takes_bus,,no,yes,operational field not in approved dataset
+Case Management Sheet,Do you need bus tickets,needs_bus_tickets,,no,yes,operational field not in approved dataset
+Case Management Sheet,RHN Physical,rhn_physical,,no,yes,not in approved dataset unless later promoted
+Case Management Sheet,Pap Smear,pap_smear,,no,yes,not in approved dataset unless later promoted
+Case Management Sheet,Glasses,glasses,Need Vision on Entry,yes,no,only if this form is allowed to update current vision need status
+Case Management Sheet,Mental Health Evaluation,mental_health_eval,MH Exam,yes,no,
+Case Management Sheet,Birth Certificate,birth_certificate,,no,yes,not in approved dataset
+Case Management Sheet,Social Security Card,social_security_card,,no,yes,not in approved dataset
+Case Management Sheet,ID or Driver License,id_or_driver_license,,no,yes,not in approved dataset
+Case Management Sheet,Court,court,,no,yes,not in approved dataset
+Case Management Sheet,Food Stamps,food_stamps,,no,yes,not in approved dataset
+Case Management Sheet,Medications,medications,Med Exam,yes,no,only if this is how medication or medical exam status is tracked
+Case Management Sheet,Other written needs,other_needs_text,,no,yes,always keep in PDF
+Meeting Sheet,Name,name,Name (Last, First),yes,no,
+Meeting Sheet,Date,date,Last updated,yes,no,use submission date if needed
+Meeting Sheet,Level,level,DWC Level Today or Exit,yes,no,
+Meeting Sheet,Sponsor name,sponsor_name,,no,yes,operational recovery field not in approved dataset
+Meeting Sheet,Sponsor phone,sponsor_phone,,no,yes,operational recovery field not in approved dataset
+Meeting Sheet,Recovery program,recovery_program,,no,yes,not in approved dataset
+Meeting Sheet,Current step,current_step,,no,yes,not in approved dataset
+Meeting Sheet,Total number of meetings,total_meetings,,no,yes,not in approved dataset
+Meeting Sheet,Needs text,needs_text,,no,yes,always keep in PDF
+Productive Sheet,Name,name,Name (Last, First),yes,no,
+Productive Sheet,Date,date,Last updated,yes,no,use submission date if needed
+Productive Sheet,Level,level,DWC Level Today or Exit,yes,no,
+Productive Sheet,Employment snapshot,employment_snapshot,Current income,yes,no,only if this field truly reflects current income status
+Productive Sheet,Total work hours,total_work_hours,,no,yes,not in approved dataset
+Productive Sheet,Total productive hours,total_productive_hours,,no,yes,not in approved dataset
+Productive Sheet,Total meetings,total_meetings,,no,yes,not in approved dataset
+Itinerary Sheet,Name,name,Name (Last, First),yes,no,
+Itinerary Sheet,Date,date,Last updated,yes,no,use submission date if needed
+Itinerary Sheet,Level,level,DWC Level Today or Exit,yes,no,
+Itinerary Sheet,Employment snapshot,employment_snapshot,Current income,yes,no,only if this field truly reflects current income status
+Itinerary Sheet,Total work hours,total_work_hours,,no,yes,not in approved dataset
+Itinerary Sheet,Total productive hours,total_productive_hours,,no,yes,not in approved dataset
+Itinerary Sheet,Total meetings,total_meetings,,no,yes,not in approved dataset
+Pass Request,Resident name,resident_name,Name (Last, First),yes,no,
+Pass Request,Date,date,Last updated,yes,no,use submission date if needed
+Pass Request,Level,level,DWC Level Today or Exit,yes,no,if present on this version of the pass form
+Pass Request,Date leaving,date_leaving,,no,yes,PDF only
+Pass Request,Date returning,date_returning,,no,yes,PDF only
+Pass Request,Estimated cost of trip,trip_cost,,no,yes,PDF only
+Pass Request,Children with you,children_with_you,,no,yes,PDF only
+Pass Request,Where will children be,children_location,,no,yes,PDF only
+Pass Request,Address staying,address_staying,,no,yes,PDF only
+Pass Request,Phone number,phone_number,Phone #,yes,no,
