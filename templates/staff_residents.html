@@ -36,7 +36,7 @@
           {% for r in residents %}
             <tr>
               <td>
-                <a href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
+                <a href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                   {{ r.last_name }}, {{ r.first_name }}
                 </a>
               </td>
@@ -52,7 +52,7 @@
               </td>
 
               <td class="resident-actions">
-                <a class="btn" href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
+                <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
                   Open Profile
                 </a>
               </td>
@@ -66,7 +66,6 @@
   <div class="residents-side">
 
     <div class="card tight">
-
       <h2 class="h2-tight">Resident Intake</h2>
 
       <p>
@@ -74,9 +73,8 @@
       </p>
 
       <a class="btn btn-primary" href="{{ url_for('case_management.intake_assessment') }}">
-        Start Intake
+        Start Intake and Assessment
       </a>
-
     </div>
 
     <div class="card tight">
