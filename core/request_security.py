@@ -129,12 +129,6 @@ def register_request_security(
             "nmap",
             "masscan",
             "zgrab",
-            "curl",
-            "wget",
-            "python-requests",
-            "pythonurllib",
-            "go-http-client",
-            "libwww-perl",
         )
 
         if any(marker in user_agent for marker in bad_agent_markers):
