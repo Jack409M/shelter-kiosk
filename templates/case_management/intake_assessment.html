@@ -486,8 +486,8 @@
                     </div>
 
                     <div class="field span-3">
-                      <label for="dob">Date of Birth</label>
-                      <input id="dob" name="dob" type="date" value="{{ form_data.get('dob', '') }}">
+                      <label for="birth_year">Birth Year</label>
+                      <input id="birth_year" name="birth_year" type="number" min="1900" max="2100" step="1" value="{{ form_data.get('birth_year', '') }}">
                     </div>
 
                     <div class="field span-3">
@@ -498,11 +498,6 @@
                     <div class="field span-6">
                       <label for="email">Email</label>
                       <input id="email" name="email" type="email" value="{{ form_data.get('email', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="ssn_last4">Last 4 of SSN</label>
-                      <input id="ssn_last4" name="ssn_last4" type="text" maxlength="4" inputmode="numeric" value="{{ form_data.get('ssn_last4', '') }}">
                     </div>
 
                     <div class="field span-4">
