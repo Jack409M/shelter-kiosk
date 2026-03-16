@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from flask import Blueprint, flash, g, redirect, render_template, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_fetchall, db_fetchone
+from core.db import db_fetchall, db_fetchone, db_execute
 from core.runtime import init_db
 
 
@@ -70,6 +70,7 @@ def index():
 @require_login
 @require_shelter
 def intake_assessment():
+
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
@@ -136,10 +137,84 @@ def intake_assessment():
     )
 
 
+# NEW ROUTE
+# Resident Intake Submission
+@case_management.post("/intake-assessment")
+@require_login
+@require_shelter
+def submit_intake_assessment():
+
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+
+    first_name = request.form.get("first_name")
+    last_name = request.form.get("last_name")
+    dob = request.form.get("dob")
+    phone = request.form.get("phone")
+    email = request.form.get("email")
+
+    entry_date = request.form.get("entry_date")
+
+    if not first_name or not last_name:
+        flash("First and last name are required.", "error")
+        return redirect(url_for("case_management.intake_assessment"))
+
+    placeholder = _placeholder()
+
+    # Create Resident
+    resident_id = db_execute(
+        f"""
+        INSERT INTO residents
+        (first_name, last_name, dob, phone, email, shelter, is_active)
+        VALUES ({placeholder},{placeholder},{placeholder},{placeholder},{placeholder},{placeholder},1)
+        RETURNING id
+        """,
+        (
+            first_name,
+            last_name,
+            dob,
+            phone,
+            email,
+            shelter,
+        ),
+    )
+
+    if isinstance(resident_id, dict):
+        resident_id = resident_id["id"]
+
+    # Create Program Enrollment
+    db_execute(
+        f"""
+        INSERT INTO program_enrollments
+        (resident_id, program_status, entry_date)
+        VALUES ({placeholder}, 'active', {placeholder})
+        """,
+        (
+            resident_id,
+            entry_date,
+        ),
+    )
+
+    flash("Resident created successfully.", "success")
+
+    return redirect(
+        url_for(
+            "case_management.resident_case",
+            resident_id=resident_id,
+        )
+    )
+
+
 @case_management.get("/<int:resident_id>")
 @require_login
 @require_shelter
 def resident_case(resident_id: int):
+
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
@@ -193,13 +268,10 @@ def resident_case(resident_id: int):
     notes = []
 
     if enrollment_id:
+
         goals = db_fetchall(
             f"""
-            SELECT
-                goal_text,
-                status,
-                target_date,
-                created_at
+            SELECT goal_text,status,target_date,created_at
             FROM goals
             WHERE enrollment_id = {placeholder}
             ORDER BY created_at DESC
@@ -209,28 +281,20 @@ def resident_case(resident_id: int):
 
         appointments = db_fetchall(
             f"""
-            SELECT
-                appointment_date,
-                appointment_type,
-                notes
+            SELECT appointment_date,appointment_type,notes
             FROM appointments
             WHERE enrollment_id = {placeholder}
-            ORDER BY appointment_date DESC, id DESC
+            ORDER BY appointment_date DESC
             """,
             (enrollment_id,),
         )
 
         notes = db_fetchall(
             f"""
-            SELECT
-                meeting_date,
-                notes,
-                progress_notes,
-                action_items,
-                created_at
+            SELECT meeting_date,notes,progress_notes,action_items,created_at
             FROM case_manager_updates
             WHERE enrollment_id = {placeholder}
-            ORDER BY meeting_date DESC, id DESC
+            ORDER BY meeting_date DESC
             """,
             (enrollment_id,),
         )
