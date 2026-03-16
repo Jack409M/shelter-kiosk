@@ -2,7 +2,7 @@ form_name,jotform_field_label,jotform_field_key,dataset_field,update_database,st
 Case Management Sheet,Name,name,Name (Last, First),yes,no,
 Case Management Sheet,Date,date,Last updated,yes,no,use submission date if needed
 Case Management Sheet,Level,level,DWC Level Today or Exit,yes,no,
-Case Management Sheet,Are you employed,employed,Current income,yes,no,only if form is being used as current status update
+Case Management Sheet,Are you employed,employed,,no,yes,employment status should be handled by case_manager_updates not the dataset
 Case Management Sheet,Do you have a sponsor,has_sponsor,,no,yes,keep on PDF unless promoted into dataset
 Case Management Sheet,Case manager,case_manager,,no,yes,operational field not in approved dataset
 Case Management Sheet,Did you meet one on one this week,met_one_on_one,,no,yes,operational field not in approved dataset
