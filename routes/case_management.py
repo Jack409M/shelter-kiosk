@@ -76,8 +76,11 @@ def intake_assessment():
 
     init_db()
 
+    current_shelter = _normalize_shelter_name(session.get("shelter"))
+
     return render_template(
         "case_management/intake_assessment.html",
+        current_shelter=current_shelter,
         shelters=[
             {"value": "abba", "label": "Abba House"},
             {"value": "haven", "label": "Haven House"},
