@@ -148,4 +148,8 @@ Source of truth:
 - case_manager_updates
 
 Rule:
-Staff one
+Staff one on one meetings with residents should be stored as structured case_manager_updates records.
+
+Weekly resident submitted forms may indicate whether a meeting occurred, but they should not store the full staff meeting record.
+
+Detailed staff notes, actions taken, services delivered, and follow up tasks belong in case_manager_updates.
