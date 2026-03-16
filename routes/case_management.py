@@ -344,7 +344,6 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
             INSERT INTO residents
             (
                 first_name,
-                middle_name,
                 last_name,
                 dob,
                 phone,
@@ -359,14 +358,12 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
                 {placeholder},
                 {placeholder},
                 {placeholder},
-                {placeholder},
                 TRUE
             )
             RETURNING id
             """,
             (
                 data["first_name"],
-                data["middle_name"],
                 data["last_name"],
                 data["dob"],
                 data["phone"],
@@ -381,7 +378,6 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
         INSERT INTO residents
         (
             first_name,
-            middle_name,
             last_name,
             dob,
             phone,
@@ -396,13 +392,11 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
             {placeholder},
             {placeholder},
             {placeholder},
-            {placeholder},
             1
         )
         """,
         (
             data["first_name"],
-            data["middle_name"],
             data["last_name"],
             data["dob"],
             data["phone"],
