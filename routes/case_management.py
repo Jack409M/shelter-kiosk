@@ -314,7 +314,7 @@ def _find_possible_duplicate(
     if email:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, dob, phone, email
+            SELECT id, first_name, last_name, dob, phone, email, resident_identifier
             FROM residents
             WHERE {_shelter_equals_sql("shelter")}
               AND LOWER(COALESCE(email, '')) = LOWER({placeholder})
@@ -328,7 +328,7 @@ def _find_possible_duplicate(
     if phone:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, dob, phone, email
+            SELECT id, first_name, last_name, dob, phone, email, resident_identifier
             FROM residents
             WHERE {_shelter_equals_sql("shelter")}
               AND COALESCE(phone, '') = {placeholder}
@@ -342,7 +342,7 @@ def _find_possible_duplicate(
     if first_name and last_name and dob:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, dob, phone, email
+            SELECT id, first_name, last_name, dob, phone, email, resident_identifier
             FROM residents
             WHERE {_shelter_equals_sql("shelter")}
               AND LOWER(COALESCE(first_name, '')) = LOWER({placeholder})
@@ -358,7 +358,7 @@ def _find_possible_duplicate(
     return None
 
 
-def _insert_resident(data: dict[str, Any], shelter: str) -> int:
+def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
     placeholder = _placeholder()
     resident_identifier = _generate_resident_identifier()
 
@@ -400,7 +400,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
                 shelter,
             ),
         )
-        return int(row["id"])
+        return int(row["id"]), resident_identifier
 
     db_execute(
         f"""
@@ -440,10 +440,10 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
     )
 
     row = db_fetchone("SELECT last_insert_rowid() AS id")
-    return int(row["id"])
+    return int(row["id"]), resident_identifier
 
 
-def _insert_program_enrollment(resident_id: int, data: dict[str, Any]) -> None:
+def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: str) -> None:
     placeholder = _placeholder()
 
     db_execute(
@@ -451,10 +451,12 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any]) -> None:
         INSERT INTO program_enrollments
         (
             resident_id,
+            shelter,
             program_status,
             entry_date
         )
         VALUES (
+            {placeholder},
             {placeholder},
             {placeholder},
             {placeholder}
@@ -462,6 +464,7 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any]) -> None:
         """,
         (
             resident_id,
+            shelter,
             data["program_status"] or "active",
             data["entry_date"],
         ),
@@ -544,10 +547,17 @@ def submit_intake_assessment():
 
     if duplicate:
         duplicate_id = duplicate["id"] if isinstance(duplicate, dict) else duplicate[0]
-        flash(
-            "Possible duplicate resident found. Review the existing profile before creating a new one.",
-            "error",
-        )
+        duplicate_identifier = duplicate["resident_identifier"] if isinstance(duplicate, dict) else None
+        if duplicate_identifier:
+            flash(
+                f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. Review that profile before creating a new one.",
+                "error",
+            )
+        else:
+            flash(
+                "Possible duplicate resident found. Review the existing profile before creating a new one.",
+                "error",
+            )
         return redirect(url_for("case_management.resident_case", resident_id=duplicate_id))
 
     if errors:
@@ -561,10 +571,13 @@ def submit_intake_assessment():
             ),
         )
 
-    resident_id = _insert_resident(data, current_shelter)
-    _insert_program_enrollment(resident_id, data)
+    resident_id, resident_identifier = _insert_resident(data, current_shelter)
+    _insert_program_enrollment(resident_id, data, current_shelter)
 
-    flash("Resident created successfully.", "success")
+    flash(
+        f"Resident created successfully. Resident ID: {resident_identifier}",
+        "success",
+    )
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
@@ -585,6 +598,7 @@ def resident_case(resident_id: int):
         f"""
         SELECT
             id,
+            resident_identifier,
             first_name,
             last_name,
             resident_code,
@@ -605,6 +619,7 @@ def resident_case(resident_id: int):
         f"""
         SELECT
             id,
+            shelter,
             program_status,
             entry_date,
             exit_date
