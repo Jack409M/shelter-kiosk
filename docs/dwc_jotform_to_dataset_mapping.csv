@@ -19,7 +19,7 @@ Case Management Sheet,Court,court,,no,yes,not in approved dataset
 Case Management Sheet,Food Stamps,food_stamps,,no,yes,not in approved dataset
 Case Management Sheet,Medications,medications,Med Exam,yes,no,only if this is how medication or medical exam status is tracked
 Case Management Sheet,Other written needs,other_needs_text,,no,yes,always keep in PDF
-Meeting Sheet,Name,name,Name (Last, First),yes,no,
+Meeting Sheet,Name,name,,no,yes,name should never update resident dataset from weekly forms
 Meeting Sheet,Date,date,Last updated,yes,no,use submission date if needed
 Meeting Sheet,Level,level,DWC Level Today or Exit,yes,no,
 Meeting Sheet,Sponsor name,sponsor_name,,no,yes,operational recovery field not in approved dataset
