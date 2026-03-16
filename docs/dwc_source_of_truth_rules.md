@@ -18,6 +18,23 @@ Do not force every JotForm field into the database.
 Only fields that map to the approved DWC dataset should be stored in structured tables.
 All other submitted form content must remain available through the saved PDF record.
 
+---
+
+## Program Reporting Dataset
+
+Source of truth:
+- the DWC approved resident dataset (currently defined in the 72 column dataset file)
+
+Rule:
+The resident reporting dataset defines the official program metrics used for reporting, dashboards, and program evaluation.
+
+Only fields contained in the approved dataset should be treated as official reporting metrics.
+
+New reporting fields should not be added casually to operational tables.  
+If a new metric is required, it must first be added to the dataset definition before being used for program reporting.
+
+Operational modules may contain additional fields for workflow purposes, but those fields should not be treated as official program metrics unless they are promoted into the dataset.
+
 
 ## Employment
 
