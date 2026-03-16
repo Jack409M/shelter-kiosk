@@ -64,6 +64,14 @@
         <div class="resident-notebook-section-copy">
           Core resident information, emergency details, medical information, and resident management actions.
         </div>
+
+        {% if session.get("role") in ["admin", "shelter_director", "case_manager"] %}
+          <div class="profile-actions resident-profile-actions-top" style="margin-top: 12px;">
+            <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
+              Open Case Manager Workspace
+            </a>
+          </div>
+        {% endif %}
       </div>
 
       <div class="resident-profile-columns">
