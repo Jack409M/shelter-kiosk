@@ -26,7 +26,6 @@ from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 from core.request_security import register_request_security
 from core.request_utils import client_ip
 from core.runtime import init_db
-from routes.resident_parts.consent import resident_consent_view
 
 
 # ------------------------------------------------------------
