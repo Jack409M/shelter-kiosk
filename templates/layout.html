@@ -47,9 +47,12 @@
       {% set is_resident_signin_page = endpoint in ['resident_signin', 'resident_portal.signin'] %}
       {% set is_public_home = endpoint == 'public.public_home' %}
       {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) and (not is_public_home) %}
-      {% set residents_url = safe_url_for('residents.staff_residents') %}
-      {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
+
+      {% set intake_assessment_url = safe_url_for('case_management.intake_assessment') %}
       {% set case_management_url = safe_url_for('case_management.index') %}
+      {% set compliance_url = safe_url_for('compliance.compliance_dashboard') %}
+      {% set forms_url = safe_url_for('forms_admin.forms_index') %}
+      {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
       {% set reports_url = safe_url_for('reports.demographics_dashboard') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
 
@@ -111,17 +114,21 @@
             <div class="nav-dd">
               <button type="button">Case Manager ▾</button>
               <div class="menu">
-                {% if residents_url %}
-                  <a href="{{ residents_url }}">Residents</a>
-                {% endif %}
-                {% if case_dashboard_url %}
-                  <a href="{{ case_dashboard_url }}">Case Dashboard</a>
+                {% if intake_assessment_url %}
+                  <a href="{{ intake_assessment_url }}">Intake and Assessment</a>
                 {% endif %}
                 {% if case_management_url %}
-                  <a href="{{ case_management_url }}">Case Management</a>
+                  <a href="{{ case_management_url }}">Case Mgmt</a>
                 {% endif %}
-                <a href="{{ url_for('compliance.compliance_dashboard') }}">Compliance</a>
-                <a href="{{ url_for('forms_admin.forms_index') }}">Forms</a>
+                {% if compliance_url %}
+                  <a href="{{ compliance_url }}">Compliance</a>
+                {% endif %}
+                {% if forms_url %}
+                  <a href="{{ forms_url }}">Forms</a>
+                {% endif %}
+                {% if case_dashboard_url %}
+                  <a href="{{ case_dashboard_url }}">Case Mgmt Dashboard</a>
+                {% endif %}
               </div>
             </div>
 
