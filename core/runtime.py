@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from flask import session, request
-from core.request_utils import client_ip
+
+from flask import request, session
+
 from core.db import get_db
-from db import schema
+from core.request_utils import client_ip
 from core.shelters import get_all_shelters as load_all_shelters
+from db import schema
 
 
 # ------------------------------------------------------------
@@ -67,12 +69,22 @@ TWILIO_STATUS_CALLBACK_URL = (
 # Database initialization
 # ------------------------------------------------------------
 
+_DB_INITIALIZED = False
+
+
 def init_db() -> None:
     """
     Ensures database connection and schema initialization.
+    Runs only once per process.
     """
+    global _DB_INITIALIZED
+
+    if _DB_INITIALIZED:
+        return
+
     get_db()
     schema.init_db()
+    _DB_INITIALIZED = True
 
 
 # ------------------------------------------------------------
