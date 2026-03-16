@@ -79,12 +79,6 @@ def _yes_no_to_int(value: str | None) -> int:
     return 1 if (value or "").strip().lower() == "yes" else 0
 
 
-def _birth_year_match_sql(column_name: str) -> str:
-    if g.get("db_kind") == "pg":
-        return f"CAST(EXTRACT(YEAR FROM {column_name}) AS INTEGER) = %s"
-    return f"CAST(strftime('%Y', {column_name}) AS INTEGER) = ?"
-
-
 def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
@@ -296,7 +290,7 @@ def _find_possible_duplicate(
     if email:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, dob, phone, email, resident_identifier
+            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
             FROM residents
             WHERE {_shelter_equals_sql("shelter")}
               AND LOWER(COALESCE(email, '')) = LOWER({placeholder})
@@ -310,7 +304,7 @@ def _find_possible_duplicate(
     if phone:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, dob, phone, email, resident_identifier
+            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
             FROM residents
             WHERE {_shelter_equals_sql("shelter")}
               AND COALESCE(phone, '') = {placeholder}
@@ -324,13 +318,12 @@ def _find_possible_duplicate(
     if first_name and last_name and birth_year is not None:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, dob, phone, email, resident_identifier
+            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
             FROM residents
             WHERE {_shelter_equals_sql("shelter")}
               AND LOWER(COALESCE(first_name, '')) = LOWER({placeholder})
               AND LOWER(COALESCE(last_name, '')) = LOWER({placeholder})
-              AND dob IS NOT NULL
-              AND {_birth_year_match_sql("dob")}
+              AND birth_year = {placeholder}
             LIMIT 1
             """,
             (shelter, first_name, last_name, birth_year),
@@ -355,7 +348,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
                 resident_code,
                 first_name,
                 last_name,
-                dob,
+                birth_year,
                 phone,
                 email,
                 emergency_contact_name,
@@ -387,7 +380,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
                 resident_code,
                 data["first_name"],
                 data["last_name"],
-                None,
+                data["birth_year"],
                 data["phone"],
                 data["email"],
                 data["emergency_contact_name"],
@@ -406,7 +399,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
             resident_code,
             first_name,
             last_name,
-            dob,
+            birth_year,
             phone,
             email,
             emergency_contact_name,
@@ -437,7 +430,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
             resident_code,
             data["first_name"],
             data["last_name"],
-            None,
+            data["birth_year"],
             data["phone"],
             data["email"],
             data["emergency_contact_name"],
@@ -778,7 +771,7 @@ def submit_intake_assessment():
 
     if duplicate:
         duplicate_id = duplicate["id"] if isinstance(duplicate, dict) else duplicate[0]
-        duplicate_identifier = duplicate["resident_identifier"] if isinstance(duplicate, dict) else None
+        duplicate_identifier = duplicate["resident_identifier"] if isinstance(duplicate, dict) else duplicate[6]
         if duplicate_identifier:
             flash(
                 f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. Review that profile before creating a new one.",
