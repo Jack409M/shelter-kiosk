@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from datetime import date
+import secrets
 from typing import Any
-from uuid import uuid4
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
@@ -75,10 +75,26 @@ def _parse_money(value: str | None) -> float | None:
         return None
 
 
-def _generate_resident_identifier(shelter: str) -> str:
-    shelter_prefix = (shelter or "resident").strip().lower()
-    short_token = uuid4().hex[:12]
-    return f"{shelter_prefix}_{short_token}"
+def _generate_resident_identifier() -> str:
+    placeholder = _placeholder()
+
+    for _ in range(25):
+        candidate = str(secrets.randbelow(90000000) + 10000000)
+
+        existing = db_fetchone(
+            f"""
+            SELECT id
+            FROM residents
+            WHERE resident_identifier = {placeholder}
+            LIMIT 1
+            """,
+            (candidate,),
+        )
+
+        if not existing:
+            return candidate
+
+    raise RuntimeError("Could not generate a unique resident identifier.")
 
 
 def _intake_template_context(
@@ -344,7 +360,7 @@ def _find_possible_duplicate(
 
 def _insert_resident(data: dict[str, Any], shelter: str) -> int:
     placeholder = _placeholder()
-    resident_identifier = _generate_resident_identifier(shelter)
+    resident_identifier = _generate_resident_identifier()
 
     if g.get("db_kind") == "pg":
         row = db_fetchone(
@@ -358,7 +374,8 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
                 phone,
                 email,
                 shelter,
-                is_active
+                is_active,
+                created_at
             )
             VALUES (
                 {placeholder},
@@ -368,7 +385,8 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
                 {placeholder},
                 {placeholder},
                 {placeholder},
-                TRUE
+                TRUE,
+                NOW()
             )
             RETURNING id
             """,
@@ -395,7 +413,8 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
             phone,
             email,
             shelter,
-            is_active
+            is_active,
+            created_at
         )
         VALUES (
             {placeholder},
@@ -405,7 +424,8 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
             {placeholder},
             {placeholder},
             {placeholder},
-            1
+            1,
+            CURRENT_TIMESTAMP
         )
         """,
         (
