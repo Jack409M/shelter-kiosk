@@ -20,7 +20,7 @@
     {% set resident_shelter = resident["resident_shelter"] %}
     {% set resident_active = resident["is_active"] %}
     {% set resident_code = resident["resident_code"] if "resident_code" in resident else "" %}
-    {% set birth_year = resident["dob"] if "dob" in resident else "" %}
+    {% set birth_year = resident["birth_year"] if "birth_year" in resident else "" %}
     {% set phone = resident["phone"] if "phone" in resident else "" %}
     {% set email = resident["email"] if "email" in resident else "" %}
     {% set emergency_contact_name = resident["emergency_contact_name"] if "emergency_contact_name" in resident else "" %}
