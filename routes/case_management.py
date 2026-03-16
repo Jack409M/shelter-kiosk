@@ -446,6 +446,34 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str]:
 def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: str) -> None:
     placeholder = _placeholder()
 
+    if g.get("db_kind") == "pg":
+        db_execute(
+            f"""
+            INSERT INTO program_enrollments
+            (
+                resident_id,
+                shelter,
+                program_status,
+                entry_date,
+                created_at
+            )
+            VALUES (
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                NOW()
+            )
+            """,
+            (
+                resident_id,
+                shelter,
+                data["program_status"] or "active",
+                data["entry_date"],
+            ),
+        )
+        return
+
     db_execute(
         f"""
         INSERT INTO program_enrollments
@@ -453,13 +481,15 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
             resident_id,
             shelter,
             program_status,
-            entry_date
+            entry_date,
+            created_at
         )
         VALUES (
             {placeholder},
             {placeholder},
             {placeholder},
-            {placeholder}
+            {placeholder},
+            CURRENT_TIMESTAMP
         )
         """,
         (
