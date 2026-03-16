@@ -1,84 +1,66 @@
 {% extends "layout.html" %}
 
-{% block extra_head %}
-  {{ super() }}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_workspace.css') }}">
-{% endblock %}
-
 {% block content %}
 
-{% if not resident %}
-  <h1>Resident Profile</h1>
-  <p>Resident not found.</p>
-{% else %}
-
-  {% set is_timeline_view = request.endpoint == "resident_detail.resident_timeline" %}
+{% if resident %}
 
   {% if resident is mapping %}
     {% set resident_id = resident["id"] %}
     {% set first_name = resident["first_name"] %}
     {% set last_name = resident["last_name"] %}
-    {% set shelter = resident["resident_shelter"] %}
+    {% set resident_code = resident["resident_code"] if "resident_code" in resident else "" %}
+    {% set resident_shelter = resident["resident_shelter"] %}
     {% set program_status = resident["program_status"] %}
-    {% set resident_active = resident["is_active"] %}
+    {% set entry_date = resident["entry_date"] %}
   {% else %}
     {% set resident_id = resident[0] %}
     {% set first_name = resident[1] %}
     {% set last_name = resident[2] %}
-    {% set shelter = resident[3] %}
-    {% set resident_active = resident[4] %}
-    {% set program_status = resident[7] %}
+    {% set resident_shelter = resident[3] %}
+    {% set resident_code = resident[10] if resident|length > 10 else "" %}
+    {% set program_status = resident[7] if resident|length > 7 else "" %}
+    {% set entry_date = resident[8] if resident|length > 8 else "" %}
   {% endif %}
 
-  <div class="resident-workspace{% if is_timeline_view %} timeline-mode{% endif %}">
+  <div class="resident-header">
 
-    <div class="resident-header resident-header-slim">
-
-      <div class="resident-header-main">
-        <div class="resident-title">
-          <h1>{{ first_name }} {{ last_name }}</h1>
-        </div>
-
-        <div class="resident-meta resident-meta-slim">
-          <span class="meta-pill">{{ shelter | shelter if shelter else "—" }}</span>
-          <span class="meta-pill">{{ "Active" if resident_active else "Inactive" }}</span>
-
-          {% if program_status %}
-            <span class="meta-pill">{{ program_status|replace("_", " ")|title }}</span>
-          {% endif %}
-        </div>
+    <div class="resident-header-main">
+      <div class="resident-header-name">
+        {{ first_name }} {{ last_name }}
       </div>
 
-      <div class="resident-actions resident-actions-slim">
-        <a class="btn-small" href="{{ url_for('residents.staff_residents') }}">
-          Back to Residents
-        </a>
+      <div class="resident-header-meta">
+        <span><strong>Resident Code:</strong> {{ resident_code or "—" }}</span>
+        <span><strong>Shelter:</strong> {{ resident_shelter | shelter if resident_shelter else "—" }}</span>
+        <span><strong>Status:</strong> {{ program_status or "—" }}</span>
       </div>
-
     </div>
 
-    <div class="resident-tabs">
-
-      <a class="resident-tab{% if not is_timeline_view %} active{% endif %}"
+    <div class="resident-header-nav">
+      <a class="btn"
          href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">
-        Profile
+         Profile
       </a>
 
-      <a class="resident-tab{% if is_timeline_view %} active{% endif %}"
+      <a class="btn"
          href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id) }}">
-        Timeline
+         Timeline
       </a>
 
-    </div>
-
-    <div class="resident-layout resident-layout-single">
-      <div class="resident-main resident-main-full">
-        {% block resident_workspace_content %}{% endblock %}
-      </div>
+      {% if session.get("role") in ["admin", "shelter_director", "case_manager"] %}
+        <a class="btn"
+           href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
+           Case Workspace
+        </a>
+      {% endif %}
     </div>
 
   </div>
 
 {% endif %}
+
+<div class="resident-workspace-body">
+  {% block resident_workspace_content %}{% endblock %}
+</div>
 
 {% endblock %}
