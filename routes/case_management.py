@@ -79,6 +79,12 @@ def _yes_no_to_int(value: str | None) -> int:
     return 1 if (value or "").strip().lower() == "yes" else 0
 
 
+def _birth_year_match_sql(column_name: str) -> str:
+    if g.get("db_kind") == "pg":
+        return f"CAST(EXTRACT(YEAR FROM {column_name}) AS INTEGER) = %s"
+    return f"CAST(strftime('%Y', {column_name}) AS INTEGER) = ?"
+
+
 def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
@@ -146,10 +152,9 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "first_name": _clean(form.get("first_name")),
         "middle_name": _clean(form.get("middle_name")),
         "last_name": _clean(form.get("last_name")),
-        "dob": _clean(form.get("dob")),
+        "birth_year": _clean(form.get("birth_year")),
         "phone": _clean(form.get("phone")),
         "email": _clean(form.get("email")),
-        "ssn_last4": _clean(form.get("ssn_last4")),
         "gender": _clean(form.get("gender")),
         "veteran": _clean(form.get("veteran")),
         "emergency_contact_name": _clean(form.get("emergency_contact_name")),
@@ -204,9 +209,15 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     if data["shelter"] != shelter:
         errors.append("Intake shelter must match the shelter currently selected in staff navigation.")
 
-    dob_date = _parse_iso_date(data["dob"])
-    if data["dob"] and dob_date is None:
-        errors.append("Date of Birth must be a valid date.")
+    birth_year = _parse_int(data["birth_year"])
+    current_year = date.today().year
+    if data["birth_year"] and birth_year is None:
+        errors.append("Birth Year must be a whole year.")
+    if birth_year is not None and birth_year < 1900:
+        errors.append("Birth Year cannot be earlier than 1900.")
+    if birth_year is not None and birth_year > current_year:
+        errors.append("Birth Year cannot be in the future.")
+    data["birth_year"] = birth_year
 
     entry_date = _parse_iso_date(data["entry_date"])
     if data["entry_date"] and entry_date is None:
@@ -218,22 +229,11 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 
     today = date.today()
 
-    if dob_date and dob_date > today:
-        errors.append("Date of Birth cannot be in the future.")
-
     if entry_date and entry_date > today:
         errors.append("Date Entered cannot be in the future.")
 
-    if dob_date and entry_date and dob_date > entry_date:
-        errors.append("Date of Birth cannot be later than Date Entered.")
-
     if sobriety_date and entry_date and sobriety_date > entry_date:
         errors.append("Sobriety Date cannot be later than Date Entered.")
-
-    ssn_last4 = _digits_only(data["ssn_last4"])
-    if data["ssn_last4"] and len(ssn_last4) != 4:
-        errors.append("Last 4 of SSN must be exactly 4 digits.")
-    data["ssn_last4"] = ssn_last4 or None
 
     phone_digits = _digits_only(data["phone"])
     if data["phone"] and len(phone_digits) < 10:
@@ -286,7 +286,7 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 def _find_possible_duplicate(
     first_name: str | None,
     last_name: str | None,
-    dob: str | None,
+    birth_year: int | None,
     phone: str | None,
     email: str | None,
     shelter: str,
@@ -321,7 +321,7 @@ def _find_possible_duplicate(
         if existing:
             return existing
 
-    if first_name and last_name and dob:
+    if first_name and last_name and birth_year is not None:
         existing = db_fetchone(
             f"""
             SELECT id, first_name, last_name, dob, phone, email, resident_identifier
@@ -329,10 +329,11 @@ def _find_possible_duplicate(
             WHERE {_shelter_equals_sql("shelter")}
               AND LOWER(COALESCE(first_name, '')) = LOWER({placeholder})
               AND LOWER(COALESCE(last_name, '')) = LOWER({placeholder})
-              AND COALESCE(dob, '') = {placeholder}
+              AND dob IS NOT NULL
+              AND {_birth_year_match_sql("dob")}
             LIMIT 1
             """,
-            (shelter, first_name, last_name, dob),
+            (shelter, first_name, last_name, birth_year),
         )
         if existing:
             return existing
@@ -386,7 +387,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
                 resident_code,
                 data["first_name"],
                 data["last_name"],
-                data["dob"],
+                None,
                 data["phone"],
                 data["email"],
                 data["emergency_contact_name"],
@@ -436,7 +437,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
             resident_code,
             data["first_name"],
             data["last_name"],
-            data["dob"],
+            None,
             data["phone"],
             data["email"],
             data["emergency_contact_name"],
@@ -769,7 +770,7 @@ def submit_intake_assessment():
     duplicate = _find_possible_duplicate(
         first_name=data["first_name"],
         last_name=data["last_name"],
-        dob=data["dob"],
+        birth_year=data["birth_year"],
         phone=data["phone"],
         email=data["email"],
         shelter=current_shelter,
