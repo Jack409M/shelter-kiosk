@@ -1,0 +1,942 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+<style>
+  .intake-page {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 20px 16px 40px 16px;
+  }
+
+  .intake-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .intake-header-copy h1 {
+    margin: 0 0 6px 0;
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .intake-header-copy p {
+    margin: 0;
+    color: #5f6b7a;
+    max-width: 760px;
+  }
+
+  .intake-header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .btn-soft,
+  .btn-primary {
+    appearance: none;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-soft {
+    background: #eef2f6;
+    color: #243447;
+  }
+
+  .btn-primary {
+    background: #1f5eff;
+    color: #ffffff;
+  }
+
+  .btn-primary[disabled] {
+    background: #9db7ff;
+    cursor: not-allowed;
+  }
+
+  .intake-shell {
+    display: grid;
+    gap: 16px;
+  }
+
+  .intake-status-bar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .status-tile,
+  .section-card,
+  .help-card {
+    background: #ffffff;
+    border: 1px solid #d8e0ea;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+
+  .status-tile {
+    padding: 14px;
+  }
+
+  .status-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+
+  .status-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #16202a;
+  }
+
+  .intake-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .tab-strip {
+    display: inline-flex;
+    gap: 8px;
+    background: #eef2f6;
+    padding: 6px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+  }
+
+  .tab-button {
+    border: 0;
+    background: transparent;
+    color: #425466;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .tab-button.is-active {
+    background: #ffffff;
+    color: #102030;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+  }
+
+  .tab-panel {
+    display: none;
+  }
+
+  .tab-panel.is-active {
+    display: block;
+  }
+
+  .panel-stack {
+    display: grid;
+    gap: 16px;
+  }
+
+  .section-card {
+    overflow: hidden;
+  }
+
+  .section-card-head {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e6ebf1;
+    background: #fafbfd;
+  }
+
+  .section-card-head h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .section-card-head p {
+    margin: 0;
+    font-size: 13px;
+    color: #637083;
+  }
+
+  .section-card-body {
+    padding: 16px;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .field {
+    display: grid;
+    gap: 6px;
+  }
+
+  .field.span-12 { grid-column: span 12; }
+  .field.span-9  { grid-column: span 9; }
+  .field.span-8  { grid-column: span 8; }
+  .field.span-6  { grid-column: span 6; }
+  .field.span-4  { grid-column: span 4; }
+  .field.span-3  { grid-column: span 3; }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-height: 40px;
+    padding: 9px 11px;
+    border: 1px solid #c7d1dc;
+    border-radius: 10px;
+    font: inherit;
+    background: #ffffff;
+    color: #13202c;
+    box-sizing: border-box;
+  }
+
+  .field textarea {
+    min-height: 92px;
+    resize: vertical;
+  }
+
+  .check-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+  }
+
+  .chip-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid #cfd8e3;
+    border-radius: 999px;
+    background: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+  }
+
+  .chip-option input {
+    width: auto;
+    min-height: auto;
+    padding: 0;
+    margin: 0;
+  }
+
+  .help-card {
+    padding: 16px;
+    position: sticky;
+    top: 14px;
+  }
+
+  .help-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+  }
+
+  .help-card p {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    color: #637083;
+    line-height: 1.45;
+  }
+
+  .mini-list {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .mini-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fbfcfe;
+  }
+
+  .mini-item-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    margin-bottom: 4px;
+  }
+
+  .mini-item-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1f2937;
+  }
+
+  .footer-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 2px;
+  }
+
+  .footer-note {
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  @media (max-width: 1080px) {
+    .intake-main {
+      grid-template-columns: 1fr;
+    }
+
+    .help-card {
+      position: static;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .intake-status-bar {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field.span-9,
+    .field.span-8,
+    .field.span-6,
+    .field.span-4,
+    .field.span-3 {
+      grid-column: span 12;
+    }
+
+    .intake-header {
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .intake-status-bar {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="intake-page">
+  <div class="intake-header">
+    <div class="intake-header-copy">
+      <h1>Intake and Assessment</h1>
+      <p>
+        Start the resident record, capture entry data, and complete the first assessment in one clean workflow for case managers.
+      </p>
+    </div>
+
+    <div class="intake-header-actions">
+      <a class="btn-soft" href="{{ safe_url_for('case_management.index') or '#' }}">Back to Case Manager</a>
+      <button class="btn-primary" type="submit" form="resident-intake-form">
+        Save and Open Resident Profile
+      </button>
+    </div>
+  </div>
+
+  <div class="intake-shell">
+    <div class="intake-status-bar">
+      <div class="status-tile">
+        <div class="status-label">Shelter</div>
+        <div class="status-value">
+          {% if current_shelter == "abba" %}
+            Abba House
+          {% elif current_shelter == "haven" %}
+            Haven House
+          {% elif current_shelter == "gratitude" %}
+            Gratitude House
+          {% else %}
+            Not set
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="status-tile">
+        <div class="status-label">Workflow Stage</div>
+        <div class="status-value">New Intake</div>
+      </div>
+
+      <div class="status-tile">
+        <div class="status-label">Record Status</div>
+        <div class="status-value">Not Saved Yet</div>
+      </div>
+
+      <div class="status-tile">
+        <div class="status-label">Required Sections</div>
+        <div class="status-value">Intake and Assessment</div>
+      </div>
+    </div>
+
+    <div class="intake-main">
+      <div>
+        <form id="resident-intake-form" method="post" action="#">
+          <div class="tab-strip" role="tablist" aria-label="Intake tabs">
+            <button
+              type="button"
+              class="tab-button is-active"
+              data-tab-button="intake"
+              role="tab"
+              aria-selected="true"
+            >
+              Intake
+            </button>
+
+            <button
+              type="button"
+              class="tab-button"
+              data-tab-button="assessment"
+              role="tab"
+              aria-selected="false"
+            >
+              Assessment
+            </button>
+          </div>
+
+          <div class="tab-panel is-active" data-tab-panel="intake">
+            <div class="panel-stack">
+
+              <section class="section-card">
+                <div class="section-card-head">
+                  <h2>Basic Information</h2>
+                  <p>Core resident identity and contact details used to create the resident record.</p>
+                </div>
+                <div class="section-card-body">
+                  <div class="field-grid">
+                    <div class="field span-4">
+                      <label for="first_name">First Name</label>
+                      <input id="first_name" name="first_name" type="text" required>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="middle_name">Middle Name</label>
+                      <input id="middle_name" name="middle_name" type="text">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="last_name">Last Name</label>
+                      <input id="last_name" name="last_name" type="text" required>
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="dob">Date of Birth</label>
+                      <input id="dob" name="dob" type="date">
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="phone">Phone</label>
+                      <input id="phone" name="phone" type="tel">
+                    </div>
+
+                    <div class="field span-6">
+                      <label for="email">Email</label>
+                      <input id="email" name="email" type="email">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="ssn_last4">Last 4 of SSN</label>
+                      <input id="ssn_last4" name="ssn_last4" type="text" maxlength="4" inputmode="numeric">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="gender">Gender</label>
+                      <select id="gender" name="gender">
+                        <option value="">Select</option>
+                        {% for option in gender_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="veteran">Veteran</label>
+                      <select id="veteran" name="veteran">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-6">
+                      <label for="emergency_contact_name">Emergency Contact Name</label>
+                      <input id="emergency_contact_name" name="emergency_contact_name" type="text">
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="emergency_contact_relationship">Relationship</label>
+                      <input id="emergency_contact_relationship" name="emergency_contact_relationship" type="text">
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="emergency_contact_phone">Emergency Contact Phone</label>
+                      <input id="emergency_contact_phone" name="emergency_contact_phone" type="tel">
+                    </div>
+
+                    <div class="field span-12">
+                      <label for="notes_basic">Immediate Notes</label>
+                      <textarea id="notes_basic" name="notes_basic" placeholder="Anything staff needs to know at intake."></textarea>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="section-card">
+                <div class="section-card-head">
+                  <h2>Program Entry</h2>
+                  <p>Entry details that should create the initial program enrollment.</p>
+                </div>
+                <div class="section-card-body">
+                  <div class="field-grid">
+                    <div class="field span-4">
+                      <label for="entry_date">Date Entered</label>
+                      <input id="entry_date" name="entry_date" type="date">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="shelter">Program Shelter</label>
+                      <select id="shelter" name="shelter">
+                        {% for option in shelters %}
+                          <option
+                            value="{{ option.value }}"
+                            {% if option.value == current_shelter %}selected{% endif %}
+                          >
+                            {{ option.label }}
+                          </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="program_status">Program Status</label>
+                      <select id="program_status" name="program_status">
+                        <option value="active" selected>Active</option>
+                        <option value="pending">Pending</option>
+                        <option value="waitlisted">Waitlisted</option>
+                      </select>
+                    </div>
+
+                    <div class="field span-6">
+                      <label for="prior_living">Where Was She Staying Before Entry</label>
+                      <select id="prior_living" name="prior_living">
+                        <option value="">Select</option>
+                        {% for option in prior_living_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="sobriety_date">Sobriety Date</label>
+                      <input id="sobriety_date" name="sobriety_date" type="date">
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="drug_of_choice">Drug of Choice</label>
+                      <select id="drug_of_choice" name="drug_of_choice">
+                        <option value="">Select</option>
+                        {% for option in drug_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="income_at_entry">Income at Entry</label>
+                      <input id="income_at_entry" name="income_at_entry" type="number" min="0" step="0.01">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="education_at_entry">Education at Entry</label>
+                      <select id="education_at_entry" name="education_at_entry">
+                        <option value="">Select</option>
+                        {% for option in education_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="disability">Disability</label>
+                      <select id="disability" name="disability">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-12">
+                      <label for="entry_notes">Entry Notes</label>
+                      <textarea id="entry_notes" name="entry_notes" placeholder="Reason for admission, immediate concerns, or placement context."></textarea>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="section-card">
+                <div class="section-card-head">
+                  <h2>Demographics</h2>
+                  <p>Core demographic fields that feed the reporting dashboards.</p>
+                </div>
+                <div class="section-card-body">
+                  <div class="field-grid">
+                    <div class="field span-4">
+                      <label for="race">Race</label>
+                      <select id="race" name="race">
+                        <option value="">Select</option>
+                        {% for option in race_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="ethnicity">Ethnicity</label>
+                      <select id="ethnicity" name="ethnicity">
+                        <option value="">Select</option>
+                        {% for option in ethnicity_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="pregnant">Pregnant at Entry</label>
+                      <select id="pregnant" name="pregnant">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="has_children">Has Children</label>
+                      <select id="has_children" name="has_children">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="children_count">Children Count</label>
+                      <input id="children_count" name="children_count" type="number" min="0" step="1">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="newborn_at_dwc">Newborn Born at DWC</label>
+                      <select id="newborn_at_dwc" name="newborn_at_dwc">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="section-card">
+                <div class="section-card-head">
+                  <h2>Initial Snapshot</h2>
+                  <p>A quick baseline of immediate need areas at the time of entry.</p>
+                </div>
+                <div class="section-card-body">
+                  <div class="field-grid">
+                    <div class="field span-12">
+                      <label>Immediate Needs</label>
+                      <div class="check-grid">
+                        <label class="chip-option"><input type="checkbox" name="need_food" value="yes"> Food</label>
+                        <label class="chip-option"><input type="checkbox" name="need_clothing" value="yes"> Clothing</label>
+                        <label class="chip-option"><input type="checkbox" name="need_hygiene" value="yes"> Hygiene</label>
+                        <label class="chip-option"><input type="checkbox" name="need_medical" value="yes"> Medical</label>
+                        <label class="chip-option"><input type="checkbox" name="need_mental_health" value="yes"> Mental Health</label>
+                        <label class="chip-option"><input type="checkbox" name="need_transportation" value="yes"> Transportation</label>
+                        <label class="chip-option"><input type="checkbox" name="need_id" value="yes"> ID and Benefits</label>
+                        <label class="chip-option"><input type="checkbox" name="need_safety" value="yes"> Safety Planning</label>
+                      </div>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="dental_need">Dental Need</label>
+                      <select id="dental_need" name="dental_need">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="vision_need">Vision Need</label>
+                      <select id="vision_need" name="vision_need">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="employment_status">Employment Status</label>
+                      <select id="employment_status" name="employment_status">
+                        <option value="">Select</option>
+                        <option value="employed_full_time">Employed Full Time</option>
+                        <option value="employed_part_time">Employed Part Time</option>
+                        <option value="unemployed">Unemployed</option>
+                        <option value="disabled">Disabled</option>
+                        <option value="unknown">Unknown</option>
+                      </select>
+                    </div>
+
+                    <div class="field span-12">
+                      <label for="initial_snapshot_notes">Initial Snapshot Notes</label>
+                      <textarea id="initial_snapshot_notes" name="initial_snapshot_notes" placeholder="Brief baseline picture of her current situation."></textarea>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          </div>
+
+          <div class="tab-panel" data-tab-panel="assessment">
+            <div class="panel-stack">
+
+              <section class="section-card">
+                <div class="section-card-head">
+                  <h2>Trauma and Vulnerability</h2>
+                  <p>Assessment items that measure trauma burden and vulnerability at entry.</p>
+                </div>
+                <div class="section-card-body">
+                  <div class="field-grid">
+                    <div class="field span-3">
+                      <label for="ace_score">ACE Score</label>
+                      <input id="ace_score" name="ace_score" type="number" min="0" max="10" step="1">
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="grit_score">Grit Score</label>
+                      <input id="grit_score" name="grit_score" type="number" min="0" max="100" step="1">
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="domestic_violence_history">Domestic Violence History</label>
+                      <select id="domestic_violence_history" name="domestic_violence_history">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="human_trafficking_history">Human Trafficking History</label>
+                      <select id="human_trafficking_history" name="human_trafficking_history">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="mental_health_need">Mental Health Need</label>
+                      <select id="mental_health_need" name="mental_health_need">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="medical_need">Medical Need</label>
+                      <select id="medical_need" name="medical_need">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="substance_use_need">Substance Use Need</label>
+                      <select id="substance_use_need" name="substance_use_need">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-12">
+                      <label for="trauma_notes">Trauma and Vulnerability Notes</label>
+                      <textarea id="trauma_notes" name="trauma_notes" placeholder="Observed trauma indicators, safety concerns, or vulnerability factors."></textarea>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="section-card">
+                <div class="section-card-head">
+                  <h2>Barriers to Stability</h2>
+                  <p>Baseline barriers that will later feed case management planning and reporting.</p>
+                </div>
+                <div class="section-card-body">
+                  <div class="field-grid">
+                    <div class="field span-12">
+                      <label>Current Barriers</label>
+                      <div class="check-grid">
+                        <label class="chip-option"><input type="checkbox" name="barrier_housing" value="yes"> Housing</label>
+                        <label class="chip-option"><input type="checkbox" name="barrier_income" value="yes"> Income</label>
+                        <label class="chip-option"><input type="checkbox" name="barrier_employment" value="yes"> Employment</label>
+                        <label class="chip-option"><input type="checkbox" name="barrier_transportation" value="yes"> Transportation</label>
+                        <label class="chip-option"><input type="checkbox" name="barrier_childcare" value="yes"> Childcare</label>
+                        <label class="chip-option"><input type="checkbox" name="barrier_legal" value="yes"> Legal</label>
+                        <label class="chip-option"><input type="checkbox" name="barrier_documents" value="yes"> Missing Documents</label>
+                        <label class="chip-option"><input type="checkbox" name="barrier_health" value="yes"> Health</label>
+                        <label class="chip-option"><input type="checkbox" name="barrier_education" value="yes"> Education</label>
+                      </div>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="felony_history">Felony History</label>
+                      <select id="felony_history" name="felony_history">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="probation_parole">Probation or Parole</label>
+                      <select id="probation_parole" name="probation_parole">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="id_documents_status">ID Documents Status</label>
+                      <select id="id_documents_status" name="id_documents_status">
+                        <option value="">Select</option>
+                        <option value="has_all">Has All</option>
+                        <option value="missing_some">Missing Some</option>
+                        <option value="missing_all">Missing All</option>
+                      </select>
+                    </div>
+
+                    <div class="field span-12">
+                      <label for="barrier_notes">Barrier Notes</label>
+                      <textarea id="barrier_notes" name="barrier_notes" placeholder="Anything likely to affect stability planning in the first 30 days."></textarea>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          </div>
+
+          <div class="footer-actions">
+            <div class="footer-note">
+              This page is ready for layout now. The submit action will be wired in the next step.
+            </div>
+
+            <button class="btn-primary" type="submit">
+              Save and Open Resident Profile
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <aside class="help-card">
+        <h3>What this page will do</h3>
+        <p>
+          This screen is the front door for case manager data entry. It will create the resident, create the enrollment, save entry data, and then open the resident workspace.
+        </p>
+
+        <div class="mini-list">
+          <div class="mini-item">
+            <div class="mini-item-label">Resident record</div>
+            <div class="mini-item-value">Basic Information</div>
+          </div>
+
+          <div class="mini-item">
+            <div class="mini-item-label">Enrollment record</div>
+            <div class="mini-item-value">Program Entry</div>
+          </div>
+
+          <div class="mini-item">
+            <div class="mini-item-label">Reporting inputs</div>
+            <div class="mini-item-value">Demographics and Assessment</div>
+          </div>
+
+          <div class="mini-item">
+            <div class="mini-item-label">Next modules</div>
+            <div class="mini-item-value">Children, Services, Exit Outcomes</div>
+          </div>
+        </div>
+
+        <p>
+          Keep these input names stable now so we only have to map the backend once.
+        </p>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const buttons = document.querySelectorAll("[data-tab-button]");
+    const panels = document.querySelectorAll("[data-tab-panel]");
+
+    function activateTab(name) {
+      buttons.forEach((button) => {
+        const isActive = button.getAttribute("data-tab-button") === name;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", isActive ? "true" : "false");
+      });
+
+      panels.forEach((panel) => {
+        const isActive = panel.getAttribute("data-tab-panel") === name;
+        panel.classList.toggle("is-active", isActive);
+      });
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", function () {
+        activateTab(button.getAttribute("data-tab-button"));
+      });
+    });
+  })();
+</script>
+{% endblock %}
