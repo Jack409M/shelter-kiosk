@@ -754,7 +754,7 @@ def resident_profile(resident_id: int):
 
     if not resident:
         return render_template(
-            "resident_detail/resident_profile.html",
+            "resident_detail/profile.html",
             resident=None,
             compliance=None,
             goals=[],
@@ -764,7 +764,7 @@ def resident_profile(resident_id: int):
         )
 
     return render_template(
-        "resident_detail/resident_profile.html",
+        "resident_detail/profile.html",
         resident=resident,
         compliance=None,
         goals=[],
