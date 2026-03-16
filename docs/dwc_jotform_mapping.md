@@ -204,3 +204,26 @@ Rule:
 ## Design Intent
 
 The platform should feel familiar to staff and residents by preserving the recognizable form workflows, but the database and application structure must remain normalized, modular, and maintainable.
+
+---
+
+## Form Record Preservation
+
+All resident submitted Jotforms must be preserved as permanent graphical records.
+
+Workflow:
+
+1. Resident submits Jotform
+2. The platform receives the submission webhook
+3. The submission PDF is downloaded and saved to the resident record
+4. The PDF remains the permanent representation of the form exactly as submitted
+
+Only fields that map to the approved DWC dataset should update structured database tables.
+
+All other form fields must remain accessible through the saved PDF record.
+
+This ensures that:
+
+- the full original form is always preserved
+- the database remains clean and limited to approved program metrics
+- staff can always view and print the exact form submitted by the resident
