@@ -66,6 +66,73 @@ def index():
     )
 
 
+@case_management.get("/intake-assessment")
+@require_login
+@require_shelter
+def intake_assessment():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    return render_template(
+        "case_management/intake_assessment.html",
+        shelters=[
+            {"value": "abba", "label": "Abba House"},
+            {"value": "haven", "label": "Haven House"},
+            {"value": "gratitude", "label": "Gratitude House"},
+        ],
+        prior_living_options=[
+            {"value": "street", "label": "Street"},
+            {"value": "shelter", "label": "Emergency Shelter"},
+            {"value": "jail", "label": "Jail"},
+            {"value": "hospital", "label": "Hospital"},
+            {"value": "family", "label": "Family or Friends"},
+            {"value": "treatment", "label": "Treatment Program"},
+            {"value": "other", "label": "Other"},
+        ],
+        ethnicity_options=[
+            {"value": "hispanic", "label": "Hispanic"},
+            {"value": "not_hispanic", "label": "Not Hispanic"},
+        ],
+        race_options=[
+            {"value": "white", "label": "White"},
+            {"value": "black", "label": "Black"},
+            {"value": "native", "label": "Native American"},
+            {"value": "asian", "label": "Asian"},
+            {"value": "pacific", "label": "Pacific Islander"},
+            {"value": "other", "label": "Other"},
+        ],
+        gender_options=[
+            {"value": "female", "label": "Female"},
+            {"value": "male", "label": "Male"},
+            {"value": "nonbinary", "label": "Nonbinary"},
+            {"value": "other", "label": "Other"},
+        ],
+        yes_no_options=[
+            {"value": "yes", "label": "Yes"},
+            {"value": "no", "label": "No"},
+        ],
+        drug_options=[
+            {"value": "alcohol", "label": "Alcohol"},
+            {"value": "meth", "label": "Meth"},
+            {"value": "opioids", "label": "Opioids"},
+            {"value": "cocaine", "label": "Cocaine"},
+            {"value": "multiple", "label": "Multiple"},
+            {"value": "other", "label": "Other"},
+        ],
+        education_options=[
+            {"value": "no_hs", "label": "No High School"},
+            {"value": "hs", "label": "High School"},
+            {"value": "ged", "label": "GED"},
+            {"value": "college", "label": "Some College"},
+            {"value": "associate", "label": "Associate"},
+            {"value": "bachelor", "label": "Bachelor"},
+        ],
+    )
+
+
 @case_management.get("/<int:resident_id>")
 @require_login
 @require_shelter
