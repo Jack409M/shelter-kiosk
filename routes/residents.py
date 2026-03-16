@@ -71,6 +71,21 @@ def _normalize_all_shelter_values() -> None:
             continue
 
 
+def _parse_birth_year(value: str | None) -> int | None:
+    text = (value or "").strip()
+    if not text:
+        return None
+
+    if not text.isdigit():
+        return None
+
+    year = int(text)
+    if year < 1900 or year > 2100:
+        return None
+
+    return year
+
+
 @residents.get("/staff/residents")
 @require_login
 @require_shelter
@@ -125,7 +140,7 @@ def staff_residents_post():
     shelter = _normalize_shelter_name(session.get("shelter"))
     first = (request.form.get("first_name") or "").strip()
     last = (request.form.get("last_name") or "").strip()
-    dob = (request.form.get("dob") or "").strip()
+    birth_year_raw = request.form.get("birth_year")
     phone = (request.form.get("phone") or "").strip()
     email = (request.form.get("email") or "").strip()
     emergency_contact_name = (request.form.get("emergency_contact_name") or "").strip()
@@ -138,13 +153,18 @@ def staff_residents_post():
         flash("First and last name required.", "error")
         return redirect(url_for("residents.staff_residents"))
 
+    birth_year = _parse_birth_year(birth_year_raw)
+    if birth_year_raw and birth_year is None:
+        flash("Birth year must be a valid 4 digit year.", "error")
+        return redirect(url_for("residents.staff_residents"))
+
     resident_code = generate_resident_code()
     resident_identifier = generate_resident_identifier()
 
     db_execute(
         (
             "INSERT INTO residents ("
-            "resident_identifier, resident_code, first_name, last_name, dob, phone, email, "
+            "resident_identifier, resident_code, first_name, last_name, birth_year, phone, email, "
             "emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, "
             "medical_alerts, medical_notes, shelter, is_active, created_at"
             ") VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
@@ -153,7 +173,7 @@ def staff_residents_post():
         else
         (
             "INSERT INTO residents ("
-            "resident_identifier, resident_code, first_name, last_name, dob, phone, email, "
+            "resident_identifier, resident_code, first_name, last_name, birth_year, phone, email, "
             "emergency_contact_name, emergency_contact_relationship, emergency_contact_phone, "
             "medical_alerts, medical_notes, shelter, is_active, created_at"
             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -163,7 +183,7 @@ def staff_residents_post():
             resident_code,
             first,
             last,
-            dob or None,
+            birth_year,
             phone or None,
             email or None,
             emergency_contact_name or None,
@@ -186,7 +206,7 @@ def staff_residents_post():
         (
             f"code={resident_code} "
             f"name={first} {last} "
-            f"dob={dob or ''} "
+            f"birth_year={birth_year or ''} "
             f"emergency_contact={emergency_contact_name or ''}"
         ).strip(),
     )
