@@ -7,163 +7,171 @@
 
 {% block resident_workspace_content %}
 
-{% if resident is mapping %}
-  {% set timeline_resident_id = resident["id"] %}
+{% if not resident %}
+  <div class="card">
+    <p>Resident not found.</p>
+  </div>
 {% else %}
-  {% set timeline_resident_id = resident[0] %}
-{% endif %}
 
-<div class="activity-calendar">
-  <div class="activity-calendar-header">
-    <div class="activity-calendar-title">
-      <h2>Resident Activity Calendar</h2>
-      <div class="activity-calendar-subtitle">
-        Track appointments, goals, compliance, enrollment, and case notes by date.
-      </div>
-    </div>
-  </div>
-
-  <div class="calendar-nav">
-    <a class="calendar-nav-link"
-       href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view='month', anchor=calendar.prev_anchor) }}">
-      Previous
-    </a>
-
-    <div class="calendar-nav-label">
-      {{ calendar.label }}
-    </div>
-
-    <a class="calendar-nav-link"
-       href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view='month', anchor=calendar.next_anchor) }}">
-      Next
-    </a>
-  </div>
-
-  <div class="calendar-legend">
-    <div class="calendar-legend-item theme-blue">
-      <span class="legend-swatch"></span>
-      Enrollment
-    </div>
-    <div class="calendar-legend-item theme-green">
-      <span class="legend-swatch"></span>
-      Goal
-    </div>
-    <div class="calendar-legend-item theme-green-dark">
-      <span class="legend-swatch"></span>
-      Completed Goal
-    </div>
-    <div class="calendar-legend-item theme-slate">
-      <span class="legend-swatch"></span>
-      Case Note
-    </div>
-    <div class="calendar-legend-item theme-amber">
-      <span class="legend-swatch"></span>
-      Compliance
-    </div>
-    <div class="calendar-legend-item theme-purple">
-      <span class="legend-swatch"></span>
-      Scheduled
-    </div>
-    <div class="calendar-legend-item theme-rose">
-      <span class="legend-swatch"></span>
-      Appointment
-    </div>
-  </div>
-
-  {% if not timeline %}
-    <div class="empty-state">
-      No activity recorded yet.
-    </div>
+  {% if resident is mapping %}
+    {% set timeline_resident_id = resident["id"] %}
   {% else %}
-    <div class="month-grid">
-      {% for weekday_name in calendar.weekday_names %}
-        <div class="month-weekday">{{ weekday_name }}</div>
-      {% endfor %}
+    {% set timeline_resident_id = resident[0] %}
+  {% endif %}
 
-      {% for day in calendar.month_days %}
-        <div class="month-cell{% if not day.is_current_month %} outside-month{% endif %}{% if day.is_today %} today{% endif %}{% if day.events %} has-events{% endif %}"
-             {% if day.events %}
-             data-modal-date="{{ day.date_iso }}"
-             data-modal-label="{{ day.date.strftime('%A') }}, {{ day.date.strftime('%B') }} {{ day.date.day }}, {{ day.date.year }}"
-             tabindex="0"
-             role="button"
-             aria-label="Open events for {{ day.date.strftime('%B') }} {{ day.date.day }}, {{ day.date.year }}"
-             {% endif %}>
-          <div class="month-cell-head">
-            <div class="month-cell-day">
-              {{ day.day_number }}
-            </div>
-            <div class="month-cell-count">
-              {% if day.events %}
-                {{ day.events|length }} item{% if day.events|length != 1 %}s{% endif %}
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="month-cell-body">
-            {% if day.events %}
-              {% for event in day.events[:2] %}
-                <div class="event-card {{ event.badge_class }}">
-                  <div class="event-card-time">{{ event.time_label }}</div>
-                  <div class="event-card-title">{{ event.title }}</div>
-                  <div class="event-card-type">{{ event.type_label }}</div>
-                </div>
-              {% endfor %}
-
-              {% if day.events|length > 2 %}
-                <div class="month-cell-more">
-                  + {{ day.events|length - 2 }} more
-                </div>
-              {% endif %}
-            {% else %}
-              <div class="quiet-cell">No activity</div>
-            {% endif %}
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-
-    <div class="day-modal" id="dayModal" aria-hidden="true">
-      <div class="day-modal-backdrop" data-close-modal="true"></div>
-
-      <div class="day-modal-panel" role="dialog" aria-modal="true" aria-labelledby="dayModalTitle">
-        <div class="day-modal-head">
-          <div>
-            <div class="day-modal-title" id="dayModalTitle">Day Details</div>
-            <div class="day-modal-subtitle" id="dayModalSubtitle">Resident activity</div>
-          </div>
-
-          <button type="button" class="day-modal-close" id="dayModalClose" aria-label="Close">
-            ×
-          </button>
-        </div>
-
-        <div class="day-modal-body" id="dayModalBody">
-          <div class="day-modal-empty">No activity recorded for this date.</div>
+  <div class="activity-calendar">
+    <div class="activity-calendar-header">
+      <div class="activity-calendar-title">
+        <h2>Resident Activity Calendar</h2>
+        <div class="activity-calendar-subtitle">
+          Track appointments, goals, compliance, enrollment, and case notes by date.
         </div>
       </div>
     </div>
 
-    <script id="residentTimelineEvents" type="application/json">
-      {
-        {% for day in calendar.month_days if day.events %}
-          "{{ day.date_iso }}": [
-            {% for event in day.events %}
-              {
-                "time": {{ event.time_label|tojson }},
-                "title": {{ event.title|tojson }},
-                "type_label": {{ event.type_label|tojson }},
-                "detail": {{ event.detail|tojson }},
-                "badge_class": {{ event.badge_class|tojson }}
-              }{% if not loop.last %},{% endif %}
-            {% endfor %}
-          ]{% if not loop.last %},{% endif %}
-        {% endfor %}
-      }
-    </script>
+    <div class="calendar-nav">
+      <a class="calendar-nav-link"
+         href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view='month', anchor=calendar.prev_anchor) }}">
+        Previous
+      </a>
 
-    <script src="{{ url_for('static', filename='js/resident_timeline.js') }}"></script>
-  {% endif %}
-</div>
+      <div class="calendar-nav-label">
+        {{ calendar.label }}
+      </div>
+
+      <a class="calendar-nav-link"
+         href="{{ url_for('resident_detail.resident_timeline', resident_id=timeline_resident_id, view='month', anchor=calendar.next_anchor) }}">
+        Next
+      </a>
+    </div>
+
+    <div class="calendar-legend">
+      <div class="calendar-legend-item theme-blue">
+        <span class="legend-swatch"></span>
+        Enrollment
+      </div>
+      <div class="calendar-legend-item theme-green">
+        <span class="legend-swatch"></span>
+        Goal
+      </div>
+      <div class="calendar-legend-item theme-green-dark">
+        <span class="legend-swatch"></span>
+        Completed Goal
+      </div>
+      <div class="calendar-legend-item theme-slate">
+        <span class="legend-swatch"></span>
+        Case Note
+      </div>
+      <div class="calendar-legend-item theme-amber">
+        <span class="legend-swatch"></span>
+        Compliance
+      </div>
+      <div class="calendar-legend-item theme-purple">
+        <span class="legend-swatch"></span>
+        Scheduled
+      </div>
+      <div class="calendar-legend-item theme-rose">
+        <span class="legend-swatch"></span>
+        Appointment
+      </div>
+    </div>
+
+    {% if not timeline %}
+      <div class="empty-state">
+        No activity recorded yet.
+      </div>
+    {% else %}
+      <div class="month-grid">
+        {% for weekday_name in calendar.weekday_names %}
+          <div class="month-weekday">{{ weekday_name }}</div>
+        {% endfor %}
+
+        {% for day in calendar.month_days %}
+          <div class="month-cell{% if not day.is_current_month %} outside-month{% endif %}{% if day.is_today %} today{% endif %}{% if day.events %} has-events{% endif %}"
+               {% if day.events %}
+               data-modal-date="{{ day.date_iso }}"
+               data-modal-label="{{ day.date.strftime('%A') }}, {{ day.date.strftime('%B') }} {{ day.date.day }}, {{ day.date.year }}"
+               tabindex="0"
+               role="button"
+               aria-label="Open events for {{ day.date.strftime('%B') }} {{ day.date.day }}, {{ day.date.year }}"
+               {% endif %}>
+            <div class="month-cell-head">
+              <div class="month-cell-day">
+                {{ day.day_number }}
+              </div>
+              <div class="month-cell-count">
+                {% if day.events %}
+                  {{ day.events|length }} item{% if day.events|length != 1 %}s{% endif %}
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="month-cell-body">
+              {% if day.events %}
+                {% for event in day.events[:2] %}
+                  <div class="event-card {{ event.badge_class }}">
+                    <div class="event-card-time">{{ event.time_label }}</div>
+                    <div class="event-card-title">{{ event.title }}</div>
+                    <div class="event-card-type">{{ event.type_label }}</div>
+                  </div>
+                {% endfor %}
+
+                {% if day.events|length > 2 %}
+                  <div class="month-cell-more">
+                    + {{ day.events|length - 2 }} more
+                  </div>
+                {% endif %}
+              {% else %}
+                <div class="quiet-cell">No activity</div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="day-modal" id="dayModal" aria-hidden="true">
+        <div class="day-modal-backdrop" data-close-modal="true"></div>
+
+        <div class="day-modal-panel" role="dialog" aria-modal="true" aria-labelledby="dayModalTitle">
+          <div class="day-modal-head">
+            <div>
+              <div class="day-modal-title" id="dayModalTitle">Day Details</div>
+              <div class="day-modal-subtitle" id="dayModalSubtitle">Resident activity</div>
+            </div>
+
+            <button type="button" class="day-modal-close" id="dayModalClose" aria-label="Close">
+              ×
+            </button>
+          </div>
+
+          <div class="day-modal-body" id="dayModalBody">
+            <div class="day-modal-empty">No activity recorded for this date.</div>
+          </div>
+        </div>
+      </div>
+
+      <script id="residentTimelineEvents" type="application/json">
+        {
+          {% for day in calendar.month_days if day.events %}
+            "{{ day.date_iso }}": [
+              {% for event in day.events %}
+                {
+                  "time": {{ event.time_label|tojson }},
+                  "title": {{ event.title|tojson }},
+                  "type_label": {{ event.type_label|tojson }},
+                  "detail": {{ event.detail|tojson }},
+                  "badge_class": {{ event.badge_class|tojson }}
+                }{% if not loop.last %},{% endif %}
+              {% endfor %}
+            ]{% if not loop.last %},{% endif %}
+          {% endfor %}
+        }
+      </script>
+
+      <script src="{{ url_for('static', filename='js/resident_timeline.js') }}"></script>
+    {% endif %}
+  </div>
+
+{% endif %}
 
 {% endblock %}
