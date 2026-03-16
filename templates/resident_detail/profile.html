@@ -20,7 +20,7 @@
     {% set resident_shelter = resident["resident_shelter"] %}
     {% set resident_active = resident["is_active"] %}
     {% set resident_code = resident["resident_code"] if "resident_code" in resident else "" %}
-    {% set dob = resident["dob"] if "dob" in resident else "" %}
+    {% set birth_year = resident["dob"] if "dob" in resident else "" %}
     {% set phone = resident["phone"] if "phone" in resident else "" %}
     {% set email = resident["email"] if "email" in resident else "" %}
     {% set emergency_contact_name = resident["emergency_contact_name"] if "emergency_contact_name" in resident else "" %}
@@ -40,7 +40,7 @@
     {% set resident_shelter = resident[3] %}
     {% set resident_active = resident[4] %}
     {% set resident_code = resident[10] if resident|length > 10 else "" %}
-    {% set dob = resident[11] if resident|length > 11 else "" %}
+    {% set birth_year = resident[11] if resident|length > 11 else "" %}
     {% set phone = resident[12] if resident|length > 12 else "" %}
     {% set email = resident[13] if resident|length > 13 else "" %}
     {% set emergency_contact_name = resident[14] if resident|length > 14 else "" %}
@@ -87,8 +87,8 @@
               <div><strong>Resident Code:</strong> {{ resident_code or "—" }}</div>
               <div>
                 <strong>Birth Year:</strong>
-                {% if dob %}
-                  {{ dob }}
+                {% if birth_year %}
+                  {{ birth_year }}
                 {% else %}
                   —
                 {% endif %}
