@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 from typing import Any
+from uuid import uuid4
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
@@ -72,6 +73,12 @@ def _parse_money(value: str | None) -> float | None:
         return float(value)
     except ValueError:
         return None
+
+
+def _generate_resident_identifier(shelter: str) -> str:
+    shelter_prefix = (shelter or "resident").strip().lower()
+    short_token = uuid4().hex[:12]
+    return f"{shelter_prefix}_{short_token}"
 
 
 def _intake_template_context(
@@ -337,12 +344,14 @@ def _find_possible_duplicate(
 
 def _insert_resident(data: dict[str, Any], shelter: str) -> int:
     placeholder = _placeholder()
+    resident_identifier = _generate_resident_identifier(shelter)
 
     if g.get("db_kind") == "pg":
         row = db_fetchone(
             f"""
             INSERT INTO residents
             (
+                resident_identifier,
                 first_name,
                 last_name,
                 dob,
@@ -358,11 +367,13 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
                 {placeholder},
                 {placeholder},
                 {placeholder},
+                {placeholder},
                 TRUE
             )
             RETURNING id
             """,
             (
+                resident_identifier,
                 data["first_name"],
                 data["last_name"],
                 data["dob"],
@@ -377,6 +388,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
         f"""
         INSERT INTO residents
         (
+            resident_identifier,
             first_name,
             last_name,
             dob,
@@ -392,10 +404,12 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
             {placeholder},
             {placeholder},
             {placeholder},
+            {placeholder},
             1
         )
         """,
         (
+            resident_identifier,
             data["first_name"],
             data["last_name"],
             data["dob"],
