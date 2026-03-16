@@ -15,6 +15,39 @@ def _make_resident_code(length: int = 8) -> str:
     return "".join(secrets.choice("0123456789") for _ in range(length))
 
 
+def _sqlite_column_exists(table_name: str, column_name: str) -> bool:
+    try:
+        rows = db_fetchall(f"PRAGMA table_info({table_name})")
+    except Exception:
+        return False
+
+    for row in rows or []:
+        name = row["name"] if isinstance(row, dict) else row[1]
+        if str(name).strip().lower() == column_name.strip().lower():
+            return True
+    return False
+
+
+def _pg_column_exists(table_name: str, column_name: str) -> bool:
+    row = db_fetchone(
+        """
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = %s
+          AND column_name = %s
+        LIMIT 1
+        """,
+        (table_name, column_name),
+    )
+    return bool(row)
+
+
+def column_exists(kind: str, table_name: str, column_name: str) -> bool:
+    if kind == "pg":
+        return _pg_column_exists(table_name, column_name)
+    return _sqlite_column_exists(table_name, column_name)
+
+
 def ensure_residents_table(kind: str) -> None:
     create_table(
         kind,
@@ -26,7 +59,7 @@ def ensure_residents_table(kind: str) -> None:
             resident_code TEXT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
-            dob TEXT,
+            birth_year INTEGER,
             phone TEXT,
             email TEXT,
             emergency_contact_name TEXT,
@@ -46,7 +79,7 @@ def ensure_residents_table(kind: str) -> None:
             resident_code TEXT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
-            dob TEXT,
+            birth_year INTEGER,
             phone TEXT,
             email TEXT,
             emergency_contact_name TEXT,
@@ -126,7 +159,7 @@ def ensure_resident_substances_table(kind: str) -> None:
 def ensure_basic_profile_columns(kind: str) -> None:
     if kind == "pg":
         statements = [
-            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS dob TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS birth_year INTEGER",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS email TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS emergency_contact_name TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS emergency_contact_relationship TEXT",
@@ -136,7 +169,7 @@ def ensure_basic_profile_columns(kind: str) -> None:
         ]
     else:
         statements = [
-            "ALTER TABLE residents ADD COLUMN dob TEXT",
+            "ALTER TABLE residents ADD COLUMN birth_year INTEGER",
             "ALTER TABLE residents ADD COLUMN email TEXT",
             "ALTER TABLE residents ADD COLUMN emergency_contact_name TEXT",
             "ALTER TABLE residents ADD COLUMN emergency_contact_relationship TEXT",
@@ -155,7 +188,6 @@ def ensure_basic_profile_columns(kind: str) -> None:
 def ensure_reporting_columns(kind: str) -> None:
     if kind == "pg":
         statements = [
-            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS birth_year INTEGER",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS gender TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS race TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS veteran BOOLEAN NOT NULL DEFAULT FALSE",
@@ -175,7 +207,6 @@ def ensure_reporting_columns(kind: str) -> None:
         ]
     else:
         statements = [
-            "ALTER TABLE residents ADD COLUMN birth_year INTEGER",
             "ALTER TABLE residents ADD COLUMN gender TEXT",
             "ALTER TABLE residents ADD COLUMN race TEXT",
             "ALTER TABLE residents ADD COLUMN veteran INTEGER NOT NULL DEFAULT 0",
@@ -266,6 +297,45 @@ def ensure_resident_code_schema(kind: str) -> None:
         pass
 
 
+def backfill_birth_year_from_legacy_dob(kind: str) -> None:
+    if not column_exists(kind, "residents", "dob"):
+        return
+
+    if not column_exists(kind, "residents", "birth_year"):
+        return
+
+    rows = db_fetchall(
+        "SELECT id, dob, birth_year FROM residents "
+        "WHERE dob IS NOT NULL AND dob <> '' "
+        "AND (birth_year IS NULL OR birth_year = '')"
+    )
+
+    for row in rows or []:
+        if isinstance(row, dict):
+            resident_id = row["id"]
+            dob_value = row["dob"]
+        else:
+            resident_id = row[0]
+            dob_value = row[1]
+
+        dob_text = str(dob_value or "").strip()
+        if len(dob_text) < 4:
+            continue
+
+        year_text = dob_text[:4]
+        if not year_text.isdigit():
+            continue
+
+        birth_year = int(year_text)
+
+        db_execute(
+            "UPDATE residents SET birth_year = %s WHERE id = %s"
+            if kind == "pg"
+            else "UPDATE residents SET birth_year = ? WHERE id = ?",
+            (birth_year, resident_id),
+        )
+
+
 def ensure_indexes() -> None:
     try:
         db_execute(
@@ -303,6 +373,14 @@ def ensure_indexes() -> None:
         db_execute(
             "CREATE INDEX IF NOT EXISTS residents_date_exit_dwc_idx "
             "ON residents (date_exit_dwc)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_birth_year_idx "
+            "ON residents (birth_year)"
         )
     except Exception:
         pass
@@ -379,4 +457,5 @@ def ensure_columns_and_constraints(kind: str) -> None:
     ensure_reporting_columns(kind)
     ensure_sms_consent_columns(kind)
     ensure_resident_code_schema(kind)
+    backfill_birth_year_from_legacy_dob(kind)
     backfill_resident_codes(kind)
