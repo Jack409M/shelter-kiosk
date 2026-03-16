@@ -15,15 +15,13 @@ from core.rate_limit import (
     is_rate_limited,
     lock_key,
 )
-from core.runtime import get_all_shelters, get_client_ip, init_db
+from core.runtime import get_all_shelters, get_client_ip
 
 auth = Blueprint("auth", __name__)
 
 
 @auth.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
-    init_db()
-
     all_shelters_raw = get_all_shelters()
     all_shelters = []
     all_shelters_lower = []
