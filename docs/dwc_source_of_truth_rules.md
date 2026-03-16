@@ -6,6 +6,18 @@ This document defines the official source of truth for repeated concepts in the 
 The purpose of this file is to prevent duplicate data fields, conflicting values, and inconsistent reporting.
 
 ---
+## Resident Form Storage
+
+Source of truth:
+- resident submitted JotForms remain the editable external form system
+- the submitted PDF is the permanent record attached to the resident
+- only fields mapped to the DWC dataset update structured database records
+
+Rule:
+Do not force every JotForm field into the database.
+Only fields that map to the approved DWC dataset should be stored in structured tables.
+All other submitted form content must remain available through the saved PDF record.
+
 
 ## Employment
 
