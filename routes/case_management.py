@@ -233,7 +233,6 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     phone_digits = _digits_only(data["phone"])
     if data["phone"] and len(phone_digits) < 10:
         errors.append("Phone must contain at least 10 digits.")
-    data["phone"] = data["phone"]
 
     emergency_phone_digits = _digits_only(data["emergency_contact_phone"])
     if data["emergency_contact_phone"] and len(emergency_phone_digits) < 10:
@@ -413,8 +412,6 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> int:
     )
 
     row = db_fetchone("SELECT last_insert_rowid() AS id")
-    if isinstance(row, dict):
-        return int(row["id"])
     return int(row["id"])
 
 
