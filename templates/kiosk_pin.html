@@ -4,13 +4,45 @@
     <meta charset="utf-8" />
     <title>Kiosk PIN</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
     <style>
-      body { font-family: Arial, sans-serif; max-width: 520px; margin: 40px auto; padding: 0 14px; }
-      .card { border: 1px solid #ddd; border-radius: 12px; padding: 18px; }
-      input { width: 100%; font-size: 20px; padding: 12px; margin: 10px 0; box-sizing: border-box; }
-      button { width: 100%; font-size: 18px; padding: 12px; }
-      .hint { color: #666; font-size: 13px; margin-top: 10px; }
-      ul { margin: 10px 0; padding-left: 18px; }
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 520px;
+        margin: 40px auto;
+        padding: 0 14px;
+      }
+
+      .card {
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        padding: 18px;
+      }
+
+      input {
+        width: 100%;
+        font-size: 20px;
+        padding: 12px;
+        margin: 10px 0;
+        box-sizing: border-box;
+      }
+
+      button {
+        width: 100%;
+        font-size: 18px;
+        padding: 12px;
+      }
+
+      .hint {
+        color: #666;
+        font-size: 13px;
+        margin-top: 10px;
+      }
+
+      ul {
+        margin: 10px 0;
+        padding-left: 18px;
+      }
     </style>
   </head>
   <body>
@@ -28,9 +60,16 @@
         {% endif %}
       {% endwith %}
 
-      <form method="post" action="{{ url_for('kiosk.kiosk_checkout', shelter=shelter) }}">
+      <form method="post" action="{{ post_url }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="password" name="kiosk_pin" inputmode="numeric" autocomplete="off" placeholder="PIN" required />
+        <input
+          type="password"
+          name="kiosk_pin"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="PIN"
+          required
+        />
         <button type="submit">Unlock kiosk</button>
       </form>
 
