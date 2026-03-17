@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>Pass Request</h1>
+
+<div class="card">
+  <p><strong>Resident:</strong> {{ p.last_name }}, {{ p.first_name }}</p>
+  <p><strong>Shelter:</strong> {{ p.shelter }}</p>
+  <p><strong>Status:</strong> {{ p.status }}</p>
+  <p><strong>Type:</strong> {{ p.pass_type }}</p>
+
+  <p><strong>When:</strong>
+    {% if p.pass_type == "ordinary" %}
+      {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
+    {% else %}
+      {{ p.start_date }} to {{ p.end_date }}
+    {% endif %}
+  </p>
+
+  <p><strong>Destination:</strong> {{ p.destination or "—" }}</p>
+
+  <p><strong>Reason:</strong><br>
+    {{ p.reason or "—" }}
+  </p>
+
+  <p><strong>Resident Notes:</strong><br>
+    {{ p.resident_notes or "—" }}
+  </p>
+
+  <p><strong>Staff Notes:</strong><br>
+    {{ p.staff_notes or "—" }}
+  </p>
+
+  <p><strong>Submitted:</strong> {{ fmt_dt(p.created_at_local) }}</p>
+</div>
+
+<br>
+
+{% if p.status == "pending" %}
+  <div style="display:flex; gap:10px;">
+    <form method="post" action="{{ url_for('attendance.staff_pass_approve', pass_id=p.id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Approve</button>
+    </form>
+
+    <form method="post" action="{{ url_for('attendance.staff_pass_deny', pass_id=p.id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Deny</button>
+    </form>
+  </div>
+{% endif %}
+
+<br>
+<a href="{{ url_for('attendance.staff_passes_pending') }}">Back to pending passes</a>
+
+{% endblock %}
