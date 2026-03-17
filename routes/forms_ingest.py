@@ -7,7 +7,7 @@ from typing import Any
 
 from flask import Blueprint, abort, current_app, g, request
 
-from core.db import db_execute
+from core.db import db_execute, db_fetchall
 from core.form_mapping_engine import FormMappingEngine
 from core.helpers import utcnow_iso
 
@@ -274,6 +274,32 @@ def jotform_webhook():
     )
 
     kind = g.get("db_kind")
+
+    if source_submission_id not in (None, ""):
+        existing_rows = db_fetchall(
+            """
+            SELECT id
+            FROM resident_form_submissions
+            WHERE source_submission_id = %s
+            LIMIT 1
+            """
+            if kind == "pg"
+            else """
+            SELECT id
+            FROM resident_form_submissions
+            WHERE source_submission_id = ?
+            LIMIT 1
+            """,
+            (str(source_submission_id).strip(),),
+        )
+
+        if existing_rows:
+            return {
+                "ok": True,
+                "duplicate": True,
+                "form_type": form_type,
+                "mapped_update_count": 0,
+            }, 200
 
     insert_sql = (
         """
