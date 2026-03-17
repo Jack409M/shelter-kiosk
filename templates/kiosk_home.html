@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1 style="text-align:center; font-size:32px;">Welcome</h1>
+
+<div style="display:flex; flex-direction:column; gap:20px; margin-top:40px;">
+
+  <a href="{{ url_for('kiosk.checkin', shelter=shelter) }}"
+     style="padding:30px; font-size:24px; background:#2e7d32; color:white; text-align:center; border-radius:10px;">
+     Check In
+  </a>
+
+  <a href="{{ url_for('kiosk.checkout', shelter=shelter) }}"
+     style="padding:30px; font-size:24px; background:#c62828; color:white; text-align:center; border-radius:10px;">
+     Check Out
+  </a>
+
+</div>
+
+<p style="text-align:center; margin-top:40px; color:#666;">
+  If you need help, please see staff.
+</p>
+
+{% endblock %}
