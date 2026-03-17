@@ -2,53 +2,143 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Kiosk Checkout Log - {{ shelter | shelter }}</title>
+  <title>Kiosk Check Out - {{ shelter | shelter }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   <style>
-    .kiosk-wrap { padding: 16px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid #ddd; padding: 10px; font-size: 16px; }
-    th { text-align: left; background: #f7f7f7; }
+    .kiosk-wrap {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    .kiosk-card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .kiosk-form {
+      display: grid;
+      gap: 14px;
+    }
+
+    .kiosk-form label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .kiosk-form input,
+    .kiosk-form button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      font-size: 16px;
+    }
+
+    .kiosk-form button {
+      cursor: pointer;
+    }
+
+    .flash-list {
+      margin: 0 0 16px 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .flash-list li {
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    .flash-error {
+      background: #fff1f1;
+      border: 1px solid #e0b4b4;
+    }
+
+    .flash-ok {
+      background: #f1fff3;
+      border: 1px solid #b7d9bd;
+    }
+
+    .kiosk-note {
+      font-size: 14px;
+      color: #555;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
   <div class="kiosk-wrap">
-    <h2>Checkout Log (Kiosk) — {{ shelter | shelter }}</h2>
-    <p>This page is kiosk-only. Residents list is shown below.</p>
+    <div class="kiosk-card">
+      <h2>Check Out — {{ shelter | shelter }}</h2>
+      <p>Enter your resident code and trip details.</p>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Action</th>
-        </tr>
-      </thead>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="flash-list">
+            {% for category, message in messages %}
+              <li class="flash-{{ category }}">{{ message }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
 
-      <tbody>
-        <tr>
-          <td>
-            <form method="post" action="{{ url_for('kiosk.kiosk_checkout', shelter=shelter) }}" class="kiosk-form">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <form method="post" action="{{ url_for('kiosk.kiosk_checkout', shelter=shelter) }}" class="kiosk-form" autocomplete="off">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-              <label>Resident Code</label>
-              <input name="resident_code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" placeholder="8 digit code" required>
+        <div>
+          <label for="resident_code">Resident Code</label>
+          <input
+            id="resident_code"
+            name="resident_code"
+            inputmode="numeric"
+            pattern="[0-9]{8}"
+            maxlength="8"
+            placeholder="8 digit code"
+            required
+            autofocus
+          >
+        </div>
 
-              <label>Destination</label>
-              <input name="destination" placeholder="Where are you going" required>
+        <div>
+          <label for="destination">Destination</label>
+          <input
+            id="destination"
+            name="destination"
+            placeholder="Where are you going"
+            required
+          >
+        </div>
 
-              <label>Expected back</label>
-              <input type="datetime-local" name="expected_back_time" required>
+        <div>
+          <label for="expected_back_time">Expected Back Time</label>
+          <input
+            id="expected_back_time"
+            type="datetime-local"
+            name="expected_back_time"
+            required
+          >
+        </div>
 
-              <label>Note (optional)</label>
-              <input name="note" placeholder="Optional">
+        <div>
+          <label for="note">Note</label>
+          <input
+            id="note"
+            name="note"
+            placeholder="Optional"
+          >
+        </div>
 
-              <button type="submit">Check out</button>
-            </form>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        <button type="submit">Check Out</button>
+      </form>
+
+      <p class="kiosk-note">This kiosk does not display resident records.</p>
+    </div>
   </div>
 </body>
 </html>
