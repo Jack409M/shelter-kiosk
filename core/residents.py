@@ -14,6 +14,15 @@ def _normalize_shelter_name(value: str | None) -> str:
     return (value or "").strip().lower()
 
 
+def _row_value(row: Any, key: str, index: int, default: str = ""):
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        return row[index]
+    except Exception:
+        return default
+
+
 def make_resident_code(length: int = 8) -> str:
     return "".join(secrets.choice("0123456789") for _ in range(length))
 
@@ -80,20 +89,14 @@ def has_active_pass(resident_id: int, shelter: str) -> bool:
 def resident_session_start(resident_row: Any, shelter: str, resident_code: str) -> None:
     session.permanent = True
 
-    session["resident_id"] = resident_row["id"] if isinstance(resident_row, dict) else resident_row[0]
-    session["resident_identifier"] = (
-        resident_row["resident_identifier"] if isinstance(resident_row, dict) else resident_row[2]
+    session["resident_id"] = _row_value(resident_row, "id", 0, None)
+    session["resident_identifier"] = _row_value(resident_row, "resident_identifier", 2, "")
+    session["resident_first"] = _row_value(resident_row, "first_name", 4, "")
+    session["resident_last"] = _row_value(resident_row, "last_name", 5, "")
+    session["resident_phone"] = _row_value(resident_row, "phone", 6, "") or ""
+    session["resident_shelter"] = _normalize_shelter_name(
+        _row_value(resident_row, "shelter", 1, shelter)
     )
-    session["resident_first"] = (
-        resident_row["first_name"] if isinstance(resident_row, dict) else resident_row[4]
-    )
-    session["resident_last"] = (
-        resident_row["last_name"] if isinstance(resident_row, dict) else resident_row[5]
-    )
-    session["resident_phone"] = (
-        (resident_row["phone"] if isinstance(resident_row, dict) else resident_row[6]) or ""
-    )
-    session["resident_shelter"] = _normalize_shelter_name(shelter)
     session["resident_code"] = resident_code
 
 
