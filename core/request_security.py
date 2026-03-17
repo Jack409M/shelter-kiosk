@@ -164,6 +164,7 @@ def register_request_security(
             ".git",
             "wp-admin",
             "wp-login",
+            "/wp-json/",
             "phpmyadmin",
             "xmlrpc.php",
             "cgi-bin",
