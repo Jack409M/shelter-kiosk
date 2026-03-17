@@ -5,7 +5,7 @@ from datetime import datetime
 from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 
 from core.audit import log_action
-from core.auth import require_login, require_shelter
+from core.auth import can_manage_requests, require_login, require_shelter
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt, utcnow_iso
 
@@ -17,10 +17,18 @@ def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
 
+def _can_manage_transport() -> bool:
+    return can_manage_requests()
+
+
 @transport.route("/staff/transport/pending")
 @require_login
 @require_shelter
 def staff_transport_pending():
+    if not _can_manage_transport():
+        flash("You do not have permission to access that page.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
     shelter = session["shelter"]
 
     rows = db_fetchall(
@@ -41,6 +49,10 @@ def staff_transport_pending():
 @require_login
 @require_shelter
 def staff_transport_board():
+    if not _can_manage_transport():
+        flash("You do not have permission to access that page.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
     shelter = session["shelter"]
 
     rows = db_fetchall(
@@ -87,6 +99,10 @@ def staff_transport_board():
 @require_login
 @require_shelter
 def staff_transport_print():
+    if not _can_manage_transport():
+        flash("You do not have permission to access that page.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
     import html as _html
 
     shelter = session["shelter"]
@@ -206,6 +222,10 @@ def staff_transport_print():
 @require_login
 @require_shelter
 def staff_transport_schedule(req_id: int):
+    if not _can_manage_transport():
+        flash("You do not have permission to access that page.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
 
