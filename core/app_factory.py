@@ -172,6 +172,14 @@ def create_app() -> Flask:
     log_level = getattr(logging, log_level_name, logging.INFO)
     app.logger.setLevel(log_level)
 
+    app.logger.info("Shelter Kiosk starting")
+    app.logger.info(
+        "database_mode=%s cloudflare_only=%s log_level=%s",
+        "postgres" if app.config["DATABASE_URL"] else "sqlite",
+        app.config.get("CLOUDFLARE_ONLY"),
+        log_level_name,
+    )
+
     _register_template_helpers(app)
 
     app.teardown_appcontext(close_db)
@@ -190,5 +198,11 @@ def create_app() -> Flask:
 
     register_blueprints(app)
     register_app_hooks(app)
+
+    app.logger.info(
+        "blueprints_loaded=%s count=%s",
+        sorted(app.blueprints.keys()),
+        len(app.blueprints),
+    )
 
     return app
