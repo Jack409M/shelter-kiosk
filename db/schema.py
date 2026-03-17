@@ -147,6 +147,29 @@ def _ensure_security_runtime_tables(kind: str) -> None:
         )
 
 
+def _ensure_rate_limit_events_table(kind: str) -> None:
+    if kind == "pg":
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS rate_limit_events (
+                id SERIAL PRIMARY KEY,
+                k TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+    else:
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS rate_limit_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                k TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+
 def _ensure_security_runtime_indexes() -> None:
     try:
         db_execute(
@@ -221,6 +244,7 @@ def init_db() -> None:
 
     # Durable security runtime state
     _ensure_security_runtime_tables(kind)
+    _ensure_rate_limit_events_table(kind)
 
     # Program participation
     schema_program.ensure_tables(kind)
