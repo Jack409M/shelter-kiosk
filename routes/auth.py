@@ -20,6 +20,14 @@ from core.runtime import get_all_shelters, get_client_ip
 auth = Blueprint("auth", __name__)
 
 
+def _safe_log_value(value: str | None, max_length: int = 80) -> str:
+    text = (value or "").strip()
+    if not text:
+        return "blank"
+    text = "".join(ch if 32 <= ord(ch) <= 126 else "?" for ch in text)
+    return text[:max_length]
+
+
 @auth.route("/staff/login", methods=["GET", "POST"])
 def staff_login():
     all_shelters_raw = get_all_shelters()
@@ -43,10 +51,11 @@ def staff_login():
 
     ip = get_client_ip()
     normalized_username = username.lower() or "blank"
+    safe_username = _safe_log_value(normalized_username)
     username_lock_key = f"staff_login_username_lock:{normalized_username}"
 
     if is_ip_banned(ip):
-        log_action("auth", None, None, None, "login_blocked_banned_ip", f"ip={ip} username={normalized_username}")
+        log_action("auth", None, None, None, "login_blocked_banned_ip", f"ip={ip} username={safe_username}")
         flash("Too many login attempts. Please wait and try again later.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 403
 
@@ -58,26 +67,26 @@ def staff_login():
             None,
             None,
             "login_blocked_locked_username",
-            f"ip={ip} username={normalized_username} seconds_remaining={seconds_remaining}",
+            f"ip={ip} username={safe_username} seconds_remaining={seconds_remaining}",
         )
         flash("That username is temporarily locked. Please wait and try again.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 429
 
     if is_rate_limited(f"staff_login_ip:{ip}", limit=10, window_seconds=900):
-        log_action("auth", None, None, None, "login_rate_limited_ip", f"ip={ip} username={normalized_username}")
+        log_action("auth", None, None, None, "login_rate_limited_ip", f"ip={ip} username={safe_username}")
         flash("Too many login attempts. Please wait and try again.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 429
 
     if is_rate_limited(f"staff_login_user:{normalized_username}", limit=8, window_seconds=900):
-        log_action("auth", None, None, None, "login_rate_limited_user", f"ip={ip} username={normalized_username}")
+        log_action("auth", None, None, None, "login_rate_limited_user", f"ip={ip} username={safe_username}")
         flash("Too many login attempts for that account. Please wait and try again.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 429
 
     row = db_fetchone(
-        "SELECT * FROM staff_users WHERE username = %s"
+        "SELECT * FROM staff_users WHERE LOWER(username) = %s"
         if g.get("db_kind") == "pg"
-        else "SELECT * FROM staff_users WHERE username = ?",
-        (username,),
+        else "SELECT * FROM staff_users WHERE LOWER(username) = ?",
+        (normalized_username,),
     )
 
     if not row:
@@ -95,7 +104,7 @@ def staff_login():
                 None,
                 None,
                 "login_username_locked",
-                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds={lock_seconds}",
+                f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds={lock_seconds}",
             )
 
         triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
@@ -107,10 +116,10 @@ def staff_login():
                 None,
                 None,
                 "login_ip_banned",
-                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=3600",
+                f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds=3600",
             )
 
-        log_action("auth", None, None, None, "login_failed", f"reason=bad_username ip={ip} username={normalized_username}")
+        log_action("auth", None, None, None, "login_failed", f"reason=bad_username ip={ip} username={safe_username}")
         flash("Invalid login.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 401
 
@@ -135,7 +144,7 @@ def staff_login():
                 None,
                 staff_user_id,
                 "login_username_locked",
-                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds={lock_seconds}",
+                f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds={lock_seconds}",
             )
 
         triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
@@ -147,7 +156,7 @@ def staff_login():
                 None,
                 staff_user_id,
                 "login_ip_banned",
-                f"reason=too_many_failed_logins ip={ip} username={normalized_username} seconds=3600",
+                f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds=3600",
             )
 
         log_action(
@@ -156,7 +165,7 @@ def staff_login():
             None,
             staff_user_id,
             "login_failed",
-            f"reason=bad_password_or_inactive ip={ip} username={normalized_username}",
+            f"reason=bad_password_or_inactive ip={ip} username={safe_username}",
         )
         flash("Invalid login.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 401
@@ -189,7 +198,7 @@ def staff_login():
             None,
             staff_user_id,
             "login_failed",
-            f"reason=no_assigned_shelters ip={ip} username={normalized_username}",
+            f"reason=no_assigned_shelters ip={ip} username={safe_username}",
         )
         flash("Your account does not have any shelter access assigned. Please contact an administrator.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 403
@@ -202,7 +211,7 @@ def staff_login():
             None,
             staff_user_id,
             "login_failed",
-            f"reason=invalid_shelter_for_user ip={ip} username={normalized_username} shelter={shelter}",
+            f"reason=invalid_shelter_for_user ip={ip} username={safe_username} shelter={shelter}",
         )
         flash("You do not have access to that shelter.", "error")
         return render_template("staff_login.html", all_shelters=all_shelters), 403
@@ -221,7 +230,7 @@ def staff_login():
         shelter,
         session["staff_user_id"],
         "login",
-        f"Staff login: {session['username']} ip={ip}",
+        f"Staff login: {_safe_log_value(session['username'])} ip={ip}",
     )
 
     if session.get("role") == "admin":
@@ -234,7 +243,7 @@ def staff_login():
 @require_login
 def staff_logout():
     staff_id = session.get("staff_user_id")
-    log_action("auth", None, None, staff_id, "logout", f"Staff logout: {session.get('username')}")
+    log_action("auth", None, None, staff_id, "logout", f"Staff logout: {_safe_log_value(session.get('username'))}")
     session.clear()
     return redirect(url_for("auth.staff_login"))
 
