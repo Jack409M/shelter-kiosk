@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>Pending Pass Requests</h1>
+
+{% if rows %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>When</th>
+      <th>Destination</th>
+      <th>Reason</th>
+      <th>Submitted</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.last_name }}, {{ r.first_name }}</td>
+      <td>{{ r.pass_type }}</td>
+      <td>
+        {% if r.pass_type == "ordinary" %}
+          {{ r.start_at }} → {{ r.end_at }}
+        {% else %}
+          {{ r.start_date }} → {{ r.end_date }}
+        {% endif %}
+      </td>
+      <td>{{ r.destination }}</td>
+      <td>{{ r.reason or "" }}</td>
+      <td>{{ r.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No pending pass requests.</p>
+{% endif %}
+
+{% endblock %}
