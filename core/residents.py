@@ -89,13 +89,60 @@ def has_active_pass(resident_id: int, shelter: str) -> bool:
 def resident_session_start(resident_row: Any, shelter: str, resident_code: str) -> None:
     session.permanent = True
 
-    session["resident_id"] = _row_value(resident_row, "id", 0, None)
-    session["resident_identifier"] = _row_value(resident_row, "resident_identifier", 2, "")
-    session["resident_first"] = _row_value(resident_row, "first_name", 4, "")
-    session["resident_last"] = _row_value(resident_row, "last_name", 5, "")
-    session["resident_phone"] = _row_value(resident_row, "phone", 6, "") or ""
+    resident_id = _row_value(resident_row, "id", 0, None)
+    normalized_shelter = _normalize_shelter_name(shelter)
+
+    fresh_row = None
+
+    if resident_id:
+        fresh_row = db_fetchone(
+            """
+            SELECT id, resident_identifier, first_name, last_name, phone, shelter
+            FROM residents
+            WHERE id = %s
+            LIMIT 1
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            SELECT id, resident_identifier, first_name, last_name, phone, shelter
+            FROM residents
+            WHERE id = ?
+            LIMIT 1
+            """,
+            (resident_id,),
+        )
+
+    if not fresh_row:
+        fresh_row = db_fetchone(
+            """
+            SELECT id, resident_identifier, first_name, last_name, phone, shelter
+            FROM residents
+            WHERE resident_code = %s
+              AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
+            LIMIT 1
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            SELECT id, resident_identifier, first_name, last_name, phone, shelter
+            FROM residents
+            WHERE resident_code = ?
+              AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
+            LIMIT 1
+            """,
+            (resident_code, normalized_shelter),
+        )
+
+    source_row = fresh_row or resident_row
+
+    session["resident_id"] = _row_value(source_row, "id", 0, None)
+    session["resident_identifier"] = _row_value(source_row, "resident_identifier", 1, "")
+    session["resident_first"] = _row_value(source_row, "first_name", 2, "")
+    session["resident_last"] = _row_value(source_row, "last_name", 3, "")
+    session["resident_phone"] = _row_value(source_row, "phone", 4, "") or ""
     session["resident_shelter"] = _normalize_shelter_name(
-        _row_value(resident_row, "shelter", 1, shelter)
+        _row_value(source_row, "shelter", 5, shelter)
     )
     session["resident_code"] = resident_code
 
