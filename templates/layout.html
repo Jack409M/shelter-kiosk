@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#2c3e50">
 
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260313b') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260317a') }}">
     {% block extra_head %}{% endblock %}
   </head>
 
@@ -56,6 +56,7 @@
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
       {% set reports_url = safe_url_for('reports.demographics_dashboard') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
+      {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
 
       <nav>
         <div class="nav-mobile">
@@ -91,15 +92,14 @@
               </div>
             </div>
 
-            <div class="nav-dd">
-              <button type="button">Passes ▾</button>
-              <div class="menu">
-                <a href="{{ url_for('staff_portal.staff_leave_pending') }}">Pending Passes</a>
-                <a href="{{ url_for('staff_portal.staff_leave_upcoming') }}">Upcoming Passes</a>
-                <a href="{{ url_for('staff_portal.staff_leave_away_now') }}">Residents Away</a>
-                <a href="{{ url_for('staff_portal.staff_leave_overdue') }}">Overdue Passes</a>
+            {% if can_manage_passes %}
+              <div class="nav-dd">
+                <button type="button">Passes ▾</button>
+                <div class="menu">
+                  <a href="{{ url_for('attendance.staff_passes_pending') }}">Pending Passes</a>
+                </div>
               </div>
-            </div>
+            {% endif %}
 
             <div class="nav-dd">
               <button type="button">Transport ▾</button>
