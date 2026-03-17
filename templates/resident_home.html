@@ -7,8 +7,8 @@
   <h1>What would you like to do?</h1>
 
   <div class="portal-actions">
-    <a class="portal-btn" href="{{ url_for('resident_requests.resident_leave') }}">
-      Request Leave
+    <a class="portal-btn" href="{{ url_for('resident_requests.resident_pass_request') }}">
+      Request Pass
     </a>
 
     <a class="portal-btn" href="{{ url_for('resident_requests.resident_transport') }}">
@@ -22,31 +22,40 @@
 
   <div class="portal-status">
 
-    <h3>Upcoming Leave Requests</h3>
-    {% if leave_items %}
+    <h3>Recent Pass Requests</h3>
+    {% if pass_items %}
       <ul>
-        {% for item in leave_items %}
+        {% for item in pass_items %}
           <li>
             <strong>{{ item.status }}</strong>
             —
-            {{ item.leave_at }} to {{ item.return_at }}
+            {% if item.pass_type == "ordinary" %}
+              {{ item.start_at_local.strftime("%m/%d %I:%M %p") if item.start_at_local else "" }}
+              to
+              {{ item.end_at_local.strftime("%m/%d %I:%M %p") if item.end_at_local else "" }}
+            {% else %}
+              {{ item.start_date }} to {{ item.end_date }}
+            {% endif %}
+            {% if item.destination %}
+              — {{ item.destination }}
+            {% endif %}
           </li>
         {% endfor %}
       </ul>
     {% else %}
-      <p>No upcoming leave requests.</p>
+      <p>No pass requests yet.</p>
     {% endif %}
 
-    <h3>Upcoming Transportation Requests</h3>
+    <h3>Recent Transportation Requests</h3>
     {% if transport_items %}
       <ul>
         {% for item in transport_items %}
           <li>
             <strong>{{ item.status }}</strong>
             —
-            {{ item.needed_at }}
-            {% if item.driver_name %}
-              (Driver: {{ item.driver_name }})
+            {{ item.needed_at_local.strftime("%m/%d %I:%M %p") if item.needed_at_local else "" }}
+            {% if item.destination %}
+              — {{ item.destination }}
             {% endif %}
           </li>
         {% endfor %}
