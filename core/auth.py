@@ -42,6 +42,24 @@ def _enforce_admin_only_mode():
     return None
 
 
+def can_manage_requests() -> bool:
+    return _current_role() in {
+        "admin",
+        "shelter_director",
+        "case_manager",
+    }
+
+
+def can_view_pass_status() -> bool:
+    return _current_role() in {
+        "admin",
+        "shelter_director",
+        "case_manager",
+        "ra",
+        "staff",
+    }
+
+
 def require_login(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
