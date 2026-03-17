@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 from typing import Any
 
 from flask import Blueprint, abort, current_app, g, request
@@ -34,11 +35,13 @@ def _require_secret() -> None:
 
     provided = (
         (request.headers.get("X-Webhook-Secret") or "").strip()
-        or (request.args.get("secret") or "").strip()
         or (request.form.get("secret") or "").strip()
     )
 
-    if provided != expected:
+    if not provided:
+        abort(403)
+
+    if not secrets.compare_digest(provided, expected):
         abort(403)
 
 
@@ -116,7 +119,7 @@ def _flatten_for_mapping(payload: dict[str, Any]) -> dict[str, Any]:
     Build a flat lookup dictionary for summary extraction and CSV mapping.
 
     This keeps the original payload untouched for permanent storage while
-    exposing useful keys such as answer 'name' and answer 'text'.
+    exposing useful keys such as answer name and answer text.
     """
     flat: dict[str, Any] = {}
 
