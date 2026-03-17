@@ -11,9 +11,7 @@ from core.helpers import is_postgres
 # including active shelter metadata, lookup by id, and caching.
 
 
-def get_all_shelters(init_db_func) -> list[str]:
-    init_db_func()
-
+def get_all_shelters() -> list[str]:
     rows = db_fetchall(
         """
         SELECT name
