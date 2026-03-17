@@ -16,7 +16,7 @@ from flask import (
 )
 
 from core.audit import log_action
-from core.auth import require_login, require_shelter
+from core.auth import can_manage_requests, require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
 from core.sms_sender import send_sms
@@ -30,7 +30,7 @@ def _is_pg() -> bool:
 
 
 def _can_manage_leave() -> bool:
-    return session.get("role") in {"admin", "shelter_director", "staff", "case_manager", "ra"}
+    return can_manage_requests()
 
 
 # -----------------------------------------------------
