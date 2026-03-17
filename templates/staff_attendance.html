@@ -101,22 +101,6 @@
     border-color: #5d7ea6;
   }
 
-  .att_badge_sal {
-    background: #f6f0ff;
-    border-color: #7c5da6;
-  }
-
-  .att_badge_overdue {
-    font-weight: 700;
-    background: #fdeeee;
-    border-color: #b00000;
-    color: #b00000;
-  }
-
-  .att_row_overdue td {
-    font-weight: 700;
-  }
-
   .att_checkout_grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -165,12 +149,6 @@
     color: #b00000;
   }
 
-  .att_overdue {
-    color: #b00000;
-    font-weight: 900;
-    animation: blinkRed 1s linear infinite;
-  }
-
   .att_name_block {
     display: flex;
     align-items: center;
@@ -190,12 +168,6 @@
     font-size: 11px;
     color: #666;
     line-height: 1.35;
-  }
-
-  @keyframes blinkRed {
-    0%   { opacity: 1; }
-    50%  { opacity: 0.2; }
-    100% { opacity: 1; }
   }
 </style>
 
@@ -231,29 +203,21 @@
           </tr>
         {% else %}
           {% for row in out_rows %}
-            {% set checkout_kind = row.checkout_type %}
-            <tr class="{% if row.is_overdue %}att_row_overdue{% endif %}">
+            <tr>
               <td>
                 <div class="att_name_block">
-                  {% if row.is_overdue %}
-                    <span class="att_icon att_overdue">✖</span>
-                  {% else %}
-                    <span class="att_icon att_out">←</span>
-                  {% endif %}
+                  <span class="att_icon att_out">←</span>
                   <span>{{ row.name }}</span>
+                  {% if row.has_active_pass %}
+                    <span class="att_badge att_badge_pass">Pass</span>
+                  {% endif %}
                 </div>
               </td>
 
               <td>
                 <div class="att_status_stack">
-                  {% if row.is_overdue %}
-                    <span class="att_badge att_badge_overdue">Overdue</span>
-                  {% endif %}
-
-                  {% if checkout_kind == 'pass' %}
-                    <span class="att_badge att_badge_pass">Pass</span>
-                  {% elif checkout_kind == 'sal' %}
-                    <span class="att_badge att_badge_sal">SAL</span>
+                  {% if row.has_active_pass %}
+                    <span class="att_badge att_badge_pass">Out on Pass</span>
                   {% else %}
                     <span class="att_badge att_badge_out">Out</span>
                   {% endif %}
@@ -301,8 +265,13 @@
           {% for row in in_rows %}
             <tr>
               <td>
-                <span class="att_icon att_in">✔</span>
-                {{ row.name }}
+                <div class="att_name_block">
+                  <span class="att_icon att_in">✔</span>
+                  <span>{{ row.name }}</span>
+                  {% if row.has_active_pass %}
+                    <span class="att_badge att_badge_pass">Pass Approved</span>
+                  {% endif %}
+                </div>
               </td>
               <td>
                 <div class="att_actions">
