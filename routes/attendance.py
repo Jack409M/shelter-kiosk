@@ -432,3 +432,68 @@ def staff_attendance_print_today():
         printed_on=fmt_dt(utcnow_iso()),
         fmt_dt=fmt_time_only,
     )
+
+
+@attendance.route("/staff/passes/pending")
+@require_login
+@require_shelter
+def staff_passes_pending():
+    shelter = session.get("shelter")
+    role = session.get("role")
+
+    if role not in {"admin", "shelter_director", "case_manager"}:
+        abort(403)
+
+    sql = (
+        """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            r.first_name,
+            r.last_name,
+            rp.shelter,
+            rp.pass_type,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            rp.reason,
+            rp.created_at
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.status = 'pending'
+        AND rp.shelter = %s
+        ORDER BY rp.created_at ASC
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            r.first_name,
+            r.last_name,
+            rp.shelter,
+            rp.pass_type,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            rp.reason,
+            rp.created_at
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.status = 'pending'
+        AND rp.shelter = ?
+        ORDER BY rp.created_at ASC
+        """
+    )
+
+    rows = db_fetchall(sql, (shelter,))
+
+    return render_template(
+        "staff_passes_pending.html",
+        rows=rows,
+        shelter=shelter,
+    )
