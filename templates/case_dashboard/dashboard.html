@@ -1,8 +1,8 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard.css', v='20260313e') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard_page.css', v='20260314a') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard.css', v='20260317a') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/case_dashboard_page.css', v='20260317a') }}">
 {% endblock %}
 
 {% block content %}
@@ -96,7 +96,7 @@
           <div class="case-list-link">Pending Pass Requests</div>
           <div class="case-list-meta">{{ pending_pass_count }} awaiting review</div>
         </div>
-        <a class="case-action-link" href="{{ url_for('staff_portal.staff_leave_pending') }}">Review Passes</a>
+        <a class="case-action-link" href="{{ url_for('attendance.staff_passes_pending') }}">Review Passes</a>
       </div>
 
       <div class="case-list-item">
@@ -106,6 +106,64 @@
         </div>
         <a class="case-action-link" href="{{ url_for('transport.staff_transport_pending') }}">Review Transport</a>
       </div>
+    </div>
+
+    <div style="margin-top: 18px;">
+      <h3 style="margin-bottom: 12px;">Pending Pass Requests</h3>
+
+      {% if pending_pass_rows %}
+        <ul class="case-list">
+          {% for item in pending_pass_rows %}
+            <li class="case-list-item{% if item.is_urgent %} case-list-item-urgent{% endif %}">
+              <div class="case-list-main">
+                <div class="case-list-link">
+                  {{ item.first_name }} {{ item.last_name }}
+                  {% if item.is_urgent %}
+                    <span class="case-pill urgent" style="margin-left:8px;">Starting Soon</span>
+                  {% endif %}
+                </div>
+
+                <div class="case-list-meta">
+                  {% if item.pass_type == "ordinary" %}
+                    {{ item.start_at_local.strftime("%m/%d %I:%M %p") if item.start_at_local else "—" }}
+                    to
+                    {{ item.end_at_local.strftime("%m/%d %I:%M %p") if item.end_at_local else "—" }}
+                  {% else %}
+                    {{ item.start_date or "—" }} to {{ item.end_date or "—" }}
+                  {% endif %}
+                  {% if item.destination %}
+                    — {{ item.destination }}
+                  {% endif %}
+                </div>
+
+                {% if item.reason %}
+                  <div class="case-list-meta" style="margin-top:4px;">
+                    Reason: {{ item.reason }}
+                  </div>
+                {% endif %}
+
+                <div class="case-list-meta" style="margin-top:4px;">
+                  Submitted {{ item.created_at_local.strftime("%m/%d %I:%M %p") if item.created_at_local else "—" }}
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <form method="post" action="{{ url_for('attendance.staff_pass_approve', pass_id=item.id) }}" style="margin:0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="case-action-link">Approve</button>
+                </form>
+
+                <form method="post" action="{{ url_for('attendance.staff_pass_deny', pass_id=item.id) }}" style="margin:0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="case-action-link">Deny</button>
+                </form>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="case-empty good">No pending pass requests.</div>
+      {% endif %}
     </div>
   </section>
 
@@ -251,6 +309,6 @@
 
 </div>
 
-<script src="{{ url_for('static', filename='js/case_dashboard_scroll.js', v='20260314a') }}"></script>
+<script src="{{ url_for('static', filename='js/case_dashboard_scroll.js', v='20260317a') }}"></script>
 
 {% endblock %}
