@@ -6,7 +6,7 @@ from core.audit import log_action
 from core.db import db_execute
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
-from core.runtime import get_all_shelters, init_db
+from core.runtime import init_db
 
 
 # Resident SMS consent flows
@@ -72,6 +72,7 @@ def resident_consent_view():
 
     allowed_next = {
         url_for("resident_requests.resident_leave"),
+        url_for("resident_requests.resident_pass_request"),
         url_for("resident_requests.resident_transport"),
         url_for("resident_portal.home"),
     }
@@ -82,9 +83,8 @@ def resident_consent_view():
     resident_id = session.get("resident_id")
     resident_identifier = (session.get("resident_identifier") or "").strip()
     shelter = (session.get("resident_shelter") or "").strip()
-    all_shelters = set(get_all_shelters())
 
-    if not resident_id or shelter not in all_shelters:
+    if not resident_id or not shelter:
         flash("Please sign in again.", "error")
         return redirect(url_for("resident_requests.resident_signin", next=next_url))
 
