@@ -121,7 +121,7 @@ def resident_consent_view():
             SET sms_opt_in = ?, sms_opt_in_at = ?
             WHERE id = ?
             """,
-            (True if kind == "pg" else 1, now, resident_id),
+            (True, now, resident_id),
         )
 
         log_action("resident", resident_id, shelter, None, "sms_opt_in", "Resident accepted SMS consent")
@@ -143,7 +143,7 @@ def resident_consent_view():
         SET sms_opt_in = ?, sms_opt_in_at = NULL
         WHERE id = ?
         """,
-        (False if kind == "pg" else 0, resident_id),
+        (False, resident_id),
     )
 
     log_action("resident", resident_id, shelter, None, "sms_opt_out", "Resident declined SMS consent")
