@@ -104,6 +104,10 @@ def _twilio_status_enabled() -> bool:
 
 
 def _validate_twilio_request() -> None:
+    token = _twilio_auth_token()
+    if not token:
+        abort(500)
+
     if RequestValidator is None:
         abort(500)
 
@@ -116,7 +120,7 @@ def _validate_twilio_request() -> None:
     if xf_proto == "https" and url.startswith("http://"):
         url = "https://" + url[len("http://"):]
 
-    validator = RequestValidator(_twilio_auth_token())
+    validator = RequestValidator(token)
     form = request.form.to_dict(flat=True)
 
     if not validator.validate(url, form, sig):
@@ -130,6 +134,40 @@ def _normalize_last10(s: str) -> str:
     if len(d) > 10:
         d = d[-10:]
     return d
+
+
+def _twiml_message(text: str) -> object:
+    twiml = (
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+        "<Response>"
+        f"<Message>{text}</Message>"
+        "</Response>"
+    )
+    return current_app.response_class(twiml, mimetype="text/xml")
+
+
+def _matching_resident_rows_by_phone(sender10: str) -> list:
+    if not sender10:
+        return []
+
+    try:
+        rows = db_fetchall(
+            """
+            SELECT id, shelter, phone
+            FROM residents
+            WHERE phone IS NOT NULL AND phone != ''
+            """
+        )
+    except Exception:
+        return []
+
+    matches = []
+    for row in rows or []:
+        resident_phone = row["phone"] if isinstance(row, dict) else row[2]
+        if _normalize_last10(str(resident_phone or "")) == sender10:
+            matches.append(row)
+
+    return matches
 
 
 @twilio.route("/twilio/inbound", methods=["POST"])
@@ -170,29 +208,12 @@ def twilio_inbound():
     if sender10 and _rate_limited(f"twilio_inbound_from:{sender10}", 10, 60):
         return current_app.response_class("", mimetype="text/xml")
 
-    reply_text = ""
+    matching_rows = _matching_resident_rows_by_phone(sender10)
 
     if body in stop_words:
-        try:
-            rows = db_fetchall(
-                """
-                SELECT id, shelter, phone
-                FROM residents
-                WHERE phone IS NOT NULL AND phone != ''
-                ORDER BY id DESC
-                LIMIT 300
-                """
-            )
-        except Exception:
-            rows = []
-
-        for r in rows or []:
-            r_id = r["id"] if isinstance(r, dict) else r[0]
-            r_shelter = r["shelter"] if isinstance(r, dict) else r[1]
-            r_phone = r["phone"] if isinstance(r, dict) else r[2]
-
-            if _normalize_last10(str(r_phone or "")) != sender10:
-                continue
+        for row in matching_rows:
+            resident_id = row["id"] if isinstance(row, dict) else row[0]
+            resident_shelter = row["shelter"] if isinstance(row, dict) else row[1]
 
             db_execute(
                 """
@@ -210,24 +231,47 @@ def twilio_inbound():
                     sms_opt_out_source = ?
                 WHERE id = ? AND shelter = ?
                 """,
-                (0, utcnow_iso(), "twilio_inbound", r_id, r_shelter),
+                (0, utcnow_iso(), "twilio_inbound", resident_id, resident_shelter),
             )
 
-        reply_text = "You are unsubscribed from Downtown Women's Center Alerts. No more messages will be sent. Reply START to rejoin."
+        return _twiml_message(
+            "You are unsubscribed from Downtown Women's Center Alerts. No more messages will be sent. Reply START to rejoin."
+        )
 
-    elif body in help_words or body in start_words:
-        return current_app.response_class("", mimetype="text/xml")
+    if body in start_words:
+        for row in matching_rows:
+            resident_id = row["id"] if isinstance(row, dict) else row[0]
+            resident_shelter = row["shelter"] if isinstance(row, dict) else row[1]
 
-    else:
-        reply_text = "For help contact staff."
+            db_execute(
+                """
+                UPDATE residents
+                SET sms_opt_in = %s,
+                    sms_opt_out_at = %s,
+                    sms_opt_out_source = %s
+                WHERE id = %s AND shelter = %s
+                """
+                if kind == "pg"
+                else """
+                UPDATE residents
+                SET sms_opt_in = ?,
+                    sms_opt_out_at = ?,
+                    sms_opt_out_source = ?
+                WHERE id = ? AND shelter = ?
+                """,
+                (1, None, None, resident_id, resident_shelter),
+            )
 
-    twiml = (
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-        "<Response>"
-        f"<Message>{reply_text}</Message>"
-        "</Response>"
-    )
-    return current_app.response_class(twiml, mimetype="text/xml")
+        return _twiml_message(
+            "You are resubscribed to Downtown Women's Center Alerts. Reply STOP to opt out again."
+        )
+
+    if body in help_words:
+        return _twiml_message(
+            "Downtown Women's Center Alerts. Reply STOP to opt out or START to rejoin. For help contact shelter staff."
+        )
+
+    return _twiml_message("For help contact staff.")
 
 
 @twilio.route("/twilio/status", methods=["POST"])
