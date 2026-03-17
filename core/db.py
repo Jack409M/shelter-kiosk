@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from threading import Lock
 from typing import Any
 
 from flask import current_app, g
@@ -13,6 +14,7 @@ except Exception:
 
 
 PG_POOL = None
+_PG_POOL_LOCK = Lock()
 
 
 def _init_pg_pool() -> None:
@@ -21,18 +23,22 @@ def _init_pg_pool() -> None:
     if PG_POOL is not None:
         return
 
-    database_url = current_app.config.get("DATABASE_URL")
-    if not database_url:
-        return
+    with _PG_POOL_LOCK:
+        if PG_POOL is not None:
+            return
 
-    if SimpleConnectionPool is None:
-        raise RuntimeError("psycopg2 is not installed, but DATABASE_URL is set.")
+        database_url = current_app.config.get("DATABASE_URL")
+        if not database_url:
+            return
 
-    PG_POOL = SimpleConnectionPool(
-        minconn=1,
-        maxconn=10,
-        dsn=database_url,
-    )
+        if SimpleConnectionPool is None:
+            raise RuntimeError("psycopg2 is not installed, but DATABASE_URL is set.")
+
+        PG_POOL = SimpleConnectionPool(
+            minconn=1,
+            maxconn=10,
+            dsn=database_url,
+        )
 
 
 def _normalize_sql(sql: str) -> str:
