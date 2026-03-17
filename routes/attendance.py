@@ -492,8 +492,43 @@ def staff_passes_pending():
 
     rows = db_fetchall(sql, (shelter,))
 
+    def to_local(dt_iso):
+        if not dt_iso:
+            return None
+        try:
+            dt = datetime.fromisoformat(dt_iso).replace(tzinfo=timezone.utc)
+            return dt.astimezone(ZoneInfo("America/Chicago"))
+        except Exception:
+            return None
+
+    processed = []
+
+    for r in rows:
+        row = dict(r) if isinstance(r, dict) else {
+            "id": r[0],
+            "resident_id": r[1],
+            "first_name": r[2],
+            "last_name": r[3],
+            "shelter": r[4],
+            "pass_type": r[5],
+            "start_at": r[6],
+            "end_at": r[7],
+            "start_date": r[8],
+            "end_date": r[9],
+            "destination": r[10],
+            "reason": r[11],
+            "created_at": r[12],
+        }
+
+        row["start_at_local"] = to_local(row.get("start_at"))
+        row["end_at_local"] = to_local(row.get("end_at"))
+        row["created_at_local"] = to_local(row.get("created_at"))
+
+        processed.append(row)
+
     return render_template(
         "staff_passes_pending.html",
-        rows=rows,
+        rows=processed,
         shelter=shelter,
+        fmt_dt=fmt_dt,
     )
