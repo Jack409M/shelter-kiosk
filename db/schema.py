@@ -16,6 +16,9 @@ from . import schema_requests
 from . import schema_shelters
 
 
+_SCHEMA_INITIALIZED = False
+
+
 def _ensure_staff_shelter_assignments_table(kind: str) -> None:
     if kind == "pg":
         db_execute(
@@ -58,6 +61,11 @@ def _ensure_staff_shelter_assignments_indexes() -> None:
 
 
 def init_db() -> None:
+    global _SCHEMA_INITIALIZED
+
+    if _SCHEMA_INITIALIZED:
+        return
+
     kind = g.get("db_kind")
     if not kind:
         raise RuntimeError("Database kind is not set on flask.g")
@@ -107,3 +115,5 @@ def init_db() -> None:
 
     # Bootstrap tasks
     schema_bootstrap.ensure_all(kind)
+
+    _SCHEMA_INITIALIZED = True
