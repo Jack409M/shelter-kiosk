@@ -27,6 +27,14 @@ def _kiosk_enabled() -> bool:
         return True
 
 
+def _safe_log_value(value: str | None, max_length: int = 80) -> str:
+    text = (value or "").strip()
+    if not text:
+        return "blank"
+    text = "".join(ch if 32 <= ord(ch) <= 126 else "?" for ch in text)
+    return text[:max_length]
+
+
 @kiosk.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
 def kiosk_checkout(shelter: str):
     from core.rate_limit import (
@@ -64,9 +72,46 @@ def kiosk_checkout(shelter: str):
 
     if kiosk_manager_user and kiosk_manager_pass:
         if session.get(f"kiosk_mgr_authed_{shelter}") is not True:
+            kiosk_mgr_lock_key = f"kiosk_mgr_lock:{shelter}:{ip}"
+            kiosk_mgr_fail_key = f"kiosk_mgr_fail:{shelter}:{ip}"
+
+            if is_key_locked(kiosk_mgr_lock_key):
+                seconds_remaining = get_key_lock_seconds_remaining(kiosk_mgr_lock_key)
+                log_action(
+                    "kiosk",
+                    None,
+                    shelter,
+                    None,
+                    "kiosk_manager_login_locked",
+                    f"ip={ip} seconds_remaining={seconds_remaining}",
+                )
+                flash(
+                    "Too many kiosk manager login attempts. Please wait and try again.",
+                    "error",
+                )
+                return render_template("kiosk_manager_login.html", shelter=shelter), 429
+
             if request.method == "POST" and request.form.get("kiosk_mgr_login") == "1":
+                if is_rate_limited(f"kiosk_mgr_ip:{ip}", limit=10, window_seconds=300) or is_rate_limited(
+                    f"kiosk_mgr_shelter:{shelter}", limit=40, window_seconds=300
+                ):
+                    log_action(
+                        "kiosk",
+                        None,
+                        shelter,
+                        None,
+                        "kiosk_manager_login_rate_limited",
+                        f"ip={ip}",
+                    )
+                    flash(
+                        "Too many kiosk manager login attempts. Please wait and try again.",
+                        "error",
+                    )
+                    return render_template("kiosk_manager_login.html", shelter=shelter), 429
+
                 entered_user = (request.form.get("username") or "").strip()
                 entered_pass = (request.form.get("password") or "").strip()
+                safe_username = _safe_log_value(entered_user)
 
                 if (
                     secrets.compare_digest(entered_user, kiosk_manager_user)
@@ -76,13 +121,24 @@ def kiosk_checkout(shelter: str):
                     session.permanent = True
                     return redirect(url_for("kiosk.kiosk_checkout", shelter=shelter))
 
+                if is_rate_limited(kiosk_mgr_fail_key, limit=5, window_seconds=300):
+                    lock_key(kiosk_mgr_lock_key, 300)
+                    log_action(
+                        "kiosk",
+                        None,
+                        shelter,
+                        None,
+                        "kiosk_manager_login_lock_started",
+                        f"ip={ip} seconds=300 username={safe_username}",
+                    )
+
                 log_action(
                     "kiosk",
                     None,
                     shelter,
                     None,
                     "kiosk_manager_login_failed",
-                    f"ip={ip} username={entered_user or 'blank'}",
+                    f"ip={ip} username={safe_username}",
                 )
                 flash("Invalid kiosk manager login.", "error")
 
