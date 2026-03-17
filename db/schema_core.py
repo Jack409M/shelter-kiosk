@@ -196,4 +196,3 @@ def ensure_tables(kind: str) -> None:
     ensure_security_settings_table(kind)
     ensure_security_incidents_table(kind)
     ensure_organizations_table(kind)
-    ensure_columns_and_security_upgrades(kind)
