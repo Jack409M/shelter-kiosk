@@ -29,7 +29,7 @@ def resident_pass_request_view():
     def _inner():
         init_db()
 
-        shelter = session.get("resident_shelter") or ""
+        shelter = (session.get("resident_shelter") or "").strip()
 
         if request.method == "GET":
             return render_template("resident_pass_request.html", shelter=shelter)
@@ -64,58 +64,60 @@ def resident_pass_request_view():
         if not destination:
             errors.append("Destination is required.")
 
-        if pass_type == "ordinary":
-            if not start_at_raw or not end_at_raw:
-                errors.append("Start time and end time are required for an ordinary pass.")
-        else:
-            if not start_date_raw or not end_date_raw:
-                errors.append("Start date and end date are required for an extended pass.")
-
         ordinary_start_iso = None
         ordinary_end_iso = None
         extended_start_date = None
         extended_end_date = None
 
-        if pass_type == "ordinary" and start_at_raw and end_at_raw:
-            try:
-                local_start = datetime.fromisoformat(start_at_raw).replace(
-                    tzinfo=ZoneInfo("America/Chicago")
-                )
-                local_end = datetime.fromisoformat(end_at_raw).replace(
-                    tzinfo=ZoneInfo("America/Chicago")
-                )
+        if pass_type == "ordinary":
+            if not start_at_raw or not end_at_raw:
+                errors.append("Start time and end time are required for an ordinary pass.")
+            else:
+                try:
+                    local_start = datetime.fromisoformat(start_at_raw).replace(
+                        tzinfo=ZoneInfo("America/Chicago")
+                    )
+                    local_end = datetime.fromisoformat(end_at_raw).replace(
+                        tzinfo=ZoneInfo("America/Chicago")
+                    )
 
-                utc_start = local_start.astimezone(timezone.utc).replace(tzinfo=None)
-                utc_end = local_end.astimezone(timezone.utc).replace(tzinfo=None)
+                    utc_start = local_start.astimezone(timezone.utc).replace(tzinfo=None)
+                    utc_end = local_end.astimezone(timezone.utc).replace(tzinfo=None)
 
-                if utc_end <= utc_start:
-                    errors.append("End time must be after start time.")
+                    if utc_end <= utc_start:
+                        errors.append("End time must be after start time.")
 
-                if utc_start < datetime.utcnow() - timedelta(minutes=1):
-                    errors.append("Start time cannot be in the past.")
+                    if utc_start < datetime.utcnow() - timedelta(minutes=1):
+                        errors.append("Start time cannot be in the past.")
 
-                ordinary_start_iso = utc_start.replace(microsecond=0).isoformat()
-                ordinary_end_iso = utc_end.replace(microsecond=0).isoformat()
-            except Exception:
-                errors.append("Invalid ordinary pass date or time.")
+                    ordinary_start_iso = utc_start.replace(microsecond=0).isoformat()
+                    ordinary_end_iso = utc_end.replace(microsecond=0).isoformat()
+                except Exception:
+                    errors.append("Invalid ordinary pass date or time.")
+        else:
+            if not start_date_raw or not end_date_raw:
+                errors.append("Start date and end date are required for an extended pass.")
+            else:
+                try:
+                    start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
+                    end_date = datetime.strptime(end_date_raw, "%Y-%m-%d").date()
 
-        if pass_type == "extended_special" and start_date_raw and end_date_raw:
-            try:
-                start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
-                end_date = datetime.strptime(end_date_raw, "%Y-%m-%d").date()
+                    if end_date < start_date:
+                        errors.append("End date cannot be earlier than start date.")
 
-                if end_date < start_date:
-                    errors.append("End date cannot be earlier than start date.")
-
-                extended_start_date = start_date.isoformat()
-                extended_end_date = end_date.isoformat()
-            except Exception:
-                errors.append("Invalid extended pass date.")
+                    extended_start_date = start_date.isoformat()
+                    extended_end_date = end_date.isoformat()
+                except Exception:
+                    errors.append("Invalid extended pass date.")
 
         if errors:
             for e in errors:
                 flash(e, "error")
             return render_template("resident_pass_request.html", shelter=shelter), 400
+
+        conn = get_db()
+        kind = g.get("db_kind")
+        now_iso = utcnow_iso()
 
         sql = (
             """
@@ -140,7 +142,7 @@ def resident_pass_request_view():
             VALUES (%s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """
-            if g.get("db_kind") == "pg"
+            if kind == "pg"
             else """
             INSERT INTO resident_passes (
                 resident_id,
@@ -164,8 +166,6 @@ def resident_pass_request_view():
             """
         )
 
-        now_iso = utcnow_iso()
-
         params = (
             resident_id,
             shelter,
@@ -184,18 +184,15 @@ def resident_pass_request_view():
             now_iso,
         )
 
-        if g.get("db_kind") == "pg":
-            conn = get_db()
-            cur = conn.cursor()
+        cur = conn.cursor()
+        try:
             cur.execute(sql, params)
-            req_id = cur.fetchone()[0]
-            cur.close()
-        else:
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute(sql, params)
-            conn.commit()
-            req_id = cur.lastrowid
+            if kind == "pg":
+                req_id = cur.fetchone()[0]
+            else:
+                conn.commit()
+                req_id = cur.lastrowid
+        finally:
             cur.close()
 
         log_action(
