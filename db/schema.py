@@ -60,6 +60,48 @@ def _ensure_staff_shelter_assignments_indexes() -> None:
     )
 
 
+def _ensure_audit_log_indexes() -> None:
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS audit_log_resident_idx
+            ON audit_log (entity_type, entity_id, created_at)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS audit_log_staff_idx
+            ON audit_log (staff_user_id, created_at)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS audit_log_shelter_idx
+            ON audit_log (shelter, created_at)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS audit_log_action_idx
+            ON audit_log (action_type, created_at)
+            """
+        )
+    except Exception:
+        pass
+
+
 def init_db() -> None:
     global _SCHEMA_INITIALIZED
 
@@ -105,6 +147,7 @@ def init_db() -> None:
     # Indexes
     schema_people.ensure_indexes()
     _ensure_staff_shelter_assignments_indexes()
+    _ensure_audit_log_indexes()
     schema_program.ensure_indexes()
     schema_outcomes.ensure_indexes()
     schema_goals.ensure_indexes()
