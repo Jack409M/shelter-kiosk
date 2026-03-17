@@ -10,12 +10,17 @@ from flask import current_app, g, url_for
 APP_TIMEZONE = ZoneInfo("America/Chicago")
 
 
-def is_postgres():
-    return g.get("db_kind") == "pg"
+def is_postgres() -> bool:
+    db_kind = g.get("db_kind")
+    if db_kind is not None:
+        return db_kind == "pg"
+
+    database_url = (current_app.config.get("DATABASE_URL") or "").strip()
+    return bool(database_url)
 
 
-def db_placeholder():
-    if g.get("db_kind") == "pg":
+def db_placeholder() -> str:
+    if is_postgres():
         return "%s"
     return "?"
 
