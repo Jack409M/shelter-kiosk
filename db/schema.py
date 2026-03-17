@@ -102,6 +102,105 @@ def _ensure_audit_log_indexes() -> None:
         pass
 
 
+def _ensure_security_runtime_tables(kind: str) -> None:
+    if kind == "pg":
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS security_runtime_state (
+                state_type TEXT NOT NULL,
+                state_key TEXT NOT NULL,
+                expires_at_epoch DOUBLE PRECISION NOT NULL,
+                created_at_epoch DOUBLE PRECISION NOT NULL,
+                updated_at_epoch DOUBLE PRECISION NOT NULL,
+                PRIMARY KEY (state_type, state_key)
+            )
+            """
+        )
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS security_lock_history (
+                state_key TEXT NOT NULL,
+                created_at_epoch DOUBLE PRECISION NOT NULL
+            )
+            """
+        )
+    else:
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS security_runtime_state (
+                state_type TEXT NOT NULL,
+                state_key TEXT NOT NULL,
+                expires_at_epoch REAL NOT NULL,
+                created_at_epoch REAL NOT NULL,
+                updated_at_epoch REAL NOT NULL,
+                PRIMARY KEY (state_type, state_key)
+            )
+            """
+        )
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS security_lock_history (
+                state_key TEXT NOT NULL,
+                created_at_epoch REAL NOT NULL
+            )
+            """
+        )
+
+
+def _ensure_security_runtime_indexes() -> None:
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS security_runtime_state_type_exp_idx
+            ON security_runtime_state (state_type, expires_at_epoch)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS security_runtime_state_key_exp_idx
+            ON security_runtime_state (state_key, expires_at_epoch)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS security_lock_history_key_created_idx
+            ON security_lock_history (state_key, created_at_epoch)
+            """
+        )
+    except Exception:
+        pass
+
+
+def _ensure_rate_limit_event_indexes() -> None:
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS rate_limit_events_k_created_idx
+            ON rate_limit_events (k, created_at)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS rate_limit_events_created_idx
+            ON rate_limit_events (created_at)
+            """
+        )
+    except Exception:
+        pass
+
+
 def init_db() -> None:
     global _SCHEMA_INITIALIZED
 
@@ -119,6 +218,9 @@ def init_db() -> None:
 
     # Staff to shelter assignments
     _ensure_staff_shelter_assignments_table(kind)
+
+    # Durable security runtime state
+    _ensure_security_runtime_tables(kind)
 
     # Program participation
     schema_program.ensure_tables(kind)
@@ -148,6 +250,8 @@ def init_db() -> None:
     schema_people.ensure_indexes()
     _ensure_staff_shelter_assignments_indexes()
     _ensure_audit_log_indexes()
+    _ensure_security_runtime_indexes()
+    _ensure_rate_limit_event_indexes()
     schema_program.ensure_indexes()
     schema_outcomes.ensure_indexes()
     schema_goals.ensure_indexes()
