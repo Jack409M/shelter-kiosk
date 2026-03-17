@@ -20,8 +20,10 @@
   <input
     id="username"
     name="username"
+    type="text"
     value="{{ request.form.get('username', '') }}"
     autocomplete="username"
+    autofocus
     required
   >
 
