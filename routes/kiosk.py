@@ -144,6 +144,35 @@ def _require_kiosk_pin(shelter: str, ip: str, post_endpoint: str):
     ), 401
 
 
+@kiosk.route("/kiosk/<shelter>")
+def kiosk_home(shelter: str):
+    init_db()
+
+    matched_shelter = _resolve_shelter_or_404(shelter)
+    if not matched_shelter:
+        return "Invalid shelter", 404
+
+    shelter = matched_shelter
+    ip = get_client_ip()
+
+    if not _kiosk_enabled():
+        log_action(
+            "kiosk",
+            None,
+            shelter,
+            None,
+            "kiosk_disabled_block",
+            f"ip={ip}",
+        )
+        return "Kiosk intake is temporarily disabled.", 503
+
+    pin_gate = _require_kiosk_pin(shelter, ip, "kiosk.kiosk_home")
+    if pin_gate is not None:
+        return pin_gate
+
+    return render_template("kiosk_home.html", shelter=shelter)
+
+
 @kiosk.route("/kiosk/<shelter>/checkin", methods=["GET", "POST"])
 def kiosk_checkin(shelter: str):
     from core.rate_limit import (
@@ -297,7 +326,7 @@ def kiosk_checkin(shelter: str):
     )
 
     flash("Checked in.", "ok")
-    return redirect(url_for("kiosk.kiosk_checkin", shelter=shelter))
+    return redirect(url_for("kiosk.kiosk_home", shelter=shelter))
 
 
 @kiosk.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
@@ -478,4 +507,4 @@ def kiosk_checkout(shelter: str):
     )
 
     flash("Checked out.", "ok")
-    return redirect(url_for("kiosk.kiosk_checkout", shelter=shelter))
+    return redirect(url_for("kiosk.kiosk_home", shelter=shelter))
