@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ipaddress
 from collections import Counter, deque
 from datetime import datetime, timezone
 
@@ -190,13 +191,22 @@ def extract_detail_value(details: str, key: str) -> str:
         if not line:
             continue
 
-        if line.startswith(prefix):
-            return line[len(prefix):].strip()
-
         parts = line.split()
         for part in parts:
-            if part.startswith(prefix):
-                return part[len(prefix):].strip()
+            if not part.startswith(prefix):
+                continue
+
+            value = part[len(prefix):].strip()
+            if not value:
+                return ""
+
+            if key == "ip":
+                try:
+                    return str(ipaddress.ip_address(value))
+                except ValueError:
+                    return ""
+
+            return value
 
     return ""
 
