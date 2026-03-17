@@ -19,6 +19,7 @@ from routes.resident_parts.consent import (
 )
 from routes.resident_parts.helpers import parse_dt as _parse_dt
 from routes.resident_parts.leave import resident_leave_view
+from routes.resident_parts.pass_request import resident_pass_request_view
 
 resident_requests = Blueprint("resident_requests", __name__)
 
@@ -87,6 +88,7 @@ def resident_signin():
 
     allowed_next = {
         url_for("resident_requests.resident_leave"),
+        url_for("resident_requests.resident_pass_request"),
         url_for("resident_requests.resident_transport"),
         url_for("resident_portal.home"),
     }
@@ -121,6 +123,11 @@ def resident_logout():
 @resident_requests.route("/leave", methods=["GET", "POST"])
 def resident_leave():
     return resident_leave_view()
+
+
+@resident_requests.route("/pass-request", methods=["GET", "POST"])
+def resident_pass_request():
+    return resident_pass_request_view()
 
 
 @resident_requests.route("/transport", methods=["GET", "POST"])
