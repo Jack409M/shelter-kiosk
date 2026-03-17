@@ -168,7 +168,9 @@ def create_app() -> Flask:
 
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
-    app.logger.setLevel(logging.DEBUG)
+    log_level_name = (os.getenv("LOG_LEVEL") or "INFO").strip().upper()
+    log_level = getattr(logging, log_level_name, logging.INFO)
+    app.logger.setLevel(log_level)
 
     _register_template_helpers(app)
 
