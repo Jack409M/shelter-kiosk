@@ -3,8 +3,6 @@ from __future__ import annotations
 import os
 from datetime import datetime
 
-from flask import request, session
-
 from core.db import get_db
 from core.request_utils import client_ip
 from core.shelters import get_all_shelters as load_all_shelters
@@ -95,7 +93,7 @@ def get_all_shelters() -> list[str]:
     """
     Returns all shelters in the system.
     """
-    return load_all_shelters(init_db)
+    return load_all_shelters()
 
 
 # ------------------------------------------------------------
