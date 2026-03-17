@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
-from flask import Blueprint, g, render_template, session, url_for
+from flask import Blueprint, g, render_template, session
 
 from core.auth import require_login, require_shelter
 from core.db import db_fetchall, db_fetchone
@@ -56,6 +57,13 @@ def _parse_dt(value):
         return dt.replace(tzinfo=timezone.utc)
 
     return dt.astimezone(timezone.utc)
+
+
+def _to_chicago(value):
+    dt = _parse_dt(value)
+    if not dt:
+        return None
+    return dt.astimezone(ZoneInfo("America/Chicago"))
 
 
 def _is_recent(value, days: int) -> bool:
@@ -265,12 +273,13 @@ def dashboard():
     pending_pass_count_row = db_fetchone(
         f"""
         SELECT COUNT(*)
-        FROM leave_requests
+        FROM resident_passes
         WHERE status = {placeholder}
           AND shelter = {placeholder}
         """,
         ("pending", shelter),
     )
+
     pending_transport_count_row = db_fetchone(
         f"""
         SELECT COUNT(*)
@@ -289,6 +298,92 @@ def dashboard():
         pending_transport_count_row["count"] if isinstance(pending_transport_count_row, dict) and "count" in pending_transport_count_row
         else pending_transport_count_row[0] if pending_transport_count_row else 0
     )
+
+    pending_pass_rows_raw = db_fetchall(
+        _sql(
+            """
+            SELECT
+                rp.id,
+                rp.resident_id,
+                r.first_name,
+                r.last_name,
+                rp.shelter,
+                rp.pass_type,
+                rp.start_at,
+                rp.end_at,
+                rp.start_date,
+                rp.end_date,
+                rp.destination,
+                rp.reason,
+                rp.created_at,
+                rp.status
+            FROM resident_passes rp
+            JOIN residents r
+              ON r.id = rp.resident_id
+            WHERE rp.status = %s
+              AND rp.shelter = %s
+            ORDER BY rp.created_at ASC
+            """,
+            """
+            SELECT
+                rp.id,
+                rp.resident_id,
+                r.first_name,
+                r.last_name,
+                rp.shelter,
+                rp.pass_type,
+                rp.start_at,
+                rp.end_at,
+                rp.start_date,
+                rp.end_date,
+                rp.destination,
+                rp.reason,
+                rp.created_at,
+                rp.status
+            FROM resident_passes rp
+            JOIN residents r
+              ON r.id = rp.resident_id
+            WHERE rp.status = ?
+              AND rp.shelter = ?
+            ORDER BY rp.created_at ASC
+            """,
+        ),
+        ("pending", shelter),
+    )
+
+    pending_pass_rows = []
+    now_chicago = datetime.now(ZoneInfo("America/Chicago"))
+
+    for row in pending_pass_rows_raw:
+        item = dict(row) if isinstance(row, dict) else {
+            "id": row[0],
+            "resident_id": row[1],
+            "first_name": row[2],
+            "last_name": row[3],
+            "shelter": row[4],
+            "pass_type": row[5],
+            "start_at": row[6],
+            "end_at": row[7],
+            "start_date": row[8],
+            "end_date": row[9],
+            "destination": row[10],
+            "reason": row[11],
+            "created_at": row[12],
+            "status": row[13],
+        }
+
+        item["start_at_local"] = _to_chicago(item.get("start_at"))
+        item["end_at_local"] = _to_chicago(item.get("end_at"))
+        item["created_at_local"] = _to_chicago(item.get("created_at"))
+
+        is_urgent = False
+        if item.get("pass_type") == "ordinary" and item["start_at_local"]:
+            delta = item["start_at_local"] - now_chicago
+            is_urgent = timedelta(0) <= delta <= timedelta(hours=2)
+
+        item["is_urgent"] = is_urgent
+        pending_pass_rows.append(item)
+
     pending_request_total = int(pending_pass_count or 0) + int(pending_transport_count or 0)
 
     return render_template(
@@ -301,6 +396,7 @@ def dashboard():
         pending_pass_count=pending_pass_count,
         pending_transport_count=pending_transport_count,
         pending_request_total=pending_request_total,
+        pending_pass_rows=pending_pass_rows,
         role=role,
         shelter=shelter,
     )
