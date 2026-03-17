@@ -34,11 +34,26 @@ def _resolve_shelter_or_404(shelter: str) -> str | None:
 
 
 def _active_resident_row(shelter: str, resident_code: str):
+    normalized_shelter = (shelter or "").strip().lower()
+    normalized_code = (resident_code or "").strip()
+
     return db_fetchone(
-        "SELECT id FROM residents WHERE shelter = %s AND resident_code = %s AND is_active = TRUE"
+        """
+        SELECT id
+        FROM residents
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = %s
+          AND TRIM(COALESCE(resident_code, '')) = %s
+          AND is_active = TRUE
+        """
         if g.get("db_kind") == "pg"
-        else "SELECT id FROM residents WHERE shelter = ? AND resident_code = ? AND is_active = 1",
-        (shelter, resident_code),
+        else """
+        SELECT id
+        FROM residents
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = ?
+          AND TRIM(COALESCE(resident_code, '')) = ?
+          AND is_active = 1
+        """,
+        (normalized_shelter, normalized_code),
     )
 
 
