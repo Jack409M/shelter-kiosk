@@ -1,0 +1,107 @@
+{% extends "layout.html" %}
+{% block content %}
+
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
+<h1>Pass Request</h1>
+
+<form method="post" class="card">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+  <label>Shelter</label>
+  <input value="{{ shelter_label }}" readonly class="w-shelter">
+
+  <label for="pass_type">Pass Type</label>
+  <select id="pass_type" name="pass_type" required onchange="togglePassType()">
+    <option value="ordinary">Ordinary Pass (hours / overnight)</option>
+    <option value="extended_special">Extended Special Pass (multi day)</option>
+  </select>
+
+  <label for="destination">Destination</label>
+  <input id="destination" name="destination" required>
+
+  <!-- ORDINARY PASS -->
+  <div id="ordinary_fields">
+
+    <div class="grid tight-row">
+      <div>
+        <label for="start_at">Leave date and time</label>
+        <input id="start_at" type="datetime-local" name="start_at" class="w-dt">
+      </div>
+
+      <div>
+        <label for="end_at">Return date and time</label>
+        <input id="end_at" type="datetime-local" name="end_at" class="w-dt">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- EXTENDED PASS -->
+  <div id="extended_fields" style="display:none;">
+
+    <div class="grid tight-row">
+      <div>
+        <label for="start_date">Start date</label>
+        <input id="start_date" type="date" name="start_date" class="w-date">
+      </div>
+
+      <div>
+        <label for="end_date">End date</label>
+        <input id="end_date" type="date" name="end_date" class="w-date">
+      </div>
+    </div>
+
+  </div>
+
+  <label for="reason">Reason optional</label>
+  <select id="reason" name="reason">
+    <option value="">Select</option>
+    <option>Medical</option>
+    <option>Work</option>
+    <option>Family</option>
+    <option>Legal</option>
+    <option>Other</option>
+  </select>
+
+  <label for="resident_notes">Notes optional</label>
+  <textarea id="resident_notes" name="resident_notes" rows="3"></textarea>
+
+  <div class="check">
+    <label>
+      <input type="checkbox" name="agreed" required>
+      <span class="check-text">
+        I understand I must return and check back in when I come back to the shelter.
+      </span>
+    </label>
+  </div>
+
+  <button type="submit">Submit Request</button>
+</form>
+
+<script>
+function togglePassType() {
+  const type = document.getElementById("pass_type").value;
+  const ordinary = document.getElementById("ordinary_fields");
+  const extended = document.getElementById("extended_fields");
+
+  if (type === "extended_special") {
+    ordinary.style.display = "none";
+    extended.style.display = "block";
+  } else {
+    ordinary.style.display = "block";
+    extended.style.display = "none";
+  }
+}
+</script>
+
+{% endblock %}
