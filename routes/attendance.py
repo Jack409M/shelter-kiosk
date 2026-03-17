@@ -10,6 +10,7 @@ from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_dt, fmt_time_only, utcnow_iso
+from core.residents import has_active_pass
 
 
 attendance = Blueprint("attendance", __name__)
@@ -92,6 +93,7 @@ def staff_attendance():
             checkout_note = (last_checkout["note"] if isinstance(last_checkout, dict) else last_checkout[2]) or ""
 
         is_out = last_event_type == "check_out"
+        active_pass = has_active_pass(rid, shelter)
 
         row = {
             "resident_id": rid,
@@ -102,6 +104,7 @@ def staff_attendance():
             "expected_back_at": expected_back_time,
             "is_out": is_out,
             "note": checkout_note,
+            "has_active_pass": active_pass,
         }
 
         if is_out:
@@ -121,7 +124,7 @@ def staff_attendance():
     )
 
 
-@attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"]) 
+@attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
 def staff_attendance_check_in(resident_id: int):
@@ -412,6 +415,7 @@ def staff_attendance_print_today():
                 "expected": None,
                 "staff": "",
                 "note": "",
+                "has_active_pass": has_active_pass(rid, shelter),
             }
 
         if event_type == "check_out":
