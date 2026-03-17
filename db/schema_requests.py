@@ -221,6 +221,22 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS attendance_events_resident_time_idx "
+            "ON attendance_events (resident_id, event_time)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_transfers_resident_time_idx "
+            "ON resident_transfers (resident_id, transferred_at)"
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_leave_requests_table(kind)
