@@ -196,6 +196,54 @@ def ensure_attendance_events_table(kind: str) -> None:
     )
 
 
+def ensure_resident_passes_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS resident_passes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            shelter TEXT NOT NULL,
+            pass_type TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            start_at TEXT,
+            end_at TEXT,
+            start_date TEXT,
+            end_date TEXT,
+            destination TEXT,
+            reason TEXT,
+            resident_notes TEXT,
+            staff_notes TEXT,
+            approved_by INTEGER,
+            approved_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_passes (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL,
+            shelter TEXT NOT NULL,
+            pass_type TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            start_at TEXT,
+            end_at TEXT,
+            start_date TEXT,
+            end_date TEXT,
+            destination TEXT,
+            reason TEXT,
+            resident_notes TEXT,
+            staff_notes TEXT,
+            approved_by INTEGER,
+            approved_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+    )
+
+
 def ensure_indexes() -> None:
     try:
         db_execute(
@@ -237,12 +285,29 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_passes_resident_status_idx "
+            "ON resident_passes (resident_id, status)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_passes_shelter_status_idx "
+            "ON resident_passes (shelter, status)"
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_leave_requests_table(kind)
     ensure_transport_requests_table(kind)
     ensure_resident_transfers_table(kind)
     ensure_attendance_events_table(kind)
+    ensure_resident_passes_table(kind)
 
 
 def ensure_columns_and_constraints(kind: str) -> None:
