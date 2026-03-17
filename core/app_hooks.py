@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from flask import current_app, redirect, request
 
 
@@ -11,17 +13,18 @@ def register_app_hooks(app):
 
     @app.before_request
     def log_request_info():
+        if not app.logger.isEnabledFor(logging.DEBUG):
+            return None
+
         try:
             app.logger.debug(
                 f"REQUEST method={request.method} path={request.path} endpoint={request.endpoint}"
             )
             app.logger.debug(f"URL RULE {request.url_rule}")
-
-            if request.method == "POST":
-                app.logger.debug(f"FORM KEYS {list(request.form.keys())}")
-
         except Exception as e:
             app.logger.debug(f"LOGGING ERROR {e}")
+
+        return None
 
 
     # ------------------------------------------------------------
@@ -99,4 +102,3 @@ def register_app_hooks(app):
             )
 
         return response
-        
