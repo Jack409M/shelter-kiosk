@@ -22,14 +22,14 @@
       <td>{{ r.pass_type }}</td>
       <td>
         {% if r.pass_type == "ordinary" %}
-          {{ r.start_at }} → {{ r.end_at }}
+          {{ fmt_dt(r.start_at_local) }} to {{ fmt_dt(r.end_at_local) }}
         {% else %}
-          {{ r.start_date }} → {{ r.end_date }}
+          {{ r.start_date }} to {{ r.end_date }}
         {% endif %}
       </td>
       <td>{{ r.destination }}</td>
       <td>{{ r.reason or "" }}</td>
-      <td>{{ r.created_at }}</td>
+      <td>{{ fmt_dt(r.created_at_local) }}</td>
     </tr>
     {% endfor %}
   </tbody>
