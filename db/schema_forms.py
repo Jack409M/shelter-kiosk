@@ -8,6 +8,8 @@ later be extracted into structured tables for reporting.
 
 from __future__ import annotations
 
+from core.db import db_execute
+
 from .schema_helpers import create_table
 
 
@@ -93,8 +95,6 @@ def ensure_weekly_resident_summary_table(kind: str) -> None:
 
 def ensure_indexes() -> None:
     try:
-        from core.db import db_execute
-
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_form_submissions_resident_idx
@@ -105,8 +105,6 @@ def ensure_indexes() -> None:
         pass
 
     try:
-        from core.db import db_execute
-
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_form_submissions_enrollment_idx
@@ -117,12 +115,50 @@ def ensure_indexes() -> None:
         pass
 
     try:
-        from core.db import db_execute
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_form_submissions_form_type_submitted_idx
+            ON resident_form_submissions (form_type, submitted_at)
+            """
+        )
+    except Exception:
+        pass
 
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_form_submissions_source_submission_idx
+            ON resident_form_submissions (source_submission_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_form_submissions_source_form_idx
+            ON resident_form_submissions (source_form_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS weekly_resident_summary_enrollment_idx
             ON weekly_resident_summary (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS weekly_resident_summary_submission_idx
+            ON weekly_resident_summary (submission_id)
             """
         )
     except Exception:
