@@ -92,8 +92,8 @@ def kiosk_checkout(shelter: str):
                 return render_template("kiosk_manager_login.html", shelter=shelter), 429
 
             if request.method == "POST" and request.form.get("kiosk_mgr_login") == "1":
-                if is_rate_limited(f"kiosk_mgr_ip:{ip}", limit=10, window_seconds=300) or is_rate_limited(
-                    f"kiosk_mgr_shelter:{shelter}", limit=40, window_seconds=300
+                if is_rate_limited(f"kiosk_mgr_ip:{ip}", limit=25, window_seconds=300) or is_rate_limited(
+                    f"kiosk_mgr_shelter:{shelter}", limit=60, window_seconds=300
                 ):
                     log_action(
                         "kiosk",
