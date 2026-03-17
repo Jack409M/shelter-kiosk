@@ -6,6 +6,20 @@
 
   <h1>What would you like to do?</h1>
 
+  {% if active_pass %}
+    <div class="active-pass-banner">
+      <strong>You are currently on an approved pass.</strong>
+      {% if active_pass.pass_type == "ordinary" %}
+        Until {{ active_pass.end_at_local.strftime("%m/%d %I:%M %p") if active_pass.end_at_local else "" }}
+      {% else %}
+        Through {{ active_pass.end_date }}
+      {% endif %}
+      {% if active_pass.destination %}
+        — Destination: {{ active_pass.destination }}
+      {% endif %}
+    </div>
+  {% endif %}
+
   <div class="portal-actions">
     <a class="portal-btn" href="{{ url_for('resident_requests.resident_pass_request') }}">
       Request Pass
@@ -24,10 +38,13 @@
 
     <h3>Recent Pass Requests</h3>
     {% if pass_items %}
-      <ul>
+      <ul class="resident-status-list">
         {% for item in pass_items %}
-          <li>
+          <li class="resident-status-item">
             <span class="status-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
+            {% if item.is_active %}
+              <span class="active-pill">active now</span>
+            {% endif %}
             —
             {% if item.pass_type == "ordinary" %}
               {{ item.start_at_local.strftime("%m/%d %I:%M %p") if item.start_at_local else "" }}
@@ -48,9 +65,9 @@
 
     <h3>Recent Transportation Requests</h3>
     {% if transport_items %}
-      <ul>
+      <ul class="resident-status-list">
         {% for item in transport_items %}
-          <li>
+          <li class="resident-status-item">
             <span class="status-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
             —
             {{ item.needed_at_local.strftime("%m/%d %I:%M %p") if item.needed_at_local else "" }}
