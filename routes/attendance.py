@@ -20,6 +20,35 @@ def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
 
 
+def _can_manage_passes() -> bool:
+    return session.get("role") in {"admin", "shelter_director", "case_manager"}
+
+
+def _complete_active_passes(resident_id: int, shelter: str) -> None:
+    now_iso = utcnow_iso()
+
+    db_execute(
+        """
+        UPDATE resident_passes
+        SET status = %s,
+            updated_at = %s
+        WHERE resident_id = %s
+          AND shelter = %s
+          AND status = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE resident_passes
+        SET status = ?,
+            updated_at = ?
+        WHERE resident_id = ?
+          AND shelter = ?
+          AND status = ?
+        """,
+        ("completed", now_iso, resident_id, shelter, "approved"),
+    )
+
+
 @attendance.route("/staff/attendance")
 @require_login
 @require_shelter
@@ -154,6 +183,8 @@ def staff_attendance_check_in(resident_id: int):
         """,
         (resident_id, shelter, "check_in", utcnow_iso(), staff_id, "Manual check in", None),
     )
+
+    _complete_active_passes(resident_id, shelter)
 
     log_action("attendance", resident_id, shelter, staff_id, "check_in", "Manual check in")
     flash("Resident checked in.", "ok")
@@ -532,3 +563,135 @@ def staff_passes_pending():
         shelter=shelter,
         fmt_dt=fmt_dt,
     )
+
+
+@attendance.route("/staff/passes/<int:pass_id>/approve", methods=["POST"])
+@require_login
+@require_shelter
+def staff_pass_approve(pass_id: int):
+    shelter = session.get("shelter")
+    staff_id = session.get("staff_user_id")
+
+    if not _can_manage_passes():
+        abort(403)
+
+    pass_row = db_fetchone(
+        """
+        SELECT id, resident_id, shelter, status
+        FROM resident_passes
+        WHERE id = %s AND shelter = %s
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT id, resident_id, shelter, status
+        FROM resident_passes
+        WHERE id = ? AND shelter = ?
+        LIMIT 1
+        """,
+        (pass_id, shelter),
+    )
+
+    if not pass_row:
+        flash("Pass request not found.", "error")
+        return redirect(url_for("attendance.staff_passes_pending"))
+
+    status = pass_row["status"] if isinstance(pass_row, dict) else pass_row[3]
+    resident_id = pass_row["resident_id"] if isinstance(pass_row, dict) else pass_row[1]
+
+    if status != "pending":
+        flash("That pass request is no longer pending.", "error")
+        return redirect(url_for("attendance.staff_passes_pending"))
+
+    now_iso = utcnow_iso()
+
+    db_execute(
+        """
+        UPDATE resident_passes
+        SET status = %s,
+            approved_by = %s,
+            approved_at = %s,
+            updated_at = %s
+        WHERE id = %s AND shelter = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE resident_passes
+        SET status = ?,
+            approved_by = ?,
+            approved_at = ?,
+            updated_at = ?
+        WHERE id = ? AND shelter = ?
+        """,
+        ("approved", staff_id, now_iso, now_iso, pass_id, shelter),
+    )
+
+    log_action("pass", resident_id, shelter, staff_id, "approve", f"pass_id={pass_id}")
+    flash("Pass request approved.", "ok")
+    return redirect(url_for("attendance.staff_passes_pending"))
+
+
+@attendance.route("/staff/passes/<int:pass_id>/deny", methods=["POST"])
+@require_login
+@require_shelter
+def staff_pass_deny(pass_id: int):
+    shelter = session.get("shelter")
+    staff_id = session.get("staff_user_id")
+
+    if not _can_manage_passes():
+        abort(403)
+
+    pass_row = db_fetchone(
+        """
+        SELECT id, resident_id, shelter, status
+        FROM resident_passes
+        WHERE id = %s AND shelter = %s
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT id, resident_id, shelter, status
+        FROM resident_passes
+        WHERE id = ? AND shelter = ?
+        LIMIT 1
+        """,
+        (pass_id, shelter),
+    )
+
+    if not pass_row:
+        flash("Pass request not found.", "error")
+        return redirect(url_for("attendance.staff_passes_pending"))
+
+    status = pass_row["status"] if isinstance(pass_row, dict) else pass_row[3]
+    resident_id = pass_row["resident_id"] if isinstance(pass_row, dict) else pass_row[1]
+
+    if status != "pending":
+        flash("That pass request is no longer pending.", "error")
+        return redirect(url_for("attendance.staff_passes_pending"))
+
+    now_iso = utcnow_iso()
+
+    db_execute(
+        """
+        UPDATE resident_passes
+        SET status = %s,
+            approved_by = %s,
+            approved_at = %s,
+            updated_at = %s
+        WHERE id = %s AND shelter = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE resident_passes
+        SET status = ?,
+            approved_by = ?,
+            approved_at = ?,
+            updated_at = ?
+        WHERE id = ? AND shelter = ?
+        """,
+        ("denied", staff_id, now_iso, now_iso, pass_id, shelter),
+    )
+
+    log_action("pass", resident_id, shelter, staff_id, "deny", f"pass_id={pass_id}")
+    flash("Pass request denied.", "ok")
+    return redirect(url_for("attendance.staff_passes_pending"))
