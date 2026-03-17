@@ -26,6 +26,16 @@ def _to_local(dt_iso):
         return None
 
 
+def _status_rank(status: str) -> int:
+    order = {
+        "approved": 0,
+        "pending": 1,
+        "denied": 2,
+        "completed": 3,
+    }
+    return order.get((status or "").strip().lower(), 9)
+
+
 @resident_portal.route("/home")
 def home():
     if not session.get("resident_id"):
@@ -36,6 +46,7 @@ def home():
     resident_id = session.get("resident_id")
     shelter = (session.get("resident_shelter") or "").strip()
     resident_identifier = (session.get("resident_identifier") or "").strip()
+    now_local = datetime.now(ZoneInfo("America/Chicago"))
 
     pass_items = db_fetchall(
         """
@@ -104,6 +115,8 @@ def home():
     )
 
     processed_pass_items = []
+    active_pass = None
+
     for r in pass_items:
         row = dict(r) if isinstance(r, dict) else {
             "pass_type": r[0],
@@ -120,7 +133,37 @@ def home():
         row["end_at_local"] = _to_local(row.get("end_at"))
         row["created_at_local"] = _to_local(row.get("created_at"))
 
+        status = (row.get("status") or "").strip().lower()
+        pass_type = (row.get("pass_type") or "").strip().lower()
+
+        is_active = False
+
+        if status == "approved":
+            if pass_type == "ordinary" and row["start_at_local"] and row["end_at_local"]:
+                is_active = row["start_at_local"] <= now_local <= row["end_at_local"]
+            elif pass_type == "extended_special" and row.get("start_date") and row.get("end_date"):
+                try:
+                    start_date = datetime.strptime(row["start_date"], "%Y-%m-%d").date()
+                    end_date = datetime.strptime(row["end_date"], "%Y-%m-%d").date()
+                    today = now_local.date()
+                    is_active = start_date <= today <= end_date
+                except Exception:
+                    is_active = False
+
+        row["is_active"] = is_active
+
+        if is_active and active_pass is None:
+            active_pass = row
+
         processed_pass_items.append(row)
+
+    processed_pass_items.sort(
+        key=lambda item: (
+            0 if item.get("is_active") else 1,
+            _status_rank(item.get("status", "")),
+            item.get("created_at") or "",
+        )
+    )
 
     processed_transport_items = []
     for r in transport_items:
@@ -140,4 +183,5 @@ def home():
         "resident_home.html",
         pass_items=processed_pass_items,
         transport_items=processed_transport_items,
+        active_pass=active_pass,
     )
