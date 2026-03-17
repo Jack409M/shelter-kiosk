@@ -8,7 +8,7 @@ from flask import current_app
 from werkzeug.security import generate_password_hash
 
 from core.db import db_execute, db_fetchall, db_fetchone
-from . import schema_people, schema_program
+from . import schema_program
 
 
 def ensure_default_organization_seed(kind: str) -> None:
@@ -233,6 +233,5 @@ def ensure_user_dashboard_favorites_schema(kind: str) -> None:
 
 def ensure_all(kind: str) -> None:
     ensure_default_organization_seed(kind)
-    schema_people.backfill_resident_codes(kind)
     ensure_admin_bootstrap(kind)
     ensure_user_dashboard_favorites_schema(kind)
