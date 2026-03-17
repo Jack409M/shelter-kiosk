@@ -52,6 +52,14 @@ def register_request_security(
             raw = raw[:-1]
         return raw
 
+    def _safe_log_value(value: str | None, max_length: int = 200) -> str:
+        text = (value or "").strip()
+        if not text:
+            return ""
+        text = "".join(ch if 32 <= ord(ch) <= 126 else "?" for ch in text)
+        text = text.replace(" ", "_")
+        return text[:max_length]
+
     def _base_details(*, ip: str | None = None, reason: str = "") -> str:
         actual_ip = (ip or client_ip_func() or "unknown").strip() or "unknown"
         method = (request.method or "").strip()
@@ -67,8 +75,8 @@ def register_request_security(
         if reason:
             parts.append(f"reason={reason}")
 
-        if ua:
-            safe_ua = ua[:200].replace(" ", "_")
+        safe_ua = _safe_log_value(ua)
+        if safe_ua:
             parts.append(f"ua={safe_ua}")
 
         return " ".join(parts)
@@ -164,7 +172,7 @@ def register_request_security(
             ".git",
             "wp-admin",
             "wp-login",
-            "/wp-json/",
+            "/wp-json",
             "phpmyadmin",
             "xmlrpc.php",
             "cgi-bin",
@@ -172,7 +180,7 @@ def register_request_security(
             "server-status",
             "actuator",
             "jenkins",
-            "/vendor/",
+            "/vendor",
         )
 
         if not any(marker in path for marker in scanner_markers):
