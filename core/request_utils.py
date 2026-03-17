@@ -13,7 +13,15 @@ from flask import request
 
 def client_ip() -> str:
     """
-    Use ProxyFix normalized remote_addr rather than trusting raw
-    forwarded headers directly.
+    Resolve the real client IP.
+
+    Priority:
+    1. Cloudflare CF-Connecting-IP header (if present)
+    2. ProxyFix normalized request.remote_addr
     """
+
+    cf_ip = (request.headers.get("CF-Connecting-IP") or "").strip()
+    if cf_ip:
+        return cf_ip
+
     return (request.remote_addr or "").strip() or "unknown"
