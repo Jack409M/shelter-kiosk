@@ -67,6 +67,31 @@ def _attendance_insert_sql() -> str:
     )
 
 
+def _complete_active_passes(resident_id: int, shelter: str) -> None:
+    now_iso = utcnow_iso()
+
+    db_execute(
+        """
+        UPDATE resident_passes
+        SET status = %s,
+            updated_at = %s
+        WHERE resident_id = %s
+          AND shelter = %s
+          AND status = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE resident_passes
+        SET status = ?,
+            updated_at = ?
+        WHERE resident_id = ?
+          AND shelter = ?
+          AND status = ?
+        """,
+        ("completed", now_iso, resident_id, shelter, "approved"),
+    )
+
+
 def _require_kiosk_pin(shelter: str, ip: str, post_endpoint: str):
     from core.rate_limit import is_rate_limited
 
@@ -259,6 +284,8 @@ def kiosk_checkin(shelter: str):
         _attendance_insert_sql(),
         (resident_id, shelter, "check_in", utcnow_iso(), None, None, None),
     )
+
+    _complete_active_passes(resident_id, shelter)
 
     log_action(
         "attendance",
