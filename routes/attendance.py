@@ -49,6 +49,16 @@ def _complete_active_passes(resident_id: int, shelter: str) -> None:
     )
 
 
+def _to_local(dt_iso):
+    if not dt_iso:
+        return None
+    try:
+        dt = datetime.fromisoformat(dt_iso).replace(tzinfo=timezone.utc)
+        return dt.astimezone(ZoneInfo("America/Chicago"))
+    except Exception:
+        return None
+
+
 @attendance.route("/staff/attendance")
 @require_login
 @require_shelter
@@ -523,15 +533,6 @@ def staff_passes_pending():
 
     rows = db_fetchall(sql, (shelter,))
 
-    def to_local(dt_iso):
-        if not dt_iso:
-            return None
-        try:
-            dt = datetime.fromisoformat(dt_iso).replace(tzinfo=timezone.utc)
-            return dt.astimezone(ZoneInfo("America/Chicago"))
-        except Exception:
-            return None
-
     processed = []
 
     for r in rows:
@@ -551,9 +552,9 @@ def staff_passes_pending():
             "created_at": r[12],
         }
 
-        row["start_at_local"] = to_local(row.get("start_at"))
-        row["end_at_local"] = to_local(row.get("end_at"))
-        row["created_at_local"] = to_local(row.get("created_at"))
+        row["start_at_local"] = _to_local(row.get("start_at"))
+        row["end_at_local"] = _to_local(row.get("end_at"))
+        row["created_at_local"] = _to_local(row.get("created_at"))
 
         processed.append(row)
 
@@ -561,6 +562,97 @@ def staff_passes_pending():
         "staff_passes_pending.html",
         rows=processed,
         shelter=shelter,
+        fmt_dt=fmt_dt,
+    )
+
+
+@attendance.route("/staff/passes/<int:pass_id>")
+@require_login
+@require_shelter
+def staff_pass_detail(pass_id: int):
+    shelter = session.get("shelter")
+
+    if not _can_manage_passes():
+        abort(403)
+
+    row = db_fetchone(
+        """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            r.first_name,
+            r.last_name,
+            rp.shelter,
+            rp.pass_type,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            rp.reason,
+            rp.resident_notes,
+            rp.staff_notes,
+            rp.created_at,
+            rp.status
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.id = %s AND rp.shelter = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            r.first_name,
+            r.last_name,
+            rp.shelter,
+            rp.pass_type,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            rp.reason,
+            rp.resident_notes,
+            rp.staff_notes,
+            rp.created_at,
+            rp.status
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.id = ? AND rp.shelter = ?
+        """,
+        (pass_id, shelter),
+    )
+
+    if not row:
+        abort(404)
+
+    p = dict(row) if isinstance(row, dict) else {
+        "id": row[0],
+        "resident_id": row[1],
+        "first_name": row[2],
+        "last_name": row[3],
+        "shelter": row[4],
+        "pass_type": row[5],
+        "start_at": row[6],
+        "end_at": row[7],
+        "start_date": row[8],
+        "end_date": row[9],
+        "destination": row[10],
+        "reason": row[11],
+        "resident_notes": row[12],
+        "staff_notes": row[13],
+        "created_at": row[14],
+        "status": row[15],
+    }
+
+    p["start_at_local"] = _to_local(p.get("start_at"))
+    p["end_at_local"] = _to_local(p.get("end_at"))
+    p["created_at_local"] = _to_local(p.get("created_at"))
+
+    return render_template(
+        "staff_pass_detail.html",
+        p=p,
         fmt_dt=fmt_dt,
     )
 
