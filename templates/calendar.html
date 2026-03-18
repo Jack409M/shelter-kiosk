@@ -28,19 +28,23 @@
     box-sizing: border-box !important;
   }
 
-  #calendar .fc table,
-  #calendar .fc-scrollgrid,
-  #calendar .fc-scrollgrid table,
-  #calendar .fc-col-header table,
-  #calendar .fc-daygrid-body table {
+  /* kill inherited table sizing */
+  #calendar .fc table {
     width: 100% !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
     border-spacing: 0 !important;
   }
 
+  #calendar .fc col {
+    width: 14.285714% !important;
+  }
+
   #calendar .fc th,
   #calendar .fc td {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
     padding: 0 !important;
     vertical-align: top !important;
   }
@@ -70,18 +74,14 @@
 
   #calendar .fc-daygrid-day-frame {
     min-height: 110px !important;
-    height: 110px !important;
     padding: 4px !important;
     position: relative !important;
   }
 
   #calendar .fc-daygrid-day-top {
-    position: absolute !important;
-    top: 4px !important;
-    left: 4px !important;
-    right: 4px !important;
-    display: block !important;
-    text-align: left !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
   }
 
   #calendar .fc-daygrid-day-number {
@@ -94,12 +94,10 @@
     line-height: 1 !important;
     text-decoration: none !important;
     float: none !important;
-    position: static !important;
   }
 
   #calendar .fc-daygrid-day-events {
-    margin-top: 22px !important;
-    margin-bottom: 0 !important;
+    margin-top: 8px !important;
     min-height: 0 !important;
   }
 
@@ -137,7 +135,7 @@
 
   #calendar .fc-button-active,
   #calendar .fc-button-primary:not(:disabled).fc-button-active {
-    background: #ffffff !important;
+    background: #eef6ff !important;
     border: 2px solid #2c3e50 !important;
     color: #2c3e50 !important;
   }
