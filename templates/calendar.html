@@ -18,7 +18,7 @@
 
   #calendar {
     background: #ffffff;
-    color: #000000;
+    color: #1f2d3d;
     min-height: 700px;
   }
 
@@ -26,44 +26,70 @@
     color: #1f2d3d;
   }
 
+  #calendar .fc table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+  }
+
   #calendar .fc-scrollgrid,
-  #calendar .fc-scrollgrid table {
-    border-color: #d7dfe7;
+  #calendar .fc-scrollgrid table,
+  #calendar .fc-col-header table,
+  #calendar .fc-daygrid-body table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  #calendar .fc td,
+  #calendar .fc th {
+    vertical-align: top !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  #calendar .fc-scrollgrid,
+  #calendar .fc-scrollgrid td,
+  #calendar .fc-scrollgrid th {
+    border-color: #d7dfe7 !important;
   }
 
   #calendar .fc-col-header-cell {
-    background: #4f8fbe;
-    border: 1px solid #d7dfe7;
+    background: #4f8fbe !important;
   }
 
   #calendar .fc-col-header-cell-cushion {
-    color: #ffffff;
-    font-weight: 700;
-    text-decoration: none;
-    padding: 10px 4px;
+    display: block !important;
+    padding: 10px 4px !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    text-align: center !important;
   }
 
   #calendar .fc-daygrid-day {
-    background: #ffffff;
+    background: #ffffff !important;
   }
 
   #calendar .fc-daygrid-day-frame {
-    min-height: 110px;
-    position: relative;
-    padding: 4px;
+    min-height: 110px !important;
+    position: relative !important;
+    padding: 4px !important;
   }
 
   #calendar .fc-daygrid-day-top {
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-start;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
   }
 
   #calendar .fc-daygrid-day-number {
-    color: #1f2d3d;
-    font-weight: 700;
-    text-decoration: none;
-    padding: 2px 4px 0 0;
+    display: inline-block !important;
+    padding: 2px 4px !important;
+    color: #1f2d3d !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+    line-height: 1 !important;
   }
 
   #calendar .fc-day-today {
@@ -71,16 +97,16 @@
   }
 
   #calendar .fc-day-other {
-    background: #f8fafc;
+    background: #f8fafc !important;
   }
 
   #calendar .fc-day-other .fc-daygrid-day-number {
-    color: #9aa7b4;
+    color: #9aa7b4 !important;
   }
 
   #calendar .fc-toolbar-title {
-    color: #1f2d3d;
-    font-weight: 700;
+    color: #1f2d3d !important;
+    font-weight: 700 !important;
   }
 
   #calendar .fc-button {
@@ -88,45 +114,46 @@
     border: 1px solid #2c3e50 !important;
     color: #2c3e50 !important;
     box-shadow: none !important;
-    text-transform: lowercase;
+    text-transform: lowercase !important;
   }
 
   #calendar .fc-button:hover,
   #calendar .fc-button:focus {
-    background: #eaf2f8 !important;
+    background: #eef6ff !important;
     border-color: #2c3e50 !important;
     color: #2c3e50 !important;
   }
 
-  #calendar .fc-button-active {
-    background: #2c3e50 !important;
+  #calendar .fc-button-active,
+  #calendar .fc-button-primary:not(:disabled).fc-button-active {
+    background: #eef6ff !important;
     border-color: #2c3e50 !important;
-    color: #ffffff !important;
+    color: #2c3e50 !important;
   }
 
   #calendar .fc-button:disabled {
-    opacity: 0.6;
     background: #f2f4f7 !important;
-    color: #6b7280 !important;
     border-color: #cbd5e1 !important;
+    color: #6b7280 !important;
+    opacity: 1 !important;
   }
 
   #calendar .fc-event {
-    border: none;
-    border-radius: 4px;
-    padding: 2px 4px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
+    border: none !important;
+    border-radius: 4px !important;
+    padding: 2px 4px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
   }
 
   #calendar .fc-event-title,
   #calendar .fc-event-time {
-    color: #ffffff;
+    color: #ffffff !important;
   }
 
   #calendar .fc-toolbar {
-    margin-bottom: 1rem;
+    margin-bottom: 1rem !important;
   }
 </style>
 
