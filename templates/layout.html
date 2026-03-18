@@ -57,10 +57,12 @@
       {% set reports_url = safe_url_for('reports.demographics_dashboard') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
       {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
+      {% set kiosk_manual_url = url_for('static', filename='docs/dwc_kiosk_manual.pdf') %}
 
       <nav>
         <div class="nav-mobile">
           {% if session.get("staff_user_id") %}
+            <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Manuals</a>
             <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
           {% elif show_logged_out_nav %}
             <a href="{{ url_for('resident_requests.resident_signin') }}">Resident Sign In</a>
@@ -139,6 +141,13 @@
             {% if reports_url and can_view_reports %}
               <a href="{{ reports_url }}">Reports</a>
             {% endif %}
+
+            <div class="nav-dd">
+              <button type="button">Documents ▾</button>
+              <div class="menu">
+                <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
+              </div>
+            </div>
 
             {% if session.get("role") == "admin" %}
               <div class="nav-dd">
