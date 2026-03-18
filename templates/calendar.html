@@ -1,0 +1,283 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Shared Calendar</h1>
+
+<style>
+  .calendar-page {
+    display: grid;
+    gap: 18px;
+  }
+
+  .calendar-card {
+    background: #f7fbff;
+    border: 1px solid #cfd9e3;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 24px rgba(18, 38, 63, 0.08);
+  }
+
+  .calendar-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .calendar-toolbar form {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0;
+  }
+
+  .calendar-toolbar input,
+  .calendar-toolbar button,
+  .calendar-toolbar select,
+  .calendar-form input,
+  .calendar-form button,
+  .calendar-form select,
+  .calendar-form textarea {
+    padding: 10px 12px;
+    border: 1px solid #c7d3df;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+
+  .calendar-toolbar button,
+  .calendar-form button {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .calendar-form {
+    display: grid;
+    gap: 14px;
+  }
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+    gap: 14px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #35516d;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .field textarea {
+    min-height: 88px;
+    resize: vertical;
+  }
+
+  .calendar-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .event-row {
+    border: 1px solid #d7e1ea;
+    border-left-width: 10px;
+    border-radius: 12px;
+    background: #fff;
+    padding: 14px 16px;
+  }
+
+  .event-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .event-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f3550;
+    margin: 0;
+  }
+
+  .event-meta {
+    margin-top: 6px;
+    color: #48627c;
+    font-size: 14px;
+    display: grid;
+    gap: 4px;
+  }
+
+  .event-notes {
+    margin-top: 10px;
+    color: #34495e;
+    white-space: pre-wrap;
+  }
+
+  .event-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #35516d;
+    background: #f4f8fb;
+    border: 1px solid #d7e1ea;
+    border-radius: 999px;
+    padding: 6px 10px;
+  }
+
+  .event-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    flex: 0 0 12px;
+  }
+
+  .empty-state {
+    padding: 20px;
+    border: 1px dashed #c7d3df;
+    border-radius: 12px;
+    background: #fff;
+    color: #60758a;
+  }
+
+  .subnote {
+    margin-top: 4px;
+    color: #60758a;
+    font-size: 12px;
+  }
+
+  @media (max-width: 860px) {
+    .calendar-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="calendar-page">
+
+  <div class="calendar-card">
+    <div class="calendar-toolbar">
+      <div>
+        <strong>Viewing month:</strong> {{ month }}
+      </div>
+
+      <form method="get" action="{{ url_for('calendar.calendar_view') }}">
+        <input type="month" name="month" value="{{ month }}">
+        <button type="submit">Go</button>
+      </form>
+    </div>
+
+    <form method="post" action="{{ url_for('calendar.add_event') }}" class="calendar-form">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="month" value="{{ month }}">
+
+      <div class="calendar-grid">
+        <div class="field">
+          <label for="title">Title</label>
+          <input id="title" name="title" required autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="event_date">Date</label>
+          <input id="event_date" type="date" name="event_date" required>
+        </div>
+
+        <div class="field">
+          <label for="start_time">Start Time</label>
+          <input id="start_time" type="time" name="start_time">
+        </div>
+
+        <div class="field">
+          <label for="end_time">End Time</label>
+          <input id="end_time" type="time" name="end_time">
+        </div>
+
+        <div class="field">
+          <label for="shelter">Shelter</label>
+          <select id="shelter" name="shelter">
+            <option value="">All / None</option>
+            <option value="abba">Abba</option>
+            <option value="haven">Haven</option>
+            <option value="gratitude">Gratitude</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="notes">Notes</label>
+          <textarea id="notes" name="notes"></textarea>
+        </div>
+      </div>
+
+      <div>
+        <button type="submit">Add Event</button>
+      </div>
+      <div class="subnote">
+        Each event will use the calendar color assigned to the staff user who created it.
+      </div>
+    </form>
+  </div>
+
+  <div class="calendar-card">
+    <h2 style="margin-top: 0;">Events</h2>
+
+    {% if events %}
+      <div class="calendar-list">
+        {% for event in events %}
+          {% set event_color = event.calendar_color or '#6c7a89' %}
+          <div class="event-row" style="border-left-color: {{ event_color }};">
+            <div class="event-top">
+              <div>
+                <p class="event-title">{{ event.title }}</p>
+                <div class="event-meta">
+                  <div><strong>Date:</strong> {{ event.event_date }}</div>
+                  {% if event.start_time or event.end_time %}
+                    <div>
+                      <strong>Time:</strong>
+                      {{ event.start_time or '' }}{% if event.start_time and event.end_time %} to {% endif %}{{ event.end_time or '' }}
+                    </div>
+                  {% endif %}
+                  {% if event.shelter %}
+                    <div><strong>Shelter:</strong> {{ event.shelter|capitalize }}</div>
+                  {% endif %}
+                  <div>
+                    <strong>Case Manager:</strong>
+                    {{ (event.first_name or '') ~ ' ' ~ (event.last_name or '') }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="event-badge">
+                <span class="event-dot" style="background: {{ event_color }};"></span>
+                <span>{{ (event.first_name or '') ~ ' ' ~ (event.last_name or '') }}</span>
+              </div>
+            </div>
+
+            {% if event.notes %}
+              <div class="event-notes">{{ event.notes }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        No events found for this month yet.
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
