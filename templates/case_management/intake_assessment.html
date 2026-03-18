@@ -55,9 +55,13 @@
     color: #243447;
   }
 
-  .btn-primary {
+  .btn-primary,
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:visited {
     background: #1f5eff;
-    color: #ffffff;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
   }
 
   .intake-shell {
@@ -371,8 +375,25 @@
 
     <div class="intake-header-actions">
       <a class="btn-soft" href="{{ safe_url_for('case_management.index') or '#' }}">Back to Case Manager</a>
-      <button class="btn-primary" type="submit" form="resident-intake-form">
-        Save and Open Resident Profile
+
+      <button
+        class="btn-soft"
+        type="submit"
+        name="action"
+        value="save_draft"
+        form="resident-intake-form"
+      >
+        Save Draft
+      </button>
+
+      <button
+        class="btn-primary"
+        type="submit"
+        name="action"
+        value="complete"
+        form="resident-intake-form"
+      >
+        Complete Intake
       </button>
     </div>
   </div>
@@ -396,12 +417,24 @@
 
       <div class="status-tile">
         <div class="status-label">Workflow Stage</div>
-        <div class="status-value">New Intake</div>
+        <div class="status-value">
+          {% if form_data.get('draft_id') %}
+            Draft Intake
+          {% else %}
+            New Intake
+          {% endif %}
+        </div>
       </div>
 
       <div class="status-tile">
         <div class="status-label">Record Status</div>
-        <div class="status-value">Not Saved Yet</div>
+        <div class="status-value">
+          {% if form_data.get('draft_id') %}
+            Draft In Progress
+          {% else %}
+            Not Saved Yet
+          {% endif %}
+        </div>
       </div>
 
       <div class="status-tile">
@@ -437,6 +470,7 @@
 
         <form id="resident-intake-form" method="post" action="{{ url_for('case_management.submit_intake_assessment') }}">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
 
           <div class="tab-strip" role="tablist" aria-label="Intake tabs">
             <button
@@ -1007,12 +1041,18 @@
 
           <div class="footer-actions">
             <div class="footer-note">
-              This screen now posts into the intake route and keeps entered values if validation fails.
+              Save Draft lets staff stop and reopen later. Complete Intake creates the resident record.
             </div>
 
-            <button class="btn-primary" type="submit">
-              Save and Open Resident Profile
-            </button>
+            <div class="intake-header-actions">
+              <button class="btn-soft" type="submit" name="action" value="save_draft">
+                Save Draft
+              </button>
+
+              <button class="btn-primary" type="submit" name="action" value="complete">
+                Complete Intake
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -1020,7 +1060,7 @@
       <aside class="help-card">
         <h3>What this page will do</h3>
         <p>
-          This screen is the front door for case manager data entry. It will create the resident, create the enrollment, save entry data, and then open the resident workspace.
+          This screen is the front door for case manager data entry. Save Draft keeps the intake open for later. Complete Intake creates the resident, creates the enrollment, saves entry data, and then opens the resident workspace.
         </p>
 
         <div class="mini-list">
