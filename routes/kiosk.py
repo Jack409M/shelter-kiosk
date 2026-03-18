@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import secrets
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 from core.audit import log_action
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
-from core.runtime import KIOSK_PIN, get_all_shelters, get_client_ip, init_db
+from core.runtime import get_all_shelters, get_client_ip, init_db
 
 kiosk = Blueprint("kiosk", __name__)
 
@@ -92,58 +91,6 @@ def _complete_active_passes(resident_id: int, shelter: str) -> None:
     )
 
 
-def _require_kiosk_pin(shelter: str, ip: str, post_endpoint: str):
-    from core.rate_limit import is_rate_limited
-
-    if not KIOSK_PIN:
-        return None
-
-    if session.get(f"kiosk_authed_{shelter}") is True:
-        return None
-
-    if is_rate_limited(f"kiosk_pin_ip:{ip}", limit=10, window_seconds=300) or is_rate_limited(
-        f"kiosk_pin_shelter:{shelter}", limit=40, window_seconds=300
-    ):
-        log_action(
-            "kiosk",
-            None,
-            shelter,
-            None,
-            "kiosk_pin_rate_limited",
-            f"ip={ip}",
-        )
-        flash("Too many PIN attempts. Please wait and try again.", "error")
-        return render_template(
-            "kiosk_pin.html",
-            shelter=shelter,
-            post_url=url_for(post_endpoint, shelter=shelter),
-        ), 429
-
-    if request.method == "POST" and request.form.get("kiosk_pin") is not None:
-        entered_pin = (request.form.get("kiosk_pin") or "").strip()
-
-        if secrets.compare_digest(entered_pin, KIOSK_PIN):
-            session[f"kiosk_authed_{shelter}"] = True
-            session.permanent = True
-            return redirect(url_for(post_endpoint, shelter=shelter))
-
-        log_action(
-            "kiosk",
-            None,
-            shelter,
-            None,
-            "kiosk_pin_failed",
-            f"ip={ip}",
-        )
-        flash("Invalid PIN.", "error")
-
-    return render_template(
-        "kiosk_pin.html",
-        shelter=shelter,
-        post_url=url_for(post_endpoint, shelter=shelter),
-    ), 401
-
-
 @kiosk.route("/kiosk/<shelter>")
 def kiosk_home(shelter: str):
     init_db()
@@ -165,10 +112,6 @@ def kiosk_home(shelter: str):
             f"ip={ip}",
         )
         return "Kiosk intake is temporarily disabled.", 503
-
-    pin_gate = _require_kiosk_pin(shelter, ip, "kiosk.kiosk_home")
-    if pin_gate is not None:
-        return pin_gate
 
     return render_template("kiosk_home.html", shelter=shelter)
 
@@ -201,10 +144,6 @@ def kiosk_checkin(shelter: str):
             f"ip={ip}",
         )
         return "Kiosk intake is temporarily disabled.", 503
-
-    pin_gate = _require_kiosk_pin(shelter, ip, "kiosk.kiosk_checkin")
-    if pin_gate is not None:
-        return pin_gate
 
     if request.method == "GET":
         return render_template("kiosk_checkin.html", shelter=shelter)
@@ -295,8 +234,8 @@ def kiosk_checkin(shelter: str):
             )
 
     if errors:
-        for e in errors:
-            flash(e, "error")
+        for error_message in errors:
+            flash(error_message, "error")
         log_action(
             "kiosk",
             None,
@@ -357,10 +296,6 @@ def kiosk_checkout(shelter: str):
             f"ip={ip}",
         )
         return "Kiosk intake is temporarily disabled.", 503
-
-    pin_gate = _require_kiosk_pin(shelter, ip, "kiosk.kiosk_checkout")
-    if pin_gate is not None:
-        return pin_gate
 
     if request.method == "GET":
         return render_template("kiosk_checkout.html", shelter=shelter)
@@ -474,8 +409,8 @@ def kiosk_checkout(shelter: str):
             errors.append("Invalid expected back time.")
 
     if errors:
-        for e in errors:
-            flash(e, "error")
+        for error_message in errors:
+            flash(error_message, "error")
         log_action(
             "kiosk",
             None,
@@ -494,7 +429,15 @@ def kiosk_checkout(shelter: str):
 
     db_execute(
         _attendance_insert_sql(),
-        (resident_id, shelter, "check_out", utcnow_iso(), None, full_note, expected_back_value),
+        (
+            resident_id,
+            shelter,
+            "check_out",
+            utcnow_iso(),
+            None,
+            full_note,
+            expected_back_value,
+        ),
     )
 
     log_action(
@@ -508,3 +451,4 @@ def kiosk_checkout(shelter: str):
 
     flash("Checked out.", "ok")
     return redirect(url_for("kiosk.kiosk_home", shelter=shelter))
+    
