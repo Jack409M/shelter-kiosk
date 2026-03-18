@@ -95,11 +95,15 @@
             {% endfor %}
           </ul>
 
-          <script>
-            setTimeout(function () {
-              window.location.href = "{{ url_for('kiosk.kiosk_home', shelter=shelter) }}";
-            }, 2500);
-          </script>
+          {% for category, message in messages %}
+            {% if category == "ok" %}
+              <script>
+                setTimeout(function () {
+                  window.location.href = "{{ url_for('kiosk.kiosk_home', shelter=shelter) }}";
+                }, 2500);
+              </script>
+            {% endif %}
+          {% endfor %}
         {% endif %}
       {% endwith %}
 
