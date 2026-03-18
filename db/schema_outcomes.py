@@ -87,6 +87,34 @@ def ensure_intake_assessments_table(kind: str) -> None:
     )
 
 
+def ensure_intake_assessment_columns(kind: str) -> None:
+    try:
+        from core.db import db_execute
+
+        statements = [
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS city TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS last_zipcode_residence TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS length_of_time_in_amarillo TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS marital_status TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS drug_court INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS sexual_survivor INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS warrants_unpaid INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS mh_exam_completed INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS med_exam_completed INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS car_at_entry INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS car_insurance_at_entry INTEGER NOT NULL DEFAULT 0",
+        ]
+
+        for sql in statements:
+            try:
+                db_execute(sql)
+            except Exception:
+                pass
+
+    except Exception:
+        pass
+
+
 def ensure_family_snapshots_table(kind: str) -> None:
     create_table(
         kind,
@@ -268,6 +296,7 @@ def ensure_indexes() -> None:
 
 def ensure_tables(kind: str) -> None:
     ensure_intake_assessments_table(kind)
+    ensure_intake_assessment_columns(kind)
     ensure_family_snapshots_table(kind)
     ensure_exit_assessments_table(kind)
     ensure_followups_table(kind)
