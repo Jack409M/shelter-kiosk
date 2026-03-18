@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from core.auth import require_login
 from core.db import db_execute, db_fetchall
@@ -51,7 +51,39 @@ def calendar_view():
         today = date.today()
         month = f"{today.year}-{str(today.month).zfill(2)}"
 
-    events = db_fetchall(
+    return render_template(
+        "calendar.html",
+        month=month,
+    )
+
+
+@calendar_bp.route("/events", methods=["GET"])
+@require_login
+def calendar_events():
+    if not _require_calendar_access():
+        return jsonify([]), 403
+
+    init_db()
+
+    month = (request.args.get("month") or "").strip()
+    shelter = _clean_shelter(request.args.get("shelter"))
+
+    where_clauses: list[str] = []
+    params: list[object] = []
+
+    if month:
+        where_clauses.append(f"e.event_date LIKE {_ph()}")
+        params.append(f"{month}%")
+
+    if shelter:
+        where_clauses.append(f"LOWER(COALESCE(e.shelter, '')) = {_ph()}")
+        params.append(shelter)
+
+    where_sql = ""
+    if where_clauses:
+        where_sql = "WHERE " + " AND ".join(where_clauses)
+
+    rows = db_fetchall(
         f"""
         SELECT
             e.id,
@@ -70,17 +102,56 @@ def calendar_view():
             u.calendar_color
         FROM case_manager_calendar_events e
         LEFT JOIN staff_users u ON u.id = e.staff_user_id
-        WHERE e.event_date LIKE {_ph()}
+        {where_sql}
         ORDER BY e.event_date ASC, e.start_time ASC, e.id ASC
         """,
-        (f"{month}%",),
+        tuple(params),
     )
 
-    return render_template(
-        "calendar.html",
-        events=events,
-        month=month,
-    )
+    events: list[dict[str, object]] = []
+
+    for row in rows:
+        event_date = str(row["event_date"])
+        start_time = (row["start_time"] or "").strip() if row["start_time"] else ""
+        end_time = (row["end_time"] or "").strip() if row["end_time"] else ""
+
+        start_value = event_date
+        end_value = None
+
+        if start_time:
+            start_value = f"{event_date}T{start_time}"
+
+        if end_time:
+            end_value = f"{event_date}T{end_time}"
+
+        first_name = (row["first_name"] or "").strip()
+        last_name = (row["last_name"] or "").strip()
+        staff_name = f"{first_name} {last_name}".strip()
+
+        extended_props = {
+            "event_id": row["id"],
+            "shelter": row["shelter"],
+            "staff_user_id": row["staff_user_id"],
+            "staff_name": staff_name,
+            "notes": row["notes"] or "",
+        }
+
+        event_payload: dict[str, object] = {
+            "id": row["id"],
+            "title": row["title"],
+            "start": start_value,
+            "color": row["calendar_color"] or "#3788d8",
+            "extendedProps": extended_props,
+        }
+
+        if end_value:
+            event_payload["end"] = end_value
+        else:
+            event_payload["allDay"] = True
+
+        events.append(event_payload)
+
+    return jsonify(events)
 
 
 @calendar_bp.route("/add", methods=["POST"])
