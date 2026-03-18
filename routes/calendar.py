@@ -214,4 +214,4 @@ def add_event():
     )
 
     flash("Event added.", "ok")
-    return redirect(url_for("calendar.calendar_view"))
+    return redirect(url_for("calendar.calendar_view", month=event_date[:7]))
