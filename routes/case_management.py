@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from typing import Any
 
@@ -78,6 +79,190 @@ def _parse_money(value: str | None) -> float | None:
 
 def _yes_no_to_int(value: str | None) -> int:
     return 1 if (value or "").strip().lower() == "yes" else 0
+
+
+def _draft_display_name(form: Any) -> str:
+    first_name = _clean(form.get("first_name")) or ""
+    last_name = _clean(form.get("last_name")) or ""
+    full_name = f"{first_name} {last_name}".strip()
+    return full_name or "Unnamed intake draft"
+
+
+def _save_intake_draft(
+    current_shelter: str,
+    form: Any,
+    draft_id: int | None = None,
+) -> int:
+    placeholder = _placeholder()
+    resident_name = _draft_display_name(form)
+    payload = json.dumps(form.to_dict(flat=True), ensure_ascii=False)
+
+    if g.get("db_kind") == "pg":
+        if draft_id is not None:
+            row = db_fetchone(
+                f"""
+                UPDATE intake_drafts
+                SET resident_name = {placeholder},
+                    form_payload = {placeholder},
+                    updated_at = NOW()
+                WHERE id = {placeholder}
+                  AND status = 'draft'
+                  AND LOWER(COALESCE(shelter, '')) = {placeholder}
+                RETURNING id
+                """,
+                (resident_name, payload, draft_id, current_shelter),
+            )
+            if row:
+                return int(row["id"])
+
+        row = db_fetchone(
+            f"""
+            INSERT INTO intake_drafts
+            (
+                shelter,
+                status,
+                resident_name,
+                form_payload,
+                created_by_user_id,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {placeholder},
+                'draft',
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                NOW(),
+                NOW()
+            )
+            RETURNING id
+            """,
+            (
+                current_shelter,
+                resident_name,
+                payload,
+                session.get("user_id"),
+            ),
+        )
+        return int(row["id"])
+
+    if draft_id is not None:
+        db_execute(
+            f"""
+            UPDATE intake_drafts
+            SET resident_name = {placeholder},
+                form_payload = {placeholder},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = {placeholder}
+              AND status = 'draft'
+              AND LOWER(COALESCE(shelter, '')) = {placeholder}
+            """,
+            (resident_name, payload, draft_id, current_shelter),
+        )
+        existing = db_fetchone(
+            f"""
+            SELECT id
+            FROM intake_drafts
+            WHERE id = {placeholder}
+              AND status = 'draft'
+              AND LOWER(COALESCE(shelter, '')) = {placeholder}
+            """,
+            (draft_id, current_shelter),
+        )
+        if existing:
+            return draft_id
+
+    db_execute(
+        f"""
+        INSERT INTO intake_drafts
+        (
+            shelter,
+            status,
+            resident_name,
+            form_payload,
+            created_by_user_id,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            {placeholder},
+            'draft',
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        """,
+        (
+            current_shelter,
+            resident_name,
+            payload,
+            session.get("user_id"),
+        ),
+    )
+
+    row = db_fetchone("SELECT last_insert_rowid() AS id")
+    return int(row["id"])
+
+
+def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | None:
+    placeholder = _placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_name,
+            form_payload,
+            updated_at
+        FROM intake_drafts
+        WHERE id = {placeholder}
+          AND status = 'draft'
+          AND LOWER(COALESCE(shelter, '')) = {placeholder}
+        """,
+        (draft_id, current_shelter),
+    )
+    if not row:
+        return None
+
+    payload_raw = row["form_payload"] if isinstance(row, dict) else row[2]
+
+    try:
+        payload = json.loads(payload_raw or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+
+    payload["draft_id"] = str(row["id"] if isinstance(row, dict) else row[0])
+    return payload
+
+
+def _complete_intake_draft(draft_id: int) -> None:
+    placeholder = _placeholder()
+
+    if g.get("db_kind") == "pg":
+        db_execute(
+            f"""
+            UPDATE intake_drafts
+            SET status = 'completed',
+                updated_at = NOW()
+            WHERE id = {placeholder}
+            """,
+            (draft_id,),
+        )
+        return
+
+    db_execute(
+        f"""
+        UPDATE intake_drafts
+        SET status = 'completed',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = {placeholder}
+        """,
+        (draft_id,),
+    )
 
 
 def _intake_template_context(
@@ -812,6 +997,7 @@ def index():
     init_db()
 
     shelter = _normalize_shelter_name(session.get("shelter"))
+    placeholder = _placeholder()
 
     residents = db_fetchall(
         f"""
@@ -828,9 +1014,24 @@ def index():
         (shelter,),
     )
 
+    drafts = db_fetchall(
+        f"""
+        SELECT
+            id,
+            resident_name,
+            updated_at
+        FROM intake_drafts
+        WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+          AND status = 'draft'
+        ORDER BY updated_at DESC, id DESC
+        """,
+        (shelter,),
+    )
+
     return render_template(
         "case_management/index.html",
         residents=residents,
+        drafts=drafts,
         shelter=shelter,
     )
 
@@ -846,10 +1047,21 @@ def intake_assessment():
     init_db()
 
     current_shelter = _normalize_shelter_name(session.get("shelter"))
+    draft_id = _parse_int(request.args.get("draft_id"))
+    form_data: dict[str, Any] | None = None
+
+    if draft_id is not None:
+        form_data = _load_intake_draft(current_shelter, draft_id)
+        if not form_data:
+            flash("Intake draft not found.", "error")
+            return redirect(url_for("case_management.index"))
 
     return render_template(
         "case_management/intake_assessment.html",
-        **_intake_template_context(current_shelter=current_shelter),
+        **_intake_template_context(
+            current_shelter=current_shelter,
+            form_data=form_data,
+        ),
     )
 
 
@@ -864,6 +1076,32 @@ def submit_intake_assessment():
     init_db()
 
     current_shelter = _normalize_shelter_name(session.get("shelter"))
+    action = (request.form.get("action") or "complete").strip().lower()
+    draft_id = _parse_int(request.form.get("draft_id"))
+
+    if action == "save_draft":
+        first_name = _clean(request.form.get("first_name"))
+        last_name = _clean(request.form.get("last_name"))
+
+        if not first_name or not last_name:
+            flash("Save Draft requires at least first name and last name.", "error")
+            return render_template(
+                "case_management/intake_assessment.html",
+                **_intake_template_context(
+                    current_shelter=current_shelter,
+                    form_data=request.form.to_dict(flat=True),
+                ),
+            )
+
+        saved_draft_id = _save_intake_draft(
+            current_shelter=current_shelter,
+            form=request.form,
+            draft_id=draft_id,
+        )
+
+        flash("Intake draft saved.", "success")
+        return redirect(url_for("case_management.intake_assessment", draft_id=saved_draft_id))
+
     data, errors = _validate_intake_form(request.form, current_shelter)
 
     duplicate = _find_possible_duplicate(
@@ -897,7 +1135,7 @@ def submit_intake_assessment():
             "case_management/intake_assessment.html",
             **_intake_template_context(
                 current_shelter=current_shelter,
-                form_data=dict(request.form),
+                form_data=request.form.to_dict(flat=True),
             ),
         )
 
@@ -905,6 +1143,9 @@ def submit_intake_assessment():
     enrollment_id = _insert_program_enrollment(resident_id, data, current_shelter)
     _insert_intake_assessment(enrollment_id, data)
     _insert_family_snapshot(enrollment_id, data)
+
+    if draft_id is not None:
+        _complete_intake_draft(draft_id)
 
     flash(
         f"Resident created successfully. Resident ID: {resident_identifier}. Resident Code: {resident_code}",
