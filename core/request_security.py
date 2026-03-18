@@ -167,6 +167,9 @@ def register_request_security(
     def auto_ban_scanner_probes():
         path = _normalized_path().lower()
 
+        if path.startswith("/static/") or path == "/favicon.ico":
+            return None
+
         scanner_markers = (
             ".env",
             ".git",
