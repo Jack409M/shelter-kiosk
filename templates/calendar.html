@@ -7,17 +7,115 @@
   <div id="calendar-status" style="font-weight: 600;">Loading calendar...</div>
 </div>
 
-<div
-  id="calendar"
-  style="
+<style>
+  #calendar-wrap {
     max-width: 1100px;
     margin: 0 auto 24px auto;
-    min-height: 700px;
     background: #ffffff;
     border-radius: 10px;
     padding: 12px;
-  "
-></div>
+  }
+
+  #calendar {
+    background: #ffffff;
+    color: #000000;
+    min-height: 700px;
+  }
+
+  #calendar table {
+    background: #ffffff;
+    border-collapse: collapse;
+  }
+
+  #calendar th {
+    background: #4f8fbe;
+    color: #ffffff;
+    padding: 8px 6px;
+    font-weight: 700;
+    border: 1px solid #d7dfe7;
+  }
+
+  #calendar td {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #d7dfe7;
+  }
+
+  #calendar .fc-scrollgrid,
+  #calendar .fc-scrollgrid table {
+    border-color: #d7dfe7;
+  }
+
+  #calendar .fc-col-header-cell-cushion {
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  #calendar .fc-daygrid-day-number,
+  #calendar .fc-timegrid-slot-label,
+  #calendar .fc-timegrid-axis-cushion,
+  #calendar .fc-toolbar-title {
+    color: #1f2d3d;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  #calendar .fc-day-today {
+    background: #eef6ff !important;
+  }
+
+  #calendar .fc-day-other {
+    background: #f8fafc;
+  }
+
+  #calendar .fc-day-other .fc-daygrid-day-number {
+    color: #9aa7b4;
+  }
+
+  #calendar .fc-button {
+    background: #2c3e50 !important;
+    border: 1px solid #2c3e50 !important;
+    color: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  #calendar .fc-button:hover,
+  #calendar .fc-button:focus {
+    background: #1f2d3d !important;
+    border-color: #1f2d3d !important;
+  }
+
+  #calendar .fc-button-active {
+    background: #1f2d3d !important;
+    border-color: #1f2d3d !important;
+  }
+
+  #calendar .fc-button:disabled {
+    opacity: 0.65;
+  }
+
+  #calendar .fc-event {
+    border: none;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  #calendar .fc-event-title,
+  #calendar .fc-event-time {
+    color: #ffffff;
+  }
+
+  #calendar .fc-toolbar {
+    margin-bottom: 1rem;
+  }
+</style>
+
+<div id="calendar-wrap">
+  <div id="calendar"></div>
+</div>
 
 <script src="{{ url_for('static', filename='vendor/fullcalendar/index.global.min.js') }}"></script>
 
