@@ -89,6 +89,40 @@ def ensure_case_manager_calendar_events_table(kind: str) -> None:
     )
 
 
+def ensure_intake_drafts_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS intake_drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shelter TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'draft',
+            resident_name TEXT,
+            form_payload TEXT NOT NULL,
+            created_by_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS intake_drafts (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'draft',
+            resident_name TEXT,
+            form_payload TEXT NOT NULL,
+            created_by_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_indexes() -> None:
     try:
         db_execute(
@@ -180,7 +214,48 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS intake_drafts_status_idx
+            ON intake_drafts (status)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS intake_drafts_shelter_idx
+            ON intake_drafts (shelter)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS intake_drafts_shelter_status_updated_idx
+            ON intake_drafts (shelter, status, updated_at)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS intake_drafts_created_by_idx
+            ON intake_drafts (created_by_user_id)
+            """
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
     ensure_case_manager_calendar_events_table(kind)
+    ensure_intake_drafts_table(kind)
