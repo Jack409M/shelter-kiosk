@@ -151,6 +151,20 @@
     color: #1f3550;
   }
 
+  .color-option-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    flex: 0 0 14px;
+  }
+
   @media (max-width: 760px) {
     .user-form-grid {
       grid-template-columns: 1fr;
@@ -166,6 +180,10 @@
   <div class="user-form-card">
 
     {% set assigned = assigned_shelters if assigned_shelters is defined and assigned_shelters else [] %}
+    {% set selected_calendar_color = '' %}
+    {% if user and user.calendar_color %}
+      {% set selected_calendar_color = user.calendar_color %}
+    {% endif %}
 
     {% if mode == "edit" and user %}
       <div class="summary-box">
@@ -278,6 +296,24 @@
                 value="{{ user.role if user and user.role else 'staff' }}"
               >
             {% endif %}
+          </div>
+
+          <div class="field">
+            <label for="calendar_color">Calendar Color</label>
+            <select id="calendar_color" name="calendar_color">
+              <option value="">No color selected</option>
+              <option value="#D9534F" {% if selected_calendar_color == '#D9534F' %}selected{% endif %}>Red</option>
+              <option value="#337AB7" {% if selected_calendar_color == '#337AB7' %}selected{% endif %}>Blue</option>
+              <option value="#5CB85C" {% if selected_calendar_color == '#5CB85C' %}selected{% endif %}>Green</option>
+              <option value="#8E44AD" {% if selected_calendar_color == '#8E44AD' %}selected{% endif %}>Purple</option>
+              <option value="#F0AD4E" {% if selected_calendar_color == '#F0AD4E' %}selected{% endif %}>Orange</option>
+              <option value="#20B2AA" {% if selected_calendar_color == '#20B2AA' %}selected{% endif %}>Teal</option>
+              <option value="#E83E8C" {% if selected_calendar_color == '#E83E8C' %}selected{% endif %}>Pink</option>
+              <option value="#C9A227" {% if selected_calendar_color == '#C9A227' %}selected{% endif %}>Gold</option>
+            </select>
+            <div class="subnote">
+              Choose the color this staff member will use on the shared calendar.
+            </div>
           </div>
         </div>
       </div>
