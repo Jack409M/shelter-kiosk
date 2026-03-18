@@ -397,9 +397,16 @@ def kiosk_checkout(shelter: str):
     expected_back_value = None
     if expected_back:
         try:
-            local_dt = datetime.fromisoformat(expected_back).replace(
-                tzinfo=ZoneInfo("America/Chicago")
+            now_local = datetime.now(ZoneInfo("America/Chicago"))
+            hour, minute = map(int, expected_back.split(":"))
+
+            local_dt = now_local.replace(
+                hour=hour,
+                minute=minute,
+                second=0,
+                microsecond=0,
             )
+
             expected_back_value = (
                 local_dt.astimezone(timezone.utc)
                 .replace(tzinfo=None)
@@ -451,4 +458,3 @@ def kiosk_checkout(shelter: str):
 
     flash("Checked out.", "ok")
     return redirect(url_for("kiosk.kiosk_home", shelter=shelter))
-    
