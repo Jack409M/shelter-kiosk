@@ -5,7 +5,7 @@ from datetime import date
 from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, session, url_for
 
 from core.auth import require_login
-from core.db import db_execute, db_fetchall
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 
@@ -61,7 +61,7 @@ def calendar_view():
 @require_login
 def calendar_events():
     if not _require_calendar_access():
-        return jsonify([]), 403
+        return jsonify([])
 
     init_db()
 
@@ -128,20 +128,18 @@ def calendar_events():
         last_name = (row["last_name"] or "").strip()
         staff_name = f"{first_name} {last_name}".strip()
 
-        extended_props = {
-            "event_id": row["id"],
-            "shelter": row["shelter"],
-            "staff_user_id": row["staff_user_id"],
-            "staff_name": staff_name,
-            "notes": row["notes"] or "",
-        }
-
         event_payload: dict[str, object] = {
             "id": row["id"],
             "title": row["title"],
             "start": start_value,
             "color": row["calendar_color"] or "#3788d8",
-            "extendedProps": extended_props,
+            "extendedProps": {
+                "event_id": row["id"],
+                "shelter": row["shelter"],
+                "staff_user_id": row["staff_user_id"],
+                "staff_name": staff_name,
+                "notes": row["notes"] or "",
+            },
         }
 
         if end_value:
@@ -154,7 +152,7 @@ def calendar_events():
     return jsonify(events)
 
 
-@calendar_bp.route("/add", methods=["POST"])
+@calendar_bp.route("/add", methods=["GET", "POST"])
 @require_login
 def add_event():
     if not _require_calendar_access():
@@ -163,21 +161,25 @@ def add_event():
 
     init_db()
 
+    if request.method == "GET":
+        event_date = (request.args.get("event_date") or "").strip()
+        return render_template(
+            "calendar_add.html",
+            event_date=event_date,
+        )
+
     title = (request.form.get("title") or "").strip()
     event_date = (request.form.get("event_date") or "").strip()
     start_time = (request.form.get("start_time") or "").strip()
     end_time = (request.form.get("end_time") or "").strip()
     shelter = _clean_shelter(request.form.get("shelter"))
     notes = (request.form.get("notes") or "").strip()
-    month = (request.form.get("month") or "").strip()
 
     staff_user_id = session.get("staff_user_id")
 
     if not title or not event_date:
         flash("Title and date required.", "error")
-        if month:
-            return redirect(url_for("calendar.calendar_view", month=month))
-        return redirect(url_for("calendar.calendar_view"))
+        return redirect(url_for("calendar.add_event", event_date=event_date))
 
     now = utcnow_iso()
 
@@ -212,6 +214,4 @@ def add_event():
     )
 
     flash("Event added.", "ok")
-    if month:
-        return redirect(url_for("calendar.calendar_view", month=month))
     return redirect(url_for("calendar.calendar_view"))
