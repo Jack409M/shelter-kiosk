@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>Edit Calendar Event</h1>
+
+<form method="post" class="card" style="max-width: 620px; margin: 20px auto; padding: 16px;">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+  <label for="title">Title</label>
+  <input id="title" name="title" value="{{ event.title or '' }}" required>
+
+  <label for="event_date">Date</label>
+  <input id="event_date" type="date" name="event_date" value="{{ event.event_date or '' }}" required>
+
+  <label for="start_time">Start time</label>
+  <input id="start_time" type="time" name="start_time" value="{{ event.start_time or '' }}">
+
+  <label for="end_time">End time</label>
+  <input id="end_time" type="time" name="end_time" value="{{ event.end_time or '' }}">
+
+  <label for="shelter">Shelter</label>
+  <select id="shelter" name="shelter">
+    <option value="">None</option>
+    <option value="abba" {% if event.shelter == "abba" %}selected{% endif %}>Abba</option>
+    <option value="haven" {% if event.shelter == "haven" %}selected{% endif %}>Haven</option>
+    <option value="gratitude" {% if event.shelter == "gratitude" %}selected{% endif %}>Gratitude</option>
+  </select>
+
+  <label for="notes">Notes</label>
+  <textarea id="notes" name="notes" rows="5">{{ event.notes or '' }}</textarea>
+
+  <div style="margin-top: 16px; display: flex; gap: 10px;">
+    <button type="submit">Save changes</button>
+    <a href="{{ url_for('calendar.calendar_view', month=(event.event_date or '')[:7]) }}" class="btn">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}
