@@ -17,6 +17,16 @@ from routes.admin_parts.helpers import (
 
 
 VALID_SHELTERS = {"abba", "haven", "gratitude"}
+VALID_CALENDAR_COLORS = {
+    "#D9534F",
+    "#337AB7",
+    "#5CB85C",
+    "#8E44AD",
+    "#F0AD4E",
+    "#20B2AA",
+    "#E83E8C",
+    "#C9A227",
+}
 
 
 def _db_kind() -> str:
@@ -49,6 +59,15 @@ def _normalize_selected_shelters(values: list[str]) -> list[str]:
             seen.add(shelter)
 
     return cleaned
+
+
+def _normalize_calendar_color(value: str | None) -> str | None:
+    cleaned = (value or "").strip().upper()
+    if not cleaned:
+        return None
+    if cleaned in VALID_CALENDAR_COLORS:
+        return cleaned
+    return None
 
 
 def _load_staff_shelter_assignments(staff_user_id: int) -> set[str]:
@@ -175,7 +194,7 @@ def admin_users_view():
 
     users = db_fetchall(
         f"""
-        SELECT id, first_name, last_name, username, role, is_active, created_at, mobile_phone
+        SELECT id, first_name, last_name, username, role, is_active, created_at, mobile_phone, calendar_color
         FROM staff_users
         {where_sql}
         {order_sql}
@@ -213,6 +232,7 @@ def admin_add_user_view():
         username = (request.form.get("username") or "").strip()
         role = (request.form.get("role") or "").strip()
         mobile_phone = (request.form.get("mobile_phone") or "").strip()
+        calendar_color = _normalize_calendar_color(request.form.get("calendar_color"))
         password = (request.form.get("password") or "").strip()
         selected_shelters = request.form.getlist("shelters")
 
@@ -222,6 +242,7 @@ def admin_add_user_view():
             "username": username,
             "role": role,
             "mobile_phone": mobile_phone,
+            "calendar_color": calendar_color or "",
             "is_active": 1,
         }
         assigned_shelters = set(_normalize_selected_shelters(selected_shelters))
@@ -287,9 +308,10 @@ def admin_add_user_view():
                     role,
                     is_active,
                     mobile_phone,
+                    calendar_color,
                     created_at
                 )
-                VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
+                VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
                 RETURNING id
                 """,
                 (
@@ -300,6 +322,7 @@ def admin_add_user_view():
                     role,
                     True,
                     mobile_phone or None,
+                    calendar_color,
                     created_at,
                 ),
             )
@@ -315,9 +338,10 @@ def admin_add_user_view():
                     role,
                     is_active,
                     mobile_phone,
+                    calendar_color,
                     created_at
                 )
-                VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
+                VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
                 """,
                 (
                     first_name,
@@ -327,6 +351,7 @@ def admin_add_user_view():
                     role,
                     1,
                     mobile_phone or None,
+                    calendar_color,
                     created_at,
                 ),
             )
@@ -371,7 +396,7 @@ def admin_edit_user_view(user_id: int):
 
     rows = db_fetchall(
         f"""
-        SELECT id, first_name, last_name, username, role, is_active, created_at, mobile_phone
+        SELECT id, first_name, last_name, username, role, is_active, created_at, mobile_phone, calendar_color
         FROM staff_users
         WHERE id = {_ph()}
         """,
@@ -396,6 +421,7 @@ def admin_edit_user_view(user_id: int):
         username = (request.form.get("username") or "").strip()
         role = (request.form.get("role") or "").strip()
         mobile_phone = (request.form.get("mobile_phone") or "").strip()
+        calendar_color = _normalize_calendar_color(request.form.get("calendar_color"))
         password = (request.form.get("password") or "").strip()
         selected_shelters = request.form.getlist("shelters")
 
@@ -406,6 +432,7 @@ def admin_edit_user_view(user_id: int):
             user["username"] = username
             user["role"] = role
             user["mobile_phone"] = mobile_phone
+            user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -422,6 +449,7 @@ def admin_edit_user_view(user_id: int):
             user["username"] = username
             user["role"] = role
             user["mobile_phone"] = mobile_phone
+            user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -438,6 +466,7 @@ def admin_edit_user_view(user_id: int):
             user["username"] = username
             user["role"] = current_user_role
             user["mobile_phone"] = mobile_phone
+            user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -454,6 +483,7 @@ def admin_edit_user_view(user_id: int):
             user["username"] = username
             user["role"] = current_user_role
             user["mobile_phone"] = mobile_phone
+            user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -470,6 +500,7 @@ def admin_edit_user_view(user_id: int):
             user["username"] = username
             user["role"] = role if _require_admin() else current_user_role
             user["mobile_phone"] = mobile_phone
+            user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -490,6 +521,7 @@ def admin_edit_user_view(user_id: int):
             user["username"] = username
             user["role"] = role if _require_admin() else current_user_role
             user["mobile_phone"] = mobile_phone
+            user["calendar_color"] = calendar_color or ""
             return render_template(
                 "admin_user_form.html",
                 **_form_context(
@@ -510,6 +542,7 @@ def admin_edit_user_view(user_id: int):
                     username = {_ph()},
                     role = {_ph()},
                     mobile_phone = {_ph()},
+                    calendar_color = {_ph()},
                     password_hash = {_ph()}
                 WHERE id = {_ph()}
                 """,
@@ -519,6 +552,7 @@ def admin_edit_user_view(user_id: int):
                     username,
                     final_role,
                     mobile_phone or None,
+                    calendar_color,
                     generate_password_hash(password),
                     user_id,
                 ),
@@ -531,7 +565,8 @@ def admin_edit_user_view(user_id: int):
                     last_name = {_ph()},
                     username = {_ph()},
                     role = {_ph()},
-                    mobile_phone = {_ph()}
+                    mobile_phone = {_ph()},
+                    calendar_color = {_ph()}
                 WHERE id = {_ph()}
                 """,
                 (
@@ -540,6 +575,7 @@ def admin_edit_user_view(user_id: int):
                     username,
                     final_role,
                     mobile_phone or None,
+                    calendar_color,
                     user_id,
                 ),
             )
