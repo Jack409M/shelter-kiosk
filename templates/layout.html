@@ -1,189 +1,131 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>{{ title or "Shelter Operations" }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#2c3e50">
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DWC App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css', v='20260317a') }}">
-    {% block extra_head %}{% endblock %}
-  </head>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
-  <body>
-    <header class="top">
-      <div class="brand">
-        <span>Shelter Operations</span>
-      </div>
+  <style>
+    .topbar {
+      background: #1f3550;
+      color: #fff;
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
 
-      <div class="top-meta">
-        <img
-          class="top-logo"
-          src="{{ url_for('static', filename='logo.png') }}"
-          alt="DWC"
-        >
+    .nav {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
 
-        {% set shelter_raw = session.get('shelter', '') %}
-        {% set resident_shelter_raw = session.get('resident_shelter', '') %}
+    .nav a,
+    .nav button {
+      color: #fff;
+      text-decoration: none;
+      background: none;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
 
-        <div class="top-user">
-          {% if session.get('staff_user_id') %}
-            Signed in:
-            <strong>{{ session.get('username') }}</strong>
-            ({{ session.get('role')|capitalize }})
-            {% if shelter_raw %} | {{ shelter_display(shelter_raw) }}{% endif %}
-          {% elif session.get('resident_id') %}
-            Signed in:
-            <strong>{{ session.get('resident_first') }} {{ session.get('resident_last') }}</strong>
-            {% if resident_shelter_raw %} | {{ shelter_display(resident_shelter_raw) }}{% endif %}
-          {% else %}
-            Not signed in
-          {% endif %}
+    .nav a:hover,
+    .nav button:hover {
+      text-decoration: underline;
+    }
+
+    .nav-dd {
+      position: relative;
+    }
+
+    .nav-dd .menu {
+      display: none;
+      position: absolute;
+      top: 28px;
+      left: 0;
+      background: #fff;
+      color: #1f3550;
+      border: 1px solid #cfd9e3;
+      border-radius: 10px;
+      min-width: 200px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+
+    .nav-dd:hover .menu {
+      display: block;
+    }
+
+    .menu a {
+      display: block;
+      padding: 10px 14px;
+      color: #1f3550;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .menu a:hover {
+      background: #f3f8fc;
+    }
+
+    .page {
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="topbar">
+    <div class="nav">
+
+      <a href="{{ url_for('attendance.staff_attendance') }}">Dashboard</a>
+
+      <div class="nav-dd">
+        <button type="button">Case Manager ▾</button>
+        <div class="menu">
+          <a href="{{ url_for('residents.residents_list') }}">Residents</a>
+          <a href="{{ url_for('case_management.case_management_home') }}">Case Management</a>
+
+          <!-- NEW CALENDAR LINK -->
+          <a href="{{ url_for('calendar.calendar_view') }}">Shared Calendar</a>
         </div>
       </div>
 
-      {% set endpoint = request.endpoint or '' %}
-      {% set is_resident_signin_page = endpoint in ['resident_signin', 'resident_portal.signin'] %}
-      {% set is_public_home = endpoint == 'public.public_home' %}
-      {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) and (not is_public_home) %}
-
-      {% set residents_url = safe_url_for('residents.staff_residents') %}
-      {% set intake_assessment_url = safe_url_for('case_management.intake_assessment') %}
-      {% set case_management_url = safe_url_for('case_management.index') %}
-      {% set compliance_url = safe_url_for('compliance.compliance_dashboard') %}
-      {% set forms_url = safe_url_for('forms_admin.forms_index') %}
-      {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
-      {% set reports_url = safe_url_for('reports.demographics_dashboard') %}
-      {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
-      {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
-      {% set kiosk_manual_url = url_for('static', filename='docs/dwc_kiosk_manual.pdf') %}
-
-      <nav>
-        <div class="nav-mobile">
-          {% if session.get("staff_user_id") %}
-            <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Manuals</a>
-            <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
-          {% elif show_logged_out_nav %}
-            <a href="{{ url_for('resident_requests.resident_signin') }}">Resident Sign In</a>
-            <a href="{{ url_for('auth.staff_login') }}">Staff Login</a>
-          {% endif %}
+      <div class="nav-dd">
+        <button type="button">Admin ▾</button>
+        <div class="menu">
+          <a href="{{ url_for('admin.admin_users') }}">Users</a>
         </div>
+      </div>
 
-        <div class="nav-desktop">
-          {% if session.get("staff_user_id") %}
+    </div>
 
-            <div class="nav-dd">
-              <button type="button">
-                {% if shelter_raw %}
-                  {{ shelter_display(shelter_raw) }}
-                {% else %}
-                  Select Shelter
-                {% endif %}
-                ▾
-              </button>
+    <div>
+      <a href="{{ url_for('auth.logout') }}">Logout</a>
+    </div>
+  </div>
 
-              <div class="menu">
-                <form method="post" action="{{ url_for('auth.staff_select_shelter') }}" style="margin:0;">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="next" value="{{ request.full_path }}">
-                  <button type="submit" name="shelter" value="Abba" style="width:100%;text-align:left;margin:0;">Abba House</button>
-                  <button type="submit" name="shelter" value="Haven" style="width:100%;text-align:left;margin:0;">Haven House</button>
-                  <button type="submit" name="shelter" value="Gratitude" style="width:100%;text-align:left;margin:0;">Gratitude House</button>
-                </form>
-              </div>
-            </div>
+  <div class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul>
+          {% for category, message in messages %}
+            <li><strong>{{ category }}</strong>: {{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
 
-            {% if can_manage_passes %}
-              <div class="nav-dd">
-                <button type="button">Passes ▾</button>
-                <div class="menu">
-                  <a href="{{ url_for('attendance.staff_passes_pending') }}">Pending Passes</a>
-                </div>
-              </div>
-            {% endif %}
+    {% block content %}{% endblock %}
+  </div>
 
-            <div class="nav-dd">
-              <button type="button">Transport ▾</button>
-              <div class="menu">
-                <a href="{{ url_for('transport.staff_transport_pending') }}">Pending Transport</a>
-                <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
-                <a href="{{ url_for('transport.staff_transport_print') }}" target="_blank">Print Transport</a>
-              </div>
-            </div>
-
-            <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-
-            <div class="nav-dd">
-              <button type="button">Case Manager ▾</button>
-              <div class="menu">
-                {% if intake_assessment_url %}
-                  <a href="{{ intake_assessment_url }}">Intake and Assessment</a>
-                {% endif %}
-                {% if residents_url %}
-                  <a href="{{ residents_url }}">Residents</a>
-                {% endif %}
-                {% if case_management_url %}
-                  <a href="{{ case_management_url }}">Case Mgmt</a>
-                {% endif %}
-                {% if compliance_url %}
-                  <a href="{{ compliance_url }}">Compliance</a>
-                {% endif %}
-                {% if forms_url %}
-                  <a href="{{ forms_url }}">Forms</a>
-                {% endif %}
-                {% if case_dashboard_url %}
-                  <a href="{{ case_dashboard_url }}">Case Mgmt Dashboard</a>
-                {% endif %}
-              </div>
-            </div>
-
-            {% if reports_url and can_view_reports %}
-              <a href="{{ reports_url }}">Reports</a>
-            {% endif %}
-
-            <div class="nav-dd">
-              <button type="button">Documents ▾</button>
-              <div class="menu">
-                <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
-              </div>
-            </div>
-
-            {% if session.get("role") == "admin" %}
-              <div class="nav-dd">
-                <button type="button">Admin ▾</button>
-                <div class="menu">
-                  <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
-                  <a href="{{ url_for('admin.admin_users') }}">Users</a>
-                  <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
-                  <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
-                </div>
-              </div>
-            {% endif %}
-
-            <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
-            <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
-
-          {% elif show_logged_out_nav %}
-            <a href="{{ url_for('resident_requests.resident_signin') }}">Resident Sign In</a>
-            <a href="{{ url_for('auth.staff_login') }}">Staff Login</a>
-          {% endif %}
-        </div>
-      </nav>
-    </header>
-
-    <main class="container">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash">
-            {% for category, message in messages %}
-              <div class="msg {{ category }}">{{ message }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-
-      {% block content %}{% endblock %}
-    </main>
-  </body>
+</body>
 </html>
