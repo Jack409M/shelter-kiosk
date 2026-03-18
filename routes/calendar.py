@@ -215,3 +215,84 @@ def add_event():
 
     flash("Event added.", "ok")
     return redirect(url_for("calendar.calendar_view", month=event_date[:7]))
+
+
+@calendar_bp.route("/edit/<int:event_id>", methods=["GET", "POST"])
+@require_login
+def edit_event(event_id: int):
+    if not _require_calendar_access():
+        flash("Not allowed.", "error")
+        return redirect(url_for("calendar.calendar_view"))
+
+    init_db()
+
+    event = db_fetchone(
+        f"""
+        SELECT
+            id,
+            title,
+            event_date,
+            start_time,
+            end_time,
+            shelter,
+            staff_user_id,
+            notes,
+            created_by,
+            created_at,
+            updated_at
+        FROM case_manager_calendar_events
+        WHERE id = {_ph()}
+        """,
+        (event_id,),
+    )
+
+    if not event:
+        flash("Event not found.", "error")
+        return redirect(url_for("calendar.calendar_view"))
+
+    if request.method == "GET":
+        return render_template(
+            "calendar_edit.html",
+            event=event,
+        )
+
+    title = (request.form.get("title") or "").strip()
+    event_date = (request.form.get("event_date") or "").strip()
+    start_time = (request.form.get("start_time") or "").strip()
+    end_time = (request.form.get("end_time") or "").strip()
+    shelter = _clean_shelter(request.form.get("shelter"))
+    notes = (request.form.get("notes") or "").strip()
+
+    if not title or not event_date:
+        flash("Title and date required.", "error")
+        return redirect(url_for("calendar.edit_event", event_id=event_id))
+
+    now = utcnow_iso()
+
+    db_execute(
+        f"""
+        UPDATE case_manager_calendar_events
+        SET
+            title = {_ph()},
+            event_date = {_ph()},
+            start_time = {_ph()},
+            end_time = {_ph()},
+            shelter = {_ph()},
+            notes = {_ph()},
+            updated_at = {_ph()}
+        WHERE id = {_ph()}
+        """,
+        (
+            title,
+            event_date,
+            start_time or None,
+            end_time or None,
+            shelter,
+            notes or None,
+            now,
+            event_id,
+        ),
+    )
+
+    flash("Event updated.", "ok")
+    return redirect(url_for("calendar.calendar_view", month=event_date[:7]))
