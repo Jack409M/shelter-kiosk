@@ -4,6 +4,8 @@
 <h1>Add Calendar Event</h1>
 
 <form method="post" class="card" style="max-width: 620px; margin: 20px auto; padding: 16px;">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
   <label for="title">Title</label>
   <input id="title" name="title" required>
 
