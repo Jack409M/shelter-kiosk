@@ -4,7 +4,7 @@ from flask import current_app, flash, redirect, render_template, request, sessio
 
 from core.audit import log_action
 from core.db import db_execute, db_fetchall
-from core.helpers import fmt_dt
+from core.helpers import fmt_dt, utcnow_iso
 from core.runtime import MIN_STAFF_PASSWORD_LEN, ROLE_LABELS, init_db
 from routes.admin_parts.helpers import (
     all_roles as _all_roles,
@@ -274,11 +274,22 @@ def admin_add_user_view():
                 ),
             )
 
+        created_at = utcnow_iso()
+
         if _db_kind() == "pg":
             created = db_fetchall(
                 f"""
-                INSERT INTO staff_users (first_name, last_name, username, password_hash, role, is_active, mobile_phone)
-                VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
+                INSERT INTO staff_users (
+                    first_name,
+                    last_name,
+                    username,
+                    password_hash,
+                    role,
+                    is_active,
+                    mobile_phone,
+                    created_at
+                )
+                VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
                 RETURNING id
                 """,
                 (
@@ -289,14 +300,24 @@ def admin_add_user_view():
                     role,
                     True,
                     mobile_phone or None,
+                    created_at,
                 ),
             )
             new_user_id = created[0]["id"]
         else:
             db_execute(
                 f"""
-                INSERT INTO staff_users (first_name, last_name, username, password_hash, role, is_active, mobile_phone)
-                VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
+                INSERT INTO staff_users (
+                    first_name,
+                    last_name,
+                    username,
+                    password_hash,
+                    role,
+                    is_active,
+                    mobile_phone,
+                    created_at
+                )
+                VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
                 """,
                 (
                     first_name,
@@ -306,6 +327,7 @@ def admin_add_user_view():
                     role,
                     1,
                     mobile_phone or None,
+                    created_at,
                 ),
             )
             created = db_fetchall(
