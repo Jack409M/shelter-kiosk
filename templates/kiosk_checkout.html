@@ -86,6 +86,20 @@
       text-decoration: none;
       font-size: 16px;
     }
+
+    .time-wrap {
+      display: block;
+    }
+
+    .time-help {
+      font-size: 14px;
+      color: #555;
+      margin-top: 6px;
+    }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -132,42 +146,54 @@
             autocorrect="off"
             autocapitalize="off"
             spellcheck="false"
+            value="{{ request.form.get('resident_code', '') }}"
           >
         </div>
 
         <div>
           <label for="destination">Destination</label>
-          <input
+          <select
             id="destination"
             name="destination"
-            placeholder="Where are you going"
             required
             autocomplete="off"
-            autocorrect="off"
-            autocapitalize="off"
-            spellcheck="false"
           >
+            <option value="">Select destination</option>
+            {% set selected_destination = request.form.get('destination', '') %}
+            {% for item in ['Work', 'School', 'Meeting', 'Appointment', 'Store', 'Errand', 'Family', 'Church', 'Job Search', 'Recreation', 'Pass', 'Other'] %}
+              <option value="{{ item }}" {% if selected_destination == item %}selected{% endif %}>{{ item }}</option>
+            {% endfor %}
+          </select>
         </div>
 
-        <div>
+        <div id="time_wrap" class="time-wrap">
           <label>Expected Back Time</label>
           <div class="time-row">
-            <select name="expected_back_hour" required>
+            {% set selected_hour = request.form.get('expected_back_hour', '') %}
+            {% set selected_minute = request.form.get('expected_back_minute', '') %}
+            {% set selected_ampm = request.form.get('expected_back_ampm', '') %}
+
+            <select id="expected_back_hour" name="expected_back_hour">
+              <option value="">Hour</option>
               {% for h in range(1, 13) %}
-                <option value="{{ h }}">{{ h }}</option>
+                {% set h_text = h|string %}
+                <option value="{{ h_text }}" {% if selected_hour == h_text %}selected{% endif %}>{{ h }}</option>
               {% endfor %}
             </select>
 
-            <select name="expected_back_minute" required>
-              <option value="00">00</option>
-              <option value="30">30</option>
+            <select id="expected_back_minute" name="expected_back_minute">
+              <option value="">Min</option>
+              <option value="00" {% if selected_minute == '00' %}selected{% endif %}>00</option>
+              <option value="30" {% if selected_minute == '30' %}selected{% endif %}>30</option>
             </select>
 
-            <select name="expected_back_ampm" required>
-              <option value="AM">AM</option>
-              <option value="PM">PM</option>
+            <select id="expected_back_ampm" name="expected_back_ampm">
+              <option value="">AM or PM</option>
+              <option value="AM" {% if selected_ampm == 'AM' %}selected{% endif %}>AM</option>
+              <option value="PM" {% if selected_ampm == 'PM' %}selected{% endif %}>PM</option>
             </select>
           </div>
+          <div id="time_help" class="time-help">Choose the time the resident expects to return.</div>
         </div>
 
         <div>
@@ -180,6 +206,7 @@
             autocorrect="off"
             autocapitalize="off"
             spellcheck="false"
+            value="{{ request.form.get('note', '') }}"
           >
         </div>
 
@@ -191,5 +218,57 @@
       <p class="kiosk-note">This kiosk does not display resident records.</p>
     </div>
   </div>
+
+  <script>
+    function toggleExpectedBackTime() {
+      const destination = document.getElementById("destination");
+      const timeWrap = document.getElementById("time_wrap");
+      const timeHelp = document.getElementById("time_help");
+      const hour = document.getElementById("expected_back_hour");
+      const minute = document.getElementById("expected_back_minute");
+      const ampm = document.getElementById("expected_back_ampm");
+
+      const isPass = destination && destination.value === "Pass";
+
+      if (timeWrap) {
+        timeWrap.classList.toggle("hidden", isPass);
+      }
+
+      if (hour) {
+        hour.required = !isPass;
+        if (isPass) {
+          hour.value = "";
+        }
+      }
+
+      if (minute) {
+        minute.required = !isPass;
+        if (isPass) {
+          minute.value = "";
+        }
+      }
+
+      if (ampm) {
+        ampm.required = !isPass;
+        if (isPass) {
+          ampm.value = "";
+        }
+      }
+
+      if (timeHelp) {
+        timeHelp.textContent = isPass
+          ? "An approved pass already controls the return time."
+          : "Choose the time the resident expects to return.";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const destination = document.getElementById("destination");
+      if (destination) {
+        destination.addEventListener("change", toggleExpectedBackTime);
+      }
+      toggleExpectedBackTime();
+    });
+  </script>
 </body>
 </html>
