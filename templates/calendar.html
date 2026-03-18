@@ -186,7 +186,9 @@
             encodeURIComponent(info.dateStr);
         },
         eventClick: function(info) {
-          alert("Event editing is not built yet.");
+          const eventId = info.event.id;
+          window.location.href =
+            "{{ url_for('calendar.edit_event', event_id=0) }}".replace("0", eventId);
         }
       });
 
