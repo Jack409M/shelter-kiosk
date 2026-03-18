@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login
 from core.db import db_execute, db_fetchall
@@ -17,8 +17,24 @@ calendar_bp = Blueprint(
 )
 
 
+VALID_SHELTERS = {"abba", "haven", "gratitude"}
+
+
 def _require_calendar_access() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager", "staff"}
+
+
+def _ph() -> str:
+    return "%s" if g.get("db_kind") == "pg" else "?"
+
+
+def _clean_shelter(value: str | None) -> str | None:
+    cleaned = (value or "").strip().lower()
+    if not cleaned:
+        return None
+    if cleaned in VALID_SHELTERS:
+        return cleaned
+    return None
 
 
 @calendar_bp.route("/", methods=["GET"])
@@ -30,23 +46,32 @@ def calendar_view():
 
     init_db()
 
-    # month filter (YYYY-MM)
-    month = request.args.get("month")
+    month = (request.args.get("month") or "").strip()
     if not month:
         today = date.today()
         month = f"{today.year}-{str(today.month).zfill(2)}"
 
     events = db_fetchall(
-        """
+        f"""
         SELECT
-            e.*,
+            e.id,
+            e.title,
+            e.event_date,
+            e.start_time,
+            e.end_time,
+            e.shelter,
+            e.staff_user_id,
+            e.notes,
+            e.created_by,
+            e.created_at,
+            e.updated_at,
             u.first_name,
             u.last_name,
             u.calendar_color
         FROM case_manager_calendar_events e
         LEFT JOIN staff_users u ON u.id = e.staff_user_id
-        WHERE e.event_date LIKE ?
-        ORDER BY e.event_date ASC, e.start_time ASC
+        WHERE e.event_date LIKE {_ph()}
+        ORDER BY e.event_date ASC, e.start_time ASC, e.id ASC
         """,
         (f"{month}%",),
     )
@@ -71,19 +96,22 @@ def add_event():
     event_date = (request.form.get("event_date") or "").strip()
     start_time = (request.form.get("start_time") or "").strip()
     end_time = (request.form.get("end_time") or "").strip()
-    shelter = (request.form.get("shelter") or "").strip().lower()
+    shelter = _clean_shelter(request.form.get("shelter"))
     notes = (request.form.get("notes") or "").strip()
+    month = (request.form.get("month") or "").strip()
 
     staff_user_id = session.get("staff_user_id")
 
     if not title or not event_date:
         flash("Title and date required.", "error")
+        if month:
+            return redirect(url_for("calendar.calendar_view", month=month))
         return redirect(url_for("calendar.calendar_view"))
 
     now = utcnow_iso()
 
     db_execute(
-        """
+        f"""
         INSERT INTO case_manager_calendar_events (
             title,
             event_date,
@@ -96,14 +124,14 @@ def add_event():
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES ({_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()}, {_ph()})
         """,
         (
             title,
             event_date,
             start_time or None,
             end_time or None,
-            shelter or None,
+            shelter,
             staff_user_id,
             notes or None,
             staff_user_id,
@@ -113,4 +141,6 @@ def add_event():
     )
 
     flash("Event added.", "ok")
+    if month:
+        return redirect(url_for("calendar.calendar_view", month=month))
     return redirect(url_for("calendar.calendar_view"))
