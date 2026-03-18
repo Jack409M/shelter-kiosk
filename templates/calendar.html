@@ -38,8 +38,7 @@
     background: #ffffff !important;
   }
 
-  /* this is the exact override for your repo rule:
-     table td:first-child { width: 50ch; max-width: 50ch; } */
+  /* override global first column width rule */
   #calendar td:first-child,
   #calendar th:first-child {
     width: auto !important;
@@ -182,8 +181,8 @@
         },
         dateClick: function(info) {
           window.location.href =
-            "{{ url_for('calendar.calendar_view') }}" +
-            "?selected_date=" +
+            "{{ url_for('calendar.add_event') }}" +
+            "?event_date=" +
             encodeURIComponent(info.dateStr);
         },
         eventClick: function(info) {
