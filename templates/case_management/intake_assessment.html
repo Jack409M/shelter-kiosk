@@ -627,6 +627,56 @@
                       </select>
                     </div>
 
+                    <div class="field span-4">
+                      <label for="city">City</label>
+                      <input id="city" name="city" type="text" value="{{ form_data.get('city', '') }}">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="last_zipcode_residence">Last Zipcode of Residence</label>
+                      <input id="last_zipcode_residence" name="last_zipcode_residence" type="text" value="{{ form_data.get('last_zipcode_residence', '') }}">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="length_of_time_in_amarillo">Length of Time in Amarillo</label>
+                      <select id="length_of_time_in_amarillo" name="length_of_time_in_amarillo">
+                        <option value="">Select</option>
+                        {% for option in amarillo_length_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('length_of_time_in_amarillo', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="marital_status">Marital Status</label>
+                      <select id="marital_status" name="marital_status">
+                        <option value="">Select</option>
+                        {% for option in marital_status_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('marital_status', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="car_at_entry">Car at Entry</label>
+                      <select id="car_at_entry" name="car_at_entry">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('car_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="car_insurance_at_entry">Car Insurance at Entry</label>
+                      <select id="car_insurance_at_entry" name="car_insurance_at_entry">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('car_insurance_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
                     <div class="field span-12">
                       <label for="entry_notes">Entry Notes</label>
                       <textarea id="entry_notes" name="entry_notes" placeholder="Reason for admission, immediate concerns, or placement context.">{{ form_data.get('entry_notes', '') }}</textarea>
@@ -785,6 +835,16 @@
                     </div>
 
                     <div class="field span-3">
+                      <label for="sexual_survivor">Sexual Survivor</label>
+                      <select id="sexual_survivor" name="sexual_survivor">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('sexual_survivor', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-3">
                       <label for="domestic_violence_history">Domestic Violence History</label>
                       <select id="domestic_violence_history" name="domestic_violence_history">
                         <option value="">Select</option>
@@ -804,7 +864,27 @@
                       </select>
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-3">
+                      <label for="drug_court">Drug Court</label>
+                      <select id="drug_court" name="drug_court">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('drug_court', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="warrants_unpaid">Warrants or Fines Unpaid</label>
+                      <select id="warrants_unpaid" name="warrants_unpaid">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('warrants_unpaid', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-3">
                       <label for="mental_health_need">Mental Health Need</label>
                       <select id="mental_health_need" name="mental_health_need">
                         <option value="">Select</option>
@@ -814,7 +894,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-3">
                       <label for="medical_need">Medical Need</label>
                       <select id="medical_need" name="medical_need">
                         <option value="">Select</option>
@@ -824,7 +904,27 @@
                       </select>
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-3">
+                      <label for="mh_exam_completed">MH Exam Completed</label>
+                      <select id="mh_exam_completed" name="mh_exam_completed">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('mh_exam_completed', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-3">
+                      <label for="med_exam_completed">Medical Exam Completed</label>
+                      <select id="med_exam_completed" name="med_exam_completed">
+                        <option value="">Select</option>
+                        {% for option in yes_no_options %}
+                          <option value="{{ option.value }}" {% if form_data.get('med_exam_completed', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+
+                    <div class="field span-3">
                       <label for="substance_use_need">Substance Use Need</label>
                       <select id="substance_use_need" name="substance_use_need">
                         <option value="">Select</option>
