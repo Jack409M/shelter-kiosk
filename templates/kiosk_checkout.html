@@ -35,8 +35,8 @@
     .kiosk-form button {
       width: 100%;
       box-sizing: border-box;
-      padding: 12px;
-      font-size: 16px;
+      padding: 16px;
+      font-size: 20px;
     }
 
     .kiosk-form button {
@@ -51,8 +51,9 @@
 
     .flash-list li {
       margin-bottom: 8px;
-      padding: 10px 12px;
+      padding: 12px 14px;
       border-radius: 8px;
+      font-size: 18px;
     }
 
     .flash-error {
@@ -70,6 +71,14 @@
       color: #555;
       margin-top: 10px;
     }
+
+    .kiosk-home-link {
+      display: block;
+      margin-top: 16px;
+      text-align: center;
+      text-decoration: none;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
@@ -85,6 +94,12 @@
               <li class="flash-{{ category }}">{{ message }}</li>
             {% endfor %}
           </ul>
+
+          <script>
+            setTimeout(function () {
+              window.location.href = "{{ url_for('kiosk.kiosk_home', shelter=shelter) }}";
+            }, 2500);
+          </script>
         {% endif %}
       {% endwith %}
 
@@ -136,6 +151,8 @@
 
         <button type="submit">Check Out</button>
       </form>
+
+      <a class="kiosk-home-link" href="{{ url_for('kiosk.kiosk_home', shelter=shelter) }}">Back</a>
 
       <p class="kiosk-note">This kiosk does not display resident records.</p>
     </div>
