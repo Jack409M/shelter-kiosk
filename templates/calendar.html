@@ -3,40 +3,51 @@
 
 <h1>Shared Calendar</h1>
 
-<div id="calendar"></div>
+<div class="card" style="padding: 16px; margin-bottom: 16px;">
+  <div id="calendar-status" style="font-weight: 600;">Loading calendar...</div>
+</div>
 
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<div id="calendar" style="max-width: 1100px; margin: 0 auto 24px auto; min-height: 700px; background: #ffffff; border-radius: 10px; padding: 12px;"></div>
 
-<style>
-  #calendar {
-    max-width: 1100px;
-    margin: 20px auto;
-  }
-</style>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.17/index.global.min.js"></script>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const calendarEl = document.getElementById('calendar');
+  document.addEventListener("DOMContentLoaded", function () {
+    const statusEl = document.getElementById("calendar-status");
+    const calendarEl = document.getElementById("calendar");
 
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: 'dayGridMonth',
-
-      headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay'
-      },
-
-      events: '/staff/calendar/events',
-
-      dateClick: function(info) {
-        // For now: simple redirect to add page
-        window.location.href = '/staff/calendar/add?date=' + info.dateStr;
+    try {
+      if (!window.FullCalendar) {
+        statusEl.textContent = "Calendar failed to load. FullCalendar library missing.";
+        return;
       }
-    });
 
-    calendar.render();
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: "dayGridMonth",
+        height: "auto",
+        headerToolbar: {
+          left: "prev,next today",
+          center: "title",
+          right: "dayGridMonth,timeGridWeek,timeGridDay"
+        },
+        events: {
+          url: "{{ url_for('calendar.calendar_events') }}"
+        },
+        dateClick: function(info) {
+          const target = "{{ url_for('calendar.calendar_view') }}" + "?selected_date=" + encodeURIComponent(info.dateStr);
+          window.location.href = target;
+        },
+        eventDidMount: function() {
+          statusEl.textContent = "Calendar loaded.";
+        }
+      });
+
+      calendar.render();
+      statusEl.textContent = "Calendar loaded.";
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Calendar failed to render. Check browser console.";
+    }
   });
 </script>
 
