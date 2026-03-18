@@ -4,7 +4,6 @@
 
 <h1>Case Management</h1>
 
-<!-- 🔴 NEW: Intake Drafts -->
 <div class="card">
   <h2>Incomplete Intake Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
   <p>These intakes were started but not completed. You can reopen and finish them.</p>
@@ -20,13 +19,16 @@
       </thead>
       <tbody>
         {% for d in drafts %}
+          {% set draft_url = safe_url_for('case_management.intake_assessment', draft_id=d.id) %}
           <tr>
             <td>{{ d.resident_name or "Unnamed intake draft" }}</td>
             <td>{{ d.updated_at or "—" }}</td>
             <td>
-              <a class="btn" href="{{ url_for('case_management.intake_assessment', draft_id=d.id) }}">
-                Continue Draft
-              </a>
+              {% if draft_url %}
+                <a class="btn" href="{{ draft_url }}">Continue Draft</a>
+              {% else %}
+                <span>Draft page not available</span>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}
@@ -37,7 +39,6 @@
   {% endif %}
 </div>
 
-<!-- 🟢 EXISTING: Residents -->
 <div class="card">
   <h2>Residents{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
   <p>Select a resident to open the case management workspace.</p>
