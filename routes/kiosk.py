@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date as date_cls
+from datetime import datetime, time as time_cls, timezone
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
@@ -30,6 +31,17 @@ def _resolve_shelter_or_404(shelter: str) -> str | None:
         (name for name in get_all_shelters() if name.lower() == shelter.lower()),
         None,
     )
+
+
+def _row_get(row, key: str, index: int, default=None):
+    if not row:
+        return default
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        return row[index]
+    except Exception:
+        return default
 
 
 def _active_resident_row(shelter: str, resident_code: str):
@@ -66,8 +78,54 @@ def _attendance_insert_sql() -> str:
     )
 
 
+def _active_pass_row(resident_id: int, shelter: str):
+    normalized_shelter = (shelter or "").strip().lower()
+    now_iso = utcnow_iso()
+    today_iso = now_iso[:10]
+
+    return db_fetchone(
+        """
+        SELECT id, pass_type, destination, end_at, end_date
+        FROM resident_passes
+        WHERE resident_id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
+          AND status = %s
+          AND (
+                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= %s AND end_at >= %s)
+             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= %s AND end_date >= %s)
+          )
+        ORDER BY
+            CASE WHEN end_at IS NULL THEN 1 ELSE 0 END,
+            end_at ASC,
+            end_date ASC,
+            id ASC
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT id, pass_type, destination, end_at, end_date
+        FROM resident_passes
+        WHERE resident_id = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
+          AND status = ?
+          AND (
+                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= ? AND end_at >= ?)
+             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= ? AND end_date >= ?)
+          )
+        ORDER BY
+            CASE WHEN end_at IS NULL THEN 1 ELSE 0 END,
+            end_at ASC,
+            end_date ASC,
+            id ASC
+        LIMIT 1
+        """,
+        (resident_id, normalized_shelter, "approved", now_iso, now_iso, today_iso, today_iso),
+    )
+
+
 def _complete_active_passes(resident_id: int, shelter: str) -> None:
     now_iso = utcnow_iso()
+    today_iso = now_iso[:10]
 
     db_execute(
         """
@@ -75,8 +133,12 @@ def _complete_active_passes(resident_id: int, shelter: str) -> None:
         SET status = %s,
             updated_at = %s
         WHERE resident_id = %s
-          AND shelter = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
           AND status = %s
+          AND (
+                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= %s AND end_at >= %s)
+             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= %s AND end_date >= %s)
+          )
         """
         if g.get("db_kind") == "pg"
         else """
@@ -84,10 +146,80 @@ def _complete_active_passes(resident_id: int, shelter: str) -> None:
         SET status = ?,
             updated_at = ?
         WHERE resident_id = ?
-          AND shelter = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
           AND status = ?
+          AND (
+                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= ? AND end_at >= ?)
+             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= ? AND end_date >= ?)
+          )
         """,
-        ("completed", now_iso, resident_id, shelter, "approved"),
+        (
+            "completed",
+            now_iso,
+            resident_id,
+            (shelter or "").strip().lower(),
+            "approved",
+            now_iso,
+            now_iso,
+            today_iso,
+            today_iso,
+        ),
+    )
+
+
+def _manual_expected_back_value(hour_text: str, minute_text: str, ampm_text: str) -> str:
+    hour_int = int(hour_text)
+    minute_int = int(minute_text)
+    ampm_value = (ampm_text or "").strip().upper()
+
+    if hour_int < 1 or hour_int > 12:
+        raise ValueError("Invalid hour")
+
+    if minute_int not in {0, 30}:
+        raise ValueError("Invalid minute")
+
+    if ampm_value not in {"AM", "PM"}:
+        raise ValueError("Invalid AM or PM")
+
+    if ampm_value == "PM" and hour_int != 12:
+        hour_int += 12
+    elif ampm_value == "AM" and hour_int == 12:
+        hour_int = 0
+
+    now_local = datetime.now(ZoneInfo("America/Chicago"))
+    local_dt = now_local.replace(
+        hour=hour_int,
+        minute=minute_int,
+        second=0,
+        microsecond=0,
+    )
+
+    return (
+        local_dt.astimezone(timezone.utc)
+        .replace(tzinfo=None)
+        .isoformat(timespec="seconds")
+    )
+
+
+def _pass_expected_back_value(pass_row) -> str | None:
+    end_at = (_row_get(pass_row, "end_at", 3, "") or "").strip()
+    if end_at:
+        return end_at
+
+    end_date = (_row_get(pass_row, "end_date", 4, "") or "").strip()
+    if not end_date:
+        return None
+
+    local_end = datetime.combine(
+        date_cls.fromisoformat(end_date),
+        time_cls(23, 59, 59),
+        tzinfo=ZoneInfo("America/Chicago"),
+    )
+
+    return (
+        local_end.astimezone(timezone.utc)
+        .replace(tzinfo=None)
+        .isoformat(timespec="seconds")
     )
 
 
@@ -246,7 +378,7 @@ def kiosk_checkin(shelter: str):
         )
         return render_template("kiosk_checkin.html", shelter=shelter), 400
 
-    resident_id = int(row["id"] if isinstance(row, dict) else row[0])
+    resident_id = int(_row_get(row, "id", 0, 0))
 
     db_execute(
         _attendance_insert_sql(),
@@ -302,7 +434,9 @@ def kiosk_checkout(shelter: str):
 
     resident_code = (request.form.get("resident_code") or "").strip()
     destination = (request.form.get("destination") or "").strip()
-    expected_back = (request.form.get("expected_back_time") or "").strip()
+    expected_back_hour = (request.form.get("expected_back_hour") or "").strip()
+    expected_back_minute = (request.form.get("expected_back_minute") or "").strip()
+    expected_back_ampm = (request.form.get("expected_back_ampm") or "").strip().upper()
     note = (request.form.get("note") or "").strip()
 
     code_key = resident_code if resident_code else "blank"
@@ -372,9 +506,6 @@ def kiosk_checkout(shelter: str):
     if not destination:
         errors.append("Destination is required.")
 
-    if not expected_back:
-        errors.append("Expected back time is required.")
-
     row = _active_resident_row(shelter, resident_code)
 
     if not row:
@@ -395,25 +526,28 @@ def kiosk_checkout(shelter: str):
             )
 
     expected_back_value = None
-    if expected_back:
-        try:
-            now_local = datetime.now(ZoneInfo("America/Chicago"))
-            hour, minute = map(int, expected_back.split(":"))
+    active_pass = None
+    resident_id = int(_row_get(row, "id", 0, 0)) if row else 0
 
-            local_dt = now_local.replace(
-                hour=hour,
-                minute=minute,
-                second=0,
-                microsecond=0,
-            )
-
-            expected_back_value = (
-                local_dt.astimezone(timezone.utc)
-                .replace(tzinfo=None)
-                .isoformat(timespec="seconds")
-            )
-        except Exception:
-            errors.append("Invalid expected back time.")
+    if destination == "Pass":
+        if resident_id:
+            active_pass = _active_pass_row(resident_id, shelter)
+        if not active_pass:
+            errors.append("No approved pass found.")
+        else:
+            expected_back_value = _pass_expected_back_value(active_pass)
+    else:
+        if not expected_back_hour or not expected_back_minute or not expected_back_ampm:
+            errors.append("Expected back time is required.")
+        else:
+            try:
+                expected_back_value = _manual_expected_back_value(
+                    expected_back_hour,
+                    expected_back_minute,
+                    expected_back_ampm,
+                )
+            except Exception:
+                errors.append("Invalid expected back time.")
 
     if errors:
         for error_message in errors:
@@ -428,9 +562,19 @@ def kiosk_checkout(shelter: str):
         )
         return render_template("kiosk_checkout.html", shelter=shelter), 400
 
-    resident_id = int(row["id"] if isinstance(row, dict) else row[0])
-
     full_note = f"Destination: {destination}"
+
+    if destination == "Pass" and active_pass:
+        pass_id = _row_get(active_pass, "id", 0, "")
+        pass_destination = (_row_get(active_pass, "destination", 2, "") or "").strip()
+        pass_type = (_row_get(active_pass, "pass_type", 1, "") or "").strip()
+
+        full_note = f"{full_note} | Pass ID: {pass_id}"
+        if pass_type:
+            full_note = f"{full_note} | Pass Type: {pass_type}"
+        if pass_destination:
+            full_note = f"{full_note} | Pass Destination: {pass_destination}"
+
     if note:
         full_note = f"{full_note} | Note: {note}"
 
