@@ -7,6 +7,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
+from core.helpers import utcnow_iso
 from core.residents import generate_resident_code, generate_resident_identifier
 from core.runtime import init_db
 
@@ -138,6 +139,24 @@ def _intake_template_context(
             {"value": "associate", "label": "Associate"},
             {"value": "bachelor", "label": "Bachelor"},
         ],
+        "marital_status_options": [
+            {"value": "single", "label": "Single"},
+            {"value": "married", "label": "Married"},
+            {"value": "divorced", "label": "Divorced"},
+            {"value": "separated", "label": "Separated"},
+            {"value": "widowed", "label": "Widowed"},
+            {"value": "partnered", "label": "Partnered"},
+            {"value": "other", "label": "Other"},
+        ],
+        "amarillo_length_options": [
+            {"value": "less_than_30_days", "label": "Less than 30 days"},
+            {"value": "1_to_6_months", "label": "1 to 6 months"},
+            {"value": "6_to_12_months", "label": "6 to 12 months"},
+            {"value": "1_to_3_years", "label": "1 to 3 years"},
+            {"value": "more_than_3_years", "label": "More than 3 years"},
+            {"value": "lifelong", "label": "Lifelong"},
+            {"value": "unknown", "label": "Unknown"},
+        ],
     }
 
 
@@ -159,6 +178,10 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "shelter": _normalize_shelter_name(form.get("shelter") or shelter),
         "program_status": _clean(form.get("program_status")) or "active",
         "prior_living": _clean(form.get("prior_living")),
+        "city": _clean(form.get("city")),
+        "last_zipcode_residence": _clean(form.get("last_zipcode_residence")),
+        "length_of_time_in_amarillo": _clean(form.get("length_of_time_in_amarillo")),
+        "marital_status": _clean(form.get("marital_status")),
         "sobriety_date": _clean(form.get("sobriety_date")),
         "drug_of_choice": _clean(form.get("drug_of_choice")),
         "income_at_entry": _clean(form.get("income_at_entry")),
@@ -177,11 +200,18 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "initial_snapshot_notes": _clean(form.get("initial_snapshot_notes")),
         "ace_score": _clean(form.get("ace_score")),
         "grit_score": _clean(form.get("grit_score")),
+        "sexual_survivor": _clean(form.get("sexual_survivor")),
         "domestic_violence_history": _clean(form.get("domestic_violence_history")),
         "human_trafficking_history": _clean(form.get("human_trafficking_history")),
+        "drug_court": _clean(form.get("drug_court")),
+        "warrants_unpaid": _clean(form.get("warrants_unpaid")),
+        "mh_exam_completed": _clean(form.get("mh_exam_completed")),
+        "med_exam_completed": _clean(form.get("med_exam_completed")),
         "mental_health_need": _clean(form.get("mental_health_need")),
         "medical_need": _clean(form.get("medical_need")),
         "substance_use_need": _clean(form.get("substance_use_need")),
+        "car_at_entry": _clean(form.get("car_at_entry")),
+        "car_insurance_at_entry": _clean(form.get("car_insurance_at_entry")),
         "trauma_notes": _clean(form.get("trauma_notes")),
         "felony_history": _clean(form.get("felony_history")),
         "probation_parole": _clean(form.get("probation_parole")),
@@ -236,6 +266,11 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     emergency_phone_digits = _digits_only(data["emergency_contact_phone"])
     if data["emergency_contact_phone"] and len(emergency_phone_digits) < 10:
         errors.append("Emergency Contact Phone must contain at least 10 digits.")
+
+    if data["last_zipcode_residence"]:
+        zipcode_digits = _digits_only(data["last_zipcode_residence"])
+        if len(zipcode_digits) not in {5, 9}:
+            errors.append("Last Zipcode of Residence must be 5 or 9 digits.")
 
     children_count = _parse_int(data["children_count"])
     if data["children_count"] and children_count is None:
@@ -512,6 +547,7 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
 
 def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     placeholder = _placeholder()
+    now = utcnow_iso()
 
     if g.get("db_kind") == "pg":
         db_execute(
@@ -519,6 +555,9 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             INSERT INTO intake_assessments
             (
                 enrollment_id,
+                city,
+                last_zipcode_residence,
+                length_of_time_in_amarillo,
                 income_at_entry,
                 education_at_entry,
                 sobriety_date,
@@ -527,11 +566,19 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 grit_score,
                 veteran,
                 disability,
+                marital_status,
                 place_staying_before_entry,
                 entry_felony_conviction,
                 entry_parole_probation,
+                drug_court,
+                sexual_survivor,
                 dv_survivor,
                 human_trafficking_survivor,
+                warrants_unpaid,
+                mh_exam_completed,
+                med_exam_completed,
+                car_at_entry,
+                car_insurance_at_entry,
                 created_at,
                 updated_at
             )
@@ -551,12 +598,26 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 {placeholder},
                 {placeholder},
                 {placeholder},
-                NOW(),
-                NOW()
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                {placeholder}
             )
             """,
             (
                 enrollment_id,
+                data["city"],
+                data["last_zipcode_residence"],
+                data["length_of_time_in_amarillo"],
                 data["income_at_entry"],
                 data["education_at_entry"],
                 data["sobriety_date"],
@@ -565,11 +626,21 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 data["grit_score"],
                 _yes_no_to_int(data["veteran"]),
                 _yes_no_to_int(data["disability"]),
+                data["marital_status"],
                 data["prior_living"],
                 _yes_no_to_int(data["felony_history"]),
                 _yes_no_to_int(data["probation_parole"]),
+                _yes_no_to_int(data["drug_court"]),
+                _yes_no_to_int(data["sexual_survivor"]),
                 _yes_no_to_int(data["domestic_violence_history"]),
                 _yes_no_to_int(data["human_trafficking_history"]),
+                _yes_no_to_int(data["warrants_unpaid"]),
+                _yes_no_to_int(data["mh_exam_completed"]),
+                _yes_no_to_int(data["med_exam_completed"]),
+                _yes_no_to_int(data["car_at_entry"]),
+                _yes_no_to_int(data["car_insurance_at_entry"]),
+                now,
+                now,
             ),
         )
         return
@@ -579,6 +650,9 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
         INSERT INTO intake_assessments
         (
             enrollment_id,
+            city,
+            last_zipcode_residence,
+            length_of_time_in_amarillo,
             income_at_entry,
             education_at_entry,
             sobriety_date,
@@ -587,11 +661,19 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             grit_score,
             veteran,
             disability,
+            marital_status,
             place_staying_before_entry,
             entry_felony_conviction,
             entry_parole_probation,
+            drug_court,
+            sexual_survivor,
             dv_survivor,
             human_trafficking_survivor,
+            warrants_unpaid,
+            mh_exam_completed,
+            med_exam_completed,
+            car_at_entry,
+            car_insurance_at_entry,
             created_at,
             updated_at
         )
@@ -611,12 +693,26 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             {placeholder},
             {placeholder},
             {placeholder},
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder}
         )
         """,
         (
             enrollment_id,
+            data["city"],
+            data["last_zipcode_residence"],
+            data["length_of_time_in_amarillo"],
             data["income_at_entry"],
             data["education_at_entry"],
             data["sobriety_date"],
@@ -625,11 +721,21 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             data["grit_score"],
             _yes_no_to_int(data["veteran"]),
             _yes_no_to_int(data["disability"]),
+            data["marital_status"],
             data["prior_living"],
             _yes_no_to_int(data["felony_history"]),
             _yes_no_to_int(data["probation_parole"]),
+            _yes_no_to_int(data["drug_court"]),
+            _yes_no_to_int(data["sexual_survivor"]),
             _yes_no_to_int(data["domestic_violence_history"]),
             _yes_no_to_int(data["human_trafficking_history"]),
+            _yes_no_to_int(data["warrants_unpaid"]),
+            _yes_no_to_int(data["mh_exam_completed"]),
+            _yes_no_to_int(data["med_exam_completed"]),
+            _yes_no_to_int(data["car_at_entry"]),
+            _yes_no_to_int(data["car_insurance_at_entry"]),
+            now,
+            now,
         ),
     )
 
