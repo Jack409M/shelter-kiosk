@@ -137,6 +137,11 @@ def ensure_columns_and_security_upgrades(kind: str) -> None:
         pass
 
     try:
+        db_execute("ALTER TABLE staff_users ADD COLUMN calendar_color TEXT")
+    except Exception:
+        pass
+
+    try:
         db_execute("ALTER TABLE security_settings ADD COLUMN sms_system_expires_at TEXT")
     except Exception:
         pass
