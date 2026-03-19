@@ -4,16 +4,16 @@
 
 <h1>Assessment</h1>
 
-<form method="post">
-
+<form method="post" action="{{ url_for('case_management.submit_assessment') }}">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
 
   <div class="card">
     <h2>Select Resident</h2>
 
     <p>
-      <label>Resident</label><br>
-      <select name="resident_id" required>
+      <label for="resident_id">Resident</label><br>
+      <select id="resident_id" name="resident_id" required>
         <option value="">Select resident</option>
         {% for r in residents %}
           <option value="{{ r.id }}"
@@ -31,14 +31,14 @@
     <p>This is the first placeholder version of the separate assessment workflow.</p>
 
     <p>
-      <label>Notes</label><br>
-      <textarea name="notes" rows="5">{{ form_data.get('notes', '') }}</textarea>
+      <label for="notes">Notes</label><br>
+      <textarea id="notes" name="notes" rows="5">{{ form_data.get('notes', '') }}</textarea>
     </p>
   </div>
 
   <div class="card">
-    <button class="btn" name="action" value="save_draft">Save Draft</button>
-    <button class="btn" type="submit">Finalize Assessment</button>
+    <button class="btn" type="submit" name="action" value="save_draft">Save Draft</button>
+    <button class="btn" type="submit" name="action" value="complete">Finalize Assessment</button>
   </div>
 
 </form>
