@@ -1928,6 +1928,7 @@ def wipe_test_residents():
         db_execute("DELETE FROM case_manager_updates")
         db_execute("DELETE FROM appointments")
         db_execute("DELETE FROM goals")
+        db_execute("DELETE FROM resident_transfers")
         db_execute("DELETE FROM resident_children")
         db_execute("DELETE FROM resident_substances")
         db_execute("DELETE FROM program_enrollments")
