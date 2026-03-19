@@ -69,45 +69,12 @@
     gap: 16px;
   }
 
-  .intake-status-bar {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-  }
-
-  .status-tile,
-  .section-card,
-  .help-card,
-  .validation-card {
+  .validation-card,
+  .section-card {
     background: #ffffff;
     border: 1px solid #d8e0ea;
     border-radius: 14px;
     box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-  }
-
-  .status-tile {
-    padding: 14px;
-  }
-
-  .status-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #6b7280;
-    margin-bottom: 6px;
-  }
-
-  .status-value {
-    font-size: 16px;
-    font-weight: 700;
-    color: #16202a;
-  }
-
-  .intake-main {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 16px;
-    align-items: start;
   }
 
   .validation-card {
@@ -267,51 +234,6 @@
     margin: 0;
   }
 
-  .help-card {
-    padding: 16px;
-    position: sticky;
-    top: 14px;
-  }
-
-  .help-card h3 {
-    margin: 0 0 10px 0;
-    font-size: 16px;
-  }
-
-  .help-card p {
-    margin: 0 0 12px 0;
-    font-size: 13px;
-    color: #637083;
-    line-height: 1.45;
-  }
-
-  .mini-list {
-    display: grid;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .mini-item {
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px 12px;
-    background: #fbfcfe;
-  }
-
-  .mini-item-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #6b7280;
-    margin-bottom: 4px;
-  }
-
-  .mini-item-value {
-    font-size: 13px;
-    font-weight: 700;
-    color: #1f2937;
-  }
-
   .footer-actions {
     display: flex;
     justify-content: space-between;
@@ -326,21 +248,7 @@
     color: #6b7280;
   }
 
-  @media (max-width: 1080px) {
-    .intake-main {
-      grid-template-columns: 1fr;
-    }
-
-    .help-card {
-      position: static;
-    }
-  }
-
   @media (max-width: 820px) {
-    .intake-status-bar {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
     .field.span-9,
     .field.span-8,
     .field.span-6,
@@ -352,11 +260,10 @@
     .intake-header {
       flex-direction: column;
     }
-  }
 
-  @media (max-width: 560px) {
-    .intake-status-bar {
-      grid-template-columns: 1fr;
+    .footer-actions {
+      flex-direction: column;
+      align-items: flex-start;
     }
   }
 </style>
@@ -374,7 +281,7 @@
     </div>
 
     <div class="intake-header-actions">
-      <a class="btn-soft" href="{{ safe_url_for('case_management.index') or '#' }}">Back to Case Manager</a>
+      <a class="btn-soft" href="{{ safe_url_for('case_management.intake_index') or '#' }}">Back to Intake and Assessment</a>
 
       <button
         class="btn-soft"
@@ -393,703 +300,622 @@
         value="complete"
         form="resident-intake-form"
       >
-        Complete Intake
+        Finalize Intake and Assessment
       </button>
     </div>
   </div>
 
   <div class="intake-shell">
-    <div class="intake-status-bar">
-      <div class="status-tile">
-        <div class="status-label">Shelter</div>
-        <div class="status-value">
-          {% if current_shelter == "abba" %}
-            Abba House
-          {% elif current_shelter == "haven" %}
-            Haven House
-          {% elif current_shelter == "gratitude" %}
-            Gratitude House
-          {% else %}
-            Not set
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% set ns = namespace(has_errors=false) %}
+        {% for category, message in messages %}
+          {% if category == "error" %}
+            {% set ns.has_errors = true %}
           {% endif %}
-        </div>
+        {% endfor %}
+        {% if ns.has_errors %}
+          <div class="validation-card">
+            <h3>Please review these items before saving</h3>
+            <ul>
+              {% for category, message in messages %}
+                {% if category == "error" %}
+                  <li>{{ message }}</li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      {% endif %}
+    {% endwith %}
+
+    <form id="resident-intake-form" method="post" action="{{ url_for('case_management.submit_intake_assessment') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
+
+      <div class="tab-strip" role="tablist" aria-label="Intake tabs">
+        <button
+          type="button"
+          class="tab-button is-active"
+          data-tab-button="intake"
+          role="tab"
+          aria-selected="true"
+        >
+          Intake
+        </button>
+
+        <button
+          type="button"
+          class="tab-button"
+          data-tab-button="assessment"
+          role="tab"
+          aria-selected="false"
+        >
+          Assessment
+        </button>
       </div>
 
-      <div class="status-tile">
-        <div class="status-label">Workflow Stage</div>
-        <div class="status-value">
-          {% if form_data.get('draft_id') %}
-            Draft Intake
-          {% else %}
-            New Intake
-          {% endif %}
-        </div>
-      </div>
+      <div class="tab-panel is-active" data-tab-panel="intake">
+        <div class="panel-stack">
 
-      <div class="status-tile">
-        <div class="status-label">Record Status</div>
-        <div class="status-value">
-          {% if form_data.get('draft_id') %}
-            Draft In Progress
-          {% else %}
-            Not Saved Yet
-          {% endif %}
-        </div>
-      </div>
+          <section class="section-card">
+            <div class="section-card-head">
+              <h2>Basic Information</h2>
+              <p>Core resident identity and contact details used to create the resident record.</p>
+            </div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field span-4">
+                  <label for="first_name">First Name</label>
+                  <input id="first_name" name="first_name" type="text" required value="{{ form_data.get('first_name', '') }}">
+                </div>
 
-      <div class="status-tile">
-        <div class="status-label">Required Sections</div>
-        <div class="status-value">Intake and Assessment</div>
-      </div>
-    </div>
+                <div class="field span-4">
+                  <label for="middle_name">Middle Name</label>
+                  <input id="middle_name" name="middle_name" type="text" value="{{ form_data.get('middle_name', '') }}">
+                </div>
 
-    <div class="intake-main">
-      <div>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% set ns = namespace(has_errors=false) %}
-            {% for category, message in messages %}
-              {% if category == "error" %}
-                {% set ns.has_errors = true %}
-              {% endif %}
-            {% endfor %}
-            {% if ns.has_errors %}
-              <div class="validation-card">
-                <h3>Please review these items before saving</h3>
-                <ul>
-                  {% for category, message in messages %}
-                    {% if category == "error" %}
-                      <li>{{ message }}</li>
-                    {% endif %}
-                  {% endfor %}
-                </ul>
+                <div class="field span-4">
+                  <label for="last_name">Last Name</label>
+                  <input id="last_name" name="last_name" type="text" required value="{{ form_data.get('last_name', '') }}">
+                </div>
+
+                <div class="field span-3">
+                  <label for="birth_year">Birth Year</label>
+                  <input id="birth_year" name="birth_year" type="number" min="1900" max="2100" step="1" value="{{ form_data.get('birth_year', '') }}">
+                </div>
+
+                <div class="field span-3">
+                  <label for="phone">Phone</label>
+                  <input id="phone" name="phone" type="tel" value="{{ form_data.get('phone', '') }}">
+                </div>
+
+                <div class="field span-6">
+                  <label for="email">Email</label>
+                  <input id="email" name="email" type="email" value="{{ form_data.get('email', '') }}">
+                </div>
+
+                <div class="field span-4">
+                  <label for="gender">Gender</label>
+                  <select id="gender" name="gender">
+                    <option value="">Select</option>
+                    {% for option in gender_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('gender', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="veteran">Veteran</label>
+                  <select id="veteran" name="veteran">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('veteran', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-6">
+                  <label for="emergency_contact_name">Emergency Contact Name</label>
+                  <input id="emergency_contact_name" name="emergency_contact_name" type="text" value="{{ form_data.get('emergency_contact_name', '') }}">
+                </div>
+
+                <div class="field span-3">
+                  <label for="emergency_contact_relationship">Relationship</label>
+                  <input id="emergency_contact_relationship" name="emergency_contact_relationship" type="text" value="{{ form_data.get('emergency_contact_relationship', '') }}">
+                </div>
+
+                <div class="field span-3">
+                  <label for="emergency_contact_phone">Emergency Contact Phone</label>
+                  <input id="emergency_contact_phone" name="emergency_contact_phone" type="tel" value="{{ form_data.get('emergency_contact_phone', '') }}">
+                </div>
+
+                <div class="field span-12">
+                  <label for="notes_basic">Immediate Notes</label>
+                  <textarea id="notes_basic" name="notes_basic" placeholder="Anything staff needs to know at intake.">{{ form_data.get('notes_basic', '') }}</textarea>
+                </div>
               </div>
-            {% endif %}
-          {% endif %}
-        {% endwith %}
-
-        <form id="resident-intake-form" method="post" action="{{ url_for('case_management.submit_intake_assessment') }}">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
-
-          <div class="tab-strip" role="tablist" aria-label="Intake tabs">
-            <button
-              type="button"
-              class="tab-button is-active"
-              data-tab-button="intake"
-              role="tab"
-              aria-selected="true"
-            >
-              Intake
-            </button>
-
-            <button
-              type="button"
-              class="tab-button"
-              data-tab-button="assessment"
-              role="tab"
-              aria-selected="false"
-            >
-              Assessment
-            </button>
-          </div>
-
-          <div class="tab-panel is-active" data-tab-panel="intake">
-            <div class="panel-stack">
-
-              <section class="section-card">
-                <div class="section-card-head">
-                  <h2>Basic Information</h2>
-                  <p>Core resident identity and contact details used to create the resident record.</p>
-                </div>
-                <div class="section-card-body">
-                  <div class="field-grid">
-                    <div class="field span-4">
-                      <label for="first_name">First Name</label>
-                      <input id="first_name" name="first_name" type="text" required value="{{ form_data.get('first_name', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="middle_name">Middle Name</label>
-                      <input id="middle_name" name="middle_name" type="text" value="{{ form_data.get('middle_name', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="last_name">Last Name</label>
-                      <input id="last_name" name="last_name" type="text" required value="{{ form_data.get('last_name', '') }}">
-                    </div>
-
-                    <div class="field span-3">
-                      <label for="birth_year">Birth Year</label>
-                      <input id="birth_year" name="birth_year" type="number" min="1900" max="2100" step="1" value="{{ form_data.get('birth_year', '') }}">
-                    </div>
-
-                    <div class="field span-3">
-                      <label for="phone">Phone</label>
-                      <input id="phone" name="phone" type="tel" value="{{ form_data.get('phone', '') }}">
-                    </div>
-
-                    <div class="field span-6">
-                      <label for="email">Email</label>
-                      <input id="email" name="email" type="email" value="{{ form_data.get('email', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="gender">Gender</label>
-                      <select id="gender" name="gender">
-                        <option value="">Select</option>
-                        {% for option in gender_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('gender', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="veteran">Veteran</label>
-                      <select id="veteran" name="veteran">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('veteran', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-6">
-                      <label for="emergency_contact_name">Emergency Contact Name</label>
-                      <input id="emergency_contact_name" name="emergency_contact_name" type="text" value="{{ form_data.get('emergency_contact_name', '') }}">
-                    </div>
-
-                    <div class="field span-3">
-                      <label for="emergency_contact_relationship">Relationship</label>
-                      <input id="emergency_contact_relationship" name="emergency_contact_relationship" type="text" value="{{ form_data.get('emergency_contact_relationship', '') }}">
-                    </div>
-
-                    <div class="field span-3">
-                      <label for="emergency_contact_phone">Emergency Contact Phone</label>
-                      <input id="emergency_contact_phone" name="emergency_contact_phone" type="tel" value="{{ form_data.get('emergency_contact_phone', '') }}">
-                    </div>
-
-                    <div class="field span-12">
-                      <label for="notes_basic">Immediate Notes</label>
-                      <textarea id="notes_basic" name="notes_basic" placeholder="Anything staff needs to know at intake.">{{ form_data.get('notes_basic', '') }}</textarea>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section class="section-card">
-                <div class="section-card-head">
-                  <h2>Program Entry</h2>
-                  <p>Entry details that should create the initial program enrollment.</p>
-                </div>
-                <div class="section-card-body">
-                  <div class="field-grid">
-                    <div class="field span-4">
-                      <label for="entry_date">Date Entered</label>
-                      <input id="entry_date" name="entry_date" type="date" value="{{ form_data.get('entry_date', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="shelter">Program Shelter</label>
-                      <select id="shelter" name="shelter">
-                        {% set selected_shelter = form_data.get('shelter', current_shelter) %}
-                        {% for option in shelters %}
-                          <option value="{{ option.value }}" {% if option.value == selected_shelter %}selected{% endif %}>
-                            {{ option.label }}
-                          </option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="program_status">Program Status</label>
-                      {% set selected_program_status = form_data.get('program_status', 'active') %}
-                      <select id="program_status" name="program_status">
-                        <option value="active" {% if selected_program_status == 'active' %}selected{% endif %}>Active</option>
-                        <option value="pending" {% if selected_program_status == 'pending' %}selected{% endif %}>Pending</option>
-                        <option value="waitlisted" {% if selected_program_status == 'waitlisted' %}selected{% endif %}>Waitlisted</option>
-                      </select>
-                    </div>
-
-                    <div class="field span-6">
-                      <label for="prior_living">Where Was She Staying Before Entry</label>
-                      <select id="prior_living" name="prior_living">
-                        <option value="">Select</option>
-                        {% for option in prior_living_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('prior_living', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-3">
-                      <label for="sobriety_date">Sobriety Date</label>
-                      <input id="sobriety_date" name="sobriety_date" type="date" value="{{ form_data.get('sobriety_date', '') }}">
-                    </div>
-
-                    <div class="field span-3">
-                      <label for="drug_of_choice">Drug of Choice</label>
-                      <select id="drug_of_choice" name="drug_of_choice">
-                        <option value="">Select</option>
-                        {% for option in drug_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('drug_of_choice', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="income_at_entry">Income at Entry</label>
-                      <input id="income_at_entry" name="income_at_entry" type="number" min="0" step="0.01" value="{{ form_data.get('income_at_entry', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="education_at_entry">Education at Entry</label>
-                      <select id="education_at_entry" name="education_at_entry">
-                        <option value="">Select</option>
-                        {% for option in education_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('education_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="disability">Disability</label>
-                      <select id="disability" name="disability">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('disability', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="city">City</label>
-                      <input id="city" name="city" type="text" value="{{ form_data.get('city', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="last_zipcode_residence">Last Zipcode of Residence</label>
-                      <input id="last_zipcode_residence" name="last_zipcode_residence" type="text" value="{{ form_data.get('last_zipcode_residence', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="length_of_time_in_amarillo">Length of Time in Amarillo</label>
-                      <select id="length_of_time_in_amarillo" name="length_of_time_in_amarillo">
-                        <option value="">Select</option>
-                        {% for option in amarillo_length_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('length_of_time_in_amarillo', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="marital_status">Marital Status</label>
-                      <select id="marital_status" name="marital_status">
-                        <option value="">Select</option>
-                        {% for option in marital_status_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('marital_status', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="car_at_entry">Car at Entry</label>
-                      <select id="car_at_entry" name="car_at_entry">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('car_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="car_insurance_at_entry">Car Insurance at Entry</label>
-                      <select id="car_insurance_at_entry" name="car_insurance_at_entry">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('car_insurance_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-12">
-                      <label for="entry_notes">Entry Notes</label>
-                      <textarea id="entry_notes" name="entry_notes" placeholder="Reason for admission, immediate concerns, or placement context.">{{ form_data.get('entry_notes', '') }}</textarea>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section class="section-card">
-                <div class="section-card-head">
-                  <h2>Demographics</h2>
-                  <p>Core demographic fields that feed the reporting dashboards.</p>
-                </div>
-                <div class="section-card-body">
-                  <div class="field-grid">
-                    <div class="field span-4">
-                      <label for="race">Race</label>
-                      <select id="race" name="race">
-                        <option value="">Select</option>
-                        {% for option in race_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('race', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="ethnicity">Ethnicity</label>
-                      <select id="ethnicity" name="ethnicity">
-                        <option value="">Select</option>
-                        {% for option in ethnicity_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('ethnicity', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="pregnant">Pregnant at Entry</label>
-                      <select id="pregnant" name="pregnant">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('pregnant', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="has_children">Has Children</label>
-                      <select id="has_children" name="has_children">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('has_children', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="children_count">Children Count</label>
-                      <input id="children_count" name="children_count" type="number" min="0" step="1" value="{{ form_data.get('children_count', '') }}">
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="newborn_at_dwc">Newborn Born at DWC</label>
-                      <select id="newborn_at_dwc" name="newborn_at_dwc">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('newborn_at_dwc', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section class="section-card">
-                <div class="section-card-head">
-                  <h2>Initial Snapshot</h2>
-                  <p>A quick baseline of immediate need areas at the time of entry.</p>
-                </div>
-                <div class="section-card-body">
-                  <div class="field-grid">
-                    <div class="field span-12">
-                      <label>Immediate Needs</label>
-                      <div class="check-grid">
-                        <label class="chip-option"><input type="checkbox" name="need_food" value="yes" {% if form_data.get('need_food') == 'yes' %}checked{% endif %}> Food</label>
-                        <label class="chip-option"><input type="checkbox" name="need_clothing" value="yes" {% if form_data.get('need_clothing') == 'yes' %}checked{% endif %}> Clothing</label>
-                        <label class="chip-option"><input type="checkbox" name="need_hygiene" value="yes" {% if form_data.get('need_hygiene') == 'yes' %}checked{% endif %}> Hygiene</label>
-                        <label class="chip-option"><input type="checkbox" name="need_medical" value="yes" {% if form_data.get('need_medical') == 'yes' %}checked{% endif %}> Medical</label>
-                        <label class="chip-option"><input type="checkbox" name="need_mental_health" value="yes" {% if form_data.get('need_mental_health') == 'yes' %}checked{% endif %}> Mental Health</label>
-                        <label class="chip-option"><input type="checkbox" name="need_transportation" value="yes" {% if form_data.get('need_transportation') == 'yes' %}checked{% endif %}> Transportation</label>
-                        <label class="chip-option"><input type="checkbox" name="need_id" value="yes" {% if form_data.get('need_id') == 'yes' %}checked{% endif %}> ID and Benefits</label>
-                        <label class="chip-option"><input type="checkbox" name="need_safety" value="yes" {% if form_data.get('need_safety') == 'yes' %}checked{% endif %}> Safety Planning</label>
-                      </div>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="dental_need">Dental Need</label>
-                      <select id="dental_need" name="dental_need">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('dental_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="vision_need">Vision Need</label>
-                      <select id="vision_need" name="vision_need">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('vision_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="employment_status">Employment Status</label>
-                      <select id="employment_status" name="employment_status">
-                        <option value="">Select</option>
-                        <option value="employed_full_time" {% if form_data.get('employment_status', '') == 'employed_full_time' %}selected{% endif %}>Employed Full Time</option>
-                        <option value="employed_part_time" {% if form_data.get('employment_status', '') == 'employed_part_time' %}selected{% endif %}>Employed Part Time</option>
-                        <option value="unemployed" {% if form_data.get('employment_status', '') == 'unemployed' %}selected{% endif %}>Unemployed</option>
-                        <option value="disabled" {% if form_data.get('employment_status', '') == 'disabled' %}selected{% endif %}>Disabled</option>
-                        <option value="unknown" {% if form_data.get('employment_status', '') == 'unknown' %}selected{% endif %}>Unknown</option>
-                      </select>
-                    </div>
-
-                    <div class="field span-12">
-                      <label for="initial_snapshot_notes">Initial Snapshot Notes</label>
-                      <textarea id="initial_snapshot_notes" name="initial_snapshot_notes" placeholder="Brief baseline picture of her current situation.">{{ form_data.get('initial_snapshot_notes', '') }}</textarea>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
             </div>
-          </div>
+          </section>
 
-          <div class="tab-panel" data-tab-panel="assessment">
-            <div class="panel-stack">
-
-              <section class="section-card">
-                <div class="section-card-head">
-                  <h2>Trauma and Vulnerability</h2>
-                  <p>Assessment items that measure trauma burden and vulnerability at entry.</p>
+          <section class="section-card">
+            <div class="section-card-head">
+              <h2>Program Entry</h2>
+              <p>Entry details that should create the initial program enrollment.</p>
+            </div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field span-4">
+                  <label for="entry_date">Date Entered</label>
+                  <input id="entry_date" name="entry_date" type="date" value="{{ form_data.get('entry_date', '') }}">
                 </div>
-                <div class="section-card-body">
-                  <div class="field-grid">
-                    <div class="field span-3">
-                      <label for="ace_score">ACE Score</label>
-                      <input id="ace_score" name="ace_score" type="number" min="0" max="10" step="1" value="{{ form_data.get('ace_score', '') }}">
-                    </div>
 
-                    <div class="field span-3">
-                      <label for="grit_score">Grit Score</label>
-                      <input id="grit_score" name="grit_score" type="number" min="0" max="100" step="1" value="{{ form_data.get('grit_score', '') }}">
-                    </div>
+                <div class="field span-4">
+                  <label for="shelter">Program Shelter</label>
+                  <select id="shelter" name="shelter">
+                    {% set selected_shelter = form_data.get('shelter', current_shelter) %}
+                    {% for option in shelters %}
+                      <option value="{{ option.value }}" {% if option.value == selected_shelter %}selected{% endif %}>
+                        {{ option.label }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
 
-                    <div class="field span-3">
-                      <label for="sexual_survivor">Sexual Survivor</label>
-                      <select id="sexual_survivor" name="sexual_survivor">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('sexual_survivor', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-4">
+                  <label for="program_status">Program Status</label>
+                  {% set selected_program_status = form_data.get('program_status', 'active') %}
+                  <select id="program_status" name="program_status">
+                    <option value="active" {% if selected_program_status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="pending" {% if selected_program_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="waitlisted" {% if selected_program_status == 'waitlisted' %}selected{% endif %}>Waitlisted</option>
+                  </select>
+                </div>
 
-                    <div class="field span-3">
-                      <label for="domestic_violence_history">Domestic Violence History</label>
-                      <select id="domestic_violence_history" name="domestic_violence_history">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('domestic_violence_history', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-6">
+                  <label for="prior_living">Where Was She Staying Before Entry</label>
+                  <select id="prior_living" name="prior_living">
+                    <option value="">Select</option>
+                    {% for option in prior_living_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('prior_living', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
 
-                    <div class="field span-3">
-                      <label for="human_trafficking_history">Human Trafficking History</label>
-                      <select id="human_trafficking_history" name="human_trafficking_history">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('human_trafficking_history', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-3">
+                  <label for="sobriety_date">Sobriety Date</label>
+                  <input id="sobriety_date" name="sobriety_date" type="date" value="{{ form_data.get('sobriety_date', '') }}">
+                </div>
 
-                    <div class="field span-3">
-                      <label for="drug_court">Drug Court</label>
-                      <select id="drug_court" name="drug_court">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('drug_court', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-3">
+                  <label for="drug_of_choice">Drug of Choice</label>
+                  <select id="drug_of_choice" name="drug_of_choice">
+                    <option value="">Select</option>
+                    {% for option in drug_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('drug_of_choice', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
 
-                    <div class="field span-3">
-                      <label for="warrants_unpaid">Warrants or Fines Unpaid</label>
-                      <select id="warrants_unpaid" name="warrants_unpaid">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('warrants_unpaid', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-4">
+                  <label for="income_at_entry">Income at Entry</label>
+                  <input id="income_at_entry" name="income_at_entry" type="number" min="0" step="0.01" value="{{ form_data.get('income_at_entry', '') }}">
+                </div>
 
-                    <div class="field span-3">
-                      <label for="mental_health_need">Mental Health Need</label>
-                      <select id="mental_health_need" name="mental_health_need">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('mental_health_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-4">
+                  <label for="education_at_entry">Education at Entry</label>
+                  <select id="education_at_entry" name="education_at_entry">
+                    <option value="">Select</option>
+                    {% for option in education_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('education_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
 
-                    <div class="field span-3">
-                      <label for="medical_need">Medical Need</label>
-                      <select id="medical_need" name="medical_need">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('medical_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-4">
+                  <label for="disability">Disability</label>
+                  <select id="disability" name="disability">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('disability', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
 
-                    <div class="field span-3">
-                      <label for="mh_exam_completed">MH Exam Completed</label>
-                      <select id="mh_exam_completed" name="mh_exam_completed">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('mh_exam_completed', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-4">
+                  <label for="city">City</label>
+                  <input id="city" name="city" type="text" value="{{ form_data.get('city', '') }}">
+                </div>
 
-                    <div class="field span-3">
-                      <label for="med_exam_completed">Medical Exam Completed</label>
-                      <select id="med_exam_completed" name="med_exam_completed">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('med_exam_completed', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-4">
+                  <label for="last_zipcode_residence">Last Zipcode of Residence</label>
+                  <input id="last_zipcode_residence" name="last_zipcode_residence" type="text" value="{{ form_data.get('last_zipcode_residence', '') }}">
+                </div>
 
-                    <div class="field span-3">
-                      <label for="substance_use_need">Substance Use Need</label>
-                      <select id="substance_use_need" name="substance_use_need">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('substance_use_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                <div class="field span-4">
+                  <label for="length_of_time_in_amarillo">Length of Time in Amarillo</label>
+                  <select id="length_of_time_in_amarillo" name="length_of_time_in_amarillo">
+                    <option value="">Select</option>
+                    {% for option in amarillo_length_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('length_of_time_in_amarillo', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
 
-                    <div class="field span-12">
-                      <label for="trauma_notes">Trauma and Vulnerability Notes</label>
-                      <textarea id="trauma_notes" name="trauma_notes" placeholder="Observed trauma indicators, safety concerns, or vulnerability factors.">{{ form_data.get('trauma_notes', '') }}</textarea>
-                    </div>
+                <div class="field span-4">
+                  <label for="marital_status">Marital Status</label>
+                  <select id="marital_status" name="marital_status">
+                    <option value="">Select</option>
+                    {% for option in marital_status_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('marital_status', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="car_at_entry">Car at Entry</label>
+                  <select id="car_at_entry" name="car_at_entry">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('car_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="car_insurance_at_entry">Car Insurance at Entry</label>
+                  <select id="car_insurance_at_entry" name="car_insurance_at_entry">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('car_insurance_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-12">
+                  <label for="entry_notes">Entry Notes</label>
+                  <textarea id="entry_notes" name="entry_notes" placeholder="Reason for admission, immediate concerns, or placement context.">{{ form_data.get('entry_notes', '') }}</textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section-card">
+            <div class="section-card-head">
+              <h2>Demographics</h2>
+              <p>Core demographic fields that feed the reporting dashboards.</p>
+            </div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field span-4">
+                  <label for="race">Race</label>
+                  <select id="race" name="race">
+                    <option value="">Select</option>
+                    {% for option in race_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('race', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="ethnicity">Ethnicity</label>
+                  <select id="ethnicity" name="ethnicity">
+                    <option value="">Select</option>
+                    {% for option in ethnicity_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('ethnicity', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="pregnant">Pregnant at Entry</label>
+                  <select id="pregnant" name="pregnant">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('pregnant', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="has_children">Has Children</label>
+                  <select id="has_children" name="has_children">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('has_children', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="children_count">Children Count</label>
+                  <input id="children_count" name="children_count" type="number" min="0" step="1" value="{{ form_data.get('children_count', '') }}">
+                </div>
+
+                <div class="field span-4">
+                  <label for="newborn_at_dwc">Newborn Born at DWC</label>
+                  <select id="newborn_at_dwc" name="newborn_at_dwc">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('newborn_at_dwc', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section-card">
+            <div class="section-card-head">
+              <h2>Initial Snapshot</h2>
+              <p>A quick baseline of immediate need areas at the time of entry.</p>
+            </div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field span-12">
+                  <label>Immediate Needs</label>
+                  <div class="check-grid">
+                    <label class="chip-option"><input type="checkbox" name="need_food" value="yes" {% if form_data.get('need_food') == 'yes' %}checked{% endif %}> Food</label>
+                    <label class="chip-option"><input type="checkbox" name="need_clothing" value="yes" {% if form_data.get('need_clothing') == 'yes' %}checked{% endif %}> Clothing</label>
+                    <label class="chip-option"><input type="checkbox" name="need_hygiene" value="yes" {% if form_data.get('need_hygiene') == 'yes' %}checked{% endif %}> Hygiene</label>
+                    <label class="chip-option"><input type="checkbox" name="need_medical" value="yes" {% if form_data.get('need_medical') == 'yes' %}checked{% endif %}> Medical</label>
+                    <label class="chip-option"><input type="checkbox" name="need_mental_health" value="yes" {% if form_data.get('need_mental_health') == 'yes' %}checked{% endif %}> Mental Health</label>
+                    <label class="chip-option"><input type="checkbox" name="need_transportation" value="yes" {% if form_data.get('need_transportation') == 'yes' %}checked{% endif %}> Transportation</label>
+                    <label class="chip-option"><input type="checkbox" name="need_id" value="yes" {% if form_data.get('need_id') == 'yes' %}checked{% endif %}> ID and Benefits</label>
+                    <label class="chip-option"><input type="checkbox" name="need_safety" value="yes" {% if form_data.get('need_safety') == 'yes' %}checked{% endif %}> Safety Planning</label>
                   </div>
                 </div>
-              </section>
 
-              <section class="section-card">
-                <div class="section-card-head">
-                  <h2>Barriers to Stability</h2>
-                  <p>Baseline barriers that will later feed case management planning and reporting.</p>
+                <div class="field span-4">
+                  <label for="dental_need">Dental Need</label>
+                  <select id="dental_need" name="dental_need">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('dental_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
                 </div>
-                <div class="section-card-body">
-                  <div class="field-grid">
-                    <div class="field span-12">
-                      <label>Current Barriers</label>
-                      <div class="check-grid">
-                        <label class="chip-option"><input type="checkbox" name="barrier_housing" value="yes" {% if form_data.get('barrier_housing') == 'yes' %}checked{% endif %}> Housing</label>
-                        <label class="chip-option"><input type="checkbox" name="barrier_income" value="yes" {% if form_data.get('barrier_income') == 'yes' %}checked{% endif %}> Income</label>
-                        <label class="chip-option"><input type="checkbox" name="barrier_employment" value="yes" {% if form_data.get('barrier_employment') == 'yes' %}checked{% endif %}> Employment</label>
-                        <label class="chip-option"><input type="checkbox" name="barrier_transportation" value="yes" {% if form_data.get('barrier_transportation') == 'yes' %}checked{% endif %}> Transportation</label>
-                        <label class="chip-option"><input type="checkbox" name="barrier_childcare" value="yes" {% if form_data.get('barrier_childcare') == 'yes' %}checked{% endif %}> Childcare</label>
-                        <label class="chip-option"><input type="checkbox" name="barrier_legal" value="yes" {% if form_data.get('barrier_legal') == 'yes' %}checked{% endif %}> Legal</label>
-                        <label class="chip-option"><input type="checkbox" name="barrier_documents" value="yes" {% if form_data.get('barrier_documents') == 'yes' %}checked{% endif %}> Missing Documents</label>
-                        <label class="chip-option"><input type="checkbox" name="barrier_health" value="yes" {% if form_data.get('barrier_health') == 'yes' %}checked{% endif %}> Health</label>
-                        <label class="chip-option"><input type="checkbox" name="barrier_education" value="yes" {% if form_data.get('barrier_education') == 'yes' %}checked{% endif %}> Education</label>
-                      </div>
-                    </div>
 
-                    <div class="field span-4">
-                      <label for="felony_history">Felony History</label>
-                      <select id="felony_history" name="felony_history">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('felony_history', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="probation_parole">Probation or Parole</label>
-                      <select id="probation_parole" name="probation_parole">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('probation_parole', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="id_documents_status">ID Documents Status</label>
-                      <select id="id_documents_status" name="id_documents_status">
-                        <option value="">Select</option>
-                        <option value="has_all" {% if form_data.get('id_documents_status', '') == 'has_all' %}selected{% endif %}>Has All</option>
-                        <option value="missing_some" {% if form_data.get('id_documents_status', '') == 'missing_some' %}selected{% endif %}>Missing Some</option>
-                        <option value="missing_all" {% if form_data.get('id_documents_status', '') == 'missing_all' %}selected{% endif %}>Missing All</option>
-                      </select>
-                    </div>
-
-                    <div class="field span-12">
-                      <label for="barrier_notes">Barrier Notes</label>
-                      <textarea id="barrier_notes" name="barrier_notes" placeholder="Anything likely to affect stability planning in the first 30 days.">{{ form_data.get('barrier_notes', '') }}</textarea>
-                    </div>
-                  </div>
+                <div class="field span-4">
+                  <label for="vision_need">Vision Need</label>
+                  <select id="vision_need" name="vision_need">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('vision_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
                 </div>
-              </section>
 
+                <div class="field span-4">
+                  <label for="employment_status">Employment Status</label>
+                  <select id="employment_status" name="employment_status">
+                    <option value="">Select</option>
+                    <option value="employed_full_time" {% if form_data.get('employment_status', '') == 'employed_full_time' %}selected{% endif %}>Employed Full Time</option>
+                    <option value="employed_part_time" {% if form_data.get('employment_status', '') == 'employed_part_time' %}selected{% endif %}>Employed Part Time</option>
+                    <option value="unemployed" {% if form_data.get('employment_status', '') == 'unemployed' %}selected{% endif %}>Unemployed</option>
+                    <option value="disabled" {% if form_data.get('employment_status', '') == 'disabled' %}selected{% endif %}>Disabled</option>
+                    <option value="unknown" {% if form_data.get('employment_status', '') == 'unknown' %}selected{% endif %}>Unknown</option>
+                  </select>
+                </div>
+
+                <div class="field span-12">
+                  <label for="initial_snapshot_notes">Initial Snapshot Notes</label>
+                  <textarea id="initial_snapshot_notes" name="initial_snapshot_notes" placeholder="Brief baseline picture of her current situation.">{{ form_data.get('initial_snapshot_notes', '') }}</textarea>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
 
-          <div class="footer-actions">
-            <div class="footer-note">
-              Save Draft lets staff stop and reopen later. Complete Intake creates the resident record.
-            </div>
-
-            <div class="intake-header-actions">
-              <button class="btn-soft" type="submit" name="action" value="save_draft">
-                Save Draft
-              </button>
-
-              <button class="btn-primary" type="submit" name="action" value="complete">
-                Complete Intake
-              </button>
-            </div>
-          </div>
-        </form>
+        </div>
       </div>
 
-      <aside class="help-card">
-        <h3>What this page will do</h3>
-        <p>
-          This screen is the front door for case manager data entry. Save Draft keeps the intake open for later. Complete Intake creates the resident, creates the enrollment, saves entry data, and then opens the resident workspace.
-        </p>
+      <div class="tab-panel" data-tab-panel="assessment">
+        <div class="panel-stack">
 
-        <div class="mini-list">
-          <div class="mini-item">
-            <div class="mini-item-label">Resident record</div>
-            <div class="mini-item-value">Basic Information</div>
-          </div>
+          <section class="section-card">
+            <div class="section-card-head">
+              <h2>Trauma and Vulnerability</h2>
+              <p>Assessment items that measure trauma burden and vulnerability at entry.</p>
+            </div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field span-3">
+                  <label for="ace_score">ACE Score</label>
+                  <input id="ace_score" name="ace_score" type="number" min="0" max="10" step="1" value="{{ form_data.get('ace_score', '') }}">
+                </div>
 
-          <div class="mini-item">
-            <div class="mini-item-label">Enrollment record</div>
-            <div class="mini-item-value">Program Entry</div>
-          </div>
+                <div class="field span-3">
+                  <label for="grit_score">Grit Score</label>
+                  <input id="grit_score" name="grit_score" type="number" min="0" max="100" step="1" value="{{ form_data.get('grit_score', '') }}">
+                </div>
 
-          <div class="mini-item">
-            <div class="mini-item-label">Reporting inputs</div>
-            <div class="mini-item-value">Demographics and Assessment</div>
-          </div>
+                <div class="field span-3">
+                  <label for="sexual_survivor">Sexual Survivor</label>
+                  <select id="sexual_survivor" name="sexual_survivor">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('sexual_survivor', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
 
-          <div class="mini-item">
-            <div class="mini-item-label">Next modules</div>
-            <div class="mini-item-value">Children, Services, Exit Outcomes</div>
-          </div>
+                <div class="field span-3">
+                  <label for="domestic_violence_history">Domestic Violence History</label>
+                  <select id="domestic_violence_history" name="domestic_violence_history">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('domestic_violence_history', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="human_trafficking_history">Human Trafficking History</label>
+                  <select id="human_trafficking_history" name="human_trafficking_history">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('human_trafficking_history', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="drug_court">Drug Court</label>
+                  <select id="drug_court" name="drug_court">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('drug_court', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="warrants_unpaid">Warrants or Fines Unpaid</label>
+                  <select id="warrants_unpaid" name="warrants_unpaid">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('warrants_unpaid', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="mental_health_need">Mental Health Need</label>
+                  <select id="mental_health_need" name="mental_health_need">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('mental_health_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="medical_need">Medical Need</label>
+                  <select id="medical_need" name="medical_need">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('medical_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="mh_exam_completed">MH Exam Completed</label>
+                  <select id="mh_exam_completed" name="mh_exam_completed">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('mh_exam_completed', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="med_exam_completed">Medical Exam Completed</label>
+                  <select id="med_exam_completed" name="med_exam_completed">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('med_exam_completed', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="substance_use_need">Substance Use Need</label>
+                  <select id="substance_use_need" name="substance_use_need">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('substance_use_need', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-12">
+                  <label for="trauma_notes">Trauma and Vulnerability Notes</label>
+                  <textarea id="trauma_notes" name="trauma_notes" placeholder="Observed trauma indicators, safety concerns, or vulnerability factors.">{{ form_data.get('trauma_notes', '') }}</textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section-card">
+            <div class="section-card-head">
+              <h2>Barriers to Stability</h2>
+              <p>Baseline barriers that will later feed case management planning and reporting.</p>
+            </div>
+            <div class="section-card-body">
+              <div class="field-grid">
+                <div class="field span-12">
+                  <label>Current Barriers</label>
+                  <div class="check-grid">
+                    <label class="chip-option"><input type="checkbox" name="barrier_housing" value="yes" {% if form_data.get('barrier_housing') == 'yes' %}checked{% endif %}> Housing</label>
+                    <label class="chip-option"><input type="checkbox" name="barrier_income" value="yes" {% if form_data.get('barrier_income') == 'yes' %}checked{% endif %}> Income</label>
+                    <label class="chip-option"><input type="checkbox" name="barrier_employment" value="yes" {% if form_data.get('barrier_employment') == 'yes' %}checked{% endif %}> Employment</label>
+                    <label class="chip-option"><input type="checkbox" name="barrier_transportation" value="yes" {% if form_data.get('barrier_transportation') == 'yes' %}checked{% endif %}> Transportation</label>
+                    <label class="chip-option"><input type="checkbox" name="barrier_childcare" value="yes" {% if form_data.get('barrier_childcare') == 'yes' %}checked{% endif %}> Childcare</label>
+                    <label class="chip-option"><input type="checkbox" name="barrier_legal" value="yes" {% if form_data.get('barrier_legal') == 'yes' %}checked{% endif %}> Legal</label>
+                    <label class="chip-option"><input type="checkbox" name="barrier_documents" value="yes" {% if form_data.get('barrier_documents') == 'yes' %}checked{% endif %}> Missing Documents</label>
+                    <label class="chip-option"><input type="checkbox" name="barrier_health" value="yes" {% if form_data.get('barrier_health') == 'yes' %}checked{% endif %}> Health</label>
+                    <label class="chip-option"><input type="checkbox" name="barrier_education" value="yes" {% if form_data.get('barrier_education') == 'yes' %}checked{% endif %}> Education</label>
+                  </div>
+                </div>
+
+                <div class="field span-4">
+                  <label for="felony_history">Felony History</label>
+                  <select id="felony_history" name="felony_history">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('felony_history', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="probation_parole">Probation or Parole</label>
+                  <select id="probation_parole" name="probation_parole">
+                    <option value="">Select</option>
+                    {% for option in yes_no_options %}
+                      <option value="{{ option.value }}" {% if form_data.get('probation_parole', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="id_documents_status">ID Documents Status</label>
+                  <select id="id_documents_status" name="id_documents_status">
+                    <option value="">Select</option>
+                    <option value="has_all" {% if form_data.get('id_documents_status', '') == 'has_all' %}selected{% endif %}>Has All</option>
+                    <option value="missing_some" {% if form_data.get('id_documents_status', '') == 'missing_some' %}selected{% endif %}>Missing Some</option>
+                    <option value="missing_all" {% if form_data.get('id_documents_status', '') == 'missing_all' %}selected{% endif %}>Missing All</option>
+                  </select>
+                </div>
+
+                <div class="field span-12">
+                  <label for="barrier_notes">Barrier Notes</label>
+                  <textarea id="barrier_notes" name="barrier_notes" placeholder="Anything likely to affect stability planning in the first 30 days.">{{ form_data.get('barrier_notes', '') }}</textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <div class="footer-note">
+          Save Draft lets staff stop and reopen later. Finalize Intake and Assessment creates the resident record and opens case management.
         </div>
 
-        <p>
-          Keep these input names stable now so we only have to map the backend once.
-        </p>
-      </aside>
-    </div>
+        <div class="intake-header-actions">
+          <button class="btn-soft" type="submit" name="action" value="save_draft">
+            Save Draft
+          </button>
+
+          <button class="btn-primary" type="submit" name="action" value="complete">
+            Finalize Intake and Assessment
+          </button>
+        </div>
+      </div>
+    </form>
   </div>
 </div>
 
