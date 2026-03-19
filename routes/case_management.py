@@ -95,6 +95,7 @@ def _save_intake_draft(
 ) -> int:
     placeholder = _placeholder()
     resident_name = _draft_display_name(form)
+    entry_date = _clean(form.get("entry_date"))
     payload = json.dumps(form.to_dict(flat=True), ensure_ascii=False)
 
     if g.get("db_kind") == "pg":
@@ -103,6 +104,7 @@ def _save_intake_draft(
                 f"""
                 UPDATE intake_drafts
                 SET resident_name = {placeholder},
+                    entry_date = {placeholder},
                     form_payload = {placeholder},
                     updated_at = NOW()
                 WHERE id = {placeholder}
@@ -110,7 +112,7 @@ def _save_intake_draft(
                   AND LOWER(COALESCE(shelter, '')) = {placeholder}
                 RETURNING id
                 """,
-                (resident_name, payload, draft_id, current_shelter),
+                (resident_name, entry_date, payload, draft_id, current_shelter),
             )
             if row:
                 return int(row["id"])
@@ -122,6 +124,7 @@ def _save_intake_draft(
                 shelter,
                 status,
                 resident_name,
+                entry_date,
                 form_payload,
                 created_by_user_id,
                 created_at,
@@ -134,6 +137,7 @@ def _save_intake_draft(
                 {placeholder},
                 {placeholder},
                 {placeholder},
+                {placeholder},
                 NOW(),
                 NOW()
             )
@@ -142,6 +146,7 @@ def _save_intake_draft(
             (
                 current_shelter,
                 resident_name,
+                entry_date,
                 payload,
                 session.get("user_id"),
             ),
@@ -153,13 +158,14 @@ def _save_intake_draft(
             f"""
             UPDATE intake_drafts
             SET resident_name = {placeholder},
+                entry_date = {placeholder},
                 form_payload = {placeholder},
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = {placeholder}
               AND status = 'draft'
               AND LOWER(COALESCE(shelter, '')) = {placeholder}
             """,
-            (resident_name, payload, draft_id, current_shelter),
+            (resident_name, entry_date, payload, draft_id, current_shelter),
         )
         existing = db_fetchone(
             f"""
@@ -181,6 +187,7 @@ def _save_intake_draft(
             shelter,
             status,
             resident_name,
+            entry_date,
             form_payload,
             created_by_user_id,
             created_at,
@@ -193,6 +200,7 @@ def _save_intake_draft(
             {placeholder},
             {placeholder},
             {placeholder},
+            {placeholder},
             CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP
         )
@@ -200,6 +208,7 @@ def _save_intake_draft(
         (
             current_shelter,
             resident_name,
+            entry_date,
             payload,
             session.get("user_id"),
         ),
@@ -1019,6 +1028,7 @@ def index():
         SELECT
             id,
             resident_name,
+            entry_date,
             updated_at
         FROM intake_drafts
         WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
