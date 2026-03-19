@@ -13,6 +13,7 @@
       <thead>
         <tr>
           <th>Name</th>
+          <th>Date Entered</th>
           <th>Last Updated</th>
           <th>Continue</th>
         </tr>
@@ -22,6 +23,7 @@
           {% set draft_url = safe_url_for('case_management.intake_assessment', draft_id=d.id) %}
           <tr>
             <td>{{ d.resident_name or "Unnamed intake draft" }}</td>
+            <td>{{ d.entry_date or "—" }}</td>
             <td>{{ d.updated_at or "—" }}</td>
             <td>
               {% if draft_url %}
