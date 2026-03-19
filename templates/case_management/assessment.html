@@ -27,12 +27,117 @@
   </div>
 
   <div class="card">
-    <h2>Assessment</h2>
-    <p>This is the first placeholder version of the separate assessment workflow.</p>
+    <h2>Trauma and Vulnerability</h2>
 
     <p>
-      <label for="notes">Notes</label><br>
-      <textarea id="notes" name="notes" rows="5">{{ form_data.get('notes', '') }}</textarea>
+      <label for="ace_score">ACE Score</label><br>
+      <input
+        id="ace_score"
+        name="ace_score"
+        type="number"
+        min="0"
+        max="10"
+        step="1"
+        value="{{ form_data.get('ace_score', '') }}"
+      >
+    </p>
+
+    <p>
+      <label for="grit_score">Grit Score</label><br>
+      <input
+        id="grit_score"
+        name="grit_score"
+        type="number"
+        min="0"
+        max="100"
+        step="1"
+        value="{{ form_data.get('grit_score', '') }}"
+      >
+    </p>
+
+    <p>
+      <label for="sexual_survivor">Sexual Survivor</label><br>
+      <select id="sexual_survivor" name="sexual_survivor">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('sexual_survivor') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('sexual_survivor') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="domestic_violence_history">Domestic Violence History</label><br>
+      <select id="domestic_violence_history" name="domestic_violence_history">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('domestic_violence_history') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('domestic_violence_history') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="human_trafficking_history">Human Trafficking History</label><br>
+      <select id="human_trafficking_history" name="human_trafficking_history">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('human_trafficking_history') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('human_trafficking_history') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Program and Stability Factors</h2>
+
+    <p>
+      <label for="drug_court">Drug Court</label><br>
+      <select id="drug_court" name="drug_court">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('drug_court') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('drug_court') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="warrants_unpaid">Warrants or Fines Unpaid</label><br>
+      <select id="warrants_unpaid" name="warrants_unpaid">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('warrants_unpaid') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('warrants_unpaid') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="mh_exam_completed">Mental Health Exam Completed</label><br>
+      <select id="mh_exam_completed" name="mh_exam_completed">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('mh_exam_completed') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('mh_exam_completed') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="med_exam_completed">Medical Exam Completed</label><br>
+      <select id="med_exam_completed" name="med_exam_completed">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('med_exam_completed') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('med_exam_completed') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="car_at_entry">Car at Entry</label><br>
+      <select id="car_at_entry" name="car_at_entry">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('car_at_entry') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('car_at_entry') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="car_insurance_at_entry">Car Insurance at Entry</label><br>
+      <select id="car_insurance_at_entry" name="car_insurance_at_entry">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('car_insurance_at_entry') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('car_insurance_at_entry') == 'no' %}selected{% endif %}>No</option>
+      </select>
     </p>
   </div>
 
