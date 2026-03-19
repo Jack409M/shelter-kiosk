@@ -60,6 +60,26 @@ from routes.case_management_parts.helpers import yes_no_to_int
 
 
 # ============================================================================
+# Compatibility aliases
+# ----------------------------------------------------------------------------
+# Other route modules still import the old underscore helper names directly
+# from routes.case_management. Keep these aliases in place during the refactor
+# so those modules do not break while logic is moved into case_management_parts.
+# ============================================================================
+
+_case_manager_allowed = case_manager_allowed
+_clean = clean
+_digits_only = digits_only
+_normalize_shelter_name = normalize_shelter_name
+_parse_int = parse_int
+_parse_iso_date = parse_iso_date
+_parse_money = parse_money
+_placeholder = placeholder
+_shelter_equals_sql = shelter_equals_sql
+_yes_no_to_int = yes_no_to_int
+
+
+# ============================================================================
 # Blueprint Registration
 # ----------------------------------------------------------------------------
 # All routes in this file live under /staff/case-management
