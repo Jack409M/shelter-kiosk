@@ -6,8 +6,7 @@ from __future__ import annotations
 # This file is now the transition shell for case management.
 #
 # Current responsibilities still living here:
-# 1. Index and intake landing display
-# 2. Temporary admin utilities during build and testing
+# 1. Temporary admin utilities during build and testing
 #
 # Extracted:
 # - routes.case_management_parts.assessment
@@ -22,12 +21,12 @@ from __future__ import annotations
 #   intake form flow shell
 # - routes.case_management_parts.resident_case
 #   resident summary page and related reads
+# - routes.case_management_parts.index
+#   dashboard and intake landing
 #
 # Future extraction plan:
 # - routes.case_management_parts.helpers
 #   shared parsing, shelter, permission, and SQL helpers
-# - routes.case_management_parts.index
-#   dashboard and intake landing
 # - routes.case_management_parts.exit
 #   exit assessment flow
 # - routes.case_management_parts.update
@@ -37,10 +36,10 @@ from __future__ import annotations
 # keep shrinking this file until it becomes a thin blueprint shell like admin.py
 # ============================================================================
 
-from flask import Blueprint, flash, redirect, render_template, session, url_for
+from flask import Blueprint, flash, redirect, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_execute, db_fetchall
+from core.db import db_execute
 from core.runtime import init_db
 from routes.case_management_parts.assessment import assessment_form_view
 from routes.case_management_parts.assessment import submit_assessment_view
@@ -54,6 +53,8 @@ from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.helpers import yes_no_to_int
+from routes.case_management_parts.index import index_view
+from routes.case_management_parts.index import intake_index_view
 from routes.case_management_parts.intake import intake_form_view
 from routes.case_management_parts.intake import submit_intake_assessment_view
 from routes.case_management_parts.resident_case import resident_case_view
@@ -99,92 +100,21 @@ case_management = Blueprint(
 # ============================================================================
 # Index and Intake Landing Routes
 # ----------------------------------------------------------------------------
-# Future extraction target:
-# routes.case_management_parts.index
+# Extracted to routes.case_management_parts.index
 # ============================================================================
 
 @case_management.get("/")
 @require_login
 @require_shelter
 def index():
-    if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    init_db()
-
-    shelter = normalize_shelter_name(session.get("shelter"))
-
-    residents = db_fetchall(
-        f"""
-        SELECT
-            id,
-            first_name,
-            last_name,
-            resident_code,
-            is_active
-        FROM residents
-        WHERE {shelter_equals_sql("shelter")}
-        ORDER BY last_name ASC, first_name ASC
-        """,
-        (shelter,),
-    )
-
-    return render_template(
-        "case_management/index.html",
-        residents=residents,
-        shelter=shelter,
-    )
+    return index_view()
 
 
 @case_management.get("/intake-assessment")
 @require_login
 @require_shelter
 def intake_index():
-    if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    init_db()
-
-    shelter = normalize_shelter_name(session.get("shelter"))
-    ph = placeholder()
-
-    drafts = db_fetchall(
-        f"""
-        SELECT
-            id,
-            resident_name,
-            entry_date,
-            updated_at
-        FROM intake_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND status = 'draft'
-        ORDER BY updated_at DESC, id DESC
-        """,
-        (shelter,),
-    )
-
-    assessment_drafts = db_fetchall(
-        f"""
-        SELECT
-            id,
-            resident_id,
-            updated_at
-        FROM assessment_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND status = 'draft'
-        ORDER BY updated_at DESC, id DESC
-        """,
-        (shelter,),
-    )
-
-    return render_template(
-        "intake_assessment/index.html",
-        drafts=drafts,
-        assessment_drafts=assessment_drafts,
-        shelter=shelter,
-    )
+    return intake_index_view()
 
 
 # ============================================================================
