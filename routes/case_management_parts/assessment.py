@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, g, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
@@ -33,7 +33,7 @@ def _save_assessment_draft(
     payload = json.dumps(form_data, ensure_ascii=False)
     now = utcnow_iso()
 
-    if session.get("db_kind") == "pg":
+    if g.get("db_kind") == "pg":
         if draft_id is not None:
             row = db_fetchone(
                 f"""
