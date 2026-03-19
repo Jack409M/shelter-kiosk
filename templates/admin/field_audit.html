@@ -1,41 +1,58 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<div class="page-header">
+  <h1>Field Audit</h1>
+  <p>
+    This page tracks where each spreadsheet column is collected, where it is stored,
+    and whether it is currently available for reporting and statistics.
+  </p>
+</div>
 
-<h1>Field Audit</h1>
+<div class="card">
+  <h2>Summary</h2>
+  <p>Total Fields: <strong>{{ total_count }}</strong></p>
+  <p>Complete: <strong>{{ complete_count }}</strong></p>
+  <p>Partial: <strong>{{ partial_count }}</strong></p>
+  <p>Missing: <strong>{{ missing_count }}</strong></p>
+</div>
 
-<table border="1" cellpadding="6">
-  <tr>
-    <th>Field</th>
-    <th>Stage</th>
-    <th>Form Field</th>
-    <th>Table</th>
-    <th>Column</th>
-    <th>Status</th>
-    <th>Sample Value</th>
-    <th>Error</th>
-  </tr>
-
-  {% for r in results %}
-  <tr>
-    <td>{{ r.label }}</td>
-    <td>{{ r.stage }}</td>
-    <td>{{ r.form_field }}</td>
-    <td>{{ r.table }}</td>
-    <td>{{ r.column }}</td>
-
-    <td>
-      {% if r.found %}
-        ✅ SAVING
-      {% else %}
-        ❌ NOT FOUND
-      {% endif %}
-    </td>
-
-    <td>{{ r.value }}</td>
-    <td style="color:red;">{{ r.error }}</td>
-  </tr>
-  {% endfor %}
-</table>
-
+<div class="card" style="overflow-x: auto;">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Form Page</th>
+        <th>Form Field</th>
+        <th>Table</th>
+        <th>Column</th>
+        <th>Used In Stats</th>
+        <th>Status</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.label }}</td>
+        <td>{{ row.form_page or "" }}</td>
+        <td><code>{{ row.form_field or "" }}</code></td>
+        <td><code>{{ row.table or "" }}</code></td>
+        <td><code>{{ row.column or "" }}</code></td>
+        <td>{{ "Yes" if row.used_in_stats else "No" }}</td>
+        <td>
+          {% if row.status == "complete" %}
+            <strong>Complete</strong>
+          {% elif row.status == "partial" %}
+            <strong>Partial</strong>
+          {% else %}
+            <strong>Missing</strong>
+          {% endif %}
+        </td>
+        <td>{{ row.notes }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}
