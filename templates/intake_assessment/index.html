@@ -4,6 +4,7 @@
 
 <h1>Intake and Assessment</h1>
 
+<!-- INTAKE SECTION -->
 <div class="card">
   <h2>Start New Intake</h2>
   <p>Start a new intake for a resident entering the program.</p>
@@ -19,8 +20,8 @@
 </div>
 
 <div class="card">
-  <h2>Resume Incomplete Intakes{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
-  <p>Continue an intake that has already been started but not completed.</p>
+  <h2>Resume Intake Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+  <p>Continue an intake that has already been started but not finalized.</p>
 
   {% if drafts %}
     <table class="table-compact">
@@ -29,7 +30,7 @@
           <th>Name</th>
           <th>Date Entered</th>
           <th>Last Updated</th>
-          <th>Continue</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -41,9 +42,9 @@
             <td>{{ d.updated_at or "—" }}</td>
             <td>
               {% if draft_url %}
-                <a class="btn" href="{{ draft_url }}">Continue Draft</a>
+                <a class="btn" href="{{ draft_url }}">Resume</a>
               {% else %}
-                <span>Draft page not available</span>
+                <span>Unavailable</span>
               {% endif %}
             </td>
           </tr>
@@ -51,19 +52,22 @@
       </tbody>
     </table>
   {% else %}
-    <p>No incomplete intake drafts.</p>
+    <p>No intake drafts in progress.</p>
   {% endif %}
 </div>
 
+<!-- ASSESSMENT SECTION -->
 <div class="card">
   <h2>Assessments{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
-  <p>Start or continue an assessment for an existing resident. Assessments can be saved and completed later.</p>
-
   <p>
-    <button class="btn" disabled>New Assessment (Coming Soon)</button>
+    Assessments are completed after intake and can be saved, resumed, and finalized separately.
   </p>
 
-  <p>No incomplete assessment drafts yet.</p>
+  <p>
+    <a class="btn" href="{{ url_for('case_management.assessment_form') }}">New Assessment</a>
+  </p>
+
+  <p>No assessment drafts yet.</p>
 </div>
 
 {% endblock %}
