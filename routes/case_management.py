@@ -1094,6 +1094,60 @@ def assessment_form():
     )
 
 
+@case_management.post("/assessment/new")
+@require_login
+@require_shelter
+def submit_assessment():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    action = (request.form.get("action") or "complete").strip().lower()
+
+    resident_id = _parse_int(request.form.get("resident_id"))
+    notes = _clean(request.form.get("notes"))
+
+    residents = db_fetchall(
+        f"""
+        SELECT id, first_name, last_name
+        FROM residents
+        WHERE {_shelter_equals_sql("shelter")}
+        ORDER BY last_name ASC, first_name ASC
+        """,
+        (shelter,),
+    )
+
+    form_data = {
+        "draft_id": request.form.get("draft_id", ""),
+        "resident_id": request.form.get("resident_id", ""),
+        "notes": notes or "",
+    }
+
+    if not resident_id:
+        flash("Resident is required.", "error")
+        return render_template(
+            "case_management/assessment.html",
+            shelter=shelter,
+            residents=residents,
+            form_data=form_data,
+        )
+
+    if action == "save_draft":
+        flash("Assessment draft saved (temporary).", "success")
+        return render_template(
+            "case_management/assessment.html",
+            shelter=shelter,
+            residents=residents,
+            form_data=form_data,
+        )
+
+    flash("Assessment finalized (temporary).", "success")
+    return redirect(url_for("case_management.index"))
+
+
 @case_management.get("/intake-assessment/new")
 @require_login
 @require_shelter
