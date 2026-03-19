@@ -1,5 +1,16 @@
 from __future__ import annotations
 
+# ============================================================================
+# Application Factory
+# ----------------------------------------------------------------------------
+# This file is responsible for:
+# 1. Creating the Flask app
+# 2. Loading configuration from environment
+# 3. Registering blueprints automatically from routes/
+# 4. Registering security, CSRF, template helpers, and app hooks
+# 5. Setting up logging and proxy handling for Railway / production
+# ============================================================================
+
 import importlib
 import logging
 import os
@@ -28,9 +39,14 @@ from core.request_utils import client_ip
 from core.runtime import init_db
 
 
-# ------------------------------------------------------------
-# Blueprint loader
-# ------------------------------------------------------------
+# ============================================================================
+# Blueprint Loader
+# ----------------------------------------------------------------------------
+# This automatically imports every module inside routes/ and registers any
+# Flask Blueprint found there. That means new route files can usually be added
+# without editing this file again.
+# ============================================================================
+
 def register_blueprints(app: Flask) -> None:
     import routes
 
@@ -43,9 +59,12 @@ def register_blueprints(app: Flask) -> None:
                 app.register_blueprint(obj)
 
 
-# ------------------------------------------------------------
-# Internal helpers
-# ------------------------------------------------------------
+# ============================================================================
+# Internal Helpers
+# ----------------------------------------------------------------------------
+# Small private helper functions used during app setup.
+# ============================================================================
+
 def _client_ip() -> str:
     return client_ip()
 
@@ -57,6 +76,16 @@ def _csrf_token() -> str:
         session["_csrf_token"] = tok
     return tok
 
+
+# ============================================================================
+# CSRF Protection
+# ----------------------------------------------------------------------------
+# Registers:
+# - csrf_token() helper for templates
+# - before_request protection for POST / PUT / PATCH / DELETE
+#
+# Some webhook style endpoints are exempt because they are called externally.
+# ============================================================================
 
 def _register_csrf(app: Flask) -> None:
     app.jinja_env.globals["csrf_token"] = _csrf_token
@@ -99,11 +128,24 @@ def _register_csrf(app: Flask) -> None:
             return resp
 
 
+# ============================================================================
+# Error Handlers
+# ----------------------------------------------------------------------------
+# Central place for app-wide error pages.
+# ============================================================================
+
 def _register_error_handlers(app: Flask) -> None:
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template("404.html"), 404
 
+
+# ============================================================================
+# Core App Configuration
+# ----------------------------------------------------------------------------
+# Loads environment variables and sets Flask config values used throughout the
+# application. This is where secrets, database mode, and cookie settings live.
+# ============================================================================
 
 def _configure_app(app: Flask) -> None:
     app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
@@ -135,6 +177,12 @@ def _configure_app(app: Flask) -> None:
     )
 
 
+# ============================================================================
+# Template Helpers and Filters
+# ----------------------------------------------------------------------------
+# Makes utility functions available directly in Jinja templates.
+# ============================================================================
+
 def _register_template_helpers(app: Flask) -> None:
     app.jinja_env.globals["safe_url_for"] = safe_url_for
     app.jinja_env.globals["shelter_display"] = shelter_display
@@ -146,6 +194,12 @@ def _register_template_helpers(app: Flask) -> None:
     app.jinja_env.filters["app_pretty_dt"] = fmt_pretty_dt
 
 
+# ============================================================================
+# Context Processors
+# ----------------------------------------------------------------------------
+# Injects values that should always be available in templates.
+# ============================================================================
+
 def _register_context_processors(app: Flask) -> None:
     @app.context_processor
     def inject_current_clock():
@@ -154,9 +208,21 @@ def _register_context_processors(app: Flask) -> None:
         }
 
 
-# ------------------------------------------------------------
-# Application factory
-# ------------------------------------------------------------
+# ============================================================================
+# Application Factory
+# ----------------------------------------------------------------------------
+# Creates and returns the Flask app instance.
+#
+# Setup order:
+# 1. Create app object
+# 2. Configure app
+# 3. Apply ProxyFix for Railway / reverse proxy deployment
+# 4. Configure logging
+# 5. Register helpers, teardown, security, CSRF, errors, context
+# 6. Register all blueprints
+# 7. Register app hooks
+# ============================================================================
+
 def create_app() -> Flask:
     app = Flask(
         __name__,
@@ -166,8 +232,11 @@ def create_app() -> Flask:
 
     _configure_app(app)
 
+    # Railway and similar platforms sit behind a proxy.
+    # ProxyFix makes Flask respect forwarded headers for scheme and host.
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
+    # Configure logging level from environment.
     log_level_name = (os.getenv("LOG_LEVEL") or "INFO").strip().upper()
     log_level = getattr(logging, log_level_name, logging.INFO)
     app.logger.setLevel(log_level)
@@ -182,8 +251,10 @@ def create_app() -> Flask:
 
     _register_template_helpers(app)
 
+    # Ensure database connections are closed cleanly at the end of each request.
     app.teardown_appcontext(close_db)
 
+    # Register request-level security checks like IP banning and rate limiting.
     register_request_security(
         app,
         client_ip_func=_client_ip,
@@ -196,7 +267,10 @@ def create_app() -> Flask:
     _register_error_handlers(app)
     _register_context_processors(app)
 
+    # Auto-load and register all blueprints found in routes/
     register_blueprints(app)
+
+    # Register any additional app hooks after blueprints are loaded.
     register_app_hooks(app)
 
     app.logger.info(
