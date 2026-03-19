@@ -21,10 +21,6 @@ from routes.case_management_parts.helpers import yes_no_to_int
 # Assessment Draft Persistence
 # ----------------------------------------------------------------------------
 # This block was extracted from routes/case_management.py.
-#
-# Future move:
-# assessment draft persistence could later be moved again into
-# routes.case_management_parts.assessment_drafts if desired.
 # ============================================================================
 
 def _save_assessment_draft(
@@ -37,8 +33,61 @@ def _save_assessment_draft(
     payload = json.dumps(form_data, ensure_ascii=False)
     now = utcnow_iso()
 
-    if draft_id is not None:
+    if session.get("db_kind") == "pg":
+        if draft_id is not None:
+            row = db_fetchone(
+                f"""
+                UPDATE assessment_drafts
+                SET resident_id = {ph},
+                    form_payload = {ph},
+                    updated_at = {ph}
+                WHERE id = {ph}
+                  AND status = 'draft'
+                  AND LOWER(COALESCE(shelter, '')) = {ph}
+                RETURNING id
+                """,
+                (resident_id, payload, now, draft_id, current_shelter),
+            )
+            if row:
+                return int(row["id"])
+
         row = db_fetchone(
+            f"""
+            INSERT INTO assessment_drafts
+            (
+                shelter,
+                resident_id,
+                form_payload,
+                status,
+                created_by_user_id,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {ph},
+                {ph},
+                {ph},
+                'draft',
+                {ph},
+                {ph},
+                {ph}
+            )
+            RETURNING id
+            """,
+            (
+                current_shelter,
+                resident_id,
+                payload,
+                session.get("user_id"),
+                now,
+                now,
+            ),
+        )
+        return int(row["id"])
+
+    if draft_id is not None:
+        db_execute(
             f"""
             UPDATE assessment_drafts
             SET resident_id = {ph},
@@ -47,48 +96,21 @@ def _save_assessment_draft(
             WHERE id = {ph}
               AND status = 'draft'
               AND LOWER(COALESCE(shelter, '')) = {ph}
-            RETURNING id
             """,
             (resident_id, payload, now, draft_id, current_shelter),
         )
-        if row:
-            return int(row["id"] if isinstance(row, dict) else row[0])
-
-    row = db_fetchone(
-        f"""
-        INSERT INTO assessment_drafts
-        (
-            shelter,
-            resident_id,
-            form_payload,
-            status,
-            created_by_user_id,
-            created_at,
-            updated_at
+        existing = db_fetchone(
+            f"""
+            SELECT id
+            FROM assessment_drafts
+            WHERE id = {ph}
+              AND status = 'draft'
+              AND LOWER(COALESCE(shelter, '')) = {ph}
+            """,
+            (draft_id, current_shelter),
         )
-        VALUES
-        (
-            {ph},
-            {ph},
-            {ph},
-            'draft',
-            {ph},
-            {ph},
-            {ph}
-        )
-        RETURNING id
-        """,
-        (
-            current_shelter,
-            resident_id,
-            payload,
-            session.get("user_id"),
-            now,
-            now,
-        ),
-    )
-    if row:
-        return int(row["id"] if isinstance(row, dict) else row[0])
+        if existing:
+            return draft_id
 
     db_execute(
         f"""
@@ -163,6 +185,7 @@ def _load_assessment_draft(current_shelter: str, draft_id: int) -> dict[str, Any
 
 def _complete_assessment_draft(draft_id: int) -> None:
     ph = placeholder()
+
     db_execute(
         f"""
         UPDATE assessment_drafts
