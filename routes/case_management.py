@@ -1910,7 +1910,7 @@ def submit_intake_assessment():
 # - residents
 # ============================================================================
 
-@case_management.post("/admin/wipe-test-residents")
+@case_management.route("/admin/wipe-test-residents", methods=["GET", "POST"])
 @require_login
 @require_shelter
 def wipe_test_residents():
@@ -1920,20 +1920,26 @@ def wipe_test_residents():
 
     init_db()
 
-    db_execute("DELETE FROM family_snapshots")
-    db_execute("DELETE FROM intake_assessments")
-    db_execute("DELETE FROM assessment_drafts")
-    db_execute("DELETE FROM intake_drafts")
-    db_execute("DELETE FROM case_manager_updates")
-    db_execute("DELETE FROM appointments")
-    db_execute("DELETE FROM goals")
-    db_execute("DELETE FROM resident_children")
-    db_execute("DELETE FROM resident_substances")
-    db_execute("DELETE FROM program_enrollments")
-    db_execute("DELETE FROM residents")
+    try:
+        db_execute("DELETE FROM family_snapshots")
+        db_execute("DELETE FROM intake_assessments")
+        db_execute("DELETE FROM assessment_drafts")
+        db_execute("DELETE FROM intake_drafts")
+        db_execute("DELETE FROM case_manager_updates")
+        db_execute("DELETE FROM appointments")
+        db_execute("DELETE FROM goals")
+        db_execute("DELETE FROM resident_children")
+        db_execute("DELETE FROM resident_substances")
+        db_execute("DELETE FROM program_enrollments")
+        db_execute("DELETE FROM residents")
 
-    flash("All resident-related test data was wiped.", "success")
+        flash("All resident-related test data was wiped.", "success")
+    except Exception as e:
+        flash(f"Wipe failed: {e}", "error")
+
     return redirect(url_for("case_management.index"))
+
+
 
 # ============================================================================
 # TEMPORARY TEST DATA WIPE ROUTE - END
