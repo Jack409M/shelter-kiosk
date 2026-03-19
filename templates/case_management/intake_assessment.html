@@ -207,33 +207,6 @@
     resize: vertical;
   }
 
-  .check-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 14px;
-  }
-
-  .chip-option {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 40px;
-    padding: 0 12px;
-    border: 1px solid #cfd8e3;
-    border-radius: 999px;
-    background: #ffffff;
-    font-size: 13px;
-    font-weight: 600;
-    color: #334155;
-  }
-
-  .chip-option input {
-    width: auto;
-    min-height: auto;
-    padding: 0;
-    margin: 0;
-  }
-
   .footer-actions {
     display: flex;
     justify-content: space-between;
@@ -365,17 +338,12 @@
             </div>
             <div class="section-card-body">
               <div class="field-grid">
-                <div class="field span-4">
+                <div class="field span-6">
                   <label for="first_name">First Name</label>
                   <input id="first_name" name="first_name" type="text" required value="{{ form_data.get('first_name', '') }}">
                 </div>
 
-                <div class="field span-4">
-                  <label for="middle_name">Middle Name</label>
-                  <input id="middle_name" name="middle_name" type="text" value="{{ form_data.get('middle_name', '') }}">
-                </div>
-
-                <div class="field span-4">
+                <div class="field span-6">
                   <label for="last_name">Last Name</label>
                   <input id="last_name" name="last_name" type="text" required value="{{ form_data.get('last_name', '') }}">
                 </div>
@@ -652,20 +620,6 @@
             </div>
             <div class="section-card-body">
               <div class="field-grid">
-                <div class="field span-12">
-                  <label>Immediate Needs</label>
-                  <div class="check-grid">
-                    <label class="chip-option"><input type="checkbox" name="need_food" value="yes" {% if form_data.get('need_food') == 'yes' %}checked{% endif %}> Food</label>
-                    <label class="chip-option"><input type="checkbox" name="need_clothing" value="yes" {% if form_data.get('need_clothing') == 'yes' %}checked{% endif %}> Clothing</label>
-                    <label class="chip-option"><input type="checkbox" name="need_hygiene" value="yes" {% if form_data.get('need_hygiene') == 'yes' %}checked{% endif %}> Hygiene</label>
-                    <label class="chip-option"><input type="checkbox" name="need_medical" value="yes" {% if form_data.get('need_medical') == 'yes' %}checked{% endif %}> Medical</label>
-                    <label class="chip-option"><input type="checkbox" name="need_mental_health" value="yes" {% if form_data.get('need_mental_health') == 'yes' %}checked{% endif %}> Mental Health</label>
-                    <label class="chip-option"><input type="checkbox" name="need_transportation" value="yes" {% if form_data.get('need_transportation') == 'yes' %}checked{% endif %}> Transportation</label>
-                    <label class="chip-option"><input type="checkbox" name="need_id" value="yes" {% if form_data.get('need_id') == 'yes' %}checked{% endif %}> ID and Benefits</label>
-                    <label class="chip-option"><input type="checkbox" name="need_safety" value="yes" {% if form_data.get('need_safety') == 'yes' %}checked{% endif %}> Safety Planning</label>
-                  </div>
-                </div>
-
                 <div class="field span-3">
                   <label for="dental_need">Dental Need</label>
                   <select id="dental_need" name="dental_need">
@@ -854,21 +808,6 @@
             </div>
             <div class="section-card-body">
               <div class="field-grid">
-                <div class="field span-12">
-                  <label>Current Barriers</label>
-                  <div class="check-grid">
-                    <label class="chip-option"><input type="checkbox" name="barrier_housing" value="yes" {% if form_data.get('barrier_housing') == 'yes' %}checked{% endif %}> Housing</label>
-                    <label class="chip-option"><input type="checkbox" name="barrier_income" value="yes" {% if form_data.get('barrier_income') == 'yes' %}checked{% endif %}> Income</label>
-                    <label class="chip-option"><input type="checkbox" name="barrier_employment" value="yes" {% if form_data.get('barrier_employment') == 'yes' %}checked{% endif %}> Employment</label>
-                    <label class="chip-option"><input type="checkbox" name="barrier_transportation" value="yes" {% if form_data.get('barrier_transportation') == 'yes' %}checked{% endif %}> Transportation</label>
-                    <label class="chip-option"><input type="checkbox" name="barrier_childcare" value="yes" {% if form_data.get('barrier_childcare') == 'yes' %}checked{% endif %}> Childcare</label>
-                    <label class="chip-option"><input type="checkbox" name="barrier_legal" value="yes" {% if form_data.get('barrier_legal') == 'yes' %}checked{% endif %}> Legal</label>
-                    <label class="chip-option"><input type="checkbox" name="barrier_documents" value="yes" {% if form_data.get('barrier_documents') == 'yes' %}checked{% endif %}> Missing Documents</label>
-                    <label class="chip-option"><input type="checkbox" name="barrier_health" value="yes" {% if form_data.get('barrier_health') == 'yes' %}checked{% endif %}> Health</label>
-                    <label class="chip-option"><input type="checkbox" name="barrier_education" value="yes" {% if form_data.get('barrier_education') == 'yes' %}checked{% endif %}> Education</label>
-                  </div>
-                </div>
-
                 <div class="field span-4">
                   <label for="felony_history">Felony History</label>
                   <select id="felony_history" name="felony_history">
