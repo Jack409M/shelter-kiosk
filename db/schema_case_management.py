@@ -100,6 +100,7 @@ def ensure_intake_drafts_table(kind: str) -> None:
             shelter TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'draft',
             resident_name TEXT,
+            entry_date TEXT,
             form_payload TEXT NOT NULL,
             created_by_user_id INTEGER,
             created_at TEXT NOT NULL,
@@ -114,6 +115,7 @@ def ensure_intake_drafts_table(kind: str) -> None:
             shelter TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'draft',
             resident_name TEXT,
+            entry_date TEXT,
             form_payload TEXT NOT NULL,
             created_by_user_id INTEGER,
             created_at TEXT NOT NULL,
@@ -237,6 +239,16 @@ def ensure_indexes() -> None:
     try:
         db_execute(
             """
+            CREATE INDEX IF NOT EXISTS intake_drafts_entry_date_idx
+            ON intake_drafts (entry_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
             CREATE INDEX IF NOT EXISTS intake_drafts_shelter_status_updated_idx
             ON intake_drafts (shelter, status, updated_at)
             """
@@ -259,3 +271,4 @@ def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
     ensure_case_manager_calendar_events_table(kind)
     ensure_intake_drafts_table(kind)
+    ensure_indexes()
