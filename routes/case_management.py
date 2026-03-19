@@ -3,13 +3,36 @@ from __future__ import annotations
 # ============================================================================
 # Case Management Routes
 # ----------------------------------------------------------------------------
-# This module handles:
+# This file is now the transition shell for case management.
+#
+# Current responsibilities still living here:
 # 1. Intake draft save and resume
 # 2. Assessment draft save and resume
 # 3. Intake validation and final resident creation
 # 4. Assessment validation and update of the intake assessment row
 # 5. Resident case page display
 # 6. Temporary admin utilities during build and testing
+#
+# Future extraction plan:
+# - routes.case_management_parts.helpers
+#   shared parsing, shelter, permission, and SQL helpers
+# - routes.case_management_parts.intake_drafts
+#   intake draft save/load/complete
+# - routes.case_management_parts.assessment_drafts
+#   assessment draft save/load/complete
+# - routes.case_management_parts.intake
+#   intake form, validation, duplicate detection, inserts
+# - routes.case_management_parts.assessment
+#   assessment form, validation, and persistence
+# - routes.case_management_parts.resident_case
+#   resident summary page and related reads
+# - routes.case_management_parts.exit
+#   exit assessment flow
+# - routes.case_management_parts.update
+#   progress update flow
+#
+# Goal:
+# keep shrinking this file until it becomes a thin blueprint shell like admin.py
 # ============================================================================
 
 import json
@@ -23,12 +46,27 @@ from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.residents import generate_resident_code, generate_resident_identifier
 from core.runtime import init_db
+from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import clean
+from routes.case_management_parts.helpers import digits_only
+from routes.case_management_parts.helpers import draft_display_name
+from routes.case_management_parts.helpers import normalize_shelter_name
+from routes.case_management_parts.helpers import parse_int
+from routes.case_management_parts.helpers import parse_iso_date
+from routes.case_management_parts.helpers import parse_money
+from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import yes_no_to_int
 
 
 # ============================================================================
 # Blueprint Registration
 # ----------------------------------------------------------------------------
 # All routes in this file live under /staff/case-management
+#
+# Future state:
+# this file should mostly contain blueprint creation plus thin decorated wrappers
+# that delegate into routes.case_management_parts.*
 # ============================================================================
 
 case_management = Blueprint(
@@ -39,94 +77,11 @@ case_management = Blueprint(
 
 
 # ============================================================================
-# Basic Access and Utility Helpers
+# Draft Persistence
 # ----------------------------------------------------------------------------
-# Small helper functions used throughout the file for:
-# - permissions
-# - shelter normalization
-# - SQL placeholders
-# - parsing and cleaning user input
-# ============================================================================
-
-def _case_manager_allowed() -> bool:
-    return session.get("role") in {"admin", "shelter_director", "case_manager"}
-
-
-def _normalize_shelter_name(value: str | None) -> str:
-    return (value or "").strip().lower()
-
-
-def _shelter_equals_sql(column_name: str) -> str:
-    if g.get("db_kind") == "pg":
-        return f"LOWER(COALESCE({column_name}, '')) = %s"
-    return f"LOWER(COALESCE({column_name}, '')) = ?"
-
-
-def _placeholder() -> str:
-    return "%s" if g.get("db_kind") == "pg" else "?"
-
-
-def _clean(value: str | None) -> str | None:
-    value = (value or "").strip()
-    return value or None
-
-
-def _digits_only(value: str | None) -> str:
-    return "".join(ch for ch in (value or "") if ch.isdigit())
-
-
-def _parse_iso_date(value: str | None) -> date | None:
-    value = _clean(value)
-    if not value:
-        return None
-    try:
-        return date.fromisoformat(value)
-    except ValueError:
-        return None
-
-
-def _parse_int(value: str | None) -> int | None:
-    value = _clean(value)
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except ValueError:
-        return None
-
-
-def _parse_money(value: str | None) -> float | None:
-    value = _clean(value)
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except ValueError:
-        return None
-
-
-def _yes_no_to_int(value: str | None) -> int:
-    return 1 if (value or "").strip().lower() == "yes" else 0
-
-
-# ============================================================================
-# Draft Display Helpers
-# ----------------------------------------------------------------------------
-# These support friendly names for intake drafts shown in the draft list.
-# ============================================================================
-
-def _draft_display_name(form: Any) -> str:
-    first_name = _clean(form.get("first_name")) or ""
-    last_name = _clean(form.get("last_name")) or ""
-    full_name = f"{first_name} {last_name}".strip()
-    return full_name or "Unnamed intake draft"
-
-
-# ============================================================================
-# Intake Draft Persistence
-# ----------------------------------------------------------------------------
-# These functions save, load, and complete intake drafts.
-# Drafts are stored in intake_drafts so staff can stop and resume later.
+# Future extraction target:
+# routes.case_management_parts.intake_drafts
+# routes.case_management_parts.assessment_drafts
 # ============================================================================
 
 def _save_intake_draft(
@@ -134,9 +89,9 @@ def _save_intake_draft(
     form: Any,
     draft_id: int | None = None,
 ) -> int:
-    placeholder = _placeholder()
-    resident_name = _draft_display_name(form)
-    entry_date = _clean(form.get("entry_date"))
+    ph = placeholder()
+    resident_name = draft_display_name(form)
+    entry_date = clean(form.get("entry_date"))
     payload = json.dumps(form.to_dict(flat=True), ensure_ascii=False)
 
     if g.get("db_kind") == "pg":
@@ -144,13 +99,13 @@ def _save_intake_draft(
             row = db_fetchone(
                 f"""
                 UPDATE intake_drafts
-                SET resident_name = {placeholder},
-                    entry_date = {placeholder},
-                    form_payload = {placeholder},
+                SET resident_name = {ph},
+                    entry_date = {ph},
+                    form_payload = {ph},
                     updated_at = NOW()
-                WHERE id = {placeholder}
+                WHERE id = {ph}
                   AND status = 'draft'
-                  AND LOWER(COALESCE(shelter, '')) = {placeholder}
+                  AND LOWER(COALESCE(shelter, '')) = {ph}
                 RETURNING id
                 """,
                 (resident_name, entry_date, payload, draft_id, current_shelter),
@@ -173,12 +128,12 @@ def _save_intake_draft(
             )
             VALUES
             (
-                {placeholder},
+                {ph},
                 'draft',
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
                 NOW(),
                 NOW()
             )
@@ -198,13 +153,13 @@ def _save_intake_draft(
         db_execute(
             f"""
             UPDATE intake_drafts
-            SET resident_name = {placeholder},
-                entry_date = {placeholder},
-                form_payload = {placeholder},
+            SET resident_name = {ph},
+                entry_date = {ph},
+                form_payload = {ph},
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = {placeholder}
+            WHERE id = {ph}
               AND status = 'draft'
-              AND LOWER(COALESCE(shelter, '')) = {placeholder}
+              AND LOWER(COALESCE(shelter, '')) = {ph}
             """,
             (resident_name, entry_date, payload, draft_id, current_shelter),
         )
@@ -212,9 +167,9 @@ def _save_intake_draft(
             f"""
             SELECT id
             FROM intake_drafts
-            WHERE id = {placeholder}
+            WHERE id = {ph}
               AND status = 'draft'
-              AND LOWER(COALESCE(shelter, '')) = {placeholder}
+              AND LOWER(COALESCE(shelter, '')) = {ph}
             """,
             (draft_id, current_shelter),
         )
@@ -236,12 +191,12 @@ def _save_intake_draft(
         )
         VALUES
         (
-            {placeholder},
+            {ph},
             'draft',
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
             CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP
         )
@@ -260,7 +215,7 @@ def _save_intake_draft(
 
 
 def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | None:
-    placeholder = _placeholder()
+    ph = placeholder()
     row = db_fetchone(
         f"""
         SELECT
@@ -269,9 +224,9 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
             form_payload,
             updated_at
         FROM intake_drafts
-        WHERE id = {placeholder}
+        WHERE id = {ph}
           AND status = 'draft'
-          AND LOWER(COALESCE(shelter, '')) = {placeholder}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
         """,
         (draft_id, current_shelter),
     )
@@ -290,7 +245,7 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
 
 
 def _complete_intake_draft(draft_id: int) -> None:
-    placeholder = _placeholder()
+    ph = placeholder()
 
     if g.get("db_kind") == "pg":
         db_execute(
@@ -298,7 +253,7 @@ def _complete_intake_draft(draft_id: int) -> None:
             UPDATE intake_drafts
             SET status = 'completed',
                 updated_at = NOW()
-            WHERE id = {placeholder}
+            WHERE id = {ph}
             """,
             (draft_id,),
         )
@@ -309,18 +264,11 @@ def _complete_intake_draft(draft_id: int) -> None:
         UPDATE intake_drafts
         SET status = 'completed',
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = {placeholder}
+        WHERE id = {ph}
         """,
         (draft_id,),
     )
 
-
-# ============================================================================
-# Assessment Draft Persistence
-# ----------------------------------------------------------------------------
-# These functions save, load, and complete assessment drafts.
-# Drafts are stored in assessment_drafts so staff can return later.
-# ============================================================================
 
 def _save_assessment_draft(
     current_shelter: str,
@@ -328,7 +276,7 @@ def _save_assessment_draft(
     resident_id: int,
     draft_id: int | None = None,
 ) -> int:
-    placeholder = _placeholder()
+    ph = placeholder()
     payload = json.dumps(form_data, ensure_ascii=False)
     now = utcnow_iso()
 
@@ -337,12 +285,12 @@ def _save_assessment_draft(
             row = db_fetchone(
                 f"""
                 UPDATE assessment_drafts
-                SET resident_id = {placeholder},
-                    form_payload = {placeholder},
-                    updated_at = {placeholder}
-                WHERE id = {placeholder}
+                SET resident_id = {ph},
+                    form_payload = {ph},
+                    updated_at = {ph}
+                WHERE id = {ph}
                   AND status = 'draft'
-                  AND LOWER(COALESCE(shelter, '')) = {placeholder}
+                  AND LOWER(COALESCE(shelter, '')) = {ph}
                 RETURNING id
                 """,
                 (resident_id, payload, now, draft_id, current_shelter),
@@ -364,13 +312,13 @@ def _save_assessment_draft(
             )
             VALUES
             (
-                {placeholder},
-                {placeholder},
-                {placeholder},
+                {ph},
+                {ph},
+                {ph},
                 'draft',
-                {placeholder},
-                {placeholder},
-                {placeholder}
+                {ph},
+                {ph},
+                {ph}
             )
             RETURNING id
             """,
@@ -389,12 +337,12 @@ def _save_assessment_draft(
         db_execute(
             f"""
             UPDATE assessment_drafts
-            SET resident_id = {placeholder},
-                form_payload = {placeholder},
-                updated_at = {placeholder}
-            WHERE id = {placeholder}
+            SET resident_id = {ph},
+                form_payload = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
               AND status = 'draft'
-              AND LOWER(COALESCE(shelter, '')) = {placeholder}
+              AND LOWER(COALESCE(shelter, '')) = {ph}
             """,
             (resident_id, payload, now, draft_id, current_shelter),
         )
@@ -402,9 +350,9 @@ def _save_assessment_draft(
             f"""
             SELECT id
             FROM assessment_drafts
-            WHERE id = {placeholder}
+            WHERE id = {ph}
               AND status = 'draft'
-              AND LOWER(COALESCE(shelter, '')) = {placeholder}
+              AND LOWER(COALESCE(shelter, '')) = {ph}
             """,
             (draft_id, current_shelter),
         )
@@ -425,13 +373,13 @@ def _save_assessment_draft(
         )
         VALUES
         (
-            {placeholder},
-            {placeholder},
-            {placeholder},
+            {ph},
+            {ph},
+            {ph},
             'draft',
-            {placeholder},
-            {placeholder},
-            {placeholder}
+            {ph},
+            {ph},
+            {ph}
         )
         """,
         (
@@ -449,7 +397,7 @@ def _save_assessment_draft(
 
 
 def _load_assessment_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | None:
-    placeholder = _placeholder()
+    ph = placeholder()
     row = db_fetchone(
         f"""
         SELECT
@@ -457,9 +405,9 @@ def _load_assessment_draft(current_shelter: str, draft_id: int) -> dict[str, Any
             resident_id,
             form_payload
         FROM assessment_drafts
-        WHERE id = {placeholder}
+        WHERE id = {ph}
           AND status = 'draft'
-          AND LOWER(COALESCE(shelter, '')) = {placeholder}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
         """,
         (draft_id, current_shelter),
     )
@@ -483,7 +431,7 @@ def _load_assessment_draft(current_shelter: str, draft_id: int) -> dict[str, Any
 
 
 def _complete_assessment_draft(draft_id: int) -> None:
-    placeholder = _placeholder()
+    ph = placeholder()
 
     if g.get("db_kind") == "pg":
         db_execute(
@@ -491,7 +439,7 @@ def _complete_assessment_draft(draft_id: int) -> None:
             UPDATE assessment_drafts
             SET status = 'completed',
                 updated_at = NOW()
-            WHERE id = {placeholder}
+            WHERE id = {ph}
             """,
             (draft_id,),
         )
@@ -502,7 +450,7 @@ def _complete_assessment_draft(draft_id: int) -> None:
         UPDATE assessment_drafts
         SET status = 'completed',
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = {placeholder}
+        WHERE id = {ph}
         """,
         (draft_id,),
     )
@@ -511,43 +459,41 @@ def _complete_assessment_draft(draft_id: int) -> None:
 # ============================================================================
 # Assessment Validation and Persistence
 # ----------------------------------------------------------------------------
-# These functions:
-# - validate the assessment form
-# - update the enrollment's intake_assessments row
-# Assessment currently updates one existing row per enrollment.
+# Future extraction target:
+# routes.case_management_parts.assessment
 # ============================================================================
 
 def _validate_assessment_form(form: Any) -> tuple[dict[str, Any], list[str]]:
     data: dict[str, Any] = {
-        "resident_id": _clean(form.get("resident_id")),
-        "ace_score": _clean(form.get("ace_score")),
-        "grit_score": _clean(form.get("grit_score")),
-        "sexual_survivor": _clean(form.get("sexual_survivor")),
-        "domestic_violence_history": _clean(form.get("domestic_violence_history")),
-        "human_trafficking_history": _clean(form.get("human_trafficking_history")),
-        "drug_court": _clean(form.get("drug_court")),
-        "warrants_unpaid": _clean(form.get("warrants_unpaid")),
-        "mh_exam_completed": _clean(form.get("mh_exam_completed")),
-        "med_exam_completed": _clean(form.get("med_exam_completed")),
-        "car_at_entry": _clean(form.get("car_at_entry")),
-        "car_insurance_at_entry": _clean(form.get("car_insurance_at_entry")),
+        "resident_id": clean(form.get("resident_id")),
+        "ace_score": clean(form.get("ace_score")),
+        "grit_score": clean(form.get("grit_score")),
+        "sexual_survivor": clean(form.get("sexual_survivor")),
+        "domestic_violence_history": clean(form.get("domestic_violence_history")),
+        "human_trafficking_history": clean(form.get("human_trafficking_history")),
+        "drug_court": clean(form.get("drug_court")),
+        "warrants_unpaid": clean(form.get("warrants_unpaid")),
+        "mh_exam_completed": clean(form.get("mh_exam_completed")),
+        "med_exam_completed": clean(form.get("med_exam_completed")),
+        "car_at_entry": clean(form.get("car_at_entry")),
+        "car_insurance_at_entry": clean(form.get("car_insurance_at_entry")),
     }
 
     errors: list[str] = []
 
-    resident_id = _parse_int(data["resident_id"])
+    resident_id = parse_int(data["resident_id"])
     if resident_id is None:
         errors.append("Resident is required.")
     data["resident_id"] = resident_id
 
-    ace_score = _parse_int(data["ace_score"])
+    ace_score = parse_int(data["ace_score"])
     if data["ace_score"] and ace_score is None:
         errors.append("ACE Score must be a whole number.")
     if ace_score is not None and not 0 <= ace_score <= 10:
         errors.append("ACE Score must be between 0 and 10.")
     data["ace_score"] = ace_score
 
-    grit_score = _parse_int(data["grit_score"])
+    grit_score = parse_int(data["grit_score"])
     if data["grit_score"] and grit_score is None:
         errors.append("Grit Score must be a whole number.")
     if grit_score is not None and not 0 <= grit_score <= 100:
@@ -578,14 +524,14 @@ def _validate_assessment_form(form: Any) -> tuple[dict[str, Any], list[str]]:
 
 
 def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) -> None:
-    placeholder = _placeholder()
+    ph = placeholder()
     now = utcnow_iso()
 
     existing = db_fetchone(
         f"""
         SELECT id
         FROM intake_assessments
-        WHERE enrollment_id = {placeholder}
+        WHERE enrollment_id = {ph}
         LIMIT 1
         """,
         (enrollment_id,),
@@ -595,32 +541,32 @@ def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) 
         db_execute(
             f"""
             UPDATE intake_assessments
-            SET ace_score = {placeholder},
-                grit_score = {placeholder},
-                sexual_survivor = {placeholder},
-                dv_survivor = {placeholder},
-                human_trafficking_survivor = {placeholder},
-                drug_court = {placeholder},
-                warrants_unpaid = {placeholder},
-                mh_exam_completed = {placeholder},
-                med_exam_completed = {placeholder},
-                car_at_entry = {placeholder},
-                car_insurance_at_entry = {placeholder},
-                updated_at = {placeholder}
-            WHERE enrollment_id = {placeholder}
+            SET ace_score = {ph},
+                grit_score = {ph},
+                sexual_survivor = {ph},
+                dv_survivor = {ph},
+                human_trafficking_survivor = {ph},
+                drug_court = {ph},
+                warrants_unpaid = {ph},
+                mh_exam_completed = {ph},
+                med_exam_completed = {ph},
+                car_at_entry = {ph},
+                car_insurance_at_entry = {ph},
+                updated_at = {ph}
+            WHERE enrollment_id = {ph}
             """,
             (
                 data["ace_score"],
                 data["grit_score"],
-                _yes_no_to_int(data["sexual_survivor"]),
-                _yes_no_to_int(data["domestic_violence_history"]),
-                _yes_no_to_int(data["human_trafficking_history"]),
-                _yes_no_to_int(data["drug_court"]),
-                _yes_no_to_int(data["warrants_unpaid"]),
-                _yes_no_to_int(data["mh_exam_completed"]),
-                _yes_no_to_int(data["med_exam_completed"]),
-                _yes_no_to_int(data["car_at_entry"]),
-                _yes_no_to_int(data["car_insurance_at_entry"]),
+                yes_no_to_int(data["sexual_survivor"]),
+                yes_no_to_int(data["domestic_violence_history"]),
+                yes_no_to_int(data["human_trafficking_history"]),
+                yes_no_to_int(data["drug_court"]),
+                yes_no_to_int(data["warrants_unpaid"]),
+                yes_no_to_int(data["mh_exam_completed"]),
+                yes_no_to_int(data["med_exam_completed"]),
+                yes_no_to_int(data["car_at_entry"]),
+                yes_no_to_int(data["car_insurance_at_entry"]),
                 now,
                 enrollment_id,
             ),
@@ -648,35 +594,35 @@ def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) 
         )
         VALUES
         (
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder}
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph}
         )
         """,
         (
             enrollment_id,
             data["ace_score"],
             data["grit_score"],
-            _yes_no_to_int(data["sexual_survivor"]),
-            _yes_no_to_int(data["domestic_violence_history"]),
-            _yes_no_to_int(data["human_trafficking_history"]),
-            _yes_no_to_int(data["drug_court"]),
-            _yes_no_to_int(data["warrants_unpaid"]),
-            _yes_no_to_int(data["mh_exam_completed"]),
-            _yes_no_to_int(data["med_exam_completed"]),
-            _yes_no_to_int(data["car_at_entry"]),
-            _yes_no_to_int(data["car_insurance_at_entry"]),
+            yes_no_to_int(data["sexual_survivor"]),
+            yes_no_to_int(data["domestic_violence_history"]),
+            yes_no_to_int(data["human_trafficking_history"]),
+            yes_no_to_int(data["drug_court"]),
+            yes_no_to_int(data["warrants_unpaid"]),
+            yes_no_to_int(data["mh_exam_completed"]),
+            yes_no_to_int(data["med_exam_completed"]),
+            yes_no_to_int(data["car_at_entry"]),
+            yes_no_to_int(data["car_insurance_at_entry"]),
             now,
             now,
         ),
@@ -686,7 +632,8 @@ def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) 
 # ============================================================================
 # Intake Template Context
 # ----------------------------------------------------------------------------
-# Supplies dropdown options and preloaded values to the intake template.
+# Future extraction target:
+# routes.case_management_parts.intake
 # ============================================================================
 
 def _intake_template_context(
@@ -772,67 +719,67 @@ def _intake_template_context(
 # ============================================================================
 # Intake Validation
 # ----------------------------------------------------------------------------
-# Validates the intake plus initial assessment data collected on the intake
-# workflow before resident and enrollment creation.
+# Future extraction target:
+# routes.case_management_parts.intake
 # ============================================================================
 
 def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list[str]]:
     data: dict[str, Any] = {
-        "first_name": _clean(form.get("first_name")),
-        "middle_name": _clean(form.get("middle_name")),
-        "last_name": _clean(form.get("last_name")),
-        "birth_year": _clean(form.get("birth_year")),
-        "phone": _clean(form.get("phone")),
-        "email": _clean(form.get("email")),
-        "gender": _clean(form.get("gender")),
-        "veteran": _clean(form.get("veteran")),
-        "emergency_contact_name": _clean(form.get("emergency_contact_name")),
-        "emergency_contact_relationship": _clean(form.get("emergency_contact_relationship")),
-        "emergency_contact_phone": _clean(form.get("emergency_contact_phone")),
-        "notes_basic": _clean(form.get("notes_basic")),
-        "entry_date": _clean(form.get("entry_date")),
-        "shelter": _normalize_shelter_name(form.get("shelter") or shelter),
-        "program_status": _clean(form.get("program_status")) or "active",
-        "prior_living": _clean(form.get("prior_living")),
-        "city": _clean(form.get("city")),
-        "last_zipcode_residence": _clean(form.get("last_zipcode_residence")),
-        "length_of_time_in_amarillo": _clean(form.get("length_of_time_in_amarillo")),
-        "marital_status": _clean(form.get("marital_status")),
-        "sobriety_date": _clean(form.get("sobriety_date")),
-        "drug_of_choice": _clean(form.get("drug_of_choice")),
-        "income_at_entry": _clean(form.get("income_at_entry")),
-        "education_at_entry": _clean(form.get("education_at_entry")),
-        "disability": _clean(form.get("disability")),
-        "entry_notes": _clean(form.get("entry_notes")),
-        "race": _clean(form.get("race")),
-        "ethnicity": _clean(form.get("ethnicity")),
-        "pregnant": _clean(form.get("pregnant")),
-        "has_children": _clean(form.get("has_children")),
-        "children_count": _clean(form.get("children_count")),
-        "newborn_at_dwc": _clean(form.get("newborn_at_dwc")),
-        "dental_need": _clean(form.get("dental_need")),
-        "vision_need": _clean(form.get("vision_need")),
-        "employment_status": _clean(form.get("employment_status")),
-        "initial_snapshot_notes": _clean(form.get("initial_snapshot_notes")),
-        "ace_score": _clean(form.get("ace_score")),
-        "grit_score": _clean(form.get("grit_score")),
-        "sexual_survivor": _clean(form.get("sexual_survivor")),
-        "domestic_violence_history": _clean(form.get("domestic_violence_history")),
-        "human_trafficking_history": _clean(form.get("human_trafficking_history")),
-        "drug_court": _clean(form.get("drug_court")),
-        "warrants_unpaid": _clean(form.get("warrants_unpaid")),
-        "mh_exam_completed": _clean(form.get("mh_exam_completed")),
-        "med_exam_completed": _clean(form.get("med_exam_completed")),
-        "mental_health_need": _clean(form.get("mental_health_need")),
-        "medical_need": _clean(form.get("medical_need")),
-        "substance_use_need": _clean(form.get("substance_use_need")),
-        "car_at_entry": _clean(form.get("car_at_entry")),
-        "car_insurance_at_entry": _clean(form.get("car_insurance_at_entry")),
-        "trauma_notes": _clean(form.get("trauma_notes")),
-        "felony_history": _clean(form.get("felony_history")),
-        "probation_parole": _clean(form.get("probation_parole")),
-        "id_documents_status": _clean(form.get("id_documents_status")),
-        "barrier_notes": _clean(form.get("barrier_notes")),
+        "first_name": clean(form.get("first_name")),
+        "middle_name": clean(form.get("middle_name")),
+        "last_name": clean(form.get("last_name")),
+        "birth_year": clean(form.get("birth_year")),
+        "phone": clean(form.get("phone")),
+        "email": clean(form.get("email")),
+        "gender": clean(form.get("gender")),
+        "veteran": clean(form.get("veteran")),
+        "emergency_contact_name": clean(form.get("emergency_contact_name")),
+        "emergency_contact_relationship": clean(form.get("emergency_contact_relationship")),
+        "emergency_contact_phone": clean(form.get("emergency_contact_phone")),
+        "notes_basic": clean(form.get("notes_basic")),
+        "entry_date": clean(form.get("entry_date")),
+        "shelter": normalize_shelter_name(form.get("shelter") or shelter),
+        "program_status": clean(form.get("program_status")) or "active",
+        "prior_living": clean(form.get("prior_living")),
+        "city": clean(form.get("city")),
+        "last_zipcode_residence": clean(form.get("last_zipcode_residence")),
+        "length_of_time_in_amarillo": clean(form.get("length_of_time_in_amarillo")),
+        "marital_status": clean(form.get("marital_status")),
+        "sobriety_date": clean(form.get("sobriety_date")),
+        "drug_of_choice": clean(form.get("drug_of_choice")),
+        "income_at_entry": clean(form.get("income_at_entry")),
+        "education_at_entry": clean(form.get("education_at_entry")),
+        "disability": clean(form.get("disability")),
+        "entry_notes": clean(form.get("entry_notes")),
+        "race": clean(form.get("race")),
+        "ethnicity": clean(form.get("ethnicity")),
+        "pregnant": clean(form.get("pregnant")),
+        "has_children": clean(form.get("has_children")),
+        "children_count": clean(form.get("children_count")),
+        "newborn_at_dwc": clean(form.get("newborn_at_dwc")),
+        "dental_need": clean(form.get("dental_need")),
+        "vision_need": clean(form.get("vision_need")),
+        "employment_status": clean(form.get("employment_status")),
+        "initial_snapshot_notes": clean(form.get("initial_snapshot_notes")),
+        "ace_score": clean(form.get("ace_score")),
+        "grit_score": clean(form.get("grit_score")),
+        "sexual_survivor": clean(form.get("sexual_survivor")),
+        "domestic_violence_history": clean(form.get("domestic_violence_history")),
+        "human_trafficking_history": clean(form.get("human_trafficking_history")),
+        "drug_court": clean(form.get("drug_court")),
+        "warrants_unpaid": clean(form.get("warrants_unpaid")),
+        "mh_exam_completed": clean(form.get("mh_exam_completed")),
+        "med_exam_completed": clean(form.get("med_exam_completed")),
+        "mental_health_need": clean(form.get("mental_health_need")),
+        "medical_need": clean(form.get("medical_need")),
+        "substance_use_need": clean(form.get("substance_use_need")),
+        "car_at_entry": clean(form.get("car_at_entry")),
+        "car_insurance_at_entry": clean(form.get("car_insurance_at_entry")),
+        "trauma_notes": clean(form.get("trauma_notes")),
+        "felony_history": clean(form.get("felony_history")),
+        "probation_parole": clean(form.get("probation_parole")),
+        "id_documents_status": clean(form.get("id_documents_status")),
+        "barrier_notes": clean(form.get("barrier_notes")),
     }
 
     errors: list[str] = []
@@ -849,7 +796,7 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     if data["shelter"] != shelter:
         errors.append("Intake shelter must match the shelter currently selected in staff navigation.")
 
-    birth_year = _parse_int(data["birth_year"])
+    birth_year = parse_int(data["birth_year"])
     current_year = date.today().year
     if data["birth_year"] and birth_year is None:
         errors.append("Birth Year must be a whole year.")
@@ -859,11 +806,11 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         errors.append("Birth Year cannot be in the future.")
     data["birth_year"] = birth_year
 
-    entry_date = _parse_iso_date(data["entry_date"])
+    entry_date = parse_iso_date(data["entry_date"])
     if data["entry_date"] and entry_date is None:
         errors.append("Date Entered must be a valid date.")
 
-    sobriety_date = _parse_iso_date(data["sobriety_date"])
+    sobriety_date = parse_iso_date(data["sobriety_date"])
     if data["sobriety_date"] and sobriety_date is None:
         errors.append("Sobriety Date must be a valid date.")
 
@@ -875,41 +822,41 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     if sobriety_date and entry_date and sobriety_date > entry_date:
         errors.append("Sobriety Date cannot be later than Date Entered.")
 
-    phone_digits = _digits_only(data["phone"])
+    phone_digits = digits_only(data["phone"])
     if data["phone"] and len(phone_digits) < 10:
         errors.append("Phone must contain at least 10 digits.")
 
-    emergency_phone_digits = _digits_only(data["emergency_contact_phone"])
+    emergency_phone_digits = digits_only(data["emergency_contact_phone"])
     if data["emergency_contact_phone"] and len(emergency_phone_digits) < 10:
         errors.append("Emergency Contact Phone must contain at least 10 digits.")
 
     if data["last_zipcode_residence"]:
-        zipcode_digits = _digits_only(data["last_zipcode_residence"])
+        zipcode_digits = digits_only(data["last_zipcode_residence"])
         if len(zipcode_digits) not in {5, 9}:
             errors.append("Last Zipcode of Residence must be 5 or 9 digits.")
 
-    children_count = _parse_int(data["children_count"])
+    children_count = parse_int(data["children_count"])
     if data["children_count"] and children_count is None:
         errors.append("Children Count must be a whole number.")
     if children_count is not None and children_count < 0:
         errors.append("Children Count cannot be negative.")
     data["children_count"] = children_count
 
-    ace_score = _parse_int(data["ace_score"])
+    ace_score = parse_int(data["ace_score"])
     if data["ace_score"] and ace_score is None:
         errors.append("ACE Score must be a whole number.")
     if ace_score is not None and not 0 <= ace_score <= 10:
         errors.append("ACE Score must be between 0 and 10.")
     data["ace_score"] = ace_score
 
-    grit_score = _parse_int(data["grit_score"])
+    grit_score = parse_int(data["grit_score"])
     if data["grit_score"] and grit_score is None:
         errors.append("Grit Score must be a whole number.")
     if grit_score is not None and not 0 <= grit_score <= 100:
         errors.append("Grit Score must be between 0 and 100.")
     data["grit_score"] = grit_score
 
-    income_at_entry = _parse_money(data["income_at_entry"])
+    income_at_entry = parse_money(data["income_at_entry"])
     if data["income_at_entry"] and income_at_entry is None:
         errors.append("Income at Entry must be a valid number.")
     if income_at_entry is not None and income_at_entry < 0:
@@ -931,11 +878,8 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 # ============================================================================
 # Duplicate Detection
 # ----------------------------------------------------------------------------
-# This checks for possible existing residents before creating a new one.
-# Current order:
-# 1. exact email match
-# 2. exact phone match
-# 3. exact first + last + birth year
+# Future extraction target:
+# routes.case_management_parts.intake
 # ============================================================================
 
 def _find_possible_duplicate(
@@ -946,15 +890,15 @@ def _find_possible_duplicate(
     email: str | None,
     shelter: str,
 ) -> Any:
-    placeholder = _placeholder()
+    ph = placeholder()
 
     if email:
         existing = db_fetchone(
             f"""
             SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
             FROM residents
-            WHERE {_shelter_equals_sql("shelter")}
-              AND LOWER(COALESCE(email, '')) = LOWER({placeholder})
+            WHERE {shelter_equals_sql("shelter")}
+              AND LOWER(COALESCE(email, '')) = LOWER({ph})
             LIMIT 1
             """,
             (shelter, email),
@@ -967,8 +911,8 @@ def _find_possible_duplicate(
             f"""
             SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
             FROM residents
-            WHERE {_shelter_equals_sql("shelter")}
-              AND COALESCE(phone, '') = {placeholder}
+            WHERE {shelter_equals_sql("shelter")}
+              AND COALESCE(phone, '') = {ph}
             LIMIT 1
             """,
             (shelter, phone),
@@ -981,10 +925,10 @@ def _find_possible_duplicate(
             f"""
             SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
             FROM residents
-            WHERE {_shelter_equals_sql("shelter")}
-              AND LOWER(COALESCE(first_name, '')) = LOWER({placeholder})
-              AND LOWER(COALESCE(last_name, '')) = LOWER({placeholder})
-              AND birth_year = {placeholder}
+            WHERE {shelter_equals_sql("shelter")}
+              AND LOWER(COALESCE(first_name, '')) = LOWER({ph})
+              AND LOWER(COALESCE(last_name, '')) = LOWER({ph})
+              AND birth_year = {ph}
             LIMIT 1
             """,
             (shelter, first_name, last_name, birth_year),
@@ -998,15 +942,12 @@ def _find_possible_duplicate(
 # ============================================================================
 # Resident and Enrollment Inserts
 # ----------------------------------------------------------------------------
-# These create:
-# 1. residents row
-# 2. program_enrollments row
-# 3. intake_assessments row
-# 4. family_snapshots row
+# Future extraction target:
+# routes.case_management_parts.intake
 # ============================================================================
 
 def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]:
-    placeholder = _placeholder()
+    ph = placeholder()
     resident_identifier = generate_resident_identifier()
     resident_code = generate_resident_code()
 
@@ -1033,20 +974,20 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
                 created_at
             )
             VALUES (
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
                 TRUE,
                 NOW()
             )
@@ -1093,20 +1034,20 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
             created_at
         )
         VALUES (
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
             1,
             CURRENT_TIMESTAMP
         )
@@ -1134,7 +1075,7 @@ def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]
 
 
 def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: str) -> int:
-    placeholder = _placeholder()
+    ph = placeholder()
 
     if g.get("db_kind") == "pg":
         row = db_fetchone(
@@ -1149,10 +1090,10 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
                 updated_at
             )
             VALUES (
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
                 NOW(),
                 NOW()
             )
@@ -1179,10 +1120,10 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
             updated_at
         )
         VALUES (
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
             CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP
         )
@@ -1200,14 +1141,14 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
 
 
 def _find_active_enrollment_id(resident_id: int, shelter: str) -> int | None:
-    placeholder = _placeholder()
+    ph = placeholder()
 
     row = db_fetchone(
         f"""
         SELECT id
         FROM program_enrollments
-        WHERE resident_id = {placeholder}
-          AND {_shelter_equals_sql("shelter")}
+        WHERE resident_id = {ph}
+          AND {shelter_equals_sql("shelter")}
           AND exit_date IS NULL
         ORDER BY entry_date DESC, id DESC
         LIMIT 1
@@ -1222,7 +1163,7 @@ def _find_active_enrollment_id(resident_id: int, shelter: str) -> int | None:
 
 
 def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
-    placeholder = _placeholder()
+    ph = placeholder()
     now = utcnow_iso()
 
     if g.get("db_kind") == "pg":
@@ -1268,41 +1209,41 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             )
             VALUES
             (
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder},
-                {placeholder}
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph}
             )
             """,
             (
@@ -1316,28 +1257,28 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 data["drug_of_choice"],
                 data["ace_score"],
                 data["grit_score"],
-                _yes_no_to_int(data["veteran"]),
-                _yes_no_to_int(data["disability"]),
+                yes_no_to_int(data["veteran"]),
+                yes_no_to_int(data["disability"]),
                 data["marital_status"],
                 data["prior_living"],
-                _yes_no_to_int(data["felony_history"]),
-                _yes_no_to_int(data["probation_parole"]),
-                _yes_no_to_int(data["drug_court"]),
-                _yes_no_to_int(data["sexual_survivor"]),
-                _yes_no_to_int(data["domestic_violence_history"]),
-                _yes_no_to_int(data["human_trafficking_history"]),
-                _yes_no_to_int(data["warrants_unpaid"]),
-                _yes_no_to_int(data["mh_exam_completed"]),
-                _yes_no_to_int(data["med_exam_completed"]),
-                _yes_no_to_int(data["car_at_entry"]),
-                _yes_no_to_int(data["car_insurance_at_entry"]),
-                _yes_no_to_int(data["pregnant"]),
-                _yes_no_to_int(data["dental_need"]),
-                _yes_no_to_int(data["vision_need"]),
+                yes_no_to_int(data["felony_history"]),
+                yes_no_to_int(data["probation_parole"]),
+                yes_no_to_int(data["drug_court"]),
+                yes_no_to_int(data["sexual_survivor"]),
+                yes_no_to_int(data["domestic_violence_history"]),
+                yes_no_to_int(data["human_trafficking_history"]),
+                yes_no_to_int(data["warrants_unpaid"]),
+                yes_no_to_int(data["mh_exam_completed"]),
+                yes_no_to_int(data["med_exam_completed"]),
+                yes_no_to_int(data["car_at_entry"]),
+                yes_no_to_int(data["car_insurance_at_entry"]),
+                yes_no_to_int(data["pregnant"]),
+                yes_no_to_int(data["dental_need"]),
+                yes_no_to_int(data["vision_need"]),
                 data["employment_status"],
-                _yes_no_to_int(data["mental_health_need"]),
-                _yes_no_to_int(data["medical_need"]),
-                _yes_no_to_int(data["substance_use_need"]),
+                yes_no_to_int(data["mental_health_need"]),
+                yes_no_to_int(data["medical_need"]),
+                yes_no_to_int(data["substance_use_need"]),
                 data["id_documents_status"],
                 now,
                 now,
@@ -1387,41 +1328,41 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
         )
         VALUES
         (
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder}
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph}
         )
         """,
         (
@@ -1435,28 +1376,28 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             data["drug_of_choice"],
             data["ace_score"],
             data["grit_score"],
-            _yes_no_to_int(data["veteran"]),
-            _yes_no_to_int(data["disability"]),
+            yes_no_to_int(data["veteran"]),
+            yes_no_to_int(data["disability"]),
             data["marital_status"],
             data["prior_living"],
-            _yes_no_to_int(data["felony_history"]),
-            _yes_no_to_int(data["probation_parole"]),
-            _yes_no_to_int(data["drug_court"]),
-            _yes_no_to_int(data["sexual_survivor"]),
-            _yes_no_to_int(data["domestic_violence_history"]),
-            _yes_no_to_int(data["human_trafficking_history"]),
-            _yes_no_to_int(data["warrants_unpaid"]),
-            _yes_no_to_int(data["mh_exam_completed"]),
-            _yes_no_to_int(data["med_exam_completed"]),
-            _yes_no_to_int(data["car_at_entry"]),
-            _yes_no_to_int(data["car_insurance_at_entry"]),
-            _yes_no_to_int(data["pregnant"]),
-            _yes_no_to_int(data["dental_need"]),
-            _yes_no_to_int(data["vision_need"]),
+            yes_no_to_int(data["felony_history"]),
+            yes_no_to_int(data["probation_parole"]),
+            yes_no_to_int(data["drug_court"]),
+            yes_no_to_int(data["sexual_survivor"]),
+            yes_no_to_int(data["domestic_violence_history"]),
+            yes_no_to_int(data["human_trafficking_history"]),
+            yes_no_to_int(data["warrants_unpaid"]),
+            yes_no_to_int(data["mh_exam_completed"]),
+            yes_no_to_int(data["med_exam_completed"]),
+            yes_no_to_int(data["car_at_entry"]),
+            yes_no_to_int(data["car_insurance_at_entry"]),
+            yes_no_to_int(data["pregnant"]),
+            yes_no_to_int(data["dental_need"]),
+            yes_no_to_int(data["vision_need"]),
             data["employment_status"],
-            _yes_no_to_int(data["mental_health_need"]),
-            _yes_no_to_int(data["medical_need"]),
-            _yes_no_to_int(data["substance_use_need"]),
+            yes_no_to_int(data["mental_health_need"]),
+            yes_no_to_int(data["medical_need"]),
+            yes_no_to_int(data["substance_use_need"]),
             data["id_documents_status"],
             now,
             now,
@@ -1465,7 +1406,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
 
 
 def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
-    placeholder = _placeholder()
+    ph = placeholder()
 
     kids_at_dwc = data["children_count"] if data["has_children"] == "yes" and data["children_count"] is not None else 0
     healthy_babies_born_at_dwc = 1 if data["newborn_at_dwc"] == "yes" else 0
@@ -1483,9 +1424,9 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
             )
             VALUES
             (
-                {placeholder},
-                {placeholder},
-                {placeholder},
+                {ph},
+                {ph},
+                {ph},
                 NOW(),
                 NOW()
             )
@@ -1510,9 +1451,9 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
         )
         VALUES
         (
-            {placeholder},
-            {placeholder},
-            {placeholder},
+            {ph},
+            {ph},
+            {ph},
             CURRENT_TIMESTAMP,
             CURRENT_TIMESTAMP
         )
@@ -1528,22 +1469,21 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
 # ============================================================================
 # Index and Intake Landing Routes
 # ----------------------------------------------------------------------------
-# These show:
-# - the main case manager resident list
-# - the intake and assessment landing page with drafts
+# Future extraction target:
+# routes.case_management_parts.index
 # ============================================================================
 
 @case_management.get("")
 @require_login
 @require_shelter
 def index():
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    shelter = _normalize_shelter_name(session.get("shelter"))
+    shelter = normalize_shelter_name(session.get("shelter"))
 
     residents = db_fetchall(
         f"""
@@ -1554,7 +1494,7 @@ def index():
             resident_code,
             is_active
         FROM residents
-        WHERE {_shelter_equals_sql("shelter")}
+        WHERE {shelter_equals_sql("shelter")}
         ORDER BY last_name ASC, first_name ASC
         """,
         (shelter,),
@@ -1571,14 +1511,14 @@ def index():
 @require_login
 @require_shelter
 def intake_index():
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    shelter = _normalize_shelter_name(session.get("shelter"))
-    placeholder = _placeholder()
+    shelter = normalize_shelter_name(session.get("shelter"))
+    ph = placeholder()
 
     drafts = db_fetchall(
         f"""
@@ -1588,7 +1528,7 @@ def intake_index():
             entry_date,
             updated_at
         FROM intake_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+        WHERE LOWER(COALESCE(shelter, '')) = {ph}
           AND status = 'draft'
         ORDER BY updated_at DESC, id DESC
         """,
@@ -1602,7 +1542,7 @@ def intake_index():
             resident_id,
             updated_at
         FROM assessment_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+        WHERE LOWER(COALESCE(shelter, '')) = {ph}
           AND status = 'draft'
         ORDER BY updated_at DESC, id DESC
         """,
@@ -1620,22 +1560,22 @@ def intake_index():
 # ============================================================================
 # Assessment Routes
 # ----------------------------------------------------------------------------
-# These routes display the assessment form, save drafts, and finalize updates
-# to the intake_assessments row tied to the active enrollment.
+# Future extraction target:
+# routes.case_management_parts.assessment
 # ============================================================================
 
 @case_management.get("/assessment/new")
 @require_login
 @require_shelter
 def assessment_form():
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    shelter = _normalize_shelter_name(session.get("shelter"))
-    draft_id = _parse_int(request.args.get("draft_id"))
+    shelter = normalize_shelter_name(session.get("shelter"))
+    draft_id = parse_int(request.args.get("draft_id"))
     form_data: dict[str, Any] = {}
 
     if draft_id is not None:
@@ -1649,7 +1589,7 @@ def assessment_form():
         f"""
         SELECT id, first_name, last_name
         FROM residents
-        WHERE {_shelter_equals_sql("shelter")}
+        WHERE {shelter_equals_sql("shelter")}
         ORDER BY last_name ASC, first_name ASC
         """,
         (shelter,),
@@ -1667,21 +1607,21 @@ def assessment_form():
 @require_login
 @require_shelter
 def submit_assessment():
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    shelter = _normalize_shelter_name(session.get("shelter"))
+    shelter = normalize_shelter_name(session.get("shelter"))
     action = (request.form.get("action") or "complete").strip().lower()
-    draft_id = _parse_int(request.form.get("draft_id"))
+    draft_id = parse_int(request.form.get("draft_id"))
 
     residents = db_fetchall(
         f"""
         SELECT id, first_name, last_name
         FROM residents
-        WHERE {_shelter_equals_sql("shelter")}
+        WHERE {shelter_equals_sql("shelter")}
         ORDER BY last_name ASC, first_name ASC
         """,
         (shelter,),
@@ -1763,22 +1703,22 @@ def submit_assessment():
 # ============================================================================
 # Intake Routes
 # ----------------------------------------------------------------------------
-# These routes display the intake form, save intake drafts, detect duplicates,
-# create the resident, create the enrollment, and insert the entry snapshot.
+# Future extraction target:
+# routes.case_management_parts.intake
 # ============================================================================
 
 @case_management.get("/intake-assessment/new")
 @require_login
 @require_shelter
 def intake_form():
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    current_shelter = _normalize_shelter_name(session.get("shelter"))
-    draft_id = _parse_int(request.args.get("draft_id"))
+    current_shelter = normalize_shelter_name(session.get("shelter"))
+    draft_id = parse_int(request.args.get("draft_id"))
     form_data: dict[str, Any] | None = None
 
     if draft_id is not None:
@@ -1800,19 +1740,19 @@ def intake_form():
 @require_login
 @require_shelter
 def submit_intake_assessment():
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    current_shelter = _normalize_shelter_name(session.get("shelter"))
+    current_shelter = normalize_shelter_name(session.get("shelter"))
     action = (request.form.get("action") or "complete").strip().lower()
-    draft_id = _parse_int(request.form.get("draft_id"))
+    draft_id = parse_int(request.form.get("draft_id"))
 
     if action == "save_draft":
-        first_name = _clean(request.form.get("first_name"))
-        last_name = _clean(request.form.get("last_name"))
+        first_name = clean(request.form.get("first_name"))
+        last_name = clean(request.form.get("last_name"))
 
         if not first_name or not last_name:
             flash("Save Draft requires at least first name and last name.", "error")
@@ -1908,6 +1848,10 @@ def submit_intake_assessment():
 # - resident_substances
 # - program_enrollments
 # - residents
+#
+# Future extraction target:
+# routes.case_management_parts.admin_tools
+# or remove entirely after build phase
 # ============================================================================
 
 @case_management.route("/admin/wipe-test-residents", methods=["GET", "POST"])
@@ -1941,7 +1885,6 @@ def wipe_test_residents():
     return redirect(url_for("case_management.index"))
 
 
-
 # ============================================================================
 # TEMPORARY TEST DATA WIPE ROUTE - END
 # ============================================================================
@@ -1950,25 +1893,22 @@ def wipe_test_residents():
 # ============================================================================
 # Resident Case Page
 # ----------------------------------------------------------------------------
-# This route shows the resident summary page with:
-# - latest enrollment
-# - goals
-# - appointments
-# - case manager notes
+# Future extraction target:
+# routes.case_management_parts.resident_case
 # ============================================================================
 
 @case_management.get("/<int:resident_id>")
 @require_login
 @require_shelter
 def resident_case(resident_id: int):
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    shelter = _normalize_shelter_name(session.get("shelter"))
-    placeholder = _placeholder()
+    shelter = normalize_shelter_name(session.get("shelter"))
+    ph = placeholder()
 
     resident = db_fetchone(
         f"""
@@ -1981,8 +1921,8 @@ def resident_case(resident_id: int):
             shelter,
             is_active
         FROM residents
-        WHERE id = {placeholder}
-          AND {_shelter_equals_sql("shelter")}
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
         """,
         (resident_id, shelter),
     )
@@ -2000,7 +1940,7 @@ def resident_case(resident_id: int):
             entry_date,
             exit_date
         FROM program_enrollments
-        WHERE resident_id = {placeholder}
+        WHERE resident_id = {ph}
         ORDER BY id DESC
         LIMIT 1
         """,
@@ -2024,7 +1964,7 @@ def resident_case(resident_id: int):
                 target_date,
                 created_at
             FROM goals
-            WHERE enrollment_id = {placeholder}
+            WHERE enrollment_id = {ph}
             ORDER BY created_at DESC
             """,
             (enrollment_id,),
@@ -2037,7 +1977,7 @@ def resident_case(resident_id: int):
                 appointment_type,
                 notes
             FROM appointments
-            WHERE enrollment_id = {placeholder}
+            WHERE enrollment_id = {ph}
             ORDER BY appointment_date DESC, id DESC
             """,
             (enrollment_id,),
@@ -2052,7 +1992,7 @@ def resident_case(resident_id: int):
                 action_items,
                 created_at
             FROM case_manager_updates
-            WHERE enrollment_id = {placeholder}
+            WHERE enrollment_id = {ph}
             ORDER BY meeting_date DESC, id DESC
             """,
             (enrollment_id,),
