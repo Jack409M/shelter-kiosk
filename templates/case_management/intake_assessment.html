@@ -300,7 +300,7 @@
         value="complete"
         form="resident-intake-form"
       >
-        Finalize Intake and Assessment
+        Finalize
       </button>
     </div>
   </div>
@@ -666,7 +666,7 @@
                   </div>
                 </div>
 
-                <div class="field span-4">
+                <div class="field span-3">
                   <label for="dental_need">Dental Need</label>
                   <select id="dental_need" name="dental_need">
                     <option value="">Select</option>
@@ -676,7 +676,7 @@
                   </select>
                 </div>
 
-                <div class="field span-4">
+                <div class="field span-3">
                   <label for="vision_need">Vision Need</label>
                   <select id="vision_need" name="vision_need">
                     <option value="">Select</option>
@@ -686,7 +686,7 @@
                   </select>
                 </div>
 
-                <div class="field span-4">
+                <div class="field span-3">
                   <label for="employment_status">Employment Status</label>
                   <select id="employment_status" name="employment_status">
                     <option value="">Select</option>
@@ -695,6 +695,16 @@
                     <option value="unemployed" {% if form_data.get('employment_status', '') == 'unemployed' %}selected{% endif %}>Unemployed</option>
                     <option value="disabled" {% if form_data.get('employment_status', '') == 'disabled' %}selected{% endif %}>Disabled</option>
                     <option value="unknown" {% if form_data.get('employment_status', '') == 'unknown' %}selected{% endif %}>Unknown</option>
+                  </select>
+                </div>
+
+                <div class="field span-3">
+                  <label for="id_documents_status">ID Documents Status</label>
+                  <select id="id_documents_status" name="id_documents_status">
+                    <option value="">Select</option>
+                    <option value="has_all" {% if form_data.get('id_documents_status', '') == 'has_all' %}selected{% endif %}>Has All</option>
+                    <option value="missing_some" {% if form_data.get('id_documents_status', '') == 'missing_some' %}selected{% endif %}>Missing Some</option>
+                    <option value="missing_all" {% if form_data.get('id_documents_status', '') == 'missing_all' %}selected{% endif %}>Missing All</option>
                   </select>
                 </div>
 
@@ -879,16 +889,6 @@
                   </select>
                 </div>
 
-                <div class="field span-4">
-                  <label for="id_documents_status">ID Documents Status</label>
-                  <select id="id_documents_status" name="id_documents_status">
-                    <option value="">Select</option>
-                    <option value="has_all" {% if form_data.get('id_documents_status', '') == 'has_all' %}selected{% endif %}>Has All</option>
-                    <option value="missing_some" {% if form_data.get('id_documents_status', '') == 'missing_some' %}selected{% endif %}>Missing Some</option>
-                    <option value="missing_all" {% if form_data.get('id_documents_status', '') == 'missing_all' %}selected{% endif %}>Missing All</option>
-                  </select>
-                </div>
-
                 <div class="field span-12">
                   <label for="barrier_notes">Barrier Notes</label>
                   <textarea id="barrier_notes" name="barrier_notes" placeholder="Anything likely to affect stability planning in the first 30 days.">{{ form_data.get('barrier_notes', '') }}</textarea>
@@ -902,7 +902,7 @@
 
       <div class="footer-actions">
         <div class="footer-note">
-          Save Draft lets staff stop and reopen later. Finalize Intake and Assessment creates the resident record and opens case management.
+          Save Draft lets staff stop and reopen later. Finalize creates the resident record and opens case management.
         </div>
 
         <div class="intake-header-actions">
@@ -911,7 +911,7 @@
           </button>
 
           <button class="btn-primary" type="submit" name="action" value="complete">
-            Finalize Intake and Assessment
+            Finalize
           </button>
         </div>
       </div>
