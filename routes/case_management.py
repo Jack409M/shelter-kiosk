@@ -1064,6 +1064,24 @@ def intake_index():
     )
 
 
+@case_management.get("/assessment/new")
+@require_login
+@require_shelter
+def assessment_form():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+
+    return render_template(
+        "case_management/assessment.html",
+        shelter=shelter,
+    )
+
+
 @case_management.get("/intake-assessment/new")
 @require_login
 @require_shelter
