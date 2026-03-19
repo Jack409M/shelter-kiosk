@@ -1,0 +1,98 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h1>Resident Update</h1>
+
+<form method="post" action="#">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+  <div class="card">
+    <h2>Select Resident</h2>
+
+    <p>
+      <label for="resident_id">Resident</label><br>
+      <select id="resident_id" name="resident_id" required>
+        <option value="">Select resident</option>
+        {% for r in residents %}
+          <option value="{{ r.id }}">
+            {{ r.last_name }}, {{ r.first_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Progress Update</h2>
+
+    <p>
+      <label>Grit Score</label><br>
+      <input type="number" name="grit_score">
+    </p>
+
+    <p>
+      <label>Current Income</label><br>
+      <input type="number" name="income">
+    </p>
+
+    <p>
+      <label>Education Level</label><br>
+      <input type="text" name="education_level">
+    </p>
+
+    <p>
+      <label>Sober</label><br>
+      <select name="sober">
+        <option value="">--</option>
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </p>
+
+    <p>
+      <label>Sober Days</label><br>
+      <input type="number" name="sober_days">
+    </p>
+
+    <p>
+      <label>Counseling</label><br>
+      <select name="counseling">
+        <option value="">--</option>
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </p>
+
+    <p>
+      <label>Parenting Class</label><br>
+      <select name="parenting_class">
+        <option value="">--</option>
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </p>
+
+    <p>
+      <label>Warrants Paid</label><br>
+      <select name="warrants_paid">
+        <option value="">--</option>
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </p>
+
+    <p>
+      <label>Notes</label><br>
+      <textarea name="notes"></textarea>
+    </p>
+
+  </div>
+
+  <p>
+    <button type="submit">Save Update</button>
+  </p>
+
+</form>
+
+{% endblock %}
