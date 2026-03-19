@@ -460,6 +460,172 @@ def _complete_assessment_draft(draft_id: int) -> None:
     )
 
 
+def _validate_assessment_form(form: Any) -> tuple[dict[str, Any], list[str]]:
+    data: dict[str, Any] = {
+        "resident_id": _clean(form.get("resident_id")),
+        "ace_score": _clean(form.get("ace_score")),
+        "grit_score": _clean(form.get("grit_score")),
+        "sexual_survivor": _clean(form.get("sexual_survivor")),
+        "domestic_violence_history": _clean(form.get("domestic_violence_history")),
+        "human_trafficking_history": _clean(form.get("human_trafficking_history")),
+        "drug_court": _clean(form.get("drug_court")),
+        "warrants_unpaid": _clean(form.get("warrants_unpaid")),
+        "mh_exam_completed": _clean(form.get("mh_exam_completed")),
+        "med_exam_completed": _clean(form.get("med_exam_completed")),
+        "car_at_entry": _clean(form.get("car_at_entry")),
+        "car_insurance_at_entry": _clean(form.get("car_insurance_at_entry")),
+    }
+
+    errors: list[str] = []
+
+    resident_id = _parse_int(data["resident_id"])
+    if resident_id is None:
+        errors.append("Resident is required.")
+    data["resident_id"] = resident_id
+
+    ace_score = _parse_int(data["ace_score"])
+    if data["ace_score"] and ace_score is None:
+        errors.append("ACE Score must be a whole number.")
+    if ace_score is not None and not 0 <= ace_score <= 10:
+        errors.append("ACE Score must be between 0 and 10.")
+    data["ace_score"] = ace_score
+
+    grit_score = _parse_int(data["grit_score"])
+    if data["grit_score"] and grit_score is None:
+        errors.append("Grit Score must be a whole number.")
+    if grit_score is not None and not 0 <= grit_score <= 100:
+        errors.append("Grit Score must be between 0 and 100.")
+    data["grit_score"] = grit_score
+
+    yes_no_fields = [
+        "sexual_survivor",
+        "domestic_violence_history",
+        "human_trafficking_history",
+        "drug_court",
+        "warrants_unpaid",
+        "mh_exam_completed",
+        "med_exam_completed",
+        "car_at_entry",
+        "car_insurance_at_entry",
+    ]
+
+    for field_name in yes_no_fields:
+        value = data[field_name]
+        if value not in {None, "yes", "no"}:
+            errors.append(f"{field_name.replace('_', ' ').title()} must be Yes or No.")
+
+    if data["car_insurance_at_entry"] == "yes" and data["car_at_entry"] != "yes":
+        errors.append("Car Insurance at Entry cannot be Yes unless Car at Entry is Yes.")
+
+    return data, errors
+
+
+def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) -> None:
+    placeholder = _placeholder()
+    now = utcnow_iso()
+
+    existing = db_fetchone(
+        f"""
+        SELECT id
+        FROM intake_assessments
+        WHERE enrollment_id = {placeholder}
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    if existing:
+        db_execute(
+            f"""
+            UPDATE intake_assessments
+            SET ace_score = {placeholder},
+                grit_score = {placeholder},
+                sexual_survivor = {placeholder},
+                dv_survivor = {placeholder},
+                human_trafficking_survivor = {placeholder},
+                drug_court = {placeholder},
+                warrants_unpaid = {placeholder},
+                mh_exam_completed = {placeholder},
+                med_exam_completed = {placeholder},
+                car_at_entry = {placeholder},
+                car_insurance_at_entry = {placeholder},
+                updated_at = {placeholder}
+            WHERE enrollment_id = {placeholder}
+            """,
+            (
+                data["ace_score"],
+                data["grit_score"],
+                _yes_no_to_int(data["sexual_survivor"]),
+                _yes_no_to_int(data["domestic_violence_history"]),
+                _yes_no_to_int(data["human_trafficking_history"]),
+                _yes_no_to_int(data["drug_court"]),
+                _yes_no_to_int(data["warrants_unpaid"]),
+                _yes_no_to_int(data["mh_exam_completed"]),
+                _yes_no_to_int(data["med_exam_completed"]),
+                _yes_no_to_int(data["car_at_entry"]),
+                _yes_no_to_int(data["car_insurance_at_entry"]),
+                now,
+                enrollment_id,
+            ),
+        )
+        return
+
+    db_execute(
+        f"""
+        INSERT INTO intake_assessments
+        (
+            enrollment_id,
+            ace_score,
+            grit_score,
+            sexual_survivor,
+            dv_survivor,
+            human_trafficking_survivor,
+            drug_court,
+            warrants_unpaid,
+            mh_exam_completed,
+            med_exam_completed,
+            car_at_entry,
+            car_insurance_at_entry,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            {placeholder}
+        )
+        """,
+        (
+            enrollment_id,
+            data["ace_score"],
+            data["grit_score"],
+            _yes_no_to_int(data["sexual_survivor"]),
+            _yes_no_to_int(data["domestic_violence_history"]),
+            _yes_no_to_int(data["human_trafficking_history"]),
+            _yes_no_to_int(data["drug_court"]),
+            _yes_no_to_int(data["warrants_unpaid"]),
+            _yes_no_to_int(data["mh_exam_completed"]),
+            _yes_no_to_int(data["med_exam_completed"]),
+            _yes_no_to_int(data["car_at_entry"]),
+            _yes_no_to_int(data["car_insurance_at_entry"]),
+            now,
+            now,
+        ),
+    )
+
+
 def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
@@ -688,44 +854,6 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 
     if data["has_children"] == "no" and children_count not in (None, 0):
         errors.append("Children Count must be 0 when Has Children is No.")
-
-    return data, errors
-
-
-def _validate_assessment_form(form: Any) -> tuple[dict[str, Any], list[str]]:
-    data: dict[str, Any] = {
-        "resident_id": _parse_int(form.get("resident_id")),
-        "ace_score": _clean(form.get("ace_score")),
-        "grit_score": _clean(form.get("grit_score")),
-        "sexual_survivor": _clean(form.get("sexual_survivor")),
-        "domestic_violence_history": _clean(form.get("domestic_violence_history")),
-        "human_trafficking_history": _clean(form.get("human_trafficking_history")),
-        "drug_court": _clean(form.get("drug_court")),
-        "warrants_unpaid": _clean(form.get("warrants_unpaid")),
-        "mh_exam_completed": _clean(form.get("mh_exam_completed")),
-        "med_exam_completed": _clean(form.get("med_exam_completed")),
-        "car_at_entry": _clean(form.get("car_at_entry")),
-        "car_insurance_at_entry": _clean(form.get("car_insurance_at_entry")),
-    }
-
-    errors: list[str] = []
-
-    if not data["resident_id"]:
-        errors.append("Resident is required.")
-
-    ace_score = _parse_int(data["ace_score"])
-    if data["ace_score"] and ace_score is None:
-        errors.append("ACE Score must be a whole number.")
-    if ace_score is not None and not 0 <= ace_score <= 10:
-        errors.append("ACE Score must be between 0 and 10.")
-    data["ace_score"] = ace_score
-
-    grit_score = _parse_int(data["grit_score"])
-    if data["grit_score"] and grit_score is None:
-        errors.append("Grit Score must be a whole number.")
-    if grit_score is not None and not 0 <= grit_score <= 100:
-        errors.append("Grit Score must be between 0 and 100.")
-    data["grit_score"] = grit_score
 
     return data, errors
 
@@ -1180,63 +1308,512 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     )
 
 
-def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) -> None:
+def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
     placeholder = _placeholder()
-    now = utcnow_iso()
 
-    existing = db_fetchone(
-        f"""
-        SELECT id
-        FROM intake_assessments
-        WHERE enrollment_id = {placeholder}
-        LIMIT 1
-        """,
-        (enrollment_id,),
-    )
+    kids_at_dwc = data["children_count"] if data["has_children"] == "yes" and data["children_count"] is not None else 0
+    healthy_babies_born_at_dwc = 1 if data["newborn_at_dwc"] == "yes" else 0
 
-    if existing:
-        if g.get("db_kind") == "pg":
-            db_execute(
-                f"""
-                UPDATE intake_assessments
-                SET ace_score = {placeholder},
-                    grit_score = {placeholder},
-                    drug_court = {placeholder},
-                    sexual_survivor = {placeholder},
-                    dv_survivor = {placeholder},
-                    human_trafficking_survivor = {placeholder},
-                    warrants_unpaid = {placeholder},
-                    mh_exam_completed = {placeholder},
-                    med_exam_completed = {placeholder},
-                    car_at_entry = {placeholder},
-                    car_insurance_at_entry = {placeholder},
-                    updated_at = {placeholder}
-                WHERE enrollment_id = {placeholder}
-                """,
-                (
-                    data["ace_score"],
-                    data["grit_score"],
-                    _yes_no_to_int(data["drug_court"]),
-                    _yes_no_to_int(data["sexual_survivor"]),
-                    _yes_no_to_int(data["domestic_violence_history"]),
-                    _yes_no_to_int(data["human_trafficking_history"]),
-                    _yes_no_to_int(data["warrants_unpaid"]),
-                    _yes_no_to_int(data["mh_exam_completed"]),
-                    _yes_no_to_int(data["med_exam_completed"]),
-                    _yes_no_to_int(data["car_at_entry"]),
-                    _yes_no_to_int(data["car_insurance_at_entry"]),
-                    now,
-                    enrollment_id,
-                ),
-            )
-            return
-
+    if g.get("db_kind") == "pg":
         db_execute(
             f"""
-            UPDATE intake_assessments
-            SET ace_score = {placeholder},
-                grit_score = {placeholder},
-                drug_court = {placeholder},
-                sexual_survivor = {placeholder},
-                dv_survivor = {placeholder},
-                human_trafficking_survivor =
+            INSERT INTO family_snapshots
+            (
+                enrollment_id,
+                kids_at_dwc,
+                healthy_babies_born_at_dwc,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                NOW(),
+                NOW()
+            )
+            """,
+            (
+                enrollment_id,
+                kids_at_dwc,
+                healthy_babies_born_at_dwc,
+            ),
+        )
+        return
+
+    db_execute(
+        f"""
+        INSERT INTO family_snapshots
+        (
+            enrollment_id,
+            kids_at_dwc,
+            healthy_babies_born_at_dwc,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            CURRENT_TIMESTAMP,
+            CURRENT_TIMESTAMP
+        )
+        """,
+        (
+            enrollment_id,
+            kids_at_dwc,
+            healthy_babies_born_at_dwc,
+        ),
+    )
+
+
+@case_management.get("")
+@require_login
+@require_shelter
+def index():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+
+    residents = db_fetchall(
+        f"""
+        SELECT
+            id,
+            first_name,
+            last_name,
+            resident_code,
+            is_active
+        FROM residents
+        WHERE {_shelter_equals_sql("shelter")}
+        ORDER BY last_name ASC, first_name ASC
+        """,
+        (shelter,),
+    )
+
+    return render_template(
+        "case_management/index.html",
+        residents=residents,
+        shelter=shelter,
+    )
+
+
+@case_management.get("/intake-assessment")
+@require_login
+@require_shelter
+def intake_index():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    placeholder = _placeholder()
+
+    drafts = db_fetchall(
+        f"""
+        SELECT
+            id,
+            resident_name,
+            entry_date,
+            updated_at
+        FROM intake_drafts
+        WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+          AND status = 'draft'
+        ORDER BY updated_at DESC, id DESC
+        """,
+        (shelter,),
+    )
+
+    assessment_drafts = db_fetchall(
+        f"""
+        SELECT
+            id,
+            resident_id,
+            updated_at
+        FROM assessment_drafts
+        WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+          AND status = 'draft'
+        ORDER BY updated_at DESC, id DESC
+        """,
+        (shelter,),
+    )
+
+    return render_template(
+        "intake_assessment/index.html",
+        drafts=drafts,
+        assessment_drafts=assessment_drafts,
+        shelter=shelter,
+    )
+
+
+@case_management.get("/assessment/new")
+@require_login
+@require_shelter
+def assessment_form():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    draft_id = _parse_int(request.args.get("draft_id"))
+    form_data: dict[str, Any] = {}
+
+    if draft_id is not None:
+        loaded = _load_assessment_draft(shelter, draft_id)
+        if not loaded:
+            flash("Assessment draft not found.", "error")
+            return redirect(url_for("case_management.intake_index"))
+        form_data = loaded
+
+    residents = db_fetchall(
+        f"""
+        SELECT id, first_name, last_name
+        FROM residents
+        WHERE {_shelter_equals_sql("shelter")}
+        ORDER BY last_name ASC, first_name ASC
+        """,
+        (shelter,),
+    )
+
+    return render_template(
+        "case_management/assessment.html",
+        shelter=shelter,
+        residents=residents,
+        form_data=form_data,
+    )
+
+
+@case_management.post("/assessment/new")
+@require_login
+@require_shelter
+def submit_assessment():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    action = (request.form.get("action") or "complete").strip().lower()
+    draft_id = _parse_int(request.form.get("draft_id"))
+
+    residents = db_fetchall(
+        f"""
+        SELECT id, first_name, last_name
+        FROM residents
+        WHERE {_shelter_equals_sql("shelter")}
+        ORDER BY last_name ASC, first_name ASC
+        """,
+        (shelter,),
+    )
+
+    form_data, errors = _validate_assessment_form(request.form)
+    form_data["draft_id"] = request.form.get("draft_id", "")
+    resident_id = form_data["resident_id"]
+
+    if errors:
+        for error in errors:
+            flash(error, "error")
+        return render_template(
+            "case_management/assessment.html",
+            shelter=shelter,
+            residents=residents,
+            form_data={
+                "draft_id": request.form.get("draft_id", ""),
+                "resident_id": request.form.get("resident_id", ""),
+                "ace_score": request.form.get("ace_score", ""),
+                "grit_score": request.form.get("grit_score", ""),
+                "sexual_survivor": request.form.get("sexual_survivor", ""),
+                "domestic_violence_history": request.form.get("domestic_violence_history", ""),
+                "human_trafficking_history": request.form.get("human_trafficking_history", ""),
+                "drug_court": request.form.get("drug_court", ""),
+                "warrants_unpaid": request.form.get("warrants_unpaid", ""),
+                "mh_exam_completed": request.form.get("mh_exam_completed", ""),
+                "med_exam_completed": request.form.get("med_exam_completed", ""),
+                "car_at_entry": request.form.get("car_at_entry", ""),
+                "car_insurance_at_entry": request.form.get("car_insurance_at_entry", ""),
+            },
+        )
+
+    form_data_for_template = {
+        "draft_id": request.form.get("draft_id", ""),
+        "resident_id": request.form.get("resident_id", ""),
+        "ace_score": request.form.get("ace_score", ""),
+        "grit_score": request.form.get("grit_score", ""),
+        "sexual_survivor": request.form.get("sexual_survivor", ""),
+        "domestic_violence_history": request.form.get("domestic_violence_history", ""),
+        "human_trafficking_history": request.form.get("human_trafficking_history", ""),
+        "drug_court": request.form.get("drug_court", ""),
+        "warrants_unpaid": request.form.get("warrants_unpaid", ""),
+        "mh_exam_completed": request.form.get("mh_exam_completed", ""),
+        "med_exam_completed": request.form.get("med_exam_completed", ""),
+        "car_at_entry": request.form.get("car_at_entry", ""),
+        "car_insurance_at_entry": request.form.get("car_insurance_at_entry", ""),
+    }
+
+    if action == "save_draft":
+        saved_draft_id = _save_assessment_draft(
+            current_shelter=shelter,
+            form_data=form_data_for_template,
+            resident_id=resident_id,
+            draft_id=draft_id,
+        )
+        flash("Assessment draft saved.", "success")
+        return redirect(url_for("case_management.assessment_form", draft_id=saved_draft_id))
+
+    enrollment_id = _find_active_enrollment_id(resident_id, shelter)
+    if enrollment_id is None:
+        flash("This resident does not have an active enrollment. Assessment cannot be finalized.", "error")
+        return render_template(
+            "case_management/assessment.html",
+            shelter=shelter,
+            residents=residents,
+            form_data=form_data_for_template,
+        )
+
+    _upsert_assessment_for_enrollment(enrollment_id, form_data)
+
+    if draft_id is not None:
+        _complete_assessment_draft(draft_id)
+
+    flash("Assessment finalized successfully.", "success")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+
+@case_management.get("/intake-assessment/new")
+@require_login
+@require_shelter
+def intake_form():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    current_shelter = _normalize_shelter_name(session.get("shelter"))
+    draft_id = _parse_int(request.args.get("draft_id"))
+    form_data: dict[str, Any] | None = None
+
+    if draft_id is not None:
+        form_data = _load_intake_draft(current_shelter, draft_id)
+        if not form_data:
+            flash("Intake draft not found.", "error")
+            return redirect(url_for("case_management.intake_index"))
+
+    return render_template(
+        "case_management/intake_assessment.html",
+        **_intake_template_context(
+            current_shelter=current_shelter,
+            form_data=form_data,
+        ),
+    )
+
+
+@case_management.post("/intake-assessment/new")
+@require_login
+@require_shelter
+def submit_intake_assessment():
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    current_shelter = _normalize_shelter_name(session.get("shelter"))
+    action = (request.form.get("action") or "complete").strip().lower()
+    draft_id = _parse_int(request.form.get("draft_id"))
+
+    if action == "save_draft":
+        first_name = _clean(request.form.get("first_name"))
+        last_name = _clean(request.form.get("last_name"))
+
+        if not first_name or not last_name:
+            flash("Save Draft requires at least first name and last name.", "error")
+            return render_template(
+                "case_management/intake_assessment.html",
+                **_intake_template_context(
+                    current_shelter=current_shelter,
+                    form_data=request.form.to_dict(flat=True),
+                ),
+            )
+
+        saved_draft_id = _save_intake_draft(
+            current_shelter=current_shelter,
+            form=request.form,
+            draft_id=draft_id,
+        )
+
+        flash("Intake draft saved.", "success")
+        return redirect(url_for("case_management.intake_form", draft_id=saved_draft_id))
+
+    data, errors = _validate_intake_form(request.form, current_shelter)
+
+    duplicate = _find_possible_duplicate(
+        first_name=data["first_name"],
+        last_name=data["last_name"],
+        birth_year=data["birth_year"],
+        phone=data["phone"],
+        email=data["email"],
+        shelter=current_shelter,
+    )
+
+    if duplicate:
+        duplicate_id = duplicate["id"] if isinstance(duplicate, dict) else duplicate[0]
+        duplicate_identifier = duplicate["resident_identifier"] if isinstance(duplicate, dict) else duplicate[6]
+        if duplicate_identifier:
+            flash(
+                f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. Review that profile before creating a new one.",
+                "error",
+            )
+        else:
+            flash(
+                "Possible duplicate resident found. Review the existing profile before creating a new one.",
+                "error",
+            )
+        return redirect(url_for("case_management.resident_case", resident_id=duplicate_id))
+
+    if errors:
+        for error in errors:
+            flash(error, "error")
+        return render_template(
+            "case_management/intake_assessment.html",
+            **_intake_template_context(
+                current_shelter=current_shelter,
+                form_data=request.form.to_dict(flat=True),
+            ),
+        )
+
+    resident_id, resident_identifier, resident_code = _insert_resident(data, current_shelter)
+    enrollment_id = _insert_program_enrollment(resident_id, data, current_shelter)
+    _insert_intake_assessment(enrollment_id, data)
+    _insert_family_snapshot(enrollment_id, data)
+
+    if draft_id is not None:
+        _complete_intake_draft(draft_id)
+
+    flash(
+        f"Resident created successfully. Resident ID: {resident_identifier}. Resident Code: {resident_code}",
+        "success",
+    )
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+
+@case_management.get("/<int:resident_id>")
+@require_login
+@require_shelter
+def resident_case(resident_id: int):
+    if not _case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    placeholder = _placeholder()
+
+    resident = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_identifier,
+            first_name,
+            last_name,
+            resident_code,
+            shelter,
+            is_active
+        FROM residents
+        WHERE id = {placeholder}
+          AND {_shelter_equals_sql("shelter")}
+        """,
+        (resident_id, shelter),
+    )
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    enrollment = db_fetchone(
+        f"""
+        SELECT
+            id,
+            shelter,
+            program_status,
+            entry_date,
+            exit_date
+        FROM program_enrollments
+        WHERE resident_id = {placeholder}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+    enrollment_id = None
+    if enrollment:
+        enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+
+    goals = []
+    appointments = []
+    notes = []
+
+    if enrollment_id:
+        goals = db_fetchall(
+            f"""
+            SELECT
+                goal_text,
+                status,
+                target_date,
+                created_at
+            FROM goals
+            WHERE enrollment_id = {placeholder}
+            ORDER BY created_at DESC
+            """,
+            (enrollment_id,),
+        )
+
+        appointments = db_fetchall(
+            f"""
+            SELECT
+                appointment_date,
+                appointment_type,
+                notes
+            FROM appointments
+            WHERE enrollment_id = {placeholder}
+            ORDER BY appointment_date DESC, id DESC
+            """,
+            (enrollment_id,),
+        )
+
+        notes = db_fetchall(
+            f"""
+            SELECT
+                meeting_date,
+                notes,
+                progress_notes,
+                action_items,
+                created_at
+            FROM case_manager_updates
+            WHERE enrollment_id = {placeholder}
+            ORDER BY meeting_date DESC, id DESC
+            """,
+            (enrollment_id,),
+        )
+
+    return render_template(
+        "case_management/resident_case.html",
+        resident=resident,
+        enrollment=enrollment,
+        enrollment_id=enrollment_id,
+        goals=goals,
+        appointments=appointments,
+        notes=notes,
+    )
