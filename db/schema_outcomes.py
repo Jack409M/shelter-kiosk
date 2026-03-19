@@ -87,6 +87,40 @@ def ensure_intake_assessments_table(kind: str) -> None:
     )
 
 
+def ensure_assessment_drafts_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS assessment_drafts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shelter TEXT,
+            status TEXT NOT NULL DEFAULT 'draft',
+            resident_id INTEGER,
+            form_payload TEXT,
+            created_by_user_id INTEGER,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS assessment_drafts (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT,
+            status TEXT NOT NULL DEFAULT 'draft',
+            resident_id INTEGER,
+            form_payload TEXT,
+            created_by_user_id INTEGER,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP
+        )
+        """
+    )
+
+
 def ensure_intake_assessment_columns(kind: str) -> None:
     try:
         from core.db import db_execute
@@ -262,6 +296,30 @@ def ensure_indexes() -> None:
 
         db_execute(
             """
+            CREATE INDEX IF NOT EXISTS assessment_drafts_shelter_status_idx
+            ON assessment_drafts (shelter, status)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        from core.db import db_execute
+
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS assessment_drafts_resident_idx
+            ON assessment_drafts (resident_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        from core.db import db_execute
+
+        db_execute(
+            """
             CREATE INDEX IF NOT EXISTS family_snapshots_enrollment_idx
             ON family_snapshots (enrollment_id)
             """
@@ -296,7 +354,9 @@ def ensure_indexes() -> None:
 
 def ensure_tables(kind: str) -> None:
     ensure_intake_assessments_table(kind)
+    ensure_assessment_drafts_table(kind)
     ensure_intake_assessment_columns(kind)
     ensure_family_snapshots_table(kind)
     ensure_exit_assessments_table(kind)
     ensure_followups_table(kind)
+    ensure_indexes()
