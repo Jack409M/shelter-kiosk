@@ -274,6 +274,166 @@ def _complete_intake_draft(draft_id: int) -> None:
     )
 
 
+def _save_assessment_draft(
+    current_shelter: str,
+    form_data: dict[str, Any],
+    resident_id: int,
+    draft_id: int | None = None,
+) -> int:
+    placeholder = _placeholder()
+    payload = json.dumps(form_data, ensure_ascii=False)
+    now = utcnow_iso()
+
+    if g.get("db_kind") == "pg":
+        if draft_id is not None:
+            row = db_fetchone(
+                f"""
+                UPDATE assessment_drafts
+                SET resident_id = {placeholder},
+                    form_payload = {placeholder},
+                    updated_at = {placeholder}
+                WHERE id = {placeholder}
+                  AND status = 'draft'
+                  AND LOWER(COALESCE(shelter, '')) = {placeholder}
+                RETURNING id
+                """,
+                (resident_id, payload, now, draft_id, current_shelter),
+            )
+            if row:
+                return int(row["id"])
+
+        row = db_fetchone(
+            f"""
+            INSERT INTO assessment_drafts
+            (
+                shelter,
+                resident_id,
+                form_payload,
+                status,
+                created_by_user_id,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {placeholder},
+                {placeholder},
+                {placeholder},
+                'draft',
+                {placeholder},
+                {placeholder},
+                {placeholder}
+            )
+            RETURNING id
+            """,
+            (
+                current_shelter,
+                resident_id,
+                payload,
+                session.get("user_id"),
+                now,
+                now,
+            ),
+        )
+        return int(row["id"])
+
+    if draft_id is not None:
+        db_execute(
+            f"""
+            UPDATE assessment_drafts
+            SET resident_id = {placeholder},
+                form_payload = {placeholder},
+                updated_at = {placeholder}
+            WHERE id = {placeholder}
+              AND status = 'draft'
+              AND LOWER(COALESCE(shelter, '')) = {placeholder}
+            """,
+            (resident_id, payload, now, draft_id, current_shelter),
+        )
+        existing = db_fetchone(
+            f"""
+            SELECT id
+            FROM assessment_drafts
+            WHERE id = {placeholder}
+              AND status = 'draft'
+              AND LOWER(COALESCE(shelter, '')) = {placeholder}
+            """,
+            (draft_id, current_shelter),
+        )
+        if existing:
+            return draft_id
+
+    db_execute(
+        f"""
+        INSERT INTO assessment_drafts
+        (
+            shelter,
+            resident_id,
+            form_payload,
+            status,
+            created_by_user_id,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            {placeholder},
+            {placeholder},
+            {placeholder},
+            'draft',
+            {placeholder},
+            {placeholder},
+            {placeholder}
+        )
+        """,
+        (
+            current_shelter,
+            resident_id,
+            payload,
+            session.get("user_id"),
+            now,
+            now,
+        ),
+    )
+
+    row = db_fetchone("SELECT last_insert_rowid() AS id")
+    return int(row["id"])
+
+
+def _load_assessment_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | None:
+    placeholder = _placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_id,
+            form_payload
+        FROM assessment_drafts
+        WHERE id = {placeholder}
+          AND status = 'draft'
+          AND LOWER(COALESCE(shelter, '')) = {placeholder}
+        """,
+        (draft_id, current_shelter),
+    )
+    if not row:
+        return None
+
+    payload_raw = row["form_payload"] if isinstance(row, dict) else row[2]
+
+    try:
+        payload = json.loads(payload_raw or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+
+    payload["draft_id"] = str(row["id"] if isinstance(row, dict) else row[0])
+
+    resident_id = row["resident_id"] if isinstance(row, dict) else row[1]
+    if resident_id is not None and "resident_id" not in payload:
+        payload["resident_id"] = str(resident_id)
+
+    return payload
+
+
 def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
@@ -1075,6 +1235,15 @@ def assessment_form():
     init_db()
 
     shelter = _normalize_shelter_name(session.get("shelter"))
+    draft_id = _parse_int(request.args.get("draft_id"))
+    form_data: dict[str, Any] = {}
+
+    if draft_id is not None:
+        loaded = _load_assessment_draft(shelter, draft_id)
+        if not loaded:
+            flash("Assessment draft not found.", "error")
+            return redirect(url_for("case_management.intake_index"))
+        form_data = loaded
 
     residents = db_fetchall(
         f"""
@@ -1090,7 +1259,7 @@ def assessment_form():
         "case_management/assessment.html",
         shelter=shelter,
         residents=residents,
-        form_data={},
+        form_data=form_data,
     )
 
 
@@ -1106,7 +1275,7 @@ def submit_assessment():
 
     shelter = _normalize_shelter_name(session.get("shelter"))
     action = (request.form.get("action") or "complete").strip().lower()
-
+    draft_id = _parse_int(request.form.get("draft_id"))
     resident_id = _parse_int(request.form.get("resident_id"))
     notes = _clean(request.form.get("notes"))
 
@@ -1136,13 +1305,14 @@ def submit_assessment():
         )
 
     if action == "save_draft":
-        flash("Assessment draft saved (temporary).", "success")
-        return render_template(
-            "case_management/assessment.html",
-            shelter=shelter,
-            residents=residents,
+        saved_draft_id = _save_assessment_draft(
+            current_shelter=shelter,
             form_data=form_data,
+            resident_id=resident_id,
+            draft_id=draft_id,
         )
+        flash("Assessment draft saved.", "success")
+        return redirect(url_for("case_management.assessment_form", draft_id=saved_draft_id))
 
     flash("Assessment finalized (temporary).", "success")
     return redirect(url_for("case_management.index"))
