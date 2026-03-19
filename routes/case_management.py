@@ -6,7 +6,7 @@ from __future__ import annotations
 # This file is now the transition shell for case management.
 #
 # Current responsibilities still living here:
-# 1. Resident case page display
+# 1. Index and intake landing display
 # 2. Temporary admin utilities during build and testing
 #
 # Extracted:
@@ -20,12 +20,14 @@ from __future__ import annotations
 #   resident, enrollment, intake assessment, and family snapshot inserts
 # - routes.case_management_parts.intake
 #   intake form flow shell
+# - routes.case_management_parts.resident_case
+#   resident summary page and related reads
 #
 # Future extraction plan:
 # - routes.case_management_parts.helpers
 #   shared parsing, shelter, permission, and SQL helpers
-# - routes.case_management_parts.resident_case
-#   resident summary page and related reads
+# - routes.case_management_parts.index
+#   dashboard and intake landing
 # - routes.case_management_parts.exit
 #   exit assessment flow
 # - routes.case_management_parts.update
@@ -38,7 +40,7 @@ from __future__ import annotations
 from flask import Blueprint, flash, redirect, render_template, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_execute, db_fetchall, db_fetchone
+from core.db import db_execute, db_fetchall
 from core.runtime import init_db
 from routes.case_management_parts.assessment import assessment_form_view
 from routes.case_management_parts.assessment import submit_assessment_view
@@ -54,6 +56,7 @@ from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.helpers import yes_no_to_int
 from routes.case_management_parts.intake import intake_form_view
 from routes.case_management_parts.intake import submit_intake_assessment_view
+from routes.case_management_parts.resident_case import resident_case_view
 
 
 # ============================================================================
@@ -288,120 +291,11 @@ def wipe_test_residents():
 # ============================================================================
 # Resident Case Page
 # ----------------------------------------------------------------------------
-# This route shows the resident summary page with:
-# - latest enrollment
-# - goals
-# - appointments
-# - case manager notes
+# Extracted to routes.case_management_parts.resident_case
 # ============================================================================
 
 @case_management.get("/<int:resident_id>")
 @require_login
 @require_shelter
 def resident_case(resident_id: int):
-    if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    init_db()
-
-    shelter = normalize_shelter_name(session.get("shelter"))
-    ph = placeholder()
-
-    resident = db_fetchone(
-        f"""
-        SELECT
-            id,
-            resident_identifier,
-            first_name,
-            last_name,
-            resident_code,
-            shelter,
-            is_active
-        FROM residents
-        WHERE id = {ph}
-          AND {shelter_equals_sql("shelter")}
-        """,
-        (resident_id, shelter),
-    )
-
-    if not resident:
-        flash("Resident not found.", "error")
-        return redirect(url_for("case_management.index"))
-
-    enrollment = db_fetchone(
-        f"""
-        SELECT
-            id,
-            shelter,
-            program_status,
-            entry_date,
-            exit_date
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
-
-    enrollment_id = None
-    if enrollment:
-        enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
-
-    goals = []
-    appointments = []
-    notes = []
-
-    if enrollment_id:
-        goals = db_fetchall(
-            f"""
-            SELECT
-                goal_text,
-                status,
-                target_date,
-                created_at
-            FROM goals
-            WHERE enrollment_id = {ph}
-            ORDER BY created_at DESC
-            """,
-            (enrollment_id,),
-        )
-
-        appointments = db_fetchall(
-            f"""
-            SELECT
-                appointment_date,
-                appointment_type,
-                notes
-            FROM appointments
-            WHERE enrollment_id = {ph}
-            ORDER BY appointment_date DESC, id DESC
-            """,
-            (enrollment_id,),
-        )
-
-        notes = db_fetchall(
-            f"""
-            SELECT
-                meeting_date,
-                notes,
-                progress_notes,
-                action_items,
-                created_at
-            FROM case_manager_updates
-            WHERE enrollment_id = {ph}
-            ORDER BY meeting_date DESC, id DESC
-            """,
-            (enrollment_id,),
-        )
-
-    return render_template(
-        "case_management/resident_case.html",
-        resident=resident,
-        enrollment=enrollment,
-        enrollment_id=enrollment_id,
-        goals=goals,
-        appointments=appointments,
-        notes=notes,
-    )
+    return resident_case_view(resident_id)
