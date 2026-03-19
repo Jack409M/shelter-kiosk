@@ -56,9 +56,14 @@
 </div>
 
 <div class="card">
-  <h2>Assessments</h2>
-  <p>Assessment workflow will live here once that phase is built out separately from intake.</p>
-  <p>No incomplete assessments yet.</p>
+  <h2>Assessments{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+  <p>Start or continue an assessment for an existing resident. Assessments can be saved and completed later.</p>
+
+  <p>
+    <button class="btn" disabled>New Assessment (Coming Soon)</button>
+  </p>
+
+  <p>No incomplete assessment drafts yet.</p>
 </div>
 
 {% endblock %}
