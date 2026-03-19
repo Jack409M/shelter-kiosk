@@ -1,5 +1,17 @@
 from __future__ import annotations
 
+# ============================================================================
+# Case Management Routes
+# ----------------------------------------------------------------------------
+# This module handles:
+# 1. Intake draft save and resume
+# 2. Assessment draft save and resume
+# 3. Intake validation and final resident creation
+# 4. Assessment validation and update of the intake assessment row
+# 5. Resident case page display
+# 6. Temporary admin utilities during build and testing
+# ============================================================================
+
 import json
 from datetime import date
 from typing import Any
@@ -13,12 +25,28 @@ from core.residents import generate_resident_code, generate_resident_identifier
 from core.runtime import init_db
 
 
+# ============================================================================
+# Blueprint Registration
+# ----------------------------------------------------------------------------
+# All routes in this file live under /staff/case-management
+# ============================================================================
+
 case_management = Blueprint(
     "case_management",
     __name__,
     url_prefix="/staff/case-management",
 )
 
+
+# ============================================================================
+# Basic Access and Utility Helpers
+# ----------------------------------------------------------------------------
+# Small helper functions used throughout the file for:
+# - permissions
+# - shelter normalization
+# - SQL placeholders
+# - parsing and cleaning user input
+# ============================================================================
 
 def _case_manager_allowed() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
@@ -81,12 +109,25 @@ def _yes_no_to_int(value: str | None) -> int:
     return 1 if (value or "").strip().lower() == "yes" else 0
 
 
+# ============================================================================
+# Draft Display Helpers
+# ----------------------------------------------------------------------------
+# These support friendly names for intake drafts shown in the draft list.
+# ============================================================================
+
 def _draft_display_name(form: Any) -> str:
     first_name = _clean(form.get("first_name")) or ""
     last_name = _clean(form.get("last_name")) or ""
     full_name = f"{first_name} {last_name}".strip()
     return full_name or "Unnamed intake draft"
 
+
+# ============================================================================
+# Intake Draft Persistence
+# ----------------------------------------------------------------------------
+# These functions save, load, and complete intake drafts.
+# Drafts are stored in intake_drafts so staff can stop and resume later.
+# ============================================================================
 
 def _save_intake_draft(
     current_shelter: str,
@@ -274,6 +315,13 @@ def _complete_intake_draft(draft_id: int) -> None:
     )
 
 
+# ============================================================================
+# Assessment Draft Persistence
+# ----------------------------------------------------------------------------
+# These functions save, load, and complete assessment drafts.
+# Drafts are stored in assessment_drafts so staff can return later.
+# ============================================================================
+
 def _save_assessment_draft(
     current_shelter: str,
     form_data: dict[str, Any],
@@ -460,6 +508,15 @@ def _complete_assessment_draft(draft_id: int) -> None:
     )
 
 
+# ============================================================================
+# Assessment Validation and Persistence
+# ----------------------------------------------------------------------------
+# These functions:
+# - validate the assessment form
+# - update the enrollment's intake_assessments row
+# Assessment currently updates one existing row per enrollment.
+# ============================================================================
+
 def _validate_assessment_form(form: Any) -> tuple[dict[str, Any], list[str]]:
     data: dict[str, Any] = {
         "resident_id": _clean(form.get("resident_id")),
@@ -626,6 +683,12 @@ def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) 
     )
 
 
+# ============================================================================
+# Intake Template Context
+# ----------------------------------------------------------------------------
+# Supplies dropdown options and preloaded values to the intake template.
+# ============================================================================
+
 def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
@@ -705,6 +768,13 @@ def _intake_template_context(
         ],
     }
 
+
+# ============================================================================
+# Intake Validation
+# ----------------------------------------------------------------------------
+# Validates the intake plus initial assessment data collected on the intake
+# workflow before resident and enrollment creation.
+# ============================================================================
 
 def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list[str]]:
     data: dict[str, Any] = {
@@ -858,6 +928,16 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     return data, errors
 
 
+# ============================================================================
+# Duplicate Detection
+# ----------------------------------------------------------------------------
+# This checks for possible existing residents before creating a new one.
+# Current order:
+# 1. exact email match
+# 2. exact phone match
+# 3. exact first + last + birth year
+# ============================================================================
+
 def _find_possible_duplicate(
     first_name: str | None,
     last_name: str | None,
@@ -914,6 +994,16 @@ def _find_possible_duplicate(
 
     return None
 
+
+# ============================================================================
+# Resident and Enrollment Inserts
+# ----------------------------------------------------------------------------
+# These create:
+# 1. residents row
+# 2. program_enrollments row
+# 3. intake_assessments row
+# 4. family_snapshots row
+# ============================================================================
 
 def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]:
     placeholder = _placeholder()
@@ -1435,6 +1525,14 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
     )
 
 
+# ============================================================================
+# Index and Intake Landing Routes
+# ----------------------------------------------------------------------------
+# These show:
+# - the main case manager resident list
+# - the intake and assessment landing page with drafts
+# ============================================================================
+
 @case_management.get("")
 @require_login
 @require_shelter
@@ -1518,6 +1616,13 @@ def intake_index():
         shelter=shelter,
     )
 
+
+# ============================================================================
+# Assessment Routes
+# ----------------------------------------------------------------------------
+# These routes display the assessment form, save drafts, and finalize updates
+# to the intake_assessments row tied to the active enrollment.
+# ============================================================================
 
 @case_management.get("/assessment/new")
 @require_login
@@ -1655,6 +1760,13 @@ def submit_assessment():
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
+# ============================================================================
+# Intake Routes
+# ----------------------------------------------------------------------------
+# These routes display the intake form, save intake drafts, detect duplicates,
+# create the resident, create the enrollment, and insert the entry snapshot.
+# ============================================================================
+
 @case_management.get("/intake-assessment/new")
 @require_login
 @require_shelter
@@ -1772,6 +1884,71 @@ def submit_intake_assessment():
     )
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
+
+# ============================================================================
+# TEMPORARY TEST DATA WIPE ROUTE - START
+# ----------------------------------------------------------------------------
+# PURPOSE:
+# This temporary admin-only route wipes resident-related test data so intake
+# can be retested from a clean state during development.
+#
+# IMPORTANT:
+# Delete everything from the START comment above to the END comment below after
+# testing is complete. Do not leave this route in production long term.
+#
+# WHAT IT DELETES:
+# - family_snapshots
+# - intake_assessments
+# - assessment_drafts
+# - intake_drafts
+# - case_manager_updates
+# - appointments
+# - goals
+# - resident_children
+# - resident_substances
+# - program_enrollments
+# - residents
+# ============================================================================
+
+@case_management.post("/admin/wipe-test-residents")
+@require_login
+@require_shelter
+def wipe_test_residents():
+    if session.get("role") != "admin":
+        flash("Admin access required.", "error")
+        return redirect(url_for("case_management.index"))
+
+    init_db()
+
+    db_execute("DELETE FROM family_snapshots")
+    db_execute("DELETE FROM intake_assessments")
+    db_execute("DELETE FROM assessment_drafts")
+    db_execute("DELETE FROM intake_drafts")
+    db_execute("DELETE FROM case_manager_updates")
+    db_execute("DELETE FROM appointments")
+    db_execute("DELETE FROM goals")
+    db_execute("DELETE FROM resident_children")
+    db_execute("DELETE FROM resident_substances")
+    db_execute("DELETE FROM program_enrollments")
+    db_execute("DELETE FROM residents")
+
+    flash("All resident-related test data was wiped.", "success")
+    return redirect(url_for("case_management.index"))
+
+# ============================================================================
+# TEMPORARY TEST DATA WIPE ROUTE - END
+# ============================================================================
+
+
+# ============================================================================
+# Resident Case Page
+# ----------------------------------------------------------------------------
+# This route shows the resident summary page with:
+# - latest enrollment
+# - goals
+# - appointments
+# - case manager notes
+# ============================================================================
 
 @case_management.get("/<int:resident_id>")
 @require_login
