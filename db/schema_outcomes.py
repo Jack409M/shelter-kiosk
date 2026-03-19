@@ -96,12 +96,13 @@ def ensure_assessment_drafts_table(kind: str) -> None:
         CREATE TABLE IF NOT EXISTS assessment_drafts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             shelter TEXT,
-            status TEXT NOT NULL DEFAULT 'draft',
             resident_id INTEGER,
             form_payload TEXT,
+            status TEXT NOT NULL DEFAULT 'draft',
             created_by_user_id INTEGER,
-            created_at TEXT,
-            updated_at TEXT
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (resident_id) REFERENCES residents(id)
         )
         """,
 
@@ -110,12 +111,12 @@ def ensure_assessment_drafts_table(kind: str) -> None:
         CREATE TABLE IF NOT EXISTS assessment_drafts (
             id SERIAL PRIMARY KEY,
             shelter TEXT,
-            status TEXT NOT NULL DEFAULT 'draft',
-            resident_id INTEGER,
+            resident_id INTEGER REFERENCES residents(id),
             form_payload TEXT,
+            status TEXT NOT NULL DEFAULT 'draft',
             created_by_user_id INTEGER,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
         )
         """
     )
