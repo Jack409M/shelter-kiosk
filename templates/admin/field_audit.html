@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h1>Field Audit</h1>
+
+<table border="1" cellpadding="6">
+  <tr>
+    <th>Field</th>
+    <th>Stage</th>
+    <th>Form Field</th>
+    <th>Table</th>
+    <th>Column</th>
+    <th>Status</th>
+    <th>Sample Value</th>
+    <th>Error</th>
+  </tr>
+
+  {% for r in results %}
+  <tr>
+    <td>{{ r.label }}</td>
+    <td>{{ r.stage }}</td>
+    <td>{{ r.form_field }}</td>
+    <td>{{ r.table }}</td>
+    <td>{{ r.column }}</td>
+
+    <td>
+      {% if r.found %}
+        ✅ SAVING
+      {% else %}
+        ❌ NOT FOUND
+      {% endif %}
+    </td>
+
+    <td>{{ r.value }}</td>
+    <td style="color:red;">{{ r.error }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock %}
