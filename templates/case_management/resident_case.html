@@ -206,7 +206,7 @@
   <div class="card">
     <h2>Add Case Note</h2>
 
-    <form method="post" action="{{ url_for('resident_detail.add_case_note', resident_id=resident_id) }}">
+    <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
       <label for="meeting_date"><strong>Meeting Date</strong></label>
