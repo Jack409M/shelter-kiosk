@@ -190,6 +190,7 @@ def ensure_reporting_columns(kind: str) -> None:
         statements = [
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS gender TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS race TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS ethnicity TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS veteran BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS disability BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS marital_status TEXT",
@@ -209,6 +210,7 @@ def ensure_reporting_columns(kind: str) -> None:
         statements = [
             "ALTER TABLE residents ADD COLUMN gender TEXT",
             "ALTER TABLE residents ADD COLUMN race TEXT",
+            "ALTER TABLE residents ADD COLUMN ethnicity TEXT",
             "ALTER TABLE residents ADD COLUMN veteran INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE residents ADD COLUMN disability INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE residents ADD COLUMN marital_status TEXT",
