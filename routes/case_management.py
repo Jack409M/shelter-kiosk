@@ -1217,9 +1217,24 @@ def intake_index():
         (shelter,),
     )
 
+    assessment_drafts = db_fetchall(
+        f"""
+        SELECT
+            id,
+            resident_id,
+            updated_at
+        FROM assessment_drafts
+        WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+          AND status = 'draft'
+        ORDER BY updated_at DESC, id DESC
+        """,
+        (shelter,),
+    )
+
     return render_template(
         "intake_assessment/index.html",
         drafts=drafts,
+        assessment_drafts=assessment_drafts,
         shelter=shelter,
     )
 
