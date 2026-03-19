@@ -84,7 +84,7 @@
   </div>
 
   <div class="card">
-    <h2>Program and Stability Factors</h2>
+    <h2>Legal and Program Indicators</h2>
 
     <p>
       <label for="drug_court">Drug Court</label><br>
@@ -103,6 +103,10 @@
         <option value="no" {% if form_data.get('warrants_unpaid') == 'no' %}selected{% endif %}>No</option>
       </select>
     </p>
+  </div>
+
+  <div class="card">
+    <h2>Medical and Mental Health Indicators</h2>
 
     <p>
       <label for="mh_exam_completed">Mental Health Exam Completed</label><br>
@@ -121,6 +125,10 @@
         <option value="no" {% if form_data.get('med_exam_completed') == 'no' %}selected{% endif %}>No</option>
       </select>
     </p>
+  </div>
+
+  <div class="card">
+    <h2>Transportation and Stability</h2>
 
     <p>
       <label for="car_at_entry">Car at Entry</label><br>
