@@ -49,7 +49,7 @@
       {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) and (not is_public_home) %}
 
       {% set residents_url = safe_url_for('residents.staff_residents') %}
-      {% set intake_assessment_url = safe_url_for('case_management.intake_assessment') %}
+      {% set intake_assessment_url = safe_url_for('case_management.intake_index') %}
       {% set case_management_url = safe_url_for('case_management.index') %}
       {% set compliance_url = safe_url_for('compliance.compliance_dashboard') %}
       {% set forms_url = safe_url_for('forms_admin.forms_index') %}
