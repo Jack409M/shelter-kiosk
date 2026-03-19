@@ -1351,6 +1351,16 @@ def submit_assessment():
         flash("Assessment draft saved.", "success")
         return redirect(url_for("case_management.assessment_form", draft_id=saved_draft_id))
 
+    enrollment_id = _find_active_enrollment_id(resident_id, shelter)
+    if enrollment_id is None:
+        flash("This resident does not have an active enrollment. Assessment cannot be finalized.", "error")
+        return render_template(
+            "case_management/assessment.html",
+            shelter=shelter,
+            residents=residents,
+            form_data=form_data,
+        )
+
     flash("Assessment finalized (temporary).", "success")
     return redirect(url_for("case_management.index"))
 
