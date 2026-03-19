@@ -33,6 +33,10 @@ from routes.admin_parts.dashboard import (
     admin_update_security_settings_view,
 )
 
+from routes.admin_parts.field_audit import (
+    admin_field_audit_view,
+)
+
 from routes.admin_parts.system import (
     recreate_schema_view,
     wipe_all_data_view,
@@ -146,6 +150,13 @@ def staff_audit_log():
 @require_shelter
 def staff_audit_log_csv():
     return staff_audit_log_csv_view()
+
+
+@admin.route("/staff/admin/field-audit", methods=["GET"])
+@require_login
+@require_shelter
+def admin_field_audit():
+    return admin_field_audit_view()
 
 
 @admin.route("/admin/wipe-all-data", methods=["POST"])
