@@ -5,8 +5,8 @@
 <h1>Intake and Assessment</h1>
 
 <div class="card">
-  <h2>Start</h2>
-  <p>Begin a new intake or return to an intake draft that is still in progress.</p>
+  <h2>Start New Intake</h2>
+  <p>Start a new intake for a resident entering the program.</p>
 
   {% set new_intake_url = safe_url_for('case_management.intake_form') %}
   {% if new_intake_url %}
@@ -19,8 +19,8 @@
 </div>
 
 <div class="card">
-  <h2>Incomplete Intakes{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
-  <p>These intakes were started but not completed. Reopen one to continue where staff left off.</p>
+  <h2>Resume Incomplete Intakes{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+  <p>Continue an intake that has already been started but not completed.</p>
 
   {% if drafts %}
     <table class="table-compact">
