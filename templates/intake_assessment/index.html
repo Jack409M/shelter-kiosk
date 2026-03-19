@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h1>Intake and Assessment</h1>
+
+<div class="card">
+  <h2>Start</h2>
+  <p>Begin a new intake or return to an intake draft that is still in progress.</p>
+
+  {% set new_intake_url = safe_url_for('case_management.intake_form') %}
+  {% if new_intake_url %}
+    <p>
+      <a class="btn" href="{{ new_intake_url }}">New Intake</a>
+    </p>
+  {% else %}
+    <p>Intake form is not available yet.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Incomplete Intakes{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+  <p>These intakes were started but not completed. Reopen one to continue where staff left off.</p>
+
+  {% if drafts %}
+    <table class="table-compact">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Date Entered</th>
+          <th>Last Updated</th>
+          <th>Continue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in drafts %}
+          {% set draft_url = safe_url_for('case_management.intake_form', draft_id=d.id) %}
+          <tr>
+            <td>{{ d.resident_name or "Unnamed intake draft" }}</td>
+            <td>{{ d.entry_date or "—" }}</td>
+            <td>{{ d.updated_at or "—" }}</td>
+            <td>
+              {% if draft_url %}
+                <a class="btn" href="{{ draft_url }}">Continue Draft</a>
+              {% else %}
+                <span>Draft page not available</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No incomplete intake drafts.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Assessments</h2>
+  <p>Assessment workflow will live here once that phase is built out separately from intake.</p>
+  <p>No incomplete assessments yet.</p>
+</div>
+
+{% endblock %}
