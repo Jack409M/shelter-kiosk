@@ -23,14 +23,14 @@ from __future__ import annotations
 #   resident summary page and related reads
 # - routes.case_management_parts.index
 #   dashboard and intake landing
+# - routes.case_management_parts.update
+#   progress update flow
 #
 # Future extraction plan:
 # - routes.case_management_parts.helpers
 #   shared parsing, shelter, permission, and SQL helpers
 # - routes.case_management_parts.exit
 #   exit assessment flow
-# - routes.case_management_parts.update
-#   progress update flow
 #
 # Goal:
 # keep shrinking this file until it becomes a thin blueprint shell like admin.py
@@ -58,6 +58,7 @@ from routes.case_management_parts.index import intake_index_view
 from routes.case_management_parts.intake import intake_form_view
 from routes.case_management_parts.intake import submit_intake_assessment_view
 from routes.case_management_parts.resident_case import resident_case_view
+from routes.case_management_parts.update import add_case_note_view
 
 
 # ============================================================================
@@ -155,6 +156,19 @@ def intake_form():
 @require_shelter
 def submit_intake_assessment():
     return submit_intake_assessment_view()
+
+
+# ============================================================================
+# Case Manager Update Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.update
+# ============================================================================
+
+@case_management.post("/<int:resident_id>/case-notes")
+@require_login
+@require_shelter
+def add_case_note(resident_id: int):
+    return add_case_note_view(resident_id)
 
 
 # ============================================================================
