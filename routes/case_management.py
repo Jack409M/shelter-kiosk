@@ -1076,9 +1076,21 @@ def assessment_form():
 
     shelter = _normalize_shelter_name(session.get("shelter"))
 
+    residents = db_fetchall(
+        f"""
+        SELECT id, first_name, last_name
+        FROM residents
+        WHERE {_shelter_equals_sql("shelter")}
+        ORDER BY last_name ASC, first_name ASC
+        """,
+        (shelter,),
+    )
+
     return render_template(
         "case_management/assessment.html",
         shelter=shelter,
+        residents=residents,
+        form_data={},
     )
 
 
