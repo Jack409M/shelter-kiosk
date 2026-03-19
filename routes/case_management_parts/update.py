@@ -67,8 +67,12 @@ def add_case_note_view(resident_id: int):
     progress_notes = (request.form.get("progress_notes") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
 
-    if not meeting_date and not notes and not progress_notes and not action_items:
-        flash("Enter at least one case manager note field.", "error")
+    if not meeting_date:
+        flash("Meeting date is required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    if not notes and not progress_notes and not action_items:
+        flash("Enter notes, progress notes, or action items.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -100,7 +104,7 @@ def add_case_note_view(resident_id: int):
         (
             enrollment_id,
             staff_user_id,
-            meeting_date or None,
+            meeting_date,
             notes or None,
             progress_notes or None,
             action_items or None,
