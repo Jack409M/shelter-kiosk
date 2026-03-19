@@ -4,14 +4,43 @@
 
 <h1>Assessment</h1>
 
-<div class="card">
-  <h2>Assessment Workflow</h2>
-  <p>
-    This is where assessment will live separately from intake.
-    Staff will be able to start, save, resume, and finalize assessments.
-  </p>
+<form method="post">
 
-  <p><strong>Status:</strong> Not built yet</p>
-</div>
+  <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
+
+  <div class="card">
+    <h2>Select Resident</h2>
+
+    <p>
+      <label>Resident</label><br>
+      <select name="resident_id" required>
+        <option value="">Select resident</option>
+        {% for r in residents %}
+          <option value="{{ r.id }}"
+            {% if form_data.get('resident_id') == r.id|string %}selected{% endif %}
+          >
+            {{ r.last_name }}, {{ r.first_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Assessment (Placeholder)</h2>
+    <p>This will become the full assessment later.</p>
+
+    <p>
+      <label>Notes</label><br>
+      <textarea name="notes" rows="5">{{ form_data.get('notes', '') }}</textarea>
+    </p>
+  </div>
+
+  <div class="card">
+    <button class="btn" name="action" value="save_draft">Save Draft</button>
+    <button class="btn">Finalize Assessment</button>
+  </div>
+
+</form>
 
 {% endblock %}
