@@ -76,6 +76,22 @@
   </div>
 
   <div class="card">
+    <h2>Exit Assessment</h2>
+
+    <p>
+      Record graduation, exit date, reason for exit, income at exit, and exit outcomes here.
+    </p>
+
+    <a class="btn" href="{{ url_for('case_management_exit.exit_assessment_form', resident_id=resident_id) }}">
+      {% if enrollment_exit_date %}
+        View or Edit Exit Assessment
+      {% else %}
+        Complete Exit Assessment
+      {% endif %}
+    </a>
+  </div>
+
+  <div class="card">
     <h2>Add Goal</h2>
 
     <form method="post" action="{{ url_for('resident_detail.add_goal', resident_id=resident_id) }}">
