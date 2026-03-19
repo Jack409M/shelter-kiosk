@@ -1,0 +1,183 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+{% if resident is mapping %}
+  {% set resident_id = resident["id"] %}
+  {% set first_name = resident["first_name"] %}
+  {% set last_name = resident["last_name"] %}
+  {% set resident_code = resident["resident_code"] %}
+{% else %}
+  {% set resident_id = resident[0] %}
+  {% set first_name = resident[2] %}
+  {% set last_name = resident[3] %}
+  {% set resident_code = resident[4] %}
+{% endif %}
+
+{% if enrollment is mapping %}
+  {% set enrollment_id = enrollment["id"] %}
+  {% set entry_date = enrollment["entry_date"] %}
+  {% set current_exit_date = enrollment["exit_date"] %}
+  {% set program_status = enrollment["program_status"] %}
+{% else %}
+  {% set enrollment_id = enrollment[0] %}
+  {% set entry_date = enrollment[3] %}
+  {% set current_exit_date = enrollment[4] %}
+  {% set program_status = enrollment[5] %}
+{% endif %}
+
+<h1>Exit Assessment</h1>
+
+<div class="card">
+  <h2>{{ first_name }} {{ last_name }}</h2>
+  <p>
+    <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
+    <strong>Enrollment ID:</strong> {{ enrollment_id }}<br>
+    <strong>Entry Date:</strong> {{ entry_date or "—" }}<br>
+    <strong>Current Exit Date:</strong> {{ current_exit_date or "—" }}<br>
+    <strong>Program Status:</strong> {{ program_status|replace("_", " ")|title if program_status else "—" }}
+  </p>
+</div>
+
+<form method="post" action="{{ url_for('case_management_exit.submit_exit_assessment', resident_id=resident_id) }}">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+  <div class="card">
+    <h2>Exit Details</h2>
+
+    <p>
+      <label for="date_exit_dwc">Date Exit DWC</label><br>
+      <input
+        id="date_exit_dwc"
+        name="date_exit_dwc"
+        type="date"
+        required
+        value="{{ form_data.get('date_exit_dwc', '') }}"
+      >
+    </p>
+
+    <p>
+      <label for="exit_reason">Reason for Exit</label><br>
+      <textarea
+        id="exit_reason"
+        name="exit_reason"
+        rows="4"
+        required
+      >{{ form_data.get('exit_reason', '') }}</textarea>
+    </p>
+
+    <p>
+      <label for="graduate_dwc">Graduate DWC</label><br>
+      <select id="graduate_dwc" name="graduate_dwc">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('graduate_dwc') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('graduate_dwc') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="date_graduated">Date Graduated</label><br>
+      <input
+        id="date_graduated"
+        name="date_graduated"
+        type="date"
+        value="{{ form_data.get('date_graduated', '') }}"
+      >
+    </p>
+
+    <p>
+      <label for="leave_ama">Leave AMA</label><br>
+      <select id="leave_ama" name="leave_ama">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('leave_ama') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('leave_ama') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Income and Education at Exit</h2>
+
+    <p>
+      <label for="income_at_exit">Current Income</label><br>
+      <input
+        id="income_at_exit"
+        name="income_at_exit"
+        type="number"
+        min="0"
+        step="0.01"
+        value="{{ form_data.get('income_at_exit', '') }}"
+      >
+    </p>
+
+    <p>
+      <label for="education_at_exit">Education at Exit</label><br>
+      <input
+        id="education_at_exit"
+        name="education_at_exit"
+        type="text"
+        value="{{ form_data.get('education_at_exit', '') }}"
+      >
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Transportation and Stability at Exit</h2>
+
+    <p>
+      <label for="received_car">Received Car</label><br>
+      <select id="received_car" name="received_car">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('received_car') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('received_car') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="car_insurance">Car Insurance</label><br>
+      <select id="car_insurance" name="car_insurance">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('car_insurance') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('car_insurance') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="obtained_insurance">Obtained Insurance</label><br>
+      <select id="obtained_insurance" name="obtained_insurance">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('obtained_insurance') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('obtained_insurance') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Needs Resolved at Exit</h2>
+
+    <p>
+      <label for="dental_needs_met">Dental Needs Met</label><br>
+      <select id="dental_needs_met" name="dental_needs_met">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('dental_needs_met') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('dental_needs_met') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="vision_needs_met">Vision Needs Met</label><br>
+      <select id="vision_needs_met" name="vision_needs_met">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('vision_needs_met') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('vision_needs_met') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+  </div>
+
+  <div class="card">
+    <button class="btn" type="submit">Save Exit Assessment</button>
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
+  </div>
+</form>
+
+{% endblock %}
