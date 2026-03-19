@@ -899,6 +899,28 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
     return int(row["id"])
 
 
+def _find_active_enrollment_id(resident_id: int, shelter: str) -> int | None:
+    placeholder = _placeholder()
+
+    row = db_fetchone(
+        f"""
+        SELECT id
+        FROM program_enrollments
+        WHERE resident_id = {placeholder}
+          AND {_shelter_equals_sql("shelter")}
+          AND exit_date IS NULL
+        ORDER BY entry_date DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
+
+    if not row:
+        return None
+
+    return int(row["id"] if isinstance(row, dict) else row[0])
+
+
 def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     placeholder = _placeholder()
     now = utcnow_iso()
