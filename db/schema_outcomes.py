@@ -44,6 +44,14 @@ def ensure_intake_assessments_table(kind: str) -> None:
             med_exam_completed INTEGER NOT NULL DEFAULT 0,
             car_at_entry INTEGER NOT NULL DEFAULT 0,
             car_insurance_at_entry INTEGER NOT NULL DEFAULT 0,
+            pregnant_at_entry INTEGER NOT NULL DEFAULT 0,
+            dental_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            vision_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            employment_status_at_entry TEXT,
+            mental_health_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            medical_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            id_documents_status_at_entry TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
@@ -80,6 +88,14 @@ def ensure_intake_assessments_table(kind: str) -> None:
             med_exam_completed INTEGER NOT NULL DEFAULT 0,
             car_at_entry INTEGER NOT NULL DEFAULT 0,
             car_insurance_at_entry INTEGER NOT NULL DEFAULT 0,
+            pregnant_at_entry INTEGER NOT NULL DEFAULT 0,
+            dental_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            vision_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            employment_status_at_entry TEXT,
+            mental_health_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            medical_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0,
+            id_documents_status_at_entry TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -138,6 +154,14 @@ def ensure_intake_assessment_columns(kind: str) -> None:
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS med_exam_completed INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS car_at_entry INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS car_insurance_at_entry INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS pregnant_at_entry INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS dental_need_at_entry INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS vision_need_at_entry INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS employment_status_at_entry TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS mental_health_need_at_entry INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS medical_need_at_entry INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS id_documents_status_at_entry TEXT",
         ]
 
         for sql in statements:
