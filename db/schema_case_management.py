@@ -125,6 +125,25 @@ def ensure_intake_drafts_table(kind: str) -> None:
     )
 
 
+def ensure_intake_drafts_columns() -> None:
+    statements = [
+        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS shelter TEXT",
+        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'draft'",
+        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS resident_name TEXT",
+        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS entry_date TEXT",
+        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS form_payload TEXT",
+        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER",
+        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS updated_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
 def ensure_indexes() -> None:
     try:
         db_execute(
@@ -271,4 +290,5 @@ def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
     ensure_case_manager_calendar_events_table(kind)
     ensure_intake_drafts_table(kind)
+    ensure_intake_drafts_columns()
     ensure_indexes()
