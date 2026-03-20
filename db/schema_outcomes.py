@@ -236,7 +236,8 @@ def ensure_exit_assessments_table(kind: str) -> None:
             car_insurance INTEGER NOT NULL DEFAULT 0,
             dental_needs_met INTEGER NOT NULL DEFAULT 0,
             vision_needs_met INTEGER NOT NULL DEFAULT 0,
-            obtained_insurance INTEGER NOT NULL DEFAULT 0,
+            obtained_public_insurance INTEGER NOT NULL DEFAULT 0,
+            private_insurance INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
@@ -260,7 +261,8 @@ def ensure_exit_assessments_table(kind: str) -> None:
             car_insurance INTEGER NOT NULL DEFAULT 0,
             dental_needs_met INTEGER NOT NULL DEFAULT 0,
             vision_needs_met INTEGER NOT NULL DEFAULT 0,
-            obtained_insurance INTEGER NOT NULL DEFAULT 0,
+            obtained_public_insurance INTEGER NOT NULL DEFAULT 0,
+            private_insurance INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -274,6 +276,8 @@ def ensure_exit_assessment_columns(kind: str) -> None:
 
         statements = [
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS grit_at_exit DOUBLE PRECISION",
+            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS obtained_public_insurance INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS private_insurance INTEGER NOT NULL DEFAULT 0",
         ]
 
         for sql in statements:
