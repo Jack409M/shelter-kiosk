@@ -39,9 +39,12 @@ FIELDS: List[FieldDefinition] = [
     FieldDefinition(
         key="prog_eval_months",
         label="Prog. Eval. Months",
-        lifecycle_stage="reporting_only",
-        wiring_status="missing",
-        notes="Reporting metric only. Not wired. No table or route found.",
+        lifecycle_stage="derived",
+        wiring_status="derived",
+        table="program_enrollments",
+        column="entry_date",
+        used_in_stats=True,
+        notes="Derived from entry_date as the two calendar months each year when 6 month program evaluations are due.",
     ),
     FieldDefinition(
         key="name_last_first",
@@ -102,16 +105,16 @@ FIELDS: List[FieldDefinition] = [
     FieldDefinition(
         key="treatment_grad_date",
         label="Treatment Grad Date",
-        lifecycle_stage="exit",
+        lifecycle_stage="intake",
         wiring_status="missing",
-        notes="Outcome field. Not wired. No table or route found.",
+        notes="Historical background field for prior rehab completion date. Should be collected at intake if retained in the dataset.",
     ),
     FieldDefinition(
         key="rad_graduation",
         label="RAD graduation",
-        lifecycle_stage="exit",
-        wiring_status="missing",
-        notes="Outcome field. Not wired. No table or route found.",
+        lifecycle_stage="reporting_only",
+        wiring_status="misaligned",
+        notes="Program milestone completed during enrollment, not an intake or exit field. Should be modeled as an in program milestone or progress event if retained.",
     ),
     FieldDefinition(
         key="days_sober_at_entry",
