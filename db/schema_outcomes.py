@@ -231,6 +231,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
             leave_ama INTEGER NOT NULL DEFAULT 0,
             income_at_exit REAL,
             education_at_exit TEXT,
+            grit_at_exit REAL,
             received_car INTEGER NOT NULL DEFAULT 0,
             car_insurance INTEGER NOT NULL DEFAULT 0,
             dental_needs_met INTEGER NOT NULL DEFAULT 0,
@@ -254,6 +255,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
             leave_ama INTEGER NOT NULL DEFAULT 0,
             income_at_exit DOUBLE PRECISION,
             education_at_exit TEXT,
+            grit_at_exit DOUBLE PRECISION,
             received_car INTEGER NOT NULL DEFAULT 0,
             car_insurance INTEGER NOT NULL DEFAULT 0,
             dental_needs_met INTEGER NOT NULL DEFAULT 0,
@@ -264,6 +266,24 @@ def ensure_exit_assessments_table(kind: str) -> None:
         )
         """
     )
+
+
+def ensure_exit_assessment_columns(kind: str) -> None:
+    try:
+        from core.db import db_execute
+
+        statements = [
+            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS grit_at_exit DOUBLE PRECISION",
+        ]
+
+        for sql in statements:
+            try:
+                db_execute(sql)
+            except Exception:
+                pass
+
+    except Exception:
+        pass
 
 
 def ensure_followups_table(kind: str) -> None:
@@ -383,5 +403,6 @@ def ensure_tables(kind: str) -> None:
     ensure_intake_assessment_columns(kind)
     ensure_family_snapshots_table(kind)
     ensure_exit_assessments_table(kind)
+    ensure_exit_assessment_columns(kind)
     ensure_followups_table(kind)
     ensure_indexes()
