@@ -185,8 +185,9 @@ def submit_intake_assessment_view():
     )
 
     if duplicate:
-        duplicate_id = duplicate["id"] if isinstance(duplicate, dict) else duplicate[0]
         duplicate_identifier = duplicate["resident_identifier"] if isinstance(duplicate, dict) else duplicate[6]
+        duplicate_first_name = duplicate["first_name"] if isinstance(duplicate, dict) else duplicate[2]
+        duplicate_last_name = duplicate["last_name"] if isinstance(duplicate, dict) else duplicate[3]
 
         if duplicate_identifier:
             flash(
@@ -200,7 +201,8 @@ def submit_intake_assessment_view():
             )
 
         flash(
-            f"Possible match is resident record {duplicate_id}. Check that profile after intake completes.",
+            f"Possible match: {duplicate_first_name} {duplicate_last_name} "
+            f"(Resident ID: {duplicate_identifier or 'unknown'}). Review after intake.",
             "warning",
         )
 
