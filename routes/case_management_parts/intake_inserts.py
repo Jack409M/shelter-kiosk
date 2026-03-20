@@ -221,6 +221,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 income_at_entry,
                 education_at_entry,
                 sobriety_date,
+                days_sober_at_entry,
                 drug_of_choice,
                 ace_score,
                 grit_score,
@@ -286,6 +287,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 {ph},
                 {ph},
                 {ph},
+                {ph},
                 {ph}
             )
             """,
@@ -297,6 +299,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 data["income_at_entry"],
                 data["education_at_entry"],
                 data["sobriety_date"],
+                data["days_sober_at_entry"],
                 data["drug_of_choice"],
                 data["ace_score"],
                 data["grit_score"],
@@ -340,6 +343,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             income_at_entry,
             education_at_entry,
             sobriety_date,
+            days_sober_at_entry,
             drug_of_choice,
             ace_score,
             grit_score,
@@ -405,6 +409,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             {ph},
             {ph},
             {ph},
+            {ph},
             {ph}
         )
         """,
@@ -416,6 +421,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             data["income_at_entry"],
             data["education_at_entry"],
             data["sobriety_date"],
+            data["days_sober_at_entry"],
             data["drug_of_choice"],
             data["ace_score"],
             data["grit_score"],
