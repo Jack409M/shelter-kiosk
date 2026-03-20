@@ -179,10 +179,14 @@ def _load_resident_for_shelter(resident_id: int, shelter: str):
                 r.emergency_contact_relationship,
                 r.emergency_contact_phone,
                 r.medical_alerts,
-                r.medical_notes
+                r.medical_notes,
+                ia.sobriety_date,
+                ia.days_sober_at_entry
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
+            LEFT JOIN intake_assessments ia
+                ON ia.enrollment_id = pe.id
             WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
             ORDER BY pe.id DESC
             LIMIT 1
@@ -207,10 +211,14 @@ def _load_resident_for_shelter(resident_id: int, shelter: str):
                 r.emergency_contact_relationship,
                 r.emergency_contact_phone,
                 r.medical_alerts,
-                r.medical_notes
+                r.medical_notes,
+                ia.sobriety_date,
+                ia.days_sober_at_entry
             FROM residents r
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
+            LEFT JOIN intake_assessments ia
+                ON ia.enrollment_id = pe.id
             WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
             ORDER BY pe.id DESC
             LIMIT 1
