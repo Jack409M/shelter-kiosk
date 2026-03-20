@@ -27,12 +27,12 @@ from __future__ import annotations
 #   progress update flow
 # - routes.case_management_parts.actions
 #   create enrollment, add goal, and add appointment writes
+# - routes.case_management_parts.exit
+#   exit assessment flow
 #
 # Future extraction plan:
 # - routes.case_management_parts.helpers
 #   shared parsing, shelter, permission, and SQL helpers
-# - routes.case_management_parts.exit
-#   exit assessment flow
 #
 # Goal:
 # keep shrinking this file until it becomes a thin blueprint shell like admin.py
@@ -48,6 +48,8 @@ from routes.case_management_parts.actions import add_goal_view
 from routes.case_management_parts.actions import create_enrollment_view
 from routes.case_management_parts.assessment import assessment_form_view
 from routes.case_management_parts.assessment import submit_assessment_view
+from routes.case_management_parts.exit import exit_assessment_form_view
+from routes.case_management_parts.exit import submit_exit_assessment_view
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
 from routes.case_management_parts.helpers import digits_only
@@ -161,6 +163,26 @@ def intake_form():
 @require_shelter
 def submit_intake_assessment():
     return submit_intake_assessment_view()
+
+
+# ============================================================================
+# Exit Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.exit
+# ============================================================================
+
+@case_management.get("/<int:resident_id>/exit-assessment")
+@require_login
+@require_shelter
+def exit_assessment(resident_id: int):
+    return exit_assessment_form_view(resident_id)
+
+
+@case_management.post("/<int:resident_id>/exit-assessment")
+@require_login
+@require_shelter
+def submit_exit_assessment(resident_id: int):
+    return submit_exit_assessment_view(resident_id)
 
 
 # ============================================================================
