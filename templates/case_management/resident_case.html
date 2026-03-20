@@ -11,11 +11,11 @@
   {% set resident_active = resident["is_active"] %}
 {% else %}
   {% set resident_id = resident[0] %}
-  {% set first_name = resident[1] %}
-  {% set last_name = resident[2] %}
-  {% set resident_code = resident[3] %}
-  {% set shelter = resident[4] %}
-  {% set resident_active = resident[5] %}
+  {% set first_name = resident[2] %}
+  {% set last_name = resident[3] %}
+  {% set resident_code = resident[4] %}
+  {% set shelter = resident[5] %}
+  {% set resident_active = resident[6] %}
 {% endif %}
 
 {% if enrollment is mapping %}
@@ -23,13 +23,65 @@
   {% set enrollment_entry_date = enrollment["entry_date"] %}
   {% set enrollment_exit_date = enrollment["exit_date"] %}
 {% elif enrollment %}
-  {% set enrollment_program_status = enrollment[1] %}
-  {% set enrollment_entry_date = enrollment[2] %}
-  {% set enrollment_exit_date = enrollment[3] %}
+  {% set enrollment_program_status = enrollment[2] %}
+  {% set enrollment_entry_date = enrollment[3] %}
+  {% set enrollment_exit_date = enrollment[4] %}
 {% else %}
   {% set enrollment_program_status = "" %}
   {% set enrollment_entry_date = "" %}
   {% set enrollment_exit_date = "" %}
+{% endif %}
+
+{% if intake_assessment is mapping %}
+  {% set intake_grit_score = intake_assessment["grit_score"] %}
+{% elif intake_assessment %}
+  {% set intake_grit_score = intake_assessment[0] %}
+{% else %}
+  {% set intake_grit_score = none %}
+{% endif %}
+
+{% if exit_assessment is mapping %}
+  {% set exit_date_graduated = exit_assessment["date_graduated"] %}
+  {% set exit_date_exit_dwc = exit_assessment["date_exit_dwc"] %}
+  {% set exit_reason = exit_assessment["exit_reason"] %}
+  {% set exit_graduate_dwc = exit_assessment["graduate_dwc"] %}
+  {% set exit_leave_ama = exit_assessment["leave_ama"] %}
+  {% set exit_income_at_exit = exit_assessment["income_at_exit"] %}
+  {% set exit_education_at_exit = exit_assessment["education_at_exit"] %}
+  {% set exit_grit_at_exit = exit_assessment["grit_at_exit"] %}
+  {% set exit_received_car = exit_assessment["received_car"] %}
+  {% set exit_car_insurance = exit_assessment["car_insurance"] %}
+  {% set exit_dental_needs_met = exit_assessment["dental_needs_met"] %}
+  {% set exit_vision_needs_met = exit_assessment["vision_needs_met"] %}
+  {% set exit_obtained_insurance = exit_assessment["obtained_insurance"] %}
+{% elif exit_assessment %}
+  {% set exit_date_graduated = exit_assessment[0] %}
+  {% set exit_date_exit_dwc = exit_assessment[1] %}
+  {% set exit_reason = exit_assessment[2] %}
+  {% set exit_graduate_dwc = exit_assessment[3] %}
+  {% set exit_leave_ama = exit_assessment[4] %}
+  {% set exit_income_at_exit = exit_assessment[5] %}
+  {% set exit_education_at_exit = exit_assessment[6] %}
+  {% set exit_grit_at_exit = exit_assessment[7] %}
+  {% set exit_received_car = exit_assessment[8] %}
+  {% set exit_car_insurance = exit_assessment[9] %}
+  {% set exit_dental_needs_met = exit_assessment[10] %}
+  {% set exit_vision_needs_met = exit_assessment[11] %}
+  {% set exit_obtained_insurance = exit_assessment[12] %}
+{% else %}
+  {% set exit_date_graduated = none %}
+  {% set exit_date_exit_dwc = none %}
+  {% set exit_reason = none %}
+  {% set exit_graduate_dwc = none %}
+  {% set exit_leave_ama = none %}
+  {% set exit_income_at_exit = none %}
+  {% set exit_education_at_exit = none %}
+  {% set exit_grit_at_exit = none %}
+  {% set exit_received_car = none %}
+  {% set exit_car_insurance = none %}
+  {% set exit_dental_needs_met = none %}
+  {% set exit_vision_needs_met = none %}
+  {% set exit_obtained_insurance = none %}
 {% endif %}
 
 <h1>Case Management</h1>
@@ -82,7 +134,7 @@
       Record graduation, exit date, reason for exit, income at exit, and exit outcomes here.
     </p>
 
-    <a class="btn" href="{{ url_for('case_management_exit.exit_assessment_form', resident_id=resident_id) }}">
+    <a class="btn" href="{{ url_for('case_management.exit_assessment', resident_id=resident_id) }}">
       {% if enrollment_exit_date %}
         View or Edit Exit Assessment
       {% else %}
@@ -90,6 +142,37 @@
       {% endif %}
     </a>
   </div>
+
+  <div class="card">
+    <h2>Grit Summary</h2>
+
+    <p>
+      <strong>Grit at Entry:</strong> {{ intake_grit_score if intake_grit_score is not none else "—" }}<br>
+      <strong>Grit at Exit:</strong> {{ exit_grit_at_exit if exit_grit_at_exit is not none else "—" }}<br>
+      <strong>Grit Difference:</strong> {{ grit_difference if grit_difference is not none else "—" }}
+    </p>
+  </div>
+
+  {% if exit_assessment %}
+    <div class="card">
+      <h2>Recorded Exit Details</h2>
+
+      <p>
+        <strong>Date Graduated:</strong> {{ exit_date_graduated or "—" }}<br>
+        <strong>Date Exit DWC:</strong> {{ exit_date_exit_dwc or "—" }}<br>
+        <strong>Reason for Exit:</strong> {{ exit_reason or "—" }}<br>
+        <strong>Graduate DWC:</strong> {{ "Yes" if exit_graduate_dwc else "No" }}<br>
+        <strong>Leave AMA:</strong> {{ "Yes" if exit_leave_ama else "No" }}<br>
+        <strong>Current Income:</strong> {{ exit_income_at_exit if exit_income_at_exit is not none else "—" }}<br>
+        <strong>Education at Exit:</strong> {{ exit_education_at_exit or "—" }}<br>
+        <strong>Received Car:</strong> {{ "Yes" if exit_received_car else "No" }}<br>
+        <strong>Car Insurance:</strong> {{ "Yes" if exit_car_insurance else "No" }}<br>
+        <strong>Dental Needs Met:</strong> {{ "Yes" if exit_dental_needs_met else "No" }}<br>
+        <strong>Vision Needs Met:</strong> {{ "Yes" if exit_vision_needs_met else "No" }}<br>
+        <strong>Obtained Insurance:</strong> {{ "Yes" if exit_obtained_insurance else "No" }}
+      </p>
+    </div>
+  {% endif %}
 
   <div class="card">
     <h2>Add Goal</h2>
