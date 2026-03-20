@@ -47,7 +47,7 @@ def create_enrollment_view(resident_id: int):
 
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     resident = db_fetchone(
         f"""
@@ -80,13 +80,13 @@ def create_enrollment_view(resident_id: int):
 
     if existing:
         flash("Resident already has an active enrollment.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     entry_date = (request.form.get("entry_date") or "").strip()
 
     if not entry_date:
         flash("Entry date required.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
 
@@ -128,7 +128,7 @@ def create_enrollment_view(resident_id: int):
     )
 
     flash("Program enrollment started.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#start-enrollment")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + "#start-enrollment")
 
 
 def add_goal_view(resident_id: int):
@@ -137,7 +137,7 @@ def add_goal_view(resident_id: int):
 
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     context = _load_enrollment_context_for_shelter(resident_id, shelter)
     resident = context["resident"]
@@ -149,14 +149,14 @@ def add_goal_view(resident_id: int):
 
     if not enrollment_id:
         flash("This resident does not have an active enrollment record yet.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     goal_text = (request.form.get("goal_text") or "").strip()
     target_date = (request.form.get("target_date") or "").strip()
 
     if not goal_text:
         flash("Goal text is required.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
 
@@ -195,7 +195,7 @@ def add_goal_view(resident_id: int):
     )
 
     flash("Goal added.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-goal")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + "#add-goal")
 
 
 def add_appointment_view(resident_id: int):
@@ -204,7 +204,7 @@ def add_appointment_view(resident_id: int):
 
     if not _case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     context = _load_enrollment_context_for_shelter(resident_id, shelter)
     resident = context["resident"]
@@ -216,7 +216,7 @@ def add_appointment_view(resident_id: int):
 
     if not enrollment_id:
         flash("Resident does not have an active enrollment record yet.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     appointment_date = (request.form.get("appointment_date") or "").strip()
     appointment_type = (request.form.get("appointment_type") or "").strip()
@@ -224,7 +224,7 @@ def add_appointment_view(resident_id: int):
 
     if not appointment_date:
         flash("Appointment date is required.", "error")
-        return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
 
@@ -263,4 +263,4 @@ def add_appointment_view(resident_id: int):
     )
 
     flash("Appointment scheduled.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-appointment")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + "#add-appointment")
