@@ -1,159 +1,304 @@
 {% extends "layout.html" %}
 
+{% block extra_head %}
+<style>
+  .assessment-page {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 20px 16px 40px 16px;
+  }
+
+  .assessment-page h1 {
+    margin: 0 0 16px 0;
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .assessment-form {
+    display: grid;
+    gap: 14px;
+  }
+
+  .assessment-card {
+    background: #ffffff;
+    border: 1px solid #d8e0ea;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    overflow: hidden;
+  }
+
+  .assessment-card-head {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e6ebf1;
+    background: #fafbfd;
+  }
+
+  .assessment-card-head h2 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .assessment-card-body {
+    padding: 14px;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .field {
+    display: grid;
+    gap: 5px;
+  }
+
+  .field.span-12 { grid-column: span 12; }
+  .field.span-6  { grid-column: span 6; }
+  .field.span-4  { grid-column: span 4; }
+  .field.span-3  { grid-column: span 3; }
+  .field.span-2  { grid-column: span 2; }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .field input,
+  .field select {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid #c7d1dc;
+    border-radius: 9px;
+    font: inherit;
+    background: #ffffff;
+    color: #13202c;
+    box-sizing: border-box;
+  }
+
+  .field input[type="number"] {
+    max-width: 140px;
+  }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 14px;
+  }
+
+  .btn-soft,
+  .btn-primary {
+    appearance: none;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-soft {
+    background: #eef2f6;
+    color: #243447;
+  }
+
+  .btn-primary,
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:visited {
+    background: #1f5eff;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  @media (max-width: 900px) {
+    .field.span-6,
+    .field.span-4,
+    .field.span-3,
+    .field.span-2 {
+      grid-column: span 12;
+    }
+
+    .field input[type="number"] {
+      max-width: 100%;
+    }
+
+    .action-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
+{% set form_data = form_data or {} %}
 
-<h1>Assessment</h1>
+<div class="assessment-page">
+  <h1>Assessment</h1>
 
-<form method="post" action="{{ url_for('case_management.submit_assessment') }}">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
+  <form class="assessment-form" method="post" action="{{ url_for('case_management.submit_assessment') }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
 
-  <div class="card">
-    <h2>Select Resident</h2>
+    <section class="assessment-card">
+      <div class="assessment-card-head">
+        <h2>Select Resident</h2>
+      </div>
+      <div class="assessment-card-body">
+        <div class="field-grid">
+          <div class="field span-6">
+            <label for="resident_id">Resident</label>
+            <select id="resident_id" name="resident_id" required>
+              <option value="">Select resident</option>
+              {% for r in residents %}
+                <option value="{{ r.id }}"
+                  {% if form_data.get('resident_id') == r.id|string %}selected{% endif %}
+                >
+                  {{ r.last_name }}, {{ r.first_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <p>
-      <label for="resident_id">Resident</label><br>
-      <select id="resident_id" name="resident_id" required>
-        <option value="">Select resident</option>
-        {% for r in residents %}
-          <option value="{{ r.id }}"
-            {% if form_data.get('resident_id') == r.id|string %}selected{% endif %}
-          >
-            {{ r.last_name }}, {{ r.first_name }}
-          </option>
-        {% endfor %}
-      </select>
-    </p>
-  </div>
+    <section class="assessment-card">
+      <div class="assessment-card-head">
+        <h2>Trauma and Vulnerability</h2>
+      </div>
+      <div class="assessment-card-body">
+        <div class="field-grid">
+          <div class="field span-2">
+            <label for="ace_score">ACE Score</label>
+            <input
+              id="ace_score"
+              name="ace_score"
+              type="number"
+              min="0"
+              max="10"
+              step="1"
+              value="{{ form_data.get('ace_score', '') }}"
+            >
+          </div>
 
-  <div class="card">
-    <h2>Trauma and Vulnerability</h2>
+          <div class="field span-2">
+            <label for="grit_score">Grit Score</label>
+            <input
+              id="grit_score"
+              name="grit_score"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              value="{{ form_data.get('grit_score', '') }}"
+            >
+          </div>
 
-    <p>
-      <label for="ace_score">ACE Score</label><br>
-      <input
-        id="ace_score"
-        name="ace_score"
-        type="number"
-        min="0"
-        max="10"
-        step="1"
-        value="{{ form_data.get('ace_score', '') }}"
-      >
-    </p>
+          <div class="field span-4">
+            <label for="sexual_survivor">Sexual Survivor</label>
+            <select id="sexual_survivor" name="sexual_survivor">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('sexual_survivor') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('sexual_survivor') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
 
-    <p>
-      <label for="grit_score">Grit Score</label><br>
-      <input
-        id="grit_score"
-        name="grit_score"
-        type="number"
-        min="0"
-        max="100"
-        step="1"
-        value="{{ form_data.get('grit_score', '') }}"
-      >
-    </p>
+          <div class="field span-4">
+            <label for="domestic_violence_history">Domestic Violence History</label>
+            <select id="domestic_violence_history" name="domestic_violence_history">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('domestic_violence_history') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('domestic_violence_history') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
 
-    <p>
-      <label for="sexual_survivor">Sexual Survivor</label><br>
-      <select id="sexual_survivor" name="sexual_survivor">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('sexual_survivor') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('sexual_survivor') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
+          <div class="field span-4">
+            <label for="human_trafficking_history">Human Trafficking History</label>
+            <select id="human_trafficking_history" name="human_trafficking_history">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('human_trafficking_history') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('human_trafficking_history') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
 
-    <p>
-      <label for="domestic_violence_history">Domestic Violence History</label><br>
-      <select id="domestic_violence_history" name="domestic_violence_history">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('domestic_violence_history') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('domestic_violence_history') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
+          <div class="field span-4">
+            <label for="drug_court">Drug Court</label>
+            <select id="drug_court" name="drug_court">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('drug_court') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('drug_court') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
 
-    <p>
-      <label for="human_trafficking_history">Human Trafficking History</label><br>
-      <select id="human_trafficking_history" name="human_trafficking_history">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('human_trafficking_history') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('human_trafficking_history') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-  </div>
+          <div class="field span-4">
+            <label for="warrants_unpaid">Warrants or Fines Unpaid</label>
+            <select id="warrants_unpaid" name="warrants_unpaid">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('warrants_unpaid') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('warrants_unpaid') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
 
-  <div class="card">
-    <h2>Legal and Program Indicators</h2>
+          <div class="field span-4">
+            <label for="mh_exam_completed">Mental Health Exam Completed</label>
+            <select id="mh_exam_completed" name="mh_exam_completed">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('mh_exam_completed') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('mh_exam_completed') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
 
-    <p>
-      <label for="drug_court">Drug Court</label><br>
-      <select id="drug_court" name="drug_court">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('drug_court') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('drug_court') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
+          <div class="field span-4">
+            <label for="med_exam_completed">Medical Exam Completed</label>
+            <select id="med_exam_completed" name="med_exam_completed">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('med_exam_completed') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('med_exam_completed') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
 
-    <p>
-      <label for="warrants_unpaid">Warrants or Fines Unpaid</label><br>
-      <select id="warrants_unpaid" name="warrants_unpaid">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('warrants_unpaid') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('warrants_unpaid') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-  </div>
+          <div class="field span-4">
+            <label for="car_at_entry">Car at Entry</label>
+            <select id="car_at_entry" name="car_at_entry">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('car_at_entry') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('car_at_entry') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
 
-  <div class="card">
-    <h2>Medical and Mental Health Indicators</h2>
+          <div class="field span-4">
+            <label for="car_insurance_at_entry">Car Insurance at Entry</label>
+            <select id="car_insurance_at_entry" name="car_insurance_at_entry">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('car_insurance_at_entry') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('car_insurance_at_entry') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <p>
-      <label for="mh_exam_completed">Mental Health Exam Completed</label><br>
-      <select id="mh_exam_completed" name="mh_exam_completed">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('mh_exam_completed') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('mh_exam_completed') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="med_exam_completed">Medical Exam Completed</label><br>
-      <select id="med_exam_completed" name="med_exam_completed">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('med_exam_completed') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('med_exam_completed') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-  </div>
-
-  <div class="card">
-    <h2>Transportation and Stability</h2>
-
-    <p>
-      <label for="car_at_entry">Car at Entry</label><br>
-      <select id="car_at_entry" name="car_at_entry">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('car_at_entry') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('car_at_entry') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="car_insurance_at_entry">Car Insurance at Entry</label><br>
-      <select id="car_insurance_at_entry" name="car_insurance_at_entry">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('car_insurance_at_entry') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('car_insurance_at_entry') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-  </div>
-
-  <div class="card">
-    <button class="btn" type="submit" name="action" value="save_draft">Save Draft</button>
-    <button class="btn" type="submit" name="action" value="complete">Finalize Assessment</button>
-  </div>
-
-</form>
-
+    <section class="assessment-card">
+      <div class="action-row">
+        <button class="btn-soft" type="submit" name="action" value="save_draft">
+          Save Draft
+        </button>
+        <button class="btn-primary" type="submit" name="action" value="complete">
+          Finalize Assessment
+        </button>
+      </div>
+    </section>
+  </form>
+</div>
 {% endblock %}
