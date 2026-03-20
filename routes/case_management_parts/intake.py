@@ -24,10 +24,12 @@ from routes.case_management_parts.intake_validation import _validate_intake_form
 def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
+    review_passed: bool = False,
 ) -> dict[str, Any]:
     return {
         "current_shelter": current_shelter,
         "form_data": form_data or {},
+        "review_passed": review_passed,
         "shelters": [
             {"value": "abba", "label": "Abba House"},
             {"value": "haven", "label": "Haven House"},
@@ -120,6 +122,11 @@ def _duplicate_identity(duplicate: Any) -> tuple[str | None, str, str]:
     return duplicate_identifier, duplicate_first_name or "", duplicate_last_name or ""
 
 
+def _form_review_passed(form_source: Any) -> bool:
+    value = clean(form_source.get("review_passed"))
+    return value in {"1", "true", "yes", "on"}
+
+
 def intake_form_view():
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -130,6 +137,7 @@ def intake_form_view():
     current_shelter = normalize_shelter_name(session.get("shelter"))
     draft_id = parse_int(request.args.get("draft_id"))
     form_data: dict[str, Any] | None = None
+    review_passed = False
 
     if draft_id is not None:
         form_data = _load_intake_draft(current_shelter, draft_id)
@@ -137,11 +145,14 @@ def intake_form_view():
             flash("Intake draft not found.", "error")
             return redirect(url_for("case_management.intake_index"))
 
+        review_passed = _form_review_passed(form_data)
+
     return render_template(
         "case_management/intake_assessment.html",
         **_intake_template_context(
             current_shelter=current_shelter,
             form_data=form_data,
+            review_passed=review_passed,
         ),
     )
 
@@ -154,8 +165,9 @@ def submit_intake_assessment_view():
     init_db()
 
     current_shelter = normalize_shelter_name(session.get("shelter"))
-    action = (request.form.get("action") or "complete").strip().lower()
+    action = (request.form.get("action") or "review").strip().lower()
     draft_id = parse_int(request.form.get("draft_id"))
+    review_passed = _form_review_passed(request.form)
 
     if action == "save_draft":
         first_name = clean(request.form.get("first_name"))
@@ -168,6 +180,7 @@ def submit_intake_assessment_view():
                 **_intake_template_context(
                     current_shelter=current_shelter,
                     form_data=request.form.to_dict(flat=True),
+                    review_passed=review_passed,
                 ),
             )
 
@@ -191,51 +204,77 @@ def submit_intake_assessment_view():
             **_intake_template_context(
                 current_shelter=current_shelter,
                 form_data=request.form.to_dict(flat=True),
+                review_passed=review_passed,
             ),
         )
 
-    duplicate = _find_possible_duplicate(
-        first_name=data["first_name"],
-        last_name=data["last_name"],
-        birth_year=data["birth_year"],
-        phone=data["phone"],
-        email=data["email"],
-        shelter=current_shelter,
-        shelter_equals_sql=shelter_equals_sql,
-    )
+    if action == "review":
+        duplicate = _find_possible_duplicate(
+            first_name=data["first_name"],
+            last_name=data["last_name"],
+            birth_year=data["birth_year"],
+            phone=data["phone"],
+            email=data["email"],
+            shelter=current_shelter,
+            shelter_equals_sql=shelter_equals_sql,
+        )
 
-    if duplicate:
-        duplicate_identifier, duplicate_first_name, duplicate_last_name = _duplicate_identity(duplicate)
+        if duplicate:
+            duplicate_identifier, duplicate_first_name, duplicate_last_name = _duplicate_identity(duplicate)
+
+            saved_draft_id = _save_intake_draft(
+                current_shelter=current_shelter,
+                form=request.form,
+                draft_id=draft_id,
+                status="pending_duplicate_review",
+            )
+
+            if duplicate_identifier:
+                flash(
+                    f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. "
+                    f"Your intake was saved for review and no new resident was created.",
+                    "warning",
+                )
+            else:
+                flash(
+                    "Possible duplicate resident found. Your intake was saved for review and "
+                    "no new resident was created.",
+                    "warning",
+                )
+
+            flash(
+                f"Possible match: {duplicate_first_name} {duplicate_last_name} "
+                f"(Resident ID: {duplicate_identifier or 'unknown'}). "
+                f"Review the duplicate before deciding whether to use the existing resident or create a new one.",
+                "warning",
+            )
+
+            return redirect(
+                url_for("case_management.intake_duplicate_review", draft_id=saved_draft_id)
+            )
+
+        request_form_data = request.form.to_dict(flat=True)
+        request_form_data["review_passed"] = "1"
 
         saved_draft_id = _save_intake_draft(
             current_shelter=current_shelter,
-            form=request.form,
+            form=request_form_data,
             draft_id=draft_id,
-            status="pending_duplicate_review",
+            status="draft",
         )
 
-        if duplicate_identifier:
-            flash(
-                f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. "
-                f"Your intake was saved for review and no new resident was created.",
-                "warning",
-            )
-        else:
-            flash(
-                "Possible duplicate resident found. Your intake was saved for review and "
-                "no new resident was created.",
-                "warning",
-            )
+        flash("No duplicate found. You can now continue the full intake and assessment.", "success")
+        return redirect(url_for("case_management.intake_form", draft_id=saved_draft_id))
 
-        flash(
-            f"Possible match: {duplicate_first_name} {duplicate_last_name} "
-            f"(Resident ID: {duplicate_identifier or 'unknown'}). "
-            f"Review the duplicate before deciding whether to use the existing resident or create a new one.",
-            "warning",
-        )
-
-        return redirect(
-            url_for("case_management.intake_duplicate_review", draft_id=saved_draft_id)
+    if not review_passed:
+        flash("Submit the basic identity information for review before finalizing intake.", "error")
+        return render_template(
+            "case_management/intake_assessment.html",
+            **_intake_template_context(
+                current_shelter=current_shelter,
+                form_data=request.form.to_dict(flat=True),
+                review_passed=False,
+            ),
         )
 
     resident_id, resident_identifier, resident_code = _insert_resident(data, current_shelter)
