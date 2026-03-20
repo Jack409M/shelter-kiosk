@@ -53,7 +53,8 @@
   {% set exit_car_insurance = exit_assessment["car_insurance"] %}
   {% set exit_dental_needs_met = exit_assessment["dental_needs_met"] %}
   {% set exit_vision_needs_met = exit_assessment["vision_needs_met"] %}
-  {% set exit_obtained_insurance = exit_assessment["obtained_insurance"] %}
+  {% set exit_obtained_public_insurance = exit_assessment["obtained_public_insurance"] %}
+  {% set exit_private_insurance = exit_assessment["private_insurance"] %}
 {% elif exit_assessment %}
   {% set exit_date_graduated = exit_assessment[0] %}
   {% set exit_date_exit_dwc = exit_assessment[1] %}
@@ -67,7 +68,8 @@
   {% set exit_car_insurance = exit_assessment[9] %}
   {% set exit_dental_needs_met = exit_assessment[10] %}
   {% set exit_vision_needs_met = exit_assessment[11] %}
-  {% set exit_obtained_insurance = exit_assessment[12] %}
+  {% set exit_obtained_public_insurance = exit_assessment[12] %}
+  {% set exit_private_insurance = exit_assessment[13] %}
 {% else %}
   {% set exit_date_graduated = none %}
   {% set exit_date_exit_dwc = none %}
@@ -81,7 +83,8 @@
   {% set exit_car_insurance = none %}
   {% set exit_dental_needs_met = none %}
   {% set exit_vision_needs_met = none %}
-  {% set exit_obtained_insurance = none %}
+  {% set exit_obtained_public_insurance = none %}
+  {% set exit_private_insurance = none %}
 {% endif %}
 
 <h1>Case Management</h1>
@@ -167,9 +170,10 @@
         <strong>Education at Exit:</strong> {{ exit_education_at_exit or "—" }}<br>
         <strong>Received Car:</strong> {{ "Yes" if exit_received_car else "No" }}<br>
         <strong>Car Insurance:</strong> {{ "Yes" if exit_car_insurance else "No" }}<br>
+        <strong>Obtained Public Insurance:</strong> {{ "Yes" if exit_obtained_public_insurance else "No" }}<br>
+        <strong>Private Insurance:</strong> {{ "Yes" if exit_private_insurance else "No" }}<br>
         <strong>Dental Needs Met:</strong> {{ "Yes" if exit_dental_needs_met else "No" }}<br>
-        <strong>Vision Needs Met:</strong> {{ "Yes" if exit_vision_needs_met else "No" }}<br>
-        <strong>Obtained Insurance:</strong> {{ "Yes" if exit_obtained_insurance else "No" }}
+        <strong>Vision Needs Met:</strong> {{ "Yes" if exit_vision_needs_met else "No" }}
       </p>
     </div>
   {% endif %}
