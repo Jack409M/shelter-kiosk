@@ -1,3 +1,15 @@
+from __future__ import annotations
+
+from flask import flash, redirect, render_template, session, url_for
+
+from core.db import db_fetchall, db_fetchone
+from core.runtime import init_db
+from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import normalize_shelter_name
+from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import shelter_equals_sql
+
+
 def resident_case_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
