@@ -7,15 +7,15 @@ from flask import flash, redirect, render_template, request, session, url_for
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
-from routes.case_management import (
-    _case_manager_allowed,
-    _clean,
-    _normalize_shelter_name,
-    _parse_iso_date,
-    _parse_money,
-    _placeholder,
-    _shelter_equals_sql,
-    _yes_no_to_int,
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    clean,
+    normalize_shelter_name,
+    parse_iso_date,
+    parse_money,
+    placeholder,
+    shelter_equals_sql,
+    yes_no_to_int,
 )
 
 
@@ -28,7 +28,7 @@ def _row_value(row: Any, key: str, index: int):
 
 
 def _fetch_resident_and_enrollment(resident_id: int, shelter: str):
-    placeholder = _placeholder()
+    ph = placeholder()
 
     resident = db_fetchone(
         f"""
@@ -41,8 +41,8 @@ def _fetch_resident_and_enrollment(resident_id: int, shelter: str):
             shelter,
             is_active
         FROM residents
-        WHERE id = {placeholder}
-          AND {_shelter_equals_sql("shelter")}
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
         """,
         (resident_id, shelter),
     )
@@ -60,8 +60,8 @@ def _fetch_resident_and_enrollment(resident_id: int, shelter: str):
             exit_date,
             program_status
         FROM program_enrollments
-        WHERE resident_id = {placeholder}
-          AND {_shelter_equals_sql("shelter")}
+        WHERE resident_id = {ph}
+          AND {shelter_equals_sql("shelter")}
         ORDER BY id DESC
         LIMIT 1
         """,
@@ -72,7 +72,7 @@ def _fetch_resident_and_enrollment(resident_id: int, shelter: str):
 
 
 def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
-    placeholder = _placeholder()
+    ph = placeholder()
 
     row = db_fetchone(
         f"""
@@ -91,7 +91,7 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
             vision_needs_met,
             obtained_insurance
         FROM exit_assessments
-        WHERE enrollment_id = {placeholder}
+        WHERE enrollment_id = {ph}
         LIMIT 1
         """,
         (enrollment_id,),
@@ -119,29 +119,29 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
 
 def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, Any], list[str]]:
     data: dict[str, Any] = {
-        "date_graduated": _clean(form.get("date_graduated")),
-        "date_exit_dwc": _clean(form.get("date_exit_dwc")),
-        "exit_reason": _clean(form.get("exit_reason")),
-        "graduate_dwc": _clean(form.get("graduate_dwc")),
-        "leave_ama": _clean(form.get("leave_ama")),
-        "income_at_exit": _clean(form.get("income_at_exit")),
-        "education_at_exit": _clean(form.get("education_at_exit")),
-        "grit_at_exit": _clean(form.get("grit_at_exit")),
-        "received_car": _clean(form.get("received_car")),
-        "car_insurance": _clean(form.get("car_insurance")),
-        "dental_needs_met": _clean(form.get("dental_needs_met")),
-        "vision_needs_met": _clean(form.get("vision_needs_met")),
-        "obtained_insurance": _clean(form.get("obtained_insurance")),
+        "date_graduated": clean(form.get("date_graduated")),
+        "date_exit_dwc": clean(form.get("date_exit_dwc")),
+        "exit_reason": clean(form.get("exit_reason")),
+        "graduate_dwc": clean(form.get("graduate_dwc")),
+        "leave_ama": clean(form.get("leave_ama")),
+        "income_at_exit": clean(form.get("income_at_exit")),
+        "education_at_exit": clean(form.get("education_at_exit")),
+        "grit_at_exit": clean(form.get("grit_at_exit")),
+        "received_car": clean(form.get("received_car")),
+        "car_insurance": clean(form.get("car_insurance")),
+        "dental_needs_met": clean(form.get("dental_needs_met")),
+        "vision_needs_met": clean(form.get("vision_needs_met")),
+        "obtained_insurance": clean(form.get("obtained_insurance")),
     }
 
     errors: list[str] = []
 
-    exit_date = _parse_iso_date(data["date_exit_dwc"])
+    exit_date = parse_iso_date(data["date_exit_dwc"])
     if exit_date is None:
         errors.append("Date Exit DWC is required and must be a valid date.")
     data["date_exit_dwc"] = exit_date.isoformat() if exit_date else None
 
-    grad_date = _parse_iso_date(data["date_graduated"])
+    grad_date = parse_iso_date(data["date_graduated"])
     if data["date_graduated"] and grad_date is None:
         errors.append("Date Graduated must be a valid date.")
     data["date_graduated"] = grad_date.isoformat() if grad_date else None
@@ -149,12 +149,12 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
     if not data["exit_reason"]:
         errors.append("Reason for exit is required.")
 
-    income_at_exit = _parse_money(data["income_at_exit"])
+    income_at_exit = parse_money(data["income_at_exit"])
     if data["income_at_exit"] and income_at_exit is None:
         errors.append("Current income must be a valid number.")
     data["income_at_exit"] = income_at_exit
 
-    grit_at_exit = _parse_money(data["grit_at_exit"])
+    grit_at_exit = parse_money(data["grit_at_exit"])
     if data["grit_at_exit"] and grit_at_exit is None:
         errors.append("Grit at Exit must be a valid number.")
     data["grit_at_exit"] = grit_at_exit
@@ -183,7 +183,7 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
     if data["car_insurance"] == "yes" and data["received_car"] != "yes":
         errors.append("Car insurance cannot be Yes unless Received Car is Yes.")
 
-    entry_dt = _parse_iso_date(entry_date)
+    entry_dt = parse_iso_date(entry_date)
     if entry_dt and exit_date and exit_date < entry_dt:
         errors.append("Date Exit DWC cannot be earlier than the entry date.")
 
@@ -191,14 +191,14 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
 
 
 def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
-    placeholder = _placeholder()
+    ph = placeholder()
     now = utcnow_iso()
 
     existing = db_fetchone(
         f"""
         SELECT id
         FROM exit_assessments
-        WHERE enrollment_id = {placeholder}
+        WHERE enrollment_id = {ph}
         LIMIT 1
         """,
         (enrollment_id,),
@@ -208,36 +208,36 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
         db_execute(
             f"""
             UPDATE exit_assessments
-            SET date_graduated = {placeholder},
-                date_exit_dwc = {placeholder},
-                exit_reason = {placeholder},
-                graduate_dwc = {placeholder},
-                leave_ama = {placeholder},
-                income_at_exit = {placeholder},
-                education_at_exit = {placeholder},
-                grit_at_exit = {placeholder},
-                received_car = {placeholder},
-                car_insurance = {placeholder},
-                dental_needs_met = {placeholder},
-                vision_needs_met = {placeholder},
-                obtained_insurance = {placeholder},
-                updated_at = {placeholder}
-            WHERE enrollment_id = {placeholder}
+            SET date_graduated = {ph},
+                date_exit_dwc = {ph},
+                exit_reason = {ph},
+                graduate_dwc = {ph},
+                leave_ama = {ph},
+                income_at_exit = {ph},
+                education_at_exit = {ph},
+                grit_at_exit = {ph},
+                received_car = {ph},
+                car_insurance = {ph},
+                dental_needs_met = {ph},
+                vision_needs_met = {ph},
+                obtained_insurance = {ph},
+                updated_at = {ph}
+            WHERE enrollment_id = {ph}
             """,
             (
                 data["date_graduated"],
                 data["date_exit_dwc"],
                 data["exit_reason"],
-                _yes_no_to_int(data["graduate_dwc"]),
-                _yes_no_to_int(data["leave_ama"]),
+                yes_no_to_int(data["graduate_dwc"]),
+                yes_no_to_int(data["leave_ama"]),
                 data["income_at_exit"],
                 data["education_at_exit"],
                 data["grit_at_exit"],
-                _yes_no_to_int(data["received_car"]),
-                _yes_no_to_int(data["car_insurance"]),
-                _yes_no_to_int(data["dental_needs_met"]),
-                _yes_no_to_int(data["vision_needs_met"]),
-                _yes_no_to_int(data["obtained_insurance"]),
+                yes_no_to_int(data["received_car"]),
+                yes_no_to_int(data["car_insurance"]),
+                yes_no_to_int(data["dental_needs_met"]),
+                yes_no_to_int(data["vision_needs_met"]),
+                yes_no_to_int(data["obtained_insurance"]),
                 now,
                 enrollment_id,
             ),
@@ -267,22 +267,22 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
         )
         VALUES
         (
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder}
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            {ph}
         )
         """,
         (
@@ -290,16 +290,16 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             data["date_graduated"],
             data["date_exit_dwc"],
             data["exit_reason"],
-            _yes_no_to_int(data["graduate_dwc"]),
-            _yes_no_to_int(data["leave_ama"]),
+            yes_no_to_int(data["graduate_dwc"]),
+            yes_no_to_int(data["leave_ama"]),
             data["income_at_exit"],
             data["education_at_exit"],
             data["grit_at_exit"],
-            _yes_no_to_int(data["received_car"]),
-            _yes_no_to_int(data["car_insurance"]),
-            _yes_no_to_int(data["dental_needs_met"]),
-            _yes_no_to_int(data["vision_needs_met"]),
-            _yes_no_to_int(data["obtained_insurance"]),
+            yes_no_to_int(data["received_car"]),
+            yes_no_to_int(data["car_insurance"]),
+            yes_no_to_int(data["dental_needs_met"]),
+            yes_no_to_int(data["vision_needs_met"]),
+            yes_no_to_int(data["obtained_insurance"]),
             now,
             now,
         ),
@@ -307,7 +307,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
 
 
 def _close_enrollment_and_resident(enrollment_id: int, resident_id: int, data: dict[str, Any]) -> None:
-    placeholder = _placeholder()
+    ph = placeholder()
     now = utcnow_iso()
 
     if data["graduate_dwc"] == "yes":
@@ -320,10 +320,10 @@ def _close_enrollment_and_resident(enrollment_id: int, resident_id: int, data: d
     db_execute(
         f"""
         UPDATE program_enrollments
-        SET exit_date = {placeholder},
-            program_status = {placeholder},
-            updated_at = {placeholder}
-        WHERE id = {placeholder}
+        SET exit_date = {ph},
+            program_status = {ph},
+            updated_at = {ph}
+        WHERE id = {ph}
         """,
         (
             data["date_exit_dwc"],
@@ -336,8 +336,8 @@ def _close_enrollment_and_resident(enrollment_id: int, resident_id: int, data: d
     db_execute(
         f"""
         UPDATE residents
-        SET is_active = {placeholder}
-        WHERE id = {placeholder}
+        SET is_active = {ph}
+        WHERE id = {ph}
         """,
         (
             False,
@@ -347,13 +347,13 @@ def _close_enrollment_and_resident(enrollment_id: int, resident_id: int, data: d
 
 
 def exit_assessment_form_view(resident_id: int):
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    shelter = _normalize_shelter_name(session.get("shelter"))
+    shelter = normalize_shelter_name(session.get("shelter"))
     resident, enrollment = _fetch_resident_and_enrollment(resident_id, shelter)
 
     if not resident:
@@ -376,13 +376,13 @@ def exit_assessment_form_view(resident_id: int):
 
 
 def submit_exit_assessment_view(resident_id: int):
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
 
-    shelter = _normalize_shelter_name(session.get("shelter"))
+    shelter = normalize_shelter_name(session.get("shelter"))
     resident, enrollment = _fetch_resident_and_enrollment(resident_id, shelter)
 
     if not resident:
