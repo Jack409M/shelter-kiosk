@@ -28,6 +28,8 @@
     {% set emergency_contact_phone = resident["emergency_contact_phone"] if "emergency_contact_phone" in resident else "" %}
     {% set medical_alerts = resident["medical_alerts"] if "medical_alerts" in resident else "" %}
     {% set medical_notes = resident["medical_notes"] if "medical_notes" in resident else "" %}
+    {% set sobriety_date = resident["sobriety_date"] if "sobriety_date" in resident else "" %}
+    {% set days_sober_at_entry = resident["days_sober_at_entry"] if "days_sober_at_entry" in resident else "" %}
     {% set enrollment_id = resident["enrollment_id"] %}
     {% set enrollment_shelter = resident["enrollment_shelter"] %}
     {% set program_status = resident["program_status"] %}
@@ -48,6 +50,8 @@
     {% set emergency_contact_phone = resident[16] if resident|length > 16 else "" %}
     {% set medical_alerts = resident[17] if resident|length > 17 else "" %}
     {% set medical_notes = resident[18] if resident|length > 18 else "" %}
+    {% set sobriety_date = resident[19] if resident|length > 19 else "" %}
+    {% set days_sober_at_entry = resident[20] if resident|length > 20 else "" %}
     {% set enrollment_id = resident[5] %}
     {% set enrollment_shelter = resident[6] %}
     {% set program_status = resident[7] %}
@@ -182,6 +186,22 @@
             <div class="profile-meta-grid">
               <div><strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}</div>
               <div><strong>Enrollment Shelter:</strong> {{ enrollment_shelter | shelter if enrollment_shelter else "—" }}</div>
+              <div>
+                <strong>Sobriety Date:</strong>
+                {% if sobriety_date %}
+                  {{ sobriety_date }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+              <div>
+                <strong>Days Sober At Entry:</strong>
+                {% if days_sober_at_entry is not none and days_sober_at_entry != "" %}
+                  {{ days_sober_at_entry }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
               <div>
                 <strong>Exit Date:</strong>
                 {% if exit_date %}
