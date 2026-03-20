@@ -89,7 +89,8 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
             car_insurance,
             dental_needs_met,
             vision_needs_met,
-            obtained_insurance
+            obtained_public_insurance,
+            private_insurance
         FROM exit_assessments
         WHERE enrollment_id = {ph}
         LIMIT 1
@@ -113,7 +114,8 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
         "car_insurance": "yes" if int(_row_value(row, "car_insurance", 9) or 0) else "no",
         "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 10) or 0) else "no",
         "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 11) or 0) else "no",
-        "obtained_insurance": "yes" if int(_row_value(row, "obtained_insurance", 12) or 0) else "no",
+        "obtained_public_insurance": "yes" if int(_row_value(row, "obtained_public_insurance", 12) or 0) else "no",
+        "private_insurance": "yes" if int(_row_value(row, "private_insurance", 13) or 0) else "no",
     }
 
 
@@ -131,7 +133,8 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
         "car_insurance": clean(form.get("car_insurance")),
         "dental_needs_met": clean(form.get("dental_needs_met")),
         "vision_needs_met": clean(form.get("vision_needs_met")),
-        "obtained_insurance": clean(form.get("obtained_insurance")),
+        "obtained_public_insurance": clean(form.get("obtained_public_insurance")),
+        "private_insurance": clean(form.get("private_insurance")),
     }
 
     errors: list[str] = []
@@ -166,7 +169,8 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
         "car_insurance",
         "dental_needs_met",
         "vision_needs_met",
-        "obtained_insurance",
+        "obtained_public_insurance",
+        "private_insurance",
     ]
 
     for field_name in yes_no_fields:
@@ -220,7 +224,8 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 car_insurance = {ph},
                 dental_needs_met = {ph},
                 vision_needs_met = {ph},
-                obtained_insurance = {ph},
+                obtained_public_insurance = {ph},
+                private_insurance = {ph},
                 updated_at = {ph}
             WHERE enrollment_id = {ph}
             """,
@@ -237,7 +242,8 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 yes_no_to_int(data["car_insurance"]),
                 yes_no_to_int(data["dental_needs_met"]),
                 yes_no_to_int(data["vision_needs_met"]),
-                yes_no_to_int(data["obtained_insurance"]),
+                yes_no_to_int(data["obtained_public_insurance"]),
+                yes_no_to_int(data["private_insurance"]),
                 now,
                 enrollment_id,
             ),
@@ -261,12 +267,14 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             car_insurance,
             dental_needs_met,
             vision_needs_met,
-            obtained_insurance,
+            obtained_public_insurance,
+            private_insurance,
             created_at,
             updated_at
         )
         VALUES
         (
+            {ph},
             {ph},
             {ph},
             {ph},
@@ -299,7 +307,8 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             yes_no_to_int(data["car_insurance"]),
             yes_no_to_int(data["dental_needs_met"]),
             yes_no_to_int(data["vision_needs_met"]),
-            yes_no_to_int(data["obtained_insurance"]),
+            yes_no_to_int(data["obtained_public_insurance"]),
+            yes_no_to_int(data["private_insurance"]),
             now,
             now,
         ),
