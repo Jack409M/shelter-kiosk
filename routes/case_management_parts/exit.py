@@ -327,7 +327,7 @@ def _close_enrollment_and_resident(enrollment_id: int, resident_id: int, data: d
         WHERE id = {placeholder}
         """,
         (
-            0,
+            False,
             resident_id,
         ),
     )
