@@ -142,18 +142,21 @@
             <h3 class="resident-profile-card-title">Resident Controls</h3>
 
             <div class="profile-actions resident-profile-actions-top">
-              {% if resident_active %}
-                <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" class="resident-profile-inline-form">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="active" value="0">
-                  <button type="submit">Deactivate</button>
-                </form>
-              {% else %}
-                <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" class="resident-profile-inline-form">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="active" value="1">
-                  <button type="submit">Activate</button>
-                </form>
+
+              {% if session.get("role") == "admin" %}
+                {% if resident_active %}
+                  <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" class="resident-profile-inline-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="active" value="0">
+                    <button type="submit">Deactivate</button>
+                  </form>
+                {% else %}
+                  <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" class="resident-profile-inline-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="active" value="1">
+                    <button type="submit">Activate</button>
+                  </form>
+                {% endif %}
               {% endif %}
 
               <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id) }}">
@@ -169,6 +172,7 @@
                   View Exit Assessment
                 </a>
               {% endif %}
+
             </div>
           </div>
 
