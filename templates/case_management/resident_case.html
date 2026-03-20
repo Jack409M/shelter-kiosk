@@ -129,14 +129,14 @@
                 <td>{{ goal["goal_text"] or "—" }}</td>
                 <td>{{ goal["status"] or "—" }}</td>
                 <td>{{ goal["target_date"] or "—" }}</td>
-                <td>{{ goal["created_at"] or "—" }}</td>
+                <td>{{ goal["created_at"] | chi_dt if goal["created_at"] else "—" }}</td>
               </tr>
             {% else %}
               <tr>
                 <td>{{ goal[0] or "—" }}</td>
                 <td>{{ goal[1] or "—" }}</td>
                 <td>{{ goal[2] or "—" }}</td>
-                <td>{{ goal[3] or "—" }}</td>
+                <td>{{ goal[3] | chi_dt if goal[3] else "—" }}</td>
               </tr>
             {% endif %}
           {% endfor %}
@@ -238,7 +238,7 @@
             <strong>Notes:</strong> {{ note["notes"] or "—" }}<br>
             <strong>Progress:</strong> {{ note["progress_notes"] or "—" }}<br>
             <strong>Actions:</strong> {{ note["action_items"] or "—" }}<br>
-            <em>Created {{ note["created_at"] or "—" }}</em>
+            <em>Created {{ note["created_at"] | chi_dt if note["created_at"] else "—" }}</em>
           </div>
         {% else %}
           <div style="margin-bottom:20px;">
@@ -246,7 +246,7 @@
             <strong>Notes:</strong> {{ note[1] or "—" }}<br>
             <strong>Progress:</strong> {{ note[2] or "—" }}<br>
             <strong>Actions:</strong> {{ note[3] or "—" }}<br>
-            <em>Created {{ note[4] or "—" }}</em>
+            <em>Created {{ note[4] | chi_dt if note[4] else "—" }}</em>
           </div>
         {% endif %}
       {% endfor %}
