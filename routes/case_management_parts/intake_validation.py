@@ -117,10 +117,14 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     phone_digits = digits_only(data["phone"])
     if data["phone"] and len(phone_digits) < 10:
         errors.append("Phone must contain at least 10 digits.")
+    data["phone"] = phone_digits or None
 
     emergency_phone_digits = digits_only(data["emergency_contact_phone"])
     if data["emergency_contact_phone"] and len(emergency_phone_digits) < 10:
         errors.append("Emergency Contact Phone must contain at least 10 digits.")
+
+    if data["email"]:
+        data["email"] = data["email"].strip().lower()
 
     if data["last_zipcode_residence"]:
         zipcode_digits = digits_only(data["last_zipcode_residence"])
@@ -178,35 +182,13 @@ def _find_possible_duplicate(
 ) -> Any:
     ph = placeholder()
 
-    if email:
-        existing = db_fetchone(
-            f"""
-            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
-            FROM residents
-            WHERE {shelter_equals_sql("shelter")}
-              AND LOWER(COALESCE(email, '')) = LOWER({ph})
-            LIMIT 1
-            """,
-            (shelter, email),
-        )
-        if existing:
-            return existing
+    normalized_email = clean(email)
+    if normalized_email:
+        normalized_email = normalized_email.lower()
 
-    if phone:
-        existing = db_fetchone(
-            f"""
-            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
-            FROM residents
-            WHERE {shelter_equals_sql("shelter")}
-              AND COALESCE(phone, '') = {ph}
-            LIMIT 1
-            """,
-            (shelter, phone),
-        )
-        if existing:
-            return existing
+    normalized_phone = digits_only(phone)
 
-    if first_name and last_name and birth_year is not None:
+    if first_name and last_name and birth_year is not None and normalized_email:
         existing = db_fetchone(
             f"""
             SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
@@ -215,9 +197,55 @@ def _find_possible_duplicate(
               AND LOWER(COALESCE(first_name, '')) = LOWER({ph})
               AND LOWER(COALESCE(last_name, '')) = LOWER({ph})
               AND birth_year = {ph}
+              AND LOWER(COALESCE(email, '')) = LOWER({ph})
             LIMIT 1
             """,
-            (shelter, first_name, last_name, birth_year),
+            (shelter, first_name, last_name, birth_year, normalized_email),
+        )
+        if existing:
+            return existing
+
+    if first_name and last_name and birth_year is not None and normalized_phone:
+        existing = db_fetchone(
+            f"""
+            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
+            FROM residents
+            WHERE {shelter_equals_sql("shelter")}
+              AND LOWER(COALESCE(first_name, '')) = LOWER({ph})
+              AND LOWER(COALESCE(last_name, '')) = LOWER({ph})
+              AND birth_year = {ph}
+              AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(phone, ''), '-', ''), '(', ''), ')', ''), ' ', ''), '+', '') = {ph}
+            LIMIT 1
+            """,
+            (shelter, first_name, last_name, birth_year, normalized_phone),
+        )
+        if existing:
+            return existing
+
+    if normalized_email:
+        existing = db_fetchone(
+            f"""
+            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
+            FROM residents
+            WHERE {shelter_equals_sql("shelter")}
+              AND LOWER(COALESCE(email, '')) = LOWER({ph})
+            LIMIT 1
+            """,
+            (shelter, normalized_email),
+        )
+        if existing:
+            return existing
+
+    if normalized_phone:
+        existing = db_fetchone(
+            f"""
+            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
+            FROM residents
+            WHERE {shelter_equals_sql("shelter")}
+              AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(phone, ''), '-', ''), '(', ''), ')', ''), ' ', ''), '+', '') = {ph}
+            LIMIT 1
+            """,
+            (shelter, normalized_phone),
         )
         if existing:
             return existing
