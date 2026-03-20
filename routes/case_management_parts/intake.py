@@ -163,6 +163,17 @@ def submit_intake_assessment_view():
 
     data, errors = _validate_intake_form(request.form, current_shelter)
 
+    if errors:
+        for error in errors:
+            flash(error, "error")
+        return render_template(
+            "case_management/intake_assessment.html",
+            **_intake_template_context(
+                current_shelter=current_shelter,
+                form_data=request.form.to_dict(flat=True),
+            ),
+        )
+
     duplicate = _find_possible_duplicate(
         first_name=data["first_name"],
         last_name=data["last_name"],
@@ -176,27 +187,21 @@ def submit_intake_assessment_view():
     if duplicate:
         duplicate_id = duplicate["id"] if isinstance(duplicate, dict) else duplicate[0]
         duplicate_identifier = duplicate["resident_identifier"] if isinstance(duplicate, dict) else duplicate[6]
+
         if duplicate_identifier:
             flash(
-                f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. Review that profile before creating a new one.",
-                "error",
+                f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. Review that profile soon, but intake will continue.",
+                "warning",
             )
         else:
             flash(
-                "Possible duplicate resident found. Review the existing profile before creating a new one.",
-                "error",
+                "Possible duplicate resident found. Review the existing profile soon, but intake will continue.",
+                "warning",
             )
-        return redirect(url_for("case_management.resident_case", resident_id=duplicate_id))
 
-    if errors:
-        for error in errors:
-            flash(error, "error")
-        return render_template(
-            "case_management/intake_assessment.html",
-            **_intake_template_context(
-                current_shelter=current_shelter,
-                form_data=request.form.to_dict(flat=True),
-            ),
+        flash(
+            f"Possible match is resident record {duplicate_id}. Check that profile after intake completes.",
+            "warning",
         )
 
     resident_id, resident_identifier, resident_code = _insert_resident(data, current_shelter)
