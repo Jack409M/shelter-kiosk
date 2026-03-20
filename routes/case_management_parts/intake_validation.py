@@ -70,6 +70,7 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "probation_parole": clean(form.get("probation_parole")),
         "id_documents_status": clean(form.get("id_documents_status")),
         "barrier_notes": clean(form.get("barrier_notes")),
+        "days_sober_at_entry": None,
     }
 
     errors: list[str] = []
@@ -109,8 +110,9 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     if entry_date and entry_date > today:
         errors.append("Date Entered cannot be in the future.")
 
-    if sobriety_date and entry_date and sobriety_date > entry_date:
-        errors.append("Sobriety Date cannot be later than Date Entered.")
+    if sobriety_date and entry_date:
+        raw_days = (entry_date - sobriety_date).days
+        data["days_sober_at_entry"] = max(raw_days, 0)
 
     phone_digits = digits_only(data["phone"])
     if data["phone"] and len(phone_digits) < 10:
