@@ -236,7 +236,7 @@ def add_appointment_view(resident_id: int):
             appointment_type or None,
             appointment_date,
             notes or None,
-            False,
+            0,
             now,
             now,
         ),
