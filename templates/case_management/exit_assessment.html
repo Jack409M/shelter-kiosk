@@ -96,7 +96,7 @@
   </div>
 
   <div class="card">
-    <h2>Income and Education at Exit</h2>
+    <h2>Income, Education, and Grit at Exit</h2>
 
     <p>
       <label for="income_at_exit">Current Income</label><br>
@@ -117,6 +117,18 @@
         name="education_at_exit"
         type="text"
         value="{{ form_data.get('education_at_exit', '') }}"
+      >
+    </p>
+
+    <p>
+      <label for="grit_at_exit">Grit at Exit</label><br>
+      <input
+        id="grit_at_exit"
+        name="grit_at_exit"
+        type="number"
+        min="0"
+        step="0.01"
+        value="{{ form_data.get('grit_at_exit', '') }}"
       >
     </p>
   </div>
