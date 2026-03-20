@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-# Central timezone
+# ============================================================================
+# Timezone
+# ============================================================================
+
 CHI = ZoneInfo("America/Chicago")
 
 
-# ============================================================================
-# Core UTC → Chicago conversion
-# ============================================================================
-
-def _to_chi(dt: datetime | None) -> datetime | None:
+def _to_chi(dt: datetime | str | None) -> datetime | None:
     if not dt:
         return None
 
@@ -28,7 +28,7 @@ def _to_chi(dt: datetime | None) -> datetime | None:
 
 
 # ============================================================================
-# Public formatting helpers (USED EVERYWHERE)
+# Formatting (Chicago time everywhere)
 # ============================================================================
 
 def fmt_dt(value) -> str:
@@ -67,11 +67,15 @@ def fmt_pretty_date(value) -> str:
 
 
 # ============================================================================
-# Existing helpers (leave untouched behavior)
+# REQUIRED EXISTING FUNCTIONS (DO NOT REMOVE)
 # ============================================================================
 
 def utcnow_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def is_postgres() -> bool:
+    return bool((os.getenv("DATABASE_URL") or "").strip())
 
 
 def safe_url_for(endpoint: str, **values) -> str:
