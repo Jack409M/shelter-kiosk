@@ -84,6 +84,7 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
             leave_ama,
             income_at_exit,
             education_at_exit,
+            grit_at_exit,
             received_car,
             car_insurance,
             dental_needs_met,
@@ -107,11 +108,12 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
         "leave_ama": "yes" if int(_row_value(row, "leave_ama", 4) or 0) else "no",
         "income_at_exit": _row_value(row, "income_at_exit", 5) or "",
         "education_at_exit": _row_value(row, "education_at_exit", 6) or "",
-        "received_car": "yes" if int(_row_value(row, "received_car", 7) or 0) else "no",
-        "car_insurance": "yes" if int(_row_value(row, "car_insurance", 8) or 0) else "no",
-        "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 9) or 0) else "no",
-        "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 10) or 0) else "no",
-        "obtained_insurance": "yes" if int(_row_value(row, "obtained_insurance", 11) or 0) else "no",
+        "grit_at_exit": _row_value(row, "grit_at_exit", 7) or "",
+        "received_car": "yes" if int(_row_value(row, "received_car", 8) or 0) else "no",
+        "car_insurance": "yes" if int(_row_value(row, "car_insurance", 9) or 0) else "no",
+        "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 10) or 0) else "no",
+        "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 11) or 0) else "no",
+        "obtained_insurance": "yes" if int(_row_value(row, "obtained_insurance", 12) or 0) else "no",
     }
 
 
@@ -124,6 +126,7 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
         "leave_ama": _clean(form.get("leave_ama")),
         "income_at_exit": _clean(form.get("income_at_exit")),
         "education_at_exit": _clean(form.get("education_at_exit")),
+        "grit_at_exit": _clean(form.get("grit_at_exit")),
         "received_car": _clean(form.get("received_car")),
         "car_insurance": _clean(form.get("car_insurance")),
         "dental_needs_met": _clean(form.get("dental_needs_met")),
@@ -150,6 +153,11 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
     if data["income_at_exit"] and income_at_exit is None:
         errors.append("Current income must be a valid number.")
     data["income_at_exit"] = income_at_exit
+
+    grit_at_exit = _parse_money(data["grit_at_exit"])
+    if data["grit_at_exit"] and grit_at_exit is None:
+        errors.append("Grit at Exit must be a valid number.")
+    data["grit_at_exit"] = grit_at_exit
 
     yes_no_fields = [
         "graduate_dwc",
@@ -207,6 +215,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 leave_ama = {placeholder},
                 income_at_exit = {placeholder},
                 education_at_exit = {placeholder},
+                grit_at_exit = {placeholder},
                 received_car = {placeholder},
                 car_insurance = {placeholder},
                 dental_needs_met = {placeholder},
@@ -223,6 +232,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 _yes_no_to_int(data["leave_ama"]),
                 data["income_at_exit"],
                 data["education_at_exit"],
+                data["grit_at_exit"],
                 _yes_no_to_int(data["received_car"]),
                 _yes_no_to_int(data["car_insurance"]),
                 _yes_no_to_int(data["dental_needs_met"]),
@@ -246,6 +256,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             leave_ama,
             income_at_exit,
             education_at_exit,
+            grit_at_exit,
             received_car,
             car_insurance,
             dental_needs_met,
@@ -256,6 +267,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
         )
         VALUES
         (
+            {placeholder},
             {placeholder},
             {placeholder},
             {placeholder},
@@ -282,6 +294,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             _yes_no_to_int(data["leave_ama"]),
             data["income_at_exit"],
             data["education_at_exit"],
+            data["grit_at_exit"],
             _yes_no_to_int(data["received_car"]),
             _yes_no_to_int(data["car_insurance"]),
             _yes_no_to_int(data["dental_needs_met"]),
