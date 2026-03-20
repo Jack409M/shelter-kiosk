@@ -234,7 +234,9 @@ def submit_intake_assessment_view():
             "warning",
         )
 
-        return redirect(url_for("case_management.intake_form", draft_id=saved_draft_id))
+        return redirect(
+            url_for("case_management.intake_duplicate_review", draft_id=saved_draft_id)
+        )
 
     resident_id, resident_identifier, resident_code = _insert_resident(data, current_shelter)
     enrollment_id = _insert_program_enrollment(resident_id, data, current_shelter)
