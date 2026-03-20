@@ -134,7 +134,7 @@
   </div>
 
   <div class="card">
-    <h2>Transportation and Stability at Exit</h2>
+    <h2>Transportation and Insurance at Exit</h2>
 
     <p>
       <label for="received_car">Received Car</label><br>
@@ -155,11 +155,20 @@
     </p>
 
     <p>
-      <label for="obtained_insurance">Obtained Insurance</label><br>
-      <select id="obtained_insurance" name="obtained_insurance">
+      <label for="obtained_public_insurance">Obtained Public Insurance</label><br>
+      <select id="obtained_public_insurance" name="obtained_public_insurance">
         <option value="">Select</option>
-        <option value="yes" {% if form_data.get('obtained_insurance') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('obtained_insurance') == 'no' %}selected{% endif %}>No</option>
+        <option value="yes" {% if form_data.get('obtained_public_insurance') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('obtained_public_insurance') == 'no' %}selected{% endif %}>No</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="private_insurance">Private Insurance</label><br>
+      <select id="private_insurance" name="private_insurance">
+        <option value="">Select</option>
+        <option value="yes" {% if form_data.get('private_insurance') == 'yes' %}selected{% endif %}>Yes</option>
+        <option value="no" {% if form_data.get('private_insurance') == 'no' %}selected{% endif %}>No</option>
       </select>
     </p>
   </div>
