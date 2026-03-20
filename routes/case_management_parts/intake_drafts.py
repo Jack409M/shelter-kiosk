@@ -15,11 +15,16 @@ def _save_intake_draft(
     current_shelter: str,
     form: Any,
     draft_id: int | None = None,
+    status: str = "draft",
 ) -> int:
     ph = placeholder()
     resident_name = draft_display_name(form)
     entry_date = clean(form.get("entry_date"))
     payload = json.dumps(form.to_dict(flat=True), ensure_ascii=False)
+
+    allowed_statuses = {"draft", "pending_duplicate_review"}
+    if status not in allowed_statuses:
+        status = "draft"
 
     if g.get("db_kind") == "pg":
         if draft_id is not None:
@@ -29,13 +34,21 @@ def _save_intake_draft(
                 SET resident_name = {ph},
                     entry_date = {ph},
                     form_payload = {ph},
+                    status = {ph},
                     updated_at = NOW()
                 WHERE id = {ph}
-                  AND status = 'draft'
+                  AND status IN ('draft', 'pending_duplicate_review')
                   AND LOWER(COALESCE(shelter, '')) = {ph}
                 RETURNING id
                 """,
-                (resident_name, entry_date, payload, draft_id, current_shelter),
+                (
+                    resident_name,
+                    entry_date,
+                    payload,
+                    status,
+                    draft_id,
+                    current_shelter,
+                ),
             )
             if row:
                 return int(row["id"])
@@ -56,7 +69,7 @@ def _save_intake_draft(
             VALUES
             (
                 {ph},
-                'draft',
+                {ph},
                 {ph},
                 {ph},
                 {ph},
@@ -68,6 +81,7 @@ def _save_intake_draft(
             """,
             (
                 current_shelter,
+                status,
                 resident_name,
                 entry_date,
                 payload,
@@ -83,19 +97,27 @@ def _save_intake_draft(
             SET resident_name = {ph},
                 entry_date = {ph},
                 form_payload = {ph},
+                status = {ph},
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = {ph}
-              AND status = 'draft'
+              AND status IN ('draft', 'pending_duplicate_review')
               AND LOWER(COALESCE(shelter, '')) = {ph}
             """,
-            (resident_name, entry_date, payload, draft_id, current_shelter),
+            (
+                resident_name,
+                entry_date,
+                payload,
+                status,
+                draft_id,
+                current_shelter,
+            ),
         )
         existing = db_fetchone(
             f"""
             SELECT id
             FROM intake_drafts
             WHERE id = {ph}
-              AND status = 'draft'
+              AND status IN ('draft', 'pending_duplicate_review')
               AND LOWER(COALESCE(shelter, '')) = {ph}
             """,
             (draft_id, current_shelter),
@@ -119,7 +141,7 @@ def _save_intake_draft(
         VALUES
         (
             {ph},
-            'draft',
+            {ph},
             {ph},
             {ph},
             {ph},
@@ -130,6 +152,7 @@ def _save_intake_draft(
         """,
         (
             current_shelter,
+            status,
             resident_name,
             entry_date,
             payload,
@@ -149,10 +172,11 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
             id,
             resident_name,
             form_payload,
+            status,
             updated_at
         FROM intake_drafts
         WHERE id = {ph}
-          AND status = 'draft'
+          AND status IN ('draft', 'pending_duplicate_review')
           AND LOWER(COALESCE(shelter, '')) = {ph}
         """,
         (draft_id, current_shelter),
@@ -161,6 +185,7 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
         return None
 
     payload_raw = row["form_payload"] if isinstance(row, dict) else row[2]
+    draft_status = row["status"] if isinstance(row, dict) else row[3]
 
     try:
         payload = json.loads(payload_raw or "{}")
@@ -168,6 +193,7 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
         payload = {}
 
     payload["draft_id"] = str(row["id"] if isinstance(row, dict) else row[0])
+    payload["draft_status"] = draft_status or "draft"
     return payload
 
 
@@ -190,6 +216,32 @@ def _complete_intake_draft(draft_id: int) -> None:
         f"""
         UPDATE intake_drafts
         SET status = 'completed',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = {ph}
+        """,
+        (draft_id,),
+    )
+
+
+def _dismiss_intake_draft(draft_id: int) -> None:
+    ph = placeholder()
+
+    if g.get("db_kind") == "pg":
+        db_execute(
+            f"""
+            UPDATE intake_drafts
+            SET status = 'dismissed',
+                updated_at = NOW()
+            WHERE id = {ph}
+            """,
+            (draft_id,),
+        )
+        return
+
+    db_execute(
+        f"""
+        UPDATE intake_drafts
+        SET status = 'dismissed',
             updated_at = CURRENT_TIMESTAMP
         WHERE id = {ph}
         """,
