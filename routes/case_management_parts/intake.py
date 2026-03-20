@@ -101,6 +101,25 @@ def _intake_template_context(
     }
 
 
+def _duplicate_identity(duplicate: Any) -> tuple[str | None, str, str]:
+    duplicate_identifier = (
+        duplicate["resident_identifier"]
+        if isinstance(duplicate, dict)
+        else duplicate[6]
+    )
+    duplicate_first_name = (
+        duplicate["first_name"]
+        if isinstance(duplicate, dict)
+        else duplicate[2]
+    )
+    duplicate_last_name = (
+        duplicate["last_name"]
+        if isinstance(duplicate, dict)
+        else duplicate[3]
+    )
+    return duplicate_identifier, duplicate_first_name or "", duplicate_last_name or ""
+
+
 def intake_form_view():
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -156,6 +175,7 @@ def submit_intake_assessment_view():
             current_shelter=current_shelter,
             form=request.form,
             draft_id=draft_id,
+            status="draft",
         )
 
         flash("Intake draft saved.", "success")
@@ -185,26 +205,36 @@ def submit_intake_assessment_view():
     )
 
     if duplicate:
-        duplicate_identifier = duplicate["resident_identifier"] if isinstance(duplicate, dict) else duplicate[6]
-        duplicate_first_name = duplicate["first_name"] if isinstance(duplicate, dict) else duplicate[2]
-        duplicate_last_name = duplicate["last_name"] if isinstance(duplicate, dict) else duplicate[3]
+        duplicate_identifier, duplicate_first_name, duplicate_last_name = _duplicate_identity(duplicate)
+
+        saved_draft_id = _save_intake_draft(
+            current_shelter=current_shelter,
+            form=request.form,
+            draft_id=draft_id,
+            status="pending_duplicate_review",
+        )
 
         if duplicate_identifier:
             flash(
-                f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. Review that profile soon, but intake will continue.",
+                f"Possible duplicate resident found. Existing Resident ID: {duplicate_identifier}. "
+                f"Your intake was saved for review and no new resident was created.",
                 "warning",
             )
         else:
             flash(
-                "Possible duplicate resident found. Review the existing profile soon, but intake will continue.",
+                "Possible duplicate resident found. Your intake was saved for review and "
+                "no new resident was created.",
                 "warning",
             )
 
         flash(
             f"Possible match: {duplicate_first_name} {duplicate_last_name} "
-            f"(Resident ID: {duplicate_identifier or 'unknown'}). Review after intake.",
+            f"(Resident ID: {duplicate_identifier or 'unknown'}). "
+            f"Review the duplicate before deciding whether to use the existing resident or create a new one.",
             "warning",
         )
+
+        return redirect(url_for("case_management.intake_form", draft_id=saved_draft_id))
 
     resident_id, resident_identifier, resident_code = _insert_resident(data, current_shelter)
     enrollment_id = _insert_program_enrollment(resident_id, data, current_shelter)
