@@ -240,6 +240,30 @@ def _find_possible_duplicate(
         if existing:
             return existing
 
+    if normalized_first_name and normalized_last_name and birth_year is not None:
+        existing = db_fetchone(
+            f"""
+            SELECT
+                id,
+                first_name,
+                last_name,
+                birth_year,
+                phone,
+                email,
+                resident_identifier,
+                shelter
+            FROM residents
+            WHERE LOWER(COALESCE(first_name, '')) = LOWER({ph})
+              AND LOWER(COALESCE(last_name, '')) = LOWER({ph})
+              AND birth_year = {ph}
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (normalized_first_name, normalized_last_name, birth_year),
+        )
+        if existing:
+            return existing
+
     if normalized_email:
         existing = db_fetchone(
             f"""
