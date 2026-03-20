@@ -140,6 +140,17 @@ def _days_in_program(entry_date_value) -> str:
     return str(days)
 
 
+def _days_sober_today(sobriety_date_value):
+    sobriety_dt = _parse_dt(sobriety_date_value)
+    if not sobriety_dt:
+        return None
+
+    days = (datetime.utcnow().date() - sobriety_dt.date()).days
+    if days < 0:
+        days = 0
+    return days
+
+
 def _compliance_snapshot_text(compliance) -> str:
     submitted_at = _row_value(compliance, "submitted_at", 3)
 
@@ -769,7 +780,10 @@ def resident_profile(resident_id: int):
             notes=[],
             appointment=None,
             snapshot=None,
+            days_sober_today=None,
         )
+
+    days_sober_today = _days_sober_today(_row_value(resident, "sobriety_date", 19))
 
     return render_template(
         "resident_detail/profile.html",
@@ -779,6 +793,7 @@ def resident_profile(resident_id: int):
         notes=[],
         appointment=None,
         snapshot=None,
+        days_sober_today=days_sober_today,
     )
 
 
