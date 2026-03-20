@@ -58,16 +58,15 @@ def resident_case_view(resident_id: int):
     )
 
     enrollment_id = None
-    intake_assessment = None
-    exit_assessment = None
-    grit_difference = None
-
     if enrollment:
         enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
 
     goals = []
     appointments = []
     notes = []
+    intake_assessment = None
+    exit_assessment = None
+    grit_difference = None
 
     if enrollment_id:
         intake_assessment = db_fetchone(
@@ -109,14 +108,14 @@ def resident_case_view(resident_id: int):
 
         if intake_assessment:
             intake_grit = (
-                intake_assessment.get("grit_score")
+                intake_assessment["grit_score"]
                 if isinstance(intake_assessment, dict)
                 else intake_assessment[0]
             )
 
         if exit_assessment:
             exit_grit = (
-                exit_assessment.get("grit_at_exit")
+                exit_assessment["grit_at_exit"]
                 if isinstance(exit_assessment, dict)
                 else exit_assessment[7]
             )
