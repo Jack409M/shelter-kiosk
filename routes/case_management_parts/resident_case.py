@@ -95,7 +95,8 @@ def resident_case_view(resident_id: int):
                 car_insurance,
                 dental_needs_met,
                 vision_needs_met,
-                obtained_insurance
+                obtained_public_insurance,
+                private_insurance
             FROM exit_assessments
             WHERE enrollment_id = {ph}
             LIMIT 1
