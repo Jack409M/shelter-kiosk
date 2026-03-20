@@ -4,16 +4,16 @@ from flask import flash, redirect, request, session, url_for
 
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
-from routes.case_management import (
-    _case_manager_allowed,
-    _normalize_shelter_name,
-    _placeholder,
-    _shelter_equals_sql,
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    normalize_shelter_name,
+    placeholder,
+    shelter_equals_sql,
 )
 
 
 def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict[str, object]:
-    placeholder = _placeholder()
+    ph = placeholder()
 
     resident = db_fetchone(
         f"""
@@ -23,8 +23,8 @@ def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict
         FROM residents r
         LEFT JOIN program_enrollments pe
             ON pe.resident_id = r.id
-        WHERE r.id = {placeholder}
-          AND {_shelter_equals_sql("r.shelter")}
+        WHERE r.id = {ph}
+          AND {shelter_equals_sql("r.shelter")}
         ORDER BY pe.id DESC
         LIMIT 1
         """,
@@ -42,10 +42,10 @@ def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict
 
 
 def create_enrollment_view(resident_id: int):
-    shelter = _normalize_shelter_name(session.get("shelter"))
-    placeholder = _placeholder()
+    shelter = normalize_shelter_name(session.get("shelter"))
+    ph = placeholder()
 
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
@@ -55,8 +55,8 @@ def create_enrollment_view(resident_id: int):
             id,
             shelter
         FROM residents
-        WHERE id = {placeholder}
-          AND {_shelter_equals_sql("shelter")}
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
         """,
         (resident_id, shelter),
     )
@@ -67,11 +67,10 @@ def create_enrollment_view(resident_id: int):
 
     existing = db_fetchone(
         f"""
-        SELECT
-            id
+        SELECT id
         FROM program_enrollments
-        WHERE resident_id = {placeholder}
-          AND program_status = {placeholder}
+        WHERE resident_id = {ph}
+          AND program_status = {ph}
         ORDER BY id DESC
         LIMIT 1
         """,
@@ -105,14 +104,7 @@ def create_enrollment_view(resident_id: int):
         )
         VALUES
         (
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder}
+            {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
         )
         """,
         (
@@ -128,14 +120,14 @@ def create_enrollment_view(resident_id: int):
     )
 
     flash("Program enrollment started.", "ok")
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + "#start-enrollment")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
 def add_goal_view(resident_id: int):
-    shelter = _normalize_shelter_name(session.get("shelter"))
-    placeholder = _placeholder()
+    shelter = normalize_shelter_name(session.get("shelter"))
+    ph = placeholder()
 
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
@@ -148,14 +140,14 @@ def add_goal_view(resident_id: int):
         return redirect(url_for("residents.staff_residents"))
 
     if not enrollment_id:
-        flash("This resident does not have an active enrollment record yet.", "error")
+        flash("No active enrollment.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     goal_text = (request.form.get("goal_text") or "").strip()
     target_date = (request.form.get("target_date") or "").strip()
 
     if not goal_text:
-        flash("Goal text is required.", "error")
+        flash("Goal text required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -174,13 +166,7 @@ def add_goal_view(resident_id: int):
         )
         VALUES
         (
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder}
+            {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
         )
         """,
         (
@@ -195,14 +181,14 @@ def add_goal_view(resident_id: int):
     )
 
     flash("Goal added.", "ok")
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + "#add-goal")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
 def add_appointment_view(resident_id: int):
-    shelter = _normalize_shelter_name(session.get("shelter"))
-    placeholder = _placeholder()
+    shelter = normalize_shelter_name(session.get("shelter"))
+    ph = placeholder()
 
-    if not _case_manager_allowed():
+    if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
@@ -215,7 +201,7 @@ def add_appointment_view(resident_id: int):
         return redirect(url_for("residents.staff_residents"))
 
     if not enrollment_id:
-        flash("Resident does not have an active enrollment record yet.", "error")
+        flash("No active enrollment.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     appointment_date = (request.form.get("appointment_date") or "").strip()
@@ -223,7 +209,7 @@ def add_appointment_view(resident_id: int):
     notes = (request.form.get("notes") or "").strip()
 
     if not appointment_date:
-        flash("Appointment date is required.", "error")
+        flash("Appointment date required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -242,13 +228,7 @@ def add_appointment_view(resident_id: int):
         )
         VALUES
         (
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder},
-            {placeholder}
+            {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
         )
         """,
         (
@@ -263,4 +243,4 @@ def add_appointment_view(resident_id: int):
     )
 
     flash("Appointment scheduled.", "ok")
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + "#add-appointment")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
