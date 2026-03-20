@@ -277,7 +277,7 @@ def add_case_note(resident_id: int):
 # TEMPORARY TEST DATA WIPE ROUTE - START
 # ----------------------------------------------------------------------------
 # PURPOSE:
-# This temporary admin-only route wipes resident-related test data so intake
+# This temporary admin only route wipes resident related test data so intake
 # can be retested from a clean state during development.
 #
 # IMPORTANT:
@@ -285,6 +285,9 @@ def add_case_note(resident_id: int):
 # testing is complete. Do not leave this route in production long term.
 #
 # WHAT IT DELETES:
+# - weekly_resident_summary
+# - exit_assessments
+# - followups
 # - family_snapshots
 # - intake_assessments
 # - assessment_drafts
@@ -292,12 +295,15 @@ def add_case_note(resident_id: int):
 # - case_manager_updates
 # - appointments
 # - goals
+# - resident_form_submissions
+# - resident_transfers
+# - attendance_events
+# - resident_passes
 # - resident_children
 # - resident_substances
 # - program_enrollments
 # - residents
 # ============================================================================
-
 @case_management.route("/admin/wipe-test-residents", methods=["GET", "POST"])
 @require_login
 @require_shelter
@@ -309,20 +315,31 @@ def wipe_test_residents():
     init_db()
 
     try:
+        # Deepest child records first
+        db_execute("DELETE FROM weekly_resident_summary")
+        db_execute("DELETE FROM exit_assessments")
+        db_execute("DELETE FROM followups")
         db_execute("DELETE FROM family_snapshots")
         db_execute("DELETE FROM intake_assessments")
+        db_execute("DELETE FROM case_manager_updates")
+        db_execute("DELETE FROM goals")
+        db_execute("DELETE FROM appointments")
+        db_execute("DELETE FROM resident_form_submissions")
+
+        # Drafts and resident linked supporting records
         db_execute("DELETE FROM assessment_drafts")
         db_execute("DELETE FROM intake_drafts")
-        db_execute("DELETE FROM case_manager_updates")
-        db_execute("DELETE FROM appointments")
-        db_execute("DELETE FROM goals")
         db_execute("DELETE FROM resident_transfers")
+        db_execute("DELETE FROM attendance_events")
+        db_execute("DELETE FROM resident_passes")
         db_execute("DELETE FROM resident_children")
         db_execute("DELETE FROM resident_substances")
+
+        # Parent records last
         db_execute("DELETE FROM program_enrollments")
         db_execute("DELETE FROM residents")
 
-        flash("All resident-related test data was wiped.", "success")
+        flash("All residents and resident related data were wiped.", "success")
     except Exception as e:
         flash(f"Wipe failed: {e}", "error")
 
