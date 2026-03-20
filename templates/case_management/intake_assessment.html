@@ -333,36 +333,51 @@
 
           <section class="section-card">
             <div class="section-card-head">
-              <h2>Basic Information</h2>
-              <p>Core resident identity and contact details used to create the resident record.</p>
+              <h2>Match Check Information</h2>
+              <p>Date entered and the core identity fields used for duplicate review.</p>
             </div>
             <div class="section-card-body">
               <div class="field-grid">
-                <div class="field span-6">
+                <div class="field span-4">
+                  <label for="entry_date">Date Entered</label>
+                  <input id="entry_date" name="entry_date" type="date" value="{{ form_data.get('entry_date', '') }}">
+                </div>
+
+                <div class="field span-4">
                   <label for="first_name">First Name</label>
                   <input id="first_name" name="first_name" type="text" required value="{{ form_data.get('first_name', '') }}">
                 </div>
 
-                <div class="field span-6">
+                <div class="field span-4">
                   <label for="last_name">Last Name</label>
                   <input id="last_name" name="last_name" type="text" required value="{{ form_data.get('last_name', '') }}">
                 </div>
 
-                <div class="field span-3">
+                <div class="field span-4">
                   <label for="birth_year">Birth Year</label>
                   <input id="birth_year" name="birth_year" type="number" min="1900" max="2100" step="1" value="{{ form_data.get('birth_year', '') }}">
                 </div>
 
-                <div class="field span-3">
+                <div class="field span-4">
                   <label for="phone">Phone</label>
                   <input id="phone" name="phone" type="tel" value="{{ form_data.get('phone', '') }}">
                 </div>
 
-                <div class="field span-6">
+                <div class="field span-4">
                   <label for="email">Email</label>
                   <input id="email" name="email" type="email" value="{{ form_data.get('email', '') }}">
                 </div>
+              </div>
+            </div>
+          </section>
 
+          <section class="section-card">
+            <div class="section-card-head">
+              <h2>Basic Information</h2>
+              <p>Core resident information and immediate contact context for intake.</p>
+            </div>
+            <div class="section-card-body">
+              <div class="field-grid">
                 <div class="field span-4">
                   <label for="gender">Gender</label>
                   <select id="gender" name="gender">
@@ -379,6 +394,18 @@
                     <option value="">Select</option>
                     {% for option in yes_no_options %}
                       <option value="{{ option.value }}" {% if form_data.get('veteran', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <div class="field span-4">
+                  <label for="shelter">Program Shelter</label>
+                  <select id="shelter" name="shelter">
+                    {% set selected_shelter = form_data.get('shelter', current_shelter) %}
+                    {% for option in shelters %}
+                      <option value="{{ option.value }}" {% if option.value == selected_shelter %}selected{% endif %}>
+                        {{ option.label }}
+                      </option>
                     {% endfor %}
                   </select>
                 </div>
@@ -414,23 +441,6 @@
             <div class="section-card-body">
               <div class="field-grid">
                 <div class="field span-4">
-                  <label for="entry_date">Date Entered</label>
-                  <input id="entry_date" name="entry_date" type="date" value="{{ form_data.get('entry_date', '') }}">
-                </div>
-
-                <div class="field span-4">
-                  <label for="shelter">Program Shelter</label>
-                  <select id="shelter" name="shelter">
-                    {% set selected_shelter = form_data.get('shelter', current_shelter) %}
-                    {% for option in shelters %}
-                      <option value="{{ option.value }}" {% if option.value == selected_shelter %}selected{% endif %}>
-                        {{ option.label }}
-                      </option>
-                    {% endfor %}
-                  </select>
-                </div>
-
-                <div class="field span-4">
                   <label for="program_status">Program Status</label>
                   {% set selected_program_status = form_data.get('program_status', 'active') %}
                   <select id="program_status" name="program_status">
@@ -440,7 +450,7 @@
                   </select>
                 </div>
 
-                <div class="field span-6">
+                <div class="field span-4">
                   <label for="prior_living">Where Was She Staying Before Entry</label>
                   <select id="prior_living" name="prior_living">
                     <option value="">Select</option>
@@ -450,12 +460,12 @@
                   </select>
                 </div>
 
-                <div class="field span-3">
+                <div class="field span-4">
                   <label for="sobriety_date">Sobriety Date</label>
                   <input id="sobriety_date" name="sobriety_date" type="date" value="{{ form_data.get('sobriety_date', '') }}">
                 </div>
 
-                <div class="field span-3">
+                <div class="field span-4">
                   <label for="drug_of_choice">Drug of Choice</label>
                   <select id="drug_of_choice" name="drug_of_choice">
                     <option value="">Select</option>
