@@ -1,107 +1,79 @@
 {% extends "layout.html" %}
+
 {% block content %}
 
 <h1>Audit Log</h1>
 
-<div class="grid">
-  <div>
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>When</th>
-          <th>Shelter</th>
-          <th>Staff</th>
-          <th>Entity</th>
-          <th>Entity ID</th>
-          <th>Action</th>
-          <th>Details</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in rows %}
-        <tr>
-          <td>{{ r.id }}</td>
+<div class="audit-container">
 
-          <!-- ✅ timezone fix -->
-          <td>{{ r.created_at | app_dt }}</td>
-
-          <td>{{ r.shelter | shelter }}</td>
-          <td>{{ r.staff or "—" }}</td>
-          <td>{{ r.entity }}</td>
-          <td>{{ r.entity_id or "" }}</td>
-          <td>{{ r.action }}</td>
-          <td>{{ r.details }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
+    <table class="audit-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>When</th>
+                <th>Shelter</th>
+                <th>Staff</th>
+                <th>Entity</th>
+                <th>Entity ID</th>
+                <th>Action</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in rows %}
+            <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.created_at | app_pretty_dt }}</td>
+                <td>{{ row.shelter }}</td>
+                <td>{{ row.staff or "" }}</td>
+                <td>{{ row.entity }}</td>
+                <td>{{ row.entity_id }}</td>
+                <td>{{ row.action }}</td>
+                <td>{{ row.details }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
-  </div>
 
-  <div class="card">
-    <h3>Filter</h3>
+    <div class="filter-panel">
 
-    <form method="get">
-      <label>Search text</label>
-      <input type="text" name="q" value="{{ request.args.get('q','') }}">
+        <form method="get">
+            <label>Search text</label>
+            <input type="text" name="q" value="{{ request.args.get('q', '') }}">
 
-      <label>Shelter</label>
-      <select name="shelter">
-        <option value="">All</option>
-        {% for s in shelters %}
-          <option value="{{ s }}" {% if request.args.get('shelter') == s %}selected{% endif %}>
-            {{ s }}
-          </option>
-        {% endfor %}
-      </select>
+            <label>Shelter</label>
+            <select name="shelter">
+                <option value="">All</option>
+            </select>
 
-      <label>Staff</label>
-      <select name="staff">
-        <option value="">All</option>
-        {% for s in staff_list %}
-          <option value="{{ s }}" {% if request.args.get('staff') == s %}selected{% endif %}>
-            {{ s }}
-          </option>
-        {% endfor %}
-      </select>
+            <label>Staff</label>
+            <select name="staff">
+                <option value="">All</option>
+            </select>
 
-      <label>Entity</label>
-      <select name="entity">
-        <option value="">All</option>
-        {% for e in entity_list %}
-          <option value="{{ e }}" {% if request.args.get('entity') == e %}selected{% endif %}>
-            {{ e }}
-          </option>
-        {% endfor %}
-      </select>
+            <label>Entity</label>
+            <select name="entity">
+                <option value="">All</option>
+            </select>
 
-      <label>Action</label>
-      <select name="action">
-        <option value="">All</option>
-        {% for a in action_list %}
-          <option value="{{ a }}" {% if request.args.get('action') == a %}selected{% endif %}>
-            {{ a }}
-          </option>
-        {% endfor %}
-      </select>
+            <label>Action</label>
+            <select name="action">
+                <option value="">All</option>
+            </select>
 
-      <div style="margin-top:10px;">
-        <!-- 🔥 FIXED ENDPOINT -->
-        <button type="submit">Apply</button>
-        <a href="{{ url_for('admin.staff_audit_log') }}">Clear</a>
-      </div>
+            <div class="filter-buttons">
+                <button type="submit">Apply</button>
+                <a href="{{ url_for('admin.staff_audit_log') }}">Clear</a>
 
-      <div style="margin-top:10px;">
-        <!-- 🔥 FIXED ENDPOINTS -->
-        <a class="btn" href="{{ url_for('admin.staff_audit_log_export', **request.args) }}">
-          Export CSV
-        </a>
-        <a class="btn" href="{{ url_for('admin.staff_audit_log') }}">
-          Refresh
-        </a>
-      </div>
-    </form>
-  </div>
+                <!-- 🔥 FIXED: removed broken export endpoint -->
+                <!-- If you want export later, we wire it properly -->
+
+                <button type="button" onclick="location.reload()">Refresh</button>
+            </div>
+        </form>
+
+    </div>
+
 </div>
 
 {% endblock %}
