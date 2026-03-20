@@ -1,0 +1,500 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+<style>
+  .duplicate-review-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 16px 40px 16px;
+  }
+
+  .duplicate-review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .duplicate-review-header-copy h1 {
+    margin: 0 0 6px 0;
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .duplicate-review-header-copy p {
+    margin: 0;
+    color: #5f6b7a;
+    max-width: 900px;
+  }
+
+  .btn-soft,
+  .btn-primary,
+  .btn-danger {
+    appearance: none;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-soft {
+    background: #eef2f6;
+    color: #243447;
+  }
+
+  .btn-primary,
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:visited {
+    background: #1f5eff;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  .btn-danger,
+  .btn-danger:hover,
+  .btn-danger:focus,
+  .btn-danger:visited {
+    background: #c62828;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  .warning-card,
+  .review-card,
+  .action-card,
+  .section-card {
+    background: #ffffff;
+    border: 1px solid #d8e0ea;
+    border-radius: 14px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+
+  .warning-card {
+    padding: 14px 16px;
+    border-color: #f8d48b;
+    background: #fffaf0;
+    margin-bottom: 16px;
+  }
+
+  .warning-card h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    color: #8a5a00;
+  }
+
+  .warning-card p {
+    margin: 0;
+    color: #6f4b00;
+  }
+
+  .review-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .review-card {
+    overflow: hidden;
+  }
+
+  .review-card-head {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e6ebf1;
+    background: #fafbfd;
+  }
+
+  .review-card-head h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .review-card-head p {
+    margin: 0;
+    font-size: 13px;
+    color: #637083;
+  }
+
+  .review-card-body {
+    padding: 16px;
+    display: grid;
+    gap: 16px;
+  }
+
+  .section-card {
+    overflow: hidden;
+  }
+
+  .section-card-head {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e6ebf1;
+    background: #fafbfd;
+  }
+
+  .section-card-head h3 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.2;
+  }
+
+  .section-card-body {
+    padding: 14px;
+  }
+
+  .kv-grid {
+    display: grid;
+    grid-template-columns: minmax(150px, 180px) 1fr;
+    gap: 8px 12px;
+  }
+
+  .kv-key {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .kv-value {
+    font-size: 14px;
+    color: #13202c;
+    word-break: break-word;
+  }
+
+  .action-card {
+    padding: 16px;
+  }
+
+  .action-card h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+  }
+
+  .action-card p {
+    margin: 0 0 16px 0;
+    color: #5f6b7a;
+  }
+
+  .action-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .action-form {
+    margin: 0;
+  }
+
+  .action-button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .subnote {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  @media (max-width: 980px) {
+    .review-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .action-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .duplicate-review-header {
+      flex-direction: column;
+    }
+
+    .kv-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set pending_form_data = pending_form_data or {} %}
+
+{% if existing_resident is mapping %}
+  {% set existing_resident_id = existing_resident["id"] %}
+  {% set existing_resident_identifier = existing_resident["resident_identifier"] %}
+  {% set existing_first_name = existing_resident["first_name"] %}
+  {% set existing_last_name = existing_resident["last_name"] %}
+  {% set existing_birth_year = existing_resident["birth_year"] %}
+  {% set existing_phone = existing_resident["phone"] %}
+  {% set existing_email = existing_resident["email"] %}
+{% else %}
+  {% set existing_resident_id = existing_resident[0] %}
+  {% set existing_first_name = existing_resident[1] %}
+  {% set existing_last_name = existing_resident[2] %}
+  {% set existing_birth_year = existing_resident[3] %}
+  {% set existing_phone = existing_resident[4] %}
+  {% set existing_email = existing_resident[5] %}
+  {% set existing_resident_identifier = existing_resident[6] %}
+{% endif %}
+
+{% if existing_enrollment is mapping %}
+  {% set existing_entry_date = existing_enrollment["entry_date"] %}
+  {% set existing_exit_date = existing_enrollment["exit_date"] %}
+  {% set existing_program_status = existing_enrollment["program_status"] %}
+  {% set existing_enrollment_shelter = existing_enrollment["shelter"] %}
+{% elif existing_enrollment %}
+  {% set existing_entry_date = existing_enrollment[1] %}
+  {% set existing_exit_date = existing_enrollment[2] %}
+  {% set existing_program_status = existing_enrollment[3] %}
+  {% set existing_enrollment_shelter = existing_enrollment[4] %}
+{% else %}
+  {% set existing_entry_date = none %}
+  {% set existing_exit_date = none %}
+  {% set existing_program_status = none %}
+  {% set existing_enrollment_shelter = none %}
+{% endif %}
+
+<div class="duplicate-review-page">
+  <div class="duplicate-review-header">
+    <div class="duplicate-review-header-copy">
+      <h1>Possible Duplicate Review</h1>
+      <p>
+        Review the existing resident and the pending intake side by side before deciding whether to continue on the existing record or create a new resident.
+      </p>
+    </div>
+
+    <a class="btn-soft" href="{{ url_for('case_management.intake_form', draft_id=draft_id) }}">
+      Back to Pending Intake
+    </a>
+  </div>
+
+  <div class="warning-card">
+    <h2>Resident match needs review</h2>
+    <p>
+      No new resident has been created yet. This intake is being held in duplicate review until staff decides what to do next.
+    </p>
+  </div>
+
+  <div class="review-grid">
+    <div class="review-card">
+      <div class="review-card-head">
+        <h2>Existing Resident</h2>
+        <p>Current resident already in the system.</p>
+      </div>
+
+      <div class="review-card-body">
+        <section class="section-card">
+          <div class="section-card-head">
+            <h3>Match Fields</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="kv-grid">
+              <div class="kv-key">Resident ID</div>
+              <div class="kv-value">{{ existing_resident_identifier or "—" }}</div>
+
+              <div class="kv-key">First Name</div>
+              <div class="kv-value">{{ existing_first_name or "—" }}</div>
+
+              <div class="kv-key">Last Name</div>
+              <div class="kv-value">{{ existing_last_name or "—" }}</div>
+
+              <div class="kv-key">Birth Year</div>
+              <div class="kv-value">{{ existing_birth_year if existing_birth_year is not none else "—" }}</div>
+
+              <div class="kv-key">Phone</div>
+              <div class="kv-value">{{ existing_phone or "—" }}</div>
+
+              <div class="kv-key">Email</div>
+              <div class="kv-value">{{ existing_email or "—" }}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <h3>Program Snapshot</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="kv-grid">
+              <div class="kv-key">Shelter</div>
+              <div class="kv-value">{{ existing_enrollment_shelter | shelter if existing_enrollment_shelter else "—" }}</div>
+
+              <div class="kv-key">Program Status</div>
+              <div class="kv-value">{{ existing_program_status|replace("_", " ")|title if existing_program_status else "—" }}</div>
+
+              <div class="kv-key">Entry Date</div>
+              <div class="kv-value">{{ existing_entry_date or "—" }}</div>
+
+              <div class="kv-key">Exit Date</div>
+              <div class="kv-value">{{ existing_exit_date or "—" }}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <h3>Next Step</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="kv-grid">
+              <div class="kv-key">Open Existing Record</div>
+              <div class="kv-value">
+                <a class="btn-soft" href="{{ url_for('case_management.resident_case', resident_id=existing_resident_id) }}">
+                  View Existing Resident
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div class="review-card">
+      <div class="review-card-head">
+        <h2>Pending Intake</h2>
+        <p>New intake data waiting for a duplicate decision.</p>
+      </div>
+
+      <div class="review-card-body">
+        <section class="section-card">
+          <div class="section-card-head">
+            <h3>Match Fields</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="kv-grid">
+              <div class="kv-key">Date Entered</div>
+              <div class="kv-value">{{ pending_form_data.get("entry_date") or "—" }}</div>
+
+              <div class="kv-key">First Name</div>
+              <div class="kv-value">{{ pending_form_data.get("first_name") or "—" }}</div>
+
+              <div class="kv-key">Last Name</div>
+              <div class="kv-value">{{ pending_form_data.get("last_name") or "—" }}</div>
+
+              <div class="kv-key">Birth Year</div>
+              <div class="kv-value">{{ pending_form_data.get("birth_year") or "—" }}</div>
+
+              <div class="kv-key">Phone</div>
+              <div class="kv-value">{{ pending_form_data.get("phone") or "—" }}</div>
+
+              <div class="kv-key">Email</div>
+              <div class="kv-value">{{ pending_form_data.get("email") or "—" }}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <h3>Intake Snapshot</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="kv-grid">
+              <div class="kv-key">Shelter</div>
+              <div class="kv-value">{{ pending_form_data.get("shelter") | shelter if pending_form_data.get("shelter") else "—" }}</div>
+
+              <div class="kv-key">Gender</div>
+              <div class="kv-value">{{ pending_form_data.get("gender") or "—" }}</div>
+
+              <div class="kv-key">Veteran</div>
+              <div class="kv-value">{{ pending_form_data.get("veteran") or "—" }}</div>
+
+              <div class="kv-key">Prior Living</div>
+              <div class="kv-value">{{ pending_form_data.get("prior_living") or "—" }}</div>
+
+              <div class="kv-key">City</div>
+              <div class="kv-value">{{ pending_form_data.get("city") or "—" }}</div>
+
+              <div class="kv-key">Zipcode</div>
+              <div class="kv-value">{{ pending_form_data.get("last_zipcode_residence") or "—" }}</div>
+
+              <div class="kv-key">Sobriety Date</div>
+              <div class="kv-value">{{ pending_form_data.get("sobriety_date") or "—" }}</div>
+
+              <div class="kv-key">Income at Entry</div>
+              <div class="kv-value">{{ pending_form_data.get("income_at_entry") or "—" }}</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-card-head">
+            <h3>Assessment Snapshot</h3>
+          </div>
+          <div class="section-card-body">
+            <div class="kv-grid">
+              <div class="kv-key">ACE Score</div>
+              <div class="kv-value">{{ pending_form_data.get("ace_score") or "—" }}</div>
+
+              <div class="kv-key">Grit Score</div>
+              <div class="kv-value">{{ pending_form_data.get("grit_score") or "—" }}</div>
+
+              <div class="kv-key">Disability</div>
+              <div class="kv-value">{{ pending_form_data.get("disability") or "—" }}</div>
+
+              <div class="kv-key">Mental Health Need</div>
+              <div class="kv-value">{{ pending_form_data.get("mental_health_need") or "—" }}</div>
+
+              <div class="kv-key">Medical Need</div>
+              <div class="kv-value">{{ pending_form_data.get("medical_need") or "—" }}</div>
+
+              <div class="kv-key">Substance Use Need</div>
+              <div class="kv-value">{{ pending_form_data.get("substance_use_need") or "—" }}</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-card">
+    <h2>Choose What To Do</h2>
+    <p>
+      Pick one action below. This pending intake will stay unresolved until staff makes a decision.
+    </p>
+
+    <div class="action-grid">
+      <form class="action-form" method="post" action="{{ url_for('case_management.intake_duplicate_use_existing', draft_id=draft_id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-primary action-button" type="submit">
+          Continue Record on Existing Resident
+        </button>
+      </form>
+
+      <form class="action-form" method="post" action="{{ url_for('case_management.intake_duplicate_create_new', draft_id=draft_id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-soft action-button" type="submit">
+          Continue Entering Information as New Resident
+        </button>
+      </form>
+
+      <form class="action-form" method="post" action="{{ url_for('case_management.intake_duplicate_return_to_edit', draft_id=draft_id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-soft action-button" type="submit">
+          Return to Edit Intake
+        </button>
+      </form>
+
+      <form class="action-form" method="post" action="{{ url_for('case_management.intake_duplicate_dismiss', draft_id=draft_id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-danger action-button" type="submit">
+          Delete Current Pending Entry
+        </button>
+      </form>
+    </div>
+
+    <div class="subnote">
+      Continue Record on Existing Resident does not create a new resident.
+      Continue Entering Information as New Resident creates a new resident from the pending intake.
+      Return to Edit Intake keeps the pending intake open for changes.
+      Delete Current Pending Entry dismisses the pending intake with no resident created.
+    </div>
+  </div>
+</div>
+{% endblock %}
