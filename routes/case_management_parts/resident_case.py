@@ -58,6 +58,10 @@ def resident_case_view(resident_id: int):
     )
 
     enrollment_id = None
+    intake_assessment = None
+    exit_assessment = None
+    grit_difference = None
+
     if enrollment:
         enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
 
@@ -66,6 +70,60 @@ def resident_case_view(resident_id: int):
     notes = []
 
     if enrollment_id:
+        intake_assessment = db_fetchone(
+            f"""
+            SELECT
+                grit_score
+            FROM intake_assessments
+            WHERE enrollment_id = {ph}
+            LIMIT 1
+            """,
+            (enrollment_id,),
+        )
+
+        exit_assessment = db_fetchone(
+            f"""
+            SELECT
+                date_graduated,
+                date_exit_dwc,
+                exit_reason,
+                graduate_dwc,
+                leave_ama,
+                income_at_exit,
+                education_at_exit,
+                grit_at_exit,
+                received_car,
+                car_insurance,
+                dental_needs_met,
+                vision_needs_met,
+                obtained_insurance
+            FROM exit_assessments
+            WHERE enrollment_id = {ph}
+            LIMIT 1
+            """,
+            (enrollment_id,),
+        )
+
+        intake_grit = None
+        exit_grit = None
+
+        if intake_assessment:
+            intake_grit = (
+                intake_assessment.get("grit_score")
+                if isinstance(intake_assessment, dict)
+                else intake_assessment[0]
+            )
+
+        if exit_assessment:
+            exit_grit = (
+                exit_assessment.get("grit_at_exit")
+                if isinstance(exit_assessment, dict)
+                else exit_assessment[7]
+            )
+
+        if intake_grit is not None and exit_grit is not None:
+            grit_difference = exit_grit - intake_grit
+
         goals = db_fetchall(
             f"""
             SELECT
@@ -113,6 +171,9 @@ def resident_case_view(resident_id: int):
         resident=resident,
         enrollment=enrollment,
         enrollment_id=enrollment_id,
+        intake_assessment=intake_assessment,
+        exit_assessment=exit_assessment,
+        grit_difference=grit_difference,
         goals=goals,
         appointments=appointments,
         notes=notes,
