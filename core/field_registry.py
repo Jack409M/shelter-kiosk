@@ -121,7 +121,7 @@ FIELDS: List[FieldDefinition] = [
         table="intake_assessments",
         column="days_sober_at_entry",
         used_in_stats=False,
-        notes="Schema exists but current intake insert does not populate it.",
+        notes="Derived at intake from sobriety_date and stored in intake_assessments.",
     ),
     FieldDefinition(
         key="days_sober_today",
