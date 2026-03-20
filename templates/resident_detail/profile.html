@@ -203,6 +203,14 @@
                 {% endif %}
               </div>
               <div>
+                <strong>Days Sober Today:</strong>
+                {% if days_sober_today is not none %}
+                  {{ days_sober_today }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+              <div>
                 <strong>Exit Date:</strong>
                 {% if exit_date %}
                   {{ exit_date }}
