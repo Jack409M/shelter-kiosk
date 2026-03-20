@@ -181,17 +181,28 @@ def _configure_app(app: Flask) -> None:
 # Template Helpers and Filters
 # ----------------------------------------------------------------------------
 # Makes utility functions available directly in Jinja templates.
+# Note:
+# fmt_date / fmt_dt / fmt_pretty_* already convert UTC timestamps into the app
+# timezone, which is Chicago in core.helpers.
 # ============================================================================
 
 def _register_template_helpers(app: Flask) -> None:
     app.jinja_env.globals["safe_url_for"] = safe_url_for
     app.jinja_env.globals["shelter_display"] = shelter_display
     app.jinja_env.filters["shelter"] = shelter_display
+
     app.jinja_env.filters["app_date"] = fmt_date
     app.jinja_env.filters["app_dt"] = fmt_dt
     app.jinja_env.filters["app_time"] = fmt_time_only
     app.jinja_env.filters["app_pretty_date"] = fmt_pretty_date
     app.jinja_env.filters["app_pretty_dt"] = fmt_pretty_dt
+
+    # Clear aliases for staff-facing timestamp display.
+    app.jinja_env.filters["chi_date"] = fmt_date
+    app.jinja_env.filters["chi_dt"] = fmt_dt
+    app.jinja_env.filters["chi_time"] = fmt_time_only
+    app.jinja_env.filters["chi_pretty_date"] = fmt_pretty_date
+    app.jinja_env.filters["chi_pretty_dt"] = fmt_pretty_dt
 
 
 # ============================================================================
