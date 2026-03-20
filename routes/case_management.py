@@ -19,6 +19,8 @@ from __future__ import annotations
 #   resident, enrollment, intake assessment, and family snapshot inserts
 # - routes.case_management_parts.intake
 #   intake form flow shell
+# - routes.case_management_parts.intake_duplicates
+#   duplicate review flow for pending intake records
 # - routes.case_management_parts.resident_case
 #   resident summary page and related reads
 # - routes.case_management_parts.index
@@ -64,6 +66,11 @@ from routes.case_management_parts.index import index_view
 from routes.case_management_parts.index import intake_index_view
 from routes.case_management_parts.intake import intake_form_view
 from routes.case_management_parts.intake import submit_intake_assessment_view
+from routes.case_management_parts.intake_duplicates import duplicate_review_create_new_view
+from routes.case_management_parts.intake_duplicates import duplicate_review_dismiss_view
+from routes.case_management_parts.intake_duplicates import duplicate_review_return_to_edit_view
+from routes.case_management_parts.intake_duplicates import duplicate_review_use_existing_view
+from routes.case_management_parts.intake_duplicates import duplicate_review_view
 from routes.case_management_parts.resident_case import resident_case_view
 from routes.case_management_parts.update import add_case_note_view
 
@@ -163,6 +170,47 @@ def intake_form():
 @require_shelter
 def submit_intake_assessment():
     return submit_intake_assessment_view()
+
+
+# ============================================================================
+# Intake Duplicate Review Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.intake_duplicates
+# ============================================================================
+
+@case_management.get("/intake-assessment/duplicate-review/<int:draft_id>")
+@require_login
+@require_shelter
+def intake_duplicate_review(draft_id: int):
+    return duplicate_review_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/use-existing")
+@require_login
+@require_shelter
+def intake_duplicate_use_existing(draft_id: int):
+    return duplicate_review_use_existing_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/create-new")
+@require_login
+@require_shelter
+def intake_duplicate_create_new(draft_id: int):
+    return duplicate_review_create_new_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/dismiss")
+@require_login
+@require_shelter
+def intake_duplicate_dismiss(draft_id: int):
+    return duplicate_review_dismiss_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/return-to-edit")
+@require_login
+@require_shelter
+def intake_duplicate_return_to_edit(draft_id: int):
+    return duplicate_review_return_to_edit_view(draft_id)
 
 
 # ============================================================================
