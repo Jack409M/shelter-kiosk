@@ -1,126 +1,11 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>{{ title or "Audit Log" }}</h1>
 
-<style>
-  .audit-layout {
-    display: grid;
-    grid-template-columns: 3fr 1fr;
-    gap: 16px;
-    align-items: start;
-  }
+<h1>Audit Log</h1>
 
-  .audit-results {
-    overflow-x: auto;
-  }
-
-  .audit-filters {
-    position: sticky;
-    top: 12px;
-  }
-
-  table.compact {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  table.compact th,
-  table.compact td {
-    padding: 6px 8px;
-    font-size: 12px;
-    line-height: 1.2;
-    border: 1px solid #999;
-    vertical-align: top;
-  }
-
-  table.compact td.details {
-    white-space: normal;
-    word-break: break-word;
-    max-width: 520px;
-  }
-
-  .filter-card {
-    background: var(--card, #e4f0f8);
-    border: 1px solid #000;
-    border-radius: var(--radius, 8px);
-    padding: 12px;
-  }
-
-  .filter-card h3 {
-    margin: 0 0 10px 0;
-    font-size: 16px;
-  }
-
-  .filter-row {
-    margin-bottom: 10px;
-  }
-
-  .filter-row label {
-    display: block;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-
-  .filter-row input,
-  .filter-row select {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
-  }
-
-  .filter-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 12px;
-  }
-
-  .filter-actions a,
-  .filter-actions button {
-    width: 100%;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    padding: 10px 12px;
-    border: 1px solid #333;
-    border-radius: var(--radius, 8px);
-    background: #fff;
-    color: #111;
-    cursor: pointer;
-    box-sizing: border-box;
-  }
-
-  .small-note {
-    margin-top: 10px;
-    font-size: 12px;
-    color: var(--text-muted, #4a5a66);
-  }
-
-  @media (max-width: 900px) {
-    .audit-layout {
-      grid-template-columns: 1fr;
-    }
-
-    .audit-filters {
-      position: static;
-    }
-
-    table.compact td.details {
-      max-width: none;
-    }
-  }
-</style>
-
-{% set q_val = request.args.get('q', '') %}
-{% set shelter_val = request.args.get('shelter', '') %}
-{% set staff_user_id_val = request.args.get('staff_user_id', '') %}
-{% set entity_type_val = request.args.get('entity_type', '') %}
-{% set action_type_val = request.args.get('action_type', '') %}
-
-<div class="audit-layout">
-
-  <div class="audit-results">
-    <table class="compact">
+<div class="grid">
+  <div>
+    <table>
       <thead>
         <tr>
           <th>ID</th>
@@ -134,122 +19,87 @@
         </tr>
       </thead>
       <tbody>
-        {% if rows %}
-          {% for r in rows %}
-            <tr>
-              <td>{{ r.id }}</td>
-              <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
-              <td>{{ r.shelter | shelter if r.shelter else "" }}</td>
-              <td>{{ r.staff_username or "" }}</td>
-              <td>{{ r.entity_type or "" }}</td>
-              <td>{{ r.entity_id or "" }}</td>
-              <td>{{ r.action_type or "" }}</td>
-              <td class="details">{{ r.action_details or "" }}</td>
-            </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="8">No matching audit events.</td>
-          </tr>
-        {% endif %}
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.id }}</td>
+
+          <!-- 🔥 FIX IS RIGHT HERE -->
+          <td>{{ r.created_at | app_dt }}</td>
+
+          <td>{{ r.shelter | shelter }}</td>
+          <td>{{ r.staff or "—" }}</td>
+          <td>{{ r.entity }}</td>
+          <td>{{ r.entity_id or "" }}</td>
+          <td>{{ r.action }}</td>
+          <td>{{ r.details }}</td>
+        </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <aside class="audit-filters">
-    <div class="filter-card">
-      <h3>Filter</h3>
+  <div class="card">
+    <h3>Filter</h3>
 
-      <form method="get" action="{{ url_for('admin.staff_audit_log') }}">
+    <form method="get">
+      <label>Search text</label>
+      <input type="text" name="q" value="{{ request.args.get('q','') }}">
 
-        <div class="filter-row">
-          <label for="q">Search text</label>
-          <input id="q" name="q" type="text" value="{{ q_val }}" placeholder="Name, action, details">
-        </div>
+      <label>Shelter</label>
+      <select name="shelter">
+        <option value="">All</option>
+        {% for s in shelters %}
+          <option value="{{ s }}" {% if request.args.get('shelter') == s %}selected{% endif %}>
+            {{ s }}
+          </option>
+        {% endfor %}
+      </select>
 
-        <div class="filter-row">
-          <label for="shelter">Shelter</label>
-          <select id="shelter" name="shelter">
-            <option value="">All</option>
-            {% for s in all_shelters %}
-              <option value="{{ s }}" {% if shelter_val == s %}selected{% endif %}>{{ s | shelter }}</option>
-            {% endfor %}
-          </select>
-        </div>
+      <label>Staff</label>
+      <select name="staff">
+        <option value="">All</option>
+        {% for s in staff_list %}
+          <option value="{{ s }}" {% if request.args.get('staff') == s %}selected{% endif %}>
+            {{ s }}
+          </option>
+        {% endfor %}
+      </select>
 
-        <div class="filter-row">
-          <label for="staff_user_id">Staff</label>
-          <select id="staff_user_id" name="staff_user_id">
-            <option value="">All</option>
-            {% set seen = namespace(ids=[]) %}
-            {% for r in rows %}
-              {% if r.staff_user_id and (r.staff_user_id not in seen.ids) %}
-                {% set _ = seen.ids.append(r.staff_user_id) %}
-              {% endif %}
-            {% endfor %}
-            {% for sid in seen.ids %}
-              {% set display = namespace(value="") %}
-              {% for r in rows %}
-                {% if r.staff_user_id == sid and not display.value %}
-                  {% set display.value = r.staff_username or ("User " ~ sid) %}
-                {% endif %}
-              {% endfor %}
-              <option value="{{ sid }}" {% if staff_user_id_val == (sid|string) %}selected{% endif %}>
-                {{ display.value }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
+      <label>Entity</label>
+      <select name="entity">
+        <option value="">All</option>
+        {% for e in entity_list %}
+          <option value="{{ e }}" {% if request.args.get('entity') == e %}selected{% endif %}>
+            {{ e }}
+          </option>
+        {% endfor %}
+      </select>
 
-        <div class="filter-row">
-          <label for="entity_type">Entity</label>
-          <select id="entity_type" name="entity_type">
-            <option value="">All</option>
-            {% set entities = namespace(vals=[]) %}
-            {% for r in rows %}
-              {% if r.entity_type and (r.entity_type not in entities.vals) %}
-                {% set _ = entities.vals.append(r.entity_type) %}
-              {% endif %}
-            {% endfor %}
-            {% for v in entities.vals|sort %}
-              <option value="{{ v }}" {% if entity_type_val == v %}selected{% endif %}>{{ v }}</option>
-            {% endfor %}
-          </select>
-        </div>
+      <label>Action</label>
+      <select name="action">
+        <option value="">All</option>
+        {% for a in action_list %}
+          <option value="{{ a }}" {% if request.args.get('action') == a %}selected{% endif %}>
+            {{ a }}
+          </option>
+        {% endfor %}
+      </select>
 
-        <div class="filter-row">
-          <label for="action_type">Action</label>
-          <select id="action_type" name="action_type">
-            <option value="">All</option>
-            {% set actions = namespace(vals=[]) %}
-            {% for r in rows %}
-              {% if r.action_type and (r.action_type not in actions.vals) %}
-                {% set _ = actions.vals.append(r.action_type) %}
-              {% endif %}
-            {% endfor %}
-            {% for v in actions.vals|sort %}
-              <option value="{{ v }}" {% if action_type_val == v %}selected{% endif %}>{{ v }}</option>
-            {% endfor %}
-          </select>
-        </div>
+      <div style="margin-top:10px;">
+        <button type="submit">Apply</button>
+        <a href="{{ url_for('staff_admin.audit_log') }}">Clear</a>
+      </div>
 
-        <div class="filter-actions">
-          <button type="submit">Apply</button>
-          <a href="{{ url_for('admin.staff_audit_log') }}">Clear</a>
-        </div>
-
-        <div class="filter-actions" style="margin-top:10px;">
-          <a href="{{ url_for('admin.staff_audit_log_csv', **request.args) }}">Export CSV</a>
-          <a href="#" onclick="window.location.reload(); return false;">Refresh</a>
-        </div>
-
-        <div class="small-note">
-          Filters run on the server and affect export.
-        </div>
-
-      </form>
-    </div>
-  </aside>
-
+      <div style="margin-top:10px;">
+        <a class="btn" href="{{ url_for('staff_admin.audit_log_export', **request.args) }}">
+          Export CSV
+        </a>
+        <a class="btn" href="{{ url_for('staff_admin.audit_log') }}">
+          Refresh
+        </a>
+      </div>
+    </form>
+  </div>
 </div>
+
 {% endblock %}
