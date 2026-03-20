@@ -253,12 +253,12 @@ def submit_intake_assessment_view():
                 url_for("case_management.intake_duplicate_review", draft_id=saved_draft_id)
             )
 
-        request_form_data = request.form.to_dict(flat=True)
-        request_form_data["review_passed"] = "1"
+        review_form = request.form.copy()
+        review_form["review_passed"] = "1"
 
         saved_draft_id = _save_intake_draft(
             current_shelter=current_shelter,
-            form=request_form_data,
+            form=review_form,
             draft_id=draft_id,
             status="draft",
         )
