@@ -679,7 +679,7 @@ FIELDS: List[FieldDefinition] = [
         label="Grit difference",
         lifecycle_stage="derived",
         wiring_status="derived",
-        notes="Derived from grit_score_at_entry and grit_at_exit once exit grit exists.",
+        notes="Derived from grit_score_at_entry and grit_at_exit, and displayed on the resident case page when both values exist.",
     ),
     FieldDefinition(
         key="leave_ama_upon_exit",
