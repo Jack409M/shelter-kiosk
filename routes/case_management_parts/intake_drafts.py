@@ -11,6 +11,16 @@ from routes.case_management_parts.helpers import draft_display_name
 from routes.case_management_parts.helpers import placeholder
 
 
+def _coerce_form_dict(form: Any) -> dict[str, Any]:
+    if form is None:
+        return {}
+
+    if hasattr(form, "to_dict"):
+        return dict(form.to_dict(flat=True))
+
+    return dict(form)
+
+
 def _save_intake_draft(
     current_shelter: str,
     form: Any,
@@ -18,9 +28,10 @@ def _save_intake_draft(
     status: str = "draft",
 ) -> int:
     ph = placeholder()
-    resident_name = draft_display_name(form)
-    entry_date = clean(form.get("entry_date"))
-    payload = json.dumps(form.to_dict(flat=True), ensure_ascii=False)
+    form_dict = _coerce_form_dict(form)
+    resident_name = draft_display_name(form_dict)
+    entry_date = clean(form_dict.get("entry_date"))
+    payload = json.dumps(form_dict, ensure_ascii=False)
 
     allowed_statuses = {"draft", "pending_duplicate_review"}
     if status not in allowed_statuses:
