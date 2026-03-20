@@ -159,6 +159,16 @@
               <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id) }}">
                 Transfer Shelter
               </a>
+
+              {% if resident_active and enrollment_id and not exit_date %}
+                <a class="btn" href="{{ url_for('case_management_exit.exit_assessment_form', resident_id=resident_id) }}">
+                  Exit Resident
+                </a>
+              {% elif enrollment_id and exit_date %}
+                <a class="btn" href="{{ url_for('case_management_exit.exit_assessment_form', resident_id=resident_id) }}">
+                  View Exit Assessment
+                </a>
+              {% endif %}
             </div>
           </div>
 
