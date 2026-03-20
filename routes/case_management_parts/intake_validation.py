@@ -182,42 +182,60 @@ def _find_possible_duplicate(
 ) -> Any:
     ph = placeholder()
 
+    normalized_first_name = clean(first_name)
+    normalized_last_name = clean(last_name)
     normalized_email = clean(email)
+    normalized_phone = digits_only(phone)
+
     if normalized_email:
         normalized_email = normalized_email.lower()
 
-    normalized_phone = digits_only(phone)
-
-    if first_name and last_name and birth_year is not None and normalized_email:
+    if normalized_first_name and normalized_last_name and birth_year is not None and normalized_email:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
+            SELECT
+                id,
+                first_name,
+                last_name,
+                birth_year,
+                phone,
+                email,
+                resident_identifier,
+                shelter
             FROM residents
-            WHERE {shelter_equals_sql("shelter")}
-              AND LOWER(COALESCE(first_name, '')) = LOWER({ph})
+            WHERE LOWER(COALESCE(first_name, '')) = LOWER({ph})
               AND LOWER(COALESCE(last_name, '')) = LOWER({ph})
               AND birth_year = {ph}
               AND LOWER(COALESCE(email, '')) = LOWER({ph})
+            ORDER BY id ASC
             LIMIT 1
             """,
-            (shelter, first_name, last_name, birth_year, normalized_email),
+            (normalized_first_name, normalized_last_name, birth_year, normalized_email),
         )
         if existing:
             return existing
 
-    if first_name and last_name and birth_year is not None and normalized_phone:
+    if normalized_first_name and normalized_last_name and birth_year is not None and normalized_phone:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
+            SELECT
+                id,
+                first_name,
+                last_name,
+                birth_year,
+                phone,
+                email,
+                resident_identifier,
+                shelter
             FROM residents
-            WHERE {shelter_equals_sql("shelter")}
-              AND LOWER(COALESCE(first_name, '')) = LOWER({ph})
+            WHERE LOWER(COALESCE(first_name, '')) = LOWER({ph})
               AND LOWER(COALESCE(last_name, '')) = LOWER({ph})
               AND birth_year = {ph}
               AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(phone, ''), '-', ''), '(', ''), ')', ''), ' ', ''), '+', '') = {ph}
+            ORDER BY id ASC
             LIMIT 1
             """,
-            (shelter, first_name, last_name, birth_year, normalized_phone),
+            (normalized_first_name, normalized_last_name, birth_year, normalized_phone),
         )
         if existing:
             return existing
@@ -225,13 +243,21 @@ def _find_possible_duplicate(
     if normalized_email:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
+            SELECT
+                id,
+                first_name,
+                last_name,
+                birth_year,
+                phone,
+                email,
+                resident_identifier,
+                shelter
             FROM residents
-            WHERE {shelter_equals_sql("shelter")}
-              AND LOWER(COALESCE(email, '')) = LOWER({ph})
+            WHERE LOWER(COALESCE(email, '')) = LOWER({ph})
+            ORDER BY id ASC
             LIMIT 1
             """,
-            (shelter, normalized_email),
+            (normalized_email,),
         )
         if existing:
             return existing
@@ -239,13 +265,21 @@ def _find_possible_duplicate(
     if normalized_phone:
         existing = db_fetchone(
             f"""
-            SELECT id, first_name, last_name, birth_year, phone, email, resident_identifier
+            SELECT
+                id,
+                first_name,
+                last_name,
+                birth_year,
+                phone,
+                email,
+                resident_identifier,
+                shelter
             FROM residents
-            WHERE {shelter_equals_sql("shelter")}
-              AND REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(phone, ''), '-', ''), '(', ''), ')', ''), ' ', ''), '+', '') = {ph}
+            WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(phone, ''), '-', ''), '(', ''), ')', ''), ' ', ''), '+', '') = {ph}
+            ORDER BY id ASC
             LIMIT 1
             """,
-            (shelter, normalized_phone),
+            (normalized_phone,),
         )
         if existing:
             return existing
