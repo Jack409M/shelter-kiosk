@@ -25,6 +25,8 @@ from __future__ import annotations
 #   dashboard and intake landing
 # - routes.case_management_parts.update
 #   progress update flow
+# - routes.case_management_parts.actions
+#   create enrollment, add goal, and add appointment writes
 #
 # Future extraction plan:
 # - routes.case_management_parts.helpers
@@ -41,6 +43,9 @@ from flask import Blueprint, flash, redirect, session, url_for
 from core.auth import require_login, require_shelter
 from core.db import db_execute
 from core.runtime import init_db
+from routes.case_management_parts.actions import add_appointment_view
+from routes.case_management_parts.actions import add_goal_view
+from routes.case_management_parts.actions import create_enrollment_view
 from routes.case_management_parts.assessment import assessment_form_view
 from routes.case_management_parts.assessment import submit_assessment_view
 from routes.case_management_parts.helpers import case_manager_allowed
@@ -156,6 +161,33 @@ def intake_form():
 @require_shelter
 def submit_intake_assessment():
     return submit_intake_assessment_view()
+
+
+# ============================================================================
+# Case Actions Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.actions
+# ============================================================================
+
+@case_management.post("/case/<int:resident_id>/enroll")
+@require_login
+@require_shelter
+def create_enrollment(resident_id: int):
+    return create_enrollment_view(resident_id)
+
+
+@case_management.post("/case/<int:resident_id>/goal")
+@require_login
+@require_shelter
+def add_goal(resident_id: int):
+    return add_goal_view(resident_id)
+
+
+@case_management.post("/case/<int:resident_id>/appointment")
+@require_login
+@require_shelter
+def add_appointment(resident_id: int):
+    return add_appointment_view(resident_id)
 
 
 # ============================================================================
