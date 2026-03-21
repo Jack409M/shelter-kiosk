@@ -227,6 +227,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
             enrollment_id INTEGER NOT NULL,
             date_graduated TEXT,
             date_exit_dwc TEXT,
+            exit_category TEXT,
             exit_reason TEXT,
             graduate_dwc INTEGER NOT NULL DEFAULT 0,
             leave_ama INTEGER NOT NULL DEFAULT 0,
@@ -252,6 +253,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
             enrollment_id INTEGER NOT NULL REFERENCES program_enrollments(id),
             date_graduated TEXT,
             date_exit_dwc TEXT,
+            exit_category TEXT,
             exit_reason TEXT,
             graduate_dwc INTEGER NOT NULL DEFAULT 0,
             leave_ama INTEGER NOT NULL DEFAULT 0,
@@ -276,6 +278,7 @@ def ensure_exit_assessment_columns(kind: str) -> None:
         from core.db import db_execute
 
         statements = [
+            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS exit_category TEXT",
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS grit_at_exit DOUBLE PRECISION",
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS obtained_public_insurance INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS private_insurance INTEGER NOT NULL DEFAULT 0",
