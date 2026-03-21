@@ -263,6 +263,8 @@ def ensure_exit_assessments_table(kind: str) -> None:
             exit_reason TEXT,
             graduate_dwc INTEGER NOT NULL DEFAULT 0,
             leave_ama INTEGER NOT NULL DEFAULT 0,
+            leave_amarillo_city TEXT,
+            leave_amarillo_unknown INTEGER NOT NULL DEFAULT 0,
             income_at_exit REAL,
             education_at_exit TEXT,
             grit_at_exit REAL,
@@ -289,6 +291,8 @@ def ensure_exit_assessments_table(kind: str) -> None:
             exit_reason TEXT,
             graduate_dwc INTEGER NOT NULL DEFAULT 0,
             leave_ama INTEGER NOT NULL DEFAULT 0,
+            leave_amarillo_city TEXT,
+            leave_amarillo_unknown INTEGER NOT NULL DEFAULT 0,
             income_at_exit DOUBLE PRECISION,
             education_at_exit TEXT,
             grit_at_exit DOUBLE PRECISION,
@@ -311,6 +315,8 @@ def ensure_exit_assessment_columns(kind: str) -> None:
 
         statements = [
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS exit_category TEXT",
+            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS leave_amarillo_city TEXT",
+            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS leave_amarillo_unknown INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS grit_at_exit DOUBLE PRECISION",
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS obtained_public_insurance INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS private_insurance INTEGER NOT NULL DEFAULT 0",
