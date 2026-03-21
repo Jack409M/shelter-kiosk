@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
+from core.constants import EDUCATION_LEVEL_RANK
 from core.db import db_fetchall, db_fetchone
 from core.helpers import shelter_display
 from core.report_filters import mask_small_counts, resolve_date_range
@@ -12,6 +13,16 @@ _SHELTER_CAPACITY = {
     "abba": 10,
     "haven": 18,
     "gratitude": 34,
+}
+
+_EDUCATION_AVERAGE_LABELS = {
+    1: "No High School",
+    2: "Some High School",
+    3: "High School Graduate / GED",
+    4: "Vocational / Associates",
+    5: "Bachelor",
+    6: "Masters",
+    7: "Doctorate",
 }
 
 
@@ -268,6 +279,22 @@ def _fetch_grouped_rows(sql: str, params: list[Any]) -> list[dict[str, Any]]:
         )
 
     return output
+
+
+def _education_rank_case(column_sql: str) -> str:
+    parts = ["CASE"]
+    for label, rank in EDUCATION_LEVEL_RANK.items():
+        safe_label = label.replace("'", "''")
+        parts.append(f"WHEN TRIM({column_sql}) = '{safe_label}' THEN {rank}")
+    parts.append("ELSE NULL END")
+    return " ".join(parts)
+
+
+def _education_average_label(avg_value: float | None) -> str:
+    if avg_value is None:
+        return "Unknown"
+    nearest_rank = max(1, min(7, int(round(avg_value))))
+    return _EDUCATION_AVERAGE_LABELS.get(nearest_rank, "Unknown")
 
 
 def _get_filtered_served_total(
@@ -989,10 +1016,59 @@ def get_education_and_income(
         where_params,
     )
 
+    entry_rank_case = _education_rank_case("ia.education_at_entry")
+    exit_rank_case = _education_rank_case("ea.education_at_exit")
+
+    avg_education_at_entry = _fetch_avg(
+        f"""
+        SELECT AVG({entry_rank_case}) AS avg_value
+        FROM program_enrollments pe
+        JOIN intake_assessments ia ON ia.enrollment_id = pe.id
+        {where_sql}
+        """,
+        where_params,
+    )
+
+    avg_education_at_exit = _fetch_avg(
+        f"""
+        SELECT AVG({exit_rank_case}) AS avg_value
+        FROM program_enrollments pe
+        JOIN exit_assessments ea ON ea.enrollment_id = pe.id
+        {where_sql}
+        """,
+        where_params,
+    )
+
+    avg_education_improvement_row = db_fetchone(
+        f"""
+        SELECT AVG(({exit_rank_case}) - ({entry_rank_case})) AS avg_value
+        FROM program_enrollments pe
+        JOIN intake_assessments ia ON ia.enrollment_id = pe.id
+        JOIN exit_assessments ea ON ea.enrollment_id = pe.id
+        {where_sql}
+        AND ({entry_rank_case}) IS NOT NULL
+        AND ({exit_rank_case}) IS NOT NULL
+        """,
+        tuple(where_params),
+    )
+    avg_education_improvement = _to_float(
+        _row_get(avg_education_improvement_row, "avg_value", 0, 0.0),
+        0.0,
+    )
+
     return {
         "average_income_at_entry": round(avg_income_at_entry, 2),
         "average_income_at_exit": round(avg_income_at_exit, 2),
         "average_income_improvement": round(avg_improvement, 2),
+        "average_education_at_entry": round(avg_education_at_entry, 2),
+        "average_education_at_entry_label": _education_average_label(
+            round(avg_education_at_entry, 2) if avg_education_at_entry else None
+        ),
+        "average_education_at_exit": round(avg_education_at_exit, 2),
+        "average_education_at_exit_label": _education_average_label(
+            round(avg_education_at_exit, 2) if avg_education_at_exit else None
+        ),
+        "average_education_improvement": round(avg_education_improvement, 2),
         "education_at_entry": education_entry,
         "education_at_exit": education_exit,
     }
