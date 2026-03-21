@@ -24,6 +24,7 @@ def ensure_intake_assessments_table(kind: str) -> None:
             length_of_time_in_amarillo TEXT,
             income_at_entry REAL,
             education_at_entry TEXT,
+            treatment_grad_date TEXT,
             sobriety_date TEXT,
             days_sober_at_entry INTEGER,
             drug_of_choice TEXT,
@@ -52,6 +53,8 @@ def ensure_intake_assessments_table(kind: str) -> None:
             medical_need_at_entry INTEGER NOT NULL DEFAULT 0,
             substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0,
             id_documents_status_at_entry TEXT,
+            parenting_class_needed INTEGER NOT NULL DEFAULT 0,
+            dwc_level_today TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
@@ -68,6 +71,7 @@ def ensure_intake_assessments_table(kind: str) -> None:
             length_of_time_in_amarillo TEXT,
             income_at_entry DOUBLE PRECISION,
             education_at_entry TEXT,
+            treatment_grad_date TEXT,
             sobriety_date TEXT,
             days_sober_at_entry INTEGER,
             drug_of_choice TEXT,
@@ -96,6 +100,8 @@ def ensure_intake_assessments_table(kind: str) -> None:
             medical_need_at_entry INTEGER NOT NULL DEFAULT 0,
             substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0,
             id_documents_status_at_entry TEXT,
+            parenting_class_needed INTEGER NOT NULL DEFAULT 0,
+            dwc_level_today TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -180,6 +186,7 @@ def ensure_intake_assessment_columns(kind: str) -> None:
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS length_of_time_in_amarillo TEXT",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS marital_status TEXT",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS disability TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS treatment_grad_date TEXT",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS drug_court INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS sexual_survivor INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS warrants_unpaid INTEGER NOT NULL DEFAULT 0",
@@ -195,6 +202,8 @@ def ensure_intake_assessment_columns(kind: str) -> None:
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS medical_need_at_entry INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS id_documents_status_at_entry TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS parenting_class_needed INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS dwc_level_today TEXT",
         ]
 
         for sql in statements:
