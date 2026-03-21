@@ -350,7 +350,7 @@ def _close_enrollment_and_resident(enrollment_id: int, resident_id: int, data: d
     db_execute(
         f"""
         UPDATE residents
-        SET is_active = 0
+        SET is_active = FALSE
         WHERE id = {ph}
         """,
         (resident_id,),
@@ -424,3 +424,4 @@ def submit_exit_assessment_view(resident_id: int):
 
     flash("Exit assessment saved.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+    
