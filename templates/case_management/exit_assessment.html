@@ -111,6 +111,9 @@
   .field.span-6,
   .toggle-field.span-6 { grid-column: span 6; }
 
+  .field.span-5,
+  .toggle-field.span-5 { grid-column: span 5; }
+
   .field.span-4,
   .toggle-field.span-4 { grid-column: span 4; }
 
@@ -154,9 +157,14 @@
     max-width: 180px;
   }
 
-  .field.field-compact-wide input[type="text"],
-  .field.field-compact-wide select {
-    max-width: 240px;
+  .field.field-max-25 select,
+  .field.field-max-25 input[type="text"] {
+    max-width: 220px;
+  }
+
+  .field.field-max-30 select,
+  .field.field-max-30 input[type="text"] {
+    max-width: 280px;
   }
 
   .toggle-inputs {
@@ -165,7 +173,8 @@
     flex-wrap: wrap;
   }
 
-  .toggle-inputs input[type="radio"] {
+  .toggle-inputs input[type="radio"],
+  .toggle-inputs input[type="checkbox"] {
     position: absolute;
     opacity: 0;
     pointer-events: none;
@@ -188,16 +197,10 @@
     user-select: none;
   }
 
-  .toggle-inputs input[type="radio"]:checked + .toggle-chip.toggle-yes {
-    background: #dcfce7;
-    border-color: #86efac;
-    color: #166534;
-  }
-
-  .toggle-inputs input[type="radio"]:checked + .toggle-chip.toggle-no {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #991b1b;
+  .toggle-inputs input:checked + .toggle-chip {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
   }
 
   .footer-card-body {
@@ -244,9 +247,13 @@
   .btn-primary:hover,
   .btn-primary:focus,
   .btn-primary:visited {
-    background: #1f5eff;
+    background: #2563eb;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
+  }
+
+  .is-hidden {
+    display: none !important;
   }
 
   @media (max-width: 980px) {
@@ -256,6 +263,8 @@
 
     .field.span-6,
     .toggle-field.span-6,
+    .field.span-5,
+    .toggle-field.span-5,
     .field.span-4,
     .toggle-field.span-4,
     .field.span-3,
@@ -269,8 +278,10 @@
     .field.field-compact input[type="number"],
     .field.field-compact input[type="text"],
     .field.field-compact select,
-    .field.field-compact-wide input[type="text"],
-    .field.field-compact-wide select {
+    .field.field-max-25 select,
+    .field.field-max-25 input[type="text"],
+    .field.field-max-30 select,
+    .field.field-max-30 input[type="text"] {
       max-width: 100%;
     }
   }
@@ -379,7 +390,7 @@
             >
           </div>
 
-          <div class="field span-4">
+          <div class="field span-3 field-max-25">
             <label for="exit_category">Exit Category</label>
             <select id="exit_category" name="exit_category" required>
               <option value="">Select</option>
@@ -391,21 +402,21 @@
             </select>
           </div>
 
-          <div class="field span-5">
+          <div class="field span-4 field-max-30">
             <label for="exit_reason">Exit Reason</label>
             <select id="exit_reason" name="exit_reason" required data-current-value="{{ form_data.get('exit_reason', '') }}">
               <option value="">Select</option>
             </select>
           </div>
 
-          <div class="toggle-field span-3">
+          <div class="toggle-field span-2">
             <label>Graduate DWC</label>
             <div class="toggle-inputs">
               <input type="radio" id="graduate_dwc_yes" name="graduate_dwc" value="yes" {% if form_data.get('graduate_dwc') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip toggle-yes" for="graduate_dwc_yes">Yes</label>
+              <label class="toggle-chip" for="graduate_dwc_yes">Yes</label>
 
               <input type="radio" id="graduate_dwc_no" name="graduate_dwc" value="no" {% if form_data.get('graduate_dwc') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip toggle-no" for="graduate_dwc_no">No</label>
+              <label class="toggle-chip" for="graduate_dwc_no">No</label>
             </div>
           </div>
 
@@ -420,13 +431,31 @@
           </div>
 
           <div class="toggle-field span-3">
-            <label>Leave AMA</label>
+            <label>Leave Amarillo</label>
             <div class="toggle-inputs">
               <input type="radio" id="leave_ama_yes" name="leave_ama" value="yes" {% if form_data.get('leave_ama') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip toggle-yes" for="leave_ama_yes">Yes</label>
+              <label class="toggle-chip" for="leave_ama_yes">Yes</label>
 
               <input type="radio" id="leave_ama_no" name="leave_ama" value="no" {% if form_data.get('leave_ama') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip toggle-no" for="leave_ama_no">No</label>
+              <label class="toggle-chip" for="leave_ama_no">No</label>
+            </div>
+          </div>
+
+          <div class="field span-3 field-compact is-hidden" id="leave-amarillo-city-wrap">
+            <label for="leave_amarillo_city">City</label>
+            <input
+              id="leave_amarillo_city"
+              name="leave_amarillo_city"
+              type="text"
+              value="{{ form_data.get('leave_amarillo_city', '') }}"
+            >
+          </div>
+
+          <div class="toggle-field span-2 is-hidden" id="leave-amarillo-unknown-wrap">
+            <label>Unknown</label>
+            <div class="toggle-inputs">
+              <input type="checkbox" id="leave_amarillo_unknown" name="leave_amarillo_unknown" value="yes" {% if form_data.get('leave_amarillo_unknown') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="leave_amarillo_unknown">Unknown</label>
             </div>
           </div>
         </div>
@@ -439,8 +468,8 @@
       </div>
       <div class="section-card-body">
         <div class="field-grid">
-          <div class="field span-4 field-compact-wide">
-            <label for="income_at_exit">Current Income</label>
+          <div class="field span-4 field-compact">
+            <label for="income_at_exit">Current Monthly Income</label>
             <input
               id="income_at_exit"
               name="income_at_exit"
@@ -451,17 +480,23 @@
             >
           </div>
 
-          <div class="field span-4">
+          <div class="field span-4 field-max-30">
             <label for="education_at_exit">Education at Exit</label>
-            <input
-              id="education_at_exit"
-              name="education_at_exit"
-              type="text"
-              value="{{ form_data.get('education_at_exit', '') }}"
-            >
+            <select id="education_at_exit" name="education_at_exit">
+              <option value="">Select</option>
+              <option value="No High School" {% if form_data.get('education_at_exit') == 'No High School' %}selected{% endif %}>No High School</option>
+              <option value="Some High School" {% if form_data.get('education_at_exit') == 'Some High School' %}selected{% endif %}>Some High School</option>
+              <option value="High School Graduate" {% if form_data.get('education_at_exit') == 'High School Graduate' %}selected{% endif %}>High School Graduate</option>
+              <option value="GED" {% if form_data.get('education_at_exit') == 'GED' %}selected{% endif %}>GED</option>
+              <option value="Vocational" {% if form_data.get('education_at_exit') == 'Vocational' %}selected{% endif %}>Vocational</option>
+              <option value="Associates" {% if form_data.get('education_at_exit') == 'Associates' %}selected{% endif %}>Associates</option>
+              <option value="Bachelor" {% if form_data.get('education_at_exit') == 'Bachelor' %}selected{% endif %}>Bachelor</option>
+              <option value="Masters" {% if form_data.get('education_at_exit') == 'Masters' %}selected{% endif %}>Masters</option>
+              <option value="Doctorate" {% if form_data.get('education_at_exit') == 'Doctorate' %}selected{% endif %}>Doctorate</option>
+            </select>
           </div>
 
-          <div class="field span-4 field-compact-wide">
+          <div class="field span-4 field-compact">
             <label for="grit_at_exit">Grit at Exit</label>
             <input
               id="grit_at_exit"
@@ -486,10 +521,10 @@
             <label>Received Car</label>
             <div class="toggle-inputs">
               <input type="radio" id="received_car_yes" name="received_car" value="yes" {% if form_data.get('received_car') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip toggle-yes" for="received_car_yes">Yes</label>
+              <label class="toggle-chip" for="received_car_yes">Yes</label>
 
               <input type="radio" id="received_car_no" name="received_car" value="no" {% if form_data.get('received_car') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip toggle-no" for="received_car_no">No</label>
+              <label class="toggle-chip" for="received_car_no">No</label>
             </div>
           </div>
 
@@ -497,10 +532,10 @@
             <label>Car Insurance</label>
             <div class="toggle-inputs">
               <input type="radio" id="car_insurance_yes" name="car_insurance" value="yes" {% if form_data.get('car_insurance') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip toggle-yes" for="car_insurance_yes">Yes</label>
+              <label class="toggle-chip" for="car_insurance_yes">Yes</label>
 
               <input type="radio" id="car_insurance_no" name="car_insurance" value="no" {% if form_data.get('car_insurance') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip toggle-no" for="car_insurance_no">No</label>
+              <label class="toggle-chip" for="car_insurance_no">No</label>
             </div>
           </div>
 
@@ -508,10 +543,10 @@
             <label>Obtained Public Insurance</label>
             <div class="toggle-inputs">
               <input type="radio" id="obtained_public_insurance_yes" name="obtained_public_insurance" value="yes" {% if form_data.get('obtained_public_insurance') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip toggle-yes" for="obtained_public_insurance_yes">Yes</label>
+              <label class="toggle-chip" for="obtained_public_insurance_yes">Yes</label>
 
               <input type="radio" id="obtained_public_insurance_no" name="obtained_public_insurance" value="no" {% if form_data.get('obtained_public_insurance') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip toggle-no" for="obtained_public_insurance_no">No</label>
+              <label class="toggle-chip" for="obtained_public_insurance_no">No</label>
             </div>
           </div>
 
@@ -519,10 +554,10 @@
             <label>Private Insurance</label>
             <div class="toggle-inputs">
               <input type="radio" id="private_insurance_yes" name="private_insurance" value="yes" {% if form_data.get('private_insurance') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip toggle-yes" for="private_insurance_yes">Yes</label>
+              <label class="toggle-chip" for="private_insurance_yes">Yes</label>
 
               <input type="radio" id="private_insurance_no" name="private_insurance" value="no" {% if form_data.get('private_insurance') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip toggle-no" for="private_insurance_no">No</label>
+              <label class="toggle-chip" for="private_insurance_no">No</label>
             </div>
           </div>
         </div>
@@ -539,10 +574,10 @@
             <label>Dental Needs Met</label>
             <div class="toggle-inputs">
               <input type="radio" id="dental_needs_met_yes" name="dental_needs_met" value="yes" {% if form_data.get('dental_needs_met') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip toggle-yes" for="dental_needs_met_yes">Yes</label>
+              <label class="toggle-chip" for="dental_needs_met_yes">Yes</label>
 
               <input type="radio" id="dental_needs_met_no" name="dental_needs_met" value="no" {% if form_data.get('dental_needs_met') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip toggle-no" for="dental_needs_met_no">No</label>
+              <label class="toggle-chip" for="dental_needs_met_no">No</label>
             </div>
           </div>
 
@@ -550,10 +585,10 @@
             <label>Vision Needs Met</label>
             <div class="toggle-inputs">
               <input type="radio" id="vision_needs_met_yes" name="vision_needs_met" value="yes" {% if form_data.get('vision_needs_met') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip toggle-yes" for="vision_needs_met_yes">Yes</label>
+              <label class="toggle-chip" for="vision_needs_met_yes">Yes</label>
 
               <input type="radio" id="vision_needs_met_no" name="vision_needs_met" value="no" {% if form_data.get('vision_needs_met') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip toggle-no" for="vision_needs_met_no">No</label>
+              <label class="toggle-chip" for="vision_needs_met_no">No</label>
             </div>
           </div>
         </div>
@@ -606,6 +641,19 @@
 
   const categorySelect = document.getElementById("exit_category");
   const reasonSelect = document.getElementById("exit_reason");
+  const leaveYes = document.getElementById("leave_ama_yes");
+  const leaveNo = document.getElementById("leave_ama_no");
+  const leaveCityWrap = document.getElementById("leave-amarillo-city-wrap");
+  const leaveCityInput = document.getElementById("leave_amarillo_city");
+  const leaveUnknownWrap = document.getElementById("leave-amarillo-unknown-wrap");
+  const leaveUnknownInput = document.getElementById("leave_amarillo_unknown");
+  const receivedCarYes = document.getElementById("received_car_yes");
+  const receivedCarNo = document.getElementById("received_car_no");
+  const carInsuranceYes = document.getElementById("car_insurance_yes");
+  const carInsuranceNo = document.getElementById("car_insurance_no");
+  const graduateYes = document.getElementById("graduate_dwc_yes");
+  const graduateNo = document.getElementById("graduate_dwc_no");
+  const dateGraduatedInput = document.getElementById("date_graduated");
 
   function updateExitReasons() {
     if (!categorySelect || !reasonSelect) return;
@@ -625,9 +673,56 @@
 
     if (allowedReasons.includes(currentValue)) {
       reasonSelect.value = currentValue;
+    } else {
+      reasonSelect.value = "";
     }
 
     reasonSelect.dataset.currentValue = reasonSelect.value;
+  }
+
+  function updateLeaveAmarillo() {
+    const leaving = leaveYes && leaveYes.checked;
+    const unknown = leaveUnknownInput && leaveUnknownInput.checked;
+
+    leaveCityWrap.classList.toggle("is-hidden", !leaving);
+    leaveUnknownWrap.classList.toggle("is-hidden", !leaving);
+
+    if (!leaving) {
+      leaveCityInput.value = "";
+      leaveUnknownInput.checked = false;
+      leaveCityInput.disabled = true;
+      leaveUnknownInput.disabled = true;
+      return;
+    }
+
+    leaveUnknownInput.disabled = false;
+    leaveCityInput.disabled = unknown;
+
+    if (unknown) {
+      leaveCityInput.value = "";
+    }
+  }
+
+  function updateCarInsurance() {
+    const hasCar = receivedCarYes && receivedCarYes.checked;
+
+    if (!hasCar) {
+      carInsuranceYes.checked = false;
+      if (carInsuranceNo) {
+        carInsuranceNo.checked = false;
+      }
+    }
+
+    if (carInsuranceYes) carInsuranceYes.disabled = !hasCar;
+    if (carInsuranceNo) carInsuranceNo.disabled = !hasCar;
+  }
+
+  function updateGraduationDate() {
+    const graduated = graduateYes && graduateYes.checked;
+    dateGraduatedInput.disabled = !graduated;
+    if (!graduated) {
+      dateGraduatedInput.value = "";
+    }
   }
 
   if (categorySelect && reasonSelect) {
@@ -639,10 +734,31 @@
     reasonSelect.addEventListener("change", function () {
       reasonSelect.dataset.currentValue = reasonSelect.value;
     });
-
-    document.addEventListener("DOMContentLoaded", updateExitReasons);
-    updateExitReasons();
   }
+
+  [leaveYes, leaveNo, leaveUnknownInput].forEach((el) => {
+    if (el) el.addEventListener("change", updateLeaveAmarillo);
+  });
+
+  [receivedCarYes, receivedCarNo].forEach((el) => {
+    if (el) el.addEventListener("change", updateCarInsurance);
+  });
+
+  [graduateYes, graduateNo].forEach((el) => {
+    if (el) el.addEventListener("change", updateGraduationDate);
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    updateExitReasons();
+    updateLeaveAmarillo();
+    updateCarInsurance();
+    updateGraduationDate();
+  });
+
+  updateExitReasons();
+  updateLeaveAmarillo();
+  updateCarInsurance();
+  updateGraduationDate();
 </script>
 
 {% endblock %}
