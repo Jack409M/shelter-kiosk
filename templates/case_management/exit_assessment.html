@@ -1,5 +1,202 @@
 {% extends "layout.html" %}
 
+{% block extra_head %}
+<style>
+  .exit-page {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 16px 12px 32px 12px;
+  }
+
+  .exit-header {
+    margin-bottom: 14px;
+  }
+
+  .exit-header h1 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.1;
+  }
+
+  .resident-card,
+  .section-card,
+  .footer-card {
+    background: #ffffff;
+    border: 1px solid #d8e0ea;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+
+  .resident-card-body,
+  .section-card-body,
+  .footer-card-body {
+    padding: 14px 16px;
+  }
+
+  .resident-card h2 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .resident-meta {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .meta-item {
+    background: #f8fbff;
+    border: 1px solid #d7e7ff;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .meta-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #5f6b7a;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .meta-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #102030;
+  }
+
+  .section-card-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e6ebf1;
+    background: #fafbfd;
+  }
+
+  .section-card-head h2 {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .field {
+    display: grid;
+    gap: 5px;
+  }
+
+  .field.span-12 { grid-column: span 12; }
+  .field.span-6 { grid-column: span 6; }
+  .field.span-4 { grid-column: span 4; }
+  .field.span-3 { grid-column: span 3; }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid #c7d1dc;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 14px;
+    background: #ffffff;
+    color: #13202c;
+    box-sizing: border-box;
+  }
+
+  .field textarea {
+    min-height: 88px;
+    resize: vertical;
+  }
+
+  .footer-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .footer-note {
+    font-size: 12px;
+    color: #6b7280;
+  }
+
+  .action-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-soft,
+  .btn-primary {
+    appearance: none;
+    border: 0;
+    border-radius: 9px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-soft {
+    background: #eef2f6;
+    color: #243447;
+  }
+
+  .btn-primary,
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:visited {
+    background: #1f5eff;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  @media (max-width: 980px) {
+    .resident-meta {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field.span-6,
+    .field.span-4,
+    .field.span-3 {
+      grid-column: span 12;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .resident-meta {
+      grid-template-columns: 1fr;
+    }
+
+    .footer-card-body {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% if resident is mapping %}
@@ -26,203 +223,257 @@
   {% set program_status = enrollment[5] %}
 {% endif %}
 
-<h1>Exit Assessment</h1>
+<div class="exit-page">
+  <div class="exit-header">
+    <h1>Exit Assessment</h1>
+  </div>
 
-<div class="card">
-  <h2>{{ first_name }} {{ last_name }}</h2>
-  <p>
-    <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
-    <strong>Enrollment ID:</strong> {{ enrollment_id }}<br>
-    <strong>Entry Date:</strong> {{ entry_date or "—" }}<br>
-    <strong>Current Exit Date:</strong> {{ current_exit_date or "—" }}<br>
-    <strong>Program Status:</strong> {{ program_status|replace("_", " ")|title if program_status else "—" }}
-  </p>
+  <div class="resident-card">
+    <div class="resident-card-body">
+      <h2>{{ first_name }} {{ last_name }}</h2>
+
+      <div class="resident-meta">
+        <div class="meta-item">
+          <span class="meta-label">Resident Code</span>
+          <span class="meta-value">{{ resident_code or "—" }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Enrollment ID</span>
+          <span class="meta-value">{{ enrollment_id }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Entry Date</span>
+          <span class="meta-value">{{ entry_date or "—" }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Current Exit Date</span>
+          <span class="meta-value">{{ current_exit_date or "—" }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Program Status</span>
+          <span class="meta-value">{{ program_status|replace("_", " ")|title if program_status else "—" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('case_management.submit_exit_assessment', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <section class="section-card">
+      <div class="section-card-head">
+        <h2>Exit Details</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-grid">
+          <div class="field span-3">
+            <label for="date_exit_dwc">Date Exit DWC</label>
+            <input
+              id="date_exit_dwc"
+              name="date_exit_dwc"
+              type="date"
+              required
+              value="{{ form_data.get('date_exit_dwc', '') }}"
+            >
+          </div>
+
+          <div class="field span-4">
+            <label for="exit_category">Exit Category</label>
+            <select id="exit_category" name="exit_category" required>
+              <option value="">Select</option>
+              <option value="Successful Completion" {% if form_data.get('exit_category') == 'Successful Completion' %}selected{% endif %}>Successful Completion</option>
+              <option value="Positive Exit" {% if form_data.get('exit_category') == 'Positive Exit' %}selected{% endif %}>Positive Exit</option>
+              <option value="Neutral Exit" {% if form_data.get('exit_category') == 'Neutral Exit' %}selected{% endif %}>Neutral Exit</option>
+              <option value="Negative Exit" {% if form_data.get('exit_category') == 'Negative Exit' %}selected{% endif %}>Negative Exit</option>
+              <option value="Administrative Exit" {% if form_data.get('exit_category') == 'Administrative Exit' %}selected{% endif %}>Administrative Exit</option>
+            </select>
+          </div>
+
+          <div class="field span-5">
+            <label for="exit_reason">Exit Reason</label>
+            <select id="exit_reason" name="exit_reason" required>
+              <option value="">Select</option>
+              <option value="Program Graduated" {% if form_data.get('exit_reason') == 'Program Graduated' %}selected{% endif %}>Program Graduated</option>
+              <option value="Permanent Housing" {% if form_data.get('exit_reason') == 'Permanent Housing' %}selected{% endif %}>Permanent Housing</option>
+              <option value="Family Placement" {% if form_data.get('exit_reason') == 'Family Placement' %}selected{% endif %}>Family Placement</option>
+              <option value="Health Placement" {% if form_data.get('exit_reason') == 'Health Placement' %}selected{% endif %}>Health Placement</option>
+              <option value="Left by Choice" {% if form_data.get('exit_reason') == 'Left by Choice' %}selected{% endif %}>Left by Choice</option>
+              <option value="Left Without Notice" {% if form_data.get('exit_reason') == 'Left Without Notice' %}selected{% endif %}>Left Without Notice</option>
+              <option value="Unknown / Lost Contact" {% if form_data.get('exit_reason') == 'Unknown / Lost Contact' %}selected{% endif %}>Unknown / Lost Contact</option>
+              <option value="Rules Violation" {% if form_data.get('exit_reason') == 'Rules Violation' %}selected{% endif %}>Rules Violation</option>
+              <option value="Non Compliance with Program" {% if form_data.get('exit_reason') == 'Non Compliance with Program' %}selected{% endif %}>Non Compliance with Program</option>
+              <option value="Relapse" {% if form_data.get('exit_reason') == 'Relapse' %}selected{% endif %}>Relapse</option>
+              <option value="Behavioral Conflict" {% if form_data.get('exit_reason') == 'Behavioral Conflict' %}selected{% endif %}>Behavioral Conflict</option>
+              <option value="Incarceration" {% if form_data.get('exit_reason') == 'Incarceration' %}selected{% endif %}>Incarceration</option>
+              <option value="Transferred to Another Program" {% if form_data.get('exit_reason') == 'Transferred to Another Program' %}selected{% endif %}>Transferred to Another Program</option>
+              <option value="Medical Discharge" {% if form_data.get('exit_reason') == 'Medical Discharge' %}selected{% endif %}>Medical Discharge</option>
+              <option value="Safety Removal" {% if form_data.get('exit_reason') == 'Safety Removal' %}selected{% endif %}>Safety Removal</option>
+            </select>
+          </div>
+
+          <div class="field span-3">
+            <label for="graduate_dwc">Graduate DWC</label>
+            <select id="graduate_dwc" name="graduate_dwc">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('graduate_dwc') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('graduate_dwc') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="field span-3">
+            <label for="date_graduated">Date Graduated</label>
+            <input
+              id="date_graduated"
+              name="date_graduated"
+              type="date"
+              value="{{ form_data.get('date_graduated', '') }}"
+            >
+          </div>
+
+          <div class="field span-3">
+            <label for="leave_ama">Leave AMA</label>
+            <select id="leave_ama" name="leave_ama">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('leave_ama') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('leave_ama') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-card-head">
+        <h2>Income, Education, and Grit at Exit</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-grid">
+          <div class="field span-4">
+            <label for="income_at_exit">Current Income</label>
+            <input
+              id="income_at_exit"
+              name="income_at_exit"
+              type="number"
+              min="0"
+              step="0.01"
+              value="{{ form_data.get('income_at_exit', '') }}"
+            >
+          </div>
+
+          <div class="field span-4">
+            <label for="education_at_exit">Education at Exit</label>
+            <input
+              id="education_at_exit"
+              name="education_at_exit"
+              type="text"
+              value="{{ form_data.get('education_at_exit', '') }}"
+            >
+          </div>
+
+          <div class="field span-4">
+            <label for="grit_at_exit">Grit at Exit</label>
+            <input
+              id="grit_at_exit"
+              name="grit_at_exit"
+              type="number"
+              min="0"
+              step="0.01"
+              value="{{ form_data.get('grit_at_exit', '') }}"
+            >
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-card-head">
+        <h2>Transportation and Insurance at Exit</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-grid">
+          <div class="field span-3">
+            <label for="received_car">Received Car</label>
+            <select id="received_car" name="received_car">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('received_car') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('received_car') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="field span-3">
+            <label for="car_insurance">Car Insurance</label>
+            <select id="car_insurance" name="car_insurance">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('car_insurance') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('car_insurance') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="field span-3">
+            <label for="obtained_public_insurance">Obtained Public Insurance</label>
+            <select id="obtained_public_insurance" name="obtained_public_insurance">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('obtained_public_insurance') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('obtained_public_insurance') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="field span-3">
+            <label for="private_insurance">Private Insurance</label>
+            <select id="private_insurance" name="private_insurance">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('private_insurance') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('private_insurance') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card">
+      <div class="section-card-head">
+        <h2>Needs Resolved at Exit</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-grid">
+          <div class="field span-6">
+            <label for="dental_needs_met">Dental Needs Met</label>
+            <select id="dental_needs_met" name="dental_needs_met">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('dental_needs_met') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('dental_needs_met') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="field span-6">
+            <label for="vision_needs_met">Vision Needs Met</label>
+            <select id="vision_needs_met" name="vision_needs_met">
+              <option value="">Select</option>
+              <option value="yes" {% if form_data.get('vision_needs_met') == 'yes' %}selected{% endif %}>Yes</option>
+              <option value="no" {% if form_data.get('vision_needs_met') == 'no' %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-card">
+      <div class="footer-card-body">
+        <div class="footer-note">
+          Review the exit details carefully before saving. This will close the enrollment and mark the resident inactive.
+        </div>
+
+        <div class="action-group">
+          <button class="btn-primary" type="submit">Save Exit Assessment</button>
+          <a class="btn-soft" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
+        </div>
+      </div>
+    </div>
+  </form>
 </div>
-
-<form method="post" action="{{ url_for('case_management.submit_exit_assessment', resident_id=resident_id) }}">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-  <div class="card">
-    <h2>Exit Details</h2>
-
-    <p>
-      <label for="date_exit_dwc">Date Exit DWC</label><br>
-      <input
-        id="date_exit_dwc"
-        name="date_exit_dwc"
-        type="date"
-        required
-        value="{{ form_data.get('date_exit_dwc', '') }}"
-      >
-    </p>
-
-    <p>
-      <label for="exit_category">Exit Category</label><br>
-      <select id="exit_category" name="exit_category" required>
-        <option value="">Select</option>
-        <option value="Successful Completion" {% if form_data.get('exit_category') == 'Successful Completion' %}selected{% endif %}>Successful Completion</option>
-        <option value="Positive Exit" {% if form_data.get('exit_category') == 'Positive Exit' %}selected{% endif %}>Positive Exit</option>
-        <option value="Neutral Exit" {% if form_data.get('exit_category') == 'Neutral Exit' %}selected{% endif %}>Neutral Exit</option>
-        <option value="Negative Exit" {% if form_data.get('exit_category') == 'Negative Exit' %}selected{% endif %}>Negative Exit</option>
-        <option value="Administrative Exit" {% if form_data.get('exit_category') == 'Administrative Exit' %}selected{% endif %}>Administrative Exit</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="exit_reason">Exit Reason</label><br>
-      <select id="exit_reason" name="exit_reason" required>
-        <option value="">Select</option>
-        <option value="Program Graduated" {% if form_data.get('exit_reason') == 'Program Graduated' %}selected{% endif %}>Program Graduated</option>
-        <option value="Permanent Housing" {% if form_data.get('exit_reason') == 'Permanent Housing' %}selected{% endif %}>Permanent Housing</option>
-        <option value="Family Placement" {% if form_data.get('exit_reason') == 'Family Placement' %}selected{% endif %}>Family Placement</option>
-        <option value="Health Placement" {% if form_data.get('exit_reason') == 'Health Placement' %}selected{% endif %}>Health Placement</option>
-        <option value="Left by Choice" {% if form_data.get('exit_reason') == 'Left by Choice' %}selected{% endif %}>Left by Choice</option>
-        <option value="Left Without Notice" {% if form_data.get('exit_reason') == 'Left Without Notice' %}selected{% endif %}>Left Without Notice</option>
-        <option value="Unknown / Lost Contact" {% if form_data.get('exit_reason') == 'Unknown / Lost Contact' %}selected{% endif %}>Unknown / Lost Contact</option>
-        <option value="Rules Violation" {% if form_data.get('exit_reason') == 'Rules Violation' %}selected{% endif %}>Rules Violation</option>
-        <option value="Non Compliance with Program" {% if form_data.get('exit_reason') == 'Non Compliance with Program' %}selected{% endif %}>Non Compliance with Program</option>
-        <option value="Relapse" {% if form_data.get('exit_reason') == 'Relapse' %}selected{% endif %}>Relapse</option>
-        <option value="Behavioral Conflict" {% if form_data.get('exit_reason') == 'Behavioral Conflict' %}selected{% endif %}>Behavioral Conflict</option>
-        <option value="Incarceration" {% if form_data.get('exit_reason') == 'Incarceration' %}selected{% endif %}>Incarceration</option>
-        <option value="Transferred to Another Program" {% if form_data.get('exit_reason') == 'Transferred to Another Program' %}selected{% endif %}>Transferred to Another Program</option>
-        <option value="Medical Discharge" {% if form_data.get('exit_reason') == 'Medical Discharge' %}selected{% endif %}>Medical Discharge</option>
-        <option value="Safety Removal" {% if form_data.get('exit_reason') == 'Safety Removal' %}selected{% endif %}>Safety Removal</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="graduate_dwc">Graduate DWC</label><br>
-      <select id="graduate_dwc" name="graduate_dwc">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('graduate_dwc') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('graduate_dwc') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="date_graduated">Date Graduated</label><br>
-      <input
-        id="date_graduated"
-        name="date_graduated"
-        type="date"
-        value="{{ form_data.get('date_graduated', '') }}"
-      >
-    </p>
-
-    <p>
-      <label for="leave_ama">Leave AMA</label><br>
-      <select id="leave_ama" name="leave_ama">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('leave_ama') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('leave_ama') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-  </div>
-
-  <div class="card">
-    <h2>Income, Education, and Grit at Exit</h2>
-
-    <p>
-      <label for="income_at_exit">Current Income</label><br>
-      <input
-        id="income_at_exit"
-        name="income_at_exit"
-        type="number"
-        min="0"
-        step="0.01"
-        value="{{ form_data.get('income_at_exit', '') }}"
-      >
-    </p>
-
-    <p>
-      <label for="education_at_exit">Education at Exit</label><br>
-      <input
-        id="education_at_exit"
-        name="education_at_exit"
-        type="text"
-        value="{{ form_data.get('education_at_exit', '') }}"
-      >
-    </p>
-
-    <p>
-      <label for="grit_at_exit">Grit at Exit</label><br>
-      <input
-        id="grit_at_exit"
-        name="grit_at_exit"
-        type="number"
-        min="0"
-        step="0.01"
-        value="{{ form_data.get('grit_at_exit', '') }}"
-      >
-    </p>
-  </div>
-
-  <div class="card">
-    <h2>Transportation and Insurance at Exit</h2>
-
-    <p>
-      <label for="received_car">Received Car</label><br>
-      <select id="received_car" name="received_car">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('received_car') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('received_car') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="car_insurance">Car Insurance</label><br>
-      <select id="car_insurance" name="car_insurance">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('car_insurance') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('car_insurance') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="obtained_public_insurance">Obtained Public Insurance</label><br>
-      <select id="obtained_public_insurance" name="obtained_public_insurance">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('obtained_public_insurance') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('obtained_public_insurance') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="private_insurance">Private Insurance</label><br>
-      <select id="private_insurance" name="private_insurance">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('private_insurance') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('private_insurance') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-  </div>
-
-  <div class="card">
-    <h2>Needs Resolved at Exit</h2>
-
-    <p>
-      <label for="dental_needs_met">Dental Needs Met</label><br>
-      <select id="dental_needs_met" name="dental_needs_met">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('dental_needs_met') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('dental_needs_met') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-
-    <p>
-      <label for="vision_needs_met">Vision Needs Met</label><br>
-      <select id="vision_needs_met" name="vision_needs_met">
-        <option value="">Select</option>
-        <option value="yes" {% if form_data.get('vision_needs_met') == 'yes' %}selected{% endif %}>Yes</option>
-        <option value="no" {% if form_data.get('vision_needs_met') == 'no' %}selected{% endif %}>No</option>
-      </select>
-    </p>
-  </div>
-
-  <div class="card">
-    <button class="btn" type="submit">Save Exit Assessment</button>
-    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
-  </div>
-</form>
 
 {% endblock %}
