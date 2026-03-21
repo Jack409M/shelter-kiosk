@@ -734,7 +734,7 @@
                     </div>
 
                     <div class="field span-3 field-compact">
-                      <label for="income_at_entry">Income at Entry</label>
+                      <label for="income_at_entry">Monthly Income at Entry</label>
                       <input id="income_at_entry" name="income_at_entry" type="number" min="0" step="0.01" value="{{ form_data.get('income_at_entry', '') }}">
                     </div>
 
@@ -748,15 +748,19 @@
                       </select>
                     </div>
 
-                    <div class="toggle-field span-2">
-                      <label>Disability</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="disability_yes" name="disability" value="yes" {% if form_data.get('disability') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="disability_yes">Yes</label>
-
-                        <input type="radio" id="disability_no" name="disability" value="no" {% if form_data.get('disability') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="disability_no">No</label>
-                      </div>
+                    <div class="field span-3 field-max-20">
+                      <label for="disability">Disability Type</label>
+                      <select id="disability" name="disability">
+                        <option value="">Select</option>
+                        <option value="Visual" {% if form_data.get('disability') == 'Visual' %}selected{% endif %}>Visual</option>
+                        <option value="Deaf" {% if form_data.get('disability') == 'Deaf' %}selected{% endif %}>Deaf</option>
+                        <option value="Mental Health" {% if form_data.get('disability') == 'Mental Health' %}selected{% endif %}>Mental Health</option>
+                        <option value="Intellectual" {% if form_data.get('disability') == 'Intellectual' %}selected{% endif %}>Intellectual</option>
+                        <option value="Acquired Brain Injury" {% if form_data.get('disability') == 'Acquired Brain Injury' %}selected{% endif %}>Acquired Brain Injury</option>
+                        <option value="Autism Spectrum Disorder" {% if form_data.get('disability') == 'Autism Spectrum Disorder' %}selected{% endif %}>Autism Spectrum Disorder</option>
+                        <option value="Physical" {% if form_data.get('disability') == 'Physical' %}selected{% endif %}>Physical</option>
+                        <option value="Multiple" {% if form_data.get('disability') == 'Multiple' %}selected{% endif %}>Multiple</option>
+                      </select>
                     </div>
 
                     <div class="field span-4">
