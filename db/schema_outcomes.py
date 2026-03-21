@@ -140,7 +140,39 @@ def ensure_assessment_drafts_table(kind: str) -> None:
 
 def ensure_intake_assessment_columns(kind: str) -> None:
     try:
-        from core.db import db_execute
+        from core.db import db_execute, db_fetchone
+
+        try:
+            col = db_fetchone(
+                """
+                SELECT data_type
+                FROM information_schema.columns
+                WHERE table_name = 'intake_assessments'
+                  AND column_name = 'disability'
+                """
+            )
+
+            if col and isinstance(col, dict):
+                data_type = col.get("data_type")
+            elif col:
+                data_type = col[0]
+            else:
+                data_type = None
+
+            if data_type and "int" in str(data_type).lower():
+                try:
+                    db_execute(
+                        """
+                        ALTER TABLE intake_assessments
+                        ALTER COLUMN disability TYPE TEXT
+                        USING disability::TEXT
+                        """
+                    )
+                except Exception:
+                    pass
+
+        except Exception:
+            pass
 
         statements = [
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS city TEXT",
