@@ -4,6 +4,7 @@ from typing import Any
 
 from flask import flash, redirect, render_template, request, session, url_for
 
+from core.constants import EDUCATION_LEVEL_OPTIONS
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
@@ -74,14 +75,7 @@ def _intake_template_context(
             {"value": "multiple", "label": "Multiple"},
             {"value": "other", "label": "Other"},
         ],
-        "education_options": [
-            {"value": "no_hs", "label": "No High School"},
-            {"value": "hs", "label": "High School"},
-            {"value": "ged", "label": "GED"},
-            {"value": "college", "label": "Some College"},
-            {"value": "associate", "label": "Associate"},
-            {"value": "bachelor", "label": "Bachelor"},
-        ],
+        "education_options": EDUCATION_LEVEL_OPTIONS,
         "marital_status_options": [
             {"value": "single", "label": "Single"},
             {"value": "married", "label": "Married"},
