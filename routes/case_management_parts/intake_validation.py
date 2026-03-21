@@ -63,8 +63,6 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "mental_health_need": clean(form.get("mental_health_need")),
         "medical_need": clean(form.get("medical_need")),
         "substance_use_need": clean(form.get("substance_use_need")),
-        "car_at_entry": clean(form.get("car_at_entry")),
-        "car_insurance_at_entry": clean(form.get("car_insurance_at_entry")),
         "trauma_notes": clean(form.get("trauma_notes")),
         "felony_history": clean(form.get("felony_history")),
         "probation_parole": clean(form.get("probation_parole")),
