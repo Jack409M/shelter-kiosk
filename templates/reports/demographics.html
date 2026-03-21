@@ -118,7 +118,50 @@
       {{ stat_tile("Women Admitted", program_snapshot.women_admitted_display, "women_admitted", favorite_metric_keys, filters) }}
       {{ stat_tile("Women Exited", program_snapshot.women_exited_display, "women_exited", favorite_metric_keys, filters) }}
       {{ stat_tile("Graduates", program_snapshot.graduates_display, "graduates", favorite_metric_keys, filters) }}
-      {{ stat_tile("Average Length of Stay", program_snapshot.average_length_of_stay_days, "avg_stay", favorite_metric_keys, filters, "days") }}
+      {{ stat_tile("Graduation Rate", program_snapshot.graduation_rate, "graduation_rate", favorite_metric_keys, filters, "%") }}
+      {{ stat_tile("Average Length Of Stay", program_snapshot.average_length_of_stay_days, "avg_stay", favorite_metric_keys, filters, "days") }}
+    </div>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <div>
+        <h2>Scope Comparison</h2>
+        <p class="section-note">
+          Current filtered scope compared against the total filtered program population.
+        </p>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      {{ stat_tile(scope_comparison.selected_scope_label ~ " Women Served", scope_comparison.selected_scope_display, "selected_scope_value", favorite_metric_keys, filters) }}
+      {{ stat_tile(scope_comparison.selected_scope_label ~ " Share Of Program", scope_comparison.selected_scope_share_of_program, "selected_scope_share", favorite_metric_keys, filters, "%") }}
+      {{ stat_tile("Total Program Women Served", scope_comparison.total_program_display, "total_program_served", favorite_metric_keys, filters) }}
+    </div>
+
+    <div class="table-wrap top-space">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Shelter</th>
+            <th>Total</th>
+            <th>Share Of Program</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in scope_comparison.shelters %}
+            <tr>
+              <td>{{ item.label }}</td>
+              <td>{{ item.display_value }}</td>
+              <td>{{ item.share_of_program }}%</td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="3">No data available.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
   </section>
 
@@ -127,13 +170,16 @@
       <div>
         <h2>Program Impact Highlights</h2>
         <p class="section-note">
-          Key outcome indicators reflecting recovery, stability, and economic progress.
+          Key outcome indicators reflecting recovery, education, and economic progress.
         </p>
       </div>
     </div>
 
     <div class="stats-grid">
       {{ stat_tile("Average Days Sober At Entry", recovery_and_sobriety.average_days_sober_at_entry, "avg_days_sober_entry", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Education At Entry", "%.2f"|format(education_and_income.average_education_at_entry), "avg_education_entry", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Education At Exit", "%.2f"|format(education_and_income.average_education_at_exit), "avg_education_exit", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Education Improvement", "%.2f"|format(education_and_income.average_education_improvement), "avg_education_improvement", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Income At Entry", "$" ~ "%.2f"|format(education_and_income.average_income_at_entry), "avg_income_entry", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Income At Exit", "$" ~ "%.2f"|format(education_and_income.average_income_at_exit), "avg_income_exit", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Income Improvement", "$" ~ "%.2f"|format(education_and_income.average_income_improvement), "avg_income_improvement", favorite_metric_keys, filters) }}
@@ -145,13 +191,20 @@
       <h2>Shelter Capacity</h2>
     </div>
 
-    <div class="capacity-bars">
+    <div class="stats-grid">
+      {{ stat_tile("Total Capacity", capacity_snapshot.total_capacity, "total_capacity", favorite_metric_keys, filters) }}
+      {{ stat_tile("Total Occupied", capacity_snapshot.total_occupied_display, "total_occupied", favorite_metric_keys, filters) }}
+      {{ stat_tile("Total Open Spaces", capacity_snapshot.total_open_spaces_display, "total_open_spaces", favorite_metric_keys, filters) }}
+      {{ stat_tile("Total Occupancy Rate", capacity_snapshot.total_occupancy_rate, "total_occupancy_rate", favorite_metric_keys, filters, "%") }}
+    </div>
+
+    <div class="capacity-bars top-space">
       {% for item in capacity_snapshot.shelters %}
         <div class="capacity-row">
           <div class="capacity-header">
             <div class="capacity-name">{{ item.label }}</div>
             <div class="capacity-meta">
-              {{ item.occupied_display }} / {{ item.capacity }} ({{ item.occupancy_rate }}%)
+              {{ item.occupied_display }} / {{ item.capacity }} occupied • {{ item.open_spaces_display }} open • {{ item.occupancy_rate }}%
             </div>
           </div>
 
@@ -330,7 +383,7 @@
     </div>
 
     <div class="stats-grid">
-      {{ stat_tile("Average Days Sober At Entry", recovery_and_sobriety.average_days_sober_at_entry, "avg_days_sober_entry", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Days Sober At Entry", recovery_and_sobriety.average_days_sober_at_entry, "avg_days_sober_entry_detail", favorite_metric_keys, filters) }}
     </div>
 
     <div class="table-wrap top-space">
@@ -388,6 +441,9 @@
     </div>
 
     <div class="stats-grid">
+      {{ stat_tile("Average Education At Entry", "%.2f"|format(education_and_income.average_education_at_entry), "avg_education_entry_section", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Education At Exit", "%.2f"|format(education_and_income.average_education_at_exit), "avg_education_exit_section", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Education Improvement", "%.2f"|format(education_and_income.average_education_improvement), "avg_education_improvement_section", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Income At Entry", "$" ~ "%.2f"|format(education_and_income.average_income_at_entry), "avg_income_entry", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Income At Exit", "$" ~ "%.2f"|format(education_and_income.average_income_at_exit), "avg_income_exit", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Income Improvement", "$" ~ "%.2f"|format(education_and_income.average_income_improvement), "avg_income_improvement", favorite_metric_keys, filters) }}
@@ -395,8 +451,13 @@
 
     <div class="two-col-grid top-space">
       <div class="subsection">
-        <h3>Education At Entry</h3>
-        <div class="table-wrap">
+        <h3>Average Education At Entry</h3>
+        <div class="stats-grid compact-grid">
+          {{ stat_tile("Numeric Average", "%.2f"|format(education_and_income.average_education_at_entry), "avg_education_entry_numeric", favorite_metric_keys, filters) }}
+          {{ stat_tile("Closest Level", education_and_income.average_education_at_entry_label, "avg_education_entry_label", favorite_metric_keys, filters) }}
+        </div>
+
+        <div class="table-wrap top-space">
           <table class="stats-table">
             <thead>
               <tr>
@@ -421,8 +482,13 @@
       </div>
 
       <div class="subsection">
-        <h3>Education At Exit</h3>
-        <div class="table-wrap">
+        <h3>Average Education At Exit</h3>
+        <div class="stats-grid compact-grid">
+          {{ stat_tile("Numeric Average", "%.2f"|format(education_and_income.average_education_at_exit), "avg_education_exit_numeric", favorite_metric_keys, filters) }}
+          {{ stat_tile("Closest Level", education_and_income.average_education_at_exit_label, "avg_education_exit_label", favorite_metric_keys, filters) }}
+        </div>
+
+        <div class="table-wrap top-space">
           <table class="stats-table">
             <thead>
               <tr>
@@ -455,7 +521,7 @@
 
     <div class="stats-grid">
       {{ stat_tile("Graduates", exit_outcomes.graduates_display, "exit_graduates", favorite_metric_keys, filters) }}
-      {{ stat_tile("Leave AMA", exit_outcomes.leave_ama_display, "leave_ama", favorite_metric_keys, filters) }}
+      {{ stat_tile("Leave Amarillo", exit_outcomes.leave_ama_display, "leave_ama", favorite_metric_keys, filters) }}
       {{ stat_tile("Total Exit Records", exit_outcomes.total_exit_records_display, "total_exit_records", favorite_metric_keys, filters) }}
     </div>
 
