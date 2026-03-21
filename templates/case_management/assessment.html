@@ -40,14 +40,16 @@
     padding: 12px;
   }
 
-  /* TIGHT GRID */
   .field-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 10px;
   }
 
-  .field { display: grid; gap: 4px; }
+  .field {
+    display: grid;
+    gap: 4px;
+  }
 
   .field.span-12 { grid-column: span 12; }
   .field.span-6  { grid-column: span 6; }
@@ -61,6 +63,11 @@
     color: #334155;
   }
 
+  .field-help {
+    font-size: 11px;
+    color: #64748b;
+  }
+
   .field input,
   .field select {
     min-height: 34px;
@@ -68,13 +75,79 @@
     border: 1px solid #c7d1dc;
     border-radius: 8px;
     font-size: 13px;
+    background: #ffffff;
+    color: #13202c;
+    box-sizing: border-box;
   }
 
   .field input[type="number"] {
     max-width: 110px;
   }
 
-  /* 🔥 ULTRA COMPACT TOGGLES */
+  .score-stack {
+    display: grid;
+    gap: 4px;
+  }
+
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    width: fit-content;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #334155;
+  }
+
+  .score-badge.is-green {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .score-badge.is-yellow {
+    background: #fef9c3;
+    border-color: #fde047;
+    color: #854d0e;
+  }
+
+  .score-badge.is-orange {
+    background: #ffedd5;
+    border-color: #fdba74;
+    color: #9a3412;
+  }
+
+  .score-badge.is-red {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+  }
+
+  .ace-input.is-green {
+    border-color: #86efac;
+    background: #f0fdf4;
+  }
+
+  .ace-input.is-yellow {
+    border-color: #fde047;
+    background: #fefce8;
+  }
+
+  .ace-input.is-orange {
+    border-color: #fdba74;
+    background: #fff7ed;
+  }
+
+  .ace-input.is-red {
+    border-color: #fca5a5;
+    background: #fef2f2;
+  }
+
   .toggle-field {
     display: grid;
     gap: 4px;
@@ -86,8 +159,8 @@
   }
 
   .toggle-inputs {
-    display: inline-flex;
-    gap: 6px;
+    display: grid;
+    gap: 4px;
   }
 
   .toggle-inputs input {
@@ -95,7 +168,7 @@
   }
 
   .toggle-chip {
-    min-width: 40px;
+    min-width: 56px;
     min-height: 28px;
     padding: 0 8px;
     border-radius: 999px;
@@ -104,12 +177,22 @@
     font-weight: 700;
     cursor: pointer;
     background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
   }
 
-  .toggle-inputs input:checked + .toggle-chip {
-    background: #1f5eff;
-    color: #fff;
-    border-color: #1f5eff;
+  .toggle-inputs input:checked + .toggle-chip.toggle-yes {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+  }
+
+  .toggle-inputs input:checked + .toggle-chip.toggle-no {
+    background: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
   }
 
   .action-row {
@@ -128,8 +211,15 @@
     border: none;
   }
 
-  .btn-soft { background: #eef2f6; }
-  .btn-primary { background: #1f5eff; color: #fff; }
+  .btn-soft {
+    background: #eef2f6;
+    color: #243447;
+  }
+
+  .btn-primary {
+    background: #1f5eff;
+    color: #fff;
+  }
 
   @media (max-width: 900px) {
     .field.span-6,
@@ -137,6 +227,10 @@
     .field.span-3,
     .field.span-2 {
       grid-column: span 12;
+    }
+
+    .field input[type="number"] {
+      max-width: 100%;
     }
   }
 </style>
@@ -152,15 +246,14 @@
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
 
-    <!-- Resident -->
     <section class="assessment-card">
       <div class="assessment-card-head">
         <h2>Select Resident</h2>
       </div>
       <div class="assessment-card-body">
         <div class="field span-6">
-          <label>Resident</label>
-          <select name="resident_id" required>
+          <label for="resident_id">Resident</label>
+          <select id="resident_id" name="resident_id" required>
             <option value="">Select resident</option>
             {% for r in residents %}
               <option value="{{ r.id }}" {% if form_data.get('resident_id') == r.id|string %}selected{% endif %}>
@@ -172,7 +265,6 @@
       </div>
     </section>
 
-    <!-- Trauma -->
     <section class="assessment-card">
       <div class="assessment-card-head">
         <h2>Trauma and Vulnerability</h2>
@@ -181,13 +273,36 @@
         <div class="field-grid">
 
           <div class="field span-2">
-            <label>ACE</label>
-            <input type="number" name="ace_score" value="{{ form_data.get('ace_score','') }}">
+            <label for="ace_score">ACE Score</label>
+            <div class="score-stack">
+              <input
+                id="ace_score"
+                class="ace-input"
+                name="ace_score"
+                type="number"
+                min="0"
+                max="10"
+                step="1"
+                inputmode="numeric"
+                value="{{ form_data.get('ace_score', '') }}"
+              >
+              <span id="ace_score_badge" class="score-badge">Enter 0 to 10</span>
+            </div>
           </div>
 
-          <div class="field span-2">
-            <label>Grit</label>
-            <input type="number" name="grit_score" value="{{ form_data.get('grit_score','') }}">
+          <div class="field span-3">
+            <label for="grit_score">Grit (Persistence Level)</label>
+            <input
+              id="grit_score"
+              name="grit_score"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              inputmode="numeric"
+              value="{{ form_data.get('grit_score', '') }}"
+            >
+            <div class="field-help">0 = gives up quickly, 100 = highly persistent</div>
           </div>
 
           {% for field, label in [
@@ -201,27 +316,22 @@
             ("car_at_entry","Has Car"),
             ("car_insurance_at_entry","Has Car Insurance")
           ] %}
-
           <div class="toggle-field span-2">
             <label>{{ label }}</label>
             <div class="toggle-inputs">
-              <input type="radio" id="{{ field }}_yes" name="{{ field }}" value="yes"
-                {% if form_data.get(field) == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="{{ field }}_yes">Yes</label>
+              <input type="radio" id="{{ field }}_yes" name="{{ field }}" value="yes" {% if form_data.get(field) == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="{{ field }}_yes">Yes</label>
 
-              <input type="radio" id="{{ field }}_no" name="{{ field }}" value="no"
-                {% if form_data.get(field) == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="{{ field }}_no">No</label>
+              <input type="radio" id="{{ field }}_no" name="{{ field }}" value="no" {% if form_data.get(field) == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="{{ field }}_no">No</label>
             </div>
           </div>
-
           {% endfor %}
 
         </div>
       </div>
     </section>
 
-    <!-- Actions -->
     <section class="assessment-card">
       <div class="action-row">
         <button class="btn-soft" type="submit" name="action" value="save_draft">
@@ -232,7 +342,81 @@
         </button>
       </div>
     </section>
-
   </form>
 </div>
+
+<script>
+  (function () {
+    const aceInput = document.getElementById("ace_score");
+    const aceBadge = document.getElementById("ace_score_badge");
+
+    function clampNumberInput(input) {
+      if (!input) return;
+      const min = input.min !== "" ? Number(input.min) : null;
+      const max = input.max !== "" ? Number(input.max) : null;
+      let value = input.value;
+
+      if (value === "") return;
+
+      let num = Number(value);
+      if (Number.isNaN(num)) return;
+
+      if (min !== null && num < min) num = min;
+      if (max !== null && num > max) num = max;
+
+      input.value = String(num);
+    }
+
+    function updateAceDisplay() {
+      if (!aceInput || !aceBadge) return;
+
+      aceInput.classList.remove("is-green", "is-yellow", "is-orange", "is-red");
+      aceBadge.classList.remove("is-green", "is-yellow", "is-orange", "is-red");
+
+      const raw = aceInput.value;
+      if (raw === "") {
+        aceBadge.textContent = "Enter 0 to 10";
+        return;
+      }
+
+      const value = Number(raw);
+      if (Number.isNaN(value)) {
+        aceBadge.textContent = "Enter 0 to 10";
+        return;
+      }
+
+      if (value <= 1) {
+        aceInput.classList.add("is-green");
+        aceBadge.classList.add("is-green");
+        aceBadge.textContent = "Normal / OK";
+      } else if (value <= 3) {
+        aceInput.classList.add("is-yellow");
+        aceBadge.classList.add("is-yellow");
+        aceBadge.textContent = "Low";
+      } else if (value <= 6) {
+        aceInput.classList.add("is-orange");
+        aceBadge.classList.add("is-orange");
+        aceBadge.textContent = "Moderate";
+      } else {
+        aceInput.classList.add("is-red");
+        aceBadge.classList.add("is-red");
+        aceBadge.textContent = "High";
+      }
+    }
+
+    if (aceInput) {
+      aceInput.addEventListener("input", function () {
+        clampNumberInput(aceInput);
+        updateAceDisplay();
+      });
+
+      aceInput.addEventListener("blur", function () {
+        clampNumberInput(aceInput);
+        updateAceDisplay();
+      });
+    }
+
+    updateAceDisplay();
+  })();
+</script>
 {% endblock %}
