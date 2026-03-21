@@ -13,6 +13,20 @@ from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
 
 
+ALLOWED_GENDER_VALUES = {"m", "f"}
+
+ALLOWED_DISABILITY_VALUES = {
+    "Visual",
+    "Deaf",
+    "Mental Health",
+    "Intellectual",
+    "Acquired Brain Injury",
+    "Autism Spectrum Disorder",
+    "Physical",
+    "Multiple",
+}
+
+
 def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list[str]]:
     data: dict[str, Any] = {
         "first_name": clean(form.get("first_name")),
@@ -73,6 +87,19 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 
     errors: list[str] = []
 
+    if data["first_name"]:
+        data["first_name"] = data["first_name"].strip()
+    if data["middle_name"]:
+        data["middle_name"] = data["middle_name"].strip()
+    if data["last_name"]:
+        data["last_name"] = data["last_name"].strip()
+    if data["city"]:
+        data["city"] = data["city"].strip()
+    if data["disability"]:
+        data["disability"] = data["disability"].strip()
+    if data["gender"]:
+        data["gender"] = data["gender"].strip().lower()
+
     if not data["first_name"]:
         errors.append("First name is required.")
 
@@ -84,6 +111,16 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 
     if data["shelter"] != shelter:
         errors.append("Intake shelter must match the shelter currently selected in staff navigation.")
+
+    if data["gender"] and data["gender"] not in ALLOWED_GENDER_VALUES:
+        errors.append("Gender must be M or F.")
+
+    if data["disability"] and data["disability"] not in ALLOWED_DISABILITY_VALUES:
+        errors.append(
+            "Disability Type must be one of the approved values: "
+            "Visual, Deaf, Mental Health, Intellectual, Acquired Brain Injury, "
+            "Autism Spectrum Disorder, Physical, or Multiple."
+        )
 
     birth_year = parse_int(data["birth_year"])
     current_year = date.today().year
@@ -120,6 +157,7 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     emergency_phone_digits = digits_only(data["emergency_contact_phone"])
     if data["emergency_contact_phone"] and len(emergency_phone_digits) < 10:
         errors.append("Emergency Contact Phone must contain at least 10 digits.")
+    data["emergency_contact_phone"] = emergency_phone_digits or None
 
     if data["email"]:
         data["email"] = data["email"].strip().lower()
@@ -128,6 +166,7 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         zipcode_digits = digits_only(data["last_zipcode_residence"])
         if len(zipcode_digits) not in {5, 9}:
             errors.append("Last Zipcode of Residence must be 5 or 9 digits.")
+        data["last_zipcode_residence"] = zipcode_digits
 
     children_count = parse_int(data["children_count"])
     if data["children_count"] and children_count is None:
@@ -152,9 +191,9 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 
     income_at_entry = parse_money(data["income_at_entry"])
     if data["income_at_entry"] and income_at_entry is None:
-        errors.append("Income at Entry must be a valid number.")
+        errors.append("Monthly Income at Entry must be a valid number.")
     if income_at_entry is not None and income_at_entry < 0:
-        errors.append("Income at Entry cannot be negative.")
+        errors.append("Monthly Income at Entry cannot be negative.")
     data["income_at_entry"] = income_at_entry
 
     if data["newborn_at_dwc"] == "yes":
