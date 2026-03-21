@@ -3,56 +3,51 @@
 {% block extra_head %}
 <style>
   .assessment-page {
-    max-width: 1240px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 20px 16px 40px 16px;
+    padding: 16px 12px 32px 12px;
   }
 
   .assessment-page h1 {
-    margin: 0 0 16px 0;
-    font-size: 28px;
-    line-height: 1.1;
+    margin: 0 0 14px 0;
+    font-size: 26px;
   }
 
   .assessment-form {
     display: grid;
-    gap: 14px;
+    gap: 12px;
   }
 
   .assessment-card {
     background: #ffffff;
     border: 1px solid #d8e0ea;
-    border-radius: 12px;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    border-radius: 10px;
     overflow: hidden;
   }
 
   .assessment-card-head {
-    padding: 12px 14px;
+    padding: 10px 12px;
     border-bottom: 1px solid #e6ebf1;
     background: #fafbfd;
   }
 
   .assessment-card-head h2 {
     margin: 0;
-    font-size: 16px;
-    line-height: 1.2;
+    font-size: 15px;
   }
 
   .assessment-card-body {
-    padding: 14px;
+    padding: 12px;
   }
 
+  /* TIGHT GRID */
   .field-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
 
-  .field {
-    display: grid;
-    gap: 5px;
-  }
+  .field { display: grid; gap: 4px; }
 
   .field.span-12 { grid-column: span 12; }
   .field.span-6  { grid-column: span 6; }
@@ -61,118 +56,80 @@
   .field.span-2  { grid-column: span 2; }
 
   .field label {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #334155;
   }
 
   .field input,
   .field select {
-    width: 100%;
-    min-height: 38px;
-    padding: 8px 10px;
+    min-height: 34px;
+    padding: 6px 8px;
     border: 1px solid #c7d1dc;
-    border-radius: 9px;
-    font: inherit;
-    background: #ffffff;
-    color: #13202c;
-    box-sizing: border-box;
+    border-radius: 8px;
+    font-size: 13px;
   }
 
   .field input[type="number"] {
-    max-width: 140px;
+    max-width: 110px;
   }
 
+  /* 🔥 ULTRA COMPACT TOGGLES */
   .toggle-field {
     display: grid;
-    gap: 6px;
+    gap: 4px;
   }
 
   .toggle-field > label {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
-    color: #334155;
   }
 
   .toggle-inputs {
     display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 6px;
   }
 
-  .toggle-inputs input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
+  .toggle-inputs input {
+    display: none;
   }
 
   .toggle-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 52px;
-    min-height: 36px;
-    padding: 0 12px;
-    border: 1px solid #c7d1dc;
+    min-width: 40px;
+    min-height: 28px;
+    padding: 0 8px;
     border-radius: 999px;
-    background: #ffffff;
-    color: #334155;
-    font-size: 13px;
+    border: 1px solid #c7d1dc;
+    font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    user-select: none;
-    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    background: #fff;
   }
 
-  .toggle-inputs input[type="radio"]:checked + .toggle-chip {
+  .toggle-inputs input:checked + .toggle-chip {
     background: #1f5eff;
+    color: #fff;
     border-color: #1f5eff;
-    color: #ffffff;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
-  }
-
-  .toggle-inputs input[type="radio"]:focus + .toggle-chip {
-    outline: 2px solid rgba(31, 94, 255, 0.2);
-    outline-offset: 2px;
   }
 
   .action-row {
     display: flex;
-    gap: 10px;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 14px;
+    gap: 8px;
+    padding: 12px;
   }
 
   .btn-soft,
   .btn-primary {
-    appearance: none;
-    border: 0;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 14px;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
     font-weight: 700;
-    text-decoration: none;
     cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    border: none;
   }
 
-  .btn-soft {
-    background: #eef2f6;
-    color: #243447;
-  }
-
-  .btn-primary,
-  .btn-primary:hover,
-  .btn-primary:focus,
-  .btn-primary:visited {
-    background: #1f5eff;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-  }
+  .btn-soft { background: #eef2f6; }
+  .btn-primary { background: #1f5eff; color: #fff; }
 
   @media (max-width: 900px) {
     .field.span-6,
@@ -180,15 +137,6 @@
     .field.span-3,
     .field.span-2 {
       grid-column: span 12;
-    }
-
-    .field input[type="number"] {
-      max-width: 100%;
-    }
-
-    .action-row {
-      flex-direction: column;
-      align-items: stretch;
     }
   }
 </style>
@@ -200,177 +148,91 @@
 <div class="assessment-page">
   <h1>Assessment</h1>
 
-  <form class="assessment-form" method="post" action="{{ url_for('case_management.submit_assessment') }}">
+  <form method="post" action="{{ url_for('case_management.submit_assessment') }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="draft_id" value="{{ form_data.get('draft_id', '') }}">
 
+    <!-- Resident -->
     <section class="assessment-card">
       <div class="assessment-card-head">
         <h2>Select Resident</h2>
       </div>
       <div class="assessment-card-body">
-        <div class="field-grid">
-          <div class="field span-6">
-            <label for="resident_id">Resident</label>
-            <select id="resident_id" name="resident_id" required>
-              <option value="">Select resident</option>
-              {% for r in residents %}
-                <option value="{{ r.id }}"
-                  {% if form_data.get('resident_id') == r.id|string %}selected{% endif %}
-                >
-                  {{ r.last_name }}, {{ r.first_name }}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
+        <div class="field span-6">
+          <label>Resident</label>
+          <select name="resident_id" required>
+            <option value="">Select resident</option>
+            {% for r in residents %}
+              <option value="{{ r.id }}" {% if form_data.get('resident_id') == r.id|string %}selected{% endif %}>
+                {{ r.last_name }}, {{ r.first_name }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
       </div>
     </section>
 
+    <!-- Trauma -->
     <section class="assessment-card">
       <div class="assessment-card-head">
         <h2>Trauma and Vulnerability</h2>
       </div>
       <div class="assessment-card-body">
         <div class="field-grid">
+
           <div class="field span-2">
-            <label for="ace_score">ACE Score</label>
-            <input
-              id="ace_score"
-              name="ace_score"
-              type="number"
-              min="0"
-              max="10"
-              step="1"
-              value="{{ form_data.get('ace_score', '') }}"
-            >
+            <label>ACE</label>
+            <input type="number" name="ace_score" value="{{ form_data.get('ace_score','') }}">
           </div>
 
           <div class="field span-2">
-            <label for="grit_score">Grit Score</label>
-            <input
-              id="grit_score"
-              name="grit_score"
-              type="number"
-              min="0"
-              max="100"
-              step="1"
-              value="{{ form_data.get('grit_score', '') }}"
-            >
+            <label>Grit</label>
+            <input type="number" name="grit_score" value="{{ form_data.get('grit_score','') }}">
           </div>
 
-          <div class="toggle-field span-4">
-            <label>Sexual Survivor</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="sexual_survivor_yes" name="sexual_survivor" value="yes" {% if form_data.get('sexual_survivor') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="sexual_survivor_yes">Yes</label>
+          {% for field, label in [
+            ("sexual_survivor","Sexual Survivor"),
+            ("domestic_violence_history","Domestic Violence"),
+            ("human_trafficking_history","Trafficking"),
+            ("drug_court","Drug Court"),
+            ("warrants_unpaid","Warrants"),
+            ("mh_exam_completed","MH Exam"),
+            ("med_exam_completed","Medical Exam"),
+            ("car_at_entry","Has Car"),
+            ("car_insurance_at_entry","Has Car Insurance")
+          ] %}
 
-              <input type="radio" id="sexual_survivor_no" name="sexual_survivor" value="no" {% if form_data.get('sexual_survivor') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="sexual_survivor_no">No</label>
+          <div class="toggle-field span-2">
+            <label>{{ label }}</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="{{ field }}_yes" name="{{ field }}" value="yes"
+                {% if form_data.get(field) == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="{{ field }}_yes">Yes</label>
+
+              <input type="radio" id="{{ field }}_no" name="{{ field }}" value="no"
+                {% if form_data.get(field) == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="{{ field }}_no">No</label>
             </div>
           </div>
 
-          <div class="toggle-field span-4">
-            <label>Domestic Violence History</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="domestic_violence_history_yes" name="domestic_violence_history" value="yes" {% if form_data.get('domestic_violence_history') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="domestic_violence_history_yes">Yes</label>
+          {% endfor %}
 
-              <input type="radio" id="domestic_violence_history_no" name="domestic_violence_history" value="no" {% if form_data.get('domestic_violence_history') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="domestic_violence_history_no">No</label>
-            </div>
-          </div>
-
-          <div class="toggle-field span-4">
-            <label>Human Trafficking History</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="human_trafficking_history_yes" name="human_trafficking_history" value="yes" {% if form_data.get('human_trafficking_history') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="human_trafficking_history_yes">Yes</label>
-
-              <input type="radio" id="human_trafficking_history_no" name="human_trafficking_history" value="no" {% if form_data.get('human_trafficking_history') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="human_trafficking_history_no">No</label>
-            </div>
-          </div>
-
-          <div class="toggle-field span-4">
-            <label>Drug Court</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="drug_court_yes" name="drug_court" value="yes" {% if form_data.get('drug_court') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="drug_court_yes">Yes</label>
-
-              <input type="radio" id="drug_court_no" name="drug_court" value="no" {% if form_data.get('drug_court') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="drug_court_no">No</label>
-            </div>
-          </div>
-
-          <div class="toggle-field span-4">
-            <label>Warrants or Fines Unpaid</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="warrants_unpaid_yes" name="warrants_unpaid" value="yes" {% if form_data.get('warrants_unpaid') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="warrants_unpaid_yes">Yes</label>
-
-              <input type="radio" id="warrants_unpaid_no" name="warrants_unpaid" value="no" {% if form_data.get('warrants_unpaid') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="warrants_unpaid_no">No</label>
-            </div>
-          </div>
-
-          <div class="toggle-field span-4">
-            <label>Mental Health Exam Completed</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="mh_exam_completed_yes" name="mh_exam_completed" value="yes" {% if form_data.get('mh_exam_completed') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="mh_exam_completed_yes">Yes</label>
-
-              <input type="radio" id="mh_exam_completed_no" name="mh_exam_completed" value="no" {% if form_data.get('mh_exam_completed') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="mh_exam_completed_no">No</label>
-            </div>
-          </div>
-
-          <div class="toggle-field span-4">
-            <label>Medical Exam Completed</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="med_exam_completed_yes" name="med_exam_completed" value="yes" {% if form_data.get('med_exam_completed') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="med_exam_completed_yes">Yes</label>
-
-              <input type="radio" id="med_exam_completed_no" name="med_exam_completed" value="no" {% if form_data.get('med_exam_completed') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="med_exam_completed_no">No</label>
-            </div>
-          </div>
-
-          <div class="toggle-field span-4">
-            <label>Car at Entry</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="car_at_entry_yes" name="car_at_entry" value="yes" {% if form_data.get('car_at_entry') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="car_at_entry_yes">Yes</label>
-
-              <input type="radio" id="car_at_entry_no" name="car_at_entry" value="no" {% if form_data.get('car_at_entry') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="car_at_entry_no">No</label>
-            </div>
-          </div>
-
-          <div class="toggle-field span-4">
-            <label>Car Insurance at Entry</label>
-            <div class="toggle-inputs">
-              <input type="radio" id="car_insurance_at_entry_yes" name="car_insurance_at_entry" value="yes" {% if form_data.get('car_insurance_at_entry') == 'yes' %}checked{% endif %}>
-              <label class="toggle-chip" for="car_insurance_at_entry_yes">Yes</label>
-
-              <input type="radio" id="car_insurance_at_entry_no" name="car_insurance_at_entry" value="no" {% if form_data.get('car_insurance_at_entry') == 'no' %}checked{% endif %}>
-              <label class="toggle-chip" for="car_insurance_at_entry_no">No</label>
-            </div>
-          </div>
         </div>
       </div>
     </section>
 
+    <!-- Actions -->
     <section class="assessment-card">
       <div class="action-row">
         <button class="btn-soft" type="submit" name="action" value="save_draft">
           Save Draft
         </button>
         <button class="btn-primary" type="submit" name="action" value="complete">
-          Finalize Assessment
+          Finalize
         </button>
       </div>
     </section>
+
   </form>
 </div>
 {% endblock %}
