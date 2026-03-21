@@ -202,11 +202,15 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
     income = parse_money(data["income_at_exit"])
     if data["income_at_exit"] and income is None:
         errors.append("Current Monthly Income must be a valid number.")
+    if income is not None and income < 0:
+        errors.append("Current Monthly Income cannot be negative.")
     data["income_at_exit"] = income
 
     grit = parse_money(data["grit_at_exit"])
     if data["grit_at_exit"] and grit is None:
         errors.append("Grit at Exit must be a valid number.")
+    if grit is not None and grit < 0:
+        errors.append("Grit at Exit cannot be negative.")
     data["grit_at_exit"] = grit
 
     if data["education_at_exit"] and data["education_at_exit"] not in EDUCATION_LEVEL_OPTIONS:
