@@ -449,9 +449,6 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
         INSERT INTO family_snapshots
         (
             enrollment_id,
-            has_children,
-            children_count,
-            newborn_born_at_dwc,
             created_at,
             updated_at
         )
@@ -459,17 +456,11 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
         (
             {ph},
             {ph},
-            {ph},
-            {ph},
-            {ph},
             {ph}
         )
         """,
         (
             enrollment_id,
-            yes_no_to_int(data["has_children"]),
-            data["children_count"],
-            yes_no_to_int(data["newborn_at_dwc"]),
             now,
             now,
         ),
