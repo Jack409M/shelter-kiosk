@@ -18,31 +18,48 @@ from routes.case_management_parts.helpers import (
 )
 
 
-ALLOWED_EXIT_CATEGORIES = {
-    "Successful Completion",
-    "Positive Exit",
-    "Neutral Exit",
-    "Negative Exit",
-    "Administrative Exit",
+EDUCATION_LEVEL_OPTIONS = {
+    "No High School",
+    "Some High School",
+    "High School Graduate",
+    "GED",
+    "Vocational",
+    "Associates",
+    "Bachelor",
+    "Masters",
+    "Doctorate",
 }
 
-ALLOWED_EXIT_REASONS = {
-    "Program Graduated",
-    "Permanent Housing",
-    "Family Placement",
-    "Health Placement",
-    "Left by Choice",
-    "Left Without Notice",
-    "Unknown / Lost Contact",
-    "Rules Violation",
-    "Non Compliance with Program",
-    "Relapse",
-    "Behavioral Conflict",
-    "Incarceration",
-    "Transferred to Another Program",
-    "Medical Discharge",
-    "Safety Removal",
+EXIT_REASON_MAP = {
+    "Successful Completion": {
+        "Program Graduated",
+    },
+    "Positive Exit": {
+        "Permanent Housing",
+        "Family Placement",
+        "Health Placement",
+    },
+    "Neutral Exit": {
+        "Transferred to Another Program",
+        "Unknown / Lost Contact",
+    },
+    "Negative Exit": {
+        "Relapse",
+        "Behavioral Conflict",
+        "Rules Violation",
+        "Non Compliance with Program",
+        "Left Without Notice",
+    },
+    "Administrative Exit": {
+        "Incarceration",
+        "Medical Discharge",
+        "Safety Removal",
+        "Left by Choice",
+    },
 }
+
+ALLOWED_EXIT_CATEGORIES = set(EXIT_REASON_MAP.keys())
+ALLOWED_EXIT_REASONS = {reason for reasons in EXIT_REASON_MAP.values() for reason in reasons}
 
 
 def _row_value(row: Any, key: str, index: int):
@@ -94,6 +111,8 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
             exit_reason,
             graduate_dwc,
             leave_ama,
+            leave_amarillo_city,
+            leave_amarillo_unknown,
             income_at_exit,
             education_at_exit,
             grit_at_exit,
@@ -120,15 +139,17 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
         "exit_reason": _row_value(row, "exit_reason", 3) or "",
         "graduate_dwc": "yes" if int(_row_value(row, "graduate_dwc", 4) or 0) else "no",
         "leave_ama": "yes" if int(_row_value(row, "leave_ama", 5) or 0) else "no",
-        "income_at_exit": _row_value(row, "income_at_exit", 6) or "",
-        "education_at_exit": _row_value(row, "education_at_exit", 7) or "",
-        "grit_at_exit": _row_value(row, "grit_at_exit", 8) or "",
-        "received_car": "yes" if int(_row_value(row, "received_car", 9) or 0) else "no",
-        "car_insurance": "yes" if int(_row_value(row, "car_insurance", 10) or 0) else "no",
-        "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 11) or 0) else "no",
-        "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 12) or 0) else "no",
-        "obtained_public_insurance": "yes" if int(_row_value(row, "obtained_public_insurance", 13) or 0) else "no",
-        "private_insurance": "yes" if int(_row_value(row, "private_insurance", 14) or 0) else "no",
+        "leave_amarillo_city": _row_value(row, "leave_amarillo_city", 6) or "",
+        "leave_amarillo_unknown": "yes" if int(_row_value(row, "leave_amarillo_unknown", 7) or 0) else "no",
+        "income_at_exit": _row_value(row, "income_at_exit", 8) or "",
+        "education_at_exit": _row_value(row, "education_at_exit", 9) or "",
+        "grit_at_exit": _row_value(row, "grit_at_exit", 10) or "",
+        "received_car": "yes" if int(_row_value(row, "received_car", 11) or 0) else "no",
+        "car_insurance": "yes" if int(_row_value(row, "car_insurance", 12) or 0) else "no",
+        "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 13) or 0) else "no",
+        "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 14) or 0) else "no",
+        "obtained_public_insurance": "yes" if int(_row_value(row, "obtained_public_insurance", 15) or 0) else "no",
+        "private_insurance": "yes" if int(_row_value(row, "private_insurance", 16) or 0) else "no",
     }
 
 
@@ -140,6 +161,8 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
         "exit_reason": clean(form.get("exit_reason")),
         "graduate_dwc": clean(form.get("graduate_dwc")),
         "leave_ama": clean(form.get("leave_ama")),
+        "leave_amarillo_city": clean(form.get("leave_amarillo_city")),
+        "leave_amarillo_unknown": "yes" if clean(form.get("leave_amarillo_unknown")) == "yes" else "no",
         "income_at_exit": clean(form.get("income_at_exit")),
         "education_at_exit": clean(form.get("education_at_exit")),
         "grit_at_exit": clean(form.get("grit_at_exit")),
@@ -169,15 +192,25 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
     if not data["exit_reason"] or data["exit_reason"] not in ALLOWED_EXIT_REASONS:
         errors.append("Exit Reason is required and must be valid.")
 
+    if (
+        data["exit_category"] in EXIT_REASON_MAP
+        and data["exit_reason"]
+        and data["exit_reason"] not in EXIT_REASON_MAP[data["exit_category"]]
+    ):
+        errors.append("Exit Reason must match the selected Exit Category.")
+
     income = parse_money(data["income_at_exit"])
     if data["income_at_exit"] and income is None:
-        errors.append("Current income must be a valid number.")
+        errors.append("Current Monthly Income must be a valid number.")
     data["income_at_exit"] = income
 
     grit = parse_money(data["grit_at_exit"])
     if data["grit_at_exit"] and grit is None:
         errors.append("Grit at Exit must be a valid number.")
     data["grit_at_exit"] = grit
+
+    if data["education_at_exit"] and data["education_at_exit"] not in EDUCATION_LEVEL_OPTIONS:
+        errors.append("Education at Exit must be one of the approved education levels.")
 
     yes_no_fields = [
         "graduate_dwc",
@@ -203,6 +236,16 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
 
     if data["car_insurance"] == "yes" and data["received_car"] != "yes":
         errors.append("Car Insurance cannot be Yes unless Received Car is Yes.")
+
+    if data["leave_ama"] == "yes":
+        if data["leave_amarillo_unknown"] != "yes" and not data["leave_amarillo_city"]:
+            errors.append("Enter the city left for or mark it Unknown when Leave Amarillo is Yes.")
+    else:
+        data["leave_amarillo_city"] = ""
+        data["leave_amarillo_unknown"] = "no"
+
+    if data["leave_amarillo_unknown"] == "yes":
+        data["leave_amarillo_city"] = ""
 
     entry_dt = parse_iso_date(entry_date)
     if entry_dt and exit_date and exit_date < entry_dt:
@@ -230,6 +273,8 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 exit_reason = {ph},
                 graduate_dwc = {ph},
                 leave_ama = {ph},
+                leave_amarillo_city = {ph},
+                leave_amarillo_unknown = {ph},
                 income_at_exit = {ph},
                 education_at_exit = {ph},
                 grit_at_exit = {ph},
@@ -249,6 +294,8 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 data["exit_reason"],
                 yes_no_to_int(data["graduate_dwc"]),
                 yes_no_to_int(data["leave_ama"]),
+                data["leave_amarillo_city"],
+                yes_no_to_int(data["leave_amarillo_unknown"]),
                 data["income_at_exit"],
                 data["education_at_exit"],
                 data["grit_at_exit"],
@@ -275,6 +322,8 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             exit_reason,
             graduate_dwc,
             leave_ama,
+            leave_amarillo_city,
+            leave_amarillo_unknown,
             income_at_exit,
             education_at_exit,
             grit_at_exit,
@@ -306,6 +355,8 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             {ph},
             {ph},
             {ph},
+            {ph},
+            {ph},
             {ph}
         )
         """,
@@ -317,6 +368,8 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             data["exit_reason"],
             yes_no_to_int(data["graduate_dwc"]),
             yes_no_to_int(data["leave_ama"]),
+            data["leave_amarillo_city"],
+            yes_no_to_int(data["leave_amarillo_unknown"]),
             data["income_at_exit"],
             data["education_at_exit"],
             data["grit_at_exit"],
@@ -424,4 +477,3 @@ def submit_exit_assessment_view(resident_id: int):
 
     flash("Exit assessment saved.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
-    
