@@ -57,13 +57,37 @@
     </p>
 
     <p>
-      <label for="exit_reason">Reason for Exit</label><br>
-      <textarea
-        id="exit_reason"
-        name="exit_reason"
-        rows="4"
-        required
-      >{{ form_data.get('exit_reason', '') }}</textarea>
+      <label for="exit_category">Exit Category</label><br>
+      <select id="exit_category" name="exit_category" required>
+        <option value="">Select</option>
+        <option value="Successful Completion" {% if form_data.get('exit_category') == 'Successful Completion' %}selected{% endif %}>Successful Completion</option>
+        <option value="Positive Exit" {% if form_data.get('exit_category') == 'Positive Exit' %}selected{% endif %}>Positive Exit</option>
+        <option value="Neutral Exit" {% if form_data.get('exit_category') == 'Neutral Exit' %}selected{% endif %}>Neutral Exit</option>
+        <option value="Negative Exit" {% if form_data.get('exit_category') == 'Negative Exit' %}selected{% endif %}>Negative Exit</option>
+        <option value="Administrative Exit" {% if form_data.get('exit_category') == 'Administrative Exit' %}selected{% endif %}>Administrative Exit</option>
+      </select>
+    </p>
+
+    <p>
+      <label for="exit_reason">Exit Reason</label><br>
+      <select id="exit_reason" name="exit_reason" required>
+        <option value="">Select</option>
+        <option value="Program Graduated" {% if form_data.get('exit_reason') == 'Program Graduated' %}selected{% endif %}>Program Graduated</option>
+        <option value="Permanent Housing" {% if form_data.get('exit_reason') == 'Permanent Housing' %}selected{% endif %}>Permanent Housing</option>
+        <option value="Family Placement" {% if form_data.get('exit_reason') == 'Family Placement' %}selected{% endif %}>Family Placement</option>
+        <option value="Health Placement" {% if form_data.get('exit_reason') == 'Health Placement' %}selected{% endif %}>Health Placement</option>
+        <option value="Left by Choice" {% if form_data.get('exit_reason') == 'Left by Choice' %}selected{% endif %}>Left by Choice</option>
+        <option value="Left Without Notice" {% if form_data.get('exit_reason') == 'Left Without Notice' %}selected{% endif %}>Left Without Notice</option>
+        <option value="Unknown / Lost Contact" {% if form_data.get('exit_reason') == 'Unknown / Lost Contact' %}selected{% endif %}>Unknown / Lost Contact</option>
+        <option value="Rules Violation" {% if form_data.get('exit_reason') == 'Rules Violation' %}selected{% endif %}>Rules Violation</option>
+        <option value="Non Compliance with Program" {% if form_data.get('exit_reason') == 'Non Compliance with Program' %}selected{% endif %}>Non Compliance with Program</option>
+        <option value="Relapse" {% if form_data.get('exit_reason') == 'Relapse' %}selected{% endif %}>Relapse</option>
+        <option value="Behavioral Conflict" {% if form_data.get('exit_reason') == 'Behavioral Conflict' %}selected{% endif %}>Behavioral Conflict</option>
+        <option value="Incarceration" {% if form_data.get('exit_reason') == 'Incarceration' %}selected{% endif %}>Incarceration</option>
+        <option value="Transferred to Another Program" {% if form_data.get('exit_reason') == 'Transferred to Another Program' %}selected{% endif %}>Transferred to Another Program</option>
+        <option value="Medical Discharge" {% if form_data.get('exit_reason') == 'Medical Discharge' %}selected{% endif %}>Medical Discharge</option>
+        <option value="Safety Removal" {% if form_data.get('exit_reason') == 'Safety Removal' %}selected{% endif %}>Safety Removal</option>
+      </select>
     </p>
 
     <p>
