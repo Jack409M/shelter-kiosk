@@ -656,7 +656,8 @@ def get_demographics(
         FROM program_enrollments pe
         JOIN intake_assessments ia ON ia.enrollment_id = pe.id
         {where_sql}
-        AND ia.disability = 1
+        AND ia.disability IS NOT NULL
+        AND TRIM(ia.disability) <> ''
         """,
         where_params,
     )
