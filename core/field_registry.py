@@ -8,7 +8,7 @@ class FieldDefinition:
     label: str
 
     # lifecycle placement
-    lifecycle_stage: Optional[str] = None  # demographics, intake, exit, followup_6m, followup_1y, derived, reporting_only
+    lifecycle_stage: Optional[str] = None  # demographics, intake, current_status, exit, followup_6m, followup_1y, derived, reporting_only
 
     # wiring status
     wiring_status: Optional[str] = None  # complete, partial, missing, derived, misaligned
@@ -104,17 +104,17 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="treatment_grad_date",
-        label="Treatment Grad Date",
+        label="Treatment Graduation Date",
         lifecycle_stage="intake",
         wiring_status="missing",
-        notes="Historical background field for prior rehab completion date. Should be collected at intake if retained in the dataset.",
+        notes="Historical background field for prior rehab completion date. This means when the resident finished her last rehab treatment before entry.",
     ),
     FieldDefinition(
         key="rad_graduation",
-        label="RAD graduation",
-        lifecycle_stage="reporting_only",
+        label="RAD Graduation",
+        lifecycle_stage="current_status",
         wiring_status="misaligned",
-        notes="Program milestone completed during enrollment, not an intake or exit field. Should be modeled as an in program milestone or progress event if retained.",
+        notes="Program milestone completed during enrollment. RAD is an 8 week milestone inside the larger program and should not be treated as intake or exit only.",
     ),
     FieldDefinition(
         key="days_sober_at_entry",
@@ -167,7 +167,7 @@ FIELDS: List[FieldDefinition] = [
         table="residents",
         column="gender",
         used_in_stats=True,
-        notes="Collected and stored.",
+        notes="Collected and stored. Allowed values should be limited to M or F.",
     ),
     FieldDefinition(
         key="woman_age",
@@ -203,7 +203,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="kids_ages_0_5",
-        label="Kids ages 0-5",
+        label="Kids ages 0 to 5",
         lifecycle_stage="derived",
         wiring_status="derived",
         table="family_snapshots",
@@ -213,7 +213,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="kids_ages_6_11",
-        label="Kids ages 6-11",
+        label="Kids ages 6 to 11",
         lifecycle_stage="derived",
         wiring_status="derived",
         table="family_snapshots",
@@ -223,7 +223,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="kids_ages_12_17",
-        label="Kids ages 12-17",
+        label="Kids ages 12 to 17",
         lifecycle_stage="derived",
         wiring_status="derived",
         table="family_snapshots",
@@ -233,14 +233,14 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="young_adults_18_21",
-        label="Young adults 18-21",
+        label="Young adults 18 to 21",
         lifecycle_stage="derived",
         wiring_status="missing",
         notes="Household composition reporting field. Not wired. Likely should be derived from dependent records if needed.",
     ),
     FieldDefinition(
         key="adult_children_21_65",
-        label="Adult children 21-65",
+        label="Adult children 21 to 65",
         lifecycle_stage="derived",
         wiring_status="missing",
         notes="Household composition reporting field. Not wired. Likely should be derived from dependent records if needed.",
@@ -267,7 +267,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="shelter",
-        label="SHELTER",
+        label="Shelter or Program Identifier",
         lifecycle_stage="intake",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -275,11 +275,11 @@ FIELDS: List[FieldDefinition] = [
         table="program_enrollments",
         column="shelter",
         used_in_stats=True,
-        notes="Also written to residents.shelter.",
+        notes="Current values in use are Abba, Haven House, Haven Too, Gratitude House, Level 9, Exited, and Outreach. This field currently mixes location, program level, and status. Also written to residents.shelter. Do not use for duplicate matching.",
     ),
     FieldDefinition(
         key="income_at_entry",
-        label="Income at Entry",
+        label="Monthly Income at Entry",
         lifecycle_stage="intake",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -287,7 +287,7 @@ FIELDS: List[FieldDefinition] = [
         table="intake_assessments",
         column="income_at_entry",
         used_in_stats=True,
-        notes="Collected and stored.",
+        notes="Collected and stored. This means monthly income, not annual income.",
     ),
     FieldDefinition(
         key="last_zipcode_of_residence",
@@ -327,7 +327,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="disability",
-        label="Disability",
+        label="Disability Type",
         lifecycle_stage="intake",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -335,11 +335,11 @@ FIELDS: List[FieldDefinition] = [
         table="intake_assessments",
         column="disability",
         used_in_stats=True,
-        notes="Collected and stored.",
+        notes="Collected and stored. Approved categories are Visual, Deaf, Mental Health, Intellectual, Acquired Brain Injury, Autism Spectrum Disorder, Physical, and Multiple. This is a condition category, not a service need field.",
     ),
     FieldDefinition(
         key="education_at_entry",
-        label="Edu at Entry",
+        label="Education at Entry",
         lifecycle_stage="intake",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -347,7 +347,14 @@ FIELDS: List[FieldDefinition] = [
         table="intake_assessments",
         column="education_at_entry",
         used_in_stats=True,
-        notes="Collected and stored.",
+        notes="Collected and stored. This means highest education level already completed at entry. GED and High School should be treated as equivalent for scoring.",
+    ),
+    FieldDefinition(
+        key="education_program",
+        label="Education Program",
+        lifecycle_stage="current_status",
+        wiring_status="missing",
+        notes="Current education track field. Approved values are Secondary, GED, Vocational, and Other. This is separate from education_at_entry and should not be treated as completed education level.",
     ),
     FieldDefinition(
         key="educational_programs_entered_after_intake",
@@ -358,27 +365,27 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="car_at_entry",
-        label="Car at Entry",
-        lifecycle_stage="intake",
-        wiring_status="complete",
+        label="Has Car",
+        lifecycle_stage="current_status",
+        wiring_status="misaligned",
         form_page="intake_assessment",
         form_field="car_at_entry",
         table="intake_assessments",
         column="car_at_entry",
         used_in_stats=False,
-        notes="Collected and stored.",
+        notes="Business rule says this belongs in assessment as a current condition field, not as an intake baseline field. Current wiring still uses the older at entry naming.",
     ),
     FieldDefinition(
         key="car_insurance_at_entry",
-        label="Car Ins Entry",
-        lifecycle_stage="intake",
-        wiring_status="complete",
+        label="Has Car Insurance",
+        lifecycle_stage="current_status",
+        wiring_status="misaligned",
         form_page="intake_assessment",
         form_field="car_insurance_at_entry",
         table="intake_assessments",
         column="car_insurance_at_entry",
         used_in_stats=False,
-        notes="Collected and stored.",
+        notes="Business rule says this belongs in assessment as a current condition field, not as an intake baseline field. Current wiring still uses the older at entry naming.",
     ),
     FieldDefinition(
         key="length_of_time_in_amarillo",
@@ -418,7 +425,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="ace_score",
-        label="ACE score at entry",
+        label="ACE Score at Entry",
         lifecycle_stage="intake",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -426,11 +433,11 @@ FIELDS: List[FieldDefinition] = [
         table="intake_assessments",
         column="ace_score",
         used_in_stats=True,
-        notes="Collected and stored.",
+        notes="Collected and stored. This is the Adverse Childhood Experiences score and should stay on the 0 to 10 scale.",
     ),
     FieldDefinition(
         key="grit_score_at_entry",
-        label="Grit score at entry",
+        label="Grit Score at Entry",
         lifecycle_stage="intake",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -438,7 +445,7 @@ FIELDS: List[FieldDefinition] = [
         table="intake_assessments",
         column="grit_score",
         used_in_stats=False,
-        notes="Collected and stored.",
+        notes="Collected and stored. Intended to reflect persistence or follow through.",
     ),
     FieldDefinition(
         key="updated_grit",
@@ -497,7 +504,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="entry_parole_probation",
-        label="Entry Parole/Probation",
+        label="Entry Parole or Probation",
         lifecycle_stage="intake",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -588,24 +595,31 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="children_receiving_counseling_count",
-        label="# of children Receiving Counseling",
+        label="Children Receiving Counseling Count",
         lifecycle_stage="followup_6m",
         wiring_status="missing",
         notes="Likely belongs in child records or later followup reporting, not intake.",
+    ),
+    FieldDefinition(
+        key="parenting_class_needed",
+        label="Parenting Class Needed",
+        lifecycle_stage="current_status",
+        wiring_status="missing",
+        notes="This field means whether parenting class is needed, not whether it was completed. Allowed values should be yes or no.",
     ),
     FieldDefinition(
         key="parenting_class_completed",
         label="Parenting Class Completed",
         lifecycle_stage="followup_6m",
         wiring_status="missing",
-        notes="Later progress or outcome field. Not wired.",
+        notes="Separate completion field. Keep separate from parenting_class_needed.",
     ),
     FieldDefinition(
-        key="dwc_level_today_or_exit",
-        label="DWC Level Today or Exit",
-        lifecycle_stage="reporting_only",
-        wiring_status="misaligned",
-        notes="Weekly submissions keep this as PDF or weekly snapshot material only. Not wired into the master resident metrics dataset.",
+        key="dwc_level_today",
+        label="DWC Level Today",
+        lifecycle_stage="current_status",
+        wiring_status="missing",
+        notes="Current program level field. Allowed values are 1, 2, 3, 4, 5, 6, 7, 8, 9, and E. This is a changing current status field, not a fixed intake identity field.",
     ),
     FieldDefinition(
         key="date_graduated",
@@ -698,7 +712,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="received_car_at_exit",
-        label="Received Car/car at exit",
+        label="Received Car at Exit",
         lifecycle_stage="exit",
         wiring_status="complete",
         form_page="exit_assessment",
@@ -710,7 +724,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="car_insurance_at_exit",
-        label="Car ins.",
+        label="Car Insurance at Exit",
         lifecycle_stage="exit",
         wiring_status="complete",
         form_page="exit_assessment",
@@ -722,14 +736,14 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="received_car_expense_help",
-        label="Recieved car expense help",
+        label="Received Car Expense Help",
         lifecycle_stage="followup_6m",
         wiring_status="missing",
         notes="Outcome field. Not wired. Could belong in exit or followup depending on business rule.",
     ),
     FieldDefinition(
         key="current_income",
-        label="Current income",
+        label="Current Income",
         lifecycle_stage="exit",
         wiring_status="complete",
         form_page="exit_assessment",
@@ -741,7 +755,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="education_at_exit",
-        label="Edu at Exit/current education level",
+        label="Education at Exit",
         lifecycle_stage="exit",
         wiring_status="complete",
         form_page="exit_assessment",
@@ -808,7 +822,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="phone",
-        label="Phone #",
+        label="Phone",
         lifecycle_stage="demographics",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -820,7 +834,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="income_6_month_graduation",
-        label="Income 6 mo. Graduation",
+        label="Income 6 Month Graduation",
         lifecycle_stage="followup_6m",
         wiring_status="partial",
         table="followups",
@@ -830,7 +844,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="income_1_year_graduation",
-        label="Income 1 yr Graduation",
+        label="Income 1 Year Graduation",
         lifecycle_stage="followup_1y",
         wiring_status="partial",
         table="followups",
@@ -840,7 +854,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="sober_6_month_graduation",
-        label="Sober 6 mo. Graduation",
+        label="Sober 6 Month Graduation",
         lifecycle_stage="followup_6m",
         wiring_status="partial",
         table="followups",
@@ -850,7 +864,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="sober_1_year_graduation",
-        label="Sober 1 yr Graduation",
+        label="Sober 1 Year Graduation",
         lifecycle_stage="followup_1y",
         wiring_status="partial",
         table="followups",
@@ -860,7 +874,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="email",
-        label="Email address",
+        label="Email Address",
         lifecycle_stage="demographics",
         wiring_status="complete",
         form_page="intake_assessment",
@@ -872,7 +886,7 @@ FIELDS: List[FieldDefinition] = [
     ),
     FieldDefinition(
         key="new_mailing_address",
-        label="New mailing address",
+        label="New Mailing Address",
         lifecycle_stage="followup_6m",
         wiring_status="missing",
         notes="Could belong in resident profile maintenance or followup workflow depending on business rule.",
