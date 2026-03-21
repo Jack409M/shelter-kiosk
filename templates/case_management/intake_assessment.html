@@ -258,6 +258,25 @@
     max-width: 170px;
   }
 
+  .field.field-max-10 select,
+  .field.field-max-10 input[type="text"] {
+    max-width: 110px;
+  }
+
+  .field.field-max-15 select,
+  .field.field-max-15 input[type="text"] {
+    max-width: 140px;
+  }
+
+  .field.field-max-20 select,
+  .field.field-max-20 input[type="text"] {
+    max-width: 180px;
+  }
+
+  .field.field-max-25 input[type="text"] {
+    max-width: 220px;
+  }
+
   .toggle-inputs {
     display: grid;
     gap: 4px;
@@ -375,7 +394,14 @@
     .field.field-compact input[type="text"],
     .field.field-compact input[type="number"],
     .field.field-compact input[type="date"],
-    .field.field-compact-wide input[type="text"] {
+    .field.field-compact-wide input[type="text"],
+    .field.field-max-10 select,
+    .field.field-max-10 input[type="text"],
+    .field.field-max-15 select,
+    .field.field-max-15 input[type="text"],
+    .field.field-max-20 select,
+    .field.field-max-20 input[type="text"],
+    .field.field-max-25 input[type="text"] {
       max-width: 100%;
     }
   }
@@ -525,7 +551,7 @@
               <input id="phone" name="phone" type="tel" value="{{ form_data.get('phone', '') }}">
             </div>
 
-            <div class="field span-12">
+            <div class="field span-2">
               <label for="email">Email</label>
               <input id="email" name="email" type="email" value="{{ form_data.get('email', '') }}">
             </div>
@@ -592,13 +618,12 @@
                 </div>
                 <div class="section-card-body">
                   <div class="field-grid">
-                    <div class="field span-3">
+                    <div class="field span-2 field-max-10">
                       <label for="gender">Gender</label>
                       <select id="gender" name="gender">
                         <option value="">Select</option>
-                        {% for option in gender_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('gender', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
+                        <option value="m" {% if form_data.get('gender', '') == 'm' %}selected{% endif %}>M</option>
+                        <option value="f" {% if form_data.get('gender', '') == 'f' %}selected{% endif %}>F</option>
                       </select>
                     </div>
 
@@ -613,7 +638,7 @@
                       </div>
                     </div>
 
-                    <div class="field span-3">
+                    <div class="field span-3 field-max-15">
                       <label for="shelter">Program Shelter</label>
                       <select id="shelter" name="shelter">
                         {% set selected_shelter = form_data.get('shelter', current_shelter) %}
@@ -625,19 +650,37 @@
                       </select>
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-3 field-max-25">
                       <label for="emergency_contact_name">Emergency Contact Name</label>
-                      <input id="emergency_contact_name" name="emergency_contact_name" type="text" value="{{ form_data.get('emergency_contact_name', '') }}">
+                      <input
+                        id="emergency_contact_name"
+                        name="emergency_contact_name"
+                        type="text"
+                        maxlength="25"
+                        value="{{ form_data.get('emergency_contact_name', '') }}"
+                      >
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-2 field-max-15">
                       <label for="emergency_contact_relationship">Relationship</label>
-                      <input id="emergency_contact_relationship" name="emergency_contact_relationship" type="text" value="{{ form_data.get('emergency_contact_relationship', '') }}">
+                      <input
+                        id="emergency_contact_relationship"
+                        name="emergency_contact_relationship"
+                        type="text"
+                        maxlength="15"
+                        value="{{ form_data.get('emergency_contact_relationship', '') }}"
+                      >
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-2 field-max-15">
                       <label for="emergency_contact_phone">Emergency Contact Phone</label>
-                      <input id="emergency_contact_phone" name="emergency_contact_phone" type="tel" value="{{ form_data.get('emergency_contact_phone', '') }}">
+                      <input
+                        id="emergency_contact_phone"
+                        name="emergency_contact_phone"
+                        type="tel"
+                        maxlength="15"
+                        value="{{ form_data.get('emergency_contact_phone', '') }}"
+                      >
                     </div>
 
                     <div class="field span-12">
@@ -655,7 +698,7 @@
                 </div>
                 <div class="section-card-body">
                   <div class="field-grid">
-                    <div class="field span-3">
+                    <div class="field span-3 field-max-15">
                       <label for="program_status">Program Status</label>
                       {% set selected_program_status = form_data.get('program_status', 'active') %}
                       <select id="program_status" name="program_status">
@@ -665,7 +708,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-3">
+                    <div class="field span-3 field-max-20">
                       <label for="prior_living">Where Was She Staying Before Entry</label>
                       <select id="prior_living" name="prior_living">
                         <option value="">Select</option>
@@ -680,7 +723,7 @@
                       <input id="sobriety_date" name="sobriety_date" type="date" value="{{ form_data.get('sobriety_date', '') }}">
                     </div>
 
-                    <div class="field span-3">
+                    <div class="field span-3 field-max-10">
                       <label for="drug_of_choice">Drug of Choice</label>
                       <select id="drug_of_choice" name="drug_of_choice">
                         <option value="">Select</option>
@@ -695,7 +738,7 @@
                       <input id="income_at_entry" name="income_at_entry" type="number" min="0" step="0.01" value="{{ form_data.get('income_at_entry', '') }}">
                     </div>
 
-                    <div class="field span-3">
+                    <div class="field span-3 field-max-15">
                       <label for="education_at_entry">Education at Entry</label>
                       <select id="education_at_entry" name="education_at_entry">
                         <option value="">Select</option>
@@ -736,7 +779,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-2 field-max-10">
                       <label for="marital_status">Marital Status</label>
                       <select id="marital_status" name="marital_status">
                         <option value="">Select</option>
@@ -761,7 +804,7 @@
                 </div>
                 <div class="section-card-body">
                   <div class="field-grid">
-                    <div class="field span-3">
+                    <div class="field span-3 field-max-20">
                       <label for="race">Race</label>
                       <select id="race" name="race">
                         <option value="">Select</option>
@@ -771,7 +814,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-3">
+                    <div class="field span-3 field-max-15">
                       <label for="ethnicity">Ethnicity</label>
                       <select id="ethnicity" name="ethnicity">
                         <option value="">Select</option>
@@ -851,7 +894,7 @@
                       </div>
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-4 field-max-20">
                       <label for="employment_status">Employment Status</label>
                       <select id="employment_status" name="employment_status">
                         <option value="">Select</option>
@@ -863,7 +906,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-4 field-max-15">
                       <label for="id_documents_status">ID Documents Status</label>
                       <select id="id_documents_status" name="id_documents_status">
                         <option value="">Select</option>
@@ -1113,6 +1156,4 @@
       activateTab("intake");
     }
   })();
-</script>
-{% endif %}
-{% endblock %}
+</
