@@ -238,8 +238,6 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 warrants_unpaid,
                 mh_exam_completed,
                 med_exam_completed,
-                car_at_entry,
-                car_insurance_at_entry,
                 pregnant_at_entry,
                 dental_need_at_entry,
                 vision_need_at_entry,
@@ -285,10 +283,8 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 {ph},
                 {ph},
                 {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph}
+                NOW(),
+                NOW()
             )
             """,
             (
@@ -316,8 +312,6 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 yes_no_to_int(data["warrants_unpaid"]),
                 yes_no_to_int(data["mh_exam_completed"]),
                 yes_no_to_int(data["med_exam_completed"]),
-                yes_no_to_int(data["car_at_entry"]),
-                yes_no_to_int(data["car_insurance_at_entry"]),
                 yes_no_to_int(data["pregnant"]),
                 yes_no_to_int(data["dental_need"]),
                 yes_no_to_int(data["vision_need"]),
@@ -326,8 +320,6 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 yes_no_to_int(data["medical_need"]),
                 yes_no_to_int(data["substance_use_need"]),
                 data["id_documents_status"],
-                now,
-                now,
             ),
         )
         return
@@ -360,8 +352,6 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             warrants_unpaid,
             mh_exam_completed,
             med_exam_completed,
-            car_at_entry,
-            car_insurance_at_entry,
             pregnant_at_entry,
             dental_need_at_entry,
             vision_need_at_entry,
@@ -375,8 +365,6 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
         )
         VALUES
         (
-            {ph},
-            {ph},
             {ph},
             {ph},
             {ph},
@@ -438,8 +426,6 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             yes_no_to_int(data["warrants_unpaid"]),
             yes_no_to_int(data["mh_exam_completed"]),
             yes_no_to_int(data["med_exam_completed"]),
-            yes_no_to_int(data["car_at_entry"]),
-            yes_no_to_int(data["car_insurance_at_entry"]),
             yes_no_to_int(data["pregnant"]),
             yes_no_to_int(data["dental_need"]),
             yes_no_to_int(data["vision_need"]),
@@ -456,45 +442,16 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
 
 def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
     ph = placeholder()
-
-    kids_at_dwc = data["children_count"] if data["has_children"] == "yes" and data["children_count"] is not None else 0
-    healthy_babies_born_at_dwc = 1 if data["newborn_at_dwc"] == "yes" else 0
-
-    if g.get("db_kind") == "pg":
-        db_execute(
-            f"""
-            INSERT INTO family_snapshots
-            (
-                enrollment_id,
-                kids_at_dwc,
-                healthy_babies_born_at_dwc,
-                created_at,
-                updated_at
-            )
-            VALUES
-            (
-                {ph},
-                {ph},
-                {ph},
-                NOW(),
-                NOW()
-            )
-            """,
-            (
-                enrollment_id,
-                kids_at_dwc,
-                healthy_babies_born_at_dwc,
-            ),
-        )
-        return
+    now = utcnow_iso()
 
     db_execute(
         f"""
         INSERT INTO family_snapshots
         (
             enrollment_id,
-            kids_at_dwc,
-            healthy_babies_born_at_dwc,
+            has_children,
+            children_count,
+            newborn_born_at_dwc,
             created_at,
             updated_at
         )
@@ -503,13 +460,17 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
             {ph},
             {ph},
             {ph},
-            CURRENT_TIMESTAMP,
-            CURRENT_TIMESTAMP
+            {ph},
+            {ph},
+            {ph}
         )
         """,
         (
             enrollment_id,
-            kids_at_dwc,
-            healthy_babies_born_at_dwc,
+            yes_no_to_int(data["has_children"]),
+            data["children_count"],
+            yes_no_to_int(data["newborn_at_dwc"]),
+            now,
+            now,
         ),
     )
