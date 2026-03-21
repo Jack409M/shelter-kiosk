@@ -723,6 +723,11 @@
                       <input id="sobriety_date" name="sobriety_date" type="date" value="{{ form_data.get('sobriety_date', '') }}">
                     </div>
 
+                    <div class="field span-3 field-compact">
+                      <label for="treatment_grad_date">Treatment Graduation Date</label>
+                      <input id="treatment_grad_date" name="treatment_grad_date" type="date" value="{{ form_data.get('treatment_grad_date', '') }}">
+                    </div>
+
                     <div class="field span-3 field-max-10">
                       <label for="drug_of_choice">Drug of Choice</label>
                       <select id="drug_of_choice" name="drug_of_choice">
@@ -836,33 +841,6 @@
 
                         <input type="radio" id="pregnant_no" name="pregnant" value="no" {% if form_data.get('pregnant') == 'no' %}checked{% endif %}>
                         <label class="toggle-chip toggle-no" for="pregnant_no">No</label>
-                      </div>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Has Children</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="has_children_yes" name="has_children" value="yes" {% if form_data.get('has_children') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="has_children_yes">Yes</label>
-
-                        <input type="radio" id="has_children_no" name="has_children" value="no" {% if form_data.get('has_children') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="has_children_no">No</label>
-                      </div>
-                    </div>
-
-                    <div class="field span-2 field-compact">
-                      <label for="children_count">Children Count</label>
-                      <input id="children_count" name="children_count" type="number" min="0" step="1" value="{{ form_data.get('children_count', '') }}">
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Newborn Born at DWC</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="newborn_at_dwc_yes" name="newborn_at_dwc" value="yes" {% if form_data.get('newborn_at_dwc') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="newborn_at_dwc_yes">Yes</label>
-
-                        <input type="radio" id="newborn_at_dwc_no" name="newborn_at_dwc" value="no" {% if form_data.get('newborn_at_dwc') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="newborn_at_dwc_no">No</label>
                       </div>
                     </div>
                   </div>
@@ -1059,6 +1037,27 @@
                         <input type="radio" id="substance_use_need_no" name="substance_use_need" value="no" {% if form_data.get('substance_use_need') == 'no' %}checked{% endif %}>
                         <label class="toggle-chip toggle-no" for="substance_use_need_no">No</label>
                       </div>
+                    </div>
+
+                    <div class="toggle-field span-2">
+                      <label>Parenting Class Needed</label>
+                      <div class="toggle-inputs">
+                        <input type="radio" id="parenting_class_needed_yes" name="parenting_class_needed" value="yes" {% if form_data.get('parenting_class_needed') == 'yes' %}checked{% endif %}>
+                        <label class="toggle-chip toggle-yes" for="parenting_class_needed_yes">Yes</label>
+
+                        <input type="radio" id="parenting_class_needed_no" name="parenting_class_needed" value="no" {% if form_data.get('parenting_class_needed') == 'no' %}checked{% endif %}>
+                        <label class="toggle-chip toggle-no" for="parenting_class_needed_no">No</label>
+                      </div>
+                    </div>
+
+                    <div class="field span-2 field-max-10">
+                      <label for="dwc_level_today">DWC Level Today</label>
+                      <select id="dwc_level_today" name="dwc_level_today">
+                        <option value="">Select</option>
+                        {% for level in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "E"] %}
+                          <option value="{{ level }}" {% if form_data.get('dwc_level_today', '') == level %}selected{% endif %}>{{ level }}</option>
+                        {% endfor %}
+                      </select>
                     </div>
 
                     <div class="field span-12">
