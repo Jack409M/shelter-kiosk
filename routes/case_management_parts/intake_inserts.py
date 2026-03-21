@@ -220,6 +220,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 length_of_time_in_amarillo,
                 income_at_entry,
                 education_at_entry,
+                treatment_grad_date,
                 sobriety_date,
                 days_sober_at_entry,
                 drug_of_choice,
@@ -246,11 +247,16 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 medical_need_at_entry,
                 substance_use_need_at_entry,
                 id_documents_status_at_entry,
+                parenting_class_needed,
+                dwc_level_today,
                 created_at,
                 updated_at
             )
             VALUES
             (
+                {ph},
+                {ph},
+                {ph},
                 {ph},
                 {ph},
                 {ph},
@@ -294,6 +300,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 data["length_of_time_in_amarillo"],
                 data["income_at_entry"],
                 data["education_at_entry"],
+                data["treatment_grad_date"],
                 data["sobriety_date"],
                 data["days_sober_at_entry"],
                 data["drug_of_choice"],
@@ -320,6 +327,8 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 yes_no_to_int(data["medical_need"]),
                 yes_no_to_int(data["substance_use_need"]),
                 data["id_documents_status"],
+                yes_no_to_int(data["parenting_class_needed"]),
+                data["dwc_level_today"],
             ),
         )
         return
@@ -334,6 +343,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             length_of_time_in_amarillo,
             income_at_entry,
             education_at_entry,
+            treatment_grad_date,
             sobriety_date,
             days_sober_at_entry,
             drug_of_choice,
@@ -360,11 +370,16 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             medical_need_at_entry,
             substance_use_need_at_entry,
             id_documents_status_at_entry,
+            parenting_class_needed,
+            dwc_level_today,
             created_at,
             updated_at
         )
         VALUES
         (
+            {ph},
+            {ph},
+            {ph},
             {ph},
             {ph},
             {ph},
@@ -408,6 +423,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             data["length_of_time_in_amarillo"],
             data["income_at_entry"],
             data["education_at_entry"],
+            data["treatment_grad_date"],
             data["sobriety_date"],
             data["days_sober_at_entry"],
             data["drug_of_choice"],
@@ -434,6 +450,8 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             yes_no_to_int(data["medical_need"]),
             yes_no_to_int(data["substance_use_need"]),
             data["id_documents_status"],
+            yes_no_to_int(data["parenting_class_needed"]),
+            data["dwc_level_today"],
             now,
             now,
         ),
