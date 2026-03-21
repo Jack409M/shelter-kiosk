@@ -9,13 +9,24 @@
   }
 
   .exit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
     margin-bottom: 14px;
   }
 
-  .exit-header h1 {
-    margin: 0;
+  .exit-header-copy h1 {
+    margin: 0 0 4px 0;
     font-size: 28px;
     line-height: 1.1;
+  }
+
+  .exit-header-copy p {
+    margin: 0;
+    color: #5f6b7a;
+    max-width: 760px;
+    font-size: 14px;
   }
 
   .resident-card,
@@ -35,9 +46,21 @@
     padding: 14px 16px;
   }
 
+  .section-card-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e6ebf1;
+    background: #fafbfd;
+  }
+
+  .section-card-head h2 {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
   .resident-card h2 {
-    margin: 0 0 8px 0;
-    font-size: 18px;
+    margin: 0 0 10px 0;
+    font-size: 19px;
     line-height: 1.2;
   }
 
@@ -70,35 +93,35 @@
     color: #102030;
   }
 
-  .section-card-head {
-    padding: 12px 16px;
-    border-bottom: 1px solid #e6ebf1;
-    background: #fafbfd;
-  }
-
-  .section-card-head h2 {
-    margin: 0;
-    font-size: 17px;
-    line-height: 1.2;
-  }
-
   .field-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
     gap: 12px;
   }
 
-  .field {
+  .field,
+  .toggle-field {
     display: grid;
     gap: 5px;
   }
 
-  .field.span-12 { grid-column: span 12; }
-  .field.span-6 { grid-column: span 6; }
-  .field.span-4 { grid-column: span 4; }
-  .field.span-3 { grid-column: span 3; }
+  .field.span-12,
+  .toggle-field.span-12 { grid-column: span 12; }
 
-  .field label {
+  .field.span-6,
+  .toggle-field.span-6 { grid-column: span 6; }
+
+  .field.span-4,
+  .toggle-field.span-4 { grid-column: span 4; }
+
+  .field.span-3,
+  .toggle-field.span-3 { grid-column: span 3; }
+
+  .field.span-2,
+  .toggle-field.span-2 { grid-column: span 2; }
+
+  .field label,
+  .toggle-field > label {
     font-size: 12px;
     font-weight: 700;
     color: #334155;
@@ -124,6 +147,59 @@
     resize: vertical;
   }
 
+  .field.field-compact input[type="date"],
+  .field.field-compact input[type="number"],
+  .field.field-compact input[type="text"],
+  .field.field-compact select {
+    max-width: 180px;
+  }
+
+  .field.field-compact-wide input[type="text"],
+  .field.field-compact-wide select {
+    max-width: 240px;
+  }
+
+  .toggle-inputs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .toggle-inputs input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .toggle-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid #c7d1dc;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle-inputs input[type="radio"]:checked + .toggle-chip.toggle-yes {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+  }
+
+  .toggle-inputs input[type="radio"]:checked + .toggle-chip.toggle-no {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+  }
+
   .footer-card-body {
     display: flex;
     justify-content: space-between;
@@ -135,6 +211,7 @@
   .footer-note {
     font-size: 12px;
     color: #6b7280;
+    max-width: 760px;
   }
 
   .action-group {
@@ -178,15 +255,33 @@
     }
 
     .field.span-6,
+    .toggle-field.span-6,
     .field.span-4,
-    .field.span-3 {
+    .toggle-field.span-4,
+    .field.span-3,
+    .toggle-field.span-3,
+    .field.span-2,
+    .toggle-field.span-2 {
       grid-column: span 12;
+    }
+
+    .field.field-compact input[type="date"],
+    .field.field-compact input[type="number"],
+    .field.field-compact input[type="text"],
+    .field.field-compact select,
+    .field.field-compact-wide input[type="text"],
+    .field.field-compact-wide select {
+      max-width: 100%;
     }
   }
 
   @media (max-width: 640px) {
     .resident-meta {
       grid-template-columns: 1fr;
+    }
+
+    .exit-header {
+      flex-direction: column;
     }
 
     .footer-card-body {
@@ -225,7 +320,10 @@
 
 <div class="exit-page">
   <div class="exit-header">
-    <h1>Exit Assessment</h1>
+    <div class="exit-header-copy">
+      <h1>Exit Assessment</h1>
+      <p>Complete the resident’s exit details, outcome status, and closing measures before saving.</p>
+    </div>
   </div>
 
   <div class="resident-card">
@@ -270,7 +368,7 @@
       </div>
       <div class="section-card-body">
         <div class="field-grid">
-          <div class="field span-3">
+          <div class="field span-3 field-compact">
             <label for="date_exit_dwc">Date Exit DWC</label>
             <input
               id="date_exit_dwc"
@@ -295,36 +393,23 @@
 
           <div class="field span-5">
             <label for="exit_reason">Exit Reason</label>
-            <select id="exit_reason" name="exit_reason" required>
+            <select id="exit_reason" name="exit_reason" required data-current-value="{{ form_data.get('exit_reason', '') }}">
               <option value="">Select</option>
-              <option value="Program Graduated" {% if form_data.get('exit_reason') == 'Program Graduated' %}selected{% endif %}>Program Graduated</option>
-              <option value="Permanent Housing" {% if form_data.get('exit_reason') == 'Permanent Housing' %}selected{% endif %}>Permanent Housing</option>
-              <option value="Family Placement" {% if form_data.get('exit_reason') == 'Family Placement' %}selected{% endif %}>Family Placement</option>
-              <option value="Health Placement" {% if form_data.get('exit_reason') == 'Health Placement' %}selected{% endif %}>Health Placement</option>
-              <option value="Left by Choice" {% if form_data.get('exit_reason') == 'Left by Choice' %}selected{% endif %}>Left by Choice</option>
-              <option value="Left Without Notice" {% if form_data.get('exit_reason') == 'Left Without Notice' %}selected{% endif %}>Left Without Notice</option>
-              <option value="Unknown / Lost Contact" {% if form_data.get('exit_reason') == 'Unknown / Lost Contact' %}selected{% endif %}>Unknown / Lost Contact</option>
-              <option value="Rules Violation" {% if form_data.get('exit_reason') == 'Rules Violation' %}selected{% endif %}>Rules Violation</option>
-              <option value="Non Compliance with Program" {% if form_data.get('exit_reason') == 'Non Compliance with Program' %}selected{% endif %}>Non Compliance with Program</option>
-              <option value="Relapse" {% if form_data.get('exit_reason') == 'Relapse' %}selected{% endif %}>Relapse</option>
-              <option value="Behavioral Conflict" {% if form_data.get('exit_reason') == 'Behavioral Conflict' %}selected{% endif %}>Behavioral Conflict</option>
-              <option value="Incarceration" {% if form_data.get('exit_reason') == 'Incarceration' %}selected{% endif %}>Incarceration</option>
-              <option value="Transferred to Another Program" {% if form_data.get('exit_reason') == 'Transferred to Another Program' %}selected{% endif %}>Transferred to Another Program</option>
-              <option value="Medical Discharge" {% if form_data.get('exit_reason') == 'Medical Discharge' %}selected{% endif %}>Medical Discharge</option>
-              <option value="Safety Removal" {% if form_data.get('exit_reason') == 'Safety Removal' %}selected{% endif %}>Safety Removal</option>
             </select>
           </div>
 
-          <div class="field span-3">
-            <label for="graduate_dwc">Graduate DWC</label>
-            <select id="graduate_dwc" name="graduate_dwc">
-              <option value="">Select</option>
-              <option value="yes" {% if form_data.get('graduate_dwc') == 'yes' %}selected{% endif %}>Yes</option>
-              <option value="no" {% if form_data.get('graduate_dwc') == 'no' %}selected{% endif %}>No</option>
-            </select>
+          <div class="toggle-field span-3">
+            <label>Graduate DWC</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="graduate_dwc_yes" name="graduate_dwc" value="yes" {% if form_data.get('graduate_dwc') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="graduate_dwc_yes">Yes</label>
+
+              <input type="radio" id="graduate_dwc_no" name="graduate_dwc" value="no" {% if form_data.get('graduate_dwc') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="graduate_dwc_no">No</label>
+            </div>
           </div>
 
-          <div class="field span-3">
+          <div class="field span-3 field-compact">
             <label for="date_graduated">Date Graduated</label>
             <input
               id="date_graduated"
@@ -334,13 +419,15 @@
             >
           </div>
 
-          <div class="field span-3">
-            <label for="leave_ama">Leave AMA</label>
-            <select id="leave_ama" name="leave_ama">
-              <option value="">Select</option>
-              <option value="yes" {% if form_data.get('leave_ama') == 'yes' %}selected{% endif %}>Yes</option>
-              <option value="no" {% if form_data.get('leave_ama') == 'no' %}selected{% endif %}>No</option>
-            </select>
+          <div class="toggle-field span-3">
+            <label>Leave AMA</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="leave_ama_yes" name="leave_ama" value="yes" {% if form_data.get('leave_ama') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="leave_ama_yes">Yes</label>
+
+              <input type="radio" id="leave_ama_no" name="leave_ama" value="no" {% if form_data.get('leave_ama') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="leave_ama_no">No</label>
+            </div>
           </div>
         </div>
       </div>
@@ -352,7 +439,7 @@
       </div>
       <div class="section-card-body">
         <div class="field-grid">
-          <div class="field span-4">
+          <div class="field span-4 field-compact-wide">
             <label for="income_at_exit">Current Income</label>
             <input
               id="income_at_exit"
@@ -374,7 +461,7 @@
             >
           </div>
 
-          <div class="field span-4">
+          <div class="field span-4 field-compact-wide">
             <label for="grit_at_exit">Grit at Exit</label>
             <input
               id="grit_at_exit"
@@ -395,40 +482,48 @@
       </div>
       <div class="section-card-body">
         <div class="field-grid">
-          <div class="field span-3">
-            <label for="received_car">Received Car</label>
-            <select id="received_car" name="received_car">
-              <option value="">Select</option>
-              <option value="yes" {% if form_data.get('received_car') == 'yes' %}selected{% endif %}>Yes</option>
-              <option value="no" {% if form_data.get('received_car') == 'no' %}selected{% endif %}>No</option>
-            </select>
+          <div class="toggle-field span-3">
+            <label>Received Car</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="received_car_yes" name="received_car" value="yes" {% if form_data.get('received_car') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="received_car_yes">Yes</label>
+
+              <input type="radio" id="received_car_no" name="received_car" value="no" {% if form_data.get('received_car') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="received_car_no">No</label>
+            </div>
           </div>
 
-          <div class="field span-3">
-            <label for="car_insurance">Car Insurance</label>
-            <select id="car_insurance" name="car_insurance">
-              <option value="">Select</option>
-              <option value="yes" {% if form_data.get('car_insurance') == 'yes' %}selected{% endif %}>Yes</option>
-              <option value="no" {% if form_data.get('car_insurance') == 'no' %}selected{% endif %}>No</option>
-            </select>
+          <div class="toggle-field span-3">
+            <label>Car Insurance</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="car_insurance_yes" name="car_insurance" value="yes" {% if form_data.get('car_insurance') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="car_insurance_yes">Yes</label>
+
+              <input type="radio" id="car_insurance_no" name="car_insurance" value="no" {% if form_data.get('car_insurance') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="car_insurance_no">No</label>
+            </div>
           </div>
 
-          <div class="field span-3">
-            <label for="obtained_public_insurance">Obtained Public Insurance</label>
-            <select id="obtained_public_insurance" name="obtained_public_insurance">
-              <option value="">Select</option>
-              <option value="yes" {% if form_data.get('obtained_public_insurance') == 'yes' %}selected{% endif %}>Yes</option>
-              <option value="no" {% if form_data.get('obtained_public_insurance') == 'no' %}selected{% endif %}>No</option>
-            </select>
+          <div class="toggle-field span-3">
+            <label>Obtained Public Insurance</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="obtained_public_insurance_yes" name="obtained_public_insurance" value="yes" {% if form_data.get('obtained_public_insurance') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="obtained_public_insurance_yes">Yes</label>
+
+              <input type="radio" id="obtained_public_insurance_no" name="obtained_public_insurance" value="no" {% if form_data.get('obtained_public_insurance') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="obtained_public_insurance_no">No</label>
+            </div>
           </div>
 
-          <div class="field span-3">
-            <label for="private_insurance">Private Insurance</label>
-            <select id="private_insurance" name="private_insurance">
-              <option value="">Select</option>
-              <option value="yes" {% if form_data.get('private_insurance') == 'yes' %}selected{% endif %}>Yes</option>
-              <option value="no" {% if form_data.get('private_insurance') == 'no' %}selected{% endif %}>No</option>
-            </select>
+          <div class="toggle-field span-3">
+            <label>Private Insurance</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="private_insurance_yes" name="private_insurance" value="yes" {% if form_data.get('private_insurance') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="private_insurance_yes">Yes</label>
+
+              <input type="radio" id="private_insurance_no" name="private_insurance" value="no" {% if form_data.get('private_insurance') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="private_insurance_no">No</label>
+            </div>
           </div>
         </div>
       </div>
@@ -440,22 +535,26 @@
       </div>
       <div class="section-card-body">
         <div class="field-grid">
-          <div class="field span-6">
-            <label for="dental_needs_met">Dental Needs Met</label>
-            <select id="dental_needs_met" name="dental_needs_met">
-              <option value="">Select</option>
-              <option value="yes" {% if form_data.get('dental_needs_met') == 'yes' %}selected{% endif %}>Yes</option>
-              <option value="no" {% if form_data.get('dental_needs_met') == 'no' %}selected{% endif %}>No</option>
-            </select>
+          <div class="toggle-field span-3">
+            <label>Dental Needs Met</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="dental_needs_met_yes" name="dental_needs_met" value="yes" {% if form_data.get('dental_needs_met') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="dental_needs_met_yes">Yes</label>
+
+              <input type="radio" id="dental_needs_met_no" name="dental_needs_met" value="no" {% if form_data.get('dental_needs_met') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="dental_needs_met_no">No</label>
+            </div>
           </div>
 
-          <div class="field span-6">
-            <label for="vision_needs_met">Vision Needs Met</label>
-            <select id="vision_needs_met" name="vision_needs_met">
-              <option value="">Select</option>
-              <option value="yes" {% if form_data.get('vision_needs_met') == 'yes' %}selected{% endif %}>Yes</option>
-              <option value="no" {% if form_data.get('vision_needs_met') == 'no' %}selected{% endif %}>No</option>
-            </select>
+          <div class="toggle-field span-3">
+            <label>Vision Needs Met</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="vision_needs_met_yes" name="vision_needs_met" value="yes" {% if form_data.get('vision_needs_met') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip toggle-yes" for="vision_needs_met_yes">Yes</label>
+
+              <input type="radio" id="vision_needs_met_no" name="vision_needs_met" value="no" {% if form_data.get('vision_needs_met') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip toggle-no" for="vision_needs_met_no">No</label>
+            </div>
           </div>
         </div>
       </div>
@@ -475,5 +574,75 @@
     </div>
   </form>
 </div>
+
+<script>
+  const EXIT_REASON_MAP = {
+    "Successful Completion": [
+      "Program Graduated"
+    ],
+    "Positive Exit": [
+      "Permanent Housing",
+      "Family Placement",
+      "Health Placement"
+    ],
+    "Neutral Exit": [
+      "Transferred to Another Program",
+      "Unknown / Lost Contact"
+    ],
+    "Negative Exit": [
+      "Relapse",
+      "Behavioral Conflict",
+      "Rules Violation",
+      "Non Compliance with Program",
+      "Left Without Notice"
+    ],
+    "Administrative Exit": [
+      "Incarceration",
+      "Medical Discharge",
+      "Safety Removal",
+      "Left by Choice"
+    ]
+  };
+
+  const categorySelect = document.getElementById("exit_category");
+  const reasonSelect = document.getElementById("exit_reason");
+
+  function updateExitReasons() {
+    if (!categorySelect || !reasonSelect) return;
+
+    const selectedCategory = categorySelect.value;
+    const allowedReasons = EXIT_REASON_MAP[selectedCategory] || [];
+    const currentValue = reasonSelect.dataset.currentValue || reasonSelect.value || "";
+
+    reasonSelect.innerHTML = '<option value="">Select</option>';
+
+    allowedReasons.forEach((reason) => {
+      const opt = document.createElement("option");
+      opt.value = reason;
+      opt.textContent = reason;
+      reasonSelect.appendChild(opt);
+    });
+
+    if (allowedReasons.includes(currentValue)) {
+      reasonSelect.value = currentValue;
+    }
+
+    reasonSelect.dataset.currentValue = reasonSelect.value;
+  }
+
+  if (categorySelect && reasonSelect) {
+    categorySelect.addEventListener("change", function () {
+      reasonSelect.dataset.currentValue = "";
+      updateExitReasons();
+    });
+
+    reasonSelect.addEventListener("change", function () {
+      reasonSelect.dataset.currentValue = reasonSelect.value;
+    });
+
+    document.addEventListener("DOMContentLoaded", updateExitReasons);
+    updateExitReasons();
+  }
+</script>
 
 {% endblock %}
