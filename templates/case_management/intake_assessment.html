@@ -631,26 +631,6 @@
                       </select>
                     </div>
 
-                    <div class="field span-4">
-                      <label for="car_at_entry">Car at Entry</label>
-                      <select id="car_at_entry" name="car_at_entry">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('car_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
-                    <div class="field span-4">
-                      <label for="car_insurance_at_entry">Car Insurance at Entry</label>
-                      <select id="car_insurance_at_entry" name="car_insurance_at_entry">
-                        <option value="">Select</option>
-                        {% for option in yes_no_options %}
-                          <option value="{{ option.value }}" {% if form_data.get('car_insurance_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-
                     <div class="field span-12">
                       <label for="entry_notes">Entry Notes</label>
                       <textarea id="entry_notes" name="entry_notes" placeholder="Reason for admission, immediate concerns, or placement context.">{{ form_data.get('entry_notes', '') }}</textarea>
