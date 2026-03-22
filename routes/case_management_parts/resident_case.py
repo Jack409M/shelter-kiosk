@@ -97,6 +97,7 @@ def resident_case_view(resident_id: int):
     goals = []
     appointments = []
     notes = []
+    services = []  # 🔥 NEW
     intake_assessment = None
     exit_assessment = None
     grit_difference = None
@@ -106,8 +107,7 @@ def resident_case_view(resident_id: int):
     if enrollment_id:
         intake_assessment = db_fetchone(
             f"""
-            SELECT
-                grit_score
+            SELECT grit_score
             FROM intake_assessments
             WHERE enrollment_id = {ph}
             LIMIT 1
@@ -163,11 +163,7 @@ def resident_case_view(resident_id: int):
 
         goals = db_fetchall(
             f"""
-            SELECT
-                goal_text,
-                status,
-                target_date,
-                created_at
+            SELECT goal_text, status, target_date, created_at
             FROM goals
             WHERE enrollment_id = {ph}
             ORDER BY created_at DESC
@@ -177,10 +173,7 @@ def resident_case_view(resident_id: int):
 
         appointments = db_fetchall(
             f"""
-            SELECT
-                appointment_date,
-                appointment_type,
-                notes
+            SELECT appointment_date, appointment_type, notes
             FROM appointments
             WHERE enrollment_id = {ph}
             ORDER BY appointment_date DESC, id DESC
@@ -203,6 +196,20 @@ def resident_case_view(resident_id: int):
             (enrollment_id,),
         )
 
+        # 🔥 NEW: SERVICES
+        services = db_fetchall(
+            f"""
+            SELECT
+                service_type,
+                service_date,
+                notes
+            FROM client_services
+            WHERE enrollment_id = {ph}
+            ORDER BY service_date DESC, id DESC
+            """,
+            (enrollment_id,),
+        )
+
         followup_6_month = _get_latest_followup(enrollment_id, "6_month")
         followup_1_year = _get_latest_followup(enrollment_id, "1_year")
 
@@ -217,6 +224,7 @@ def resident_case_view(resident_id: int):
         goals=goals,
         appointments=appointments,
         notes=notes,
+        services=services,  # 🔥 NEW
         followup_6_month=followup_6_month,
         followup_1_year=followup_1_year,
     )
