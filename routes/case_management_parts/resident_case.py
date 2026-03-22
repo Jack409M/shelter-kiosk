@@ -10,6 +10,39 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
+def _get_latest_followup(enrollment_id: int, followup_type: str):
+    ph = placeholder()
+
+    row = db_fetchone(
+        f"""
+        SELECT
+            followup_date,
+            income_at_followup,
+            sober_at_followup,
+            notes
+        FROM followups
+        WHERE enrollment_id = {ph}
+          AND followup_type = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id, followup_type),
+    )
+
+    if not row:
+        return None
+
+    if isinstance(row, dict):
+        return row
+
+    return {
+        "followup_date": row[0],
+        "income_at_followup": row[1],
+        "sober_at_followup": row[2],
+        "notes": row[3],
+    }
+
+
 def resident_case_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -67,6 +100,8 @@ def resident_case_view(resident_id: int):
     intake_assessment = None
     exit_assessment = None
     grit_difference = None
+    followup_6_month = None
+    followup_1_year = None
 
     if enrollment_id:
         intake_assessment = db_fetchone(
@@ -120,7 +155,7 @@ def resident_case_view(resident_id: int):
             exit_grit = (
                 exit_assessment["grit_at_exit"]
                 if isinstance(exit_assessment, dict)
-                else exit_assessment[9]  # shifted index
+                else exit_assessment[9]
             )
 
         if intake_grit is not None and exit_grit is not None:
@@ -168,6 +203,9 @@ def resident_case_view(resident_id: int):
             (enrollment_id,),
         )
 
+        followup_6_month = _get_latest_followup(enrollment_id, "6_month")
+        followup_1_year = _get_latest_followup(enrollment_id, "1_year")
+
     return render_template(
         "case_management/resident_case.html",
         resident=resident,
@@ -179,4 +217,6 @@ def resident_case_view(resident_id: int):
         goals=goals,
         appointments=appointments,
         notes=notes,
+        followup_6_month=followup_6_month,
+        followup_1_year=followup_1_year,
     )
