@@ -138,15 +138,44 @@
 
       <h3>Services Provided</h3>
 
-      <label><input type="checkbox" name="service_type" value="Counseling"> Counseling</label><br>
-      <label><input type="checkbox" name="service_type" value="Dental"> Dental</label><br>
-      <label><input type="checkbox" name="service_type" value="Vision"> Vision</label><br>
-      <label><input type="checkbox" name="service_type" value="Parenting Support"> Parenting Support</label><br>
-      <label><input type="checkbox" name="service_type" value="Legal Assistance"> Legal Assistance</label><br>
-      <label><input type="checkbox" name="service_type" value="Transportation"> Transportation</label><br>
-      <label><input type="checkbox" name="service_type" value="Other"> Other</label>
+      <div style="display:grid; grid-template-columns:repeat(3, minmax(180px, 1fr)); gap:10px 18px; align-items:start; margin-top:10px;">
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <input type="checkbox" name="service_type" value="Counseling">
+          <span>Counseling</span>
+        </label>
 
-      <label style="margin-top:10px;"><strong>Service Notes</strong></label>
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <input type="checkbox" name="service_type" value="Dental">
+          <span>Dental</span>
+        </label>
+
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <input type="checkbox" name="service_type" value="Vision">
+          <span>Vision</span>
+        </label>
+
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <input type="checkbox" name="service_type" value="Parenting Support">
+          <span>Parenting Support</span>
+        </label>
+
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <input type="checkbox" name="service_type" value="Legal Assistance">
+          <span>Legal Assistance</span>
+        </label>
+
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <input type="checkbox" name="service_type" value="Transportation">
+          <span>Transportation</span>
+        </label>
+
+        <label style="display:flex; align-items:center; gap:8px; margin:0;">
+          <input type="checkbox" name="service_type" value="Other">
+          <span>Other</span>
+        </label>
+      </div>
+
+      <label style="margin-top:14px;"><strong>Service Notes</strong></label>
       <textarea name="service_notes" rows="2"></textarea>
 
       <div style="margin-top:10px;">
