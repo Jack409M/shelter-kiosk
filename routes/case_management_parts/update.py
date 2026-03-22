@@ -134,22 +134,47 @@ def add_case_note_view(resident_id: int):
         ),
     )
 
+    note = db_fetchone(
+        f"""
+        SELECT id
+        FROM case_manager_updates
+        WHERE enrollment_id = {ph}
+          AND staff_user_id = {ph}
+          AND meeting_date = {ph}
+          AND created_at = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (
+            enrollment_id,
+            staff_user_id,
+            meeting_date,
+            now,
+        ),
+    )
+
+    note_id = None
+    if note:
+        note_id = note["id"] if isinstance(note, dict) else note[0]
+
     for service_type in service_types:
         db_execute(
             f"""
             INSERT INTO client_services
             (
                 enrollment_id,
+                case_manager_update_id,
                 service_type,
                 service_date,
                 notes,
                 created_at,
                 updated_at
             )
-            VALUES ({ph},{ph},{ph},{ph},{ph},{ph})
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
             """,
             (
                 enrollment_id,
+                note_id,
                 service_type,
                 service_date,
                 service_notes or None,
@@ -209,32 +234,37 @@ def edit_case_note_view(resident_id: int, update_id: int):
         flash("Invalid note access.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    # ---------------- GET ----------------
     if request.method == "GET":
         services = db_fetchall(
             f"""
-            SELECT service_type
+            SELECT service_type, notes
             FROM client_services
-            WHERE enrollment_id = {ph}
-              AND service_date = {ph}
+            WHERE case_manager_update_id = {ph}
+            ORDER BY id ASC
             """,
-            (note["enrollment_id"], note["meeting_date"]),
+            (update_id,),
         )
 
-        # FIX: handle mapping OR tuple
         selected_services = [
             s["service_type"] if isinstance(s, dict) else s[0]
             for s in services
         ]
+
+        service_notes_value = ""
+        if services:
+            first_service = services[0]
+            service_notes_value = (
+                first_service["notes"] if isinstance(first_service, dict) else first_service[1]
+            ) or ""
 
         return render_template(
             "case_management/edit_case_note.html",
             resident=resident,
             note=note,
             selected_services=selected_services,
+            service_notes_value=service_notes_value,
         )
 
-    # ---------------- POST ----------------
     meeting_date = (request.form.get("meeting_date") or "").strip()
     notes = (request.form.get("notes") or "").strip()
     progress_notes = (request.form.get("progress_notes") or "").strip()
@@ -248,8 +278,6 @@ def edit_case_note_view(resident_id: int, update_id: int):
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
-
-    old_meeting_date = note["meeting_date"]  # FIX: capture BEFORE update
 
     db_execute(
         f"""
@@ -271,14 +299,12 @@ def edit_case_note_view(resident_id: int, update_id: int):
         ),
     )
 
-    # FIX: delete using OLD meeting_date
     db_execute(
         f"""
         DELETE FROM client_services
-        WHERE enrollment_id = {ph}
-          AND service_date = {ph}
+        WHERE case_manager_update_id = {ph}
         """,
-        (note["enrollment_id"], old_meeting_date),
+        (update_id,),
     )
 
     for service_type in service_types:
@@ -287,16 +313,18 @@ def edit_case_note_view(resident_id: int, update_id: int):
             INSERT INTO client_services
             (
                 enrollment_id,
+                case_manager_update_id,
                 service_type,
                 service_date,
                 notes,
                 created_at,
                 updated_at
             )
-            VALUES ({ph},{ph},{ph},{ph},{ph},{ph})
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
             """,
             (
                 note["enrollment_id"],
+                update_id,
                 service_type,
                 meeting_date,
                 service_notes or None,
