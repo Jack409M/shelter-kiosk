@@ -252,7 +252,7 @@ def resident_case_view(resident_id: int):
                 created_at
             FROM case_manager_updates
             WHERE enrollment_id = {ph}
-            ORDER BY meeting_date DESC, id DESC
+            ORDER BY meeting_date ASC, id ASC
             """,
             (enrollment_id,),
         )
