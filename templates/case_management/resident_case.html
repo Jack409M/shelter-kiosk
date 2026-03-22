@@ -43,6 +43,7 @@
 {% if exit_assessment is mapping %}
   {% set exit_date_graduated = exit_assessment["date_graduated"] %}
   {% set exit_date_exit_dwc = exit_assessment["date_exit_dwc"] %}
+  {% set exit_category = exit_assessment["exit_category"] %}
   {% set exit_reason = exit_assessment["exit_reason"] %}
   {% set exit_graduate_dwc = exit_assessment["graduate_dwc"] %}
   {% set exit_leave_ama = exit_assessment["leave_ama"] %}
@@ -58,21 +59,23 @@
 {% elif exit_assessment %}
   {% set exit_date_graduated = exit_assessment[0] %}
   {% set exit_date_exit_dwc = exit_assessment[1] %}
-  {% set exit_reason = exit_assessment[2] %}
-  {% set exit_graduate_dwc = exit_assessment[3] %}
-  {% set exit_leave_ama = exit_assessment[4] %}
-  {% set exit_income_at_exit = exit_assessment[5] %}
-  {% set exit_education_at_exit = exit_assessment[6] %}
-  {% set exit_grit_at_exit = exit_assessment[7] %}
-  {% set exit_received_car = exit_assessment[8] %}
-  {% set exit_car_insurance = exit_assessment[9] %}
-  {% set exit_dental_needs_met = exit_assessment[10] %}
-  {% set exit_vision_needs_met = exit_assessment[11] %}
-  {% set exit_obtained_public_insurance = exit_assessment[12] %}
-  {% set exit_private_insurance = exit_assessment[13] %}
+  {% set exit_category = exit_assessment[2] %}
+  {% set exit_reason = exit_assessment[3] %}
+  {% set exit_graduate_dwc = exit_assessment[4] %}
+  {% set exit_leave_ama = exit_assessment[5] %}
+  {% set exit_income_at_exit = exit_assessment[6] %}
+  {% set exit_education_at_exit = exit_assessment[7] %}
+  {% set exit_grit_at_exit = exit_assessment[8] %}
+  {% set exit_received_car = exit_assessment[9] %}
+  {% set exit_car_insurance = exit_assessment[10] %}
+  {% set exit_dental_needs_met = exit_assessment[11] %}
+  {% set exit_vision_needs_met = exit_assessment[12] %}
+  {% set exit_obtained_public_insurance = exit_assessment[13] %}
+  {% set exit_private_insurance = exit_assessment[14] %}
 {% else %}
   {% set exit_date_graduated = none %}
   {% set exit_date_exit_dwc = none %}
+  {% set exit_category = none %}
   {% set exit_reason = none %}
   {% set exit_graduate_dwc = none %}
   {% set exit_leave_ama = none %}
@@ -111,8 +114,8 @@
     <form method="post" action="{{ url_for('case_management.create_enrollment', resident_id=resident_id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-      <label for="entry_date"><strong>Program Entry Date</strong></label>
-      <input id="entry_date" type="date" name="entry_date" required>
+      <label><strong>Program Entry Date</strong></label>
+      <input type="date" name="entry_date" required>
 
       <div style="margin-top:10px;">
         <button type="submit">Start Enrollment</button>
@@ -120,6 +123,7 @@
     </form>
   </div>
 {% else %}
+
   <div class="card">
     <h2>Program Information</h2>
 
@@ -133,10 +137,6 @@
   <div class="card">
     <h2>Exit Assessment</h2>
 
-    <p>
-      Record graduation, exit date, reason for exit, income at exit, and exit outcomes here.
-    </p>
-
     <a class="btn" href="{{ url_for('case_management.exit_assessment', resident_id=resident_id) }}">
       {% if enrollment_exit_date %}
         View or Edit Exit Assessment
@@ -146,201 +146,21 @@
     </a>
   </div>
 
-  <div class="card">
-    <h2>Grit Summary</h2>
-
-    <p>
-      <strong>Grit at Entry:</strong> {{ intake_grit_score if intake_grit_score is not none else "—" }}<br>
-      <strong>Grit at Exit:</strong> {{ exit_grit_at_exit if exit_grit_at_exit is not none else "—" }}<br>
-      <strong>Grit Difference:</strong> {{ grit_difference if grit_difference is not none else "—" }}
-    </p>
-  </div>
-
   {% if exit_assessment %}
     <div class="card">
-      <h2>Recorded Exit Details</h2>
+      <h2>Exit Summary</h2>
 
       <p>
-        <strong>Date Graduated:</strong> {{ exit_date_graduated or "—" }}<br>
-        <strong>Date Exit DWC:</strong> {{ exit_date_exit_dwc or "—" }}<br>
-        <strong>Reason for Exit:</strong> {{ exit_reason or "—" }}<br>
-        <strong>Graduate DWC:</strong> {{ "Yes" if exit_graduate_dwc else "No" }}<br>
-        <strong>Leave AMA:</strong> {{ "Yes" if exit_leave_ama else "No" }}<br>
-        <strong>Current Income:</strong> {{ exit_income_at_exit if exit_income_at_exit is not none else "—" }}<br>
+        <strong>Exit Category:</strong> {{ exit_category or "—" }}<br>
+        <strong>Exit Reason:</strong> {{ exit_reason or "—" }}<br>
+        <strong>Date Exit:</strong> {{ exit_date_exit_dwc or "—" }}<br>
+        <strong>Monthly Income at Exit:</strong> {{ exit_income_at_exit if exit_income_at_exit is not none else "—" }}<br>
         <strong>Education at Exit:</strong> {{ exit_education_at_exit or "—" }}<br>
-        <strong>Received Car:</strong> {{ "Yes" if exit_received_car else "No" }}<br>
-        <strong>Car Insurance:</strong> {{ "Yes" if exit_car_insurance else "No" }}<br>
-        <strong>Obtained Public Insurance:</strong> {{ "Yes" if exit_obtained_public_insurance else "No" }}<br>
-        <strong>Private Insurance:</strong> {{ "Yes" if exit_private_insurance else "No" }}<br>
-        <strong>Dental Needs Met:</strong> {{ "Yes" if exit_dental_needs_met else "No" }}<br>
-        <strong>Vision Needs Met:</strong> {{ "Yes" if exit_vision_needs_met else "No" }}
+        <strong>Leave Amarillo:</strong> {{ "Yes" if exit_leave_ama else "No" }}
       </p>
     </div>
   {% endif %}
 
-  <div class="card">
-    <h2>Add Goal</h2>
-
-    <form method="post" action="{{ url_for('case_management.add_goal', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <label for="goal_text"><strong>Goal</strong></label>
-      <textarea id="goal_text" name="goal_text" rows="3" required></textarea>
-
-      <label for="target_date"><strong>Target Date</strong></label>
-      <input id="target_date" type="date" name="target_date">
-
-      <div style="margin-top:10px;">
-        <button type="submit">Add Goal</button>
-      </div>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>Existing Goals</h2>
-
-    {% if goals %}
-      <table class="table-compact">
-        <thead>
-          <tr>
-            <th>Goal</th>
-            <th>Status</th>
-            <th>Target</th>
-            <th>Created</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for goal in goals %}
-            {% if goal is mapping %}
-              <tr>
-                <td>{{ goal["goal_text"] or "—" }}</td>
-                <td>{{ goal["status"] or "—" }}</td>
-                <td>{{ goal["target_date"] or "—" }}</td>
-                <td>{{ goal["created_at"] | chi_dt if goal["created_at"] else "—" }}</td>
-              </tr>
-            {% else %}
-              <tr>
-                <td>{{ goal[0] or "—" }}</td>
-                <td>{{ goal[1] or "—" }}</td>
-                <td>{{ goal[2] or "—" }}</td>
-                <td>{{ goal[3] | chi_dt if goal[3] else "—" }}</td>
-              </tr>
-            {% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p>No goals recorded.</p>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h2>Add Appointment</h2>
-
-    <form method="post" action="{{ url_for('case_management.add_appointment', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <label for="appointment_date"><strong>Appointment Date</strong></label>
-      <input id="appointment_date" type="date" name="appointment_date" required>
-
-      <label for="appointment_type"><strong>Appointment Type</strong></label>
-      <input id="appointment_type" type="text" name="appointment_type">
-
-      <label for="appointment_notes"><strong>Notes</strong></label>
-      <textarea id="appointment_notes" name="notes" rows="3"></textarea>
-
-      <div style="margin-top:10px;">
-        <button type="submit">Add Appointment</button>
-      </div>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>Appointments</h2>
-
-    {% if appointments %}
-      <table class="table-compact">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for appointment in appointments %}
-            {% if appointment is mapping %}
-              <tr>
-                <td>{{ appointment["appointment_date"] or "—" }}</td>
-                <td>{{ appointment["appointment_type"] or "—" }}</td>
-                <td>{{ appointment["notes"] or "—" }}</td>
-              </tr>
-            {% else %}
-              <tr>
-                <td>{{ appointment[0] or "—" }}</td>
-                <td>{{ appointment[1] or "—" }}</td>
-                <td>{{ appointment[2] or "—" }}</td>
-              </tr>
-            {% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p>No appointments recorded.</p>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h2>Add Case Note</h2>
-
-    <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <label for="meeting_date"><strong>Meeting Date</strong></label>
-      <input id="meeting_date" type="date" name="meeting_date">
-
-      <label for="notes"><strong>Notes</strong></label>
-      <textarea id="notes" name="notes" rows="4"></textarea>
-
-      <label for="progress_notes"><strong>Progress Notes</strong></label>
-      <textarea id="progress_notes" name="progress_notes" rows="4"></textarea>
-
-      <label for="action_items"><strong>Action Items</strong></label>
-      <textarea id="action_items" name="action_items" rows="4"></textarea>
-
-      <div style="margin-top:10px;">
-        <button type="submit">Add Case Note</button>
-      </div>
-    </form>
-  </div>
-
-  <div class="card">
-    <h2>Case Notes History</h2>
-
-    {% if notes %}
-      {% for note in notes %}
-        {% if note is mapping %}
-          <div style="margin-bottom:20px;">
-            <strong>Meeting:</strong> {{ note["meeting_date"] or "—" }}<br>
-            <strong>Notes:</strong> {{ note["notes"] or "—" }}<br>
-            <strong>Progress:</strong> {{ note["progress_notes"] or "—" }}<br>
-            <strong>Actions:</strong> {{ note["action_items"] or "—" }}<br>
-            <em>Created {{ note["created_at"] | chi_dt if note["created_at"] else "—" }}</em>
-          </div>
-        {% else %}
-          <div style="margin-bottom:20px;">
-            <strong>Meeting:</strong> {{ note[0] or "—" }}<br>
-            <strong>Notes:</strong> {{ note[1] or "—" }}<br>
-            <strong>Progress:</strong> {{ note[2] or "—" }}<br>
-            <strong>Actions:</strong> {{ note[3] or "—" }}<br>
-            <em>Created {{ note[4] | chi_dt if note[4] else "—" }}</em>
-          </div>
-        {% endif %}
-      {% endfor %}
-    {% else %}
-      <p>No case notes recorded.</p>
-    {% endif %}
-  </div>
 {% endif %}
 
 {% endblock %}
