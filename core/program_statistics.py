@@ -25,6 +25,33 @@ _EDUCATION_AVERAGE_LABELS = {
     7: "Doctorate",
 }
 
+_EXIT_REASON_TO_CATEGORY = {
+    "Program Graduated": "Successful Completion",
+    "Permanent Housing": "Positive Exit",
+    "Family Placement": "Positive Exit",
+    "Health Placement": "Positive Exit",
+    "Transferred to Another Program": "Neutral Exit",
+    "Unknown / Lost Contact": "Neutral Exit",
+    "Relapse": "Negative Exit",
+    "Behavioral Conflict": "Negative Exit",
+    "Rules Violation": "Negative Exit",
+    "Non Compliance with Program": "Negative Exit",
+    "Left Without Notice": "Negative Exit",
+    "Incarceration": "Administrative Exit",
+    "Medical Discharge": "Administrative Exit",
+    "Safety Removal": "Administrative Exit",
+    "Left by Choice": "Administrative Exit",
+}
+
+_EXIT_CATEGORY_ORDER = [
+    "Successful Completion",
+    "Positive Exit",
+    "Neutral Exit",
+    "Negative Exit",
+    "Administrative Exit",
+    "Unknown",
+]
+
 
 def _row_get(row: Any, key: str, index: int | None = None, default: Any = None) -> Any:
     if row is None:
@@ -1153,6 +1180,28 @@ def get_exit_outcomes(
         "unknown": _to_int(_row_get(local_outcomes_row, "unknown", 2, 0), 0),
     }
 
+    exit_category_counts: dict[str, int] = {category: 0 for category in _EXIT_CATEGORY_ORDER}
+
+    for item in exit_reasons:
+        reason = item["label"]
+        category = _EXIT_REASON_TO_CATEGORY.get(reason, "Unknown")
+        exit_category_counts[category] = exit_category_counts.get(category, 0) + item["value"]
+
+    total_categorized_exits = sum(exit_category_counts.values())
+
+    exit_category_percentages: list[dict[str, Any]] = []
+    for category in _EXIT_CATEGORY_ORDER:
+        count = exit_category_counts.get(category, 0)
+        percent = round((count / total_categorized_exits) * 100, 1) if total_categorized_exits else 0.0
+        exit_category_percentages.append(
+            {
+                "label": category,
+                "value": count,
+                "display_value": mask_small_counts(count),
+                "percent": percent,
+            }
+        )
+
     total_exits = sum(item["value"] for item in exit_reasons)
 
     return {
@@ -1163,6 +1212,7 @@ def get_exit_outcomes(
         "total_exit_records": total_exits,
         "total_exit_records_display": mask_small_counts(total_exits),
         "exit_reasons": exit_reasons,
+        "exit_category_percentages": exit_category_percentages,
         "local_outcomes": {
             "stayed": local_outcomes["stayed"],
             "stayed_display": mask_small_counts(local_outcomes["stayed"]),
