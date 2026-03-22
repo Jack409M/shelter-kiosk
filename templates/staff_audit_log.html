@@ -3,17 +3,91 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+<style>
+    .audit-page {
+        width: 100%;
+    }
+
+    .audit-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 240px;
+        gap: 16px;
+        align-items: start;
+    }
+
+    .audit-main {
+        min-width: 0;
+    }
+
+    .audit-sidebar {
+        width: 240px;
+    }
+
+    .audit-sidebar .filter-panel {
+        position: sticky;
+        top: 16px;
+        padding: 12px;
+    }
+
+    .audit-sidebar form {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .audit-sidebar label {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .audit-sidebar input,
+    .audit-sidebar select {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0;
+    }
+
+    .filter-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .filter-buttons a,
+    .filter-buttons button {
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+    }
+
+    .audit-container {
+        overflow-x: auto;
+    }
+
+    @media (max-width: 1000px) {
+        .audit-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .audit-sidebar {
+            width: 100%;
+        }
+
+        .audit-sidebar .filter-panel {
+            position: static;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-
 <div class="dash-wrap">
-    <div class="dash-panel">
-
+    <div class="dash-panel audit-page">
         <h1>Audit Log</h1>
 
-        <div class="audit-layout">
-
+        <div class="audit-shell">
             <div class="audit-main">
                 <div class="audit-container">
                     <table class="audit-table">
@@ -85,10 +159,7 @@
                     </form>
                 </div>
             </aside>
-
         </div>
-
     </div>
 </div>
-
 {% endblock %}
