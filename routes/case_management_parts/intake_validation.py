@@ -27,7 +27,81 @@ ALLOWED_DISABILITY_VALUES = {
 }
 
 
+def _find_possible_duplicate(
+    first_name: str | None,
+    last_name: str | None,
+    birth_year: int | None,
+    phone: str | None,
+    email: str | None,
+    shelter: str,
+    shelter_equals_sql,
+):
+    ph = placeholder()
+
+    first_name = clean(first_name)
+    last_name = clean(last_name)
+    phone = digits_only(phone)
+    email = clean(email)
+    shelter = normalize_shelter_name(shelter)
+
+    if email:
+        email = email.lower()
+
+    if not first_name or not last_name:
+        return None
+
+    match_clauses: list[str] = []
+    params: list[Any] = []
+
+    match_clauses.append("(LOWER(first_name) = LOWER(" + ph + ") AND LOWER(last_name) = LOWER(" + ph + "))")
+    params.extend([first_name, last_name])
+
+    if birth_year is not None:
+        match_clauses.append(
+            "(LOWER(first_name) = LOWER(" + ph + ") AND LOWER(last_name) = LOWER(" + ph + ") AND birth_year = " + ph + ")"
+        )
+        params.extend([first_name, last_name, birth_year])
+
+    if phone:
+        match_clauses.append("(phone = " + ph + ")")
+        params.append(phone)
+
+    if email:
+        match_clauses.append("(LOWER(email) = LOWER(" + ph + "))")
+        params.append(email)
+
+    if not match_clauses:
+        return None
+
+    shelter_sql = shelter_equals_sql("shelter", ph)
+
+    sql = f"""
+        SELECT
+            id,
+            resident_code,
+            first_name,
+            last_name,
+            birth_year,
+            phone,
+            resident_identifier,
+            email,
+            shelter
+        FROM residents
+        WHERE is_active = TRUE
+          AND ({shelter_sql})
+          AND (
+            {" OR ".join(match_clauses)}
+          )
+        ORDER BY id DESC
+        LIMIT 1
+    """
+
+    return db_fetchone(sql, tuple([shelter] + params))
+
+
 def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list[str]]:
+    normalized_selected_shelter = normalize_shelter_name(shelter)
+
     data: dict[str, Any] = {
         "first_name": clean(form.get("first_name")),
         "middle_name": clean(form.get("middle_name")),
@@ -45,7 +119,6 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "shelter": normalize_shelter_name(form.get("shelter") or shelter),
         "program_status": clean(form.get("program_status")) or "active",
 
-        # Intake baseline
         "prior_living": clean(form.get("prior_living")),
         "city": clean(form.get("city")),
         "last_zipcode_residence": clean(form.get("last_zipcode_residence")),
@@ -58,27 +131,22 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "education_at_entry": clean(form.get("education_at_entry")),
         "disability": clean(form.get("disability")),
 
-        # Assessment / current status
         "parenting_class_needed": clean(form.get("parenting_class_needed")),
         "dwc_level_today": clean(form.get("dwc_level_today")),
 
-        # Demographics / notes
         "entry_notes": clean(form.get("entry_notes")),
         "race": clean(form.get("race")),
         "ethnicity": clean(form.get("ethnicity")),
 
-        # Health + needs
         "pregnant": clean(form.get("pregnant")),
         "dental_need": clean(form.get("dental_need")),
         "vision_need": clean(form.get("vision_need")),
         "employment_status": clean(form.get("employment_status")),
         "initial_snapshot_notes": clean(form.get("initial_snapshot_notes")),
 
-        # Scores
         "ace_score": clean(form.get("ace_score")),
         "grit_score": clean(form.get("grit_score")),
 
-        # Trauma / barriers
         "sexual_survivor": clean(form.get("sexual_survivor")),
         "domestic_violence_history": clean(form.get("domestic_violence_history")),
         "human_trafficking_history": clean(form.get("human_trafficking_history")),
@@ -100,7 +168,6 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 
     errors: list[str] = []
 
-    # --- REQUIRED FIELDS ---
     if not data["first_name"]:
         errors.append("First name is required.")
 
@@ -110,24 +177,21 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     if not data["entry_date"]:
         errors.append("Date Entered is required.")
 
-    if data["shelter"] != shelter:
+    if data["shelter"] != normalized_selected_shelter:
         errors.append("Intake shelter must match the shelter currently selected in staff navigation.")
 
-    # --- NORMALIZATION ---
     if data["gender"]:
         data["gender"] = data["gender"].strip().lower()
 
     if data["disability"]:
         data["disability"] = data["disability"].strip()
 
-    # --- VALIDATION ---
     if data["gender"] and data["gender"] not in ALLOWED_GENDER_VALUES:
         errors.append("Gender must be M or F.")
 
     if data["disability"] and data["disability"] not in ALLOWED_DISABILITY_VALUES:
         errors.append("Invalid disability type.")
 
-    # --- DATES ---
     birth_year = parse_int(data["birth_year"])
     current_year = date.today().year
 
@@ -162,24 +226,20 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         raw_days = (entry_date - sobriety_date).days
         data["days_sober_at_entry"] = max(raw_days, 0)
 
-    # --- PHONE ---
     phone_digits = digits_only(data["phone"])
     if data["phone"] and len(phone_digits) < 10:
         errors.append("Phone must contain at least 10 digits.")
     data["phone"] = phone_digits or None
 
-    # --- EMAIL ---
     if data["email"]:
         data["email"] = data["email"].strip().lower()
 
-    # --- ZIP ---
     if data["last_zipcode_residence"]:
         zipcode_digits = digits_only(data["last_zipcode_residence"])
         if len(zipcode_digits) not in {5, 9}:
             errors.append("Zipcode must be 5 or 9 digits.")
         data["last_zipcode_residence"] = zipcode_digits
 
-    # --- SCORES ---
     ace_score = parse_int(data["ace_score"])
     if ace_score is not None and not 0 <= ace_score <= 10:
         errors.append("ACE Score must be between 0 and 10.")
@@ -190,7 +250,6 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         errors.append("Grit Score must be between 0 and 100.")
     data["grit_score"] = grit_score
 
-    # --- INCOME ---
     income_at_entry = parse_money(data["income_at_entry"])
     if income_at_entry is not None and income_at_entry < 0:
         errors.append("Monthly Income cannot be negative.")
