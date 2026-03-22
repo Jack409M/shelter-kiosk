@@ -1,79 +1,84 @@
 {% extends "layout.html" %}
 
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+{% endblock %}
+
 {% block content %}
 
-<h1>Audit Log</h1>
+<div class="dash-wrap">
+    <div class="dash-panel">
+        <h1>Audit Log</h1>
 
-<div class="audit-container">
+        <div class="filter-panel">
+            <form method="get">
+                <label for="q">Search text</label>
+                <input id="q" type="text" name="q" value="{{ request.args.get('q', '') }}">
 
-    <table class="audit-table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>When</th>
-                <th>Shelter</th>
-                <th>Staff</th>
-                <th>Entity</th>
-                <th>Entity ID</th>
-                <th>Action</th>
-                <th>Details</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in rows %}
-            <tr>
-                <td>{{ row.id }}</td>
-                <td>{{ row.created_at | app_pretty_dt }}</td>
-                <td>{{ row.shelter }}</td>
-                <td>{{ row.staff or "" }}</td>
-                <td>{{ row.entity }}</td>
-                <td>{{ row.entity_id }}</td>
-                <td>{{ row.action }}</td>
-                <td>{{ row.details }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                <label for="shelter">Shelter</label>
+                <select id="shelter" name="shelter">
+                    <option value="">All</option>
+                </select>
 
-    <div class="filter-panel">
+                <label for="staff">Staff</label>
+                <select id="staff" name="staff">
+                    <option value="">All</option>
+                </select>
 
-        <form method="get">
-            <label>Search text</label>
-            <input type="text" name="q" value="{{ request.args.get('q', '') }}">
+                <label for="entity">Entity</label>
+                <select id="entity" name="entity">
+                    <option value="">All</option>
+                </select>
 
-            <label>Shelter</label>
-            <select name="shelter">
-                <option value="">All</option>
-            </select>
+                <label for="action">Action</label>
+                <select id="action" name="action">
+                    <option value="">All</option>
+                </select>
 
-            <label>Staff</label>
-            <select name="staff">
-                <option value="">All</option>
-            </select>
+                <div class="filter-buttons">
+                    <button type="submit">Apply</button>
+                    <a href="{{ url_for('admin.staff_audit_log') }}">Clear</a>
+                    <button type="button" onclick="location.reload()">Refresh</button>
+                </div>
+            </form>
+        </div>
 
-            <label>Entity</label>
-            <select name="entity">
-                <option value="">All</option>
-            </select>
-
-            <label>Action</label>
-            <select name="action">
-                <option value="">All</option>
-            </select>
-
-            <div class="filter-buttons">
-                <button type="submit">Apply</button>
-                <a href="{{ url_for('admin.staff_audit_log') }}">Clear</a>
-
-                <!-- 🔥 FIXED: removed broken export endpoint -->
-                <!-- If you want export later, we wire it properly -->
-
-                <button type="button" onclick="location.reload()">Refresh</button>
-            </div>
-        </form>
-
+        <div class="audit-container">
+            <table class="audit-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>When</th>
+                        <th>Shelter</th>
+                        <th>Staff</th>
+                        <th>Entity</th>
+                        <th>Entity ID</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td>{{ row.id }}</td>
+                        <td>{{ row.created_at | app_pretty_dt }}</td>
+                        <td>{{ row.shelter }}</td>
+                        <td>{{ row.staff or "" }}</td>
+                        <td>{{ row.entity }}</td>
+                        <td>{{ row.entity_id }}</td>
+                        <td>{{ row.action }}</td>
+                        <td>{{ row.details }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8">No audit log records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-
 </div>
 
 {% endblock %}
