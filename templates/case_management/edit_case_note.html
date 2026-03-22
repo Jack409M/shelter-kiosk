@@ -1,0 +1,92 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+{% if resident is mapping %}
+  {% set resident_id = resident["id"] %}
+{% else %}
+  {% set resident_id = resident[0] %}
+{% endif %}
+
+{% if note is mapping %}
+  {% set note_id = note["id"] %}
+  {% set meeting_date = note["meeting_date"] %}
+  {% set notes_value = note["notes"] %}
+  {% set progress_notes_value = note["progress_notes"] %}
+  {% set action_items_value = note["action_items"] %}
+{% else %}
+  {% set note_id = note[0] %}
+  {% set meeting_date = note[3] %}
+  {% set notes_value = note[4] %}
+  {% set progress_notes_value = note[5] %}
+  {% set action_items_value = note[6] %}
+{% endif %}
+
+<h1>Edit Case Note</h1>
+
+<div class="card">
+  <form method="post" action="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Meeting Date</strong></label>
+    <input type="date" name="meeting_date" value="{{ meeting_date or '' }}" required>
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes" rows="3">{{ notes_value or "" }}</textarea>
+
+    <label><strong>Progress Notes</strong></label>
+    <textarea name="progress_notes" rows="3">{{ progress_notes_value or "" }}</textarea>
+
+    <label><strong>Action Items</strong></label>
+    <textarea name="action_items" rows="3">{{ action_items_value or "" }}</textarea>
+
+    <hr>
+
+    <h3>Services Provided</h3>
+
+    <label>
+      <input type="checkbox" name="service_type" value="Counseling" {% if "Counseling" in selected_services %}checked{% endif %}>
+      Counseling
+    </label><br>
+
+    <label>
+      <input type="checkbox" name="service_type" value="Dental" {% if "Dental" in selected_services %}checked{% endif %}>
+      Dental
+    </label><br>
+
+    <label>
+      <input type="checkbox" name="service_type" value="Vision" {% if "Vision" in selected_services %}checked{% endif %}>
+      Vision
+    </label><br>
+
+    <label>
+      <input type="checkbox" name="service_type" value="Parenting Support" {% if "Parenting Support" in selected_services %}checked{% endif %}>
+      Parenting Support
+    </label><br>
+
+    <label>
+      <input type="checkbox" name="service_type" value="Legal Assistance" {% if "Legal Assistance" in selected_services %}checked{% endif %}>
+      Legal Assistance
+    </label><br>
+
+    <label>
+      <input type="checkbox" name="service_type" value="Transportation" {% if "Transportation" in selected_services %}checked{% endif %}>
+      Transportation
+    </label><br>
+
+    <label>
+      <input type="checkbox" name="service_type" value="Other" {% if "Other" in selected_services %}checked{% endif %}>
+      Other
+    </label>
+
+    <label style="margin-top:10px;"><strong>Service Notes</strong></label>
+    <textarea name="service_notes" rows="2"></textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Changes</button>
+      <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
