@@ -249,6 +249,7 @@
           {% set note_progress_notes = note["progress_notes"] %}
           {% set note_action_items = note["action_items"] %}
           {% set note_created_at = note["created_at"] %}
+          {% set note_services = note["services"] %}
         {% else %}
           {% set note_id = note[0] %}
           {% set note_meeting_date = note[1] %}
@@ -256,6 +257,7 @@
           {% set note_progress_notes = note[3] %}
           {% set note_action_items = note[4] %}
           {% set note_created_at = note[5] %}
+          {% set note_services = note[6] %}
         {% endif %}
 
         <div style="padding:10px 0; border-bottom:1px solid #ddd;">
@@ -276,6 +278,38 @@
             <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
           {% endif %}
 
+          {% if note_services %}
+            <div style="margin-top:12px;">
+              <strong>Services Provided:</strong>
+              <div style="display:grid; grid-template-columns:repeat(3, minmax(180px, 1fr)); gap:10px; margin-top:8px;">
+                {% for service in note_services %}
+                  {% if service is mapping %}
+                    {% set service_type = service["service_type"] %}
+                    {% set service_date = service["service_date"] %}
+                    {% set service_notes_value = service["notes"] %}
+                  {% else %}
+                    {% set service_type = service[0] %}
+                    {% set service_date = service[1] %}
+                    {% set service_notes_value = service[2] %}
+                  {% endif %}
+
+                  <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+                    <div><strong>{{ service_type or "—" }}</strong></div>
+                    <div style="margin-top:4px;">
+                      <small>{{ service_date or "—" }}</small>
+                    </div>
+
+                    {% if service_notes_value %}
+                      <div style="margin-top:8px;">
+                        {{ service_notes_value }}
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+
           {% if note_id %}
             <div style="margin-top:10px;">
               <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
@@ -287,37 +321,6 @@
       {% endfor %}
     {% else %}
       <p>No monthly meetings recorded.</p>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h2>Service History</h2>
-
-    {% if services %}
-      {% for service in services %}
-        {% if service is mapping %}
-          {% set service_type = service["service_type"] %}
-          {% set service_date = service["service_date"] %}
-          {% set service_notes_value = service["notes"] %}
-        {% else %}
-          {% set service_type = service[0] %}
-          {% set service_date = service[1] %}
-          {% set service_notes_value = service[2] %}
-        {% endif %}
-
-        <div style="padding:10px 0; border-bottom:1px solid #ddd;">
-          <p>
-            <strong>Service:</strong> {{ service_type or "—" }}<br>
-            <strong>Date:</strong> {{ service_date or "—" }}
-          </p>
-
-          {% if service_notes_value %}
-            <p><strong>Notes:</strong><br>{{ service_notes_value }}</p>
-          {% endif %}
-        </div>
-      {% endfor %}
-    {% else %}
-      <p>No services recorded.</p>
     {% endif %}
   </div>
 
