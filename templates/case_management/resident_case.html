@@ -161,12 +161,14 @@
     {% if notes %}
       {% for note in notes %}
         {% if note is mapping %}
+          {% set note_id = note["id"] %}
           {% set note_meeting_date = note["meeting_date"] %}
           {% set note_notes = note["notes"] %}
           {% set note_progress_notes = note["progress_notes"] %}
           {% set note_action_items = note["action_items"] %}
           {% set note_created_at = note["created_at"] %}
         {% else %}
+          {% set note_id = none %}
           {% set note_meeting_date = note[0] %}
           {% set note_notes = note[1] %}
           {% set note_progress_notes = note[2] %}
@@ -190,6 +192,14 @@
 
           {% if note_action_items %}
             <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
+          {% endif %}
+
+          {% if note_id %}
+            <div style="margin-top:10px;">
+              <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
+                Edit Note
+              </a>
+            </div>
           {% endif %}
         </div>
       {% endfor %}
