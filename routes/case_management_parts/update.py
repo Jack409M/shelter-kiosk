@@ -221,7 +221,11 @@ def edit_case_note_view(resident_id: int, update_id: int):
             (note["enrollment_id"], note["meeting_date"]),
         )
 
-        selected_services = [s["service_type"] for s in services]
+        # FIX: handle mapping OR tuple
+        selected_services = [
+            s["service_type"] if isinstance(s, dict) else s[0]
+            for s in services
+        ]
 
         return render_template(
             "case_management/edit_case_note.html",
@@ -245,6 +249,8 @@ def edit_case_note_view(resident_id: int, update_id: int):
 
     now = utcnow_iso()
 
+    old_meeting_date = note["meeting_date"]  # FIX: capture BEFORE update
+
     db_execute(
         f"""
         UPDATE case_manager_updates
@@ -265,14 +271,14 @@ def edit_case_note_view(resident_id: int, update_id: int):
         ),
     )
 
-    # wipe + reinsert services (safe version for now)
+    # FIX: delete using OLD meeting_date
     db_execute(
         f"""
         DELETE FROM client_services
         WHERE enrollment_id = {ph}
           AND service_date = {ph}
         """,
-        (note["enrollment_id"], note["meeting_date"]),
+        (note["enrollment_id"], old_meeting_date),
     )
 
     for service_type in service_types:
