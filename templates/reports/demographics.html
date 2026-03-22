@@ -422,9 +422,8 @@
     </div>
 
     <div class="stats-grid">
-      {{ stat_tile("Average Education At Entry", "%.2f"|format(education_and_income.average_education_at_entry), "avg_education_entry", favorite_metric_keys, filters) }}
-      {{ stat_tile("Average Education At Exit", "%.2f"|format(education_and_income.average_education_at_exit), "avg_education_exit", favorite_metric_keys, filters) }}
-      {{ stat_tile("Average Education Improvement", "%.2f"|format(education_and_income.average_education_improvement), "avg_education_improvement", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Education At Entry", education_and_income.average_education_at_entry_label, "avg_education_entry_label", favorite_metric_keys, filters) }}
+      {{ stat_tile("Average Education At Exit", education_and_income.average_education_at_exit_label, "avg_education_exit_label", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Monthly Income At Entry", "$" ~ "%.2f"|format(education_and_income.average_income_at_entry), "avg_monthly_income_entry", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Monthly Income At Exit", "$" ~ "%.2f"|format(education_and_income.average_income_at_exit), "avg_monthly_income_exit", favorite_metric_keys, filters) }}
       {{ stat_tile("Average Monthly Income Improvement", "$" ~ "%.2f"|format(education_and_income.average_income_improvement), "avg_monthly_income_improvement", favorite_metric_keys, filters) }}
@@ -433,12 +432,7 @@
     <div class="two-col-grid top-space">
       <div class="subsection">
         <h3>Education At Entry</h3>
-
-        <div class="stats-grid compact-grid">
-          {{ stat_tile("Average Entry Level", education_and_income.average_education_at_entry_label, "avg_education_entry_label", favorite_metric_keys, filters) }}
-        </div>
-
-        <div class="table-wrap top-space">
+        <div class="table-wrap">
           <table class="stats-table">
             <thead>
               <tr>
@@ -464,12 +458,7 @@
 
       <div class="subsection">
         <h3>Education At Exit</h3>
-
-        <div class="stats-grid compact-grid">
-          {{ stat_tile("Average Exit Level", education_and_income.average_education_at_exit_label, "avg_education_exit_label", favorite_metric_keys, filters) }}
-        </div>
-
-        <div class="table-wrap top-space">
+        <div class="table-wrap">
           <table class="stats-table">
             <thead>
               <tr>
