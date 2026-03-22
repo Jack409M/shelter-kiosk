@@ -241,7 +241,7 @@ def resident_case_view(resident_id: int):
             (enrollment_id,),
         )
 
-        notes = db_fetchall(
+        notes_raw = db_fetchall(
             f"""
             SELECT
                 id,
@@ -257,9 +257,10 @@ def resident_case_view(resident_id: int):
             (enrollment_id,),
         )
 
-        services = db_fetchall(
+        services_raw = db_fetchall(
             f"""
             SELECT
+                case_manager_update_id,
                 service_type,
                 service_date,
                 notes
@@ -269,6 +270,48 @@ def resident_case_view(resident_id: int):
             """,
             (enrollment_id,),
         )
+
+        services_by_note = {}
+
+        for s in services_raw:
+            if isinstance(s, dict):
+                note_id = s["case_manager_update_id"]
+                service = {
+                    "service_type": s["service_type"],
+                    "service_date": s["service_date"],
+                    "notes": s["notes"],
+                }
+            else:
+                note_id = s[0]
+                service = {
+                    "service_type": s[1],
+                    "service_date": s[2],
+                    "notes": s[3],
+                }
+
+            services_by_note.setdefault(note_id, []).append(service)
+
+        notes = []
+
+        for n in notes_raw:
+            if isinstance(n, dict):
+                note_id = n["id"]
+                note_obj = dict(n)
+            else:
+                note_id = n[0]
+                note_obj = {
+                    "id": n[0],
+                    "meeting_date": n[1],
+                    "notes": n[2],
+                    "progress_notes": n[3],
+                    "action_items": n[4],
+                    "created_at": n[5],
+                }
+
+            note_obj["services"] = services_by_note.get(note_id, [])
+            notes.append(note_obj)
+
+        services = services_raw
 
         followup_6_month = _get_latest_followup(enrollment_id, "6_month")
         followup_1_year = _get_latest_followup(enrollment_id, "1_year")
