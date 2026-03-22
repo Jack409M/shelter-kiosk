@@ -77,6 +77,7 @@ from routes.case_management_parts.intake_duplicates import duplicate_review_use_
 from routes.case_management_parts.intake_duplicates import duplicate_review_view
 from routes.case_management_parts.resident_case import resident_case_view
 from routes.case_management_parts.update import add_case_note_view
+from routes.case_management_parts.update import edit_case_note_view
 
 
 # ============================================================================
@@ -295,6 +296,13 @@ def add_appointment(resident_id: int):
 @require_shelter
 def add_case_note(resident_id: int):
     return add_case_note_view(resident_id)
+
+
+@case_management.route("/<int:resident_id>/case-notes/<int:update_id>/edit", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def edit_case_note(resident_id: int, update_id: int):
+    return edit_case_note_view(resident_id, update_id)
 
 
 # ============================================================================
