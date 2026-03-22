@@ -116,7 +116,7 @@
     </p>
   </div>
 
-  <div class="card">
+  <div class="card no-print">
     <h2>Monthly Case Manager Meeting</h2>
 
     <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
@@ -237,14 +237,80 @@
     </form>
   </div>
 
+  <style>
+    .case-note-tile.is-active {
+      border-color: #555 !important;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+    }
+
+    @media print {
+      .no-print,
+      #case-note-scroll-lane,
+      .case-note-tile,
+      .print-hide {
+        display: none !important;
+      }
+
+      .print-note-panel {
+        display: block !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+
+      .print-note-panel .card {
+        border: none !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+      }
+    }
+  </style>
+
   <div class="card">
     <h2>Monthly Meeting History</h2>
 
     {% if notes %}
       <div
         id="case-note-scroll-lane"
-        style="display:flex; gap:10px; overflow-x:auto; padding:4px 2px 8px 2px; scroll-behavior:smooth;"
+        class="no-print"
+        style="display:flex; gap:10px; overflow-x:auto; padding:4px 2px 10px 2px; scroll-behavior:smooth;"
       >
+        {% for note in notes %}
+          {% if note is mapping %}
+            {% set note_id = note["id"] %}
+            {% set note_meeting_date = note["meeting_date"] %}
+            {% set note_created_at = note["created_at"] %}
+            {% set note_services = note["services"] %}
+            {% set note_notes = note["notes"] %}
+            {% set note_progress_notes = note["progress_notes"] %}
+            {% set note_action_items = note["action_items"] %}
+          {% else %}
+            {% set note_id = note[0] %}
+            {% set note_meeting_date = note[1] %}
+            {% set note_notes = note[2] %}
+            {% set note_progress_notes = note[3] %}
+            {% set note_action_items = note[4] %}
+            {% set note_created_at = note[5] %}
+            {% set note_services = note[6] %}
+          {% endif %}
+
+          <button
+            type="button"
+            class="case-note-tile"
+            data-note-target="case-note-panel-{{ note_id }}"
+            style="flex:0 0 15.5%; min-width:170px; max-width:220px; border:1px solid #ddd; border-radius:8px; background:#fff; padding:10px; cursor:pointer; text-align:center;"
+          >
+            <div><strong>{{ note_meeting_date or "—" }}</strong></div>
+            {% if note_services %}
+              <div style="margin-top:4px; font-size:0.82em; color:#666;">
+                {{ note_services|length }} svc
+              </div>
+            {% endif %}
+          </button>
+        {% endfor %}
+      </div>
+
+      <div class="print-note-panel">
         {% for note in notes %}
           {% if note is mapping %}
             {% set note_id = note["id"] %}
@@ -264,81 +330,109 @@
             {% set note_services = note[6] %}
           {% endif %}
 
-          <details style="flex:0 0 15.5%; min-width:170px; max-width:220px; border:1px solid #ddd; border-radius:8px; background:#fff;">
-            <summary style="cursor:pointer; list-style:none; padding:10px 10px 8px 10px;">
-              <div style="text-align:center;">
-                <div><strong>{{ note_meeting_date or "—" }}</strong></div>
-                {% if note_services %}
-                  <div style="margin-top:4px; font-size:0.82em; color:#666;">
-                    {{ note_services|length }} svc
-                  </div>
-                {% endif %}
-              </div>
-            </summary>
-
-            <div style="padding:0 10px 10px 10px; border-top:1px solid #eee;">
-              <div style="margin-top:10px; font-size:0.88em; color:#666;">
-                Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
-              </div>
-
-              {% if note_notes %}
-                <p style="margin-top:10px;"><strong>Notes:</strong><br>{{ note_notes }}</p>
-              {% endif %}
-
-              {% if note_progress_notes %}
-                <p><strong>Progress Notes:</strong><br>{{ note_progress_notes }}</p>
-              {% endif %}
-
-              {% if note_action_items %}
-                <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
-              {% endif %}
-
-              {% if note_services %}
-                <div style="margin-top:10px;">
-                  <strong>Services:</strong>
-                  <div style="margin-top:6px; display:grid; gap:8px;">
-                    {% for service in note_services %}
-                      {% if service is mapping %}
-                        {% set service_type = service["service_type"] %}
-                        {% set service_date = service["service_date"] %}
-                        {% set service_notes_value = service["notes"] %}
-                      {% else %}
-                        {% set service_type = service[0] %}
-                        {% set service_date = service[1] %}
-                        {% set service_notes_value = service[2] %}
-                      {% endif %}
-
-                      <div style="padding:8px; border:1px solid #ddd; border-radius:6px;">
-                        <div><strong>{{ service_type or "—" }}</strong></div>
-                        <div style="margin-top:2px; font-size:0.82em; color:#666;">
-                          {{ service_date or "—" }}
-                        </div>
-                        {% if service_notes_value %}
-                          <div style="margin-top:6px;">{{ service_notes_value }}</div>
-                        {% endif %}
-                      </div>
-                    {% endfor %}
-                  </div>
+          <div
+            id="case-note-panel-{{ note_id }}"
+            class="card case-note-panel"
+            style="display:none; margin-top:10px;"
+          >
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+              <div>
+                <h3 style="margin-bottom:6px;">Meeting {{ note_meeting_date or "—" }}</h3>
+                <div style="font-size:0.95em; color:#666;">
+                  Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
                 </div>
-              {% endif %}
+              </div>
 
               {% if note_id %}
-                <div style="margin-top:10px;">
+                <div class="print-hide">
                   <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
-                    Edit
+                    Edit Note
                   </a>
                 </div>
               {% endif %}
             </div>
-          </details>
+
+            {% if note_notes %}
+              <p style="margin-top:14px;"><strong>Notes:</strong><br>{{ note_notes }}</p>
+            {% endif %}
+
+            {% if note_progress_notes %}
+              <p><strong>Progress Notes:</strong><br>{{ note_progress_notes }}</p>
+            {% endif %}
+
+            {% if note_action_items %}
+              <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
+            {% endif %}
+
+            {% if note_services %}
+              <div style="margin-top:14px;">
+                <strong>Services Provided:</strong>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:10px;">
+                  {% for service in note_services %}
+                    {% if service is mapping %}
+                      {% set service_type = service["service_type"] %}
+                      {% set service_date = service["service_date"] %}
+                      {% set service_notes_value = service["notes"] %}
+                    {% else %}
+                      {% set service_type = service[0] %}
+                      {% set service_date = service[1] %}
+                      {% set service_notes_value = service[2] %}
+                    {% endif %}
+
+                    <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+                      <div><strong>{{ service_type or "—" }}</strong></div>
+                      <div style="margin-top:4px; font-size:0.88em; color:#666;">
+                        {{ service_date or "—" }}
+                      </div>
+
+                      {% if service_notes_value %}
+                        <div style="margin-top:8px;">
+                          {{ service_notes_value }}
+                        </div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          </div>
         {% endfor %}
       </div>
 
       <script>
         (function () {
           var lane = document.getElementById("case-note-scroll-lane");
+          var tiles = Array.prototype.slice.call(document.querySelectorAll(".case-note-tile"));
+          var panels = Array.prototype.slice.call(document.querySelectorAll(".case-note-panel"));
+
+          function showPanel(panelId) {
+            panels.forEach(function (panel) {
+              panel.style.display = panel.id === panelId ? "block" : "none";
+            });
+
+            tiles.forEach(function (tile) {
+              if (tile.getAttribute("data-note-target") === panelId) {
+                tile.classList.add("is-active");
+              } else {
+                tile.classList.remove("is-active");
+              }
+            });
+          }
+
+          tiles.forEach(function (tile) {
+            tile.addEventListener("click", function () {
+              showPanel(tile.getAttribute("data-note-target"));
+            });
+          });
+
           if (lane) {
             lane.scrollLeft = lane.scrollWidth;
+          }
+
+          if (tiles.length > 0) {
+            var newestTile = tiles[tiles.length - 1];
+            showPanel(newestTile.getAttribute("data-note-target"));
           }
         })();
       </script>
