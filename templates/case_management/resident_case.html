@@ -156,7 +156,12 @@
         <strong>Date Exit:</strong> {{ exit_date_exit_dwc or "—" }}<br>
         <strong>Monthly Income at Exit:</strong> {{ exit_income_at_exit if exit_income_at_exit is not none else "—" }}<br>
         <strong>Education at Exit:</strong> {{ exit_education_at_exit or "—" }}<br>
-        <strong>Leave Amarillo:</strong> {{ "Yes" if exit_leave_ama else "No" }}
+        <strong>Leave Amarillo:</strong>
+        {% if exit_leave_ama is none %}
+          —
+        {% else %}
+          {{ "Yes" if exit_leave_ama else "No" }}
+        {% endif %}
       </p>
     </div>
   {% endif %}
