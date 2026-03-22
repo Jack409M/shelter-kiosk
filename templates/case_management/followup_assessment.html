@@ -12,6 +12,7 @@
   </div>
 
   <form method="POST">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
     <!-- Follow Up Date -->
     <div class="mb-3">
