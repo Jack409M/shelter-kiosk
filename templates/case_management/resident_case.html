@@ -344,7 +344,10 @@
               </div>
 
               {% if note_id %}
-                <div class="print-hide">
+                <div class="print-hide" style="display:flex; gap:8px; align-items:center;">
+                  <button type="button" class="btn" onclick="window.print()">
+                    Print
+                  </button>
                   <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
                     Edit Note
                   </a>
