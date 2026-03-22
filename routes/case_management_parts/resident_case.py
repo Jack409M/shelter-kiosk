@@ -10,6 +10,59 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
+def _normalize_exit_assessment(row):
+    if not row:
+        return None
+
+    if isinstance(row, dict):
+        leave_ama = row.get("leave_ama")
+        leave_amarillo_city = row.get("leave_amarillo_city")
+        leave_amarillo_unknown = row.get("leave_amarillo_unknown")
+
+        destination = None
+        if leave_ama:
+            if leave_amarillo_city:
+                destination = leave_amarillo_city
+            elif leave_amarillo_unknown:
+                destination = "Unknown"
+
+        normalized = dict(row)
+        normalized["leave_ama_destination"] = destination
+        return normalized
+
+    leave_ama = row[5]
+    leave_amarillo_city = row[6]
+    leave_amarillo_unknown = row[7]
+
+    destination = None
+    if leave_ama:
+        if leave_amarillo_city:
+            destination = leave_amarillo_city
+        elif leave_amarillo_unknown:
+            destination = "Unknown"
+
+    return {
+        "date_graduated": row[0],
+        "date_exit_dwc": row[1],
+        "exit_category": row[2],
+        "exit_reason": row[3],
+        "graduate_dwc": row[4],
+        "leave_ama": row[5],
+        "leave_amarillo_city": row[6],
+        "leave_amarillo_unknown": row[7],
+        "leave_ama_destination": destination,
+        "income_at_exit": row[8],
+        "education_at_exit": row[9],
+        "grit_at_exit": row[10],
+        "received_car": row[11],
+        "car_insurance": row[12],
+        "dental_needs_met": row[13],
+        "vision_needs_met": row[14],
+        "obtained_public_insurance": row[15],
+        "private_insurance": row[16],
+    }
+
+
 def _get_latest_followup(enrollment_id: int, followup_type: str):
     ph = placeholder()
 
@@ -97,7 +150,7 @@ def resident_case_view(resident_id: int):
     goals = []
     appointments = []
     notes = []
-    services = []  # 🔥 NEW
+    services = []
     intake_assessment = None
     exit_assessment = None
     grit_difference = None
@@ -107,7 +160,8 @@ def resident_case_view(resident_id: int):
     if enrollment_id:
         intake_assessment = db_fetchone(
             f"""
-            SELECT grit_score
+            SELECT
+                grit_score
             FROM intake_assessments
             WHERE enrollment_id = {ph}
             LIMIT 1
@@ -115,7 +169,7 @@ def resident_case_view(resident_id: int):
             (enrollment_id,),
         )
 
-        exit_assessment = db_fetchone(
+        raw_exit_assessment = db_fetchone(
             f"""
             SELECT
                 date_graduated,
@@ -124,7 +178,8 @@ def resident_case_view(resident_id: int):
                 exit_reason,
                 graduate_dwc,
                 leave_ama,
-                leave_ama_destination,
+                leave_amarillo_city,
+                leave_amarillo_unknown,
                 income_at_exit,
                 education_at_exit,
                 grit_at_exit,
@@ -141,6 +196,8 @@ def resident_case_view(resident_id: int):
             (enrollment_id,),
         )
 
+        exit_assessment = _normalize_exit_assessment(raw_exit_assessment)
+
         intake_grit = None
         exit_grit = None
 
@@ -152,18 +209,18 @@ def resident_case_view(resident_id: int):
             )
 
         if exit_assessment:
-            exit_grit = (
-                exit_assessment["grit_at_exit"]
-                if isinstance(exit_assessment, dict)
-                else exit_assessment[9]
-            )
+            exit_grit = exit_assessment.get("grit_at_exit")
 
         if intake_grit is not None and exit_grit is not None:
             grit_difference = exit_grit - intake_grit
 
         goals = db_fetchall(
             f"""
-            SELECT goal_text, status, target_date, created_at
+            SELECT
+                goal_text,
+                status,
+                target_date,
+                created_at
             FROM goals
             WHERE enrollment_id = {ph}
             ORDER BY created_at DESC
@@ -173,7 +230,10 @@ def resident_case_view(resident_id: int):
 
         appointments = db_fetchall(
             f"""
-            SELECT appointment_date, appointment_type, notes
+            SELECT
+                appointment_date,
+                appointment_type,
+                notes
             FROM appointments
             WHERE enrollment_id = {ph}
             ORDER BY appointment_date DESC, id DESC
@@ -184,6 +244,7 @@ def resident_case_view(resident_id: int):
         notes = db_fetchall(
             f"""
             SELECT
+                id,
                 meeting_date,
                 notes,
                 progress_notes,
@@ -196,7 +257,6 @@ def resident_case_view(resident_id: int):
             (enrollment_id,),
         )
 
-        # 🔥 NEW: SERVICES
         services = db_fetchall(
             f"""
             SELECT
@@ -224,7 +284,7 @@ def resident_case_view(resident_id: int):
         goals=goals,
         appointments=appointments,
         notes=notes,
-        services=services,  # 🔥 NEW
+        services=services,
         followup_6_month=followup_6_month,
         followup_1_year=followup_1_year,
     )
