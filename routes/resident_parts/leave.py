@@ -13,16 +13,15 @@ from core.rate_limit import is_rate_limited
 from core.runtime import init_db
 
 
-# Resident leave workflow
-#
-# Future extraction note
-# If this area grows, split into:
-# leave_validation.py
-# leave_queries.py
-
-
 def _client_ip() -> str:
     return (request.remote_addr or "").strip() or "unknown"
+
+
+def _parse_date_safe(value: str):
+    try:
+        return datetime.strptime(value.strip(), "%Y-%m-%d").date()
+    except Exception:
+        return None
 
 
 def resident_leave_view():
@@ -58,13 +57,17 @@ def resident_leave_view():
         if not first or not last or not leave_date_raw or not return_date_raw or not destination:
             errors.append("Complete all required fields.")
 
+        # ✅ safer parsing
+        leave_local_date = _parse_date_safe(leave_date_raw)
+        return_local_date = _parse_date_safe(return_date_raw)
+
+        if not leave_local_date or not return_local_date:
+            errors.append("Invalid date.")
+
         leave_dt = None
         return_dt = None
 
-        try:
-            leave_local_date = datetime.strptime(leave_date_raw, "%Y-%m-%d").date()
-            return_local_date = datetime.strptime(return_date_raw, "%Y-%m-%d").date()
-
+        if leave_local_date and return_local_date:
             leave_local_dt = datetime.combine(
                 leave_local_date,
                 datetime.strptime("08:00", "%H:%M").time(),
@@ -77,10 +80,7 @@ def resident_leave_view():
 
             leave_dt = leave_local_dt.astimezone(timezone.utc).replace(tzinfo=None)
             return_dt = return_local_dt.astimezone(timezone.utc).replace(tzinfo=None)
-        except Exception:
-            errors.append("Invalid date.")
 
-        if leave_dt and return_dt:
             if return_dt < leave_dt:
                 errors.append("Return date cannot be earlier than leave date.")
 
