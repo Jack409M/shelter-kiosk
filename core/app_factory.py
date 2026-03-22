@@ -253,9 +253,13 @@ def create_app() -> Flask:
     app.logger.setLevel(log_level)
 
     app.logger.info("Shelter Kiosk starting")
+
+    if not app.config["DATABASE_URL"]:
+        raise RuntimeError("DATABASE_URL is required. App is locked to Postgres.")
+
     app.logger.info(
         "database_mode=%s cloudflare_only=%s log_level=%s",
-        "postgres" if app.config["DATABASE_URL"] else "sqlite",
+        "postgres",
         app.config.get("CLOUDFLARE_ONLY"),
         log_level_name,
     )
