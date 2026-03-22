@@ -183,3 +183,91 @@ def add_case_note_view(resident_id: int):
         flash("Case manager note added.", "success")
 
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+
+def edit_case_note_view(resident_id: int, note_id: int):
+    init_db()
+
+    shelter = normalize_shelter_name(session.get("shelter"))
+    staff_user_id = session.get("staff_user_id")
+    ph = placeholder()
+
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    if not staff_user_id:
+        flash("Your session is missing a staff user id. Please log in again.", "error")
+        return redirect(url_for("auth.staff_login"))
+
+    resident = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_identifier
+        FROM residents
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
+        """,
+        (resident_id, shelter),
+    )
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    note = db_fetchone(
+        f"""
+        SELECT
+            cmu.id,
+            cmu.enrollment_id,
+            pe.resident_id
+        FROM case_manager_updates cmu
+        JOIN program_enrollments pe
+          ON pe.id = cmu.enrollment_id
+        WHERE cmu.id = {ph}
+        LIMIT 1
+        """,
+        (note_id,),
+    )
+
+    if not note:
+        flash("Case manager note not found.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    note_resident_id = note["resident_id"] if isinstance(note, dict) else note[2]
+    if note_resident_id != resident_id:
+        flash("That note does not belong to this resident.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    notes = (request.form.get("notes") or "").strip()
+    progress_notes = (request.form.get("progress_notes") or "").strip()
+    action_items = (request.form.get("action_items") or "").strip()
+
+    if not notes and not progress_notes and not action_items:
+        flash("Enter notes, progress notes, or action items.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    now = utcnow_iso()
+
+    db_execute(
+        f"""
+        UPDATE case_manager_updates
+        SET
+            notes = {ph},
+            progress_notes = {ph},
+            action_items = {ph},
+            updated_at = {ph}
+        WHERE id = {ph}
+        """,
+        (
+            notes or None,
+            progress_notes or None,
+            action_items or None,
+            now,
+            note_id,
+        ),
+    )
+
+    flash("Case manager note updated.", "success")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
