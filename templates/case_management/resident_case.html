@@ -74,23 +74,35 @@
 
 <h1>Case Management</h1>
 
-<div class="card">
-  <h2>{{ first_name }} {{ last_name }}</h2>
+<div style="display:grid; grid-template-columns:repeat(2, minmax(280px, 1fr)); gap:12px;" class="case-header-strip">
+  <div class="card">
+    <h2>{{ first_name }} {{ last_name }}</h2>
 
-  <p>
-    <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
-    <strong>Shelter:</strong> {{ shelter | shelter if shelter else "—" }}<br>
-    <strong>Status:</strong> {{ "Active" if resident_active else "Inactive" }}<br>
-    <strong>Program Status:</strong> {{ enrollment_program_status|replace("_", " ")|title if enrollment_program_status else "Not enrolled" }}
-  </p>
+    <p>
+      <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
+      <strong>Shelter:</strong> {{ shelter | shelter if shelter else "—" }}<br>
+      <strong>Status:</strong> {{ "Active" if resident_active else "Inactive" }}
+    </p>
 
-  <a class="btn" href="{{ url_for('case_management.index') }}">
-    Back to Case List
-  </a>
+    <a class="btn no-print" href="{{ url_for('case_management.index') }}">
+      Back to Case List
+    </a>
+  </div>
+
+  <div class="card">
+    <h2>Program Information</h2>
+
+    <p>
+      <strong>Program Status:</strong> {{ enrollment_program_status|replace("_", " ")|title if enrollment_program_status else "Not enrolled" }}<br>
+      <strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}<br>
+      <strong>Entry Date:</strong> {{ enrollment_entry_date or "—" }}<br>
+      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}
+    </p>
+  </div>
 </div>
 
 {% if not enrollment_id %}
-  <div class="card">
+  <div class="card no-print">
     <h2>Start Program Enrollment</h2>
 
     <form method="post" action="{{ url_for('case_management.create_enrollment', resident_id=resident_id) }}">
@@ -105,16 +117,6 @@
     </form>
   </div>
 {% else %}
-
-  <div class="card">
-    <h2>Program Information</h2>
-
-    <p>
-      <strong>Enrollment ID:</strong> {{ enrollment_id }}<br>
-      <strong>Entry Date:</strong> {{ enrollment_entry_date or "—" }}<br>
-      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}
-    </p>
-  </div>
 
   <div class="card no-print">
     <h2>Monthly Case Manager Meeting</h2>
@@ -244,24 +246,46 @@
     }
 
     @media print {
+      body {
+        background: #fff !important;
+      }
+
       .no-print,
       #case-note-scroll-lane,
       .case-note-tile,
-      .print-hide {
+      .print-hide,
+      h1,
+      .card:not(.case-header-print):not(.case-note-panel) {
         display: none !important;
       }
 
-      .print-note-panel {
-        display: block !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
+      .case-header-strip {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 12px !important;
+        margin-bottom: 14px !important;
       }
 
-      .print-note-panel .card {
+      .case-header-print,
+      .print-note-panel,
+      .case-note-panel {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
         border: none !important;
         box-shadow: none !important;
         break-inside: avoid;
+      }
+
+      .case-header-print {
+        border: 1px solid #ccc !important;
+        padding: 12px !important;
+      }
+
+      .case-note-panel {
+        margin-top: 0 !important;
       }
     }
   </style>
@@ -444,7 +468,7 @@
     {% endif %}
   </div>
 
-  <div class="card">
+  <div class="card no-print">
     <h2>Follow Up</h2>
 
     <p>
@@ -492,7 +516,7 @@
     {% endif %}
   </div>
 
-  <div class="card">
+  <div class="card no-print">
     <h2>Exit Assessment</h2>
 
     <a class="btn" href="{{ url_for('case_management.exit_assessment', resident_id=resident_id) }}">
@@ -505,7 +529,7 @@
   </div>
 
   {% if exit_assessment %}
-    <div class="card">
+    <div class="card no-print">
       <h2>Exit Summary</h2>
 
       <p>
