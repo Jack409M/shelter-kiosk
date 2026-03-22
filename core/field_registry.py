@@ -907,16 +907,16 @@ FIELDS: List[FieldDefinition] = [
     FieldDefinition(
         key="updated_grit",
         label="Updated Grit",
-        lifecycle_stage="followup_6m",
-        wiring_status="missing",
-        notes="Later progress or outcome field. Not wired. Good fit for a follow up blueprint.",
+        lifecycle_stage="current_status",
+        wiring_status="misaligned",
+        notes="Collected during ongoing case management monthly meetings. Not part of followup. Should be captured in case manager updates or assessment workflow.",
     ),
     FieldDefinition(
         key="did_resident_receive_counseling",
         label="Did Resident Receive Counseling?",
-        lifecycle_stage="followup_6m",
-        wiring_status="missing",
-        notes="Later progress or outcome field. Not wired.",
+        lifecycle_stage="current_status",
+        wiring_status="misaligned",
+        notes="Collected during ongoing case management monthly meetings. Not part of followup. Should be captured in case manager updates or assessment workflow.",
     ),
     FieldDefinition(
         key="children_receiving_counseling_count",
@@ -928,9 +928,9 @@ FIELDS: List[FieldDefinition] = [
     FieldDefinition(
         key="parenting_class_completed",
         label="Parenting Class Completed",
-        lifecycle_stage="followup_6m",
-        wiring_status="missing",
-        notes="Separate completion field. Keep separate from parenting_class_needed. Good fit for follow up or milestone blueprint.",
+        lifecycle_stage="current_status",
+        wiring_status="misaligned",
+        notes="Collected during ongoing case management monthly meetings. Not part of followup. Separate from parenting_class_needed. Should be tracked during program.",
     ),
     FieldDefinition(
         key="received_car_expense_help",
@@ -942,9 +942,9 @@ FIELDS: List[FieldDefinition] = [
     FieldDefinition(
         key="warrants_or_fines_paid",
         label="Warrants or Fines paid",
-        lifecycle_stage="followup_6m",
-        wiring_status="missing",
-        notes="Later progress or outcome field. Not wired.",
+        lifecycle_stage="current_status",
+        wiring_status="misaligned",
+        notes="Collected during ongoing case management monthly meetings. Not part of followup. Represents progress during program, not post program outcome.",
     ),
     FieldDefinition(
         key="income_6_month_graduation",
