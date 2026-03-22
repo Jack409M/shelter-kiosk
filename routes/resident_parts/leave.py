@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from flask import flash, g, redirect, render_template, request, session, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
 from core.audit import log_action
@@ -57,7 +57,6 @@ def resident_leave_view():
         if not first or not last or not leave_date_raw or not return_date_raw or not destination:
             errors.append("Complete all required fields.")
 
-        # ✅ safer parsing
         leave_local_date = _parse_date_safe(leave_date_raw)
         return_local_date = _parse_date_safe(return_date_raw)
 
@@ -89,20 +88,12 @@ def resident_leave_view():
                 flash(e, "error")
             return render_template("resident_leave.html", shelter=shelter), 400
 
-        sql = (
-            """
+        sql = """
             INSERT INTO leave_requests
             (shelter, resident_identifier, first_name, last_name, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', %s)
             RETURNING id
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            INSERT INTO leave_requests
-            (shelter, resident_identifier, first_name, last_name, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-            """
-        )
+        """
 
         leave_iso = leave_dt.replace(microsecond=0).isoformat()
         return_iso = return_dt.replace(microsecond=0).isoformat()
@@ -122,19 +113,11 @@ def resident_leave_view():
             submitted,
         )
 
-        if g.get("db_kind") == "pg":
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute(sql, params)
-            req_id = cur.fetchone()[0]
-            cur.close()
-        else:
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute(sql, params)
-            conn.commit()
-            req_id = cur.lastrowid
-            cur.close()
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        req_id = cur.fetchone()[0]
+        cur.close()
 
         log_action("leave", req_id, shelter, None, "create", "Resident submitted leave request")
         flash("Your leave request was submitted successfully.", "ok")
