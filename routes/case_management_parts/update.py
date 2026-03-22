@@ -94,7 +94,6 @@ def add_case_note_view(resident_id: int):
     action_items = (request.form.get("action_items") or "").strip()
 
     service_types = _clean_service_types(request.form.getlist("service_type"))
-    service_notes = (request.form.get("service_notes") or "").strip()
     service_date = (request.form.get("service_date") or "").strip() or meeting_date
 
     if not meeting_date:
@@ -153,11 +152,11 @@ def add_case_note_view(resident_id: int):
         ),
     )
 
-    note_id = None
-    if note:
-        note_id = note["id"] if isinstance(note, dict) else note[0]
+    note_id = note["id"] if isinstance(note, dict) else note[0]
 
     for service_type in service_types:
+        service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
+
         db_execute(
             f"""
             INSERT INTO client_services
@@ -177,7 +176,7 @@ def add_case_note_view(resident_id: int):
                 note_id,
                 service_type,
                 service_date,
-                service_notes or None,
+                service_note or None,
                 now,
                 now,
             ),
@@ -240,29 +239,25 @@ def edit_case_note_view(resident_id: int, update_id: int):
             SELECT service_type, notes
             FROM client_services
             WHERE case_manager_update_id = {ph}
-            ORDER BY id ASC
             """,
             (update_id,),
         )
 
-        selected_services = [
-            s["service_type"] if isinstance(s, dict) else s[0]
-            for s in services
-        ]
+        selected_services = []
+        service_notes_map = {}
 
-        service_notes_value = ""
-        if services:
-            first_service = services[0]
-            service_notes_value = (
-                first_service["notes"] if isinstance(first_service, dict) else first_service[1]
-            ) or ""
+        for s in services:
+            st = s["service_type"] if isinstance(s, dict) else s[0]
+            sn = s["notes"] if isinstance(s, dict) else s[1]
+            selected_services.append(st)
+            service_notes_map[st] = sn or ""
 
         return render_template(
             "case_management/edit_case_note.html",
             resident=resident,
             note=note,
             selected_services=selected_services,
-            service_notes_value=service_notes_value,
+            service_notes_map=service_notes_map,
         )
 
     meeting_date = (request.form.get("meeting_date") or "").strip()
@@ -271,11 +266,6 @@ def edit_case_note_view(resident_id: int, update_id: int):
     action_items = (request.form.get("action_items") or "").strip()
 
     service_types = _clean_service_types(request.form.getlist("service_type"))
-    service_notes = (request.form.get("service_notes") or "").strip()
-
-    if not meeting_date:
-        flash("Meeting date required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
 
@@ -308,6 +298,8 @@ def edit_case_note_view(resident_id: int, update_id: int):
     )
 
     for service_type in service_types:
+        service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
+
         db_execute(
             f"""
             INSERT INTO client_services
@@ -327,7 +319,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 update_id,
                 service_type,
                 meeting_date,
-                service_notes or None,
+                service_note or None,
                 now,
                 now,
             ),
