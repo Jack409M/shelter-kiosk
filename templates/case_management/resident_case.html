@@ -168,12 +168,12 @@
           {% set note_action_items = note["action_items"] %}
           {% set note_created_at = note["created_at"] %}
         {% else %}
-          {% set note_id = none %}
-          {% set note_meeting_date = note[0] %}
-          {% set note_notes = note[1] %}
-          {% set note_progress_notes = note[2] %}
-          {% set note_action_items = note[3] %}
-          {% set note_created_at = note[4] %}
+          {% set note_id = note[0] %}
+          {% set note_meeting_date = note[1] %}
+          {% set note_notes = note[2] %}
+          {% set note_progress_notes = note[3] %}
+          {% set note_action_items = note[4] %}
+          {% set note_created_at = note[5] %}
         {% endif %}
 
         <div style="padding:10px 0; border-bottom:1px solid #ddd;">
