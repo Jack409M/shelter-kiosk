@@ -138,51 +138,98 @@
 
       <h3>Services Provided</h3>
 
-      <div style="display:grid; grid-template-columns:repeat(4, minmax(120px, 1fr)); gap:6px 10px; align-items:start; margin-top:10px;">
-        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Counseling" style="margin-top:3px;">
-          <span>Counseling</span>
-        </label>
+      <div style="display:grid; grid-template-columns:repeat(4, minmax(160px, 1fr)); gap:10px; align-items:start; margin-top:10px;">
+        <div>
+          <label style="display:flex; gap:6px; margin:0;">
+            <input type="checkbox" name="service_type" value="Counseling" style="margin-top:3px;">
+            <span>Counseling</span>
+          </label>
+          <textarea
+            name="service_notes_Counseling"
+            rows="2"
+            style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+            placeholder="Counseling notes"
+          ></textarea>
+        </div>
 
-        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Dental" style="margin-top:3px;">
-          <span>Dental</span>
-        </label>
+        <div>
+          <label style="display:flex; gap:6px; margin:0;">
+            <input type="checkbox" name="service_type" value="Dental" style="margin-top:3px;">
+            <span>Dental</span>
+          </label>
+          <textarea
+            name="service_notes_Dental"
+            rows="2"
+            style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+            placeholder="Dental notes"
+          ></textarea>
+        </div>
 
-        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Vision" style="margin-top:3px;">
-          <span>Vision</span>
-        </label>
+        <div>
+          <label style="display:flex; gap:6px; margin:0;">
+            <input type="checkbox" name="service_type" value="Vision" style="margin-top:3px;">
+            <span>Vision</span>
+          </label>
+          <textarea
+            name="service_notes_Vision"
+            rows="2"
+            style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+            placeholder="Vision notes"
+          ></textarea>
+        </div>
 
-        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Parenting Support" style="margin-top:3px;">
-          <span>Parenting Support</span>
-        </label>
+        <div>
+          <label style="display:flex; gap:6px; margin:0;">
+            <input type="checkbox" name="service_type" value="Parenting Support" style="margin-top:3px;">
+            <span>Parenting Support</span>
+          </label>
+          <textarea
+            name="service_notes_Parenting Support"
+            rows="2"
+            style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+            placeholder="Parenting support notes"
+          ></textarea>
+        </div>
 
-        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Legal Assistance" style="margin-top:3px;">
-          <span>Legal Assistance</span>
-        </label>
+        <div>
+          <label style="display:flex; gap:6px; margin:0;">
+            <input type="checkbox" name="service_type" value="Legal Assistance" style="margin-top:3px;">
+            <span>Legal Assistance</span>
+          </label>
+          <textarea
+            name="service_notes_Legal Assistance"
+            rows="2"
+            style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+            placeholder="Legal assistance notes"
+          ></textarea>
+        </div>
 
-        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Transportation" style="margin-top:3px;">
-          <span>Transportation</span>
-        </label>
+        <div>
+          <label style="display:flex; gap:6px; margin:0;">
+            <input type="checkbox" name="service_type" value="Transportation" style="margin-top:3px;">
+            <span>Transportation</span>
+          </label>
+          <textarea
+            name="service_notes_Transportation"
+            rows="2"
+            style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+            placeholder="Transportation notes"
+          ></textarea>
+        </div>
 
-        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Other" style="margin-top:3px;">
-          <span>Other</span>
-        </label>
+        <div>
+          <label style="display:flex; gap:6px; margin:0;">
+            <input type="checkbox" name="service_type" value="Other" style="margin-top:3px;">
+            <span>Other</span>
+          </label>
+          <textarea
+            name="service_notes_Other"
+            rows="2"
+            style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+            placeholder="Other service notes"
+          ></textarea>
+        </div>
       </div>
-
-      <label style="margin-top:12px;"><strong>Service Notes</strong></label>
-      <textarea
-        name="service_notes"
-        rows="3"
-        cols="25"
-        style="width:100%; min-height:78px; resize:vertical; white-space:pre-wrap; overflow-wrap:break-word;"
-        placeholder="Referred to Dr. Carmichael 2/5/2026 at 3:30pm"
-      ></textarea>
 
       <div style="margin-top:10px;">
         <button type="submit">Save Monthly Update</button>
