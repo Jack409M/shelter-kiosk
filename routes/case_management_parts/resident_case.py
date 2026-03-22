@@ -89,6 +89,7 @@ def resident_case_view(resident_id: int):
                 exit_reason,
                 graduate_dwc,
                 leave_ama,
+                leave_ama_destination,
                 income_at_exit,
                 education_at_exit,
                 grit_at_exit,
@@ -119,7 +120,7 @@ def resident_case_view(resident_id: int):
             exit_grit = (
                 exit_assessment["grit_at_exit"]
                 if isinstance(exit_assessment, dict)
-                else exit_assessment[8]
+                else exit_assessment[9]  # shifted index
             )
 
         if intake_grit is not None and exit_grit is not None:
