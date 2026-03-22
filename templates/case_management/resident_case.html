@@ -138,45 +138,51 @@
 
       <h3>Services Provided</h3>
 
-      <div style="display:grid; grid-template-columns:repeat(3, minmax(180px, 1fr)); gap:10px 18px; align-items:start; margin-top:10px;">
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <input type="checkbox" name="service_type" value="Counseling">
+      <div style="display:grid; grid-template-columns:repeat(4, minmax(120px, 1fr)); gap:6px 10px; align-items:start; margin-top:10px;">
+        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
+          <input type="checkbox" name="service_type" value="Counseling" style="margin-top:3px;">
           <span>Counseling</span>
         </label>
 
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <input type="checkbox" name="service_type" value="Dental">
+        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
+          <input type="checkbox" name="service_type" value="Dental" style="margin-top:3px;">
           <span>Dental</span>
         </label>
 
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <input type="checkbox" name="service_type" value="Vision">
+        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
+          <input type="checkbox" name="service_type" value="Vision" style="margin-top:3px;">
           <span>Vision</span>
         </label>
 
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <input type="checkbox" name="service_type" value="Parenting Support">
+        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
+          <input type="checkbox" name="service_type" value="Parenting Support" style="margin-top:3px;">
           <span>Parenting Support</span>
         </label>
 
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <input type="checkbox" name="service_type" value="Legal Assistance">
+        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
+          <input type="checkbox" name="service_type" value="Legal Assistance" style="margin-top:3px;">
           <span>Legal Assistance</span>
         </label>
 
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <input type="checkbox" name="service_type" value="Transportation">
+        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
+          <input type="checkbox" name="service_type" value="Transportation" style="margin-top:3px;">
           <span>Transportation</span>
         </label>
 
-        <label style="display:flex; align-items:center; gap:8px; margin:0;">
-          <input type="checkbox" name="service_type" value="Other">
+        <label style="display:flex; align-items:flex-start; gap:6px; margin:0;">
+          <input type="checkbox" name="service_type" value="Other" style="margin-top:3px;">
           <span>Other</span>
         </label>
       </div>
 
-      <label style="margin-top:14px;"><strong>Service Notes</strong></label>
-      <textarea name="service_notes" rows="2"></textarea>
+      <label style="margin-top:12px;"><strong>Service Notes</strong></label>
+      <textarea
+        name="service_notes"
+        rows="3"
+        cols="25"
+        style="width:100%; min-height:78px; resize:vertical; white-space:pre-wrap; overflow-wrap:break-word;"
+        placeholder="Referred to Dr. Carmichael 2/5/2026 at 3:30pm"
+      ></textarea>
 
       <div style="margin-top:10px;">
         <button type="submit">Save Monthly Update</button>
