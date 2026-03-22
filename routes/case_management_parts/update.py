@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from flask import flash, redirect, request, session, url_for
+from flask import flash, redirect, request, session, url_for, render_template
 
-from core.db import db_execute, db_fetchone
+from core.db import db_execute, db_fetchone, db_fetchall
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
@@ -53,9 +53,7 @@ def add_case_note_view(resident_id: int):
 
     resident = db_fetchone(
         f"""
-        SELECT
-            id,
-            resident_identifier
+        SELECT id, resident_identifier
         FROM residents
         WHERE id = {ph}
           AND {shelter_equals_sql("shelter")}
@@ -69,8 +67,7 @@ def add_case_note_view(resident_id: int):
 
     enrollment = db_fetchone(
         f"""
-        SELECT
-            id
+        SELECT id
         FROM program_enrollments
         WHERE resident_id = {ph}
         ORDER BY id DESC
@@ -123,16 +120,7 @@ def add_case_note_view(resident_id: int):
             created_at,
             updated_at
         )
-        VALUES (
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph}
-        )
+        VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
         """,
         (
             enrollment_id,
@@ -158,14 +146,7 @@ def add_case_note_view(resident_id: int):
                 created_at,
                 updated_at
             )
-            VALUES (
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph}
-            )
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph})
             """,
             (
                 enrollment_id,
@@ -177,11 +158,7 @@ def add_case_note_view(resident_id: int):
             ),
         )
 
-    if service_types:
-        flash("Case manager update and services saved.", "success")
-    else:
-        flash("Case manager note added.", "success")
-
+    flash("Case manager update saved.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
@@ -197,14 +174,12 @@ def edit_case_note_view(resident_id: int, update_id: int):
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     if not staff_user_id:
-        flash("Your session is missing a staff user id. Please log in again.", "error")
+        flash("Session expired. Please log in again.", "error")
         return redirect(url_for("auth.staff_login"))
 
     resident = db_fetchone(
         f"""
-        SELECT
-            id,
-            resident_identifier
+        SELECT id, resident_identifier
         FROM residents
         WHERE id = {ph}
           AND {shelter_equals_sql("shelter")}
@@ -218,34 +193,54 @@ def edit_case_note_view(resident_id: int, update_id: int):
 
     note = db_fetchone(
         f"""
-        SELECT
-            cmu.id,
-            cmu.enrollment_id,
-            pe.resident_id
+        SELECT cmu.*, pe.resident_id
         FROM case_manager_updates cmu
-        JOIN program_enrollments pe
-          ON pe.id = cmu.enrollment_id
+        JOIN program_enrollments pe ON pe.id = cmu.enrollment_id
         WHERE cmu.id = {ph}
-        LIMIT 1
         """,
         (update_id,),
     )
 
     if not note:
-        flash("Case manager note not found.", "error")
+        flash("Note not found.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    note_resident_id = note["resident_id"] if isinstance(note, dict) else note[2]
-    if note_resident_id != resident_id:
-        flash("That note does not belong to this resident.", "error")
+    if note["resident_id"] != resident_id:
+        flash("Invalid note access.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
+    # ---------------- GET ----------------
+    if request.method == "GET":
+        services = db_fetchall(
+            f"""
+            SELECT service_type
+            FROM client_services
+            WHERE enrollment_id = {ph}
+              AND service_date = {ph}
+            """,
+            (note["enrollment_id"], note["meeting_date"]),
+        )
+
+        selected_services = [s["service_type"] for s in services]
+
+        return render_template(
+            "case_management/edit_case_note.html",
+            resident=resident,
+            note=note,
+            selected_services=selected_services,
+        )
+
+    # ---------------- POST ----------------
+    meeting_date = (request.form.get("meeting_date") or "").strip()
     notes = (request.form.get("notes") or "").strip()
     progress_notes = (request.form.get("progress_notes") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
 
-    if not notes and not progress_notes and not action_items:
-        flash("Enter notes, progress notes, or action items.", "error")
+    service_types = _clean_service_types(request.form.getlist("service_type"))
+    service_notes = (request.form.get("service_notes") or "").strip()
+
+    if not meeting_date:
+        flash("Meeting date required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -253,7 +248,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
     db_execute(
         f"""
         UPDATE case_manager_updates
-        SET
+        SET meeting_date = {ph},
             notes = {ph},
             progress_notes = {ph},
             action_items = {ph},
@@ -261,6 +256,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
         WHERE id = {ph}
         """,
         (
+            meeting_date,
             notes or None,
             progress_notes or None,
             action_items or None,
@@ -269,5 +265,39 @@ def edit_case_note_view(resident_id: int, update_id: int):
         ),
     )
 
-    flash("Case manager note updated.", "success")
+    # wipe + reinsert services (safe version for now)
+    db_execute(
+        f"""
+        DELETE FROM client_services
+        WHERE enrollment_id = {ph}
+          AND service_date = {ph}
+        """,
+        (note["enrollment_id"], note["meeting_date"]),
+    )
+
+    for service_type in service_types:
+        db_execute(
+            f"""
+            INSERT INTO client_services
+            (
+                enrollment_id,
+                service_type,
+                service_date,
+                notes,
+                created_at,
+                updated_at
+            )
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph})
+            """,
+            (
+                note["enrollment_id"],
+                service_type,
+                meeting_date,
+                service_notes or None,
+                now,
+                now,
+            ),
+        )
+
+    flash("Case note updated.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
