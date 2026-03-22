@@ -75,7 +75,7 @@
 <h1>Case Management</h1>
 
 <div style="display:grid; grid-template-columns:repeat(2, minmax(280px, 1fr)); gap:12px;" class="case-header-strip">
-  <div class="card">
+  <div class="card case-header-print">
     <h2>{{ first_name }} {{ last_name }}</h2>
 
     <p>
@@ -89,7 +89,7 @@
     </a>
   </div>
 
-  <div class="card">
+  <div class="card case-header-print">
     <h2>Program Information</h2>
 
     <p>
@@ -254,8 +254,7 @@
       #case-note-scroll-lane,
       .case-note-tile,
       .print-hide,
-      h1,
-      .card:not(.case-header-print):not(.case-note-panel) {
+      h1 {
         display: none !important;
       }
 
@@ -266,10 +265,18 @@
         margin-bottom: 14px !important;
       }
 
-      .case-header-print,
-      .print-note-panel,
-      .case-note-panel {
+      .case-header-print {
         display: block !important;
+        border: 1px solid #ccc !important;
+        padding: 12px !important;
+        box-shadow: none !important;
+      }
+
+      .print-note-panel {
+        display: block !important;
+      }
+
+      .case-note-panel {
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
@@ -279,13 +286,13 @@
         break-inside: avoid;
       }
 
-      .case-header-print {
-        border: 1px solid #ccc !important;
-        padding: 12px !important;
+      .case-note-panel[style*="display:none"] {
+        display: none !important;
       }
 
-      .case-note-panel {
-        margin-top: 0 !important;
+      .case-note-panel[style*="display: block"],
+      .case-note-panel[style*="display:block"] {
+        display: block !important;
       }
     }
   </style>
