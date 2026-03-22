@@ -11,6 +11,35 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
+ALLOWED_SERVICE_TYPES = {
+    "Counseling",
+    "Dental",
+    "Vision",
+    "Parenting Support",
+    "Legal Assistance",
+    "Transportation",
+    "Other",
+}
+
+
+def _clean_service_types(raw_values: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    seen: set[str] = set()
+
+    for value in raw_values:
+        service_type = (value or "").strip()
+        if not service_type:
+            continue
+        if service_type not in ALLOWED_SERVICE_TYPES:
+            continue
+        if service_type in seen:
+            continue
+        seen.add(service_type)
+        cleaned.append(service_type)
+
+    return cleaned
+
+
 def add_case_note_view(resident_id: int):
     init_db()
 
@@ -67,12 +96,16 @@ def add_case_note_view(resident_id: int):
     progress_notes = (request.form.get("progress_notes") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
 
+    service_types = _clean_service_types(request.form.getlist("service_type"))
+    service_notes = (request.form.get("service_notes") or "").strip()
+    service_date = (request.form.get("service_date") or "").strip() or meeting_date
+
     if not meeting_date:
         flash("Meeting date is required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    if not notes and not progress_notes and not action_items:
-        flash("Enter notes, progress notes, or action items.", "error")
+    if not notes and not progress_notes and not action_items and not service_types:
+        flash("Enter notes, progress notes, action items, or at least one service.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -113,5 +146,40 @@ def add_case_note_view(resident_id: int):
         ),
     )
 
-    flash("Case manager note added.", "success")
+    for service_type in service_types:
+        db_execute(
+            f"""
+            INSERT INTO client_services
+            (
+                enrollment_id,
+                service_type,
+                service_date,
+                notes,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph}
+            )
+            """,
+            (
+                enrollment_id,
+                service_type,
+                service_date,
+                service_notes or None,
+                now,
+                now,
+            ),
+        )
+
+    if service_types:
+        flash("Case manager update and services saved.", "success")
+    else:
+        flash("Case manager note added.", "success")
+
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
