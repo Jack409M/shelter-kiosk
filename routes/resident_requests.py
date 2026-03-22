@@ -180,20 +180,12 @@ def resident_transport():
                 flash(e, "error")
             return render_template("resident_transport.html", shelter=shelter), 400
 
-        sql = (
-            """
+        sql = """
             INSERT INTO transport_requests
             (shelter, resident_identifier, first_name, last_name, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', %s)
             RETURNING id
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            INSERT INTO transport_requests
-            (shelter, resident_identifier, first_name, last_name, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-            """
-        )
+        """
 
         needed_iso = needed_dt.replace(microsecond=0).isoformat()
         submitted = utcnow_iso()
@@ -212,19 +204,11 @@ def resident_transport():
             submitted,
         )
 
-        if g.get("db_kind") == "pg":
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute(sql, params)
-            req_id = cur.fetchone()[0]
-            cur.close()
-        else:
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute(sql, params)
-            conn.commit()
-            req_id = cur.lastrowid
-            cur.close()
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(sql, params)
+        req_id = cur.fetchone()[0]
+        cur.close()
 
         log_action("transport", req_id, shelter, None, "create", "Resident submitted transport request")
         flash("Your transportation request was submitted successfully.", "ok")
