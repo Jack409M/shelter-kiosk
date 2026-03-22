@@ -98,12 +98,14 @@ def ensure_client_services_table(kind: str) -> None:
         CREATE TABLE IF NOT EXISTS client_services (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             enrollment_id INTEGER NOT NULL,
+            case_manager_update_id INTEGER,
             service_type TEXT NOT NULL,
             service_date TEXT NOT NULL,
             notes TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
-            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
+            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id),
+            FOREIGN KEY (case_manager_update_id) REFERENCES case_manager_updates(id)
         )
         """,
 
@@ -112,6 +114,7 @@ def ensure_client_services_table(kind: str) -> None:
         CREATE TABLE IF NOT EXISTS client_services (
             id SERIAL PRIMARY KEY,
             enrollment_id INTEGER NOT NULL REFERENCES program_enrollments(id),
+            case_manager_update_id INTEGER REFERENCES case_manager_updates(id),
             service_type TEXT NOT NULL,
             service_date TEXT NOT NULL,
             notes TEXT,
@@ -240,6 +243,19 @@ def ensure_assessment_drafts_columns() -> None:
             pass
 
 
+# ✅ NEW
+def ensure_client_services_columns() -> None:
+    statements = [
+        "ALTER TABLE client_services ADD COLUMN IF NOT EXISTS case_manager_update_id INTEGER",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
 def ensure_indexes() -> None:
     try:
         db_execute(
@@ -336,6 +352,17 @@ def ensure_indexes() -> None:
             """
             CREATE INDEX IF NOT EXISTS client_services_enrollment_idx
             ON client_services (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    # ✅ NEW INDEX
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS client_services_case_note_idx
+            ON client_services (case_manager_update_id)
             """
         )
     except Exception:
@@ -490,4 +517,5 @@ def ensure_tables(kind: str) -> None:
     ensure_assessment_drafts_table(kind)
     ensure_intake_drafts_columns()
     ensure_assessment_drafts_columns()
+    ensure_client_services_columns()  # ✅ NEW
     ensure_indexes()
