@@ -116,7 +116,45 @@
     </p>
   </div>
 
-  <!-- 🔥 FOLLOW UP SECTION -->
+  <div class="card">
+    <h2>Monthly Case Manager Meeting</h2>
+
+    <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <label><strong>Meeting Date</strong></label>
+      <input type="date" name="meeting_date" required>
+
+      <label><strong>Notes</strong></label>
+      <textarea name="notes" rows="3"></textarea>
+
+      <label><strong>Progress Notes</strong></label>
+      <textarea name="progress_notes" rows="3"></textarea>
+
+      <label><strong>Action Items</strong></label>
+      <textarea name="action_items" rows="3"></textarea>
+
+      <hr>
+
+      <h3>Services Provided</h3>
+
+      <label><input type="checkbox" name="service_type" value="Counseling"> Counseling</label><br>
+      <label><input type="checkbox" name="service_type" value="Dental"> Dental</label><br>
+      <label><input type="checkbox" name="service_type" value="Vision"> Vision</label><br>
+      <label><input type="checkbox" name="service_type" value="Parenting Support"> Parenting Support</label><br>
+      <label><input type="checkbox" name="service_type" value="Legal Assistance"> Legal Assistance</label><br>
+      <label><input type="checkbox" name="service_type" value="Transportation"> Transportation</label><br>
+      <label><input type="checkbox" name="service_type" value="Other"> Other</label>
+
+      <label style="margin-top:10px;"><strong>Service Notes</strong></label>
+      <textarea name="service_notes" rows="2"></textarea>
+
+      <div style="margin-top:10px;">
+        <button type="submit">Save Monthly Update</button>
+      </div>
+    </form>
+  </div>
+
   <div class="card">
     <h2>Follow Up</h2>
 
