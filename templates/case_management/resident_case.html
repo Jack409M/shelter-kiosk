@@ -156,6 +156,80 @@
   </div>
 
   <div class="card">
+    <h2>Monthly Meeting History</h2>
+
+    {% if notes %}
+      {% for note in notes %}
+        {% if note is mapping %}
+          {% set note_meeting_date = note["meeting_date"] %}
+          {% set note_notes = note["notes"] %}
+          {% set note_progress_notes = note["progress_notes"] %}
+          {% set note_action_items = note["action_items"] %}
+          {% set note_created_at = note["created_at"] %}
+        {% else %}
+          {% set note_meeting_date = note[0] %}
+          {% set note_notes = note[1] %}
+          {% set note_progress_notes = note[2] %}
+          {% set note_action_items = note[3] %}
+          {% set note_created_at = note[4] %}
+        {% endif %}
+
+        <div style="padding:10px 0; border-bottom:1px solid #ddd;">
+          <p>
+            <strong>Meeting Date:</strong> {{ note_meeting_date or "—" }}<br>
+            <strong>Created:</strong> {{ note_created_at or "—" }}
+          </p>
+
+          {% if note_notes %}
+            <p><strong>Notes:</strong><br>{{ note_notes }}</p>
+          {% endif %}
+
+          {% if note_progress_notes %}
+            <p><strong>Progress Notes:</strong><br>{{ note_progress_notes }}</p>
+          {% endif %}
+
+          {% if note_action_items %}
+            <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No monthly meetings recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2>Service History</h2>
+
+    {% if services %}
+      {% for service in services %}
+        {% if service is mapping %}
+          {% set service_type = service["service_type"] %}
+          {% set service_date = service["service_date"] %}
+          {% set service_notes_value = service["notes"] %}
+        {% else %}
+          {% set service_type = service[0] %}
+          {% set service_date = service[1] %}
+          {% set service_notes_value = service[2] %}
+        {% endif %}
+
+        <div style="padding:10px 0; border-bottom:1px solid #ddd;">
+          <p>
+            <strong>Service:</strong> {{ service_type or "—" }}<br>
+            <strong>Date:</strong> {{ service_date or "—" }}
+          </p>
+
+          {% if service_notes_value %}
+            <p><strong>Notes:</strong><br>{{ service_notes_value }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <p>No services recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
     <h2>Follow Up</h2>
 
     <p>
