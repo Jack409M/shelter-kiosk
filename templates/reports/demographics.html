@@ -493,29 +493,65 @@
       {{ stat_tile("Graduates", exit_outcomes.graduates_display, "exit_graduates", favorite_metric_keys, filters) }}
       {{ stat_tile("Leave Amarillo", exit_outcomes.leave_ama_display, "leave_amarillo", favorite_metric_keys, filters) }}
       {{ stat_tile("Total Exit Records", exit_outcomes.total_exit_records_display, "total_exit_records", favorite_metric_keys, filters) }}
+      {{ stat_tile("Stayed In Amarillo", exit_outcomes.local_outcomes.stayed_display, "stayed_in_amarillo", favorite_metric_keys, filters) }}
+      {{ stat_tile("Left Amarillo", exit_outcomes.local_outcomes.left_display, "left_amarillo", favorite_metric_keys, filters) }}
+      {{ stat_tile("Local Outcome Unknown", exit_outcomes.local_outcomes.unknown_display, "local_outcome_unknown", favorite_metric_keys, filters) }}
     </div>
 
-    <div class="table-wrap top-space">
-      <table class="stats-table">
-        <thead>
-          <tr>
-            <th>Exit Reason</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in exit_outcomes.exit_reasons %}
-            <tr>
-              <td>{{ item.label }}</td>
-              <td>{{ item.display_value }}</td>
-            </tr>
-          {% else %}
-            <tr>
-              <td colspan="2">No data available.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="two-col-grid top-space">
+      <div class="subsection">
+        <h3>Local Stability At Exit</h3>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Outcome</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Stayed In Amarillo</td>
+                <td>{{ exit_outcomes.local_outcomes.stayed_display }}</td>
+              </tr>
+              <tr>
+                <td>Left Amarillo</td>
+                <td>{{ exit_outcomes.local_outcomes.left_display }}</td>
+              </tr>
+              <tr>
+                <td>Unknown</td>
+                <td>{{ exit_outcomes.local_outcomes.unknown_display }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
+        <h3>Exit Reasons</h3>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Exit Reason</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in exit_outcomes.exit_reasons %}
+                <tr>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.display_value }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="2">No data available.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </section>
 </div>
