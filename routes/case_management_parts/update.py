@@ -185,7 +185,7 @@ def add_case_note_view(resident_id: int):
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
-def edit_case_note_view(resident_id: int, note_id: int):
+def edit_case_note_view(resident_id: int, update_id: int):
     init_db()
 
     shelter = normalize_shelter_name(session.get("shelter"))
@@ -228,7 +228,7 @@ def edit_case_note_view(resident_id: int, note_id: int):
         WHERE cmu.id = {ph}
         LIMIT 1
         """,
-        (note_id,),
+        (update_id,),
     )
 
     if not note:
@@ -265,7 +265,7 @@ def edit_case_note_view(resident_id: int, note_id: int):
             progress_notes or None,
             action_items or None,
             now,
-            note_id,
+            update_id,
         ),
     )
 
