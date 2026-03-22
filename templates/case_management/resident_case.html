@@ -241,84 +241,99 @@
     <h2>Monthly Meeting History</h2>
 
     {% if notes %}
-      {% for note in notes %}
-        {% if note is mapping %}
-          {% set note_id = note["id"] %}
-          {% set note_meeting_date = note["meeting_date"] %}
-          {% set note_notes = note["notes"] %}
-          {% set note_progress_notes = note["progress_notes"] %}
-          {% set note_action_items = note["action_items"] %}
-          {% set note_created_at = note["created_at"] %}
-          {% set note_services = note["services"] %}
-        {% else %}
-          {% set note_id = note[0] %}
-          {% set note_meeting_date = note[1] %}
-          {% set note_notes = note[2] %}
-          {% set note_progress_notes = note[3] %}
-          {% set note_action_items = note[4] %}
-          {% set note_created_at = note[5] %}
-          {% set note_services = note[6] %}
-        {% endif %}
-
-        <div style="padding:10px 0; border-bottom:1px solid #ddd;">
-          <p>
-            <strong>Meeting Date:</strong> {{ note_meeting_date or "—" }}<br>
-            <strong>Created:</strong> {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
-          </p>
-
-          {% if note_notes %}
-            <p><strong>Notes:</strong><br>{{ note_notes }}</p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; align-items:start;">
+        {% for note in notes %}
+          {% if note is mapping %}
+            {% set note_id = note["id"] %}
+            {% set note_meeting_date = note["meeting_date"] %}
+            {% set note_notes = note["notes"] %}
+            {% set note_progress_notes = note["progress_notes"] %}
+            {% set note_action_items = note["action_items"] %}
+            {% set note_created_at = note["created_at"] %}
+            {% set note_services = note["services"] %}
+          {% else %}
+            {% set note_id = note[0] %}
+            {% set note_meeting_date = note[1] %}
+            {% set note_notes = note[2] %}
+            {% set note_progress_notes = note[3] %}
+            {% set note_action_items = note[4] %}
+            {% set note_created_at = note[5] %}
+            {% set note_services = note[6] %}
           {% endif %}
 
-          {% if note_progress_notes %}
-            <p><strong>Progress Notes:</strong><br>{{ note_progress_notes }}</p>
-          {% endif %}
-
-          {% if note_action_items %}
-            <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
-          {% endif %}
-
-          {% if note_services %}
-            <div style="margin-top:12px;">
-              <strong>Services Provided:</strong>
-              <div style="display:grid; grid-template-columns:repeat(3, minmax(180px, 1fr)); gap:10px; margin-top:8px;">
-                {% for service in note_services %}
-                  {% if service is mapping %}
-                    {% set service_type = service["service_type"] %}
-                    {% set service_date = service["service_date"] %}
-                    {% set service_notes_value = service["notes"] %}
-                  {% else %}
-                    {% set service_type = service[0] %}
-                    {% set service_date = service[1] %}
-                    {% set service_notes_value = service[2] %}
-                  {% endif %}
-
-                  <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
-                    <div><strong>{{ service_type or "—" }}</strong></div>
-                    <div style="margin-top:4px;">
-                      <small>{{ service_date or "—" }}</small>
-                    </div>
-
-                    {% if service_notes_value %}
-                      <div style="margin-top:8px;">
-                        {{ service_notes_value }}
-                      </div>
-                    {% endif %}
+          <details style="border:1px solid #ddd; border-radius:8px; background:#fff;">
+            <summary style="cursor:pointer; list-style:none; padding:12px 14px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                <div>
+                  <div><strong>{{ note_meeting_date or "—" }}</strong></div>
+                  <div style="margin-top:4px; font-size:0.9em; color:#666;">
+                    {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
                   </div>
-                {% endfor %}
-              </div>
-            </div>
-          {% endif %}
+                  {% if note_services %}
+                    <div style="margin-top:6px; font-size:0.9em; color:#666;">
+                      {{ note_services|length }} service{{ "" if note_services|length == 1 else "s" }}
+                    </div>
+                  {% endif %}
+                </div>
 
-          {% if note_id %}
-            <div style="margin-top:10px;">
-              <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
-                Edit Note
-              </a>
+                {% if note_id %}
+                  <span style="white-space:nowrap;">
+                    <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
+                      Edit
+                    </a>
+                  </span>
+                {% endif %}
+              </div>
+            </summary>
+
+            <div style="padding:0 14px 14px 14px; border-top:1px solid #eee;">
+              {% if note_notes %}
+                <p style="margin-top:12px;"><strong>Notes:</strong><br>{{ note_notes }}</p>
+              {% endif %}
+
+              {% if note_progress_notes %}
+                <p><strong>Progress Notes:</strong><br>{{ note_progress_notes }}</p>
+              {% endif %}
+
+              {% if note_action_items %}
+                <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
+              {% endif %}
+
+              {% if note_services %}
+                <div style="margin-top:12px;">
+                  <strong>Services Provided:</strong>
+                  <div style="display:grid; grid-template-columns:repeat(2, minmax(120px, 1fr)); gap:10px; margin-top:8px;">
+                    {% for service in note_services %}
+                      {% if service is mapping %}
+                        {% set service_type = service["service_type"] %}
+                        {% set service_date = service["service_date"] %}
+                        {% set service_notes_value = service["notes"] %}
+                      {% else %}
+                        {% set service_type = service[0] %}
+                        {% set service_date = service[1] %}
+                        {% set service_notes_value = service[2] %}
+                      {% endif %}
+
+                      <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+                        <div><strong>{{ service_type or "—" }}</strong></div>
+                        <div style="margin-top:4px;">
+                          <small>{{ service_date or "—" }}</small>
+                        </div>
+
+                        {% if service_notes_value %}
+                          <div style="margin-top:8px;">
+                            {{ service_notes_value }}
+                          </div>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
             </div>
-          {% endif %}
-        </div>
-      {% endfor %}
+          </details>
+        {% endfor %}
+      </div>
     {% else %}
       <p>No monthly meetings recorded.</p>
     {% endif %}
