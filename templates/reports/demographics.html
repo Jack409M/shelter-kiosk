@@ -528,6 +528,34 @@
       </div>
 
       <div class="subsection">
+        <h3>Exit Success Breakdown</h3>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Total</th>
+                <th>Percent</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in exit_outcomes.exit_category_percentages %}
+                <tr>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.display_value }}</td>
+                  <td>{{ item.percent }}%</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="3">No data available.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="subsection">
         <h3>Exit Reasons</h3>
         <div class="table-wrap">
           <table class="stats-table">
