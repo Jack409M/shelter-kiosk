@@ -1132,6 +1132,27 @@ def get_exit_outcomes(
         scope_params + exit_window_params,
     )
 
+    local_outcomes_row = db_fetchone(
+        f"""
+        SELECT
+            SUM(CASE WHEN ea.leave_ama = 0 THEN 1 ELSE 0 END) AS stayed,
+            SUM(CASE WHEN ea.leave_ama = 1 THEN 1 ELSE 0 END) AS left_program_city,
+            SUM(CASE WHEN ea.leave_ama IS NULL THEN 1 ELSE 0 END) AS unknown
+        FROM exit_assessments ea
+        JOIN program_enrollments pe ON pe.id = ea.enrollment_id
+        WHERE 1=1
+        {scope_sql}
+        {exit_window_sql}
+        """,
+        tuple(scope_params + exit_window_params),
+    )
+
+    local_outcomes = {
+        "stayed": _to_int(_row_get(local_outcomes_row, "stayed", 0, 0), 0),
+        "left": _to_int(_row_get(local_outcomes_row, "left_program_city", 1, 0), 0),
+        "unknown": _to_int(_row_get(local_outcomes_row, "unknown", 2, 0), 0),
+    }
+
     total_exits = sum(item["value"] for item in exit_reasons)
 
     return {
@@ -1142,6 +1163,14 @@ def get_exit_outcomes(
         "total_exit_records": total_exits,
         "total_exit_records_display": mask_small_counts(total_exits),
         "exit_reasons": exit_reasons,
+        "local_outcomes": {
+            "stayed": local_outcomes["stayed"],
+            "stayed_display": mask_small_counts(local_outcomes["stayed"]),
+            "left": local_outcomes["left"],
+            "left_display": mask_small_counts(local_outcomes["left"]),
+            "unknown": local_outcomes["unknown"],
+            "unknown_display": mask_small_counts(local_outcomes["unknown"]),
+        },
     }
 
 
