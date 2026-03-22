@@ -89,6 +89,39 @@ def ensure_case_manager_calendar_events_table(kind: str) -> None:
     )
 
 
+def ensure_client_services_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS client_services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            enrollment_id INTEGER NOT NULL,
+            service_type TEXT NOT NULL,
+            service_date TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS client_services (
+            id SERIAL PRIMARY KEY,
+            enrollment_id INTEGER NOT NULL REFERENCES program_enrollments(id),
+            service_type TEXT NOT NULL,
+            service_date TEXT NOT NULL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_intake_drafts_table(kind: str) -> None:
     create_table(
         kind,
@@ -301,6 +334,46 @@ def ensure_indexes() -> None:
     try:
         db_execute(
             """
+            CREATE INDEX IF NOT EXISTS client_services_enrollment_idx
+            ON client_services (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS client_services_service_type_idx
+            ON client_services (service_type)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS client_services_service_date_idx
+            ON client_services (service_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS client_services_enrollment_date_idx
+            ON client_services (enrollment_id, service_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
             CREATE INDEX IF NOT EXISTS intake_drafts_status_idx
             ON intake_drafts (status)
             """
@@ -412,6 +485,7 @@ def ensure_indexes() -> None:
 def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
     ensure_case_manager_calendar_events_table(kind)
+    ensure_client_services_table(kind)
     ensure_intake_drafts_table(kind)
     ensure_assessment_drafts_table(kind)
     ensure_intake_drafts_columns()
