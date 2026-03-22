@@ -73,13 +73,17 @@ def _row_value(row: Any, key: str, index: int):
 def _fetch_resident_and_enrollment(resident_id: int):
     ph = placeholder()
 
+    shelter = normalize_shelter_name(session.get("shelter"))
+    if not shelter:
+        return None, None
+
     resident = db_fetchone(
         f"""
         SELECT id, resident_identifier, first_name, last_name, resident_code, shelter, is_active
         FROM residents
-        WHERE id = {ph}
+        WHERE id = {ph} AND shelter = {ph}
         """,
-        (resident_id,),
+        (resident_id, shelter),
     )
 
     if not resident:
@@ -89,11 +93,11 @@ def _fetch_resident_and_enrollment(resident_id: int):
         f"""
         SELECT id, resident_id, shelter, entry_date, exit_date, program_status
         FROM program_enrollments
-        WHERE resident_id = {ph}
+        WHERE resident_id = {ph} AND shelter = {ph}
         ORDER BY id DESC
         LIMIT 1
         """,
-        (resident_id,),
+        (resident_id, shelter),
     )
 
     return resident, enrollment
