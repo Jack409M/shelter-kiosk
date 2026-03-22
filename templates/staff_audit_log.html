@@ -138,7 +138,7 @@
           {% for r in rows %}
             <tr>
               <td>{{ r.id }}</td>
-              <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
+              <td>{{ r.created_at | app_dt }}</td>
               <td>{{ r.shelter | shelter if r.shelter else "" }}</td>
               <td>{{ r.staff_username or "" }}</td>
               <td>{{ r.entity_type or "" }}</td>
