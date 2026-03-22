@@ -245,6 +245,10 @@
       box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
     }
 
+    .print-only-note {
+      display: none;
+    }
+
     @media print {
       body {
         background: #fff !important;
@@ -254,7 +258,8 @@
       #case-note-scroll-lane,
       .case-note-tile,
       .print-hide,
-      h1 {
+      h1,
+      .case-note-panel {
         display: none !important;
       }
 
@@ -272,11 +277,13 @@
         box-shadow: none !important;
       }
 
-      .print-note-panel {
+      .print-only-note {
         display: block !important;
+        margin-top: 14px !important;
       }
 
-      .case-note-panel {
+      .print-only-note .card {
+        display: block !important;
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
@@ -284,15 +291,6 @@
         border: none !important;
         box-shadow: none !important;
         break-inside: avoid;
-      }
-
-      .case-note-panel[style*="display:none"] {
-        display: none !important;
-      }
-
-      .case-note-panel[style*="display: block"],
-      .case-note-panel[style*="display:block"] {
-        display: block !important;
       }
     }
   </style>
@@ -310,18 +308,10 @@
           {% if note is mapping %}
             {% set note_id = note["id"] %}
             {% set note_meeting_date = note["meeting_date"] %}
-            {% set note_created_at = note["created_at"] %}
             {% set note_services = note["services"] %}
-            {% set note_notes = note["notes"] %}
-            {% set note_progress_notes = note["progress_notes"] %}
-            {% set note_action_items = note["action_items"] %}
           {% else %}
             {% set note_id = note[0] %}
             {% set note_meeting_date = note[1] %}
-            {% set note_notes = note[2] %}
-            {% set note_progress_notes = note[3] %}
-            {% set note_action_items = note[4] %}
-            {% set note_created_at = note[5] %}
             {% set note_services = note[6] %}
           {% endif %}
 
@@ -329,6 +319,7 @@
             type="button"
             class="case-note-tile"
             data-note-target="case-note-panel-{{ note_id }}"
+            data-print-target="print-case-note-{{ note_id }}"
             style="flex:0 0 15.5%; min-width:170px; max-width:220px; border:1px solid #ddd; border-radius:8px; background:#fff; padding:10px; cursor:pointer; text-align:center;"
           >
             <div><strong>{{ note_meeting_date or "—" }}</strong></div>
@@ -431,16 +422,75 @@
               </div>
             {% endif %}
           </div>
+
+          <template id="print-case-note-{{ note_id }}">
+            <div class="card">
+              <div>
+                <h3 style="margin-bottom:6px;">Meeting {{ note_meeting_date or "—" }}</h3>
+                <div style="font-size:0.95em; color:#666;">
+                  Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
+                </div>
+              </div>
+
+              {% if note_notes %}
+                <p style="margin-top:14px;"><strong>Notes:</strong><br>{{ note_notes }}</p>
+              {% endif %}
+
+              {% if note_progress_notes %}
+                <p><strong>Progress Notes:</strong><br>{{ note_progress_notes }}</p>
+              {% endif %}
+
+              {% if note_action_items %}
+                <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
+              {% endif %}
+
+              {% if note_services %}
+                <div style="margin-top:14px;">
+                  <strong>Services Provided:</strong>
+
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:10px;">
+                    {% for service in note_services %}
+                      {% if service is mapping %}
+                        {% set service_type = service["service_type"] %}
+                        {% set service_date = service["service_date"] %}
+                        {% set service_notes_value = service["notes"] %}
+                      {% else %}
+                        {% set service_type = service[0] %}
+                        {% set service_date = service[1] %}
+                        {% set service_notes_value = service[2] %}
+                      {% endif %}
+
+                      <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+                        <div><strong>{{ service_type or "—" }}</strong></div>
+                        <div style="margin-top:4px; font-size:0.88em; color:#666;">
+                          {{ service_date or "—" }}
+                        </div>
+
+                        {% if service_notes_value %}
+                          <div style="margin-top:8px;">
+                            {{ service_notes_value }}
+                          </div>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </template>
         {% endfor %}
       </div>
+
+      <div id="print-selected-note" class="print-only-note"></div>
 
       <script>
         (function () {
           var lane = document.getElementById("case-note-scroll-lane");
           var tiles = Array.prototype.slice.call(document.querySelectorAll(".case-note-tile"));
           var panels = Array.prototype.slice.call(document.querySelectorAll(".case-note-panel"));
+          var printBox = document.getElementById("print-selected-note");
 
-          function showPanel(panelId) {
+          function showPanel(panelId, printId) {
             panels.forEach(function (panel) {
               panel.style.display = panel.id === panelId ? "block" : "none";
             });
@@ -452,11 +502,21 @@
                 tile.classList.remove("is-active");
               }
             });
+
+            if (printBox && printId) {
+              var tpl = document.getElementById(printId);
+              if (tpl) {
+                printBox.innerHTML = tpl.innerHTML;
+              }
+            }
           }
 
           tiles.forEach(function (tile) {
             tile.addEventListener("click", function () {
-              showPanel(tile.getAttribute("data-note-target"));
+              showPanel(
+                tile.getAttribute("data-note-target"),
+                tile.getAttribute("data-print-target")
+              );
             });
           });
 
@@ -466,7 +526,10 @@
 
           if (tiles.length > 0) {
             var newestTile = tiles[tiles.length - 1];
-            showPanel(newestTile.getAttribute("data-note-target"));
+            showPanel(
+              newestTile.getAttribute("data-note-target"),
+              newestTile.getAttribute("data-print-target")
+            );
           }
         })();
       </script>
