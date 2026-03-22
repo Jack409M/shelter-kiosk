@@ -73,7 +73,7 @@ def _find_possible_duplicate(
     if not match_clauses:
         return None
 
-    shelter_sql = shelter_equals_sql("shelter", ph)
+    shelter_sql = shelter_equals_sql("shelter")
 
     sql = f"""
         SELECT
