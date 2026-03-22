@@ -116,6 +116,55 @@
     </p>
   </div>
 
+  <!-- 🔥 FOLLOW UP SECTION -->
+  <div class="card">
+    <h2>Follow Up</h2>
+
+    <p>
+      <a class="btn" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='6_month') }}">
+        6 Month Follow Up
+      </a>
+
+      <a class="btn" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='1_year') }}">
+        1 Year Follow Up
+      </a>
+    </p>
+
+    <hr>
+
+    <h3>6 Month</h3>
+    {% if followup_6_month %}
+      <p>
+        <strong>Date:</strong> {{ followup_6_month.followup_date or "—" }}<br>
+        <strong>Income:</strong> {{ followup_6_month.income_at_followup if followup_6_month.income_at_followup is not none else "—" }}<br>
+        <strong>Sober:</strong>
+        {% if followup_6_month.sober_at_followup is none %}
+          —
+        {% else %}
+          {{ "Yes" if followup_6_month.sober_at_followup else "No" }}
+        {% endif %}
+      </p>
+    {% else %}
+      <p>No 6 month follow up recorded.</p>
+    {% endif %}
+
+    <h3>1 Year</h3>
+    {% if followup_1_year %}
+      <p>
+        <strong>Date:</strong> {{ followup_1_year.followup_date or "—" }}<br>
+        <strong>Income:</strong> {{ followup_1_year.income_at_followup if followup_1_year.income_at_followup is not none else "—" }}<br>
+        <strong>Sober:</strong>
+        {% if followup_1_year.sober_at_followup is none %}
+          —
+        {% else %}
+          {{ "Yes" if followup_1_year.sober_at_followup else "No" }}
+        {% endif %}
+      </p>
+    {% else %}
+      <p>No 1 year follow up recorded.</p>
+    {% endif %}
+  </div>
+
   <div class="card">
     <h2>Exit Assessment</h2>
 
