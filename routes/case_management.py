@@ -31,6 +31,8 @@ from __future__ import annotations
 #   create enrollment, add goal, and add appointment writes
 # - routes.case_management_parts.exit
 #   exit assessment flow
+# - routes.case_management_parts.followups
+#   6 month and 1 year follow up flow
 #
 # Future extraction plan:
 # - routes.case_management_parts.helpers
@@ -52,6 +54,8 @@ from routes.case_management_parts.assessment import assessment_form_view
 from routes.case_management_parts.assessment import submit_assessment_view
 from routes.case_management_parts.exit import exit_assessment_form_view
 from routes.case_management_parts.exit import submit_exit_assessment_view
+from routes.case_management_parts.followups import followup_form_view
+from routes.case_management_parts.followups import submit_followup_view
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
 from routes.case_management_parts.helpers import digits_only
@@ -231,6 +235,26 @@ def exit_assessment(resident_id: int):
 @require_shelter
 def submit_exit_assessment(resident_id: int):
     return submit_exit_assessment_view(resident_id)
+
+
+# ============================================================================
+# Follow Up Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.followups
+# ============================================================================
+
+@case_management.get("/<int:resident_id>/followup/<string:followup_type>")
+@require_login
+@require_shelter
+def followup_form(resident_id: int, followup_type: str):
+    return followup_form_view(resident_id, followup_type)
+
+
+@case_management.post("/<int:resident_id>/followup/<string:followup_type>")
+@require_login
+@require_shelter
+def submit_followup(resident_id: int, followup_type: str):
+    return submit_followup_view(resident_id, followup_type)
 
 
 # ============================================================================
