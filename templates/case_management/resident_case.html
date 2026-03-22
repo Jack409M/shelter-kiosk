@@ -179,7 +179,7 @@
         <div style="padding:10px 0; border-bottom:1px solid #ddd;">
           <p>
             <strong>Meeting Date:</strong> {{ note_meeting_date or "—" }}<br>
-            <strong>Created:</strong> {{ note_created_at or "—" }}
+            <strong>Created:</strong> {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
           </p>
 
           {% if note_notes %}
