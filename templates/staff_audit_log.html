@@ -1,165 +1,255 @@
 {% extends "layout.html" %}
-
-{% block head %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
-<style>
-    .audit-page {
-        width: 100%;
-    }
-
-    .audit-shell {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 240px;
-        gap: 16px;
-        align-items: start;
-    }
-
-    .audit-main {
-        min-width: 0;
-    }
-
-    .audit-sidebar {
-        width: 240px;
-    }
-
-    .audit-sidebar .filter-panel {
-        position: sticky;
-        top: 16px;
-        padding: 12px;
-    }
-
-    .audit-sidebar form {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .audit-sidebar label {
-        margin: 0;
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-
-    .audit-sidebar input,
-    .audit-sidebar select {
-        width: 100%;
-        box-sizing: border-box;
-        margin: 0;
-    }
-
-    .filter-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-top: 8px;
-    }
-
-    .filter-buttons a,
-    .filter-buttons button {
-        width: 100%;
-        box-sizing: border-box;
-        text-align: center;
-    }
-
-    .audit-container {
-        overflow-x: auto;
-    }
-
-    @media (max-width: 1000px) {
-        .audit-shell {
-            grid-template-columns: 1fr;
-        }
-
-        .audit-sidebar {
-            width: 100%;
-        }
-
-        .audit-sidebar .filter-panel {
-            position: static;
-        }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="dash-wrap">
-    <div class="dash-panel audit-page">
-        <h1>Audit Log</h1>
+<h1>{{ title or "Audit Log" }}</h1>
 
-        <div class="audit-shell">
-            <div class="audit-main">
-                <div class="audit-container">
-                    <table class="audit-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>When</th>
-                                <th>Shelter</th>
-                                <th>Staff</th>
-                                <th>Entity</th>
-                                <th>Entity ID</th>
-                                <th>Action</th>
-                                <th>Details</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in rows %}
-                            <tr>
-                                <td>{{ row.id }}</td>
-                                <td>{{ row.created_at | app_pretty_dt }}</td>
-                                <td>{{ row.shelter }}</td>
-                                <td>{{ row.staff or "" }}</td>
-                                <td>{{ row.entity }}</td>
-                                <td>{{ row.entity_id }}</td>
-                                <td>{{ row.action }}</td>
-                                <td>{{ row.details }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="8">No audit log records found.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+<style>
+  .audit-layout {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
 
-            <aside class="audit-sidebar">
-                <div class="filter-panel">
-                    <form method="get">
-                        <label for="q">Search</label>
-                        <input id="q" type="text" name="q" value="{{ request.args.get('q', '') }}">
+  .audit-results {
+    overflow-x: auto;
+  }
 
-                        <label for="shelter">Shelter</label>
-                        <select id="shelter" name="shelter">
-                            <option value="">All</option>
-                        </select>
+  .audit-filters {
+    position: sticky;
+    top: 12px;
+  }
 
-                        <label for="staff">Staff</label>
-                        <select id="staff" name="staff">
-                            <option value="">All</option>
-                        </select>
+  table.compact {
+    width: 100%;
+    border-collapse: collapse;
+  }
 
-                        <label for="entity">Entity</label>
-                        <select id="entity" name="entity">
-                            <option value="">All</option>
-                        </select>
+  table.compact th,
+  table.compact td {
+    padding: 6px 8px;
+    font-size: 12px;
+    line-height: 1.2;
+    border: 1px solid #999;
+    vertical-align: top;
+  }
 
-                        <label for="action">Action</label>
-                        <select id="action" name="action">
-                            <option value="">All</option>
-                        </select>
+  table.compact td.details {
+    white-space: normal;
+    word-break: break-word;
+    max-width: 520px;
+  }
 
-                        <div class="filter-buttons">
-                            <button type="submit">Apply</button>
-                            <a href="{{ url_for('admin.staff_audit_log') }}">Clear</a>
-                            <button type="button" onclick="location.reload()">Refresh</button>
-                        </div>
-                    </form>
-                </div>
-            </aside>
+  .filter-card {
+    background: var(--card, #e4f0f8);
+    border: 1px solid #000;
+    border-radius: var(--radius, 8px);
+    padding: 12px;
+  }
+
+  .filter-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+  }
+
+  .filter-row {
+    margin-bottom: 10px;
+  }
+
+  .filter-row label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .filter-row input,
+  .filter-row select {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+
+  .filter-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .filter-actions a,
+  .filter-actions button {
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    padding: 10px 12px;
+    border: 1px solid #333;
+    border-radius: var(--radius, 8px);
+    background: #fff;
+    color: #111;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  .small-note {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted, #4a5a66);
+  }
+
+  @media (max-width: 900px) {
+    .audit-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .audit-filters {
+      position: static;
+    }
+
+    table.compact td.details {
+      max-width: none;
+    }
+  }
+</style>
+
+{% set q_val = request.args.get('q', '') %}
+{% set shelter_val = request.args.get('shelter', '') %}
+{% set staff_user_id_val = request.args.get('staff_user_id', '') %}
+{% set entity_type_val = request.args.get('entity_type', '') %}
+{% set action_type_val = request.args.get('action_type', '') %}
+
+<div class="audit-layout">
+
+  <div class="audit-results">
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>When</th>
+          <th>Shelter</th>
+          <th>Staff</th>
+          <th>Entity</th>
+          <th>Entity ID</th>
+          <th>Action</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if rows %}
+          {% for r in rows %}
+            <tr>
+              <td>{{ r.id }}</td>
+              <td>{{ fmt_dt(r.created_at) if fmt_dt else r.created_at }}</td>
+              <td>{{ r.shelter | shelter if r.shelter else "" }}</td>
+              <td>{{ r.staff_username or "" }}</td>
+              <td>{{ r.entity_type or "" }}</td>
+              <td>{{ r.entity_id or "" }}</td>
+              <td>{{ r.action_type or "" }}</td>
+              <td class="details">{{ r.action_details or "" }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8">No matching audit events.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <aside class="audit-filters">
+    <div class="filter-card">
+      <h3>Filter</h3>
+
+      <form method="get" action="{{ url_for('admin.staff_audit_log') }}">
+
+        <div class="filter-row">
+          <label for="q">Search text</label>
+          <input id="q" name="q" type="text" value="{{ q_val }}" placeholder="Name, action, details">
         </div>
+
+        <div class="filter-row">
+          <label for="shelter">Shelter</label>
+          <select id="shelter" name="shelter">
+            <option value="">All</option>
+            {% for s in all_shelters %}
+              <option value="{{ s }}" {% if shelter_val == s %}selected{% endif %}>{{ s | shelter }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filter-row">
+          <label for="staff_user_id">Staff</label>
+          <select id="staff_user_id" name="staff_user_id">
+            <option value="">All</option>
+            {% set seen = namespace(ids=[]) %}
+            {% for r in rows %}
+              {% if r.staff_user_id and (r.staff_user_id not in seen.ids) %}
+                {% set _ = seen.ids.append(r.staff_user_id) %}
+              {% endif %}
+            {% endfor %}
+            {% for sid in seen.ids %}
+              {% set display = namespace(value="") %}
+              {% for r in rows %}
+                {% if r.staff_user_id == sid and not display.value %}
+                  {% set display.value = r.staff_username or ("User " ~ sid) %}
+                {% endif %}
+              {% endfor %}
+              <option value="{{ sid }}" {% if staff_user_id_val == (sid|string) %}selected{% endif %}>
+                {{ display.value }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filter-row">
+          <label for="entity_type">Entity</label>
+          <select id="entity_type" name="entity_type">
+            <option value="">All</option>
+            {% set entities = namespace(vals=[]) %}
+            {% for r in rows %}
+              {% if r.entity_type and (r.entity_type not in entities.vals) %}
+                {% set _ = entities.vals.append(r.entity_type) %}
+              {% endif %}
+            {% endfor %}
+            {% for v in entities.vals|sort %}
+              <option value="{{ v }}" {% if entity_type_val == v %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filter-row">
+          <label for="action_type">Action</label>
+          <select id="action_type" name="action_type">
+            <option value="">All</option>
+            {% set actions = namespace(vals=[]) %}
+            {% for r in rows %}
+              {% if r.action_type and (r.action_type not in actions.vals) %}
+                {% set _ = actions.vals.append(r.action_type) %}
+              {% endif %}
+            {% endfor %}
+            {% for v in actions.vals|sort %}
+              <option value="{{ v }}" {% if action_type_val == v %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button type="submit">Apply</button>
+          <a href="{{ url_for('admin.staff_audit_log') }}">Clear</a>
+        </div>
+
+        <div class="filter-actions" style="margin-top:10px;">
+          <a href="{{ url_for('admin.staff_audit_log_csv', **request.args) }}">Export CSV</a>
+          <a href="#" onclick="window.location.reload(); return false;">Refresh</a>
+        </div>
+
+        <div class="small-note">
+          Filters run on the server and affect export.
+        </div>
+
+      </form>
     </div>
+  </aside>
+
 </div>
 {% endblock %}
