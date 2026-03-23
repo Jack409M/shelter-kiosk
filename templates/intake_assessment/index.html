@@ -55,49 +55,4 @@
   {% endif %}
 </div>
 
-<div class="card">
-  <h2>Assessments{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
-  <p>
-    Assessments are completed after intake and can be saved, resumed, and finalized separately.
-  </p>
-
-  <p>
-    <a class="btn" href="{{ url_for('case_management.assessment_form') }}">New Assessment</a>
-  </p>
-
-  <h3>Resume Assessment Drafts</h3>
-
-  {% if assessment_drafts %}
-    <table class="table-compact">
-      <thead>
-        <tr>
-          <th>Draft</th>
-          <th>Resident ID</th>
-          <th>Last Updated</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in assessment_drafts %}
-          {% set assessment_url = safe_url_for('case_management.assessment_form', draft_id=d.id) %}
-          <tr>
-            <td>#{{ d.id }}</td>
-            <td>{{ d.resident_id or "—" }}</td>
-            <td>{{ d.updated_at or "—" }}</td>
-            <td>
-              {% if assessment_url %}
-                <a class="btn" href="{{ assessment_url }}">Resume</a>
-              {% else %}
-                <span>Unavailable</span>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No assessment drafts yet.</p>
-  {% endif %}
-</div>
-
 {% endblock %}
