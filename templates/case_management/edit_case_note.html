@@ -14,12 +14,18 @@
   {% set notes_value = note["notes"] %}
   {% set progress_notes_value = note["progress_notes"] %}
   {% set action_items_value = note["action_items"] %}
+  {% set updated_grit_value = note["updated_grit"] %}
+  {% set parenting_class_completed_value = note["parenting_class_completed"] %}
+  {% set warrants_or_fines_paid_value = note["warrants_or_fines_paid"] %}
 {% else %}
   {% set note_id = note[0] %}
   {% set meeting_date = note[3] %}
   {% set notes_value = note[4] %}
   {% set progress_notes_value = note[5] %}
   {% set action_items_value = note[6] %}
+  {% set updated_grit_value = note[7] %}
+  {% set parenting_class_completed_value = note[8] %}
+  {% set warrants_or_fines_paid_value = note[9] %}
 {% endif %}
 
 <h1>Edit Case Note</h1>
@@ -39,6 +45,23 @@
 
     <label><strong>Action Items</strong></label>
     <textarea name="action_items" rows="3">{{ action_items_value or "" }}</textarea>
+
+    <label><strong>Updated Grit</strong></label>
+    <input type="number" name="updated_grit" min="0" max="100" value="{{ updated_grit_value if updated_grit_value is not none else '' }}">
+
+    <label><strong>Parenting Class Completed</strong></label>
+    <select name="parenting_class_completed">
+      <option value="" {% if parenting_class_completed_value is none %}selected{% endif %}>—</option>
+      <option value="yes" {% if parenting_class_completed_value == 1 %}selected{% endif %}>Yes</option>
+      <option value="no" {% if parenting_class_completed_value == 0 %}selected{% endif %}>No</option>
+    </select>
+
+    <label><strong>Warrants or Fines Paid</strong></label>
+    <select name="warrants_or_fines_paid">
+      <option value="" {% if warrants_or_fines_paid_value is none %}selected{% endif %}>—</option>
+      <option value="yes" {% if warrants_or_fines_paid_value == 1 %}selected{% endif %}>Yes</option>
+      <option value="no" {% if warrants_or_fines_paid_value == 0 %}selected{% endif %}>No</option>
+    </select>
 
     <hr>
 
