@@ -6,7 +6,7 @@ from typing import Any
 from flask import flash, redirect, render_template, request, session, url_for
 
 from core.constants import EDUCATION_LEVEL_OPTIONS
-from core.db import db_execute
+from core.db import db_execute, db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
@@ -355,4 +355,69 @@ def family_intake_view(resident_id: int):
     return render_template(
         "case_management/family_intake.html",
         resident_id=resident_id,
+    )
+
+
+def edit_child_view(child_id: int):
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+    ph = placeholder()
+
+    child = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_id,
+            child_name,
+            birth_year,
+            relationship,
+            living_status
+        FROM resident_children
+        WHERE id = {ph}
+        """,
+        (child_id,),
+    )
+
+    if not child:
+        flash("Child not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    if request.method == "POST":
+        child_name = clean(request.form.get("child_name"))
+        birth_year = parse_int(request.form.get("birth_year"))
+        relationship = clean(request.form.get("relationship"))
+        living_status = clean(request.form.get("living_status"))
+
+        db_execute(
+            f"""
+            UPDATE resident_children
+            SET
+                child_name = {ph},
+                birth_year = {ph},
+                relationship = {ph},
+                living_status = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                child_name,
+                birth_year,
+                relationship,
+                living_status,
+                datetime.utcnow().isoformat(),
+                child_id,
+            ),
+        )
+
+        resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
+
+        flash("Child updated.", "success")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    return render_template(
+        "case_management/edit_child.html",
+        child=child,
     )
