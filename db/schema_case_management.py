@@ -146,6 +146,44 @@ def ensure_client_services_table(kind: str) -> None:
     )
 
 
+def ensure_child_services_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS child_services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_child_id INTEGER NOT NULL,
+            enrollment_id INTEGER NOT NULL,
+            service_date TEXT,
+            service_type TEXT,
+            outcome TEXT,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY (resident_child_id) REFERENCES resident_children(id),
+            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS child_services (
+            id SERIAL PRIMARY KEY,
+            resident_child_id INTEGER NOT NULL REFERENCES resident_children(id),
+            enrollment_id INTEGER NOT NULL REFERENCES program_enrollments(id),
+            service_date TEXT,
+            service_type TEXT,
+            outcome TEXT,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """
+    )
+
+
 def ensure_intake_drafts_table(kind: str) -> None:
     create_table(
         kind,
@@ -409,6 +447,56 @@ def ensure_indexes() -> None:
     try:
         db_execute(
             """
+            CREATE INDEX IF NOT EXISTS child_services_child_idx
+            ON child_services (resident_child_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS child_services_enrollment_idx
+            ON child_services (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS child_services_service_type_idx
+            ON child_services (service_type)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS child_services_service_date_idx
+            ON child_services (service_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS child_services_child_enrollment_idx
+            ON child_services (resident_child_id, enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
             CREATE INDEX IF NOT EXISTS intake_drafts_status_idx
             ON intake_drafts (status)
             """
@@ -481,6 +569,7 @@ def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
     ensure_case_manager_calendar_events_table(kind)
     ensure_client_services_table(kind)
+    ensure_child_services_table(kind)
     ensure_intake_drafts_table(kind)
     ensure_case_manager_updates_columns()
     ensure_intake_drafts_columns()
