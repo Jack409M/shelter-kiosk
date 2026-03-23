@@ -121,7 +121,7 @@
   <div class="card no-print">
     <h2>Family</h2>
 
-    {% set family_intake_url = safe_url_for('case_management.family_intake', resident_id=resident_id) %}
+    {% set family_intake_url = safe_url_for('case_management.family_intake_view', resident_id=resident_id) %}
 
     {% if family_intake_url %}
       <p>
