@@ -6,6 +6,8 @@
 
 <div class="card">
   <form method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
     <label><strong>Child Name</strong></label>
     <input type="text" name="child_name" required>
 
