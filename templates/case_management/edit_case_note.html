@@ -47,21 +47,51 @@
     <textarea name="action_items" rows="3">{{ action_items_value or "" }}</textarea>
 
     <label><strong>Updated Grit</strong></label>
-    <input type="number" name="updated_grit" min="0" max="100" value="{{ updated_grit_value if updated_grit_value is not none else '' }}">
+    <input
+      type="number"
+      name="updated_grit"
+      min="0"
+      max="100"
+      style="width:70px;"
+      inputmode="numeric"
+      value="{{ updated_grit_value if updated_grit_value is not none else '' }}"
+    >
 
     <label><strong>Parenting Class Completed</strong></label>
-    <select name="parenting_class_completed">
-      <option value="" {% if parenting_class_completed_value is none %}selected{% endif %}>—</option>
-      <option value="yes" {% if parenting_class_completed_value == 1 %}selected{% endif %}>Yes</option>
-      <option value="no" {% if parenting_class_completed_value == 0 %}selected{% endif %}>No</option>
-    </select>
+    <label style="display:flex; gap:10px; margin-top:4px;">
+      <input
+        type="radio"
+        name="parenting_class_completed"
+        value="yes"
+        {% if parenting_class_completed_value == 1 %}checked{% endif %}
+      >
+      Yes
+      <input
+        type="radio"
+        name="parenting_class_completed"
+        value="no"
+        {% if parenting_class_completed_value == 0 %}checked{% endif %}
+      >
+      No
+    </label>
 
     <label><strong>Warrants or Fines Paid</strong></label>
-    <select name="warrants_or_fines_paid">
-      <option value="" {% if warrants_or_fines_paid_value is none %}selected{% endif %}>—</option>
-      <option value="yes" {% if warrants_or_fines_paid_value == 1 %}selected{% endif %}>Yes</option>
-      <option value="no" {% if warrants_or_fines_paid_value == 0 %}selected{% endif %}>No</option>
-    </select>
+    <label style="display:flex; gap:10px; margin-top:4px;">
+      <input
+        type="radio"
+        name="warrants_or_fines_paid"
+        value="yes"
+        {% if warrants_or_fines_paid_value == 1 %}checked{% endif %}
+      >
+      Yes
+      <input
+        type="radio"
+        name="warrants_or_fines_paid"
+        value="no"
+        {% if warrants_or_fines_paid_value == 0 %}checked{% endif %}
+      >
+      No
+    </label>
 
     <hr>
 
