@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h1>Add Child</h1>
+
+<div class="card">
+  <form method="post">
+    <label><strong>Child Name</strong></label>
+    <input type="text" name="child_name" required>
+
+    <label><strong>Birth Year</strong></label>
+    <input type="number" name="birth_year">
+
+    <label><strong>Relationship</strong></label>
+    <input type="text" name="relationship">
+
+    <label><strong>Living Status</strong></label>
+    <select name="living_status">
+      <option value="living_with_mom">Living with Mom</option>
+      <option value="not_with_mom">Not with Mom</option>
+      <option value="foster_care">Foster Care</option>
+      <option value="kinship_care">Kinship Care</option>
+      <option value="reunified">Reunified</option>
+      <option value="unknown">Unknown</option>
+    </select>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Child</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
