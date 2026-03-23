@@ -40,6 +40,15 @@ def _clean_service_types(raw_values: list[str]) -> list[str]:
     return cleaned
 
 
+def _yes_no_to_int(value: str | None):
+    value = (value or "").strip().lower()
+    if value == "yes":
+        return 1
+    if value == "no":
+        return 0
+    return None
+
+
 def add_case_note_view(resident_id: int):
     init_db()
 
@@ -91,6 +100,11 @@ def add_case_note_view(resident_id: int):
     progress_notes = (request.form.get("progress_notes") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
 
+    updated_grit_raw = (request.form.get("updated_grit") or "").strip()
+    updated_grit = int(updated_grit_raw) if updated_grit_raw else None
+    parenting_class_completed = _yes_no_to_int(request.form.get("parenting_class_completed"))
+    warrants_or_fines_paid = _yes_no_to_int(request.form.get("warrants_or_fines_paid"))
+
     service_types = _clean_service_types(request.form.getlist("service_type"))
     service_date = (request.form.get("service_date") or "").strip() or meeting_date
 
@@ -114,10 +128,13 @@ def add_case_note_view(resident_id: int):
             notes,
             progress_notes,
             action_items,
+            updated_grit,
+            parenting_class_completed,
+            warrants_or_fines_paid,
             created_at,
             updated_at
         )
-        VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+        VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
         """,
         (
             enrollment_id,
@@ -126,12 +143,14 @@ def add_case_note_view(resident_id: int):
             notes or None,
             progress_notes or None,
             action_items or None,
+            updated_grit,
+            parenting_class_completed,
+            warrants_or_fines_paid,
             now,
             now,
         ),
     )
 
-    # SAFER: get last inserted for this enrollment
     note = db_fetchone(
         f"""
         SELECT id
@@ -256,6 +275,11 @@ def edit_case_note_view(resident_id: int, update_id: int):
     progress_notes = (request.form.get("progress_notes") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
 
+    updated_grit_raw = (request.form.get("updated_grit") or "").strip()
+    updated_grit = int(updated_grit_raw) if updated_grit_raw else None
+    parenting_class_completed = _yes_no_to_int(request.form.get("parenting_class_completed"))
+    warrants_or_fines_paid = _yes_no_to_int(request.form.get("warrants_or_fines_paid"))
+
     service_types = _clean_service_types(request.form.getlist("service_type"))
     service_date = (request.form.get("service_date") or "").strip() or meeting_date
 
@@ -272,6 +296,9 @@ def edit_case_note_view(resident_id: int, update_id: int):
             notes = {ph},
             progress_notes = {ph},
             action_items = {ph},
+            updated_grit = {ph},
+            parenting_class_completed = {ph},
+            warrants_or_fines_paid = {ph},
             updated_at = {ph}
         WHERE id = {ph}
         """,
@@ -280,6 +307,9 @@ def edit_case_note_view(resident_id: int, update_id: int):
             notes or None,
             progress_notes or None,
             action_items or None,
+            updated_grit,
+            parenting_class_completed,
+            warrants_or_fines_paid,
             now,
             update_id,
         ),
