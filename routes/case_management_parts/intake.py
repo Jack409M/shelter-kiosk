@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from flask import flash, redirect, render_template, request, session, url_for
 
 from core.constants import EDUCATION_LEVEL_OPTIONS
+from core.db import db_execute
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import parse_int
+from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.intake_drafts import _complete_intake_draft
 from routes.case_management_parts.intake_drafts import _load_intake_draft
@@ -284,3 +287,72 @@ def submit_intake_assessment_view():
         "success",
     )
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+
+def family_intake_view(resident_id: int):
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    ph = placeholder()
+
+    if request.method == "POST":
+        child_name = clean(request.form.get("child_name"))
+        birth_year = parse_int(request.form.get("birth_year"))
+        relationship = clean(request.form.get("relationship"))
+        living_status = clean(request.form.get("living_status"))
+
+        if not child_name:
+            flash("Child name is required.", "error")
+            return render_template(
+                "case_management/family_intake.html",
+                resident_id=resident_id,
+            )
+
+        now = datetime.utcnow().isoformat()
+
+        db_execute(
+            f"""
+            INSERT INTO resident_children
+            (
+                resident_id,
+                child_name,
+                birth_year,
+                relationship,
+                living_status,
+                is_active,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                1,
+                {ph},
+                {ph}
+            )
+            """,
+            (
+                resident_id,
+                child_name,
+                birth_year,
+                relationship,
+                living_status,
+                now,
+                now,
+            ),
+        )
+
+        flash("Child added.", "success")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    return render_template(
+        "case_management/family_intake.html",
+        resident_id=resident_id,
+    )
