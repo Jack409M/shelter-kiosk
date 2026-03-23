@@ -121,7 +121,7 @@
   <div class="card no-print">
     <h2>Family</h2>
 
-    {% set family_intake_url = safe_url_for('case_management.family_intake_view', resident_id=resident_id) %}
+    {% set family_intake_url = safe_url_for('case_management.family_intake', resident_id=resident_id) %}
 
     {% if family_intake_url %}
       <p>
@@ -163,10 +163,10 @@
               <td>{{ child_relationship or "—" }}</td>
               <td>{{ child_living_status or "—" }}</td>
               <td>
-                <a class="btn btn-sm" href="{{ url_for('case_management.edit_child_view', child_id=child_id) }}">
+                <a class="btn btn-sm" href="{{ url_for('case_management.edit_child', child_id=child_id) }}">
                   Edit
                 </a>
-                <a class="btn btn-sm" href="{{ url_for('case_management.child_services_view', child_id=child_id) }}">
+                <a class="btn btn-sm" href="{{ url_for('case_management.child_services', child_id=child_id) }}">
                   Services
                 </a>
               </td>
