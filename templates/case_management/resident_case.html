@@ -249,6 +249,12 @@
       display: none;
     }
 
+    .case-note-text-block {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
     @media print {
       body {
         background: #fff !important;
@@ -291,6 +297,12 @@
         border: none !important;
         box-shadow: none !important;
         break-inside: avoid;
+      }
+
+      .case-note-text-block {
+        white-space: pre-wrap !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
       }
     }
   </style>
@@ -378,15 +390,24 @@
             </div>
 
             {% if note_notes %}
-              <p style="margin-top:14px;"><strong>Notes:</strong><br>{{ note_notes }}</p>
+              <div style="margin-top:14px;">
+                <strong>Notes:</strong><br>
+                <div class="case-note-text-block">{{ note_notes }}</div>
+              </div>
             {% endif %}
 
             {% if note_progress_notes %}
-              <p><strong>Progress Notes:</strong><br>{{ note_progress_notes }}</p>
+              <div style="margin-top:14px;">
+                <strong>Progress Notes:</strong><br>
+                <div class="case-note-text-block">{{ note_progress_notes }}</div>
+              </div>
             {% endif %}
 
             {% if note_action_items %}
-              <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
+              <div style="margin-top:14px;">
+                <strong>Action Items:</strong><br>
+                <div class="case-note-text-block">{{ note_action_items }}</div>
+              </div>
             {% endif %}
 
             {% if note_services %}
@@ -412,7 +433,7 @@
                       </div>
 
                       {% if service_notes_value %}
-                        <div style="margin-top:8px;">
+                        <div style="margin-top:8px;" class="case-note-text-block">
                           {{ service_notes_value }}
                         </div>
                       {% endif %}
@@ -433,15 +454,24 @@
               </div>
 
               {% if note_notes %}
-                <p style="margin-top:14px;"><strong>Notes:</strong><br>{{ note_notes }}</p>
+                <div style="margin-top:14px;">
+                  <strong>Notes:</strong><br>
+                  <div class="case-note-text-block">{{ note_notes }}</div>
+                </div>
               {% endif %}
 
               {% if note_progress_notes %}
-                <p><strong>Progress Notes:</strong><br>{{ note_progress_notes }}</p>
+                <div style="margin-top:14px;">
+                  <strong>Progress Notes:</strong><br>
+                  <div class="case-note-text-block">{{ note_progress_notes }}</div>
+                </div>
               {% endif %}
 
               {% if note_action_items %}
-                <p><strong>Action Items:</strong><br>{{ note_action_items }}</p>
+                <div style="margin-top:14px;">
+                  <strong>Action Items:</strong><br>
+                  <div class="case-note-text-block">{{ note_action_items }}</div>
+                </div>
               {% endif %}
 
               {% if note_services %}
@@ -467,7 +497,7 @@
                         </div>
 
                         {% if service_notes_value %}
-                          <div style="margin-top:8px;">
+                          <div style="margin-top:8px;" class="case-note-text-block">
                             {{ service_notes_value }}
                           </div>
                         {% endif %}
