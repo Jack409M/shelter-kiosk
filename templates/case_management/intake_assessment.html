@@ -586,28 +586,6 @@
 
       {% if review_passed %}
         <div style="margin-top: 12px;">
-          <div class="tab-strip" role="tablist" aria-label="Intake tabs">
-            <button
-              type="button"
-              class="tab-button is-active"
-              data-tab-button="intake"
-              role="tab"
-              aria-selected="true"
-            >
-              Intake
-            </button>
-
-            <button
-              type="button"
-              class="tab-button"
-              data-tab-button="assessment"
-              role="tab"
-              aria-selected="false"
-            >
-              Assessment
-            </button>
-          </div>
-
           <div class="tab-panel is-active" data-tab-panel="intake">
             <div class="panel-stack">
 
@@ -906,12 +884,6 @@
                 </div>
               </section>
 
-            </div>
-          </div>
-
-          <div class="tab-panel" data-tab-panel="assessment">
-            <div class="panel-stack">
-
               <section class="section-card">
                 <div class="section-card-head">
                   <h2>Trauma and Vulnerability</h2>
@@ -1128,37 +1100,4 @@
     </form>
   </div>
 </div>
-
-{% if review_passed %}
-<script>
-  (function () {
-    const buttons = document.querySelectorAll("[data-tab-button]");
-    const panels = document.querySelectorAll("[data-tab-panel]");
-
-    function activateTab(name) {
-      buttons.forEach((button) => {
-        const isActive = button.getAttribute("data-tab-button") === name;
-        button.classList.toggle("is-active", isActive);
-        button.setAttribute("aria-selected", isActive ? "true" : "false");
-      });
-
-      panels.forEach((panel) => {
-        const isActive = panel.getAttribute("data-tab-panel") === name;
-        panel.classList.toggle("is-active", isActive);
-      });
-    }
-
-    buttons.forEach((button) => {
-      button.addEventListener("click", function () {
-        activateTab(button.getAttribute("data-tab-button"));
-      });
-    });
-
-    const hasValidationCard = document.querySelector(".validation-card");
-    if (hasValidationCard) {
-      activateTab("intake");
-    }
-  })();
-</script>
-{% endif %}
 {% endblock %}
