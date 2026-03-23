@@ -44,6 +44,7 @@ def _save_intake_draft(
                 UPDATE intake_drafts
                 SET resident_name = {ph},
                     entry_date = {ph},
+                    draft_data = {ph}::jsonb,
                     form_payload = {ph},
                     status = {ph},
                     updated_at = NOW()
@@ -55,6 +56,7 @@ def _save_intake_draft(
                 (
                     resident_name,
                     entry_date,
+                    payload,
                     payload,
                     status,
                     draft_id,
@@ -72,6 +74,7 @@ def _save_intake_draft(
                 status,
                 resident_name,
                 entry_date,
+                draft_data,
                 form_payload,
                 created_by_user_id,
                 created_at,
@@ -83,6 +86,7 @@ def _save_intake_draft(
                 {ph},
                 {ph},
                 {ph},
+                {ph}::jsonb,
                 {ph},
                 {ph},
                 NOW(),
@@ -96,6 +100,7 @@ def _save_intake_draft(
                 resident_name,
                 entry_date,
                 payload,
+                payload,
                 session.get("user_id"),
             ),
         )
@@ -107,6 +112,7 @@ def _save_intake_draft(
             UPDATE intake_drafts
             SET resident_name = {ph},
                 entry_date = {ph},
+                draft_data = {ph},
                 form_payload = {ph},
                 status = {ph},
                 updated_at = CURRENT_TIMESTAMP
@@ -117,6 +123,7 @@ def _save_intake_draft(
             (
                 resident_name,
                 entry_date,
+                payload,
                 payload,
                 status,
                 draft_id,
@@ -144,6 +151,7 @@ def _save_intake_draft(
             status,
             resident_name,
             entry_date,
+            draft_data,
             form_payload,
             created_by_user_id,
             created_at,
@@ -151,6 +159,7 @@ def _save_intake_draft(
         )
         VALUES
         (
+            {ph},
             {ph},
             {ph},
             {ph},
@@ -167,6 +176,7 @@ def _save_intake_draft(
             resident_name,
             entry_date,
             payload,
+            payload,
             session.get("user_id"),
         ),
     )
@@ -182,6 +192,7 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
         SELECT
             id,
             resident_name,
+            draft_data,
             form_payload,
             status,
             updated_at
@@ -195,15 +206,21 @@ def _load_intake_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | 
     if not row:
         return None
 
-    payload_raw = row["form_payload"] if isinstance(row, dict) else row[2]
-    draft_status = row["status"] if isinstance(row, dict) else row[3]
+    if isinstance(row, dict):
+        payload_raw = row.get("draft_data") or row.get("form_payload")
+        draft_status = row.get("status")
+        draft_id_value = row.get("id")
+    else:
+        payload_raw = row[2] or row[3]
+        draft_status = row[4]
+        draft_id_value = row[0]
 
     try:
         payload = json.loads(payload_raw or "{}")
     except json.JSONDecodeError:
         payload = {}
 
-    payload["draft_id"] = str(row["id"] if isinstance(row, dict) else row[0])
+    payload["draft_id"] = str(draft_id_value)
     payload["draft_status"] = draft_status or "draft"
     return payload
 
