@@ -119,6 +119,56 @@
 {% else %}
 
   <div class="card no-print">
+    <h2>Family</h2>
+
+    {% set family_intake_url = safe_url_for('case_management.family_intake', resident_id=resident_id) %}
+
+    {% if family_intake_url %}
+      <p>
+        <a class="btn" href="{{ family_intake_url }}">
+          Add Child
+        </a>
+      </p>
+    {% endif %}
+
+    {% if children is defined and children %}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Birth Year</th>
+            <th>Relationship</th>
+            <th>Living Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for child in children %}
+            {% if child is mapping %}
+              {% set child_name = child["child_name"] %}
+              {% set child_birth_year = child["birth_year"] %}
+              {% set child_relationship = child["relationship"] %}
+              {% set child_living_status = child["living_status"] %}
+            {% else %}
+              {% set child_name = child[2] %}
+              {% set child_birth_year = child[3] %}
+              {% set child_relationship = child[4] %}
+              {% set child_living_status = child[5] %}
+            {% endif %}
+            <tr>
+              <td>{{ child_name or "—" }}</td>
+              <td>{{ child_birth_year or "—" }}</td>
+              <td>{{ child_relationship or "—" }}</td>
+              <td>{{ child_living_status or "—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No children recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="card no-print">
     <h2>Monthly Case Manager Meeting</h2>
 
     <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
