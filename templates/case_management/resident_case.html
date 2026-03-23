@@ -166,6 +166,28 @@
                 <a class="btn btn-sm" href="{{ url_for('case_management.edit_child_view', child_id=child_id) }}">
                   Edit
                 </a>
+                <a class="btn btn-sm" href="{{ url_for('case_management.child_services_view', child_id=child_id) }}">
+                  Services
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="5">
+                {% if child.services %}
+                  <div style="font-size:0.9em; color:#555;">
+                    {% for s in child.services %}
+                      {% if s is mapping %}
+                        {{ s.service_date }} — {{ s.service_type }} ({{ s.outcome }})<br>
+                      {% else %}
+                        {{ s[3] }} — {{ s[1] }} ({{ s[2] }})<br>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div style="font-size:0.9em; color:#999;">
+                    No services recorded
+                  </div>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}
