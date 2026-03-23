@@ -176,6 +176,63 @@ def resident_case_view(resident_id: int):
             """,
             (resident_id,),
         )
+
+        child_ids = [
+            child["id"] if isinstance(child, dict) else child[0]
+            for child in children
+        ]
+
+        child_services = []
+
+        if child_ids:
+            child_placeholders = ",".join([ph] * len(child_ids))
+            child_services = db_fetchall(
+                f"""
+                SELECT
+                    resident_child_id,
+                    service_type,
+                    outcome,
+                    service_date
+                FROM child_services
+                WHERE resident_child_id IN ({child_placeholders})
+                ORDER BY service_date DESC
+                """,
+                tuple(child_ids),
+            )
+
+        services_by_child = {}
+
+        for service in child_services:
+            if isinstance(service, dict):
+                child_id = service["resident_child_id"]
+            else:
+                child_id = service[0]
+
+            services_by_child.setdefault(child_id, []).append(service)
+
+        enriched_children = []
+
+        for child in children:
+            if isinstance(child, dict):
+                child_id = child["id"]
+                child_obj = dict(child)
+                child_obj["services"] = services_by_child.get(child_id, [])
+            else:
+                child_id = child[0]
+                child_obj = {
+                    "id": child[0],
+                    "resident_id": child[1],
+                    "child_name": child[2],
+                    "birth_year": child[3],
+                    "relationship": child[4],
+                    "living_status": child[5],
+                    "is_active": child[6],
+                    "services": services_by_child.get(child_id, []),
+                }
+
+            enriched_children.append(child_obj)
+
+        children = enriched_children
     except Exception:
         children = []
 
