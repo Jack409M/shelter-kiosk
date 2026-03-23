@@ -76,9 +76,7 @@ def add_case_note_view(resident_id: int):
         (resident_id,),
     )
 
-    enrollment_id = None
-    if enrollment:
-        enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+    enrollment_id = enrollment["id"] if enrollment else None
 
     if not enrollment_id:
         flash("Resident does not have an active enrollment record yet.", "error")
@@ -133,26 +131,19 @@ def add_case_note_view(resident_id: int):
         ),
     )
 
+    # SAFER: get last inserted for this enrollment
     note = db_fetchone(
         f"""
         SELECT id
         FROM case_manager_updates
         WHERE enrollment_id = {ph}
-          AND staff_user_id = {ph}
-          AND meeting_date = {ph}
-          AND created_at = {ph}
         ORDER BY id DESC
         LIMIT 1
         """,
-        (
-            enrollment_id,
-            staff_user_id,
-            meeting_date,
-            now,
-        ),
+        (enrollment_id,),
     )
 
-    note_id = note["id"] if isinstance(note, dict) else note[0]
+    note_id = note["id"]
 
     for service_type in service_types:
         service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
@@ -247,8 +238,8 @@ def edit_case_note_view(resident_id: int, update_id: int):
         service_notes_map = {}
 
         for s in services:
-            st = s["service_type"] if isinstance(s, dict) else s[0]
-            sn = s["notes"] if isinstance(s, dict) else s[1]
+            st = s["service_type"]
+            sn = s["notes"]
             selected_services.append(st)
             service_notes_map[st] = sn or ""
 
@@ -266,6 +257,11 @@ def edit_case_note_view(resident_id: int, update_id: int):
     action_items = (request.form.get("action_items") or "").strip()
 
     service_types = _clean_service_types(request.form.getlist("service_type"))
+    service_date = (request.form.get("service_date") or "").strip() or meeting_date
+
+    if not meeting_date:
+        flash("Meeting date is required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
 
@@ -318,7 +314,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 note["enrollment_id"],
                 update_id,
                 service_type,
-                meeting_date,
+                service_date,
                 service_note or None,
                 now,
                 now,
