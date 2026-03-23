@@ -378,6 +378,9 @@
           {% set note_notes = note["notes"] %}
           {% set note_progress_notes = note["progress_notes"] %}
           {% set note_action_items = note["action_items"] %}
+          {% set note_updated_grit = note["updated_grit"] %}
+          {% set note_parenting_class_completed = note["parenting_class_completed"] %}
+          {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
           {% set note_created_at = note["created_at"] %}
           {% set note_services = note["services"] %}
         {% else %}
@@ -386,6 +389,9 @@
           {% set note_notes = note[2] %}
           {% set note_progress_notes = note[3] %}
           {% set note_action_items = note[4] %}
+          {% set note_updated_grit = none %}
+          {% set note_parenting_class_completed = none %}
+          {% set note_warrants_or_fines_paid = none %}
           {% set note_created_at = note[5] %}
           {% set note_services = note[6] %}
         {% endif %}
@@ -433,6 +439,27 @@
             <div style="margin-top:14px;">
               <strong>Action Items:</strong><br>
               <div class="case-note-text-block">{{ note_action_items }}</div>
+            </div>
+          {% endif %}
+
+          {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
+            <div style="margin-top:14px;">
+              <strong>Structured Progress:</strong>
+              <span style="margin-left:10px;">
+                {% if note_updated_grit is not none %}
+                  Grit: {{ note_updated_grit }}
+                {% endif %}
+
+                {% if note_parenting_class_completed is not none %}
+                  {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+                  Parenting: {{ "Yes" if note_parenting_class_completed else "No" }}
+                {% endif %}
+
+                {% if note_warrants_or_fines_paid is not none %}
+                  {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+                  Warrants: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
+                {% endif %}
+              </span>
             </div>
           {% endif %}
 
