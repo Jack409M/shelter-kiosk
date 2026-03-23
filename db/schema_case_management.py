@@ -26,6 +26,9 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             notes TEXT,
             progress_notes TEXT,
             action_items TEXT,
+            updated_grit INTEGER,
+            parenting_class_completed INTEGER,
+            warrants_or_fines_paid INTEGER,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
@@ -42,6 +45,9 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             notes TEXT,
             progress_notes TEXT,
             action_items TEXT,
+            updated_grit INTEGER,
+            parenting_class_completed INTEGER,
+            warrants_or_fines_paid INTEGER,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -201,6 +207,20 @@ def ensure_assessment_drafts_table(kind: str) -> None:
         )
         """
     )
+
+
+def ensure_case_manager_updates_columns() -> None:
+    statements = [
+        "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS updated_grit INTEGER",
+        "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS parenting_class_completed INTEGER",
+        "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS warrants_or_fines_paid INTEGER",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
 
 
 def ensure_intake_drafts_columns() -> None:
@@ -515,6 +535,7 @@ def ensure_tables(kind: str) -> None:
     ensure_client_services_table(kind)
     ensure_intake_drafts_table(kind)
     ensure_assessment_drafts_table(kind)
+    ensure_case_manager_updates_columns()
     ensure_intake_drafts_columns()
     ensure_assessment_drafts_columns()
     ensure_client_services_columns()  # ✅ NEW
