@@ -33,6 +33,9 @@ def _save_assessment_draft(
     payload = json.dumps(form_data, ensure_ascii=False)
     now = utcnow_iso()
 
+    # assessment_drafts removed under one-intake architecture
+    return int(draft_id or 0)
+
     if g.get("db_kind") == "pg":
         if draft_id is not None:
             row = db_fetchone(
@@ -151,6 +154,10 @@ def _save_assessment_draft(
 
 def _load_assessment_draft(current_shelter: str, draft_id: int) -> dict[str, Any] | None:
     ph = placeholder()
+
+    # assessment_drafts removed under one-intake architecture
+    return None
+
     row = db_fetchone(
         f"""
         SELECT
@@ -185,6 +192,9 @@ def _load_assessment_draft(current_shelter: str, draft_id: int) -> dict[str, Any
 
 def _complete_assessment_draft(draft_id: int) -> None:
     ph = placeholder()
+
+    # assessment_drafts removed under one-intake architecture
+    return None
 
     db_execute(
         f"""
@@ -288,6 +298,9 @@ def _find_active_enrollment_id(resident_id: int, shelter: str) -> int | None:
 def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) -> None:
     ph = placeholder()
     now = utcnow_iso()
+
+    # intake_assessments write removed under one-intake architecture
+    return None
 
     existing = db_fetchone(
         f"""
@@ -499,14 +512,13 @@ def submit_assessment_view():
     }
 
     if action == "save_draft":
-        saved_draft_id = _save_assessment_draft(
-            current_shelter=shelter,
+        flash("Assessment drafts are no longer supported. Use intake drafts instead.", "error")
+        return render_template(
+            "case_management/assessment.html",
+            shelter=shelter,
+            residents=residents,
             form_data=form_data_for_template,
-            resident_id=resident_id,
-            draft_id=draft_id,
         )
-        flash("Assessment draft saved.", "success")
-        return redirect(url_for("case_management.assessment_form", draft_id=saved_draft_id))
 
     enrollment_id = _find_active_enrollment_id(resident_id, shelter)
     if enrollment_id is None:
@@ -518,10 +530,10 @@ def submit_assessment_view():
             form_data=form_data_for_template,
         )
 
-    _upsert_assessment_for_enrollment(enrollment_id, form_data)
-
-    if draft_id is not None:
-        _complete_assessment_draft(draft_id)
-
-    flash("Assessment finalized successfully.", "success")
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+    flash("Assessment finalization has been moved to the intake process.", "error")
+    return render_template(
+        "case_management/assessment.html",
+        shelter=shelter,
+        residents=residents,
+        form_data=form_data_for_template,
+    )
