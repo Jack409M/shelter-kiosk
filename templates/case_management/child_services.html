@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>Child Services</h1>
+
+<div class="card">
+  <form method="post">
+
+    <label><strong>Service Type</strong></label>
+    <select name="service_type">
+      <option value="counseling">Counseling</option>
+      <option value="medical">Medical</option>
+      <option value="dental">Dental</option>
+      <option value="vision">Vision</option>
+      <option value="education">Education Support</option>
+      <option value="daycare">Daycare</option>
+      <option value="transportation">Transportation</option>
+      <option value="basic_needs">Basic Needs</option>
+      <option value="other">Other</option>
+    </select>
+
+    <label><strong>Outcome</strong></label>
+    <select name="outcome">
+      <option value="completed">Completed</option>
+      <option value="in_progress">In Progress</option>
+      <option value="referred">Referred</option>
+      <option value="declined">Declined</option>
+      <option value="unknown">Unknown</option>
+    </select>
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes"></textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Service</button>
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}
