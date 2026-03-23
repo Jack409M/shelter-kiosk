@@ -151,11 +151,33 @@ def resident_case_view(resident_id: int):
     appointments = []
     notes = []
     services = []
+    children = []
     intake_assessment = None
     exit_assessment = None
     grit_difference = None
     followup_6_month = None
     followup_1_year = None
+
+    try:
+        children = db_fetchall(
+            f"""
+            SELECT
+                id,
+                resident_id,
+                child_name,
+                birth_year,
+                relationship,
+                living_status,
+                is_active
+            FROM resident_children
+            WHERE resident_id = {ph}
+              AND is_active = 1
+            ORDER BY id ASC
+            """,
+            (resident_id,),
+        )
+    except Exception:
+        children = []
 
     if enrollment_id:
         intake_assessment = db_fetchone(
@@ -328,6 +350,7 @@ def resident_case_view(resident_id: int):
         appointments=appointments,
         notes=notes,
         services=services,
+        children=children,
         followup_6_month=followup_6_month,
         followup_1_year=followup_1_year,
     )
