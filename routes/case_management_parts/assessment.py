@@ -411,6 +411,8 @@ def _upsert_assessment_for_enrollment(enrollment_id: int, data: dict[str, Any]) 
 # ============================================================================
 
 def assessment_form_view():
+    return redirect(url_for("case_management.intake_index"))
+
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
@@ -447,6 +449,8 @@ def assessment_form_view():
 
 
 def submit_assessment_view():
+    return redirect(url_for("case_management.intake_index"))
+
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
