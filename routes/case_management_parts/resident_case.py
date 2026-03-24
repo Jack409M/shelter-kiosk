@@ -171,7 +171,7 @@ def resident_case_view(resident_id: int):
                 is_active
             FROM resident_children
             WHERE resident_id = {ph}
-              AND is_active = 1
+              AND is_active = TRUE
             ORDER BY id ASC
             """,
             (resident_id,),
