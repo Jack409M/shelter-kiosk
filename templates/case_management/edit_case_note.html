@@ -97,6 +97,10 @@
 
     <h3>Services Provided</h3>
 
+    <p style="color:#666; font-size:0.9em;">
+      Uncheck a service to remove it from this record.
+    </p>
+
     <label><strong>Service Date</strong></label>
     <input type="date" name="service_date" value="{{ meeting_date or '' }}">
 
@@ -104,8 +108,28 @@
       <div>
         <label style="display:flex; gap:6px; margin:0;">
           <input type="checkbox" name="service_type" value="Counseling" {% if "Counseling" in selected_services %}checked{% endif %} style="margin-top:3px;">
-          <span>Counseling</span>
+          <span>
+            Counseling
+            {% if "Counseling" in selected_services %}
+              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
+            {% endif %}
+          </span>
         </label>
+        <input
+          type="number"
+          name="quantity_Counseling"
+          min="0"
+          style="width:80px; margin-top:4px;"
+          placeholder="Qty"
+          value="{{ service_quantity_map.get('Counseling', '') }}"
+        >
+        <input
+          type="text"
+          name="unit_Counseling"
+          style="width:100%; margin-top:4px;"
+          placeholder="sessions"
+          value="{{ service_unit_map.get('Counseling', '') }}"
+        >
         <textarea
           name="service_notes_Counseling"
           rows="2"
@@ -117,8 +141,28 @@
       <div>
         <label style="display:flex; gap:6px; margin:0;">
           <input type="checkbox" name="service_type" value="Dental" {% if "Dental" in selected_services %}checked{% endif %} style="margin-top:3px;">
-          <span>Dental</span>
+          <span>
+            Dental
+            {% if "Dental" in selected_services %}
+              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
+            {% endif %}
+          </span>
         </label>
+        <input
+          type="number"
+          name="quantity_Dental"
+          min="0"
+          style="width:80px; margin-top:4px;"
+          placeholder="Qty"
+          value="{{ service_quantity_map.get('Dental', '') }}"
+        >
+        <input
+          type="text"
+          name="unit_Dental"
+          style="width:100%; margin-top:4px;"
+          placeholder="visits"
+          value="{{ service_unit_map.get('Dental', '') }}"
+        >
         <textarea
           name="service_notes_Dental"
           rows="2"
@@ -130,8 +174,28 @@
       <div>
         <label style="display:flex; gap:6px; margin:0;">
           <input type="checkbox" name="service_type" value="Vision" {% if "Vision" in selected_services %}checked{% endif %} style="margin-top:3px;">
-          <span>Vision</span>
+          <span>
+            Vision
+            {% if "Vision" in selected_services %}
+              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
+            {% endif %}
+          </span>
         </label>
+        <input
+          type="number"
+          name="quantity_Vision"
+          min="0"
+          style="width:80px; margin-top:4px;"
+          placeholder="Qty"
+          value="{{ service_quantity_map.get('Vision', '') }}"
+        >
+        <input
+          type="text"
+          name="unit_Vision"
+          style="width:100%; margin-top:4px;"
+          placeholder="visits"
+          value="{{ service_unit_map.get('Vision', '') }}"
+        >
         <textarea
           name="service_notes_Vision"
           rows="2"
@@ -143,8 +207,28 @@
       <div>
         <label style="display:flex; gap:6px; margin:0;">
           <input type="checkbox" name="service_type" value="Parenting Support" {% if "Parenting Support" in selected_services %}checked{% endif %} style="margin-top:3px;">
-          <span>Parenting Support</span>
+          <span>
+            Parenting Support
+            {% if "Parenting Support" in selected_services %}
+              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
+            {% endif %}
+          </span>
         </label>
+        <input
+          type="number"
+          name="quantity_Parenting Support"
+          min="0"
+          style="width:80px; margin-top:4px;"
+          placeholder="Qty"
+          value="{{ service_quantity_map.get('Parenting Support', '') }}"
+        >
+        <input
+          type="text"
+          name="unit_Parenting Support"
+          style="width:100%; margin-top:4px;"
+          placeholder="sessions"
+          value="{{ service_unit_map.get('Parenting Support', '') }}"
+        >
         <textarea
           name="service_notes_Parenting Support"
           rows="2"
@@ -156,8 +240,28 @@
       <div>
         <label style="display:flex; gap:6px; margin:0;">
           <input type="checkbox" name="service_type" value="Legal Assistance" {% if "Legal Assistance" in selected_services %}checked{% endif %} style="margin-top:3px;">
-          <span>Legal Assistance</span>
+          <span>
+            Legal Assistance
+            {% if "Legal Assistance" in selected_services %}
+              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
+            {% endif %}
+          </span>
         </label>
+        <input
+          type="number"
+          name="quantity_Legal Assistance"
+          min="0"
+          style="width:80px; margin-top:4px;"
+          placeholder="Qty"
+          value="{{ service_quantity_map.get('Legal Assistance', '') }}"
+        >
+        <input
+          type="text"
+          name="unit_Legal Assistance"
+          style="width:100%; margin-top:4px;"
+          placeholder="visits"
+          value="{{ service_unit_map.get('Legal Assistance', '') }}"
+        >
         <textarea
           name="service_notes_Legal Assistance"
           rows="2"
@@ -169,8 +273,28 @@
       <div>
         <label style="display:flex; gap:6px; margin:0;">
           <input type="checkbox" name="service_type" value="Transportation" {% if "Transportation" in selected_services %}checked{% endif %} style="margin-top:3px;">
-          <span>Transportation</span>
+          <span>
+            Transportation
+            {% if "Transportation" in selected_services %}
+              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
+            {% endif %}
+          </span>
         </label>
+        <input
+          type="number"
+          name="quantity_Transportation"
+          min="0"
+          style="width:80px; margin-top:4px;"
+          placeholder="Qty"
+          value="{{ service_quantity_map.get('Transportation', '') }}"
+        >
+        <input
+          type="text"
+          name="unit_Transportation"
+          style="width:100%; margin-top:4px;"
+          placeholder="rides"
+          value="{{ service_unit_map.get('Transportation', '') }}"
+        >
         <textarea
           name="service_notes_Transportation"
           rows="2"
@@ -182,8 +306,28 @@
       <div>
         <label style="display:flex; gap:6px; margin:0;">
           <input type="checkbox" name="service_type" value="Other" {% if "Other" in selected_services %}checked{% endif %} style="margin-top:3px;">
-          <span>Other</span>
+          <span>
+            Other
+            {% if "Other" in selected_services %}
+              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
+            {% endif %}
+          </span>
         </label>
+        <input
+          type="number"
+          name="quantity_Other"
+          min="0"
+          style="width:80px; margin-top:4px;"
+          placeholder="Qty"
+          value="{{ service_quantity_map.get('Other', '') }}"
+        >
+        <input
+          type="text"
+          name="unit_Other"
+          style="width:100%; margin-top:4px;"
+          placeholder="units"
+          value="{{ service_unit_map.get('Other', '') }}"
+        >
         <textarea
           name="service_notes_Other"
           rows="2"
