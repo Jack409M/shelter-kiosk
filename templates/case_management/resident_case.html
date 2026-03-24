@@ -160,8 +160,8 @@
             <tr>
               <td>{{ child_name or "—" }}</td>
               <td>{{ child_birth_year or "—" }}</td>
-              <td>{{ child_relationship or "—" }}</td>
-              <td>{{ child_living_status or "—" }}</td>
+              <td>{{ child.relationship_display or "—" }}</td>
+              <td>{{ child.living_status_display or "—" }}</td>
               <td>
                 <a class="btn btn-sm" href="{{ url_for('case_management.edit_child', child_id=child_id) }}">
                   Edit
@@ -177,7 +177,21 @@
                   <div style="font-size:0.9em; color:#555;">
                     {% for s in child.services %}
                       {% if s is mapping %}
-                        {{ s.service_date }} — {{ s.service_type }} ({{ s.outcome }})<br>
+                        <div>
+                          <strong>{{ s.service_date_display }}</strong> —
+                          {{ s.service_type_display }}
+                          {% if s.quantity_display and s.quantity_display != "—" %}
+                            ({{ s.quantity_display }})
+                          {% endif %}
+                          {% if s.outcome_display and s.outcome_display != "—" %}
+                            — {{ s.outcome_display }}
+                          {% endif %}
+                          {% if s.notes %}
+                            <div style="margin-left:10px; color:#555;">
+                              {{ s.notes }}
+                            </div>
+                          {% endif %}
+                        </div>
                       {% else %}
                         {{ s[3] }} — {{ s[1] }} ({{ s[2] }})<br>
                       {% endif %}
