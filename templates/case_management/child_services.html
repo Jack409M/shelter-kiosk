@@ -41,8 +41,74 @@
     <div style="margin-top:10px;">
       <button type="submit">Save Service</button>
     </div>
-
   </form>
 </div>
+
+{% if services is defined and services %}
+  <div class="card" style="margin-top:12px;">
+    <h2>Recorded Services</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Service Type</th>
+          <th>Quantity</th>
+          <th>Outcome</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in services %}
+          {% if s is mapping %}
+            {% set service_id = s["id"] %}
+            {% set service_date = s["service_date"] %}
+            {% set service_type = s["service_type"] %}
+            {% set quantity = s["quantity"] %}
+            {% set unit = s["unit"] %}
+            {% set outcome = s["outcome"] %}
+            {% set notes = s["notes"] %}
+          {% else %}
+            {% set service_id = s[0] %}
+            {% set service_date = s[1] %}
+            {% set service_type = s[2] %}
+            {% set quantity = s[3] %}
+            {% set unit = s[4] %}
+            {% set outcome = s[5] %}
+            {% set notes = s[6] %}
+          {% endif %}
+
+          <tr>
+            <td>{{ service_date | chi_dt if service_date else "—" }}</td>
+            <td>{{ service_type|replace("_", " ")|title if service_type else "—" }}</td>
+            <td>
+              {% if quantity is not none and unit %}
+                {{ quantity }} {{ unit }}
+              {% elif quantity is not none %}
+                {{ quantity }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ outcome|replace("_", " ")|title if outcome else "—" }}</td>
+            <td>
+              <a class="btn btn-sm" href="{{ url_for('case_management.edit_child_service', service_id=service_id) }}">
+                Edit
+              </a>
+            </td>
+          </tr>
+
+          {% if notes %}
+            <tr>
+              <td colspan="5" style="color:#555; font-size:0.95em;">
+                {{ notes }}
+              </td>
+            </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
 
 {% endblock %}
