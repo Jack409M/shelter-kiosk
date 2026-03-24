@@ -423,6 +423,41 @@ def edit_child_view(child_id: int):
     )
 
 
+def edit_child_service_view(service_id: int):
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+    ph = placeholder()
+
+    service = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_child_id,
+            service_type,
+            outcome,
+            quantity,
+            unit,
+            notes,
+            service_date
+        FROM child_services
+        WHERE id = {ph}
+        """,
+        (service_id,),
+    )
+
+    if not service:
+        flash("Service not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    return render_template(
+        "case_management/edit_child_service.html",
+        service=service,
+    )
+
+
 def child_services_view(child_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
