@@ -305,8 +305,8 @@ def submit_intake_assessment_view():
 
     current_shelter = normalize_shelter_name(session.get("shelter"))
     action = (request.form.get("action") or "review").strip().lower()
-    is_edit_mode = request.form.get("is_edit_mode") == "true"
     resident_id = parse_int(request.form.get("resident_id"))
+    is_edit_mode = request.form.get("is_edit_mode") == "true" or resident_id is not None
     draft_id = parse_int(request.form.get("draft_id"))
     review_passed = _form_review_passed(request.form)
 
