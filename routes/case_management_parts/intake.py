@@ -421,3 +421,98 @@ def edit_child_view(child_id: int):
         "case_management/edit_child.html",
         child=child,
     )
+
+
+def child_services_view(child_id: int):
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+    ph = placeholder()
+
+    child = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_id
+        FROM resident_children
+        WHERE id = {ph}
+        """,
+        (child_id,),
+    )
+
+    if not child:
+        flash("Child not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
+
+    enrollment = db_fetchone(
+        f"""
+        SELECT
+            id
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+    if not enrollment:
+        flash("No active enrollment found.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+
+    if request.method == "POST":
+        service_type = clean(request.form.get("service_type"))
+        outcome = clean(request.form.get("outcome"))
+        notes = clean(request.form.get("notes"))
+        now = datetime.utcnow().isoformat()
+
+        db_execute(
+            f"""
+            INSERT INTO child_services
+            (
+                resident_child_id,
+                enrollment_id,
+                service_date,
+                service_type,
+                outcome,
+                notes,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph},
+                {ph}
+            )
+            """,
+            (
+                child_id,
+                enrollment_id,
+                now,
+                service_type,
+                outcome,
+                notes,
+                now,
+                now,
+            ),
+        )
+
+        flash("Child service added.", "success")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    return render_template(
+        "case_management/child_services.html",
+        child_id=child_id,
+    )
