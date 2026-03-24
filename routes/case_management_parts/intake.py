@@ -128,6 +128,46 @@ def _form_review_passed(form_source: Any) -> bool:
     return value in {"1", "true", "yes", "on"}
 
 
+def _normalize_yes_no_value(value: Any) -> str:
+    normalized = clean(value).lower()
+
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return "yes"
+
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return "no"
+
+    return clean(value)
+
+
+def _normalize_yes_no_fields(form_data: dict[str, Any]) -> dict[str, Any]:
+    yes_no_fields = [
+        "veteran",
+        "pregnant",
+        "dental_need",
+        "vision_need",
+        "sexual_survivor",
+        "domestic_violence_history",
+        "human_trafficking_history",
+        "drug_court",
+        "warrants_unpaid",
+        "mental_health_need",
+        "medical_need",
+        "mh_exam_completed",
+        "med_exam_completed",
+        "substance_use_need",
+        "parenting_class_needed",
+        "felony_history",
+        "probation_parole",
+    ]
+
+    for field_name in yes_no_fields:
+        if field_name in form_data:
+            form_data[field_name] = _normalize_yes_no_value(form_data.get(field_name))
+
+    return form_data
+
+
 def intake_form_view():
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -232,6 +272,7 @@ def intake_edit_view(resident_id: int):
     if family:
         form_data.update(dict(family))
 
+    form_data = _normalize_yes_no_fields(form_data)
     form_data["review_passed"] = "1"
 
     return render_template(
