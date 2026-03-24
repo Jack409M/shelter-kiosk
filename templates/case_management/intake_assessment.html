@@ -278,8 +278,10 @@
   }
 
   .toggle-inputs {
-    display: grid;
-    gap: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
   }
 
   .toggle-inputs input[type="radio"] {
@@ -304,18 +306,32 @@
     cursor: pointer;
     user-select: none;
     width: fit-content;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+  }
+
+  .toggle-inputs input[type="radio"]:checked + .toggle-chip {
+    box-shadow: 0 0 0 2px rgba(31, 94, 255, 0.18);
+    border-width: 2px;
+    transform: translateY(-1px);
   }
 
   .toggle-inputs input[type="radio"]:checked + .toggle-chip.toggle-yes {
     background: #dcfce7;
-    border-color: #86efac;
+    border-color: #16a34a;
     color: #166534;
   }
 
   .toggle-inputs input[type="radio"]:checked + .toggle-chip.toggle-no {
     background: #fee2e2;
-    border-color: #fca5a5;
+    border-color: #dc2626;
     color: #991b1b;
+  }
+
+  .field select.has-value {
+    border-color: #1f5eff;
+    background: #f8fbff;
+    box-shadow: 0 0 0 2px rgba(31, 94, 255, 0.08);
+    font-weight: 600;
   }
 
   .match-locked {
@@ -602,7 +618,7 @@
                   <div class="field-grid">
                     <div class="field span-2 field-max-10">
                       <label for="gender">Gender</label>
-                      <select id="gender" name="gender">
+                      <select id="gender" name="gender" class="{% if form_data.get('gender', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         <option value="m" {% if form_data.get('gender', '') == 'm' %}selected{% endif %}>M</option>
                         <option value="f" {% if form_data.get('gender', '') == 'f' %}selected{% endif %}>F</option>
@@ -622,8 +638,7 @@
 
                     <div class="field span-3 field-max-15">
                       <label for="shelter">Program Shelter</label>
-                      <select id="shelter" name="shelter">
-                        {% set selected_shelter = form_data.get('shelter', current_shelter) %}
+                      <select id="shelter" name="shelter" class="{% set selected_shelter = form_data.get('shelter', current_shelter) %}{% if selected_shelter %}has-value{% endif %}">
                         {% for option in shelters %}
                           <option value="{{ option.value }}" {% if option.value == selected_shelter %}selected{% endif %}>
                             {{ option.label }}
@@ -683,7 +698,7 @@
                     <div class="field span-3 field-max-15">
                       <label for="program_status">Program Status</label>
                       {% set selected_program_status = form_data.get('program_status', 'active') %}
-                      <select id="program_status" name="program_status">
+                      <select id="program_status" name="program_status" class="{% if selected_program_status %}has-value{% endif %}">
                         <option value="active" {% if selected_program_status == 'active' %}selected{% endif %}>Active</option>
                         <option value="pending" {% if selected_program_status == 'pending' %}selected{% endif %}>Pending</option>
                         <option value="waitlisted" {% if selected_program_status == 'waitlisted' %}selected{% endif %}>Waitlisted</option>
@@ -692,7 +707,7 @@
 
                     <div class="field span-3 field-max-20">
                       <label for="prior_living">Where Was She Staying Before Entry</label>
-                      <select id="prior_living" name="prior_living">
+                      <select id="prior_living" name="prior_living" class="{% if form_data.get('prior_living', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         {% for option in prior_living_options %}
                           <option value="{{ option.value }}" {% if form_data.get('prior_living', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -712,7 +727,7 @@
 
                     <div class="field span-3 field-max-10">
                       <label for="drug_of_choice">Drug of Choice</label>
-                      <select id="drug_of_choice" name="drug_of_choice">
+                      <select id="drug_of_choice" name="drug_of_choice" class="{% if form_data.get('drug_of_choice', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         {% for option in drug_options %}
                           <option value="{{ option.value }}" {% if form_data.get('drug_of_choice', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -727,7 +742,7 @@
 
                     <div class="field span-3 field-max-15">
                       <label for="education_at_entry">Education at Entry</label>
-                      <select id="education_at_entry" name="education_at_entry">
+                      <select id="education_at_entry" name="education_at_entry" class="{% if form_data.get('education_at_entry', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         {% for option in education_options %}
                           <option value="{{ option.value }}" {% if form_data.get('education_at_entry', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -737,7 +752,7 @@
 
                     <div class="field span-3 field-max-20">
                       <label for="disability">Disability Type</label>
-                      <select id="disability" name="disability">
+                      <select id="disability" name="disability" class="{% if form_data.get('disability', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         <option value="Visual" {% if form_data.get('disability') == 'Visual' %}selected{% endif %}>Visual</option>
                         <option value="Deaf" {% if form_data.get('disability') == 'Deaf' %}selected{% endif %}>Deaf</option>
@@ -762,7 +777,7 @@
 
                     <div class="field span-4">
                       <label for="length_of_time_in_amarillo">Length of Time in Amarillo</label>
-                      <select id="length_of_time_in_amarillo" name="length_of_time_in_amarillo">
+                      <select id="length_of_time_in_amarillo" name="length_of_time_in_amarillo" class="{% if form_data.get('length_of_time_in_amarillo', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         {% for option in amarillo_length_options %}
                           <option value="{{ option.value }}" {% if form_data.get('length_of_time_in_amarillo', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -772,7 +787,7 @@
 
                     <div class="field span-2 field-max-10">
                       <label for="marital_status">Marital Status</label>
-                      <select id="marital_status" name="marital_status">
+                      <select id="marital_status" name="marital_status" class="{% if form_data.get('marital_status', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         {% for option in marital_status_options %}
                           <option value="{{ option.value }}" {% if form_data.get('marital_status', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -797,7 +812,7 @@
                   <div class="field-grid">
                     <div class="field span-3 field-max-20">
                       <label for="race">Race</label>
-                      <select id="race" name="race">
+                      <select id="race" name="race" class="{% if form_data.get('race', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         {% for option in race_options %}
                           <option value="{{ option.value }}" {% if form_data.get('race', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -807,7 +822,7 @@
 
                     <div class="field span-3 field-max-15">
                       <label for="ethnicity">Ethnicity</label>
-                      <select id="ethnicity" name="ethnicity">
+                      <select id="ethnicity" name="ethnicity" class="{% if form_data.get('ethnicity', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         {% for option in ethnicity_options %}
                           <option value="{{ option.value }}" {% if form_data.get('ethnicity', '') == option.value %}selected{% endif %}>{{ option.label }}</option>
@@ -860,7 +875,7 @@
 
                     <div class="field span-4 field-max-20">
                       <label for="employment_status">Employment Status</label>
-                      <select id="employment_status" name="employment_status">
+                      <select id="employment_status" name="employment_status" class="{% if form_data.get('employment_status', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         <option value="employed_full_time" {% if form_data.get('employment_status', '') == 'employed_full_time' %}selected{% endif %}>Employed Full Time</option>
                         <option value="employed_part_time" {% if form_data.get('employment_status', '') == 'employed_part_time' %}selected{% endif %}>Employed Part Time</option>
@@ -872,7 +887,7 @@
 
                     <div class="field span-4 field-max-15">
                       <label for="id_documents_status">ID Documents Status</label>
-                      <select id="id_documents_status" name="id_documents_status">
+                      <select id="id_documents_status" name="id_documents_status" class="{% if form_data.get('id_documents_status', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         <option value="has_all" {% if form_data.get('id_documents_status', '') == 'has_all' %}selected{% endif %}>Has All</option>
                         <option value="missing_some" {% if form_data.get('id_documents_status', '') == 'missing_some' %}selected{% endif %}>Missing Some</option>
@@ -1028,7 +1043,7 @@
 
                     <div class="field span-2 field-max-10">
                       <label for="dwc_level_today">DWC Level Today</label>
-                      <select id="dwc_level_today" name="dwc_level_today">
+                      <select id="dwc_level_today" name="dwc_level_today" class="{% if form_data.get('dwc_level_today', '') %}has-value{% endif %}">
                         <option value="">Select</option>
                         {% for level in ["1", "2", "3", "4", "5", "6", "7", "8", "9", "E"] %}
                           <option value="{{ level }}" {% if form_data.get('dwc_level_today', '') == level %}selected{% endif %}>{{ level }}</option>
