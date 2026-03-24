@@ -68,6 +68,7 @@ from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.helpers import yes_no_to_int
 from routes.case_management_parts.index import index_view
 from routes.case_management_parts.index import intake_index_view
+from routes.case_management_parts.intake import child_services_view
 from routes.case_management_parts.intake import edit_child_view
 from routes.case_management_parts.intake import family_intake_view
 from routes.case_management_parts.intake import intake_form_view
@@ -191,6 +192,13 @@ def family_intake(resident_id: int):
 @require_shelter
 def edit_child(child_id: int):
     return edit_child_view(child_id)
+
+
+@case_management.route("/child/<int:child_id>/services", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def child_services(child_id: int):
+    return child_services_view(child_id)
 
 
 # ============================================================================
