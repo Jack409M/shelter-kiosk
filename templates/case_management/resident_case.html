@@ -142,12 +142,17 @@
     }
 
     .notebook-tab-btn.is-active {
-     background: #1e3a8a !important;   /* dark blue */
-     color: #ffffff !important;       /* white text */
-     border-color: #1e3a8a !important;
-     box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.25);
-     font-weight: 700;
-    }
+  background: #1e3a8a !important;
+  border-color: #1e3a8a !important;
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.25);
+  font-weight: 700;
+}
+
+.notebook-tab-btn.is-active,
+.notebook-tab-btn.is-active *,
+.notebook-tab-btn.is-active span {
+  color: #ffffff !important;
+}
 
     @media print {
       body {
