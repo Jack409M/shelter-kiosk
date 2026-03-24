@@ -255,6 +255,8 @@ def submit_intake_assessment_view():
 
     current_shelter = normalize_shelter_name(session.get("shelter"))
     action = (request.form.get("action") or "review").strip().lower()
+    is_edit_mode = request.form.get("is_edit_mode") == "true"
+    resident_id = parse_int(request.form.get("resident_id"))
     draft_id = parse_int(request.form.get("draft_id"))
     review_passed = _form_review_passed(request.form)
 
@@ -270,6 +272,8 @@ def submit_intake_assessment_view():
                     current_shelter=current_shelter,
                     form_data=request.form.to_dict(flat=True),
                     review_passed=review_passed,
+                    is_edit_mode=is_edit_mode,
+                    resident_id=resident_id,
                 ),
             )
 
@@ -294,6 +298,8 @@ def submit_intake_assessment_view():
                 current_shelter=current_shelter,
                 form_data=request.form.to_dict(flat=True),
                 review_passed=review_passed,
+                is_edit_mode=is_edit_mode,
+                resident_id=resident_id,
             ),
         )
 
@@ -363,8 +369,81 @@ def submit_intake_assessment_view():
                 current_shelter=current_shelter,
                 form_data=request.form.to_dict(flat=True),
                 review_passed=False,
+                is_edit_mode=is_edit_mode,
+                resident_id=resident_id,
             ),
         )
+
+    if is_edit_mode and resident_id:
+        ph = placeholder()
+
+        enrollment = db_fetchone(
+            f"""
+            SELECT id
+            FROM program_enrollments
+            WHERE resident_id = {ph}
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (resident_id,),
+        )
+
+        if not enrollment:
+            flash("No enrollment found for update.", "error")
+            return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+        enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+        now = datetime.utcnow().isoformat()
+
+        db_execute(
+            f"""
+            UPDATE residents
+            SET
+                first_name = {ph},
+                last_name = {ph},
+                birth_year = {ph},
+                phone = {ph},
+                email = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                data.get("first_name"),
+                data.get("last_name"),
+                data.get("birth_year"),
+                data.get("phone"),
+                data.get("email"),
+                now,
+                resident_id,
+            ),
+        )
+
+        db_execute(
+            f"""
+            UPDATE intake_assessments
+            SET updated_at = {ph}
+            WHERE enrollment_id = {ph}
+            """,
+            (
+                now,
+                enrollment_id,
+            ),
+        )
+
+        db_execute(
+            f"""
+            UPDATE family_snapshots
+            SET updated_at = {ph}
+            WHERE enrollment_id = {ph}
+            """,
+            (
+                now,
+                enrollment_id,
+            ),
+        )
+
+        flash("Intake updated successfully.", "success")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     resident_id, resident_identifier, resident_code = _insert_resident(data, current_shelter)
     enrollment_id = _insert_program_enrollment(resident_id, data, current_shelter)
