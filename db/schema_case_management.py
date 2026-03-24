@@ -122,6 +122,8 @@ def ensure_client_services_table(kind: str) -> None:
             case_manager_update_id INTEGER,
             service_type TEXT NOT NULL,
             service_date TEXT NOT NULL,
+            quantity INTEGER,
+            unit TEXT,
             notes TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
@@ -138,6 +140,8 @@ def ensure_client_services_table(kind: str) -> None:
             case_manager_update_id INTEGER REFERENCES case_manager_updates(id),
             service_type TEXT NOT NULL,
             service_date TEXT NOT NULL,
+            quantity INTEGER,
+            unit TEXT,
             notes TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
@@ -159,6 +163,8 @@ def ensure_child_services_table(kind: str) -> None:
             service_date TEXT,
             service_type TEXT,
             outcome TEXT,
+            quantity INTEGER,
+            unit TEXT,
             notes TEXT,
             created_at TEXT,
             updated_at TEXT,
@@ -176,6 +182,8 @@ def ensure_child_services_table(kind: str) -> None:
             service_date TEXT,
             service_type TEXT,
             outcome TEXT,
+            quantity INTEGER,
+            unit TEXT,
             notes TEXT,
             created_at TEXT,
             updated_at TEXT
@@ -294,6 +302,21 @@ def ensure_intake_drafts_columns() -> None:
 def ensure_client_services_columns() -> None:
     statements = [
         "ALTER TABLE client_services ADD COLUMN IF NOT EXISTS case_manager_update_id INTEGER",
+        "ALTER TABLE client_services ADD COLUMN IF NOT EXISTS quantity INTEGER",
+        "ALTER TABLE client_services ADD COLUMN IF NOT EXISTS unit TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_child_services_columns() -> None:
+    statements = [
+        "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS quantity INTEGER",
+        "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS unit TEXT",
     ]
 
     for statement in statements:
@@ -574,4 +597,5 @@ def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_columns()
     ensure_intake_drafts_columns()
     ensure_client_services_columns()
+    ensure_child_services_columns()
     ensure_indexes()
