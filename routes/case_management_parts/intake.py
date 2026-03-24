@@ -469,6 +469,8 @@ def child_services_view(child_id: int):
     if request.method == "POST":
         service_type = clean(request.form.get("service_type"))
         outcome = clean(request.form.get("outcome"))
+        quantity = parse_int(request.form.get("quantity"))
+        unit = clean(request.form.get("unit"))
         notes = clean(request.form.get("notes"))
         now = datetime.utcnow().isoformat()
 
@@ -481,12 +483,16 @@ def child_services_view(child_id: int):
                 service_date,
                 service_type,
                 outcome,
+                quantity,
+                unit,
                 notes,
                 created_at,
                 updated_at
             )
             VALUES
             (
+                {ph},
+                {ph},
                 {ph},
                 {ph},
                 {ph},
@@ -503,6 +509,8 @@ def child_services_view(child_id: int):
                 now,
                 service_type,
                 outcome,
+                quantity,
+                unit,
                 notes,
                 now,
                 now,
