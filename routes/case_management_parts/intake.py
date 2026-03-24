@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import abort, flash, redirect, render_template, request, session, url_for
 
 from core.constants import EDUCATION_LEVEL_OPTIONS
 from core.db import db_execute, db_fetchall, db_fetchone
@@ -29,11 +29,15 @@ def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
     review_passed: bool = False,
+    is_edit_mode: bool = False,
+    resident_id: int | None = None,
 ) -> dict[str, Any]:
     return {
         "current_shelter": current_shelter,
         "form_data": form_data or {},
         "review_passed": review_passed,
+        "is_edit_mode": is_edit_mode,
+        "resident_id": resident_id,
         "shelters": [
             {"value": "abba", "label": "Abba House"},
             {"value": "haven", "label": "Haven House"},
@@ -150,6 +154,94 @@ def intake_form_view():
             current_shelter=current_shelter,
             form_data=form_data,
             review_passed=review_passed,
+        ),
+    )
+
+
+def intake_edit_view(resident_id: int):
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+    ph = placeholder()
+
+    current_shelter = normalize_shelter_name(session.get("shelter"))
+
+    resident = db_fetchone(
+        f"""
+        SELECT *
+        FROM residents
+        WHERE id = {ph}
+        """,
+        (resident_id,),
+    )
+
+    if not resident:
+        abort(404)
+
+    enrollment = db_fetchone(
+        f"""
+        SELECT *
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+    if not enrollment:
+        abort(404)
+
+    enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+
+    intake = db_fetchone(
+        f"""
+        SELECT *
+        FROM intake_assessments
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    family = db_fetchone(
+        f"""
+        SELECT *
+        FROM family_snapshots
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    form_data: dict[str, Any] = {}
+
+    if resident:
+        form_data.update(dict(resident))
+
+    if enrollment:
+        form_data.update(dict(enrollment))
+
+    if intake:
+        form_data.update(dict(intake))
+
+    if family:
+        form_data.update(dict(family))
+
+    form_data["review_passed"] = "1"
+
+    return render_template(
+        "case_management/intake_assessment.html",
+        **_intake_template_context(
+            current_shelter=current_shelter,
+            form_data=form_data,
+            review_passed=True,
+            is_edit_mode=True,
+            resident_id=resident_id,
         ),
     )
 
