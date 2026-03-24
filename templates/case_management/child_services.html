@@ -55,13 +55,11 @@
           <th>Service Type</th>
           <th>Quantity</th>
           <th>Outcome</th>
-          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for s in services %}
           {% if s is mapping %}
-            {% set service_id = s["id"] %}
             {% set service_date = s["service_date"] %}
             {% set service_type = s["service_type"] %}
             {% set quantity = s["quantity"] %}
@@ -69,7 +67,6 @@
             {% set outcome = s["outcome"] %}
             {% set notes = s["notes"] %}
           {% else %}
-            {% set service_id = s[0] %}
             {% set service_date = s[1] %}
             {% set service_type = s[2] %}
             {% set quantity = s[3] %}
@@ -91,16 +88,11 @@
               {% endif %}
             </td>
             <td>{{ outcome|replace("_", " ")|title if outcome else "—" }}</td>
-            <td>
-              <a class="btn btn-sm" href="{{ url_for('case_management.edit_child_service', service_id=service_id) }}">
-                Edit
-              </a>
-            </td>
           </tr>
 
           {% if notes %}
             <tr>
-              <td colspan="5" style="color:#555; font-size:0.95em;">
+              <td colspan="4" style="color:#555; font-size:0.95em;">
                 {{ notes }}
               </td>
             </tr>
