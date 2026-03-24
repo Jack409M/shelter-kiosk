@@ -55,4 +55,76 @@
   {% endif %}
 </div>
 
+<div class="card">
+  <h2>Pending Duplicate Reviews{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+  <p>Review possible duplicate residents before deciding whether to use the existing resident or create a new one.</p>
+
+  {% if duplicate_review_drafts %}
+    <table class="table-compact">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Date Entered</th>
+          <th>Last Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in duplicate_review_drafts %}
+          {% set review_url = safe_url_for('case_management.intake_duplicate_review', draft_id=d.id) %}
+          <tr>
+            <td>{{ d.resident_name or "Unnamed duplicate review" }}</td>
+            <td>{{ d.entry_date or "—" }}</td>
+            <td>{{ d.updated_at or "—" }}</td>
+            <td>
+              {% if review_url %}
+                <a class="btn" href="{{ review_url }}">Review</a>
+              {% else %}
+                <span>Unavailable</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No duplicate reviews pending.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>Resume Assessment Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+  <p>Continue an assessment draft that has already been started but not finalized.</p>
+
+  {% if assessment_drafts %}
+    <table class="table-compact">
+      <thead>
+        <tr>
+          <th>Resident ID</th>
+          <th>Last Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in assessment_drafts %}
+          {% set assessment_url = safe_url_for('case_management.assessment_form', draft_id=d.id) %}
+          <tr>
+            <td>{{ d.resident_id or "—" }}</td>
+            <td>{{ d.updated_at or "—" }}</td>
+            <td>
+              {% if assessment_url %}
+                <a class="btn" href="{{ assessment_url }}">Resume</a>
+              {% else %}
+                <span>Unavailable</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No assessment drafts in progress.</p>
+  {% endif %}
+</div>
+
 {% endblock %}
