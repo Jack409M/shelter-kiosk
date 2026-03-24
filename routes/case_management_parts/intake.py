@@ -482,7 +482,7 @@ def submit_intake_assessment_view():
                 email = {ph},
                 gender = {ph},
                 city = {ph},
-                last_zipcode_residence = {ph},
+                zipcode = {ph},
                 updated_at = {ph}
             WHERE id = {ph}
             """,
@@ -494,7 +494,7 @@ def submit_intake_assessment_view():
                 data.get("email"),
                 data.get("gender"),
                 data.get("city"),
-                data.get("last_zipcode_residence"),
+                data.get("zipcode"),
                 now,
                 resident_id,
             ),
