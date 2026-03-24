@@ -193,6 +193,7 @@ def _apply_intake_edit_aliases(form_data: dict[str, Any]) -> dict[str, Any]:
         "medical_need": "medical_need_at_entry",
         "substance_use_need": "substance_use_need_at_entry",
         "id_documents_status": "id_documents_status_at_entry",
+        "last_zipcode_residence": "last_zipcode_of_residence",
     }
 
     for form_key, db_key in field_aliases.items():
@@ -482,7 +483,7 @@ def submit_intake_assessment_view():
                 email = {ph},
                 gender = {ph},
                 city = {ph},
-                zipcode = {ph},
+                last_zipcode_of_residence = {ph},
                 updated_at = {ph}
             WHERE id = {ph}
             """,
@@ -494,7 +495,7 @@ def submit_intake_assessment_view():
                 data.get("email"),
                 data.get("gender"),
                 data.get("city"),
-                data.get("zipcode"),
+                data.get("last_zipcode_residence"),
                 now,
                 resident_id,
             ),
