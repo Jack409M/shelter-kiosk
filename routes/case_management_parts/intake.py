@@ -6,7 +6,7 @@ from typing import Any
 from flask import flash, redirect, render_template, request, session, url_for
 
 from core.constants import EDUCATION_LEVEL_OPTIONS
-from core.db import db_execute, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
@@ -518,9 +518,27 @@ def child_services_view(child_id: int):
         )
 
         flash("Child service added.", "success")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return redirect(url_for("case_management.child_services", child_id=child_id))
+
+    services = db_fetchall(
+        f"""
+        SELECT
+            id,
+            service_date,
+            service_type,
+            quantity,
+            unit,
+            outcome,
+            notes
+        FROM child_services
+        WHERE resident_child_id = {ph}
+        ORDER BY service_date DESC, id DESC
+        """,
+        (child_id,),
+    )
 
     return render_template(
         "case_management/child_services.html",
         child_id=child_id,
+        services=services,
     )
