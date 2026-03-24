@@ -49,6 +49,16 @@ def _yes_no_to_int(value: str | None):
     return None
 
 
+def _parse_quantity(value: str | None):
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
 def add_case_note_view(resident_id: int):
     init_db()
 
@@ -166,6 +176,8 @@ def add_case_note_view(resident_id: int):
 
     for service_type in service_types:
         service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
+        quantity = _parse_quantity(request.form.get(f"quantity_{service_type}"))
+        unit = (request.form.get(f"unit_{service_type}") or "").strip()
 
         db_execute(
             f"""
@@ -175,17 +187,21 @@ def add_case_note_view(resident_id: int):
                 case_manager_update_id,
                 service_type,
                 service_date,
+                quantity,
+                unit,
                 notes,
                 created_at,
                 updated_at
             )
-            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
             """,
             (
                 enrollment_id,
                 note_id,
                 service_type,
                 service_date,
+                quantity,
+                unit or None,
                 service_note or None,
                 now,
                 now,
@@ -246,7 +262,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
     if request.method == "GET":
         services = db_fetchall(
             f"""
-            SELECT service_type, notes
+            SELECT service_type, quantity, unit, notes
             FROM client_services
             WHERE case_manager_update_id = {ph}
             """,
@@ -255,12 +271,18 @@ def edit_case_note_view(resident_id: int, update_id: int):
 
         selected_services = []
         service_notes_map = {}
+        service_quantity_map = {}
+        service_unit_map = {}
 
         for s in services:
             st = s["service_type"]
+            qty = s["quantity"]
+            unit = s["unit"]
             sn = s["notes"]
             selected_services.append(st)
             service_notes_map[st] = sn or ""
+            service_quantity_map[st] = qty if qty is not None else ""
+            service_unit_map[st] = unit or ""
 
         return render_template(
             "case_management/edit_case_note.html",
@@ -268,6 +290,8 @@ def edit_case_note_view(resident_id: int, update_id: int):
             note=note,
             selected_services=selected_services,
             service_notes_map=service_notes_map,
+            service_quantity_map=service_quantity_map,
+            service_unit_map=service_unit_map,
         )
 
     meeting_date = (request.form.get("meeting_date") or "").strip()
@@ -325,6 +349,8 @@ def edit_case_note_view(resident_id: int, update_id: int):
 
     for service_type in service_types:
         service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
+        quantity = _parse_quantity(request.form.get(f"quantity_{service_type}"))
+        unit = (request.form.get(f"unit_{service_type}") or "").strip()
 
         db_execute(
             f"""
@@ -334,17 +360,21 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 case_manager_update_id,
                 service_type,
                 service_date,
+                quantity,
+                unit,
                 notes,
                 created_at,
                 updated_at
             )
-            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
             """,
             (
                 note["enrollment_id"],
                 update_id,
                 service_type,
                 service_date,
+                quantity,
+                unit or None,
                 service_note or None,
                 now,
                 now,
