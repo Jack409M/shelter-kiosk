@@ -333,7 +333,7 @@ def family_intake_view(resident_id: int):
                 {ph},
                 {ph},
                 {ph},
-                1,
+                TRUE,
                 {ph},
                 {ph}
             )
