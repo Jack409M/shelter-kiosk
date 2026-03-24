@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+{% if child is mapping %}
+  {% set child_id = child["id"] %}
+  {% set child_name = child["child_name"] %}
+  {% set birth_year = child["birth_year"] %}
+  {% set relationship = child["relationship"] %}
+  {% set living_status = child["living_status"] %}
+{% else %}
+  {% set child_id = child[0] %}
+  {% set child_name = child[2] %}
+  {% set birth_year = child[3] %}
+  {% set relationship = child[4] %}
+  {% set living_status = child[5] %}
+{% endif %}
+
+<h1>Edit Child</h1>
+
+<div class="card">
+  <form method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Child Name</strong></label>
+    <input type="text" name="child_name" value="{{ child_name or '' }}" required>
+
+    <label><strong>Birth Year</strong></label>
+    <input type="number" name="birth_year" value="{{ birth_year or '' }}">
+
+    <label><strong>Relationship</strong></label>
+    <input type="text" name="relationship" value="{{ relationship or '' }}">
+
+    <label><strong>Living Status</strong></label>
+    <select name="living_status">
+      <option value="living_with_mom" {% if living_status == "living_with_mom" %}selected{% endif %}>Living with Mom</option>
+      <option value="not_with_mom" {% if living_status == "not_with_mom" %}selected{% endif %}>Not with Mom</option>
+      <option value="foster_care" {% if living_status == "foster_care" %}selected{% endif %}>Foster Care</option>
+      <option value="kinship_care" {% if living_status == "kinship_care" %}selected{% endif %}>Kinship Care</option>
+      <option value="reunified" {% if living_status == "reunified" %}selected{% endif %}>Reunified</option>
+      <option value="unknown" {% if living_status == "unknown" %}selected{% endif %}>Unknown</option>
+    </select>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
