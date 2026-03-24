@@ -3,6 +3,7 @@ from __future__ import annotations
 from flask import flash, redirect, render_template, session, url_for
 
 from core.db import db_fetchall, db_fetchone
+from core.helpers import fmt_dt
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import normalize_shelter_name
@@ -96,6 +97,58 @@ def _get_latest_followup(enrollment_id: int, followup_type: str):
     }
 
 
+def _display_label(value: str | None) -> str:
+    if not value:
+        return "—"
+    return value.replace("_", " ").strip().title()
+
+
+def _display_quantity_unit(quantity, unit: str | None) -> str:
+    if quantity is None and not unit:
+        return "—"
+    if quantity is None:
+        return _display_label(unit)
+
+    unit_clean = (unit or "").strip()
+    if not unit_clean:
+        return str(quantity)
+
+    return f"{quantity} {unit_clean}"
+
+
+def _normalize_child_service_row(service):
+    if isinstance(service, dict):
+        resident_child_id = service.get("resident_child_id")
+        service_type = service.get("service_type")
+        outcome = service.get("outcome")
+        quantity = service.get("quantity")
+        unit = service.get("unit")
+        notes = service.get("notes")
+        service_date = service.get("service_date")
+    else:
+        resident_child_id = service[0]
+        service_type = service[1]
+        outcome = service[2]
+        quantity = service[3]
+        unit = service[4]
+        notes = service[5]
+        service_date = service[6]
+
+    return {
+        "resident_child_id": resident_child_id,
+        "service_type": service_type,
+        "service_type_display": _display_label(service_type),
+        "outcome": outcome,
+        "outcome_display": _display_label(outcome),
+        "quantity": quantity,
+        "unit": unit,
+        "quantity_display": _display_quantity_unit(quantity, unit),
+        "notes": notes,
+        "service_date": service_date,
+        "service_date_display": fmt_dt(service_date),
+    }
+
+
 def resident_case_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -186,28 +239,28 @@ def resident_case_view(resident_id: int):
 
         if child_ids:
             child_placeholders = ",".join([ph] * len(child_ids))
-            child_services = db_fetchall(
+            child_services_raw = db_fetchall(
                 f"""
                 SELECT
                     resident_child_id,
                     service_type,
                     outcome,
+                    quantity,
+                    unit,
+                    notes,
                     service_date
                 FROM child_services
                 WHERE resident_child_id IN ({child_placeholders})
-                ORDER BY service_date DESC
+                ORDER BY service_date DESC, id DESC
                 """,
                 tuple(child_ids),
             )
+            child_services = [_normalize_child_service_row(service) for service in child_services_raw]
 
         services_by_child = {}
 
         for service in child_services:
-            if isinstance(service, dict):
-                child_id = service["resident_child_id"]
-            else:
-                child_id = service[0]
-
+            child_id = service["resident_child_id"]
             services_by_child.setdefault(child_id, []).append(service)
 
         enriched_children = []
@@ -216,6 +269,8 @@ def resident_case_view(resident_id: int):
             if isinstance(child, dict):
                 child_id = child["id"]
                 child_obj = dict(child)
+                child_obj["relationship_display"] = _display_label(child.get("relationship"))
+                child_obj["living_status_display"] = _display_label(child.get("living_status"))
                 child_obj["services"] = services_by_child.get(child_id, [])
             else:
                 child_id = child[0]
@@ -225,7 +280,9 @@ def resident_case_view(resident_id: int):
                     "child_name": child[2],
                     "birth_year": child[3],
                     "relationship": child[4],
+                    "relationship_display": _display_label(child[4]),
                     "living_status": child[5],
+                    "living_status_display": _display_label(child[5]),
                     "is_active": child[6],
                     "services": services_by_child.get(child_id, []),
                 }
