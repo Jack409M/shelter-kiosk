@@ -487,8 +487,6 @@ def submit_intake_assessment_view():
                 gender = {ph},
                 race = {ph},
                 ethnicity = {ph},
-                city = {ph},
-                last_zipcode_of_residence = {ph},
                 updated_at = {ph}
             WHERE id = {ph}
             """,
@@ -504,8 +502,6 @@ def submit_intake_assessment_view():
                 data.get("gender"),
                 data.get("race"),
                 data.get("ethnicity"),
-                data.get("city"),
-                data.get("last_zipcode_residence"),
                 now,
                 resident_id,
             ),
@@ -515,14 +511,12 @@ def submit_intake_assessment_view():
             f"""
             UPDATE program_enrollments
             SET
-                shelter = {ph},
                 entry_date = {ph},
                 program_status = {ph},
                 updated_at = {ph}
             WHERE id = {ph}
             """,
             (
-                data.get("shelter"),
                 data.get("entry_date"),
                 data.get("program_status"),
                 now,
@@ -545,6 +539,8 @@ def submit_intake_assessment_view():
                 disability = {ph},
                 length_of_time_in_amarillo = {ph},
                 marital_status = {ph},
+                city = {ph},
+                last_zipcode_residence = {ph},
                 entry_notes = {ph},
                 pregnant_at_entry = {ph},
                 dental_need_at_entry = {ph},
@@ -585,6 +581,8 @@ def submit_intake_assessment_view():
                 data.get("disability"),
                 data.get("length_of_time_in_amarillo"),
                 data.get("marital_status"),
+                data.get("city"),
+                data.get("last_zipcode_residence"),
                 data.get("entry_notes"),
                 yes_no_to_int(data.get("pregnant")),
                 yes_no_to_int(data.get("dental_need")),
