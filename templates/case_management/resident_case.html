@@ -87,6 +87,10 @@
     <a class="btn no-print" href="{{ url_for('case_management.index') }}">
       Back to Case List
     </a>
+
+    <a class="btn no-print" href="{{ url_for('case_management.intake_edit', resident_id=resident_id) }}">
+      Edit Intake
+    </a>
   </div>
 
   <div class="card case-header-print">
