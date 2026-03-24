@@ -66,6 +66,21 @@ def intake_index_view():
         (shelter,),
     )
 
+    duplicate_review_drafts = db_fetchall(
+        f"""
+        SELECT
+            id,
+            resident_name,
+            entry_date,
+            updated_at
+        FROM intake_drafts
+        WHERE LOWER(COALESCE(shelter, '')) = {ph}
+          AND status = 'pending_duplicate_review'
+        ORDER BY updated_at DESC, id DESC
+        """,
+        (shelter,),
+    )
+
     assessment_drafts = db_fetchall(
         f"""
         SELECT
@@ -83,6 +98,7 @@ def intake_index_view():
     return render_template(
         "intake_assessment/index.html",
         drafts=drafts,
+        duplicate_review_drafts=duplicate_review_drafts,
         assessment_drafts=assessment_drafts,
         shelter=shelter,
     )
