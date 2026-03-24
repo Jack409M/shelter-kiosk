@@ -2,45 +2,26 @@
 
 {% block content %}
 
-{% if resident is mapping %}
-  {% set resident_id = resident["id"] %}
-  {% set first_name = resident["first_name"] %}
-  {% set last_name = resident["last_name"] %}
-  {% set resident_code = resident["resident_code"] %}
-  {% set shelter = resident["shelter"] %}
-  {% set resident_active = resident["is_active"] %}
-{% else %}
-  {% set resident_id = resident[0] %}
-  {% set first_name = resident[2] %}
-  {% set last_name = resident[3] %}
-  {% set resident_code = resident[4] %}
-  {% set shelter = resident[5] %}
-  {% set resident_active = resident[6] %}
-{% endif %}
+{% set resident_id = resident["id"] %}
+{% set first_name = resident["first_name"] %}
+{% set last_name = resident["last_name"] %}
+{% set resident_code = resident["resident_code"] %}
+{% set shelter = resident["shelter"] %}
+{% set resident_active = resident["is_active"] %}
 
-{% if enrollment is mapping %}
+{% if enrollment %}
   {% set enrollment_program_status = enrollment["program_status"] %}
   {% set enrollment_entry_date = enrollment["entry_date"] %}
   {% set enrollment_exit_date = enrollment["exit_date"] %}
-{% elif enrollment %}
-  {% set enrollment_program_status = enrollment[2] %}
-  {% set enrollment_entry_date = enrollment[3] %}
-  {% set enrollment_exit_date = enrollment[4] %}
 {% else %}
   {% set enrollment_program_status = "" %}
   {% set enrollment_entry_date = "" %}
   {% set enrollment_exit_date = "" %}
 {% endif %}
 
-{% if intake_assessment is mapping %}
-  {% set intake_grit_score = intake_assessment["grit_score"] %}
-{% elif intake_assessment %}
-  {% set intake_grit_score = intake_assessment[0] %}
-{% else %}
-  {% set intake_grit_score = none %}
-{% endif %}
+{% set intake_grit_score = intake_assessment["grit_score"] if intake_assessment else none %}
 
-{% if exit_assessment is mapping %}
+{% if exit_assessment %}
   {% set exit_date_graduated = exit_assessment["date_graduated"] %}
   {% set exit_date_exit_dwc = exit_assessment["date_exit_dwc"] %}
   {% set exit_category = exit_assessment["exit_category"] %}
@@ -50,16 +31,6 @@
   {% set exit_leave_ama_destination = exit_assessment["leave_ama_destination"] %}
   {% set exit_income_at_exit = exit_assessment["income_at_exit"] %}
   {% set exit_education_at_exit = exit_assessment["education_at_exit"] %}
-{% elif exit_assessment %}
-  {% set exit_date_graduated = exit_assessment[0] %}
-  {% set exit_date_exit_dwc = exit_assessment[1] %}
-  {% set exit_category = exit_assessment[2] %}
-  {% set exit_reason = exit_assessment[3] %}
-  {% set exit_graduate_dwc = exit_assessment[4] %}
-  {% set exit_leave_ama = exit_assessment[5] %}
-  {% set exit_leave_ama_destination = exit_assessment[6] %}
-  {% set exit_income_at_exit = exit_assessment[7] %}
-  {% set exit_education_at_exit = exit_assessment[8] %}
 {% else %}
   {% set exit_date_graduated = none %}
   {% set exit_date_exit_dwc = none %}
@@ -521,19 +492,11 @@ button.notebook-tab-btn.is-active span {
           </thead>
           <tbody>
             {% for child in children %}
-              {% if child is mapping %}
-                {% set child_name = child["child_name"] %}
-                {% set child_birth_year = child["birth_year"] %}
-                {% set child_relationship = child["relationship"] %}
-                {% set child_living_status = child["living_status"] %}
-                {% set child_id = child["id"] %}
-              {% else %}
-                {% set child_name = child[2] %}
-                {% set child_birth_year = child[3] %}
-                {% set child_relationship = child[4] %}
-                {% set child_living_status = child[5] %}
-                {% set child_id = child[0] %}
-              {% endif %}
+              {% set child_name = child["child_name"] %}
+              {% set child_birth_year = child["birth_year"] %}
+              {% set child_relationship = child["relationship"] %}
+              {% set child_living_status = child["living_status"] %}
+              {% set child_id = child["id"] %}
               <tr>
                 <td>{{ child_name or "—" }}</td>
                 <td>{{ child_birth_year or "—" }}</td>
@@ -553,25 +516,21 @@ button.notebook-tab-btn.is-active span {
                   {% if child.services %}
                     <div style="font-size:0.9em; color:#555;">
                       {% for s in child.services %}
-                        {% if s is mapping %}
-                          <div>
-                            <strong>{{ s.service_date_display }}</strong> —
-                            {{ s.service_type_display }}
-                            {% if s.quantity_display and s.quantity_display != "—" %}
-                              ({{ s.quantity_display }})
-                            {% endif %}
-                            {% if s.outcome_display and s.outcome_display != "—" %}
-                              — {{ s.outcome_display }}
-                            {% endif %}
-                            {% if s.notes %}
-                              <div style="margin-left:10px; color:#555;">
-                                {{ s.notes }}
-                              </div>
-                            {% endif %}
-                          </div>
-                        {% else %}
-                          {{ s[3] }} — {{ s[1] }} ({{ s[2] }})<br>
-                        {% endif %}
+                        <div>
+                          <strong>{{ s.service_date_display }}</strong> —
+                          {{ s.service_type_display }}
+                          {% if s.quantity_display and s.quantity_display != "—" %}
+                            ({{ s.quantity_display }})
+                          {% endif %}
+                          {% if s.outcome_display and s.outcome_display != "—" %}
+                            — {{ s.outcome_display }}
+                          {% endif %}
+                          {% if s.notes %}
+                            <div style="margin-left:10px; color:#555;">
+                              {{ s.notes }}
+                            </div>
+                          {% endif %}
+                        </div>
                       {% endfor %}
                     </div>
                   {% else %}
@@ -600,15 +559,9 @@ button.notebook-tab-btn.is-active span {
         style="display:flex; gap:10px; overflow-x:auto; padding:4px 2px 10px 2px; scroll-behavior:smooth;"
       >
         {% for note in notes %}
-          {% if note is mapping %}
-            {% set note_id = note["id"] %}
-            {% set note_meeting_date = note["meeting_date"] %}
-            {% set note_services = note["services"] %}
-          {% else %}
-            {% set note_id = note[0] %}
-            {% set note_meeting_date = note[1] %}
-            {% set note_services = note[6] %}
-          {% endif %}
+          {% set note_id = note["id"] %}
+          {% set note_meeting_date = note["meeting_date"] %}
+          {% set note_services = note["services"] %}
 
           <button
             type="button"
@@ -629,29 +582,16 @@ button.notebook-tab-btn.is-active span {
 
       <div class="print-note-panel">
         {% for note in notes %}
-          {% if note is mapping %}
-            {% set note_id = note["id"] %}
-            {% set note_meeting_date = note["meeting_date"] %}
-            {% set note_notes = note["notes"] %}
-            {% set note_progress_notes = note["progress_notes"] %}
-            {% set note_action_items = note["action_items"] %}
-            {% set note_updated_grit = note["updated_grit"] %}
-            {% set note_parenting_class_completed = note["parenting_class_completed"] %}
-            {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
-            {% set note_created_at = note["created_at"] %}
-            {% set note_services = note["services"] %}
-          {% else %}
-            {% set note_id = note[0] %}
-            {% set note_meeting_date = note[1] %}
-            {% set note_notes = note[2] %}
-            {% set note_progress_notes = note[3] %}
-            {% set note_action_items = note[4] %}
-            {% set note_updated_grit = none %}
-            {% set note_parenting_class_completed = none %}
-            {% set note_warrants_or_fines_paid = none %}
-            {% set note_created_at = note[5] %}
-            {% set note_services = note[6] %}
-          {% endif %}
+          {% set note_id = note["id"] %}
+          {% set note_meeting_date = note["meeting_date"] %}
+          {% set note_notes = note["notes"] %}
+          {% set note_progress_notes = note["progress_notes"] %}
+          {% set note_action_items = note["action_items"] %}
+          {% set note_updated_grit = note["updated_grit"] %}
+          {% set note_parenting_class_completed = note["parenting_class_completed"] %}
+          {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
+          {% set note_created_at = note["created_at"] %}
+          {% set note_services = note["services"] %}
 
           <div
             id="case-note-panel-{{ note_id }}"
@@ -726,15 +666,9 @@ button.notebook-tab-btn.is-active span {
 
                 <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:10px;">
                   {% for service in note_services %}
-                    {% if service is mapping %}
-                      {% set service_type = service["service_type"] %}
-                      {% set service_date = service["service_date"] %}
-                      {% set service_notes_value = service["notes"] %}
-                    {% else %}
-                      {% set service_type = service[0] %}
-                      {% set service_date = service[1] %}
-                      {% set service_notes_value = service[2] %}
-                    {% endif %}
+                    {% set service_type = service["service_type"] %}
+                    {% set service_date = service["service_date"] %}
+                    {% set service_notes_value = service["notes"] %}
 
                     <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
                       <div><strong>{{ service_type or "—" }}</strong></div>
@@ -790,15 +724,9 @@ button.notebook-tab-btn.is-active span {
 
                   <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:10px;">
                     {% for service in note_services %}
-                      {% if service is mapping %}
-                        {% set service_type = service["service_type"] %}
-                        {% set service_date = service["service_date"] %}
-                        {% set service_notes_value = service["notes"] %}
-                      {% else %}
-                        {% set service_type = service[0] %}
-                        {% set service_date = service[1] %}
-                        {% set service_notes_value = service[2] %}
-                      {% endif %}
+                      {% set service_type = service["service_type"] %}
+                      {% set service_date = service["service_date"] %}
+                      {% set service_notes_value = service["notes"] %}
 
                       <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
                         <div><strong>{{ service_type or "—" }}</strong></div>
