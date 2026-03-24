@@ -14,6 +14,7 @@ from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import parse_int
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import yes_no_to_int
 from routes.case_management_parts.intake_drafts import _complete_intake_draft
 from routes.case_management_parts.intake_drafts import _load_intake_draft
 from routes.case_management_parts.intake_drafts import _save_intake_draft
@@ -177,6 +178,30 @@ def _normalize_yes_no_fields(form_data: dict[str, Any]) -> dict[str, Any]:
     return form_data
 
 
+def _apply_intake_edit_aliases(form_data: dict[str, Any]) -> dict[str, Any]:
+    field_aliases = {
+        "prior_living": "place_staying_before_entry",
+        "felony_history": "entry_felony_conviction",
+        "probation_parole": "entry_parole_probation",
+        "domestic_violence_history": "dv_survivor",
+        "human_trafficking_history": "human_trafficking_survivor",
+        "pregnant": "pregnant_at_entry",
+        "dental_need": "dental_need_at_entry",
+        "vision_need": "vision_need_at_entry",
+        "employment_status": "employment_status_at_entry",
+        "mental_health_need": "mental_health_need_at_entry",
+        "medical_need": "medical_need_at_entry",
+        "substance_use_need": "substance_use_need_at_entry",
+        "id_documents_status": "id_documents_status_at_entry",
+    }
+
+    for form_key, db_key in field_aliases.items():
+        if form_data.get(form_key) in (None, "") and db_key in form_data:
+            form_data[form_key] = form_data.get(db_key)
+
+    return form_data
+
+
 def intake_form_view():
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -281,6 +306,7 @@ def intake_edit_view(resident_id: int):
     if family:
         form_data.update(dict(family))
 
+    form_data = _apply_intake_edit_aliases(form_data)
     form_data = _normalize_yes_no_fields(form_data)
     form_data["review_passed"] = "1"
 
@@ -502,7 +528,7 @@ def submit_intake_assessment_view():
                 emergency_contact_relationship = {ph},
                 emergency_contact_phone = {ph},
                 notes_basic = {ph},
-                prior_living = {ph},
+                place_staying_before_entry = {ph},
                 sobriety_date = {ph},
                 treatment_grad_date = {ph},
                 drug_of_choice = {ph},
@@ -514,35 +540,35 @@ def submit_intake_assessment_view():
                 entry_notes = {ph},
                 race = {ph},
                 ethnicity = {ph},
-                pregnant = {ph},
-                dental_need = {ph},
-                vision_need = {ph},
-                employment_status = {ph},
-                id_documents_status = {ph},
+                pregnant_at_entry = {ph},
+                dental_need_at_entry = {ph},
+                vision_need_at_entry = {ph},
+                employment_status_at_entry = {ph},
+                id_documents_status_at_entry = {ph},
                 initial_snapshot_notes = {ph},
                 ace_score = {ph},
                 grit_score = {ph},
                 sexual_survivor = {ph},
-                domestic_violence_history = {ph},
-                human_trafficking_history = {ph},
+                dv_survivor = {ph},
+                human_trafficking_survivor = {ph},
                 drug_court = {ph},
                 warrants_unpaid = {ph},
-                mental_health_need = {ph},
-                medical_need = {ph},
+                mental_health_need_at_entry = {ph},
+                medical_need_at_entry = {ph},
                 mh_exam_completed = {ph},
                 med_exam_completed = {ph},
-                substance_use_need = {ph},
+                substance_use_need_at_entry = {ph},
                 parenting_class_needed = {ph},
                 dwc_level_today = {ph},
                 trauma_notes = {ph},
-                felony_history = {ph},
-                probation_parole = {ph},
+                entry_felony_conviction = {ph},
+                entry_parole_probation = {ph},
                 barrier_notes = {ph},
                 updated_at = {ph}
             WHERE enrollment_id = {ph}
             """,
             (
-                data.get("veteran"),
+                yes_no_to_int(data.get("veteran")),
                 data.get("emergency_contact_name"),
                 data.get("emergency_contact_relationship"),
                 data.get("emergency_contact_phone"),
@@ -559,29 +585,29 @@ def submit_intake_assessment_view():
                 data.get("entry_notes"),
                 data.get("race"),
                 data.get("ethnicity"),
-                data.get("pregnant"),
-                data.get("dental_need"),
-                data.get("vision_need"),
+                yes_no_to_int(data.get("pregnant")),
+                yes_no_to_int(data.get("dental_need")),
+                yes_no_to_int(data.get("vision_need")),
                 data.get("employment_status"),
                 data.get("id_documents_status"),
                 data.get("initial_snapshot_notes"),
                 data.get("ace_score"),
                 data.get("grit_score"),
-                data.get("sexual_survivor"),
-                data.get("domestic_violence_history"),
-                data.get("human_trafficking_history"),
-                data.get("drug_court"),
-                data.get("warrants_unpaid"),
-                data.get("mental_health_need"),
-                data.get("medical_need"),
-                data.get("mh_exam_completed"),
-                data.get("med_exam_completed"),
-                data.get("substance_use_need"),
-                data.get("parenting_class_needed"),
+                yes_no_to_int(data.get("sexual_survivor")),
+                yes_no_to_int(data.get("domestic_violence_history")),
+                yes_no_to_int(data.get("human_trafficking_history")),
+                yes_no_to_int(data.get("drug_court")),
+                yes_no_to_int(data.get("warrants_unpaid")),
+                yes_no_to_int(data.get("mental_health_need")),
+                yes_no_to_int(data.get("medical_need")),
+                yes_no_to_int(data.get("mh_exam_completed")),
+                yes_no_to_int(data.get("med_exam_completed")),
+                yes_no_to_int(data.get("substance_use_need")),
+                yes_no_to_int(data.get("parenting_class_needed")),
                 data.get("dwc_level_today"),
                 data.get("trauma_notes"),
-                data.get("felony_history"),
-                data.get("probation_parole"),
+                yes_no_to_int(data.get("felony_history")),
+                yes_no_to_int(data.get("probation_parole")),
                 data.get("barrier_notes"),
                 now,
                 enrollment_id,
