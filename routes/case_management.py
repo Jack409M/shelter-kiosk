@@ -72,6 +72,7 @@ from routes.case_management_parts.intake import child_services_view
 from routes.case_management_parts.intake import edit_child_service_view
 from routes.case_management_parts.intake import edit_child_view
 from routes.case_management_parts.intake import family_intake_view
+from routes.case_management_parts.intake import intake_edit_view
 from routes.case_management_parts.intake import intake_form_view
 from routes.case_management_parts.intake import submit_intake_assessment_view
 from routes.case_management_parts.intake_duplicates import duplicate_review_create_new_view
@@ -179,6 +180,13 @@ def intake_form():
 @require_shelter
 def submit_intake_assessment():
     return submit_intake_assessment_view()
+
+
+@case_management.get("/<int:resident_id>/intake-edit")
+@require_login
+@require_shelter
+def intake_edit(resident_id: int):
+    return intake_edit_view(resident_id)
 
 
 @case_management.route("/<int:resident_id>/family-intake", methods=["GET", "POST"])
