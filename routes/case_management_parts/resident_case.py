@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, session, url_for
+from flask import current_app, flash, redirect, render_template, session, url_for
 
 from core.db import db_fetchall, db_fetchone
 from core.helpers import fmt_dt
@@ -15,25 +15,9 @@ def _normalize_exit_assessment(row):
     if not row:
         return None
 
-    if isinstance(row, dict):
-        leave_ama = row.get("leave_ama")
-        leave_amarillo_city = row.get("leave_amarillo_city")
-        leave_amarillo_unknown = row.get("leave_amarillo_unknown")
-
-        destination = None
-        if leave_ama:
-            if leave_amarillo_city:
-                destination = leave_amarillo_city
-            elif leave_amarillo_unknown:
-                destination = "Unknown"
-
-        normalized = dict(row)
-        normalized["leave_ama_destination"] = destination
-        return normalized
-
-    leave_ama = row[5]
-    leave_amarillo_city = row[6]
-    leave_amarillo_unknown = row[7]
+    leave_ama = row.get("leave_ama")
+    leave_amarillo_city = row.get("leave_amarillo_city")
+    leave_amarillo_unknown = row.get("leave_amarillo_unknown")
 
     destination = None
     if leave_ama:
@@ -42,26 +26,9 @@ def _normalize_exit_assessment(row):
         elif leave_amarillo_unknown:
             destination = "Unknown"
 
-    return {
-        "date_graduated": row[0],
-        "date_exit_dwc": row[1],
-        "exit_category": row[2],
-        "exit_reason": row[3],
-        "graduate_dwc": row[4],
-        "leave_ama": row[5],
-        "leave_amarillo_city": row[6],
-        "leave_amarillo_unknown": row[7],
-        "leave_ama_destination": destination,
-        "income_at_exit": row[8],
-        "education_at_exit": row[9],
-        "grit_at_exit": row[10],
-        "received_car": row[11],
-        "car_insurance": row[12],
-        "dental_needs_met": row[13],
-        "vision_needs_met": row[14],
-        "obtained_public_insurance": row[15],
-        "private_insurance": row[16],
-    }
+    normalized = dict(row)
+    normalized["leave_ama_destination"] = destination
+    return normalized
 
 
 def _get_latest_followup(enrollment_id: int, followup_type: str):
@@ -83,18 +50,7 @@ def _get_latest_followup(enrollment_id: int, followup_type: str):
         (enrollment_id, followup_type),
     )
 
-    if not row:
-        return None
-
-    if isinstance(row, dict):
-        return row
-
-    return {
-        "followup_date": row[0],
-        "income_at_followup": row[1],
-        "sober_at_followup": row[2],
-        "notes": row[3],
-    }
+    return row if row else None
 
 
 def _display_label(value: str | None) -> str:
@@ -117,35 +73,18 @@ def _display_quantity_unit(quantity, unit: str | None) -> str:
 
 
 def _normalize_child_service_row(service):
-    if isinstance(service, dict):
-        resident_child_id = service.get("resident_child_id")
-        service_type = service.get("service_type")
-        outcome = service.get("outcome")
-        quantity = service.get("quantity")
-        unit = service.get("unit")
-        notes = service.get("notes")
-        service_date = service.get("service_date")
-    else:
-        resident_child_id = service[0]
-        service_type = service[1]
-        outcome = service[2]
-        quantity = service[3]
-        unit = service[4]
-        notes = service[5]
-        service_date = service[6]
-
     return {
-        "resident_child_id": resident_child_id,
-        "service_type": service_type,
-        "service_type_display": _display_label(service_type),
-        "outcome": outcome,
-        "outcome_display": _display_label(outcome),
-        "quantity": quantity,
-        "unit": unit,
-        "quantity_display": _display_quantity_unit(quantity, unit),
-        "notes": notes,
-        "service_date": service_date,
-        "service_date_display": fmt_dt(service_date),
+        "resident_child_id": service.get("resident_child_id"),
+        "service_type": service.get("service_type"),
+        "service_type_display": _display_label(service.get("service_type")),
+        "outcome": service.get("outcome"),
+        "outcome_display": _display_label(service.get("outcome")),
+        "quantity": service.get("quantity"),
+        "unit": service.get("unit"),
+        "quantity_display": _display_quantity_unit(service.get("quantity"), service.get("unit")),
+        "notes": service.get("notes"),
+        "service_date": service.get("service_date"),
+        "service_date_display": fmt_dt(service.get("service_date")),
     }
 
 
@@ -196,9 +135,7 @@ def resident_case_view(resident_id: int):
         (resident_id,),
     )
 
-    enrollment_id = None
-    if enrollment:
-        enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+    enrollment_id = enrollment["id"] if enrollment else None
 
     goals = []
     appointments = []
@@ -230,10 +167,7 @@ def resident_case_view(resident_id: int):
             (resident_id,),
         )
 
-        child_ids = [
-            child["id"] if isinstance(child, dict) else child[0]
-            for child in children
-        ]
+        child_ids = [child["id"] for child in children]
 
         child_services = []
 
@@ -266,31 +200,19 @@ def resident_case_view(resident_id: int):
         enriched_children = []
 
         for child in children:
-            if isinstance(child, dict):
-                child_id = child["id"]
-                child_obj = dict(child)
-                child_obj["relationship_display"] = _display_label(child.get("relationship"))
-                child_obj["living_status_display"] = _display_label(child.get("living_status"))
-                child_obj["services"] = services_by_child.get(child_id, [])
-            else:
-                child_id = child[0]
-                child_obj = {
-                    "id": child[0],
-                    "resident_id": child[1],
-                    "child_name": child[2],
-                    "birth_year": child[3],
-                    "relationship": child[4],
-                    "relationship_display": _display_label(child[4]),
-                    "living_status": child[5],
-                    "living_status_display": _display_label(child[5]),
-                    "is_active": child[6],
-                    "services": services_by_child.get(child_id, []),
-                }
-
+            child_id = child["id"]
+            child_obj = dict(child)
+            child_obj["relationship_display"] = _display_label(child.get("relationship"))
+            child_obj["living_status_display"] = _display_label(child.get("living_status"))
+            child_obj["services"] = services_by_child.get(child_id, [])
             enriched_children.append(child_obj)
 
         children = enriched_children
     except Exception:
+        current_app.logger.exception(
+            "Failed to load child or child service data for resident_id=%s",
+            resident_id,
+        )
         children = []
 
     if enrollment_id:
@@ -334,18 +256,8 @@ def resident_case_view(resident_id: int):
 
         exit_assessment = _normalize_exit_assessment(raw_exit_assessment)
 
-        intake_grit = None
-        exit_grit = None
-
-        if intake_assessment:
-            intake_grit = (
-                intake_assessment["grit_score"]
-                if isinstance(intake_assessment, dict)
-                else intake_assessment[0]
-            )
-
-        if exit_assessment:
-            exit_grit = exit_assessment.get("grit_at_exit")
+        intake_grit = intake_assessment.get("grit_score") if intake_assessment else None
+        exit_grit = exit_assessment.get("grit_at_exit") if exit_assessment else None
 
         if intake_grit is not None and exit_grit is not None:
             grit_difference = exit_grit - intake_grit
@@ -410,40 +322,19 @@ def resident_case_view(resident_id: int):
         services_by_note = {}
 
         for s in services_raw:
-            if isinstance(s, dict):
-                note_id = s["case_manager_update_id"]
-                service = {
-                    "service_type": s["service_type"],
-                    "service_date": s["service_date"],
-                    "notes": s["notes"],
-                }
-            else:
-                note_id = s[0]
-                service = {
-                    "service_type": s[1],
-                    "service_date": s[2],
-                    "notes": s[3],
-                }
-
+            note_id = s["case_manager_update_id"]
+            service = {
+                "service_type": s["service_type"],
+                "service_date": s["service_date"],
+                "notes": s["notes"],
+            }
             services_by_note.setdefault(note_id, []).append(service)
 
         notes = []
 
         for n in notes_raw:
-            if isinstance(n, dict):
-                note_id = n["id"]
-                note_obj = dict(n)
-            else:
-                note_id = n[0]
-                note_obj = {
-                    "id": n[0],
-                    "meeting_date": n[1],
-                    "notes": n[2],
-                    "progress_notes": n[3],
-                    "action_items": n[4],
-                    "created_at": n[5],
-                }
-
+            note_id = n["id"]
+            note_obj = dict(n)
             note_obj["services"] = services_by_note.get(note_id, [])
             notes.append(note_obj)
 
