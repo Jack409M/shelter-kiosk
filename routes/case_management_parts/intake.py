@@ -129,7 +129,16 @@ def _form_review_passed(form_source: Any) -> bool:
 
 
 def _normalize_yes_no_value(value: Any) -> str:
-    normalized = clean(value).lower()
+    if value is None:
+        return ""
+
+    if isinstance(value, (int, bool)):
+        if value in (1, True):
+            return "yes"
+        if value in (0, False):
+            return "no"
+
+    normalized = str(value).strip().lower()
 
     if normalized in {"1", "true", "yes", "y", "on"}:
         return "yes"
@@ -137,7 +146,7 @@ def _normalize_yes_no_value(value: Any) -> str:
     if normalized in {"0", "false", "no", "n", "off"}:
         return "no"
 
-    return clean(value)
+    return normalized
 
 
 def _normalize_yes_no_fields(form_data: dict[str, Any]) -> dict[str, Any]:
