@@ -642,7 +642,7 @@ def submit_intake_assessment_view():
         f"Resident created successfully. Resident ID: {resident_identifier}. Resident Code: {resident_code}",
         "success",
     )
-    return redirect(url_for("case_management.family_intake", resident_id=resident_id))
+    return redirect(url_for("case_management.intake_edit", resident_id=resident_id))
 
 
 def family_intake_view(resident_id: int):
