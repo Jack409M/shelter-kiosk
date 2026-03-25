@@ -19,6 +19,22 @@
 </div>
 
 <div class="card">
+  <h2>Family Intake</h2>
+  <p>Begin family intake, finish family intake, or edit family information for an existing resident.</p>
+
+  <form onsubmit="return openFamilyIntake();">
+    <label for="family_resident_id"><strong>Resident ID</strong></label>
+    <input type="number" id="family_resident_id" min="1" required>
+
+    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" onclick="openFamilyIntake()">Begin Family Intake</button>
+      <button type="button" onclick="openFamilyIntake()">Finish Family Intake</button>
+      <button type="button" onclick="openFamilyIntake()">Edit Family</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
   <h2>Resume Unsubmitted Intake Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
   <p>Continue an intake that has already been started but not finalized.</p>
 
@@ -126,5 +142,16 @@
     <p>No assessment drafts in progress.</p>
   {% endif %}
 </div>
+
+<script>
+function openFamilyIntake() {
+  var residentId = document.getElementById("family_resident_id").value;
+  if (!residentId) {
+    return false;
+  }
+  window.location.href = "/staff/case-management/" + residentId + "/family-intake";
+  return false;
+}
+</script>
 
 {% endblock %}
