@@ -35,8 +35,9 @@
     flex-wrap: wrap;
   }
 
-  .family-intake-row input[type="number"] {
-    width: 180px;
+  .family-intake-row select {
+    min-width: 280px;
+    max-width: 420px;
   }
 
   .family-intake-actions {
@@ -45,8 +46,15 @@
     flex-wrap: wrap;
   }
 
-  .intake-grid-full {
+  .intake-grid-centered {
     grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+  }
+
+  .intake-grid-centered .card {
+    width: 100%;
+    max-width: 720px;
   }
 
   @media (max-width: 900px) {
@@ -54,8 +62,13 @@
       grid-template-columns: 1fr;
     }
 
-    .intake-grid-full {
+    .intake-grid-centered {
       grid-column: auto;
+      display: block;
+    }
+
+    .intake-grid-centered .card {
+      max-width: none;
     }
   }
 </style>
@@ -79,13 +92,20 @@
 
   <div class="card">
     <h2>Start New Family Intake</h2>
-    <p>Begin family intake for an existing resident.</p>
+    <p>Begin family intake, finish family intake, or edit family information for an existing resident.</p>
 
     <form class="family-intake-form" onsubmit="return openFamilyIntake();">
       <div class="family-intake-row">
         <div>
-          <label for="family_resident_id"><strong>Resident ID</strong></label>
-          <input type="number" id="family_resident_id" min="1" required>
+          <label for="family_resident_id"><strong>Select Resident</strong></label>
+          <select id="family_resident_id" required>
+            <option value="">Select resident</option>
+            {% for r in residents %}
+              <option value="{{ r.id }}">
+                {{ r.last_name }}, {{ r.first_name }} (ID {{ r.id }})
+              </option>
+            {% endfor %}
+          </select>
         </div>
 
         <div class="family-intake-actions">
@@ -171,39 +191,41 @@
     {% endif %}
   </div>
 
-  <div class="card intake-grid-full">
-    <h2>Resume Resident Assessment Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
-    <p>Continue an assessment draft that has already been started but not finalized.</p>
+  <div class="intake-grid-centered">
+    <div class="card">
+      <h2>Resume Resident Assessment Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+      <p>Continue an assessment draft that has already been started but not finalized.</p>
 
-    {% if assessment_drafts %}
-      <table class="table-compact">
-        <thead>
-          <tr>
-            <th>Resident ID</th>
-            <th>Last Updated</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for d in assessment_drafts %}
-            {% set assessment_url = safe_url_for('case_management.assessment_form', draft_id=d.id) %}
+      {% if assessment_drafts %}
+        <table class="table-compact">
+          <thead>
             <tr>
-              <td>{{ d.resident_id or "—" }}</td>
-              <td>{{ d.updated_at or "—" }}</td>
-              <td>
-                {% if assessment_url %}
-                  <a class="btn" href="{{ assessment_url }}">Resume</a>
-                {% else %}
-                  <span>Unavailable</span>
-                {% endif %}
-              </td>
+              <th>Resident ID</th>
+              <th>Last Updated</th>
+              <th></th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <p>No assessment drafts in progress.</p>
-    {% endif %}
+          </thead>
+          <tbody>
+            {% for d in assessment_drafts %}
+              {% set assessment_url = safe_url_for('case_management.assessment_form', draft_id=d.id) %}
+              <tr>
+                <td>{{ d.resident_id or "—" }}</td>
+                <td>{{ d.updated_at or "—" }}</td>
+                <td>
+                  {% if assessment_url %}
+                    <a class="btn" href="{{ assessment_url }}">Resume</a>
+                  {% else %}
+                    <span>Unavailable</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No assessment drafts in progress.</p>
+      {% endif %}
+    </div>
   </div>
 </div>
 
