@@ -54,6 +54,7 @@
       {% set compliance_url = safe_url_for('compliance.compliance_dashboard') %}
       {% set forms_url = safe_url_for('forms_admin.forms_index') %}
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
+      {% set chore_management_url = safe_url_for('shelter_operations.chore_management') %}
       {% set calendar_url = safe_url_for('calendar.calendar_view') %}
       {% set reports_url = safe_url_for('reports.demographics_dashboard') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
@@ -141,6 +142,15 @@
                 {% endif %}
                 {% if calendar_url %}
                   <a href="{{ calendar_url }}">Shared Calendar</a>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="nav-dd">
+              <button type="button">Shelter Operations ▾</button>
+              <div class="menu">
+                {% if chore_management_url %}
+                  <a href="{{ chore_management_url }}">Chore Management</a>
                 {% endif %}
               </div>
             </div>
