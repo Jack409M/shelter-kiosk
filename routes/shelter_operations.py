@@ -177,6 +177,8 @@ def chore_board():
         """
         SELECT
             ca.id,
+            ca.resident_id,
+            ca.chore_id,
             ca.status,
             r.first_name,
             r.last_name,
@@ -198,6 +200,56 @@ def chore_board():
         assignments=assignments,
         assigned_date=assigned_date,
     )
+
+
+@shelter_operations.route("/chore-board/<int:assignment_id>/edit", methods=["POST"])
+@require_login
+@require_shelter
+def edit_assignment(assignment_id: int):
+    shelter = session.get("shelter")
+
+    resident_id = (request.form.get("resident_id") or "").strip()
+    chore_id = (request.form.get("chore_id") or "").strip()
+    assigned_date = (request.form.get("assigned_date") or "").strip()
+
+    if not resident_id or not chore_id:
+        flash("Resident and chore are required.", "error")
+        return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
+
+    existing = db_fetchone(
+        """
+        SELECT id
+        FROM chore_assignments
+        WHERE resident_id = %s
+          AND chore_id = %s
+          AND assigned_date = %s
+          AND id != %s
+        LIMIT 1
+        """,
+        (resident_id, chore_id, assigned_date, assignment_id),
+    )
+
+    if existing:
+        flash("That assignment already exists.", "error")
+        return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
+
+    db_execute(
+        """
+        UPDATE chore_assignments ca
+        SET
+            resident_id = %s,
+            chore_id = %s,
+            updated_at = %s
+        FROM residents r
+        WHERE ca.id = %s
+          AND r.id = ca.resident_id
+          AND r.shelter = %s
+        """,
+        (resident_id, chore_id, utcnow_iso(), assignment_id, shelter),
+    )
+
+    flash("Assignment updated.", "success")
+    return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
 
 
 @shelter_operations.route("/chore-board/<int:assignment_id>/toggle-status", methods=["POST"])
