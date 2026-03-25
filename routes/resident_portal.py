@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, g, redirect, render_template, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
-from core.db import db_fetchall
+from core.db import db_execute, db_fetchall
+from core.helpers import utcnow_iso
 from core.runtime import init_db
 
 
@@ -184,4 +185,71 @@ def home():
         pass_items=processed_pass_items,
         transport_items=processed_transport_items,
         active_pass=active_pass,
+    )
+
+
+@resident_portal.route("/chores", methods=["GET", "POST"])
+def resident_chores():
+    if not session.get("resident_id"):
+        return redirect(url_for("resident_requests.resident_signin"))
+
+    init_db()
+
+    resident_id = session.get("resident_id")
+    today = str(date.today())
+
+    if request.method == "POST":
+        assignment_id = (request.form.get("assignment_id") or "").strip()
+
+        if assignment_id:
+            db_execute(
+                """
+                UPDATE chore_assignments
+                SET status = 'completed', updated_at = %s
+                WHERE id = %s AND resident_id = %s
+                """
+                if g.get("db_kind") == "pg"
+                else """
+                UPDATE chore_assignments
+                SET status = 'completed', updated_at = ?
+                WHERE id = ? AND resident_id = ?
+                """,
+                (utcnow_iso(), assignment_id, resident_id),
+            )
+
+            flash("Chore marked complete.", "success")
+
+        return redirect(url_for("resident_portal.resident_chores"))
+
+    chores = db_fetchall(
+        """
+        SELECT
+            ca.id,
+            ca.status,
+            ct.name AS chore_name
+        FROM chore_assignments ca
+        JOIN chore_templates ct ON ct.id = ca.chore_id
+        WHERE ca.resident_id = %s
+          AND ca.assigned_date = %s
+        ORDER BY ct.name
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            ca.id,
+            ca.status,
+            ct.name AS chore_name
+        FROM chore_assignments ca
+        JOIN chore_templates ct ON ct.id = ca.chore_id
+        WHERE ca.resident_id = ?
+          AND ca.assigned_date = ?
+        ORDER BY ct.name
+        """,
+        (resident_id, today),
+    )
+
+    return render_template(
+        "resident/chores.html",
+        chores=chores,
+        today=today,
     )
