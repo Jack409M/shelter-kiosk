@@ -37,7 +37,7 @@
                 <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=a.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                  <select name="resident_id" required>
+                  <select name="resident_id" required style="max-width:320px;">
                     {% for r in residents %}
                       <option value="{{ r.id }}" {% if r.id == a.resident_id %}selected{% endif %}>
                         {{ r.last_name }}, {{ r.first_name }}
@@ -104,7 +104,7 @@
 
         <div style="margin-bottom:10px;">
           <label>Resident</label><br>
-          <select name="resident_id" style="width:100%;" required>
+          <select name="resident_id" style="max-width:320px; width:100%;" required>
             <option value="">Select resident</option>
             {% for r in residents %}
               <option value="{{ r.id }}">{{ r.last_name }}, {{ r.first_name }}</option>
