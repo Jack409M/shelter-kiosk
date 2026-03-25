@@ -62,234 +62,144 @@
 
   </div>
 
-  <section class="case-section" id="requests-pending">
+  <section class="case-section">
     <div class="case-section-header">
       <div>
-        <h2>Requests Pending</h2>
-        <p>Pending pass and transport requests that need approval or denial.</p>
+        <h2>Overnight and Attendance Issues</h2>
+        <p>Residents who missed last night check in or returned late today.</p>
       </div>
-      <span class="case-pill urgent">{{ pending_request_total }}</span>
     </div>
 
-    <div class="case-list">
-      <div class="case-list-item">
-        <div class="case-list-main">
-          <div class="case-list-link">Pending Pass Requests</div>
-          <div class="case-list-meta">{{ pending_pass_count }} awaiting review</div>
+    <div class="case-dashboard-summary" style="margin-top: 16px;">
+      <div class="case-summary-card urgent" style="cursor: default;">
+        <div class="case-summary-icon">🌙</div>
+        <div class="case-summary-content">
+          <div class="case-summary-title">Failed to Clock In Last Night</div>
+          <div class="case-summary-count">{{ missed_clock_in_rows|length }}</div>
+          <div class="case-summary-note">Still checked out past yesterday</div>
         </div>
-        <a class="case-action-link" href="{{ url_for('attendance.staff_passes_pending') }}">Review Passes</a>
       </div>
 
-      <div class="case-list-item">
-        <div class="case-list-main">
-          <div class="case-list-link">Pending Transport Requests</div>
-          <div class="case-list-meta">{{ pending_transport_count }} awaiting review</div>
+      <div class="case-summary-card warn" style="cursor: default;">
+        <div class="case-summary-icon">⏰</div>
+        <div class="case-summary-content">
+          <div class="case-summary-title">Clocked In Late Today</div>
+          <div class="case-summary-count">{{ late_check_in_rows|length }}</div>
+          <div class="case-summary-note">Returned after expected back time</div>
         </div>
-        <a class="case-action-link" href="{{ url_for('transport.staff_transport_pending') }}">Review Transport</a>
+      </div>
+
+      <div class="case-summary-card warn" style="cursor: default;">
+        <div class="case-summary-icon">📅</div>
+        <div class="case-summary-content">
+          <div class="case-summary-title">Appointments Today</div>
+          <div class="case-summary-count">{{ appointments_today|length }}</div>
+          <div class="case-summary-note">{{ today_local.strftime("%m/%d/%Y") }}</div>
+        </div>
       </div>
     </div>
 
     <div style="margin-top: 18px;">
-      <h3 style="margin-bottom: 12px;">Pending Pass Requests</h3>
+      <h3 style="margin-bottom: 12px;">Failed to Clock In Last Night</h3>
 
-      {% if pending_pass_rows %}
+      {% if missed_clock_in_rows %}
         <ul class="case-list">
-          {% for item in pending_pass_rows %}
-            <li class="case-list-item{% if item.is_urgent %} case-list-item-urgent{% endif %}">
+          {% for item in missed_clock_in_rows %}
+            <li class="case-list-item">
               <div class="case-list-main">
-                <div class="case-list-link">
+                <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
                   {{ item.first_name }} {{ item.last_name }}
-                  {% if item.is_urgent %}
-                    <span class="case-pill urgent" style="margin-left:8px;">Starting Soon</span>
-                  {% endif %}
-                </div>
-
+                </a>
                 <div class="case-list-meta">
-                  {% if item.pass_type == "ordinary" %}
-                    {{ item.start_at_local.strftime("%m/%d %I:%M %p") if item.start_at_local else "—" }}
-                    to
-                    {{ item.end_at_local.strftime("%m/%d %I:%M %p") if item.end_at_local else "—" }}
-                  {% else %}
-                    {{ item.start_date or "—" }} to {{ item.end_date or "—" }}
-                  {% endif %}
-                  {% if item.destination %}
-                    — {{ item.destination }}
-                  {% endif %}
-                </div>
-
-                {% if item.reason %}
-                  <div class="case-list-meta" style="margin-top:4px;">
-                    Reason: {{ item.reason }}
-                  </div>
-                {% endif %}
-
-                <div class="case-list-meta" style="margin-top:4px;">
-                  Submitted {{ item.created_at_local.strftime("%m/%d %I:%M %p") if item.created_at_local else "—" }}
+                  Expected back:
+                  {{ item.expected_back_local.strftime("%m/%d %I:%M %p") if item.expected_back_local else "—" }}
                 </div>
               </div>
-
-              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <form method="post" action="{{ url_for('attendance.staff_pass_approve', pass_id=item.id) }}" style="margin:0;">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="case-action-link">Approve</button>
-                </form>
-
-                <form method="post" action="{{ url_for('attendance.staff_pass_deny', pass_id=item.id) }}" style="margin:0;">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <button type="submit" class="case-action-link">Deny</button>
-                </form>
-              </div>
+              <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">Open Case</a>
             </li>
           {% endfor %}
         </ul>
       {% else %}
-        <div class="case-empty good">No pending pass requests.</div>
+        <div class="case-empty good">No one missed last night check in.</div>
+      {% endif %}
+    </div>
+
+    <div style="margin-top: 18px;">
+      <h3 style="margin-bottom: 12px;">Clocked In Late Today</h3>
+
+      {% if late_check_in_rows %}
+        <ul class="case-list">
+          {% for item in late_check_in_rows %}
+            <li class="case-list-item">
+              <div class="case-list-main">
+                <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
+                  {{ item.first_name }} {{ item.last_name }}
+                </a>
+                <div class="case-list-meta">
+                  Expected:
+                  {{ item.expected_back_local.strftime("%m/%d %I:%M %p") if item.expected_back_local else "—" }}
+                  |
+                  Actual:
+                  {{ item.check_in_local.strftime("%m/%d %I:%M %p") if item.check_in_local else "—" }}
+                </div>
+              </div>
+              <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">Open Case</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="case-empty good">No late check ins today.</div>
       {% endif %}
     </div>
   </section>
 
-  <section class="case-section" id="missing-enrollment">
+  <section class="case-section">
     <div class="case-section-header">
       <div>
-        <h2>Needs Enrollment Started</h2>
-        <p>Residents with no enrollment record yet.</p>
+        <h2>Appointments Today</h2>
+        <p>Resident appointments scheduled for today.</p>
       </div>
-      <span class="case-pill urgent">{{ missing_enrollment|length }}</span>
     </div>
 
-    {% if missing_enrollment %}
-      <ul class="case-list">
-        {% for r in missing_enrollment %}
+    {% if appointments_today %}
+      <ul class="case-list" style="margin-top: 16px;">
+        {% for item in appointments_today %}
           <li class="case-list-item">
             <div class="case-list-main">
-              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
-                {{ r.first_name }} {{ r.last_name }}
+              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
+                {{ item.first_name }} {{ item.last_name }}
               </a>
-              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
+              <div class="case-list-meta">
+                {{ item.appointment_type or "Appointment" }}
+              </div>
+              {% if item.notes %}
+                <div class="case-list-meta" style="margin-top: 4px;">
+                  {{ item.notes }}
+                </div>
+              {% endif %}
             </div>
-            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
+            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">Open Case</a>
           </li>
         {% endfor %}
       </ul>
     {% else %}
-      <div class="case-empty good">Everything looks good here.</div>
+      <div class="case-empty good" style="margin-top: 16px;">No appointments scheduled for today.</div>
     {% endif %}
   </section>
 
-  <section class="case-section" id="no-goals">
+  <section class="case-section">
     <div class="case-section-header">
       <div>
-        <h2>Needs Goal Planning</h2>
-        <p>Residents with enrollment but no goals yet.</p>
+        <h2>Chores</h2>
+        <p>Chore completion is not wired into this dashboard yet.</p>
       </div>
-      <span class="case-pill urgent">{{ no_goals|length }}</span>
     </div>
 
-    {% if no_goals %}
-      <ul class="case-list">
-        {% for r in no_goals %}
-          <li class="case-list-item">
-            <div class="case-list-main">
-              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
-                {{ r.first_name }} {{ r.last_name }}
-              </a>
-              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
-            </div>
-            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="case-empty good">All enrolled residents have goals started.</div>
-    {% endif %}
-  </section>
-
-  <section class="case-section" id="compliance-missing">
-    <div class="case-section-header">
-      <div>
-        <h2>Needs Weekly Check In</h2>
-        <p>Residents missing a weekly summary in the last 7 days.</p>
-      </div>
-      <span class="case-pill urgent">{{ compliance_missing|length }}</span>
+    <div class="case-empty" style="margin-top: 16px;">
+      I did not find an existing chore completion data source in the dashboard files I checked, so this was left out instead of guessing.
     </div>
-
-    {% if compliance_missing %}
-      <ul class="case-list">
-        {% for r in compliance_missing %}
-          <li class="case-list-item">
-            <div class="case-list-main">
-              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
-                {{ r.first_name }} {{ r.last_name }}
-              </a>
-              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
-            </div>
-            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="case-empty good">Weekly summaries are up to date.</div>
-    {% endif %}
-  </section>
-
-  <section class="case-section" id="notes-missing">
-    <div class="case-section-header">
-      <div>
-        <h2>Needs Recent Case Note</h2>
-        <p>Residents with no case note entered in the last 14 days.</p>
-      </div>
-      <span class="case-pill warn">{{ notes_missing|length }}</span>
-    </div>
-
-    {% if notes_missing %}
-      <ul class="case-list">
-        {% for r in notes_missing %}
-          <li class="case-list-item">
-            <div class="case-list-main">
-              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
-                {{ r.first_name }} {{ r.last_name }}
-              </a>
-              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
-            </div>
-            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="case-empty good">Recent case notes are in place.</div>
-    {% endif %}
-  </section>
-
-  <section class="case-section" id="no-appointments">
-    <div class="case-section-header">
-      <div>
-        <h2>Needs Appointment Scheduled</h2>
-        <p>Residents with no appointment currently on file.</p>
-      </div>
-      <span class="case-pill warn">{{ no_appointments|length }}</span>
-    </div>
-
-    {% if no_appointments %}
-      <ul class="case-list">
-        {% for r in no_appointments %}
-          <li class="case-list-item">
-            <div class="case-list-main">
-              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
-                {{ r.first_name }} {{ r.last_name }}
-              </a>
-              <div class="case-list-meta">{{ r.shelter | shelter if r.shelter else "—" }}</div>
-            </div>
-            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open Case</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="case-empty good">Appointments are scheduled for everyone listed here.</div>
-    {% endif %}
   </section>
 
 </div>
-
-<script src="{{ url_for('static', filename='js/case_dashboard_scroll.js', v='20260317a') }}"></script>
 
 {% endblock %}
