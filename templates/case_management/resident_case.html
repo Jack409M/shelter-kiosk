@@ -493,9 +493,6 @@ button.notebook-tab-btn.is-active span {
                 <td>{{ child.relationship_display or "—" }}</td>
                 <td>{{ child.living_status_display or "—" }}</td>
                 <td>
-                  <a class="btn btn-sm" href="{{ url_for('case_management.edit_child', child_id=child_id) }}">
-                    Edit
-                  </a>
                   <a class="btn btn-sm" href="{{ url_for('case_management.child_services', child_id=child_id) }}">
                     Services
                   </a>
