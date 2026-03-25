@@ -8,8 +8,20 @@
 {% set quantity = service["quantity"] if service is mapping else service[4] %}
 {% set unit = service["unit"] if service is mapping else service[5] %}
 {% set notes = service["notes"] if service is mapping else service[6] %}
+{% set resident_id = resident_id if resident_id is defined else None %}
 
 <h1>Edit Child Service</h1>
+
+<div style="margin-bottom:10px;">
+  {% if resident_id %}
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
+      ← Back to Resident
+    </a>
+  {% endif %}
+  <a class="btn" href="{{ url_for('case_management.child_services', child_id=child_id) }}">
+    Back to Child Services
+  </a>
+</div>
 
 <div class="card">
   <form method="post" action="{{ url_for('case_management.edit_child_service', service_id=service_id) }}">
