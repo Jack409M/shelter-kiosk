@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from core.auth import require_login, require_shelter
-from core.db import db_fetchall, db_execute
+from core.db import db_fetchall, db_fetchone, db_execute
 from core.helpers import utcnow_iso
 
 
@@ -83,9 +83,9 @@ def chore_board():
         assigned_date = str(date.today())
 
     if request.method == "POST":
-        resident_id = request.form.get("resident_id")
-        chore_id = request.form.get("chore_id")
-        assign_mode = request.form.get("assign_mode")
+        resident_id = (request.form.get("resident_id") or "").strip()
+        chore_id = (request.form.get("chore_id") or "").strip()
+        assign_mode = (request.form.get("assign_mode") or "day").strip()
 
         if not resident_id or not chore_id:
             flash("Resident and chore are required.", "error")
@@ -108,8 +108,26 @@ def chore_board():
             dates_to_insert.append(assigned_date)
 
         now = utcnow_iso()
+        inserted_count = 0
+        skipped_count = 0
 
         for d in dates_to_insert:
+            existing = db_fetchone(
+                """
+                SELECT id
+                FROM chore_assignments
+                WHERE resident_id = %s
+                  AND chore_id = %s
+                  AND assigned_date = %s
+                LIMIT 1
+                """,
+                (resident_id, chore_id, d),
+            )
+
+            if existing:
+                skipped_count += 1
+                continue
+
             db_execute(
                 """
                 INSERT INTO chore_assignments
@@ -118,11 +136,20 @@ def chore_board():
                 """,
                 (resident_id, chore_id, d, now, now),
             )
+            inserted_count += 1
 
-        if assign_mode == "week":
-            flash("Chore assigned for full week.", "success")
+        if inserted_count and skipped_count:
+            flash(
+                f"Added {inserted_count} assignment(s). Skipped {skipped_count} duplicate assignment(s).",
+                "success",
+            )
+        elif inserted_count:
+            if assign_mode == "week":
+                flash("Chore assigned for full week.", "success")
+            else:
+                flash("Chore assigned for selected day.", "success")
         else:
-            flash("Chore assigned for selected day.", "success")
+            flash("No new assignments were added because matching assignments already exist.", "error")
 
         return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
 
@@ -149,6 +176,8 @@ def chore_board():
     assignments = db_fetchall(
         """
         SELECT
+            ca.id,
+            ca.status,
             r.first_name,
             r.last_name,
             ct.name AS chore_name
@@ -157,7 +186,7 @@ def chore_board():
         JOIN chore_templates ct ON ct.id = ca.chore_id
         WHERE r.shelter = %s
           AND ca.assigned_date = %s
-        ORDER BY r.last_name, r.first_name
+        ORDER BY r.last_name, r.first_name, ct.name
         """,
         (shelter, assigned_date),
     )
@@ -169,3 +198,53 @@ def chore_board():
         assignments=assignments,
         assigned_date=assigned_date,
     )
+
+
+@shelter_operations.route("/chore-board/<int:assignment_id>/toggle-status", methods=["POST"])
+@require_login
+@require_shelter
+def toggle_assignment_status(assignment_id: int):
+    shelter = session.get("shelter")
+    assigned_date = (request.form.get("assigned_date") or "").strip()
+
+    db_execute(
+        """
+        UPDATE chore_assignments ca
+        SET
+            status = CASE
+                WHEN ca.status = 'completed' THEN 'assigned'
+                ELSE 'completed'
+            END,
+            updated_at = %s
+        FROM residents r
+        WHERE ca.id = %s
+          AND r.id = ca.resident_id
+          AND r.shelter = %s
+        """,
+        (utcnow_iso(), assignment_id, shelter),
+    )
+
+    flash("Chore status updated.", "success")
+    return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
+
+
+@shelter_operations.route("/chore-board/<int:assignment_id>/delete", methods=["POST"])
+@require_login
+@require_shelter
+def delete_assignment(assignment_id: int):
+    shelter = session.get("shelter")
+    assigned_date = (request.form.get("assigned_date") or "").strip()
+
+    db_execute(
+        """
+        DELETE FROM chore_assignments ca
+        USING residents r
+        WHERE ca.id = %s
+          AND r.id = ca.resident_id
+          AND r.shelter = %s
+        """,
+        (assignment_id, shelter),
+    )
+
+    flash("Assignment deleted.", "success")
+    return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
