@@ -44,7 +44,7 @@
   </form>
 </div>
 
-{% if services is defined and services %}
+{% if services %}
   <div class="card" style="margin-top:12px;">
     <h2>Recorded Services</h2>
 
@@ -55,25 +55,18 @@
           <th>Service Type</th>
           <th>Quantity</th>
           <th>Outcome</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for s in services %}
-          {% if s is mapping %}
-            {% set service_date = s["service_date"] %}
-            {% set service_type = s["service_type"] %}
-            {% set quantity = s["quantity"] %}
-            {% set unit = s["unit"] %}
-            {% set outcome = s["outcome"] %}
-            {% set notes = s["notes"] %}
-          {% else %}
-            {% set service_date = s[1] %}
-            {% set service_type = s[2] %}
-            {% set quantity = s[3] %}
-            {% set unit = s[4] %}
-            {% set outcome = s[5] %}
-            {% set notes = s[6] %}
-          {% endif %}
+          {% set service_id = s["id"] if s is mapping else s[0] %}
+          {% set service_date = s["service_date"] if s is mapping else s[1] %}
+          {% set service_type = s["service_type"] if s is mapping else s[2] %}
+          {% set quantity = s["quantity"] if s is mapping else s[3] %}
+          {% set unit = s["unit"] if s is mapping else s[4] %}
+          {% set outcome = s["outcome"] if s is mapping else s[5] %}
+          {% set notes = s["notes"] if s is mapping else s[6] %}
 
           <tr>
             <td>{{ service_date | chi_dt if service_date else "—" }}</td>
@@ -88,11 +81,24 @@
               {% endif %}
             </td>
             <td>{{ outcome|replace("_", " ")|title if outcome else "—" }}</td>
+
+            <td>
+              <a class="btn btn-sm" href="{{ url_for('case_management.edit_child_service', service_id=service_id) }}">
+                Edit
+              </a>
+
+              <form method="post"
+                    action="{{ url_for('case_management.delete_child_service', service_id=service_id) }}"
+                    style="display:inline;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm">Delete</button>
+              </form>
+            </td>
           </tr>
 
           {% if notes %}
             <tr>
-              <td colspan="4" style="color:#555; font-size:0.95em;">
+              <td colspan="5" style="color:#555; font-size:0.95em;">
                 {{ notes }}
               </td>
             </tr>
