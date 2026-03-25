@@ -659,10 +659,28 @@ def family_intake_view(resident_id: int):
         living_status = clean(request.form.get("living_status"))
 
         if not child_name:
+            children = db_fetchall(
+                f"""
+                SELECT
+                    id,
+                    resident_id,
+                    child_name,
+                    birth_year,
+                    relationship,
+                    living_status
+                FROM resident_children
+                WHERE resident_id = {ph}
+                  AND is_active = TRUE
+                ORDER BY id ASC
+                """,
+                (resident_id,),
+            )
+
             flash("Child name is required.", "error")
             return render_template(
                 "case_management/family_intake.html",
                 resident_id=resident_id,
+                children=children,
             )
 
         now = datetime.utcnow().isoformat()
@@ -706,9 +724,27 @@ def family_intake_view(resident_id: int):
         flash("Child added.", "success")
         return redirect(url_for("case_management.family_intake", resident_id=resident_id))
 
+    children = db_fetchall(
+        f"""
+        SELECT
+            id,
+            resident_id,
+            child_name,
+            birth_year,
+            relationship,
+            living_status
+        FROM resident_children
+        WHERE resident_id = {ph}
+          AND is_active = TRUE
+        ORDER BY id ASC
+        """,
+        (resident_id,),
+    )
+
     return render_template(
         "case_management/family_intake.html",
         resident_id=resident_id,
+        children=children,
     )
 
 
