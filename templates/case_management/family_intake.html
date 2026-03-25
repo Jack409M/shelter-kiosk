@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<h1>Add Child</h1>
+<h1>Family Intake</h1>
 
 <div class="card">
   <form method="post">
@@ -30,10 +30,55 @@
     <div style="margin-top:10px;">
       <button type="submit">Save Child</button>
       <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
-        No Children / Continue
+        Done with Family
       </a>
     </div>
   </form>
 </div>
+
+{% if children %}
+  <div class="card" style="margin-top:12px;">
+    <h2>Current Children</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Birth Year</th>
+          <th>Relationship</th>
+          <th>Living Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for child in children %}
+          {% set child_id = child["id"] if child is mapping else child[0] %}
+          {% set child_name = child["child_name"] if child is mapping else child[2] %}
+          {% set birth_year = child["birth_year"] if child is mapping else child[3] %}
+          {% set relationship = child["relationship"] if child is mapping else child[4] %}
+          {% set living_status = child["living_status"] if child is mapping else child[5] %}
+
+          <tr>
+            <td>{{ child_name or "—" }}</td>
+            <td>{{ birth_year or "—" }}</td>
+            <td>{{ relationship or "—" }}</td>
+            <td>{{ living_status|replace("_", " ")|title if living_status else "—" }}</td>
+            <td>
+              <a class="btn btn-sm" href="{{ url_for('case_management.edit_child', child_id=child_id) }}">
+                Edit
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div style="margin-top:12px;">
+      <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
+        Done with Family
+      </a>
+    </div>
+  </div>
+{% endif %}
 
 {% endblock %}
