@@ -95,10 +95,24 @@ def intake_index_view():
         (shelter,),
     )
 
+    residents = db_fetchall(
+        f"""
+        SELECT
+            id,
+            first_name,
+            last_name
+        FROM residents
+        WHERE {shelter_equals_sql("shelter")}
+        ORDER BY last_name ASC, first_name ASC
+        """,
+        (shelter,),
+    )
+
     return render_template(
         "intake_assessment/index.html",
         drafts=drafts,
         duplicate_review_drafts=duplicate_review_drafts,
         assessment_drafts=assessment_drafts,
         shelter=shelter,
+        residents=residents,
     )
