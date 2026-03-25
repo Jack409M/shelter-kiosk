@@ -188,25 +188,11 @@ def chore_board():
         JOIN chore_templates ct ON ct.id = ca.chore_id
         WHERE r.shelter = %s
           AND ca.assigned_date = %s
-        ORDER BY r.last_name, r.first_name, ct.name
-        """,
-        (shelter, assigned_date),
-    )
-
-    today_assignments = db_fetchall(
-        """
-        SELECT
-            ca.id,
-            ca.status,
-            r.first_name,
+        ORDER BY
+            CASE WHEN ca.status = 'completed' THEN 1 ELSE 0 END,
             r.last_name,
-            ct.name AS chore_name
-        FROM chore_assignments ca
-        JOIN residents r ON r.id = ca.resident_id
-        JOIN chore_templates ct ON ct.id = ca.chore_id
-        WHERE r.shelter = %s
-          AND ca.assigned_date = %s
-        ORDER BY ca.status, r.last_name, r.first_name
+            r.first_name,
+            ct.name
         """,
         (shelter, assigned_date),
     )
@@ -217,7 +203,6 @@ def chore_board():
         chores=chores,
         assignments=assignments,
         assigned_date=assigned_date,
-        today_assignments=today_assignments,
     )
 
 
