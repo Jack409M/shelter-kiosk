@@ -24,6 +24,8 @@
             <tr>
               <th>Resident</th>
               <th>Chore</th>
+              <th>Status</th>
+              <th></th>
               <th></th>
             </tr>
           </thead>
@@ -32,6 +34,18 @@
             <tr>
               <td>{{ a.last_name }}, {{ a.first_name }}</td>
               <td>{{ a.chore_name }}</td>
+              <td>{{ a.status|capitalize }}</td>
+              <td>
+                <form method="post" action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=a.id) }}">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+                  {% if a.status == 'completed' %}
+                    <button type="submit">Mark Assigned</button>
+                  {% else %}
+                    <button type="submit">Mark Complete</button>
+                  {% endif %}
+                </form>
+              </td>
               <td>
                 <form method="post" action="{{ url_for('shelter_operations.delete_assignment', assignment_id=a.id) }}">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
