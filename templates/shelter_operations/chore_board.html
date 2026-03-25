@@ -4,11 +4,19 @@
 
 <h1>Daily Chore Board</h1>
 
+<div class="card" style="margin-bottom:20px;">
+  <form method="get">
+    <label>Select Date</label><br>
+    <input type="date" name="assigned_date" value="{{ assigned_date }}" required>
+    <button type="submit">Load</button>
+  </form>
+</div>
+
 <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
 
   <div style="flex:2; min-width:340px;">
     <div class="card">
-      <h2>Today's Assignments</h2>
+      <h2>Assignments for {{ assigned_date }}</h2>
 
       {% if assignments %}
         <table class="table-compact">
@@ -28,7 +36,7 @@
           </tbody>
         </table>
       {% else %}
-        <p>No chores assigned yet today.</p>
+        <p>No chores assigned for this date.</p>
       {% endif %}
     </div>
   </div>
@@ -39,6 +47,8 @@
 
       <form method="post">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+        <input type="hidden" name="assign_mode" id="assign_mode" value="day">
 
         <div style="margin-bottom:10px;">
           <label>Resident</label><br>
@@ -60,7 +70,13 @@
           </select>
         </div>
 
-        <button type="submit">Assign Chore</button>
+        <button type="submit" onclick="document.getElementById('assign_mode').value='day'">
+          Assign (Day)
+        </button>
+
+        <button type="submit" onclick="document.getElementById('assign_mode').value='week'">
+          Assign for Week
+        </button>
       </form>
     </div>
   </div>
