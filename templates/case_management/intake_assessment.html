@@ -140,7 +140,7 @@
           <div class="field-grid">
             <div class="field span-2 field-compact">
               <label for="entry_date">Date Entered</label>
-              <input id="entry_date" name="entry_date" type="date" value="{{ form_data.get('entry_date', '') }}">
+              <input id="entry_date" name="entry_date" type="date" required value="{{ form_data.get('entry_date', '') }}">
             </div>
 
             <div class="field span-3 field-compact-wide">
@@ -228,16 +228,31 @@
                       </div>
                     </div>
 
-                    <div class="field span-3 field-max-15">
-                      <label for="shelter">Program Shelter</label>
-                      <select id="shelter" name="shelter" class="{% set selected_shelter = form_data.get('shelter', current_shelter) %}{% if selected_shelter %}has-value{% endif %}">
-                        {% for option in shelters %}
-                          <option value="{{ option.value }}" {% if option.value == selected_shelter %}selected{% endif %}>
-                            {{ option.label }}
-                          </option>
-                        {% endfor %}
-                      </select>
-                    </div>
+                    {% set selected_shelter = form_data.get('shelter', current_shelter) %}
+                    {% if is_edit_mode %}
+                      <div class="field span-3 field-max-15">
+                        <label for="shelter_display">Program Shelter</label>
+                        <input
+                          id="shelter_display"
+                          type="text"
+                          value="{% for option in shelters %}{% if option.value == selected_shelter %}{{ option.label }}{% endif %}{% endfor %}"
+                          readonly
+                        >
+                        <input type="hidden" name="shelter" value="{{ selected_shelter }}">
+                        <small>Shelter changes must be done through the transfer workflow.</small>
+                      </div>
+                    {% else %}
+                      <div class="field span-3 field-max-15">
+                        <label for="shelter">Program Shelter</label>
+                        <select id="shelter" name="shelter" class="{% if selected_shelter %}has-value{% endif %}">
+                          {% for option in shelters %}
+                            <option value="{{ option.value }}" {% if option.value == selected_shelter %}selected{% endif %}>
+                              {{ option.label }}
+                            </option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                    {% endif %}
 
                     <div class="field span-3 field-max-25">
                       <label for="emergency_contact_name">Emergency Contact Name</label>
@@ -359,15 +374,15 @@
 
                     <div class="field span-4">
                       <label for="city">City</label>
-                      <input id="city" name="city" type="text" value="{{ form_data.get('city', '') }}">
+                      <input id="city" name="city" type="text" maxlength="25" value="{{ form_data.get('city', '') }}">
                     </div>
 
                     <div class="field span-2 field-compact">
                       <label for="last_zipcode_residence">Zipcode</label>
-                      <input id="last_zipcode_residence" name="last_zipcode_residence" type="text" value="{{ form_data.get('last_zipcode_residence', '') }}">
+                      <input id="last_zipcode_residence" name="last_zipcode_residence" type="text" maxlength="7" value="{{ form_data.get('last_zipcode_residence', '') }}">
                     </div>
 
-                    <div class="field span-4">
+                    <div class="field span-4 field-max-20">
                       <label for="length_of_time_in_amarillo">Length of Time in Amarillo</label>
                       <select id="length_of_time_in_amarillo" name="length_of_time_in_amarillo" class="{% if form_data.get('length_of_time_in_amarillo', '') %}has-value{% endif %}">
                         <option value="">Select</option>
