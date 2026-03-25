@@ -469,16 +469,6 @@ button.notebook-tab-btn.is-active span {
     <div class="card no-print">
       <h2>Family</h2>
 
-      {% set family_intake_url = safe_url_for('case_management.family_intake', resident_id=resident_id) %}
-
-      {% if family_intake_url %}
-        <p>
-          <a class="btn" href="{{ family_intake_url }}">
-            Add Child
-          </a>
-        </p>
-      {% endif %}
-
       {% if children is defined and children %}
         <table>
           <thead>
