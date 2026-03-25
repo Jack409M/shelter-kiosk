@@ -3,6 +3,12 @@
 
 <h1>Child Services</h1>
 
+<div style="margin-bottom:10px;">
+  <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
+    Back to Resident
+  </a>
+</div>
+
 <div class="card">
   <form method="post">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
