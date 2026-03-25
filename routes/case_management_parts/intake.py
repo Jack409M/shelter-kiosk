@@ -704,7 +704,7 @@ def family_intake_view(resident_id: int):
         )
 
         flash("Child added.", "success")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return redirect(url_for("case_management.family_intake", resident_id=resident_id))
 
     return render_template(
         "case_management/family_intake.html",
@@ -769,7 +769,7 @@ def edit_child_view(child_id: int):
         resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
 
         flash("Child updated.", "success")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return redirect(url_for("case_management.family_intake", resident_id=resident_id))
 
     return render_template(
         "case_management/edit_child.html",
