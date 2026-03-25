@@ -14,6 +14,8 @@ case_dashboard = Blueprint(
     url_prefix="/staff/case-dashboard",
 )
 
+CHICAGO_TZ = ZoneInfo("America/Chicago")
+
 
 def _sql(pg_sql: str, sqlite_sql: str) -> str:
     return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
@@ -63,16 +65,7 @@ def _to_chicago(value):
     dt = _parse_dt(value)
     if not dt:
         return None
-    return dt.astimezone(ZoneInfo("America/Chicago"))
-
-
-def _is_recent(value, days: int) -> bool:
-    dt = _parse_dt(value)
-    if not dt:
-        return False
-
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    return dt >= cutoff
+    return dt.astimezone(CHICAGO_TZ)
 
 
 def _scope_filter_and_params(shelter: str | None):
@@ -84,6 +77,12 @@ def _request_placeholder() -> str:
     return "%s" if g.get("db_kind") == "pg" else "?"
 
 
+def _row_value(row, key: str, index: int):
+    if isinstance(row, dict):
+        return row.get(key)
+    return row[index]
+
+
 @case_dashboard.route("")
 @require_login
 @require_shelter
@@ -93,182 +92,6 @@ def dashboard():
 
     shelter_filter, params = _scope_filter_and_params(shelter)
     placeholder = _request_placeholder()
-
-    missing_enrollment = db_fetchall(
-        _sql(
-            f"""
-            SELECT r.id, r.first_name, r.last_name, r.shelter
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            WHERE pe.id IS NULL
-              AND r.is_active = TRUE
-              {shelter_filter}
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-            f"""
-            SELECT r.id, r.first_name, r.last_name, r.shelter
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            WHERE pe.id IS NULL
-              AND r.is_active = 1
-              {shelter_filter}
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-        ),
-        params,
-    )
-
-    no_goals = db_fetchall(
-        _sql(
-            f"""
-            SELECT DISTINCT r.id, r.first_name, r.last_name, r.shelter
-            FROM residents r
-            JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            LEFT JOIN goals g
-              ON g.enrollment_id = pe.id
-            WHERE g.id IS NULL
-              AND r.is_active = TRUE
-              {shelter_filter}
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-            f"""
-            SELECT DISTINCT r.id, r.first_name, r.last_name, r.shelter
-            FROM residents r
-            JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            LEFT JOIN goals g
-              ON g.enrollment_id = pe.id
-            WHERE g.id IS NULL
-              AND r.is_active = 1
-              {shelter_filter}
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-        ),
-        params,
-    )
-
-    compliance_candidates = db_fetchall(
-        _sql(
-            f"""
-            SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter,
-                MAX(wrs.submitted_at) AS last_submitted_at
-            FROM residents r
-            JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            LEFT JOIN weekly_resident_summary wrs
-              ON wrs.enrollment_id = pe.id
-            WHERE r.is_active = TRUE
-              {shelter_filter}
-            GROUP BY r.id, r.first_name, r.last_name, r.shelter
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-            f"""
-            SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter,
-                MAX(wrs.submitted_at) AS last_submitted_at
-            FROM residents r
-            JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            LEFT JOIN weekly_resident_summary wrs
-              ON wrs.enrollment_id = pe.id
-            WHERE r.is_active = 1
-              {shelter_filter}
-            GROUP BY r.id, r.first_name, r.last_name, r.shelter
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-        ),
-        params,
-    )
-
-    compliance_missing = [
-        row for row in compliance_candidates
-        if not _is_recent((row.get("last_submitted_at") if isinstance(row, dict) else row[4]), 7)
-    ]
-
-    notes_candidates = db_fetchall(
-        _sql(
-            f"""
-            SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter,
-                MAX(cmu.created_at) AS last_note_at
-            FROM residents r
-            JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            LEFT JOIN case_manager_updates cmu
-              ON cmu.enrollment_id = pe.id
-            WHERE r.is_active = TRUE
-              {shelter_filter}
-            GROUP BY r.id, r.first_name, r.last_name, r.shelter
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-            f"""
-            SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter,
-                MAX(cmu.created_at) AS last_note_at
-            FROM residents r
-            JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            LEFT JOIN case_manager_updates cmu
-              ON cmu.enrollment_id = pe.id
-            WHERE r.is_active = 1
-              {shelter_filter}
-            GROUP BY r.id, r.first_name, r.last_name, r.shelter
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-        ),
-        params,
-    )
-
-    notes_missing = [
-        row for row in notes_candidates
-        if not _is_recent((row.get("last_note_at") if isinstance(row, dict) else row[4]), 14)
-    ]
-
-    no_appointments = db_fetchall(
-        _sql(
-            f"""
-            SELECT DISTINCT r.id, r.first_name, r.last_name, r.shelter
-            FROM residents r
-            JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            LEFT JOIN appointments a
-              ON a.enrollment_id = pe.id
-            WHERE a.id IS NULL
-              AND r.is_active = TRUE
-              {shelter_filter}
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-            f"""
-            SELECT DISTINCT r.id, r.first_name, r.last_name, r.shelter
-            FROM residents r
-            JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-            LEFT JOIN appointments a
-              ON a.enrollment_id = pe.id
-            WHERE a.id IS NULL
-              AND r.is_active = 1
-              {shelter_filter}
-            ORDER BY r.shelter, r.last_name, r.first_name
-            """,
-        ),
-        params,
-    )
 
     pending_pass_count_row = db_fetchone(
         f"""
@@ -372,106 +195,232 @@ def dashboard():
     )
     family_intakes_pending_count = len(family_intakes_pending_rows)
 
-    pending_pass_rows_raw = db_fetchall(
+    now_chicago = datetime.now(CHICAGO_TZ)
+    today_local = now_chicago.date()
+
+    attendance_rows = db_fetchall(
+        _sql(
+            f"""
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter,
+                ae.event_type,
+                ae.event_time,
+                ae.expected_back_time,
+                ae.note
+            FROM residents r
+            LEFT JOIN attendance_events ae
+              ON ae.id = (
+                SELECT ae2.id
+                FROM attendance_events ae2
+                WHERE ae2.resident_id = r.id
+                  AND ae2.shelter = r.shelter
+                ORDER BY ae2.event_time DESC, ae2.id DESC
+                LIMIT 1
+              )
+            WHERE r.is_active = TRUE
+              {shelter_filter}
+            ORDER BY r.last_name, r.first_name
+            """,
+            f"""
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                r.shelter,
+                ae.event_type,
+                ae.event_time,
+                ae.expected_back_time,
+                ae.note
+            FROM residents r
+            LEFT JOIN attendance_events ae
+              ON ae.id = (
+                SELECT ae2.id
+                FROM attendance_events ae2
+                WHERE ae2.resident_id = r.id
+                  AND ae2.shelter = r.shelter
+                ORDER BY ae2.event_time DESC, ae2.id DESC
+                LIMIT 1
+              )
+            WHERE r.is_active = 1
+              {shelter_filter}
+            ORDER BY r.last_name, r.first_name
+            """,
+        ),
+        params,
+    )
+
+    missed_clock_in_rows = []
+    for row in attendance_rows:
+        event_type = _row_value(row, "event_type", 4)
+        expected_back_time = _row_value(row, "expected_back_time", 6)
+
+        if event_type != "check_out":
+            continue
+
+        expected_back_local = _to_chicago(expected_back_time)
+        if not expected_back_local:
+            continue
+
+        if expected_back_local.date() < today_local:
+            missed_clock_in_rows.append(
+                {
+                    "id": _row_value(row, "id", 0),
+                    "first_name": _row_value(row, "first_name", 1),
+                    "last_name": _row_value(row, "last_name", 2),
+                    "expected_back_local": expected_back_local,
+                }
+            )
+
+    late_check_in_rows_raw = db_fetchall(
         _sql(
             """
             SELECT
-                rp.id,
-                rp.resident_id,
+                r.id,
                 r.first_name,
                 r.last_name,
-                rp.shelter,
-                rp.pass_type,
-                rp.start_at,
-                rp.end_at,
-                rp.start_date,
-                rp.end_date,
-                rp.destination,
-                rp.reason,
-                rp.created_at,
-                rp.status
-            FROM resident_passes rp
+                ci.event_time AS check_in_time,
+                co.expected_back_time
+            FROM attendance_events ci
             JOIN residents r
-              ON r.id = rp.resident_id
-            WHERE rp.status = %s
-              AND rp.shelter = %s
-            ORDER BY rp.created_at ASC
+              ON r.id = ci.resident_id
+             AND r.shelter = ci.shelter
+            JOIN attendance_events co
+              ON co.id = (
+                SELECT co2.id
+                FROM attendance_events co2
+                WHERE co2.resident_id = ci.resident_id
+                  AND co2.shelter = ci.shelter
+                  AND co2.event_type = 'check_out'
+                  AND co2.event_time < ci.event_time
+                ORDER BY co2.event_time DESC, co2.id DESC
+                LIMIT 1
+              )
+            WHERE ci.event_type = 'check_in'
+              AND r.is_active = TRUE
+              AND r.shelter = %s
+            ORDER BY ci.event_time DESC
             """,
             """
             SELECT
-                rp.id,
-                rp.resident_id,
+                r.id,
                 r.first_name,
                 r.last_name,
-                rp.shelter,
-                rp.pass_type,
-                rp.start_at,
-                rp.end_at,
-                rp.start_date,
-                rp.end_date,
-                rp.destination,
-                rp.reason,
-                rp.created_at,
-                rp.status
-            FROM resident_passes rp
+                ci.event_time AS check_in_time,
+                co.expected_back_time
+            FROM attendance_events ci
             JOIN residents r
-              ON r.id = rp.resident_id
-            WHERE rp.status = ?
-              AND rp.shelter = ?
-            ORDER BY rp.created_at ASC
+              ON r.id = ci.resident_id
+             AND r.shelter = ci.shelter
+            JOIN attendance_events co
+              ON co.id = (
+                SELECT co2.id
+                FROM attendance_events co2
+                WHERE co2.resident_id = ci.resident_id
+                  AND co2.shelter = ci.shelter
+                  AND co2.event_type = 'check_out'
+                  AND co2.event_time < ci.event_time
+                ORDER BY co2.event_time DESC, co2.id DESC
+                LIMIT 1
+              )
+            WHERE ci.event_type = 'check_in'
+              AND r.is_active = 1
+              AND r.shelter = ?
+            ORDER BY ci.event_time DESC
             """,
         ),
-        ("pending", shelter),
+        (shelter,),
     )
 
-    pending_pass_rows = []
-    now_chicago = datetime.now(ZoneInfo("America/Chicago"))
+    late_check_in_rows = []
+    for row in late_check_in_rows_raw:
+        check_in_local = _to_chicago(_row_value(row, "check_in_time", 3))
+        expected_back_local = _to_chicago(_row_value(row, "expected_back_time", 4))
 
-    for row in pending_pass_rows_raw:
-        item = dict(row) if isinstance(row, dict) else {
-            "id": row[0],
-            "resident_id": row[1],
-            "first_name": row[2],
-            "last_name": row[3],
-            "shelter": row[4],
-            "pass_type": row[5],
-            "start_at": row[6],
-            "end_at": row[7],
-            "start_date": row[8],
-            "end_date": row[9],
-            "destination": row[10],
-            "reason": row[11],
-            "created_at": row[12],
-            "status": row[13],
-        }
+        if not check_in_local or not expected_back_local:
+            continue
 
-        item["start_at_local"] = _to_chicago(item.get("start_at"))
-        item["end_at_local"] = _to_chicago(item.get("end_at"))
-        item["created_at_local"] = _to_chicago(item.get("created_at"))
+        if check_in_local.date() != today_local:
+            continue
 
-        is_urgent = False
-        if item.get("pass_type") == "ordinary" and item["start_at_local"]:
-            delta = item["start_at_local"] - now_chicago
-            is_urgent = timedelta(0) <= delta <= timedelta(hours=2)
+        if check_in_local > expected_back_local:
+            late_check_in_rows.append(
+                {
+                    "id": _row_value(row, "id", 0),
+                    "first_name": _row_value(row, "first_name", 1),
+                    "last_name": _row_value(row, "last_name", 2),
+                    "check_in_local": check_in_local,
+                    "expected_back_local": expected_back_local,
+                }
+            )
 
-        item["is_urgent"] = is_urgent
-        pending_pass_rows.append(item)
+    appointments_today_rows = db_fetchall(
+        _sql(
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                a.appointment_type,
+                a.appointment_date,
+                a.notes
+            FROM appointments a
+            JOIN program_enrollments pe
+              ON pe.id = a.enrollment_id
+            JOIN residents r
+              ON r.id = pe.resident_id
+            WHERE r.is_active = TRUE
+              AND r.shelter = %s
+              AND a.appointment_date = %s
+            ORDER BY r.last_name, r.first_name, a.id
+            """,
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                a.appointment_type,
+                a.appointment_date,
+                a.notes
+            FROM appointments a
+            JOIN program_enrollments pe
+              ON pe.id = a.enrollment_id
+            JOIN residents r
+              ON r.id = pe.resident_id
+            WHERE r.is_active = 1
+              AND r.shelter = ?
+              AND a.appointment_date = ?
+            ORDER BY r.last_name, r.first_name, a.id
+            """,
+        ),
+        (shelter, today_local.isoformat()),
+    )
 
-    pending_request_total = int(pending_pass_count or 0) + int(pending_transport_count or 0)
+    appointments_today = []
+    for row in appointments_today_rows:
+        appointments_today.append(
+            {
+                "id": _row_value(row, "id", 0),
+                "first_name": _row_value(row, "first_name", 1),
+                "last_name": _row_value(row, "last_name", 2),
+                "appointment_type": _row_value(row, "appointment_type", 3),
+                "appointment_date": _row_value(row, "appointment_date", 4),
+                "notes": _row_value(row, "notes", 5),
+            }
+        )
 
     return render_template(
         "case_dashboard/dashboard.html",
-        missing_enrollment=missing_enrollment,
-        no_goals=no_goals,
-        compliance_missing=compliance_missing,
-        notes_missing=notes_missing,
-        no_appointments=no_appointments,
         pending_pass_count=pending_pass_count,
         pending_transport_count=pending_transport_count,
-        pending_request_total=pending_request_total,
-        pending_pass_rows=pending_pass_rows,
         intake_drafts_count=intake_drafts_count,
         family_intakes_pending_count=family_intakes_pending_count,
+        missed_clock_in_rows=missed_clock_in_rows,
+        late_check_in_rows=late_check_in_rows,
+        appointments_today=appointments_today,
+        today_local=today_local,
         role=role,
         shelter=shelter,
     )
