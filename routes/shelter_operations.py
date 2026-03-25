@@ -69,3 +69,10 @@ def toggle_chore(chore_id: int):
 
     flash("Chore updated.", "success")
     return redirect(url_for("shelter_operations.chore_management"))
+
+
+@shelter_operations.route("/chore-board")
+@require_login
+@require_shelter
+def chore_board():
+    return render_template("shelter_operations/chore_board.html")
