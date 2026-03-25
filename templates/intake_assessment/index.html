@@ -2,145 +2,209 @@
 
 {% block content %}
 
+<style>
+  .intake-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  .intake-grid .card {
+    margin: 0;
+  }
+
+  .intake-grid .card h2 {
+    margin-bottom: 10px;
+  }
+
+  .intake-grid .card p {
+    margin-top: 0;
+    margin-bottom: 12px;
+  }
+
+  .family-intake-form label {
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .family-intake-row {
+    display: flex;
+    gap: 10px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+
+  .family-intake-row input[type="number"] {
+    width: 180px;
+  }
+
+  .family-intake-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .intake-grid-full {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 900px) {
+    .intake-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .intake-grid-full {
+      grid-column: auto;
+    }
+  }
+</style>
+
 <h1>Intake and Assessment</h1>
 
-<div class="card">
-  <h2>Start New Intake</h2>
-  <p>Start a new intake for a resident entering the program.</p>
+<div class="intake-grid">
+  <div class="card">
+    <h2>Start New Resident Intake</h2>
+    <p>Start a new intake for a resident entering the program.</p>
 
-  {% set new_intake_url = safe_url_for('case_management.intake_form') %}
-  {% if new_intake_url %}
-    <p>
-      <a class="btn" href="{{ new_intake_url }}">New Intake</a>
-    </p>
-  {% else %}
-    <p>Intake form is not available yet.</p>
-  {% endif %}
-</div>
+    {% set new_intake_url = safe_url_for('case_management.intake_form') %}
+    {% if new_intake_url %}
+      <p>
+        <a class="btn" href="{{ new_intake_url }}">New Intake</a>
+      </p>
+    {% else %}
+      <p>Intake form is not available yet.</p>
+    {% endif %}
+  </div>
 
-<div class="card">
-  <h2>Family Intake</h2>
-  <p>Begin family intake, finish family intake, or edit family information for an existing resident.</p>
+  <div class="card">
+    <h2>Start New Family Intake</h2>
+    <p>Begin family intake for an existing resident.</p>
 
-  <form onsubmit="return openFamilyIntake();">
-    <label for="family_resident_id"><strong>Resident ID</strong></label>
-    <input type="number" id="family_resident_id" min="1" required>
+    <form class="family-intake-form" onsubmit="return openFamilyIntake();">
+      <div class="family-intake-row">
+        <div>
+          <label for="family_resident_id"><strong>Resident ID</strong></label>
+          <input type="number" id="family_resident_id" min="1" required>
+        </div>
 
-    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button type="button" onclick="openFamilyIntake()">Begin Family Intake</button>
-      <button type="button" onclick="openFamilyIntake()">Finish Family Intake</button>
-      <button type="button" onclick="openFamilyIntake()">Edit Family</button>
-    </div>
-  </form>
-</div>
+        <div class="family-intake-actions">
+          <button type="button" onclick="openFamilyIntake()">Begin Family Intake</button>
+          <button type="button" onclick="openFamilyIntake()">Finish Family Intake</button>
+          <button type="button" onclick="openFamilyIntake()">Edit Family</button>
+        </div>
+      </div>
+    </form>
+  </div>
 
-<div class="card">
-  <h2>Resume Unsubmitted Intake Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
-  <p>Continue an intake that has already been started but not finalized.</p>
+  <div class="card">
+    <h2>Resume Resident Unsubmitted Intake Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+    <p>Continue an intake that has already been started but not finalized.</p>
 
-  {% if drafts %}
-    <table class="table-compact">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Date Entered</th>
-          <th>Last Updated</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in drafts %}
-          {% set draft_url = safe_url_for('case_management.intake_form', draft_id=d.id) %}
+    {% if drafts %}
+      <table class="table-compact">
+        <thead>
           <tr>
-            <td>{{ d.resident_name or "Unnamed intake draft" }}</td>
-            <td>{{ d.entry_date or "—" }}</td>
-            <td>{{ d.updated_at or "—" }}</td>
-            <td>
-              {% if draft_url %}
-                <a class="btn" href="{{ draft_url }}">Resume</a>
-              {% else %}
-                <span>Unavailable</span>
-              {% endif %}
-            </td>
+            <th>Name</th>
+            <th>Date Entered</th>
+            <th>Last Updated</th>
+            <th></th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No intake drafts in progress.</p>
-  {% endif %}
-</div>
+        </thead>
+        <tbody>
+          {% for d in drafts %}
+            {% set draft_url = safe_url_for('case_management.intake_form', draft_id=d.id) %}
+            <tr>
+              <td>{{ d.resident_name or "Unnamed intake draft" }}</td>
+              <td>{{ d.entry_date or "—" }}</td>
+              <td>{{ d.updated_at or "—" }}</td>
+              <td>
+                {% if draft_url %}
+                  <a class="btn" href="{{ draft_url }}">Resume</a>
+                {% else %}
+                  <span>Unavailable</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No intake drafts in progress.</p>
+    {% endif %}
+  </div>
 
-<div class="card">
-  <h2>Pending Duplicate Reviews{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
-  <p>Review possible duplicate residents before deciding whether to use the existing resident or create a new one.</p>
+  <div class="card">
+    <h2>Review Pending Resident Duplicates{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+    <p>Review possible duplicate residents before deciding whether to use the existing resident or create a new one.</p>
 
-  {% if duplicate_review_drafts %}
-    <table class="table-compact">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Date Entered</th>
-          <th>Last Updated</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in duplicate_review_drafts %}
-          {% set review_url = safe_url_for('case_management.intake_duplicate_review', draft_id=d.id) %}
+    {% if duplicate_review_drafts %}
+      <table class="table-compact">
+        <thead>
           <tr>
-            <td>{{ d.resident_name or "Unnamed duplicate review" }}</td>
-            <td>{{ d.entry_date or "—" }}</td>
-            <td>{{ d.updated_at or "—" }}</td>
-            <td>
-              {% if review_url %}
-                <a class="btn" href="{{ review_url }}">Review</a>
-              {% else %}
-                <span>Unavailable</span>
-              {% endif %}
-            </td>
+            <th>Name</th>
+            <th>Date Entered</th>
+            <th>Last Updated</th>
+            <th></th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No duplicate reviews pending.</p>
-  {% endif %}
-</div>
+        </thead>
+        <tbody>
+          {% for d in duplicate_review_drafts %}
+            {% set review_url = safe_url_for('case_management.intake_duplicate_review', draft_id=d.id) %}
+            <tr>
+              <td>{{ d.resident_name or "Unnamed duplicate review" }}</td>
+              <td>{{ d.entry_date or "—" }}</td>
+              <td>{{ d.updated_at or "—" }}</td>
+              <td>
+                {% if review_url %}
+                  <a class="btn" href="{{ review_url }}">Review</a>
+                {% else %}
+                  <span>Unavailable</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No duplicate reviews pending.</p>
+    {% endif %}
+  </div>
 
-<div class="card">
-  <h2>Resume Assessment Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
-  <p>Continue an assessment draft that has already been started but not finalized.</p>
+  <div class="card intake-grid-full">
+    <h2>Resume Resident Assessment Drafts{% if shelter %} for {{ shelter | shelter }}{% endif %}</h2>
+    <p>Continue an assessment draft that has already been started but not finalized.</p>
 
-  {% if assessment_drafts %}
-    <table class="table-compact">
-      <thead>
-        <tr>
-          <th>Resident ID</th>
-          <th>Last Updated</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for d in assessment_drafts %}
-          {% set assessment_url = safe_url_for('case_management.assessment_form', draft_id=d.id) %}
+    {% if assessment_drafts %}
+      <table class="table-compact">
+        <thead>
           <tr>
-            <td>{{ d.resident_id or "—" }}</td>
-            <td>{{ d.updated_at or "—" }}</td>
-            <td>
-              {% if assessment_url %}
-                <a class="btn" href="{{ assessment_url }}">Resume</a>
-              {% else %}
-                <span>Unavailable</span>
-              {% endif %}
-            </td>
+            <th>Resident ID</th>
+            <th>Last Updated</th>
+            <th></th>
           </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No assessment drafts in progress.</p>
-  {% endif %}
+        </thead>
+        <tbody>
+          {% for d in assessment_drafts %}
+            {% set assessment_url = safe_url_for('case_management.assessment_form', draft_id=d.id) %}
+            <tr>
+              <td>{{ d.resident_id or "—" }}</td>
+              <td>{{ d.updated_at or "—" }}</td>
+              <td>
+                {% if assessment_url %}
+                  <a class="btn" href="{{ assessment_url }}">Resume</a>
+                {% else %}
+                  <span>Unavailable</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No assessment drafts in progress.</p>
+    {% endif %}
+  </div>
 </div>
 
 <script>
