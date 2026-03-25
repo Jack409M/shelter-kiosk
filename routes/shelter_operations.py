@@ -1,74 +1,71 @@
-{% extends "layout.html" %}
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from core.auth import require_login, require_shelter
+from core.db import db_fetchall, db_execute
+from core.helpers import utcnow_iso
 
-{% block content %}
 
-<h1>Chore Management</h1>
+shelter_operations = Blueprint(
+    "shelter_operations",
+    __name__,
+    url_prefix="/staff/shelter-operations",
+)
 
-<div class="card" style="margin-bottom:20px;">
-  <h2>Add New Chore</h2>
 
-  <form method="post">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+@shelter_operations.route("/chores", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def chore_management():
+    shelter = session.get("shelter")
 
-    <div style="margin-bottom:10px;">
-      <label>Chore Name</label><br>
-      <input type="text" name="name" style="width:300px;" required>
-    </div>
+    if request.method == "POST":
+        name = (request.form.get("name") or "").strip()
+        description = (request.form.get("description") or "").strip()
 
-    <div style="margin-bottom:10px;">
-      <label>Description (optional)</label><br>
-      <input type="text" name="description" style="width:400px;">
-    </div>
+        if not name:
+            flash("Chore name is required.", "error")
+            return redirect(url_for("shelter_operations.chore_management"))
 
-    <button type="submit">Add Chore</button>
-  </form>
-</div>
+        db_execute(
+            """
+            INSERT INTO chore_templates (shelter, name, description, active, created_at)
+            VALUES (%s, %s, %s, 1, %s)
+            """,
+            (shelter, name, description or None, utcnow_iso()),
+        )
 
-<div class="card">
-  <h2>Current Chores</h2>
+        flash("Chore added.", "success")
+        return redirect(url_for("shelter_operations.chore_management"))
 
-  {% if chores %}
-    <table class="table-compact">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Description</th>
-          <th>Status</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in chores %}
-        <tr>
-          <td>{{ c.name }}</td>
-          <td>{{ c.description or "—" }}</td>
-          <td>
-            {% if c.active %}
-              Active
-            {% else %}
-              Inactive
-            {% endif %}
-          </td>
-          <td>
-            <form method="post" action="{{ url_for('shelter_operations.toggle_chore', chore_id=c.id) }}">
-              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <button type="submit">
-                {% if c.active %}
-                  Deactivate
-                {% else %}
-                  Activate
-                {% endif %}
-              </button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No chores created yet.</p>
-  {% endif %}
+    chores = db_fetchall(
+        """
+        SELECT id, name, description, active
+        FROM chore_templates
+        WHERE shelter = %s
+        ORDER BY active DESC, name ASC
+        """,
+        (shelter,),
+    )
 
-</div>
+    return render_template(
+        "shelter_operations/chore_management.html",
+        chores=chores,
+    )
 
-{% endblock %}
+
+@shelter_operations.route("/chores/<int:chore_id>/toggle", methods=["POST"])
+@require_login
+@require_shelter
+def toggle_chore(chore_id: int):
+    shelter = session.get("shelter")
+
+    db_execute(
+        """
+        UPDATE chore_templates
+        SET active = CASE WHEN active = 1 THEN 0 ELSE 1 END
+        WHERE id = %s AND shelter = %s
+        """,
+        (chore_id, shelter),
+    )
+
+    flash("Chore updated.", "success")
+    return redirect(url_for("shelter_operations.chore_management"))
