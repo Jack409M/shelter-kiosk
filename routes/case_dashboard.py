@@ -411,6 +411,86 @@ def dashboard():
             }
         )
 
+    yesterday = today_local - timedelta(days=1)
+
+    missed_yesterday_rows = db_fetchall(
+        _sql(
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                ct.name AS chore_name
+            FROM chore_assignments ca
+            JOIN residents r ON r.id = ca.resident_id
+            JOIN chore_templates ct ON ct.id = ca.chore_id
+            WHERE r.is_active = TRUE
+              AND r.shelter = %s
+              AND ca.assigned_date = %s
+              AND ca.status <> 'completed'
+            ORDER BY r.last_name, r.first_name
+            """,
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                ct.name AS chore_name
+            FROM chore_assignments ca
+            JOIN residents r ON r.id = ca.resident_id
+            JOIN chore_templates ct ON ct.id = ca.chore_id
+            WHERE r.is_active = 1
+              AND r.shelter = ?
+              AND ca.assigned_date = ?
+              AND ca.status <> 'completed'
+            ORDER BY r.last_name, r.first_name
+            """,
+        ),
+        (shelter, yesterday.isoformat()),
+    )
+
+    weekday = today_local.weekday()
+    days_to_tuesday = (weekday - 1) % 7
+    week_start = today_local - timedelta(days=days_to_tuesday)
+
+    missed_week_rows = db_fetchall(
+        _sql(
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                COUNT(*) AS missed_count
+            FROM chore_assignments ca
+            JOIN residents r ON r.id = ca.resident_id
+            WHERE r.is_active = TRUE
+              AND r.shelter = %s
+              AND ca.assigned_date BETWEEN %s AND %s
+              AND ca.status <> 'completed'
+            GROUP BY r.id, r.first_name, r.last_name
+            HAVING COUNT(*) > 0
+            ORDER BY missed_count DESC, r.last_name, r.first_name
+            """,
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                COUNT(*) AS missed_count
+            FROM chore_assignments ca
+            JOIN residents r ON r.id = ca.resident_id
+            WHERE r.is_active = 1
+              AND r.shelter = ?
+              AND ca.assigned_date BETWEEN ? AND ?
+              AND ca.status <> 'completed'
+            GROUP BY r.id, r.first_name, r.last_name
+            HAVING COUNT(*) > 0
+            ORDER BY missed_count DESC, r.last_name, r.first_name
+            """,
+        ),
+        (shelter, week_start.isoformat(), today_local.isoformat()),
+    )
+
     return render_template(
         "case_dashboard/dashboard.html",
         pending_pass_count=pending_pass_count,
@@ -420,6 +500,8 @@ def dashboard():
         missed_clock_in_rows=missed_clock_in_rows,
         late_check_in_rows=late_check_in_rows,
         appointments_today=appointments_today,
+        missed_yesterday_rows=missed_yesterday_rows,
+        missed_week_rows=missed_week_rows,
         today_local=today_local,
         role=role,
         shelter=shelter,
