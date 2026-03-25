@@ -11,7 +11,11 @@
   <div class="intake-header">
     <div class="intake-header-copy">
       <h1>Intake and Assessment</h1>
-      {% if review_passed %}
+      {% if is_edit_mode %}
+        <p>
+          Update the submitted intake information below, then save your changes.
+        </p>
+      {% elif review_passed %}
         <p>
           Match review is complete. Continue the intake and complete the initial assessment before finalizing.
         </p>
@@ -25,17 +29,29 @@
     <div class="intake-header-actions">
       <a class="btn-soft" href="{{ safe_url_for('case_management.intake_index') or '#' }}">Back to Intake and Assessment</a>
 
-      <button
-        class="btn-soft"
-        type="submit"
-        name="action"
-        value="save_draft"
-        form="resident-intake-form"
-      >
-        Save Draft
-      </button>
+      {% if not is_edit_mode %}
+        <button
+          class="btn-soft"
+          type="submit"
+          name="action"
+          value="save_draft"
+          form="resident-intake-form"
+        >
+          Save Draft
+        </button>
+      {% endif %}
 
-      {% if review_passed %}
+      {% if is_edit_mode %}
+        <button
+          class="btn-primary"
+          type="submit"
+          name="action"
+          value="complete"
+          form="resident-intake-form"
+        >
+          Save Changes
+        </button>
+      {% elif review_passed %}
         <button
           class="btn-primary"
           type="submit"
@@ -83,7 +99,14 @@
       {% endif %}
     {% endwith %}
 
-    {% if review_passed %}
+    {% if is_edit_mode %}
+      <div class="stage-card">
+        <h2>Edit Submitted Intake</h2>
+        <p>
+          Update the submitted intake record below and save your changes when finished.
+        </p>
+      </div>
+    {% elif review_passed %}
       <div class="stage-card">
         <h2>Step One Complete</h2>
         <p>
@@ -671,16 +694,22 @@
 
         <div class="footer-actions">
           <div class="footer-note">
-            Save Draft lets staff stop and reopen later. Finalize should only be used after review has passed and the intake is ready to be committed.
+            {% if is_edit_mode %}
+              Save Changes updates the submitted intake record.
+            {% else %}
+              Save Draft lets staff stop and reopen later. Finalize should only be used after review has passed and the intake is ready to be committed.
+            {% endif %}
           </div>
 
           <div class="intake-header-actions">
-            <button class="btn-soft" type="submit" name="action" value="save_draft">
-              Save Draft
-            </button>
+            {% if not is_edit_mode %}
+              <button class="btn-soft" type="submit" name="action" value="save_draft">
+                Save Draft
+              </button>
+            {% endif %}
 
             <button class="btn-primary" type="submit" name="action" value="complete">
-              Finalize
+              {% if is_edit_mode %}Save Changes{% else %}Finalize{% endif %}
             </button>
           </div>
         </div>
