@@ -290,6 +290,74 @@ def dashboard():
         ("pending", shelter),
     )
 
+    intake_drafts_count_row = db_fetchone(
+        f"""
+        SELECT COUNT(*)
+        FROM intake_drafts
+        WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+          AND status = 'draft'
+        """,
+        (shelter,),
+    )
+
+    family_intakes_pending_rows = db_fetchall(
+        _sql(
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                COALESCE(fs.kids_at_dwc, 0) + COALESCE(fs.kids_served_outside_under_18, 0) AS expected_children,
+                COUNT(rc.id) AS actual_children
+            FROM residents r
+            JOIN program_enrollments pe
+              ON pe.resident_id = r.id
+            JOIN family_snapshots fs
+              ON fs.enrollment_id = pe.id
+            LEFT JOIN resident_children rc
+              ON rc.resident_id = r.id
+             AND rc.is_active = TRUE
+            WHERE r.is_active = TRUE
+              AND r.shelter = %s
+            GROUP BY
+                r.id,
+                r.first_name,
+                r.last_name,
+                fs.kids_at_dwc,
+                fs.kids_served_outside_under_18
+            HAVING (COALESCE(fs.kids_at_dwc, 0) + COALESCE(fs.kids_served_outside_under_18, 0)) > COUNT(rc.id)
+            ORDER BY r.last_name, r.first_name
+            """,
+            """
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                COALESCE(fs.kids_at_dwc, 0) + COALESCE(fs.kids_served_outside_under_18, 0) AS expected_children,
+                COUNT(rc.id) AS actual_children
+            FROM residents r
+            JOIN program_enrollments pe
+              ON pe.resident_id = r.id
+            JOIN family_snapshots fs
+              ON fs.enrollment_id = pe.id
+            LEFT JOIN resident_children rc
+              ON rc.resident_id = r.id
+             AND rc.is_active = 1
+            WHERE r.is_active = 1
+              AND r.shelter = ?
+            GROUP BY
+                r.id,
+                r.first_name,
+                r.last_name,
+                fs.kids_at_dwc,
+                fs.kids_served_outside_under_18
+            HAVING (COALESCE(fs.kids_at_dwc, 0) + COALESCE(fs.kids_served_outside_under_18, 0)) > COUNT(rc.id)
+            ORDER BY r.last_name, r.first_name
+            """,
+        ),
+        (shelter,),
+    )
+
     pending_pass_count = (
         pending_pass_count_row["count"] if isinstance(pending_pass_count_row, dict) and "count" in pending_pass_count_row
         else pending_pass_count_row[0] if pending_pass_count_row else 0
@@ -298,6 +366,11 @@ def dashboard():
         pending_transport_count_row["count"] if isinstance(pending_transport_count_row, dict) and "count" in pending_transport_count_row
         else pending_transport_count_row[0] if pending_transport_count_row else 0
     )
+    intake_drafts_count = (
+        intake_drafts_count_row["count"] if isinstance(intake_drafts_count_row, dict) and "count" in intake_drafts_count_row
+        else intake_drafts_count_row[0] if intake_drafts_count_row else 0
+    )
+    family_intakes_pending_count = len(family_intakes_pending_rows)
 
     pending_pass_rows_raw = db_fetchall(
         _sql(
@@ -397,6 +470,8 @@ def dashboard():
         pending_transport_count=pending_transport_count,
         pending_request_total=pending_request_total,
         pending_pass_rows=pending_pass_rows,
+        intake_drafts_count=intake_drafts_count,
+        family_intakes_pending_count=family_intakes_pending_count,
         role=role,
         shelter=shelter,
     )
