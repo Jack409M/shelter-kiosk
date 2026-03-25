@@ -77,25 +77,54 @@ def toggle_chore(chore_id: int):
 def chore_board():
     shelter = session.get("shelter")
 
+    assigned_date = (request.values.get("assigned_date") or "").strip()
+    if not assigned_date:
+        from datetime import date
+        assigned_date = str(date.today())
+
     if request.method == "POST":
         resident_id = request.form.get("resident_id")
         chore_id = request.form.get("chore_id")
+        assign_mode = request.form.get("assign_mode")
 
         if not resident_id or not chore_id:
             flash("Resident and chore are required.", "error")
-            return redirect(url_for("shelter_operations.chore_board"))
+            return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
 
-        db_execute(
-            """
-            INSERT INTO chore_assignments
-            (resident_id, chore_id, assigned_date, status, created_at, updated_at)
-            VALUES (%s, %s, CURRENT_DATE::text, 'assigned', %s, %s)
-            """,
-            (resident_id, chore_id, utcnow_iso(), utcnow_iso()),
-        )
+        from datetime import datetime, timedelta
 
-        flash("Chore assigned.", "success")
-        return redirect(url_for("shelter_operations.chore_board"))
+        base_date = datetime.strptime(assigned_date, "%Y-%m-%d")
+        weekday = base_date.weekday()
+        days_to_tuesday = (weekday - 1) % 7
+        tuesday = base_date - timedelta(days=days_to_tuesday)
+
+        dates_to_insert = []
+
+        if assign_mode == "week":
+            for i in range(7):
+                d = tuesday + timedelta(days=i)
+                dates_to_insert.append(d.strftime("%Y-%m-%d"))
+        else:
+            dates_to_insert.append(assigned_date)
+
+        now = utcnow_iso()
+
+        for d in dates_to_insert:
+            db_execute(
+                """
+                INSERT INTO chore_assignments
+                (resident_id, chore_id, assigned_date, status, created_at, updated_at)
+                VALUES (%s, %s, %s, 'assigned', %s, %s)
+                """,
+                (resident_id, chore_id, d, now, now),
+            )
+
+        if assign_mode == "week":
+            flash("Chore assigned for full week.", "success")
+        else:
+            flash("Chore assigned for selected day.", "success")
+
+        return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
 
     residents = db_fetchall(
         """
@@ -127,10 +156,10 @@ def chore_board():
         JOIN residents r ON r.id = ca.resident_id
         JOIN chore_templates ct ON ct.id = ca.chore_id
         WHERE r.shelter = %s
-          AND ca.assigned_date = CURRENT_DATE::text
+          AND ca.assigned_date = %s
         ORDER BY r.last_name, r.first_name
         """,
-        (shelter,),
+        (shelter, assigned_date),
     )
 
     return render_template(
@@ -138,4 +167,5 @@ def chore_board():
         residents=residents,
         chores=chores,
         assignments=assignments,
+        assigned_date=assigned_date,
     )
