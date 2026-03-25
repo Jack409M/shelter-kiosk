@@ -193,12 +193,31 @@ def chore_board():
         (shelter, assigned_date),
     )
 
+    today_assignments = db_fetchall(
+        """
+        SELECT
+            ca.id,
+            ca.status,
+            r.first_name,
+            r.last_name,
+            ct.name AS chore_name
+        FROM chore_assignments ca
+        JOIN residents r ON r.id = ca.resident_id
+        JOIN chore_templates ct ON ct.id = ca.chore_id
+        WHERE r.shelter = %s
+          AND ca.assigned_date = %s
+        ORDER BY ca.status, r.last_name, r.first_name
+        """,
+        (shelter, assigned_date),
+    )
+
     return render_template(
         "shelter_operations/chore_board.html",
         residents=residents,
         chores=chores,
         assignments=assignments,
         assigned_date=assigned_date,
+        today_assignments=today_assignments,
     )
 
 
