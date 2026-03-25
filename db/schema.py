@@ -13,6 +13,7 @@ from . import schema_outcomes
 from . import schema_people
 from . import schema_program
 from . import schema_requests
+from . import schema_shelter_operations
 from . import schema_shelters
 
 
@@ -258,6 +259,9 @@ def init_db() -> None:
     # Case manager updates
     schema_case_management.ensure_tables(kind)
 
+    # Shelter operations
+    schema_shelter_operations.ensure_tables(kind)
+
     # Flexible resident form storage
     schema_forms.ensure_tables(kind)
 
@@ -280,6 +284,7 @@ def init_db() -> None:
     schema_outcomes.ensure_indexes()
     schema_goals.ensure_indexes()
     schema_case_management.ensure_indexes()
+    schema_shelter_operations.ensure_indexes()
     schema_forms.ensure_indexes()
     schema_requests.ensure_indexes()
     schema_comms.ensure_indexes(kind)
