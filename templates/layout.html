@@ -145,6 +145,13 @@
               </div>
             </div>
 
+            <div class="nav-dd">
+              <button type="button">Shelter Operations ▾</button>
+              <div class="menu">
+                <a href="#">Chore Management</a>
+              </div>
+            </div>
+
             {% if reports_url and can_view_reports %}
               <a href="{{ reports_url }}">Reports</a>
             {% endif %}
@@ -157,40 +164,4 @@
             </div>
 
             {% if session.get("role") == "admin" %}
-              <div class="nav-dd">
-                <button type="button">Admin ▾</button>
-                <div class="menu">
-                  <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
-                  <a href="{{ url_for('admin.admin_users') }}">Users</a>
-                  <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
-                  <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
-                </div>
-              </div>
-            {% endif %}
-
-            <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
-            <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
-
-          {% elif show_logged_out_nav %}
-            <a href="{{ url_for('resident_requests.resident_signin') }}">Resident Sign In</a>
-            <a href="{{ url_for('auth.staff_login') }}">Staff Login</a>
-          {% endif %}
-        </div>
-      </nav>
-    </header>
-
-    <main class="container">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash">
-            {% for category, message in messages %}
-              <div class="msg {{ category }}">{{ message }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-
-      {% block content %}{% endblock %}
-    </main>
-  </body>
-</html>
+              <div class
