@@ -4,59 +4,66 @@
 
 <h1>Daily Chore Board</h1>
 
-<div class="card" style="margin-bottom:20px;">
-  <h2>Assign Chore</h2>
+<div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
 
-  <form method="post">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <div style="flex:2; min-width:340px;">
+    <div class="card">
+      <h2>Today's Assignments</h2>
 
-    <div style="margin-bottom:10px;">
-      <label>Resident</label><br>
-      <select name="resident_id" required>
-        <option value="">Select resident</option>
-        {% for r in residents %}
-          <option value="{{ r.id }}">{{ r.last_name }}, {{ r.first_name }}</option>
-        {% endfor %}
-      </select>
+      {% if assignments %}
+        <table class="table-compact">
+          <thead>
+            <tr>
+              <th>Resident</th>
+              <th>Chore</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in assignments %}
+            <tr>
+              <td>{{ a.last_name }}, {{ a.first_name }}</td>
+              <td>{{ a.chore_name }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No chores assigned yet today.</p>
+      {% endif %}
     </div>
+  </div>
 
-    <div style="margin-bottom:10px;">
-      <label>Chore</label><br>
-      <select name="chore_id" required>
-        <option value="">Select chore</option>
-        {% for c in chores %}
-          <option value="{{ c.id }}">{{ c.name }}</option>
-        {% endfor %}
-      </select>
+  <div style="flex:1; min-width:280px;">
+    <div class="card">
+      <h2>Assign Chore</h2>
+
+      <form method="post">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div style="margin-bottom:10px;">
+          <label>Resident</label><br>
+          <select name="resident_id" style="width:100%;" required>
+            <option value="">Select resident</option>
+            {% for r in residents %}
+              <option value="{{ r.id }}">{{ r.last_name }}, {{ r.first_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <label>Chore</label><br>
+          <select name="chore_id" style="width:100%;" required>
+            <option value="">Select chore</option>
+            {% for c in chores %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit">Assign Chore</button>
+      </form>
     </div>
-
-    <button type="submit">Assign Chore</button>
-  </form>
-</div>
-
-<div class="card">
-  <h2>Today's Assignments</h2>
-
-  {% if assignments %}
-    <table class="table-compact">
-      <thead>
-        <tr>
-          <th>Resident</th>
-          <th>Chore</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for a in assignments %}
-        <tr>
-          <td>{{ a.last_name }}, {{ a.first_name }}</td>
-          <td>{{ a.chore_name }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No chores assigned yet today.</p>
-  {% endif %}
+  </div>
 
 </div>
 
