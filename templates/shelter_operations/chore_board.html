@@ -12,6 +12,39 @@
   </form>
 </div>
 
+<div class="card" style="margin-bottom:20px;">
+  <h2>Today's Status</h2>
+
+  {% if today_assignments %}
+    <table class="table-compact">
+      <thead>
+        <tr>
+          <th>Resident</th>
+          <th>Chore</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in today_assignments %}
+        <tr>
+          <td>{{ a.last_name }}, {{ a.first_name }}</td>
+          <td>{{ a.chore_name }}</td>
+          <td>
+            {% if a.status == 'completed' %}
+              <span style="color:green;">✓ Completed</span>
+            {% else %}
+              <span style="color:red;">✗ Not Done</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No chores assigned for today.</p>
+  {% endif %}
+</div>
+
 <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
 
   <div style="flex:2; min-width:340px;">
