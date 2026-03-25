@@ -202,22 +202,44 @@ def resident_chores():
         assignment_id = (request.form.get("assignment_id") or "").strip()
 
         if assignment_id:
-            db_execute(
+            existing = db_fetchall(
                 """
-                UPDATE chore_assignments
-                SET status = 'completed', updated_at = %s
+                SELECT status
+                FROM chore_assignments
                 WHERE id = %s AND resident_id = %s
                 """
                 if g.get("db_kind") == "pg"
                 else """
-                UPDATE chore_assignments
-                SET status = 'completed', updated_at = ?
+                SELECT status
+                FROM chore_assignments
                 WHERE id = ? AND resident_id = ?
                 """,
-                (utcnow_iso(), assignment_id, resident_id),
+                (assignment_id, resident_id),
             )
 
-            flash("Chore marked complete.", "success")
+            current_status = None
+            if existing:
+                current_status = existing[0]["status"] if isinstance(existing[0], dict) else existing[0][0]
+
+            if current_status != "completed":
+                db_execute(
+                    """
+                    UPDATE chore_assignments
+                    SET status = 'completed', updated_at = %s
+                    WHERE id = %s AND resident_id = %s
+                    """
+                    if g.get("db_kind") == "pg"
+                    else """
+                    UPDATE chore_assignments
+                    SET status = 'completed', updated_at = ?
+                    WHERE id = ? AND resident_id = ?
+                    """,
+                    (utcnow_iso(), assignment_id, resident_id),
+                )
+
+                flash("Chore marked complete.", "success")
+            else:
+                flash("Chore already completed.", "info")
 
         return redirect(url_for("resident_portal.resident_chores"))
 
