@@ -71,8 +71,71 @@ def toggle_chore(chore_id: int):
     return redirect(url_for("shelter_operations.chore_management"))
 
 
-@shelter_operations.route("/chore-board")
+@shelter_operations.route("/chore-board", methods=["GET", "POST"])
 @require_login
 @require_shelter
 def chore_board():
-    return render_template("shelter_operations/chore_board.html")
+    shelter = session.get("shelter")
+
+    if request.method == "POST":
+        resident_id = request.form.get("resident_id")
+        chore_id = request.form.get("chore_id")
+
+        if not resident_id or not chore_id:
+            flash("Resident and chore are required.", "error")
+            return redirect(url_for("shelter_operations.chore_board"))
+
+        db_execute(
+            """
+            INSERT INTO chore_assignments
+            (resident_id, chore_id, assigned_date, status, created_at, updated_at)
+            VALUES (%s, %s, CURRENT_DATE, 'assigned', %s, %s)
+            """,
+            (resident_id, chore_id, utcnow_iso(), utcnow_iso()),
+        )
+
+        flash("Chore assigned.", "success")
+        return redirect(url_for("shelter_operations.chore_board"))
+
+    residents = db_fetchall(
+        """
+        SELECT id, first_name, last_name
+        FROM residents
+        WHERE shelter = %s AND is_active = TRUE
+        ORDER BY last_name, first_name
+        """,
+        (shelter,),
+    )
+
+    chores = db_fetchall(
+        """
+        SELECT id, name
+        FROM chore_templates
+        WHERE shelter = %s AND active = 1
+        ORDER BY name
+        """,
+        (shelter,),
+    )
+
+    assignments = db_fetchall(
+        """
+        SELECT
+            r.first_name,
+            r.last_name,
+            ct.name AS chore_name
+        FROM chore_assignments ca
+        JOIN residents r ON r.id = ca.resident_id
+        JOIN chore_templates ct ON ct.id = ca.chore_id
+        WHERE r.shelter = %s
+          AND ca.assigned_date = CURRENT_DATE
+        ORDER BY r.last_name, r.first_name
+        """,
+        (shelter,),
+    )
+
+    return render_template(
+        "shelter_operations/chore_board.html",
+        residents=residents,
+        chores=chores,
+        assignments=assignments,
+    )
