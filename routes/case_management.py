@@ -69,6 +69,7 @@ from routes.case_management_parts.helpers import yes_no_to_int
 from routes.case_management_parts.index import index_view
 from routes.case_management_parts.index import intake_index_view
 from routes.case_management_parts.intake import child_services_view
+from routes.case_management_parts.intake import delete_child_service_view
 from routes.case_management_parts.intake import edit_child_service_view
 from routes.case_management_parts.intake import edit_child_view
 from routes.case_management_parts.intake import family_intake_view
@@ -210,11 +211,18 @@ def child_services(child_id: int):
     return child_services_view(child_id)
 
 
-@case_management.get("/child-service/<int:service_id>/edit")
+@case_management.route("/child-service/<int:service_id>/edit", methods=["GET", "POST"])
 @require_login
 @require_shelter
 def edit_child_service(service_id: int):
     return edit_child_service_view(service_id)
+
+
+@case_management.post("/child-service/<int:service_id>/delete")
+@require_login
+@require_shelter
+def delete_child_service(service_id: int):
+    return delete_child_service_view(service_id)
 
 
 # ============================================================================
