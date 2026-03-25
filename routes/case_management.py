@@ -379,6 +379,7 @@ def edit_case_note(resident_id: int, update_id: int):
 # - resident_transfers
 # - attendance_events
 # - resident_passes
+# - child_services
 # - resident_children
 # - resident_substances
 # - program_enrollments
@@ -405,6 +406,7 @@ def wipe_test_residents():
         db_execute("DELETE FROM goals")
         db_execute("DELETE FROM appointments")
         db_execute("DELETE FROM resident_form_submissions")
+        db_execute("DELETE FROM child_services")
 
         # Drafts and resident linked supporting records
         db_execute("DELETE FROM assessment_drafts")
