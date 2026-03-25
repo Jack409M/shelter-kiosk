@@ -156,47 +156,63 @@
   <section class="case-section">
     <div class="case-section-header">
       <div>
-        <h2>Appointments Today</h2>
-        <p>Resident appointments scheduled for today.</p>
-      </div>
-    </div>
-
-    {% if appointments_today %}
-      <ul class="case-list" style="margin-top: 16px;">
-        {% for item in appointments_today %}
-          <li class="case-list-item">
-            <div class="case-list-main">
-              <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
-                {{ item.first_name }} {{ item.last_name }}
-              </a>
-              <div class="case-list-meta">
-                {{ item.appointment_type or "Appointment" }}
-              </div>
-              {% if item.notes %}
-                <div class="case-list-meta" style="margin-top: 4px;">
-                  {{ item.notes }}
-                </div>
-              {% endif %}
-            </div>
-            <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">Open Case</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="case-empty good" style="margin-top: 16px;">No appointments scheduled for today.</div>
-    {% endif %}
-  </section>
-
-  <section class="case-section">
-    <div class="case-section-header">
-      <div>
         <h2>Chores</h2>
-        <p>Chore completion is not wired into this dashboard yet.</p>
+        <p>Missed chore accountability.</p>
       </div>
     </div>
 
-    <div class="case-empty" style="margin-top: 16px;">
-      I did not find an existing chore completion data source in the dashboard files I checked, so this was left out instead of guessing.
+    <div style="margin-top:16px;">
+
+      <details style="margin-bottom:14px;">
+        <summary style="font-weight:bold; cursor:pointer;">
+          Missed Chores Yesterday: {{ missed_yesterday_rows|length }}
+        </summary>
+
+        {% if missed_yesterday_rows %}
+          <ul class="case-list" style="margin-top:10px;">
+            {% for item in missed_yesterday_rows %}
+              <li class="case-list-item">
+                <div class="case-list-main">
+                  <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
+                    {{ item.first_name }} {{ item.last_name }}
+                  </a>
+                  <div class="case-list-meta">
+                    {{ item.chore_name }}
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="case-empty good">No missed chores yesterday.</div>
+        {% endif %}
+      </details>
+
+      <details>
+        <summary style="font-weight:bold; cursor:pointer;">
+          Missed Chores This Week: {{ missed_week_rows|length }}
+        </summary>
+
+        {% if missed_week_rows %}
+          <ul class="case-list" style="margin-top:10px;">
+            {% for item in missed_week_rows %}
+              <li class="case-list-item">
+                <div class="case-list-main">
+                  <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
+                    {{ item.first_name }} {{ item.last_name }}
+                  </a>
+                  <div class="case-list-meta">
+                    Missed {{ item.missed_count }} day{{ 's' if item.missed_count > 1 else '' }}
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="case-empty good">No missed chores this week.</div>
+        {% endif %}
+      </details>
+
     </div>
   </section>
 
