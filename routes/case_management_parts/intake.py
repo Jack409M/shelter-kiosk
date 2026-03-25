@@ -806,10 +806,81 @@ def edit_child_service_view(service_id: int):
         flash("Service not found.", "error")
         return redirect(url_for("case_management.index"))
 
+    if request.method == "POST":
+        service_type = clean(request.form.get("service_type"))
+        outcome = clean(request.form.get("outcome"))
+        quantity = parse_int(request.form.get("quantity"))
+        unit = clean(request.form.get("unit"))
+        notes = clean(request.form.get("notes"))
+        now = datetime.utcnow().isoformat()
+
+        db_execute(
+            f"""
+            UPDATE child_services
+            SET
+                service_type = {ph},
+                outcome = {ph},
+                quantity = {ph},
+                unit = {ph},
+                notes = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                service_type,
+                outcome,
+                quantity,
+                unit,
+                notes,
+                now,
+                service_id,
+            ),
+        )
+
+        child_id = service["resident_child_id"] if isinstance(service, dict) else service[1]
+
+        flash("Service updated.", "success")
+        return redirect(url_for("case_management.child_services", child_id=child_id))
+
     return render_template(
         "case_management/edit_child_service.html",
         service=service,
     )
+
+
+def delete_child_service_view(service_id: int):
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+    ph = placeholder()
+
+    service = db_fetchone(
+        f"""
+        SELECT resident_child_id
+        FROM child_services
+        WHERE id = {ph}
+        """,
+        (service_id,),
+    )
+
+    if not service:
+        flash("Service not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    child_id = service["resident_child_id"] if isinstance(service, dict) else service[0]
+
+    db_execute(
+        f"""
+        DELETE FROM child_services
+        WHERE id = {ph}
+        """,
+        (service_id,),
+    )
+
+    flash("Service deleted.", "success")
+    return redirect(url_for("case_management.child_services", child_id=child_id))
 
 
 def child_services_view(child_id: int):
