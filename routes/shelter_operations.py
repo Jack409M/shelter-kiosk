@@ -89,7 +89,7 @@ def chore_board():
             """
             INSERT INTO chore_assignments
             (resident_id, chore_id, assigned_date, status, created_at, updated_at)
-            VALUES (%s, %s, CURRENT_DATE, 'assigned', %s, %s)
+            VALUES (%s, %s, CURRENT_DATE::text, 'assigned', %s, %s)
             """,
             (resident_id, chore_id, utcnow_iso(), utcnow_iso()),
         )
@@ -127,7 +127,7 @@ def chore_board():
         JOIN residents r ON r.id = ca.resident_id
         JOIN chore_templates ct ON ct.id = ca.chore_id
         WHERE r.shelter = %s
-          AND ca.assigned_date = CURRENT_DATE
+          AND ca.assigned_date = CURRENT_DATE::text
         ORDER BY r.last_name, r.first_name
         """,
         (shelter,),
