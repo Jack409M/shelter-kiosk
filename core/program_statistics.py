@@ -682,12 +682,12 @@ def get_demographics(
 
     marital_rows = _fetch_grouped_rows(
         f"""
-        SELECT COALESCE(NULLIF(TRIM(r.marital_status), ''), 'Unknown') AS label,
+        SELECT COALESCE(NULLIF(TRIM(ia.marital_status), ''), 'Unknown') AS label,
                COUNT(DISTINCT pe.resident_id) AS total
         FROM program_enrollments pe
-        JOIN residents r ON r.id = pe.resident_id
+        JOIN intake_assessments ia ON ia.enrollment_id = pe.id
         {where_sql}
-        GROUP BY COALESCE(NULLIF(TRIM(r.marital_status), ''), 'Unknown')
+        GROUP BY COALESCE(NULLIF(TRIM(ia.marital_status), ''), 'Unknown')
         ORDER BY total DESC, label
         """,
         where_params,
