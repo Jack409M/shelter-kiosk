@@ -2,13 +2,21 @@
 
 {% block content %}
 
-<h1>Daily Chore Board</h1>
+<h1>Weekly Chore Board</h1>
 
-<div class="card" style="margin-bottom:20px;">
-  <form method="get">
-    <label>Select Date</label><br>
-    <input type="date" name="assigned_date" value="{{ assigned_date }}" required>
-    <button type="submit">Load</button>
+<div class="card no-print" style="margin-bottom:20px;">
+  <form method="get" id="weekForm" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+    <div>
+      <label for="assigned_date">Week Anchor Date</label><br>
+      <input type="date" id="assigned_date" name="assigned_date" value="{{ assigned_date }}" required>
+    </div>
+    <div>
+      <button type="submit">Load</button>
+      <button type="button" onclick="shiftWeek(-7)">Past</button>
+      <button type="button" onclick="goToToday()">This Week</button>
+      <button type="button" onclick="shiftWeek(7)">Future</button>
+      <button type="button" onclick="window.print()">Print</button>
+    </div>
   </form>
 </div>
 
@@ -16,84 +24,113 @@
 
   <div style="flex:2; min-width:340px;">
     <div class="card">
-      <h2>Assignments for {{ assigned_date }}</h2>
+      <h2 style="text-align:center; margin-bottom:16px;">Weekly Chore Schedule</h2>
+      <p style="text-align:center; margin-top:0;"><strong>Selected Date:</strong> {{ assigned_date }}</p>
 
       {% if assignments %}
-        <table class="table-compact">
-          <thead>
-            <tr>
-              <th>Resident</th>
-              <th>Chore</th>
-              <th>Status</th>
-              <th></th>
-              <th></th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for a in assignments %}
-            <tr{% if a.status != 'completed' %} style="background:#fff3f3;"{% endif %}>
-              <td>
-                <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=a.id) }}">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                  <select name="resident_id" required style="max-width:320px;">
-                    {% for r in residents %}
-                      <option value="{{ r.id }}" {% if r.id == a.resident_id %}selected{% endif %}>
-                        {{ r.last_name }}, {{ r.first_name }}
-                      </option>
-                    {% endfor %}
-                  </select>
-              </td>
-              <td>
-                  <select name="chore_id" required>
-                    {% for c in chores %}
-                      <option value="{{ c.id }}" {% if c.id == a.chore_id %}selected{% endif %}>
-                        {{ c.name }}
-                      </option>
-                    {% endfor %}
-                  </select>
-              </td>
-              <td>
-                {% if a.status == 'completed' %}
-                  <span style="color:green; font-weight:bold;">✓ Completed</span>
-                {% else %}
-                  <span style="color:red; font-weight:bold;">✗ Not Done</span>
-                {% endif %}
-              </td>
-              <td>
-                  <button type="submit">Save</button>
-                </form>
-              </td>
-              <td>
-                <form method="post" action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=a.id) }}">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                  {% if a.status == 'completed' %}
-                    <button type="submit">Mark Assigned</button>
+        <div class="table-wrap">
+          <table class="chore-board-table">
+            <thead>
+              <tr>
+                <th>Who</th>
+                <th>When</th>
+                <th>What</th>
+                <th>Tuesday</th>
+                <th>Wednesday</th>
+                <th>Thursday</th>
+                <th>Friday</th>
+                <th>Saturday</th>
+                <th>Sunday</th>
+                <th>Monday</th>
+                <th class="no-print">Save</th>
+                <th class="no-print">Status</th>
+                <th class="no-print">Delete</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in assignments %}
+              <tr{% if a.status != 'completed' %} class="not-complete"{% endif %}>
+                <td>
+                  <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=a.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+                    <select name="resident_id" required style="max-width:220px; width:100%;">
+                      {% for r in residents %}
+                        <option value="{{ r.id }}" {% if r.id == a.resident_id %}selected{% endif %}>
+                          {{ r.last_name }}, {{ r.first_name }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                </td>
+
+                <td style="white-space:nowrap;">
+                  {{ a.when_label or "" }}
+                </td>
+
+                <td>
+                    <select name="chore_id" required style="max-width:220px; width:100%;">
+                      {% for c in chores %}
+                        <option value="{{ c.id }}" {% if c.id == a.chore_id %}selected{% endif %}>
+                          {{ c.name }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                </td>
+
+                {% for day_name in ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Monday"] %}
+                <td class="day-cell">
+                  {% if loop.first %}
+                    {% if a.status == 'completed' %}
+                      ☑
+                    {% else %}
+                      ☐
+                    {% endif %}
                   {% else %}
-                    <button type="submit">Mark Complete</button>
+                    &nbsp;
                   {% endif %}
-                </form>
-              </td>
-              <td>
-                <form method="post" action="{{ url_for('shelter_operations.delete_assignment', assignment_id=a.id) }}">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                  <button type="submit">Delete</button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+                </td>
+                {% endfor %}
+
+                <td class="no-print">
+                    <button type="submit">Save</button>
+                  </form>
+                </td>
+
+                <td class="no-print">
+                  <form method="post" action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=a.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+                    {% if a.status == 'completed' %}
+                      <button type="submit">Mark Assigned</button>
+                    {% else %}
+                      <button type="submit">Mark Complete</button>
+                    {% endif %}
+                  </form>
+                </td>
+
+                <td class="no-print">
+                  <form method="post" action="{{ url_for('shelter_operations.delete_assignment', assignment_id=a.id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+                    <button type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <p style="margin-top:12px; font-size:0.95em;">
+          Printed layout now matches the paper style more closely. The true Tuesday through Monday weekly population still needs route logic so each day column can display its own assignment for the selected week.
+        </p>
       {% else %}
         <p>No chores assigned for this date.</p>
       {% endif %}
     </div>
   </div>
 
-  <div style="flex:1; min-width:280px;">
+  <div class="no-print" style="flex:1; min-width:280px;">
     <div class="card">
       <h2>Assign Chore</h2>
 
@@ -123,16 +160,120 @@
         </div>
 
         <button type="submit" onclick="document.getElementById('assign_mode').value='day'">
-          Assign (Day)
+          Assign Day
         </button>
 
         <button type="submit" onclick="document.getElementById('assign_mode').value='week'">
-          Assign for Week
+          Assign Week
         </button>
       </form>
     </div>
   </div>
 
 </div>
+
+<style>
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chore-board-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.chore-board-table th,
+.chore-board-table td {
+  border: 1px solid #000;
+  padding: 6px;
+  vertical-align: middle;
+}
+
+.chore-board-table th {
+  background: #f5f5f5;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.chore-board-table td.day-cell {
+  text-align: center;
+  min-width: 72px;
+  font-size: 18px;
+}
+
+.chore-board-table tr.not-complete {
+  background: #fff3f3;
+}
+
+@media print {
+  .no-print,
+  nav,
+  .sidebar,
+  header,
+  footer {
+    display: none !important;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  .table-wrap {
+    overflow: visible !important;
+  }
+
+  .chore-board-table {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .chore-board-table th,
+  .chore-board-table td {
+    border: 1px solid #000;
+    padding: 5px;
+  }
+
+  @page {
+    size: landscape;
+    margin: 0.5in;
+  }
+}
+</style>
+
+<script>
+function shiftWeek(days) {
+  const input = document.getElementById("assigned_date");
+  if (!input || !input.value) return;
+
+  const parts = input.value.split("-");
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  dt.setDate(dt.getDate() + days);
+
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  input.value = `${y}-${m}-${d}`;
+
+  document.getElementById("weekForm").submit();
+}
+
+function goToToday() {
+  const dt = new Date();
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  document.getElementById("assigned_date").value = `${y}-${m}-${d}`;
+  document.getElementById("weekForm").submit();
+}
+</script>
 
 {% endblock %}
