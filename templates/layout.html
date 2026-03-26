@@ -56,7 +56,7 @@
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
       {% set chore_management_url = safe_url_for('shelter_operations.chore_management') %}
       {% set calendar_url = safe_url_for('calendar.calendar_view') %}
-      {% set reports_url = safe_url_for('reports.demographics_dashboard') %}
+      {% set reports_url = safe_url_for('reports.reports_index') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
       {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
       {% set kiosk_manual_url = url_for('static', filename='docs/dwc_kiosk_manual.pdf') %}
