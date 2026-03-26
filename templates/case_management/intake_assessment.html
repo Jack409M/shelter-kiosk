@@ -374,17 +374,17 @@
 
                     <div class="field span-3 field-max-25">
                       <label for="city">City</label>
-                      <input id="city" name="city" type="text" maxlength="25" value="{{ form_data.get('city', '') }}">
+                      <input id="city" name="city" type="text" maxlength="25" value="{{ form_data.get('city') or '' }}">
                     </div>
 
                     <div class="field span-3 field-max-25">
                       <label for="county">County</label>
-                      <input id="county" name="county" type="text" maxlength="25" value="{{ form_data.get('county', '') }}">
+                      <input id="county" name="county" type="text" maxlength="25" value="{{ form_data.get('county') or '' }}">
                     </div>
 
                     <div class="field span-1 field-max-7">
                       <label for="last_zipcode_residence">Zipcode</label>
-                      <input id="last_zipcode_residence" name="last_zipcode_residence" type="text" maxlength="7" value="{{ form_data.get('last_zipcode_residence', '') }}">
+                      <input id="last_zipcode_residence" name="last_zipcode_residence" type="text" maxlength="7" value="{{ form_data.get('last_zipcode_residence') or '' }}">
                     </div>
 
                     <div class="field span-4 field-max-20">
