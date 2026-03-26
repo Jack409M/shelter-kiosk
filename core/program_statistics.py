@@ -7,6 +7,7 @@ from core.constants import EDUCATION_LEVEL_RANK
 from core.db import db_fetchall, db_fetchone
 from core.helpers import shelter_display
 from core.report_filters import mask_small_counts, resolve_date_range
+from core.stats.family import get_family_composition
 
 
 _SHELTER_CAPACITY = {
@@ -724,72 +725,6 @@ def get_demographics(
         "veteran_yes_display": mask_small_counts(veteran_yes),
         "disability_yes": disability_yes,
         "disability_yes_display": mask_small_counts(disability_yes),
-    }
-
-
-def get_family_composition(
-    scope: str = "total_program",
-    population: str = "all",
-    date_range: str = "all_time",
-    start: str | None = None,
-    end: str | None = None,
-) -> dict[str, Any]:
-    where_sql, where_params, _, _ = _base_enrollment_where(
-        _normalize_scope(scope),
-        _normalize_population(population),
-        _normalize_date_range_key(date_range),
-        start,
-        end,
-        alias="pe",
-    )
-
-    family_row = db_fetchone(
-        f"""
-        SELECT
-            COUNT(DISTINCT CASE
-                WHEN COALESCE(fs.kids_at_dwc, 0) > 0
-                  OR COALESCE(fs.kids_served_outside_under_18, 0) > 0
-                THEN pe.resident_id
-            END) AS residents_with_children,
-            COALESCE(SUM(fs.kids_at_dwc), 0) AS children_in_shelter,
-            COALESCE(SUM(fs.kids_served_outside_under_18), 0) AS children_out_of_shelter,
-            COALESCE(SUM(fs.kids_ages_0_5), 0) AS ages_0_5,
-            COALESCE(SUM(fs.kids_ages_6_11), 0) AS ages_6_11,
-            COALESCE(SUM(fs.kids_ages_12_17), 0) AS ages_12_17,
-            COALESCE(SUM(fs.kids_reunited_while_in_program), 0) AS reunited,
-            COALESCE(SUM(fs.healthy_babies_born_at_dwc), 0) AS babies_born
-        FROM program_enrollments pe
-        LEFT JOIN family_snapshots fs ON fs.enrollment_id = pe.id
-        {where_sql}
-        """,
-        tuple(where_params),
-    )
-
-    residents_with_children = _to_int(_row_get(family_row, "residents_with_children", 0, 0), 0)
-    children_in_shelter = _to_int(_row_get(family_row, "children_in_shelter", 1, 0), 0)
-    children_out_of_shelter = _to_int(_row_get(family_row, "children_out_of_shelter", 2, 0), 0)
-    ages_0_5 = _to_int(_row_get(family_row, "ages_0_5", 3, 0), 0)
-    ages_6_11 = _to_int(_row_get(family_row, "ages_6_11", 4, 0), 0)
-    ages_12_17 = _to_int(_row_get(family_row, "ages_12_17", 5, 0), 0)
-    reunited = _to_int(_row_get(family_row, "reunited", 6, 0), 0)
-    babies_born = _to_int(_row_get(family_row, "babies_born", 7, 0), 0)
-
-    return {
-        "residents_with_children": residents_with_children,
-        "residents_with_children_display": mask_small_counts(residents_with_children),
-        "children_in_shelter": children_in_shelter,
-        "children_in_shelter_display": mask_small_counts(children_in_shelter),
-        "children_out_of_shelter": children_out_of_shelter,
-        "children_out_of_shelter_display": mask_small_counts(children_out_of_shelter),
-        "child_age_groups": [
-            {"label": "Ages 0 to 5", "value": ages_0_5, "display_value": mask_small_counts(ages_0_5)},
-            {"label": "Ages 6 to 11", "value": ages_6_11, "display_value": mask_small_counts(ages_6_11)},
-            {"label": "Ages 12 to 17", "value": ages_12_17, "display_value": mask_small_counts(ages_12_17)},
-        ],
-        "children_reunited": reunited,
-        "children_reunited_display": mask_small_counts(reunited),
-        "healthy_babies_born": babies_born,
-        "healthy_babies_born_display": mask_small_counts(babies_born),
     }
 
 
