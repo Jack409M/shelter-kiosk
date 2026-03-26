@@ -74,6 +74,12 @@
               <a class="btn btn-sm" href="{{ url_for('case_management.edit_child', child_id=child_id) }}">
                 Edit
               </a>
+              <form method="post" action="{{ url_for('case_management.delete_child', child_id=child_id) }}" style="display:inline;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Remove this child?');">
+                  Delete
+                </button>
+              </form>
             </td>
           </tr>
         {% endfor %}
