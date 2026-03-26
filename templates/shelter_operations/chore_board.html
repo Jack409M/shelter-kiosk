@@ -81,20 +81,13 @@
                   <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}" style="margin:0;">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                    <select name="resident_id" required style="width:100%;" onchange="this.form.submit()">
+                    <select name="resident_id" required style="width:100%; margin-bottom:6px;" onchange="this.form.submit()">
                       {% for r in residents %}
                         <option value="{{ r.id }}" {% if r.id == row.resident_id %}selected{% endif %}>
                           {{ r.last_name }}, {{ r.first_name }}
                         </option>
                       {% endfor %}
                     </select>
-                </td>
-
-                <td style="white-space:nowrap;">
-                  {{ row.when_label or "" }}
-                </td>
-
-                <td>
                     <select name="chore_id" required style="width:100%;" onchange="this.form.submit()">
                       {% for c in chores %}
                         <option value="{{ c.id }}" {% if c.id == row.chore_id %}selected{% endif %}>
@@ -103,6 +96,14 @@
                       {% endfor %}
                     </select>
                   </form>
+                </td>
+
+                <td style="white-space:nowrap;">
+                  {{ row.when_label or "" }}
+                </td>
+
+                <td>
+                  {{ row.chore_name }}
                 </td>
 
                 {% for d in week_dates %}
@@ -188,10 +189,12 @@
       <h2>Assign Chore</h2>
       <p id="assignHelpText" style="margin-top:0; display:none;"></p>
 
-      <form method="post">
+      <form method="post" id="assignForm">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="assigned_date" id="assign_assigned_date" value="{{ assigned_date }}">
+        <input type="hidden" name="target_date" id="assign_target_date" value="{{ assigned_date }}">
         <input type="hidden" name="assign_mode" id="assign_mode" value="day">
+        <input type="hidden" id="assign_date_locked" value="0">
 
         <div style="margin-bottom:10px;">
           <label>Resident</label><br>
@@ -205,10 +208,10 @@
 
         <div style="margin-bottom:10px;">
           <label>Chore</label><br>
-          <select name="chore_id" id="assign_chore_id" style="width:100%;" required>
+          <select name="chore_id" id="assign_chore_id" style="width:100%;" required onchange="applyDefaultDayForSelectedChore()">
             <option value="">Select chore</option>
             {% for c in chores %}
-              <option value="{{ c.id }}">{{ c.name }}</option>
+              <option value="{{ c.id }}" data-default-day="{{ c.default_day or '' }}">{{ c.name }}</option>
             {% endfor %}
           </select>
         </div>
@@ -330,6 +333,8 @@
 </style>
 
 <script>
+const weekStartDate = "{{ week_start }}";
+
 function shiftWeek(days) {
   const input = document.getElementById("assigned_date");
   if (!input || !input.value) return;
@@ -359,6 +364,7 @@ function toggleAssign() {
   const panel = document.getElementById("assignPanel");
   const btn = document.getElementById("assignToggleBtn");
   const help = document.getElementById("assignHelpText");
+  const dateLocked = document.getElementById("assign_date_locked");
 
   if (!panel || !btn) return;
 
@@ -368,12 +374,78 @@ function toggleAssign() {
     if (help && !help.textContent) {
       help.style.display = "none";
     }
+    if (dateLocked) {
+      dateLocked.value = "0";
+    }
+    applyDefaultDayForSelectedChore();
   } else {
     panel.style.display = "none";
     btn.textContent = "+ Assign Chore";
     if (help) {
       help.style.display = "none";
       help.textContent = "";
+    }
+    if (dateLocked) {
+      dateLocked.value = "0";
+    }
+  }
+}
+
+function formatDateForInput(dt) {
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getWeekDateForDefaultDay(defaultDay) {
+  if (!defaultDay) return weekStartDate;
+
+  const offsets = {
+    tue: 0,
+    wed: 1,
+    thu: 2,
+    fri: 3,
+    sat: 4,
+    sun: 5,
+    mon: 6
+  };
+
+  if (!(defaultDay in offsets)) {
+    return weekStartDate;
+  }
+
+  const parts = weekStartDate.split("-");
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  dt.setDate(dt.getDate() + offsets[defaultDay]);
+
+  return formatDateForInput(dt);
+}
+
+function applyDefaultDayForSelectedChore() {
+  const chore = document.getElementById("assign_chore_id");
+  const targetDate = document.getElementById("assign_target_date");
+  const help = document.getElementById("assignHelpText");
+  const dateLocked = document.getElementById("assign_date_locked");
+
+  if (!chore || !targetDate) return;
+  if (dateLocked && dateLocked.value === "1") return;
+
+  const selectedOption = chore.options[chore.selectedIndex];
+  if (!selectedOption) return;
+
+  const defaultDay = selectedOption.getAttribute("data-default-day") || "";
+  const newTargetDate = getWeekDateForDefaultDay(defaultDay);
+
+  targetDate.value = newTargetDate;
+
+  if (help && chore.value) {
+    if (defaultDay) {
+      help.textContent = "Default day selected for this chore: " + newTargetDate + ".";
+      help.style.display = "block";
+    } else {
+      help.textContent = "No default day set for this chore. Using " + newTargetDate + ".";
+      help.style.display = "block";
     }
   }
 }
@@ -384,18 +456,25 @@ function openAssignForCell(residentId, choreId, dateText) {
   const resident = document.getElementById("assign_resident_id");
   const chore = document.getElementById("assign_chore_id");
   const assignedDate = document.getElementById("assign_assigned_date");
+  const targetDate = document.getElementById("assign_target_date");
   const assignMode = document.getElementById("assign_mode");
   const help = document.getElementById("assignHelpText");
+  const dateLocked = document.getElementById("assign_date_locked");
 
-  if (!panel || !btn || !resident || !chore || !assignedDate || !assignMode) return;
+  if (!panel || !btn || !resident || !chore || !assignedDate || !targetDate || !assignMode) return;
 
   panel.style.display = "block";
   btn.textContent = "− Hide Assign Chore";
 
   resident.value = residentId;
   chore.value = choreId;
-  assignedDate.value = dateText;
+  assignedDate.value = "{{ assigned_date }}";
+  targetDate.value = dateText;
   assignMode.value = "day";
+
+  if (dateLocked) {
+    dateLocked.value = "1";
+  }
 
   if (help) {
     help.textContent = "Assigning selected resident and chore for " + dateText + ".";
