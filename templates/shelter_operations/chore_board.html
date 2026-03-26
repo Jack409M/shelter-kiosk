@@ -78,24 +78,29 @@
               {% for row in weekly_rows %}
               <tr>
                 <td>
-                  <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}" style="margin:0;">
+                  <form
+                    id="edit-row-{{ row.assignment_id }}"
+                    method="post"
+                    action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}"
+                    style="display:none;"
+                  >
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                    <select name="resident_id" required style="width:100%; margin-bottom:6px;" onchange="this.form.submit()">
-                      {% for r in residents %}
-                        <option value="{{ r.id }}" {% if r.id == row.resident_id %}selected{% endif %}>
-                          {{ r.last_name }}, {{ r.first_name }}
-                        </option>
-                      {% endfor %}
-                    </select>
-                    <select name="chore_id" required style="width:100%;" onchange="this.form.submit()">
-                      {% for c in chores %}
-                        <option value="{{ c.id }}" {% if c.id == row.chore_id %}selected{% endif %}>
-                          {{ c.name }}
-                        </option>
-                      {% endfor %}
-                    </select>
                   </form>
+
+                  <select
+                    name="resident_id"
+                    form="edit-row-{{ row.assignment_id }}"
+                    required
+                    style="width:100%;"
+                    onchange="document.getElementById('edit-row-{{ row.assignment_id }}').submit()"
+                  >
+                    {% for r in residents %}
+                      <option value="{{ r.id }}" {% if r.id == row.resident_id %}selected{% endif %}>
+                        {{ r.last_name }}, {{ r.first_name }}
+                      </option>
+                    {% endfor %}
+                  </select>
                 </td>
 
                 <td style="white-space:nowrap;">
@@ -103,7 +108,19 @@
                 </td>
 
                 <td>
-                  {{ row.chore_name }}
+                  <select
+                    name="chore_id"
+                    form="edit-row-{{ row.assignment_id }}"
+                    required
+                    style="width:100%;"
+                    onchange="document.getElementById('edit-row-{{ row.assignment_id }}').submit()"
+                  >
+                    {% for c in chores %}
+                      <option value="{{ c.id }}" {% if c.id == row.chore_id %}selected{% endif %}>
+                        {{ c.name }}
+                      </option>
+                    {% endfor %}
+                  </select>
                 </td>
 
                 {% for d in week_dates %}
