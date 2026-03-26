@@ -14,13 +14,20 @@
       <label for="assigned_date">Week Anchor Date</label><br>
       <input type="date" id="assigned_date" name="assigned_date" value="{{ assigned_date }}" required>
     </div>
-    <div>
+    <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
       <button type="submit">Load</button>
       <button type="button" onclick="shiftWeek(-7)">Past</button>
       <button type="button" onclick="goToToday()">This Week</button>
       <button type="button" onclick="shiftWeek(7)">Future</button>
       <button type="button" onclick="window.print()">Print</button>
     </div>
+  </form>
+
+  <form method="post" style="margin-top:12px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="build_from_last_week">
+    <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+    <button type="submit">Build From Last Week</button>
   </form>
 </div>
 
@@ -96,7 +103,7 @@
                     <button
                       type="submit"
                       form="toggle-day-{{ day.id }}"
-                      style="border:none; background:none; font-size:18px;"
+                      class="check-btn no-print"
                       title="Toggle completion"
                     >
                       {% if day.status == 'completed' %}
@@ -105,6 +112,13 @@
                         ☐
                       {% endif %}
                     </button>
+                    <span class="print-check">
+                      {% if day.status == 'completed' %}
+                        ☑
+                      {% else %}
+                        ☐
+                      {% endif %}
+                    </span>
                     <form
                       id="toggle-day-{{ day.id }}"
                       method="post"
@@ -123,6 +137,7 @@
                     >
                       +
                     </button>
+                    <span class="print-check">&nbsp;</span>
                   {% endif %}
                 </td>
                 {% endfor %}
@@ -233,6 +248,19 @@
   padding: 4px;
 }
 
+.check-btn {
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.print-check {
+  display: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
 .assign-cell-btn {
   border: 1px dashed #999;
   background: transparent;
@@ -253,6 +281,10 @@
   header,
   footer {
     display: none !important;
+  }
+
+  .print-check {
+    display: inline !important;
   }
 
   body {
