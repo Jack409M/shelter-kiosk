@@ -56,7 +56,7 @@
               {% for row in weekly_rows %}
               <tr>
                 <td>
-                  <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}">
+                  <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}" style="margin:0;">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
                     <select name="resident_id" required style="max-width:220px; width:100%;">
@@ -86,16 +86,25 @@
                 <td class="day-cell">
                   {% set day = row.days[d] %}
                   {% if day %}
-                    <form method="post" action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=day.id) }}">
+                    <button
+                      type="submit"
+                      form="toggle-day-{{ day.id }}"
+                      style="border:none; background:none; font-size:18px;"
+                    >
+                      {% if day.status == 'completed' %}
+                        ☑
+                      {% else %}
+                        ☐
+                      {% endif %}
+                    </button>
+                    <form
+                      id="toggle-day-{{ day.id }}"
+                      method="post"
+                      action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=day.id) }}"
+                      style="display:none;"
+                    >
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                      <button type="submit" style="border:none; background:none; font-size:18px;">
-                        {% if day.status == 'completed' %}
-                          ☑
-                        {% else %}
-                          ☐
-                        {% endif %}
-                      </button>
                     </form>
                   {% else %}
                     &nbsp;
@@ -109,10 +118,20 @@
                 </td>
 
                 <td class="no-print">
-                  <form method="post" action="{{ url_for('shelter_operations.delete_assignment', assignment_id=row.assignment_id) }}">
+                  <button
+                    type="submit"
+                    form="delete-row-{{ row.assignment_id }}"
+                  >
+                    Delete
+                  </button>
+                  <form
+                    id="delete-row-{{ row.assignment_id }}"
+                    method="post"
+                    action="{{ url_for('shelter_operations.delete_assignment', assignment_id=row.assignment_id) }}"
+                    style="display:none;"
+                  >
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                    <button type="submit">Delete</button>
                   </form>
                 </td>
               </tr>
