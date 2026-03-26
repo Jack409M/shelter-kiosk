@@ -292,6 +292,107 @@ def chore_management():
     )
 
 
+@shelter_operations.route("/chores/<int:chore_id>/edit", methods=["POST"])
+@require_login
+@require_shelter
+def edit_chore(chore_id: int):
+    shelter = session.get("shelter")
+
+    target = db_fetchone(
+        """
+        SELECT id
+        FROM chore_templates
+        WHERE id = %s AND shelter = %s
+        LIMIT 1
+        """,
+        (chore_id, shelter),
+    )
+
+    if not target:
+        flash("Chore not found.", "error")
+        return redirect(url_for("shelter_operations.chore_management"))
+
+    name = (request.form.get("name") or "").strip()
+    when_time = _normalize_time_value(request.form.get("when_time") or "")
+    default_day = _normalize_default_day(request.form.get("default_day") or "")
+    description = (request.form.get("description") or "").strip()
+
+    if not name:
+        flash("Chore name is required.", "error")
+        return redirect(url_for("shelter_operations.chore_management"))
+
+    raw_when_time = (request.form.get("when_time") or "").strip()
+    if raw_when_time and not when_time:
+        flash("When time must be in HH:MM format.", "error")
+        return redirect(url_for("shelter_operations.chore_management"))
+
+    db_execute(
+        """
+        UPDATE chore_templates
+        SET
+            name = %s,
+            when_time = %s,
+            default_day = %s,
+            description = %s
+        WHERE id = %s
+          AND shelter = %s
+        """,
+        (name, when_time, default_day, description or None, chore_id, shelter),
+    )
+
+    flash("Chore updated.", "success")
+    return redirect(url_for("shelter_operations.chore_management"))
+
+
+@shelter_operations.route("/chores/<int:chore_id>/delete", methods=["POST"])
+@require_login
+@require_shelter
+def delete_chore(chore_id: int):
+    shelter = session.get("shelter")
+
+    target = db_fetchone(
+        """
+        SELECT id
+        FROM chore_templates
+        WHERE id = %s AND shelter = %s
+        LIMIT 1
+        """,
+        (chore_id, shelter),
+    )
+
+    if not target:
+        flash("Chore not found.", "error")
+        return redirect(url_for("shelter_operations.chore_management"))
+
+    in_use = db_fetchone(
+        """
+        SELECT ca.id
+        FROM chore_assignments ca
+        JOIN chore_templates ct ON ct.id = ca.chore_id
+        WHERE ct.id = %s
+          AND ct.shelter = %s
+        LIMIT 1
+        """,
+        (chore_id, shelter),
+    )
+
+    if in_use:
+        flash("Cannot delete a chore that is still used in assignments.", "error")
+        return redirect(url_for("shelter_operations.chore_management"))
+
+    db_execute(
+        """
+        DELETE FROM chore_templates
+        WHERE id = %s
+          AND shelter = %s
+        """,
+        (chore_id, shelter),
+    )
+
+    flash("Chore deleted.", "success")
+    return redirect(url_for("shelter_operations.chore_management"))
+
+
 @shelter_operations.route("/chores/<int:chore_id>/toggle", methods=["POST"])
 @require_login
 @require_shelter
