@@ -54,7 +54,8 @@
       {% set compliance_url = safe_url_for('compliance.compliance_dashboard') %}
       {% set forms_url = safe_url_for('forms_admin.forms_index') %}
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
-      {% set chore_management_url = safe_url_for('shelter_operations.chore_board') %}
+      {% set chore_board_url = safe_url_for('shelter_operations.chore_board') %}
+      {% set chore_config_url = safe_url_for('shelter_operations.chore_management') %}
       {% set calendar_url = safe_url_for('calendar.calendar_view') %}
       {% set reports_url = safe_url_for('reports.reports_index') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
@@ -111,13 +112,9 @@
             <div class="nav-dd">
               <button type="button">Transport ▾</button>
               <div class="menu">
-                <a href="{{ url_for('transport.staff_transport_pending') }}">Pending Transport</a>
                 <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
-                <a href="{{ url_for('transport.staff_transport_print') }}" target="_blank">Print Transport</a>
               </div>
             </div>
-
-            <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
 
             <div class="nav-dd">
               <button type="button">Case Management ▾</button>
@@ -149,9 +146,14 @@
             <div class="nav-dd">
               <button type="button">Shelter Operations ▾</button>
               <div class="menu">
-                {% if chore_management_url %}
-                  <a href="{{ chore_management_url }}">Weekly Chore Board</a>
+                {% if chore_board_url %}
+                  <a href="{{ chore_board_url }}">Weekly Chore Board</a>
                 {% endif %}
+                {% if chore_config_url %}
+                  <a href="{{ chore_config_url }}">Chore Configuration</a>
+                {% endif %}
+                <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+                <a href="{{ url_for('transport.staff_transport_print') }}" target="_blank">Print Transport Board</a>
               </div>
             </div>
 
