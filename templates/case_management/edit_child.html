@@ -31,7 +31,8 @@
     <label><strong>Relationship</strong></label>
     <select name="relationship">
       <option value="">Select</option>
-      <option value="child" {% if relationship == "child" %}selected{% endif %}>Son or Daughter</option>
+      <option value="son" {% if relationship == "son" %}selected{% endif %}>Son</option>
+      <option value="daughter" {% if relationship == "daughter" %}selected{% endif %}>Daughter</option>
       <option value="foster" {% if relationship == "foster" %}selected{% endif %}>Foster Child</option>
       <option value="relative" {% if relationship == "relative" %}selected{% endif %}>Relative</option>
       <option value="non_relative" {% if relationship == "non_relative" %}selected{% endif %}>Non Relative</option>
