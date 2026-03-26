@@ -1,12 +1,32 @@
 from __future__ import annotations
 
-from datetime import date, datetime
 from typing import Any
 
 from core.constants import EDUCATION_LEVEL_RANK
 from core.db import db_fetchall, db_fetchone
 from core.helpers import shelter_display
-from core.report_filters import mask_small_counts, resolve_date_range
+from core.report_filters import mask_small_counts
+from core.stats.common import (
+    base_enrollment_where,
+    days_between,
+    display_shelter_label,
+    entry_window_clause,
+    exit_window_clause,
+    fetch_avg,
+    fetch_count,
+    fetch_grouped_rows,
+    iso_today,
+    normalize_date_range_key,
+    normalize_population,
+    normalize_scope,
+    normalize_shelter_value,
+    row_get,
+    scope_clause,
+    shelter_expr,
+    to_float,
+    to_int,
+    window_dates,
+)
 from core.stats.demographics import get_demographics
 from core.stats.family import get_family_composition
 
@@ -55,261 +75,6 @@ _EXIT_CATEGORY_ORDER = [
 ]
 
 
-def _row_get(row: Any, key: str, index: int | None = None, default: Any = None) -> Any:
-    if row is None:
-        return default
-    if isinstance(row, dict):
-        return row.get(key, default)
-    if index is not None:
-        try:
-            return row[index]
-        except Exception:
-            return default
-    try:
-        return row[key]
-    except Exception:
-        return default
-
-
-def _to_int(value: Any, default: int = 0) -> int:
-    if value in (None, "", False):
-        return default
-    try:
-        return int(value)
-    except Exception:
-        try:
-            return int(float(value))
-        except Exception:
-            return default
-
-
-def _to_float(value: Any, default: float = 0.0) -> float:
-    if value in (None, "", False):
-        return default
-    try:
-        return float(value)
-    except Exception:
-        return default
-
-
-def _iso_today() -> str:
-    return date.today().isoformat()
-
-
-def _parse_iso_date(value: Any) -> date | None:
-    if not value:
-        return None
-
-    text = str(value).strip()
-    if not text:
-        return None
-
-    for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(text[:19], fmt).date()
-        except Exception:
-            pass
-
-    return None
-
-
-def _days_between(start_value: Any, end_value: Any) -> int | None:
-    start_date = _parse_iso_date(start_value)
-    end_date = _parse_iso_date(end_value)
-    if not start_date or not end_date:
-        return None
-    return (end_date - start_date).days
-
-
-def _normalize_shelter_value(value: Any) -> str:
-    raw = str(value or "").strip().lower()
-
-    if raw in {"abba house", "abba_house"}:
-        return "abba"
-    if raw in {"haven house", "haven_house"}:
-        return "haven"
-    if raw in {"gratitude house", "gratitude_house"}:
-        return "gratitude"
-
-    return raw
-
-
-def _display_shelter_label(value: Any) -> str:
-    normalized = _normalize_shelter_value(value)
-
-    if normalized in {"abba", "haven", "gratitude"}:
-        return shelter_display(normalized)
-
-    raw = str(value or "").strip()
-    return raw or "Unknown"
-
-
-def _shelter_expr(alias: str) -> str:
-    return f"LOWER(TRIM(COALESCE({alias}.shelter, '')))"
-
-
-def _normalize_scope(scope: str | None) -> str:
-    value = _normalize_shelter_value(scope or "total_program")
-    if value in {"abba", "haven", "gratitude", "total_program"}:
-        return value
-    return "total_program"
-
-
-def _normalize_population(population: str | None) -> str:
-    value = (population or "all").strip().lower()
-    if value in {"active", "exited", "all"}:
-        return value
-    return "all"
-
-
-def _normalize_date_range_key(date_range: str | None) -> str:
-    value = (date_range or "all_time").strip().lower()
-    allowed = {
-        "this_month",
-        "last_month",
-        "this_quarter",
-        "this_year",
-        "last_year",
-        "all_time",
-        "custom",
-    }
-    if value in allowed:
-        return value
-    return "all_time"
-
-
-def _scope_clause(alias: str, scope: str) -> tuple[str, list[Any]]:
-    if scope == "total_program":
-        return "", []
-    return f" AND {_shelter_expr(alias)} IN (?, ?)", [scope, f"{scope} house"]
-
-
-def _window_dates(date_range: str, start: str | None = None, end: str | None = None) -> tuple[str | None, str | None]:
-    resolved_start, resolved_end = resolve_date_range(date_range, start, end)
-    return (
-        resolved_start.isoformat() if resolved_start else None,
-        resolved_end.isoformat() if resolved_end else None,
-    )
-
-
-def _population_clause(
-    alias: str,
-    population: str,
-    start_date: str | None,
-    end_date: str | None,
-) -> tuple[str, list[Any]]:
-    if population == "active":
-        effective_end = end_date or _iso_today()
-        if start_date:
-            return (
-                f" AND {alias}.entry_date <= ? "
-                f"AND ({alias}.exit_date IS NULL OR {alias}.exit_date = '' OR {alias}.exit_date >= ?)",
-                [effective_end, start_date],
-            )
-        return (
-            f" AND {alias}.entry_date <= ? "
-            f"AND ({alias}.exit_date IS NULL OR {alias}.exit_date = '' OR {alias}.exit_date >= ?)",
-            [effective_end, effective_end],
-        )
-
-    if population == "exited":
-        if start_date and end_date:
-            return (
-                f" AND {alias}.exit_date IS NOT NULL "
-                f"AND {alias}.exit_date <> '' "
-                f"AND {alias}.exit_date >= ? "
-                f"AND {alias}.exit_date <= ?",
-                [start_date, end_date],
-            )
-        return (
-            f" AND {alias}.exit_date IS NOT NULL "
-            f"AND {alias}.exit_date <> ''",
-            [],
-        )
-
-    if start_date and end_date:
-        return (
-            f" AND {alias}.entry_date <= ? "
-            f"AND ({alias}.exit_date IS NULL OR {alias}.exit_date = '' OR {alias}.exit_date >= ?)",
-            [end_date, start_date],
-        )
-
-    return "", []
-
-
-def _entry_window_clause(alias: str, start_date: str | None, end_date: str | None) -> tuple[str, list[Any]]:
-    if start_date and end_date:
-        return f" AND {alias}.entry_date >= ? AND {alias}.entry_date <= ?", [start_date, end_date]
-    return "", []
-
-
-def _exit_window_clause(alias: str, start_date: str | None, end_date: str | None) -> tuple[str, list[Any]]:
-    if start_date and end_date:
-        return (
-            f" AND {alias}.exit_date IS NOT NULL "
-            f"AND {alias}.exit_date <> '' "
-            f"AND {alias}.exit_date >= ? "
-            f"AND {alias}.exit_date <= ?",
-            [start_date, end_date],
-        )
-    return (
-        f" AND {alias}.exit_date IS NOT NULL "
-        f"AND {alias}.exit_date <> ''",
-        [],
-    )
-
-
-def _base_enrollment_where(
-    scope: str,
-    population: str,
-    date_range: str,
-    start: str | None = None,
-    end: str | None = None,
-    alias: str = "pe",
-) -> tuple[str, list[Any], str | None, str | None]:
-    start_date, end_date = _window_dates(date_range, start, end)
-
-    where = " WHERE 1=1"
-    params: list[Any] = []
-
-    scope_sql, scope_params = _scope_clause(alias, scope)
-    pop_sql, pop_params = _population_clause(alias, population, start_date, end_date)
-
-    where += scope_sql + pop_sql
-    params.extend(scope_params)
-    params.extend(pop_params)
-
-    return where, params, start_date, end_date
-
-
-def _fetch_count(sql: str, params: list[Any]) -> int:
-    row = db_fetchone(sql, tuple(params))
-    return _to_int(_row_get(row, "total", 0, 0), 0)
-
-
-def _fetch_avg(sql: str, params: list[Any], key: str = "avg_value") -> float:
-    row = db_fetchone(sql, tuple(params))
-    return _to_float(_row_get(row, key, 0, 0.0), 0.0)
-
-
-def _fetch_grouped_rows(sql: str, params: list[Any]) -> list[dict[str, Any]]:
-    rows = db_fetchall(sql, tuple(params)) or []
-    output: list[dict[str, Any]] = []
-
-    for row in rows:
-        label = _row_get(row, "label", 0, "Unknown")
-        total = _to_int(_row_get(row, "total", 1, 0), 0)
-        output.append(
-            {
-                "label": label or "Unknown",
-                "value": total,
-                "display_value": mask_small_counts(total),
-            }
-        )
-
-    return output
-
-
 def _education_rank_case(column_sql: str) -> str:
     parts = ["CASE"]
     for label, rank in EDUCATION_LEVEL_RANK.items():
@@ -333,16 +98,16 @@ def _get_filtered_served_total(
     start: str | None = None,
     end: str | None = None,
 ) -> int:
-    where_sql, where_params, _, _ = _base_enrollment_where(
-        _normalize_scope(scope),
-        _normalize_population(population),
-        _normalize_date_range_key(date_range),
+    where_sql, where_params, _, _ = base_enrollment_where(
+        normalize_scope(scope),
+        normalize_population(population),
+        normalize_date_range_key(date_range),
         start,
         end,
         alias="pe",
     )
 
-    return _fetch_count(
+    return fetch_count(
         f"""
         SELECT COUNT(DISTINCT pe.resident_id) AS total
         FROM program_enrollments pe
@@ -353,10 +118,10 @@ def _get_filtered_served_total(
 
 
 def _get_current_active_count_for_scope(scope: str) -> int:
-    normalized_scope = _normalize_scope(scope)
-    scope_sql, scope_params = _scope_clause("pe", normalized_scope)
+    normalized_scope = normalize_scope(scope)
+    scope_sql, scope_params = scope_clause("pe", normalized_scope)
 
-    return _fetch_count(
+    return fetch_count(
         f"""
         SELECT COUNT(DISTINCT pe.resident_id) AS total
         FROM program_enrollments pe
@@ -365,7 +130,7 @@ def _get_current_active_count_for_scope(scope: str) -> int:
         AND pe.entry_date <= ?
         AND (pe.exit_date IS NULL OR pe.exit_date = '' OR pe.exit_date >= ?)
         """,
-        scope_params + [_iso_today(), _iso_today()],
+        scope_params + [iso_today(), iso_today()],
     )
 
 
@@ -415,7 +180,7 @@ def get_scope_comparison(
     start: str | None = None,
     end: str | None = None,
 ) -> dict[str, Any]:
-    normalized_scope = _normalize_scope(scope)
+    normalized_scope = normalize_scope(scope)
 
     total_program_served = _get_filtered_served_total(
         "total_program",
@@ -478,11 +243,11 @@ def get_program_snapshot(
     start: str | None = None,
     end: str | None = None,
 ) -> dict[str, Any]:
-    normalized_scope = _normalize_scope(scope)
-    normalized_population = _normalize_population(population)
-    normalized_date_range = _normalize_date_range_key(date_range)
+    normalized_scope = normalize_scope(scope)
+    normalized_population = normalize_population(population)
+    normalized_date_range = normalize_date_range_key(date_range)
 
-    where_sql, where_params, start_date, end_date = _base_enrollment_where(
+    where_sql, where_params, start_date, end_date = base_enrollment_where(
         normalized_scope,
         normalized_population,
         normalized_date_range,
@@ -491,7 +256,7 @@ def get_program_snapshot(
         alias="pe",
     )
 
-    women_served = _fetch_count(
+    women_served = fetch_count(
         f"""
         SELECT COUNT(DISTINCT pe.resident_id) AS total
         FROM program_enrollments pe
@@ -500,10 +265,10 @@ def get_program_snapshot(
         where_params,
     )
 
-    scope_sql, scope_params = _scope_clause("pe", normalized_scope)
+    scope_sql, scope_params = scope_clause("pe", normalized_scope)
 
-    entry_sql, entry_params = _entry_window_clause("pe", start_date, end_date)
-    women_admitted = _fetch_count(
+    entry_sql, entry_params = entry_window_clause("pe", start_date, end_date)
+    women_admitted = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM program_enrollments pe
@@ -514,8 +279,8 @@ def get_program_snapshot(
         scope_params + entry_params,
     )
 
-    exit_sql, exit_params = _exit_window_clause("pe", start_date, end_date)
-    women_exited = _fetch_count(
+    exit_sql, exit_params = exit_window_clause("pe", start_date, end_date)
+    women_exited = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM program_enrollments pe
@@ -526,7 +291,7 @@ def get_program_snapshot(
         scope_params + exit_params,
     )
 
-    graduates = _fetch_count(
+    graduates = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM exit_assessments ea
@@ -554,13 +319,13 @@ def get_program_snapshot(
 
     stay_lengths: list[int] = []
     for row in exited_rows:
-        days = _days_between(_row_get(row, "entry_date", 0), _row_get(row, "exit_date", 1))
+        days = days_between(row_get(row, "entry_date", 0), row_get(row, "exit_date", 1))
         if days is not None and days >= 0:
             stay_lengths.append(days)
 
     average_length_of_stay_days = round(sum(stay_lengths) / len(stay_lengths), 1) if stay_lengths else 0.0
 
-    current_active = _fetch_count(
+    current_active = fetch_count(
         f"""
         SELECT COUNT(DISTINCT pe.resident_id) AS total
         FROM program_enrollments pe
@@ -569,7 +334,7 @@ def get_program_snapshot(
         AND pe.entry_date <= ?
         AND (pe.exit_date IS NULL OR pe.exit_date = '' OR pe.exit_date >= ?)
         """,
-        scope_params + [_iso_today(), _iso_today()],
+        scope_params + [iso_today(), iso_today()],
     )
 
     return {
@@ -594,10 +359,10 @@ def get_shelter_distribution(
     start: str | None = None,
     end: str | None = None,
 ) -> list[dict[str, Any]]:
-    where_sql, where_params, _, _ = _base_enrollment_where(
+    where_sql, where_params, _, _ = base_enrollment_where(
         "total_program",
-        _normalize_population(population),
-        _normalize_date_range_key(date_range),
+        normalize_population(population),
+        normalize_date_range_key(date_range),
         start,
         end,
         alias="pe",
@@ -605,10 +370,10 @@ def get_shelter_distribution(
 
     rows = db_fetchall(
         f"""
-        SELECT {_shelter_expr('pe')} AS shelter_key, COUNT(DISTINCT pe.resident_id) AS total
+        SELECT {shelter_expr('pe')} AS shelter_key, COUNT(DISTINCT pe.resident_id) AS total
         FROM program_enrollments pe
         {where_sql}
-        GROUP BY {_shelter_expr('pe')}
+        GROUP BY {shelter_expr('pe')}
         ORDER BY total DESC, shelter_key
         """,
         tuple(where_params),
@@ -616,9 +381,9 @@ def get_shelter_distribution(
 
     merged: dict[str, int] = {}
     for row in rows:
-        raw_key = _row_get(row, "shelter_key", 0, "")
-        normalized_key = _normalize_shelter_value(raw_key)
-        value = _to_int(_row_get(row, "total", 1, 0), 0)
+        raw_key = row_get(row, "shelter_key", 0, "")
+        normalized_key = normalize_shelter_value(raw_key)
+        value = to_int(row_get(row, "total", 1, 0), 0)
         merged[normalized_key] = merged.get(normalized_key, 0) + value
 
     total = sum(merged.values()) or 0
@@ -629,7 +394,7 @@ def get_shelter_distribution(
         pct = round((value / total) * 100, 1) if total else 0.0
         output.append(
             {
-                "label": _display_shelter_label(shelter_key),
+                "label": display_shelter_label(shelter_key),
                 "value": value,
                 "display_value": mask_small_counts(value),
                 "percentage": pct,
@@ -647,16 +412,16 @@ def get_recovery_and_sobriety(
     start: str | None = None,
     end: str | None = None,
 ) -> dict[str, Any]:
-    where_sql, where_params, _, _ = _base_enrollment_where(
-        _normalize_scope(scope),
-        _normalize_population(population),
-        _normalize_date_range_key(date_range),
+    where_sql, where_params, _, _ = base_enrollment_where(
+        normalize_scope(scope),
+        normalize_population(population),
+        normalize_date_range_key(date_range),
         start,
         end,
         alias="pe",
     )
 
-    primary_substances = _fetch_grouped_rows(
+    primary_substances = fetch_grouped_rows(
         f"""
         SELECT COALESCE(NULLIF(TRIM(ia.drug_of_choice), ''), 'Unknown') AS label,
                COUNT(*) AS total
@@ -669,7 +434,7 @@ def get_recovery_and_sobriety(
         where_params,
     )
 
-    avg_days_sober_at_entry = _fetch_avg(
+    avg_days_sober_at_entry = fetch_avg(
         f"""
         SELECT AVG(ia.days_sober_at_entry) AS avg_value
         FROM program_enrollments pe
@@ -692,16 +457,16 @@ def get_trauma_and_vulnerability(
     start: str | None = None,
     end: str | None = None,
 ) -> dict[str, Any]:
-    where_sql, where_params, _, _ = _base_enrollment_where(
-        _normalize_scope(scope),
-        _normalize_population(population),
-        _normalize_date_range_key(date_range),
+    where_sql, where_params, _, _ = base_enrollment_where(
+        normalize_scope(scope),
+        normalize_population(population),
+        normalize_date_range_key(date_range),
         start,
         end,
         alias="pe",
     )
 
-    ace_avg = _fetch_avg(
+    ace_avg = fetch_avg(
         f"""
         SELECT AVG(ia.ace_score) AS avg_value
         FROM program_enrollments pe
@@ -711,7 +476,7 @@ def get_trauma_and_vulnerability(
         where_params,
     )
 
-    sexual_survivor = _fetch_count(
+    sexual_survivor = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM program_enrollments pe
@@ -722,7 +487,7 @@ def get_trauma_and_vulnerability(
         where_params,
     )
 
-    dv_survivor = _fetch_count(
+    dv_survivor = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM program_enrollments pe
@@ -733,7 +498,7 @@ def get_trauma_and_vulnerability(
         where_params,
     )
 
-    trafficking_survivor = _fetch_count(
+    trafficking_survivor = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM program_enrollments pe
@@ -762,16 +527,16 @@ def get_barriers_to_stability(
     start: str | None = None,
     end: str | None = None,
 ) -> dict[str, Any]:
-    where_sql, where_params, _, _ = _base_enrollment_where(
-        _normalize_scope(scope),
-        _normalize_population(population),
-        _normalize_date_range_key(date_range),
+    where_sql, where_params, _, _ = base_enrollment_where(
+        normalize_scope(scope),
+        normalize_population(population),
+        normalize_date_range_key(date_range),
         start,
         end,
         alias="pe",
     )
 
-    felony = _fetch_count(
+    felony = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM program_enrollments pe
@@ -782,7 +547,7 @@ def get_barriers_to_stability(
         where_params,
     )
 
-    parole = _fetch_count(
+    parole = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM program_enrollments pe
@@ -793,7 +558,7 @@ def get_barriers_to_stability(
         where_params,
     )
 
-    drug_court = _fetch_count(
+    drug_court = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM program_enrollments pe
@@ -821,16 +586,16 @@ def get_education_and_income(
     start: str | None = None,
     end: str | None = None,
 ) -> dict[str, Any]:
-    where_sql, where_params, _, _ = _base_enrollment_where(
-        _normalize_scope(scope),
-        _normalize_population(population),
-        _normalize_date_range_key(date_range),
+    where_sql, where_params, _, _ = base_enrollment_where(
+        normalize_scope(scope),
+        normalize_population(population),
+        normalize_date_range_key(date_range),
         start,
         end,
         alias="pe",
     )
 
-    avg_income_at_entry = _fetch_avg(
+    avg_income_at_entry = fetch_avg(
         f"""
         SELECT AVG(ia.income_at_entry) AS avg_value
         FROM program_enrollments pe
@@ -840,7 +605,7 @@ def get_education_and_income(
         where_params,
     )
 
-    avg_income_at_exit = _fetch_avg(
+    avg_income_at_exit = fetch_avg(
         f"""
         SELECT AVG(ea.income_at_exit) AS avg_value
         FROM program_enrollments pe
@@ -862,9 +627,9 @@ def get_education_and_income(
         """,
         tuple(where_params),
     )
-    avg_improvement = _to_float(_row_get(improvement_row, "avg_value", 0, 0.0), 0.0)
+    avg_improvement = to_float(row_get(improvement_row, "avg_value", 0, 0.0), 0.0)
 
-    education_entry = _fetch_grouped_rows(
+    education_entry = fetch_grouped_rows(
         f"""
         SELECT COALESCE(NULLIF(TRIM(ia.education_at_entry), ''), 'Unknown') AS label,
                COUNT(*) AS total
@@ -877,7 +642,7 @@ def get_education_and_income(
         where_params,
     )
 
-    education_exit = _fetch_grouped_rows(
+    education_exit = fetch_grouped_rows(
         f"""
         SELECT COALESCE(NULLIF(TRIM(ea.education_at_exit), ''), 'Unknown') AS label,
                COUNT(*) AS total
@@ -893,7 +658,7 @@ def get_education_and_income(
     entry_rank_case = _education_rank_case("ia.education_at_entry")
     exit_rank_case = _education_rank_case("ea.education_at_exit")
 
-    avg_education_at_entry = _fetch_avg(
+    avg_education_at_entry = fetch_avg(
         f"""
         SELECT AVG({entry_rank_case}) AS avg_value
         FROM program_enrollments pe
@@ -903,7 +668,7 @@ def get_education_and_income(
         where_params,
     )
 
-    avg_education_at_exit = _fetch_avg(
+    avg_education_at_exit = fetch_avg(
         f"""
         SELECT AVG({exit_rank_case}) AS avg_value
         FROM program_enrollments pe
@@ -925,8 +690,8 @@ def get_education_and_income(
         """,
         tuple(where_params),
     )
-    avg_education_improvement = _to_float(
-        _row_get(avg_education_improvement_row, "avg_value", 0, 0.0),
+    avg_education_improvement = to_float(
+        row_get(avg_education_improvement_row, "avg_value", 0, 0.0),
         0.0,
     )
 
@@ -955,9 +720,9 @@ def get_exit_outcomes(
     start: str | None = None,
     end: str | None = None,
 ) -> dict[str, Any]:
-    normalized_scope = _normalize_scope(scope)
-    start_date, end_date = _window_dates(_normalize_date_range_key(date_range), start, end)
-    scope_sql, scope_params = _scope_clause("pe", normalized_scope)
+    normalized_scope = normalize_scope(scope)
+    start_date, end_date = window_dates(normalize_date_range_key(date_range), start, end)
+    scope_sql, scope_params = scope_clause("pe", normalized_scope)
 
     exit_window_sql = ""
     exit_window_params: list[Any] = []
@@ -965,7 +730,7 @@ def get_exit_outcomes(
         exit_window_sql = " AND ea.date_exit_dwc >= ? AND ea.date_exit_dwc <= ?"
         exit_window_params = [start_date, end_date]
 
-    graduates = _fetch_count(
+    graduates = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM exit_assessments ea
@@ -978,7 +743,7 @@ def get_exit_outcomes(
         scope_params + exit_window_params,
     )
 
-    leave_ama = _fetch_count(
+    leave_ama = fetch_count(
         f"""
         SELECT COUNT(*) AS total
         FROM exit_assessments ea
@@ -991,7 +756,7 @@ def get_exit_outcomes(
         scope_params + exit_window_params,
     )
 
-    exit_reasons = _fetch_grouped_rows(
+    exit_reasons = fetch_grouped_rows(
         f"""
         SELECT COALESCE(NULLIF(TRIM(ea.exit_reason), ''), 'Unknown') AS label,
                COUNT(*) AS total
@@ -1022,9 +787,9 @@ def get_exit_outcomes(
     )
 
     local_outcomes = {
-        "stayed": _to_int(_row_get(local_outcomes_row, "stayed", 0, 0), 0),
-        "left": _to_int(_row_get(local_outcomes_row, "left_program_city", 1, 0), 0),
-        "unknown": _to_int(_row_get(local_outcomes_row, "unknown", 2, 0), 0),
+        "stayed": to_int(row_get(local_outcomes_row, "stayed", 0, 0), 0),
+        "left": to_int(row_get(local_outcomes_row, "left_program_city", 1, 0), 0),
+        "unknown": to_int(row_get(local_outcomes_row, "unknown", 2, 0), 0),
     }
 
     exit_category_counts: dict[str, int] = {category: 0 for category in _EXIT_CATEGORY_ORDER}
@@ -1078,10 +843,10 @@ def get_dashboard_statistics(
     start: str | None = None,
     end: str | None = None,
 ) -> dict[str, Any]:
-    normalized_scope = _normalize_scope(scope)
-    normalized_population = _normalize_population(population)
-    normalized_date_range = _normalize_date_range_key(date_range)
-    start_date, end_date = _window_dates(normalized_date_range, start, end)
+    normalized_scope = normalize_scope(scope)
+    normalized_population = normalize_population(population)
+    normalized_date_range = normalize_date_range_key(date_range)
+    start_date, end_date = window_dates(normalized_date_range, start, end)
 
     return {
         "filters": {
