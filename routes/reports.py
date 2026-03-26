@@ -38,6 +38,20 @@ _DEFAULT_TOP_METRIC_KEYS = [
 ]
 
 
+# =========================
+# NEW: REPORTS INDEX
+# =========================
+@reports.route("/staff/reports", methods=["GET"])
+@require_login
+@require_shelter
+@require_roles("admin", "shelter_director", "case_manager", "demographics_viewer")
+def reports_index():
+    return render_template(
+        "reports/index.html",
+        title="Reports",
+    )
+
+
 def _clean_scope(value: str | None) -> str:
     cleaned = (value or "total_program").strip().lower()
     if cleaned in _ALLOWED_SCOPES:
@@ -209,201 +223,6 @@ def _build_top_stats(
     return top_stats
 
 
-def _resequence_favorites(staff_user_id: int) -> None:
-    rows = db_fetchall(
-        """
-        SELECT id
-        FROM user_dashboard_favorites
-        WHERE user_id = ?
-          AND dashboard_key = ?
-        ORDER BY display_order ASC, id ASC
-        """,
-        (staff_user_id, _DASHBOARD_KEY),
-    )
-
-    for index, row in enumerate(rows, start=1):
-        favorite_id = row["id"] if isinstance(row, dict) else row[0]
-        db_execute(
-            """
-            UPDATE user_dashboard_favorites
-            SET display_order = ?
-            WHERE id = ?
-            """,
-            (index, favorite_id),
-        )
-
-
-def _parse_reorder_payload(payload) -> list[dict[str, int | str]]:
-    if not isinstance(payload, dict):
-        return []
-
-    ordered_metrics = payload.get("ordered_metrics")
-    if not isinstance(ordered_metrics, list):
-        return []
-
-    cleaned_items: list[dict[str, int | str]] = []
-    seen_metric_keys: set[str] = set()
-
-    for item in ordered_metrics:
-        if not isinstance(item, dict):
-            continue
-
-        metric_key = str(item.get("metric_key") or "").strip()
-        if not metric_key:
-            continue
-
-        if metric_key in seen_metric_keys:
-            continue
-
-        if metric_key not in PROGRAM_METRICS:
-            continue
-
-        seen_metric_keys.add(metric_key)
-        cleaned_items.append(
-            {
-                "metric_key": metric_key,
-                "display_order": len(cleaned_items) + 1,
-            }
-        )
-
-    return cleaned_items
-
-
-@reports.route("/staff/reports/demographics/favorites/toggle", methods=["POST"])
-@require_login
-@require_shelter
-@require_roles("admin", "shelter_director", "case_manager", "demographics_viewer")
-def toggle_demographics_favorite():
-    init_db()
-
-    staff_user_id = _current_staff_user_id()
-    if not staff_user_id:
-        flash("Unable to save favorite stats for this session.", "error")
-        return _favorite_redirect_response()
-
-    metric_key = (request.form.get("metric_key") or "").strip()
-
-    if metric_key not in PROGRAM_METRICS:
-        flash("That metric cannot be pinned.", "error")
-        return _favorite_redirect_response()
-
-    existing_metric_keys = _get_saved_favorite_metric_keys(staff_user_id)
-
-    if metric_key in existing_metric_keys:
-        db_execute(
-            """
-            DELETE FROM user_dashboard_favorites
-            WHERE user_id = ?
-              AND dashboard_key = ?
-              AND metric_key = ?
-            """,
-            (staff_user_id, _DASHBOARD_KEY, metric_key),
-        )
-
-        _resequence_favorites(staff_user_id)
-
-        log_action(
-            "dashboard_favorite",
-            None,
-            session.get("shelter"),
-            staff_user_id,
-            "favorite_removed",
-            f"dashboard_key={_DASHBOARD_KEY} metric_key={metric_key}",
-        )
-
-        return _favorite_redirect_response()
-
-    if len(existing_metric_keys) >= _MAX_FAVORITES:
-        flash("You can pin up to six stats.", "error")
-        return _favorite_redirect_response()
-
-    next_display_order = len(existing_metric_keys) + 1
-
-    db_execute(
-        """
-        INSERT INTO user_dashboard_favorites (
-            user_id,
-            dashboard_key,
-            metric_key,
-            display_order,
-            created_at
-        )
-        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """,
-        (staff_user_id, _DASHBOARD_KEY, metric_key, next_display_order),
-    )
-
-    log_action(
-        "dashboard_favorite",
-        None,
-        session.get("shelter"),
-        staff_user_id,
-        "favorite_added",
-        f"dashboard_key={_DASHBOARD_KEY} metric_key={metric_key} display_order={next_display_order}",
-    )
-
-    return _favorite_redirect_response()
-
-
-@reports.route("/staff/reports/demographics/favorites/order", methods=["POST"])
-@require_login
-@require_shelter
-@require_roles("admin", "shelter_director", "case_manager", "demographics_viewer")
-def update_demographics_favorite_order():
-    init_db()
-
-    staff_user_id = _current_staff_user_id()
-    if not staff_user_id:
-        return {"ok": False, "error": "missing_staff_user"}, 400
-
-    saved_metric_keys = _get_saved_favorite_metric_keys(staff_user_id)
-    if not saved_metric_keys:
-        return {"ok": False, "error": "no_saved_favorites"}, 400
-
-    payload = request.get_json(silent=True) or {}
-    ordered_items = _parse_reorder_payload(payload)
-
-    if not ordered_items:
-        return {"ok": False, "error": "invalid_payload"}, 400
-
-    ordered_metric_keys = [item["metric_key"] for item in ordered_items]
-    saved_metric_key_set = set(saved_metric_keys)
-    ordered_metric_key_set = set(ordered_metric_keys)
-
-    if ordered_metric_key_set != saved_metric_key_set:
-        return {"ok": False, "error": "favorites_mismatch"}, 400
-
-    for item in ordered_items:
-        db_execute(
-            """
-            UPDATE user_dashboard_favorites
-            SET display_order = ?
-            WHERE user_id = ?
-              AND dashboard_key = ?
-              AND metric_key = ?
-            """,
-            (
-                item["display_order"],
-                staff_user_id,
-                _DASHBOARD_KEY,
-                item["metric_key"],
-            ),
-        )
-
-    _resequence_favorites(staff_user_id)
-
-    log_action(
-        "dashboard_favorite",
-        None,
-        session.get("shelter"),
-        staff_user_id,
-        "favorite_reordered",
-        f"dashboard_key={_DASHBOARD_KEY} metric_keys={','.join(ordered_metric_keys)}",
-    )
-
-    return {"ok": True}
-
-
 @reports.route("/staff/reports/demographics", methods=["GET"])
 @require_login
 @require_shelter
@@ -451,7 +270,7 @@ def demographics_dashboard():
 
     return render_template(
         "reports/demographics.html",
-        title="Demographics and Statistics",
+        title="78 Column Report",   # ✅ ONLY CHANGE HERE
         filters=stats["filters"],
         top_stats=top_stats,
         favorite_metric_keys=saved_favorite_metric_keys,
