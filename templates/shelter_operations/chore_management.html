@@ -20,6 +20,7 @@
             <tr>
               <th>Name</th>
               <th>When</th>
+              <th>Default Day</th>
               <th>Description</th>
               <th>Status</th>
               <th></th>
@@ -30,6 +31,13 @@
             <tr>
               <td>{{ c.name }}</td>
               <td>{{ c.when_time or "—" }}</td>
+              <td>
+                {% if c.default_day %}
+                  {{ c.default_day|upper }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
               <td>{{ c.description or "—" }}</td>
               <td>
                 {% if c.active %}
@@ -76,6 +84,20 @@
         <div style="margin-bottom:10px;">
           <label>When</label><br>
           <input type="time" name="when_time" style="width:100%;" step="60">
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <label>Default Day (optional)</label><br>
+          <select name="default_day" style="width:100%;">
+            <option value="">No default day</option>
+            <option value="tue">Tue</option>
+            <option value="wed">Wed</option>
+            <option value="thu">Thu</option>
+            <option value="fri">Fri</option>
+            <option value="sat">Sat</option>
+            <option value="sun">Sun</option>
+            <option value="mon">Mon</option>
+          </select>
         </div>
 
         <div style="margin-bottom:10px;">
