@@ -29,25 +29,50 @@
           <tbody>
             {% for c in chores %}
             <tr>
-              <td>{{ c.name }}</td>
-              <td>{{ c.when_time or "—" }}</td>
-              <td>
-                {% if c.default_day %}
-                  {{ c.default_day|upper }}
-                {% else %}
-                  —
-                {% endif %}
-              </td>
-              <td>{{ c.description or "—" }}</td>
-              <td>
-                {% if c.active %}
-                  Active
-                {% else %}
-                  Inactive
-                {% endif %}
-              </td>
-              <td>
-                <form method="post" action="{{ url_for('shelter_operations.toggle_chore', chore_id=c.id) }}">
+              <td colspan="6" style="padding:0;">
+                <form method="post" action="{{ url_for('shelter_operations.edit_chore', chore_id=c.id) }}" style="margin:0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                  <table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                      <td style="width:20%; padding:6px; border-right:1px solid #ddd;">
+                        <input type="text" name="name" value="{{ c.name }}" style="width:100%;" required>
+                      </td>
+
+                      <td style="width:12%; padding:6px; border-right:1px solid #ddd;">
+                        <input type="time" name="when_time" value="{{ c.when_time or '' }}" style="width:100%;" step="60">
+                      </td>
+
+                      <td style="width:12%; padding:6px; border-right:1px solid #ddd;">
+                        <select name="default_day" style="width:100%;">
+                          <option value="">No default day</option>
+                          <option value="tue" {% if c.default_day == 'tue' %}selected{% endif %}>Tue</option>
+                          <option value="wed" {% if c.default_day == 'wed' %}selected{% endif %}>Wed</option>
+                          <option value="thu" {% if c.default_day == 'thu' %}selected{% endif %}>Thu</option>
+                          <option value="fri" {% if c.default_day == 'fri' %}selected{% endif %}>Fri</option>
+                          <option value="sat" {% if c.default_day == 'sat' %}selected{% endif %}>Sat</option>
+                          <option value="sun" {% if c.default_day == 'sun' %}selected{% endif %}>Sun</option>
+                          <option value="mon" {% if c.default_day == 'mon' %}selected{% endif %}>Mon</option>
+                        </select>
+                      </td>
+
+                      <td style="width:28%; padding:6px; border-right:1px solid #ddd;">
+                        <input type="text" name="description" value="{{ c.description or '' }}" style="width:100%;">
+                      </td>
+
+                      <td style="width:10%; padding:6px; border-right:1px solid #ddd; white-space:nowrap;">
+                        {% if c.active %}
+                          Active
+                        {% else %}
+                          Inactive
+                        {% endif %}
+                      </td>
+
+                      <td style="width:18%; padding:6px; white-space:nowrap;">
+                        <button type="submit">Save</button>
+                </form>
+
+                <form method="post" action="{{ url_for('shelter_operations.toggle_chore', chore_id=c.id) }}" style="display:inline; margin-left:4px;">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <button type="submit">
                     {% if c.active %}
@@ -57,6 +82,14 @@
                     {% endif %}
                   </button>
                 </form>
+
+                <form method="post" action="{{ url_for('shelter_operations.delete_chore', chore_id=c.id) }}" style="display:inline; margin-left:4px;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" onclick="return confirm('Delete this chore?')">Delete</button>
+                </form>
+                      </td>
+                    </tr>
+                  </table>
               </td>
             </tr>
             {% endfor %}
