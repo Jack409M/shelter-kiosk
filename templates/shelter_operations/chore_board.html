@@ -37,12 +37,11 @@
         <div class="table-wrap">
           <table class="chore-board-table">
             <colgroup>
-              <col style="width:20%;">
+              <col style="width:22%;">
               <col style="width:12%;">
-              <col style="width:20%;">
+              <col style="width:22%;">
               <col span="7" style="width:6%;">
-              <col style="width:6%;">
-              <col style="width:6%;">
+              <col style="width:8%;">
             </colgroup>
             <thead>
               <tr>
@@ -56,7 +55,6 @@
                 <th>Saturday</th>
                 <th>Sunday</th>
                 <th>Monday</th>
-                <th class="no-print">Save</th>
                 <th class="no-print">Delete</th>
               </tr>
             </thead>
@@ -67,7 +65,7 @@
                   <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}" style="margin:0;">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                    <select name="resident_id" required style="width:100%;">
+                    <select name="resident_id" required style="width:100%;" onchange="this.form.submit()">
                       {% for r in residents %}
                         <option value="{{ r.id }}" {% if r.id == row.resident_id %}selected{% endif %}>
                           {{ r.last_name }}, {{ r.first_name }}
@@ -81,13 +79,14 @@
                 </td>
 
                 <td>
-                    <select name="chore_id" required style="width:100%;">
+                    <select name="chore_id" required style="width:100%;" onchange="this.form.submit()">
                       {% for c in chores %}
                         <option value="{{ c.id }}" {% if c.id == row.chore_id %}selected{% endif %}>
                           {{ c.name }}
                         </option>
                       {% endfor %}
                     </select>
+                  </form>
                 </td>
 
                 {% for d in week_dates %}
@@ -127,11 +126,6 @@
                   {% endif %}
                 </td>
                 {% endfor %}
-
-                <td class="no-print">
-                    <button type="submit">Save</button>
-                  </form>
-                </td>
 
                 <td class="no-print">
                   <button
