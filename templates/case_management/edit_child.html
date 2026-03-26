@@ -29,7 +29,14 @@
     <input type="number" name="birth_year" value="{{ birth_year or '' }}">
 
     <label><strong>Relationship</strong></label>
-    <input type="text" name="relationship" value="{{ relationship or '' }}">
+    <select name="relationship">
+      <option value="">Select</option>
+      <option value="child" {% if relationship == "child" %}selected{% endif %}>Son or Daughter</option>
+      <option value="foster" {% if relationship == "foster" %}selected{% endif %}>Foster Child</option>
+      <option value="relative" {% if relationship == "relative" %}selected{% endif %}>Relative</option>
+      <option value="non_relative" {% if relationship == "non_relative" %}selected{% endif %}>Non Relative</option>
+      <option value="guardian" {% if relationship == "guardian" %}selected{% endif %}>Legal Guardian Placement</option>
+    </select>
 
     <label><strong>Living Status</strong></label>
     <select name="living_status">
