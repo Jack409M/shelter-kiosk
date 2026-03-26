@@ -14,7 +14,6 @@
       <label for="assigned_date">Week Anchor Date</label><br>
       <input type="date" id="assigned_date" name="assigned_date" value="{{ assigned_date }}" required>
     </div>
-
     <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
       <button type="submit">Load</button>
       <button type="button" onclick="shiftWeek(-7)">Past</button>
@@ -24,16 +23,15 @@
     </div>
   </form>
 
-  <!-- CLONE ACTIONS -->
   <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-    <form method="post">
+    <form method="post" style="margin:0;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="clone_week">
       <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
       <button type="submit">Clone Week</button>
     </form>
 
-    <form method="post">
+    <form method="post" style="margin:0;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="clone_week_random">
       <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
@@ -79,8 +77,6 @@
             <tbody>
               {% for row in weekly_rows %}
               <tr>
-
-                <!-- WHO -->
                 <td>
                   <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}" style="margin:0;">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -94,12 +90,10 @@
                     </select>
                 </td>
 
-                <!-- WHEN -->
                 <td style="white-space:nowrap;">
                   {{ row.when_label or "" }}
                 </td>
 
-                <!-- WHAT -->
                 <td>
                     <select name="chore_id" required style="width:100%;" onchange="this.form.submit()">
                       {% for c in chores %}
@@ -111,7 +105,6 @@
                   </form>
                 </td>
 
-                <!-- DAYS -->
                 {% for d in week_dates %}
                 <td class="day-cell">
                   {% set day = row.days[d] %}
@@ -120,6 +113,7 @@
                       type="submit"
                       form="toggle-day-{{ day.id }}"
                       class="check-btn no-print"
+                      title="Toggle completion"
                     >
                       {% if day.status == 'completed' %}
                         ☑
@@ -127,7 +121,6 @@
                         ☐
                       {% endif %}
                     </button>
-
                     <span class="print-check">
                       {% if day.status == 'completed' %}
                         ☑
@@ -135,7 +128,6 @@
                         ☐
                       {% endif %}
                     </span>
-
                     <form
                       id="toggle-day-{{ day.id }}"
                       method="post"
@@ -145,12 +137,12 @@
                       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                       <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
                     </form>
-
                   {% else %}
                     <button
                       type="button"
                       class="assign-cell-btn no-print"
                       onclick="openAssignForCell('{{ row.resident_id }}', '{{ row.chore_id }}', '{{ d }}')"
+                      title="Assign this chore for this day"
                     >
                       +
                     </button>
@@ -159,7 +151,6 @@
                 </td>
                 {% endfor %}
 
-                <!-- DELETE -->
                 <td class="no-print">
                   <button
                     type="submit"
@@ -167,7 +158,6 @@
                   >
                     Delete
                   </button>
-
                   <form
                     id="delete-row-{{ row.assignment_id }}"
                     method="post"
@@ -178,7 +168,6 @@
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
                   </form>
                 </td>
-
               </tr>
               {% endfor %}
             </tbody>
@@ -190,7 +179,6 @@
     </div>
   </div>
 
-  <!-- ASSIGN PANEL -->
   <div class="no-print" style="width:100%; margin-top:20px;">
     <div style="margin-bottom:10px;">
       <button type="button" onclick="toggleAssign()" id="assignToggleBtn">+ Assign Chore</button>
@@ -237,3 +225,185 @@
   </div>
 
 </div>
+
+<style>
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.chore-board-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.chore-board-table th,
+.chore-board-table td {
+  border: 1px solid #000;
+  padding: 6px;
+  vertical-align: middle;
+}
+
+.chore-board-table th {
+  background: #f5f5f5;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.chore-board-table td.day-cell {
+  text-align: center;
+  font-size: 18px;
+  padding: 4px;
+}
+
+.check-btn {
+  border: none;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.print-check {
+  display: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.assign-cell-btn {
+  border: 1px dashed #999;
+  background: transparent;
+  width: 100%;
+  min-height: 32px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.assign-cell-btn:hover {
+  background: #f5f5f5;
+}
+
+@media print {
+  .no-print,
+  nav,
+  .sidebar,
+  header,
+  footer {
+    display: none !important;
+  }
+
+  .print-check {
+    display: inline !important;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .card {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  .table-wrap {
+    overflow: visible !important;
+  }
+
+  .chore-board-table {
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .chore-board-table th,
+  .chore-board-table td {
+    border: 1px solid #000;
+    padding: 5px;
+  }
+
+  @page {
+    size: landscape;
+    margin: 0.5in;
+  }
+}
+</style>
+
+<script>
+function shiftWeek(days) {
+  const input = document.getElementById("assigned_date");
+  if (!input || !input.value) return;
+
+  const parts = input.value.split("-");
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  dt.setDate(dt.getDate() + days);
+
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  input.value = `${y}-${m}-${d}`;
+
+  document.getElementById("weekForm").submit();
+}
+
+function goToToday() {
+  const dt = new Date();
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  document.getElementById("assigned_date").value = `${y}-${m}-${d}`;
+  document.getElementById("weekForm").submit();
+}
+
+function toggleAssign() {
+  const panel = document.getElementById("assignPanel");
+  const btn = document.getElementById("assignToggleBtn");
+  const help = document.getElementById("assignHelpText");
+
+  if (!panel || !btn) return;
+
+  if (panel.style.display === "none") {
+    panel.style.display = "block";
+    btn.textContent = "− Hide Assign Chore";
+    if (help && !help.textContent) {
+      help.style.display = "none";
+    }
+  } else {
+    panel.style.display = "none";
+    btn.textContent = "+ Assign Chore";
+    if (help) {
+      help.style.display = "none";
+      help.textContent = "";
+    }
+  }
+}
+
+function openAssignForCell(residentId, choreId, dateText) {
+  const panel = document.getElementById("assignPanel");
+  const btn = document.getElementById("assignToggleBtn");
+  const resident = document.getElementById("assign_resident_id");
+  const chore = document.getElementById("assign_chore_id");
+  const assignedDate = document.getElementById("assign_assigned_date");
+  const assignMode = document.getElementById("assign_mode");
+  const help = document.getElementById("assignHelpText");
+
+  if (!panel || !btn || !resident || !chore || !assignedDate || !assignMode) return;
+
+  panel.style.display = "block";
+  btn.textContent = "− Hide Assign Chore";
+
+  resident.value = residentId;
+  chore.value = choreId;
+  assignedDate.value = dateText;
+  assignMode.value = "day";
+
+  if (help) {
+    help.textContent = "Assigning selected resident and chore for " + dateText + ".";
+    help.style.display = "block";
+  }
+
+  resident.focus();
+}
+</script>
+
+{% endblock %}
