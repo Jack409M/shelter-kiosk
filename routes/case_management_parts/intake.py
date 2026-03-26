@@ -887,6 +887,49 @@ def edit_child_view(child_id: int):
     )
 
 
+def delete_child_view(child_id: int):
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+    ph = placeholder()
+
+    child = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_id
+        FROM resident_children
+        WHERE id = {ph}
+        """,
+        (child_id,),
+    )
+
+    if not child:
+        flash("Child not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
+
+    db_execute(
+        f"""
+        UPDATE resident_children
+        SET
+            is_active = FALSE,
+            updated_at = {ph}
+        WHERE id = {ph}
+        """,
+        (
+            datetime.utcnow().isoformat(),
+            child_id,
+        ),
+    )
+
+    flash("Child removed.", "success")
+    return redirect(url_for("case_management.family_intake", resident_id=resident_id))
+
+
 def edit_child_service_view(service_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
