@@ -110,13 +110,6 @@
             {% endif %}
 
             <div class="nav-dd">
-              <button type="button">Transport ▾</button>
-              <div class="menu">
-                <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
-              </div>
-            </div>
-
-            <div class="nav-dd">
               <button type="button">Case Management ▾</button>
               <div class="menu">
                 {% if intake_assessment_url %}
@@ -149,11 +142,8 @@
                 {% if chore_board_url %}
                   <a href="{{ chore_board_url }}">Weekly Chore Board</a>
                 {% endif %}
-                {% if chore_config_url %}
-                  <a href="{{ chore_config_url }}">Chore Configuration</a>
-                {% endif %}
                 <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-                <a href="{{ url_for('transport.staff_transport_print') }}" target="_blank">Print Transport Board</a>
+                <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
               </div>
             </div>
 
