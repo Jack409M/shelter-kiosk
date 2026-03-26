@@ -216,6 +216,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             (
                 enrollment_id,
                 city,
+                county,
                 last_zipcode_residence,
                 length_of_time_in_amarillo,
                 income_at_entry,
@@ -303,6 +304,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 {ph},
                 {ph},
                 {ph},
+                {ph},
                 NOW(),
                 NOW()
             )
@@ -310,6 +312,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             (
                 enrollment_id,
                 data.get("city"),
+                data.get("county"),
                 data.get("last_zipcode_residence"),
                 data.get("length_of_time_in_amarillo"),
                 data.get("income_at_entry"),
@@ -360,6 +363,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
         (
             enrollment_id,
             city,
+            county,
             last_zipcode_residence,
             length_of_time_in_amarillo,
             income_at_entry,
@@ -448,12 +452,14 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             {ph},
             {ph},
             {ph},
+            {ph},
             {ph}
         )
         """,
         (
             enrollment_id,
             data.get("city"),
+            data.get("county"),
             data.get("last_zipcode_residence"),
             data.get("length_of_time_in_amarillo"),
             data.get("income_at_entry"),
