@@ -429,6 +429,16 @@ def demographics_dashboard():
         end=end_date,
     )
 
+    stat_errors: dict[str, str] = {}
+
+    for key, value in list(stats.items()):
+        if key == "filters":
+            continue
+        if isinstance(value, dict) and "ok" in value and "data" in value:
+            if not value.get("ok") and value.get("error"):
+                stat_errors[key] = value["error"]
+            stats[key] = value.get("data", {})
+
     staff_user_id = _current_staff_user_id()
     saved_favorite_metric_keys = _get_saved_favorite_metric_keys(staff_user_id) if staff_user_id else []
     display_top_metric_keys = _get_display_top_metric_keys(staff_user_id)
@@ -445,6 +455,7 @@ def demographics_dashboard():
         filters=stats["filters"],
         top_stats=top_stats,
         favorite_metric_keys=saved_favorite_metric_keys,
+        stat_errors=stat_errors,
         program_snapshot=stats["program_snapshot"],
         scope_comparison=stats["scope_comparison"],
         capacity_snapshot=stats["capacity_snapshot"],
