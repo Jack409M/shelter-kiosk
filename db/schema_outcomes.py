@@ -248,7 +248,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
         """
         CREATE TABLE IF NOT EXISTS exit_assessments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            enrollment_id INTEGER NOT NULL,
+            enrollment_id INTEGER NOT NULL UNIQUE,
             date_graduated TEXT,
             date_exit_dwc TEXT,
             exit_category TEXT,
@@ -276,7 +276,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
         """
         CREATE TABLE IF NOT EXISTS exit_assessments (
             id SERIAL PRIMARY KEY,
-            enrollment_id INTEGER NOT NULL REFERENCES program_enrollments(id),
+            enrollment_id INTEGER NOT NULL UNIQUE REFERENCES program_enrollments(id),
             date_graduated TEXT,
             date_exit_dwc TEXT,
             exit_category TEXT,
@@ -391,7 +391,7 @@ def ensure_indexes() -> None:
 
         db_execute(
             """
-            CREATE INDEX IF NOT EXISTS exit_assessments_enrollment_idx
+            CREATE UNIQUE INDEX IF NOT EXISTS exit_assessments_enrollment_uidx
             ON exit_assessments (enrollment_id)
             """
         )
