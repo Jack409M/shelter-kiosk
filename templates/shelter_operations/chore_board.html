@@ -25,9 +25,11 @@
   <div style="flex:2; min-width:340px;">
     <div class="card">
       <h2 style="text-align:center; margin-bottom:16px;">Weekly Chore Schedule</h2>
-      <p style="text-align:center; margin-top:0;"><strong>Selected Date:</strong> {{ assigned_date }}</p>
+      <p style="text-align:center; margin-top:0;">
+        <strong>Week:</strong> {{ week_start }} to {{ week_end }}
+      </p>
 
-      {% if assignments %}
+      {% if weekly_rows %}
         <div class="table-wrap">
           <table class="chore-board-table">
             <thead>
@@ -43,20 +45,19 @@
                 <th>Sunday</th>
                 <th>Monday</th>
                 <th class="no-print">Save</th>
-                <th class="no-print">Status</th>
                 <th class="no-print">Delete</th>
               </tr>
             </thead>
             <tbody>
-              {% for a in assignments %}
-              <tr{% if a.status != 'completed' %} class="not-complete"{% endif %}>
+              {% for row in weekly_rows %}
+              <tr>
                 <td>
-                  <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=a.id) }}">
+                  <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
                     <select name="resident_id" required style="max-width:220px; width:100%;">
                       {% for r in residents %}
-                        <option value="{{ r.id }}" {% if r.id == a.resident_id %}selected{% endif %}>
+                        <option value="{{ r.id }}" {% if r.id == row.resident_id %}selected{% endif %}>
                           {{ r.last_name }}, {{ r.first_name }}
                         </option>
                       {% endfor %}
@@ -64,27 +65,34 @@
                 </td>
 
                 <td style="white-space:nowrap;">
-                  {{ a.when_label or "" }}
+                  {{ row.when_label or "" }}
                 </td>
 
                 <td>
                     <select name="chore_id" required style="max-width:220px; width:100%;">
                       {% for c in chores %}
-                        <option value="{{ c.id }}" {% if c.id == a.chore_id %}selected{% endif %}>
+                        <option value="{{ c.id }}" {% if c.id == row.chore_id %}selected{% endif %}>
                           {{ c.name }}
                         </option>
                       {% endfor %}
                     </select>
                 </td>
 
-                {% for day_name in ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Monday"] %}
+                {% for d in week_dates %}
                 <td class="day-cell">
-                  {% if loop.first %}
-                    {% if a.status == 'completed' %}
-                      ☑
-                    {% else %}
-                      ☐
-                    {% endif %}
+                  {% set day = row.days[d] %}
+                  {% if day %}
+                    <form method="post" action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=day.id) }}">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+                      <button type="submit" style="border:none; background:none; font-size:18px;">
+                        {% if day.status == 'completed' %}
+                          ☑
+                        {% else %}
+                          ☐
+                        {% endif %}
+                      </button>
+                    </form>
                   {% else %}
                     &nbsp;
                   {% endif %}
@@ -97,19 +105,7 @@
                 </td>
 
                 <td class="no-print">
-                  <form method="post" action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=a.id) }}">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                    {% if a.status == 'completed' %}
-                      <button type="submit">Mark Assigned</button>
-                    {% else %}
-                      <button type="submit">Mark Complete</button>
-                    {% endif %}
-                  </form>
-                </td>
-
-                <td class="no-print">
-                  <form method="post" action="{{ url_for('shelter_operations.delete_assignment', assignment_id=a.id) }}">
+                  <form method="post" action="{{ url_for('shelter_operations.delete_assignment', assignment_id=row.assignment_id) }}">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
                     <button type="submit">Delete</button>
@@ -120,12 +116,8 @@
             </tbody>
           </table>
         </div>
-
-        <p style="margin-top:12px; font-size:0.95em;">
-          Printed layout now matches the paper style more closely. The true Tuesday through Monday weekly population still needs route logic so each day column can display its own assignment for the selected week.
-        </p>
       {% else %}
-        <p>No chores assigned for this date.</p>
+        <p>No chores assigned for this week.</p>
       {% endif %}
     </div>
   </div>
@@ -201,10 +193,6 @@
   text-align: center;
   min-width: 72px;
   font-size: 18px;
-}
-
-.chore-board-table tr.not-complete {
-  background: #fff3f3;
 }
 
 @media print {
