@@ -1,6 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from datetime import date, datetime, timedelta
+
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+
 from core.auth import require_login, require_shelter
-from core.db import db_fetchall, db_fetchone, db_execute
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 
 
@@ -11,7 +14,26 @@ shelter_operations = Blueprint(
 )
 
 
-@shelter_operations.route("/chores", methods=["GET", "POST"])
+def _week_start_tuesday(date_text: str) -> str:
+    base_date = datetime.strptime(date_text, "%Y-%m-%d").date()
+    weekday = base_date.weekday()
+    days_to_tuesday = (weekday - 1) % 7
+    tuesday = base_date - timedelta(days=days_to_tuesday)
+    return tuesday.strftime("%Y-%m-%d")
+
+
+def _week_dates_from_anchor(date_text: str) -> tuple[str, str, list[str]]:
+    week_start = _week_start_tuesday(date_text)
+    start_date = datetime.strptime(week_start, "%Y-%m-%d").date()
+    week_dates = [
+        (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
+        for i in range(7)
+    ]
+    week_end = week_dates[-1]
+    return week_start, week_end, week_dates
+
+
+@shelter_operations.route("/chores/config", methods=["GET", "POST"])
 @require_login
 @require_shelter
 def chore_management():
@@ -71,6 +93,7 @@ def toggle_chore(chore_id: int):
     return redirect(url_for("shelter_operations.chore_management"))
 
 
+@shelter_operations.route("/chores", methods=["GET", "POST"])
 @shelter_operations.route("/chore-board", methods=["GET", "POST"])
 @require_login
 @require_shelter
@@ -79,8 +102,9 @@ def chore_board():
 
     assigned_date = (request.values.get("assigned_date") or "").strip()
     if not assigned_date:
-        from datetime import date
         assigned_date = str(date.today())
+
+    week_start, week_end, week_dates = _week_dates_from_anchor(assigned_date)
 
     if request.method == "POST":
         resident_id = (request.form.get("resident_id") or "").strip()
@@ -89,21 +113,12 @@ def chore_board():
 
         if not resident_id or not chore_id:
             flash("Resident and chore are required.", "error")
-            return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
+            return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
 
-        from datetime import datetime, timedelta
-
-        base_date = datetime.strptime(assigned_date, "%Y-%m-%d")
-        weekday = base_date.weekday()
-        days_to_tuesday = (weekday - 1) % 7
-        tuesday = base_date - timedelta(days=days_to_tuesday)
-
-        dates_to_insert = []
+        dates_to_insert: list[str] = []
 
         if assign_mode == "week":
-            for i in range(7):
-                d = tuesday + timedelta(days=i)
-                dates_to_insert.append(d.strftime("%Y-%m-%d"))
+            dates_to_insert.extend(week_dates)
         else:
             dates_to_insert.append(assigned_date)
 
@@ -151,7 +166,7 @@ def chore_board():
         else:
             flash("No new assignments were added because matching assignments already exist.", "error")
 
-        return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
+        return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
 
     residents = db_fetchall(
         """
@@ -180,6 +195,7 @@ def chore_board():
             ca.resident_id,
             ca.chore_id,
             ca.status,
+            ca.assigned_date,
             r.first_name,
             r.last_name,
             ct.name AS chore_name
@@ -197,12 +213,64 @@ def chore_board():
         (shelter, assigned_date),
     )
 
+    weekly_assignment_rows = db_fetchall(
+        """
+        SELECT
+            ca.id,
+            ca.resident_id,
+            ca.chore_id,
+            ca.assigned_date,
+            ca.status,
+            r.first_name,
+            r.last_name,
+            ct.name AS chore_name
+        FROM chore_assignments ca
+        JOIN residents r ON r.id = ca.resident_id
+        JOIN chore_templates ct ON ct.id = ca.chore_id
+        WHERE r.shelter = %s
+          AND ca.assigned_date BETWEEN %s AND %s
+        ORDER BY
+            r.last_name,
+            r.first_name,
+            ct.name,
+            ca.assigned_date
+        """,
+        (shelter, week_start, week_end),
+    )
+
+    weekly_rows_map: dict[tuple[int, int], dict] = {}
+
+    for row in weekly_assignment_rows:
+        row_key = (row["resident_id"], row["chore_id"])
+        if row_key not in weekly_rows_map:
+            weekly_rows_map[row_key] = {
+                "assignment_id": row["id"],
+                "resident_id": row["resident_id"],
+                "chore_id": row["chore_id"],
+                "first_name": row["first_name"],
+                "last_name": row["last_name"],
+                "chore_name": row["chore_name"],
+                "when_label": "",
+                "days": {d: None for d in week_dates},
+            }
+
+        weekly_rows_map[row_key]["days"][row["assigned_date"]] = {
+            "id": row["id"],
+            "status": row["status"],
+        }
+
+    weekly_rows = list(weekly_rows_map.values())
+
     return render_template(
         "shelter_operations/chore_board.html",
         residents=residents,
         chores=chores,
         assignments=assignments,
         assigned_date=assigned_date,
+        week_start=week_start,
+        week_end=week_end,
+        week_dates=week_dates,
+        weekly_rows=weekly_rows,
     )
 
 
@@ -220,40 +288,85 @@ def edit_assignment(assignment_id: int):
         flash("Resident and chore are required.", "error")
         return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
 
-    existing = db_fetchone(
+    target = db_fetchone(
         """
-        SELECT id
-        FROM chore_assignments
-        WHERE resident_id = %s
-          AND chore_id = %s
-          AND assigned_date = %s
-          AND id != %s
+        SELECT
+            ca.id,
+            ca.resident_id,
+            ca.chore_id,
+            ca.assigned_date
+        FROM chore_assignments ca
+        JOIN residents r ON r.id = ca.resident_id
+        WHERE ca.id = %s
+          AND r.shelter = %s
         LIMIT 1
         """,
-        (resident_id, chore_id, assigned_date, assignment_id),
+        (assignment_id, shelter),
     )
 
-    if existing:
-        flash("That assignment already exists.", "error")
+    if not target:
+        flash("Assignment not found.", "error")
         return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
 
-    db_execute(
+    week_start, week_end, week_dates = _week_dates_from_anchor(assigned_date or target["assigned_date"])
+
+    target_rows = db_fetchall(
         """
-        UPDATE chore_assignments ca
-        SET
-            resident_id = %s,
-            chore_id = %s,
-            updated_at = %s
-        FROM residents r
-        WHERE ca.id = %s
-          AND r.id = ca.resident_id
-          AND r.shelter = %s
+        SELECT ca.id, ca.assigned_date
+        FROM chore_assignments ca
+        JOIN residents r ON r.id = ca.resident_id
+        WHERE r.shelter = %s
+          AND ca.resident_id = %s
+          AND ca.chore_id = %s
+          AND ca.assigned_date BETWEEN %s AND %s
+        ORDER BY ca.assigned_date
         """,
-        (resident_id, chore_id, utcnow_iso(), assignment_id, shelter),
+        (shelter, target["resident_id"], target["chore_id"], week_start, week_end),
     )
 
-    flash("Assignment updated.", "success")
-    return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
+    target_ids = {row["id"] for row in target_rows}
+
+    for d in week_dates:
+        target_has_date = any(row["assigned_date"] == d for row in target_rows)
+        if not target_has_date:
+            continue
+
+        existing = db_fetchone(
+            """
+            SELECT ca.id
+            FROM chore_assignments ca
+            JOIN residents r ON r.id = ca.resident_id
+            WHERE r.shelter = %s
+              AND ca.resident_id = %s
+              AND ca.chore_id = %s
+              AND ca.assigned_date = %s
+            LIMIT 1
+            """,
+            (shelter, resident_id, chore_id, d),
+        )
+
+        if existing and existing["id"] not in target_ids:
+            flash("That weekly edit would create a duplicate assignment.", "error")
+            return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
+
+    for row in target_rows:
+        db_execute(
+            """
+            UPDATE chore_assignments ca
+            SET
+                resident_id = %s,
+                chore_id = %s,
+                updated_at = %s
+            FROM residents r
+            WHERE ca.id = %s
+              AND r.id = ca.resident_id
+              AND r.shelter = %s
+            """,
+            (resident_id, chore_id, utcnow_iso(), row["id"], shelter),
+        )
+
+    flash("Weekly assignment updated.", "success")
+    return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
 
 
 @shelter_operations.route("/chore-board/<int:assignment_id>/toggle-status", methods=["POST"])
