@@ -1,1 +1,42 @@
+{% extends "layout.html" %}
 
+{% block content %}
+<div class="reports-page">
+  <div class="reports-header card">
+    <div>
+      <h1>Reports</h1>
+      <p class="reports-subtitle">
+        Select a report to view.
+      </p>
+    </div>
+  </div>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Available Reports</h2>
+    </div>
+
+    <div class="two-col-grid">
+      <div class="subsection">
+        <h3>78 Column Report</h3>
+        <p>
+          Aggregate program reporting across demographics, family composition,
+          recovery, barriers, income, and exit outcomes.
+        </p>
+        <p>
+          <a class="btn btn-primary" href="{{ url_for('reports.demographics_dashboard') }}">
+            Open 78 Column Report
+          </a>
+        </p>
+      </div>
+
+      <div class="subsection">
+        <h3>DB Stats</h3>
+        <p>
+          Coming soon.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
