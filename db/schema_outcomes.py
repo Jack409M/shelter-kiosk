@@ -20,6 +20,7 @@ def ensure_intake_assessments_table(kind: str) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             enrollment_id INTEGER NOT NULL,
             city TEXT,
+            county TEXT,
             last_zipcode_residence TEXT,
             length_of_time_in_amarillo TEXT,
             income_at_entry REAL,
@@ -72,6 +73,7 @@ def ensure_intake_assessments_table(kind: str) -> None:
             id SERIAL PRIMARY KEY,
             enrollment_id INTEGER NOT NULL REFERENCES program_enrollments(id),
             city TEXT,
+            county TEXT,
             last_zipcode_residence TEXT,
             length_of_time_in_amarillo TEXT,
             income_at_entry DOUBLE PRECISION,
@@ -157,6 +159,7 @@ def ensure_intake_assessment_columns(kind: str) -> None:
 
         statements = [
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS city TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS county TEXT",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS last_zipcode_residence TEXT",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS length_of_time_in_amarillo TEXT",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS marital_status TEXT",
