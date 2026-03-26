@@ -16,6 +16,17 @@
     </div>
   </div>
 
+  {% if stat_errors %}
+    <div class="card" style="border-left: 4px solid #b45309;">
+      <h3 style="margin-top: 0;">Some report sections could not be loaded</h3>
+      <ul style="margin-bottom: 0;">
+        {% for section_key, error_text in stat_errors.items() %}
+          <li><strong>{{ section_key.replace('_', ' ').title() }}:</strong> {{ error_text }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
   <form method="get" class="card filter-card">
     <div class="filter-grid">
       <div class="filter-group">
