@@ -685,6 +685,52 @@ def family_intake_view(resident_id: int):
                 children=children,
             )
 
+        existing_child = db_fetchone(
+            f"""
+            SELECT id
+            FROM resident_children
+            WHERE resident_id = {ph}
+              AND LOWER(child_name) = LOWER({ph})
+              AND (
+                    (birth_year IS NULL AND {ph} IS NULL)
+                    OR birth_year = {ph}
+                  )
+              AND is_active = TRUE
+            LIMIT 1
+            """,
+            (
+                resident_id,
+                child_name,
+                birth_year,
+                birth_year,
+            ),
+        )
+
+        if existing_child:
+            children = db_fetchall(
+                f"""
+                SELECT
+                    id,
+                    resident_id,
+                    child_name,
+                    birth_year,
+                    relationship,
+                    living_status
+                FROM resident_children
+                WHERE resident_id = {ph}
+                  AND is_active = TRUE
+                ORDER BY id ASC
+                """,
+                (resident_id,),
+            )
+
+            flash("This child already exists for this resident.", "error")
+            return render_template(
+                "case_management/family_intake.html",
+                resident_id=resident_id,
+                children=children,
+            )
+
         now = datetime.utcnow().isoformat()
 
         db_execute(
