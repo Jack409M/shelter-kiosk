@@ -828,6 +828,34 @@ def edit_child_view(child_id: int):
         birth_year = parse_int(request.form.get("birth_year"))
         relationship = clean(request.form.get("relationship"))
         living_status = clean(request.form.get("living_status"))
+        resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
+
+        existing_child = db_fetchone(
+            f"""
+            SELECT id
+            FROM resident_children
+            WHERE resident_id = {ph}
+              AND LOWER(child_name) = LOWER({ph})
+              AND (
+                    (birth_year IS NULL AND {ph} IS NULL)
+                    OR birth_year = {ph}
+                  )
+              AND is_active = TRUE
+              AND id <> {ph}
+            LIMIT 1
+            """,
+            (
+                resident_id,
+                child_name,
+                birth_year,
+                birth_year,
+                child_id,
+            ),
+        )
+
+        if existing_child:
+            flash("This child already exists for this resident.", "error")
+            return redirect(url_for("case_management.edit_child", child_id=child_id))
 
         db_execute(
             f"""
@@ -849,8 +877,6 @@ def edit_child_view(child_id: int):
                 child_id,
             ),
         )
-
-        resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
 
         flash("Child updated.", "success")
         return redirect(url_for("case_management.family_intake", resident_id=resident_id))
