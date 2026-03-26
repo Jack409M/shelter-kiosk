@@ -121,6 +121,7 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
 
         "prior_living": clean(form.get("prior_living")),
         "city": clean(form.get("city")),
+        "county": clean(form.get("county")),
         "last_zipcode_residence": clean(form.get("last_zipcode_residence")),
         "length_of_time_in_amarillo": clean(form.get("length_of_time_in_amarillo")),
         "marital_status": clean(form.get("marital_status")),
