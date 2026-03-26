@@ -36,6 +36,14 @@
       {% if weekly_rows %}
         <div class="table-wrap">
           <table class="chore-board-table">
+            <colgroup>
+              <col style="width:20%;">
+              <col style="width:12%;">
+              <col style="width:20%;">
+              <col span="7" style="width:6%;">
+              <col style="width:6%;">
+              <col style="width:6%;">
+            </colgroup>
             <thead>
               <tr>
                 <th>Who</th>
@@ -59,7 +67,7 @@
                   <form method="post" action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}" style="margin:0;">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                    <select name="resident_id" required style="max-width:220px; width:100%;">
+                    <select name="resident_id" required style="width:100%;">
                       {% for r in residents %}
                         <option value="{{ r.id }}" {% if r.id == row.resident_id %}selected{% endif %}>
                           {{ r.last_name }}, {{ r.first_name }}
@@ -73,7 +81,7 @@
                 </td>
 
                 <td>
-                    <select name="chore_id" required style="max-width:220px; width:100%;">
+                    <select name="chore_id" required style="width:100%;">
                       {% for c in chores %}
                         <option value="{{ c.id }}" {% if c.id == row.chore_id %}selected{% endif %}>
                           {{ c.name }}
@@ -90,6 +98,7 @@
                       type="submit"
                       form="toggle-day-{{ day.id }}"
                       style="border:none; background:none; font-size:18px;"
+                      title="Toggle completion"
                     >
                       {% if day.status == 'completed' %}
                         ☑
@@ -107,7 +116,14 @@
                       <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
                     </form>
                   {% else %}
-                    &nbsp;
+                    <button
+                      type="button"
+                      class="assign-cell-btn no-print"
+                      onclick="openAssignForCell('{{ row.resident_id }}', '{{ row.chore_id }}', '{{ d }}')"
+                      title="Assign this chore for this day"
+                    >
+                      +
+                    </button>
                   {% endif %}
                 </td>
                 {% endfor %}
@@ -152,15 +168,16 @@
 
     <div id="assignPanel" class="card" style="display:none;">
       <h2>Assign Chore</h2>
+      <p id="assignHelpText" style="margin-top:0; display:none;"></p>
 
       <form method="post">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+        <input type="hidden" name="assigned_date" id="assign_assigned_date" value="{{ assigned_date }}">
         <input type="hidden" name="assign_mode" id="assign_mode" value="day">
 
         <div style="margin-bottom:10px;">
           <label>Resident</label><br>
-          <select name="resident_id" style="max-width:320px; width:100%;" required>
+          <select name="resident_id" id="assign_resident_id" style="max-width:320px; width:100%;" required>
             <option value="">Select resident</option>
             {% for r in residents %}
               <option value="{{ r.id }}">{{ r.last_name }}, {{ r.first_name }}</option>
@@ -170,7 +187,7 @@
 
         <div style="margin-bottom:10px;">
           <label>Chore</label><br>
-          <select name="chore_id" style="width:100%;" required>
+          <select name="chore_id" id="assign_chore_id" style="width:100%;" required>
             <option value="">Select chore</option>
             {% for c in chores %}
               <option value="{{ c.id }}">{{ c.name }}</option>
@@ -200,7 +217,7 @@
 .chore-board-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .chore-board-table th,
@@ -218,8 +235,21 @@
 
 .chore-board-table td.day-cell {
   text-align: center;
-  min-width: 72px;
   font-size: 18px;
+  padding: 4px;
+}
+
+.assign-cell-btn {
+  border: 1px dashed #999;
+  background: transparent;
+  width: 100%;
+  min-height: 32px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.assign-cell-btn:hover {
+  background: #f5f5f5;
 }
 
 @media print {
@@ -293,16 +323,51 @@ function goToToday() {
 function toggleAssign() {
   const panel = document.getElementById("assignPanel");
   const btn = document.getElementById("assignToggleBtn");
+  const help = document.getElementById("assignHelpText");
 
   if (!panel || !btn) return;
 
   if (panel.style.display === "none") {
     panel.style.display = "block";
     btn.textContent = "− Hide Assign Chore";
+    if (help && !help.textContent) {
+      help.style.display = "none";
+    }
   } else {
     panel.style.display = "none";
     btn.textContent = "+ Assign Chore";
+    if (help) {
+      help.style.display = "none";
+      help.textContent = "";
+    }
   }
+}
+
+function openAssignForCell(residentId, choreId, dateText) {
+  const panel = document.getElementById("assignPanel");
+  const btn = document.getElementById("assignToggleBtn");
+  const resident = document.getElementById("assign_resident_id");
+  const chore = document.getElementById("assign_chore_id");
+  const assignedDate = document.getElementById("assign_assigned_date");
+  const assignMode = document.getElementById("assign_mode");
+  const help = document.getElementById("assignHelpText");
+
+  if (!panel || !btn || !resident || !chore || !assignedDate || !assignMode) return;
+
+  panel.style.display = "block";
+  btn.textContent = "− Hide Assign Chore";
+
+  resident.value = residentId;
+  chore.value = choreId;
+  assignedDate.value = dateText;
+  assignMode.value = "day";
+
+  if (help) {
+    help.textContent = "Assigning selected resident and chore for " + dateText + ".";
+    help.style.display = "block";
+  }
+
+  resident.focus();
 }
 </script>
 
