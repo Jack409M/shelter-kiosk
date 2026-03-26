@@ -19,6 +19,7 @@
           <thead>
             <tr>
               <th>Name</th>
+              <th>When</th>
               <th>Description</th>
               <th>Status</th>
               <th></th>
@@ -28,6 +29,7 @@
             {% for c in chores %}
             <tr>
               <td>{{ c.name }}</td>
+              <td>{{ c.when_time or "—" }}</td>
               <td>{{ c.description or "—" }}</td>
               <td>
                 {% if c.active %}
@@ -69,6 +71,11 @@
         <div style="margin-bottom:10px;">
           <label>Chore Name</label><br>
           <input type="text" name="name" style="width:100%;" required>
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <label>When</label><br>
+          <input type="time" name="when_time" style="width:100%;" step="60">
         </div>
 
         <div style="margin-bottom:10px;">
