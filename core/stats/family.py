@@ -34,7 +34,7 @@ def get_family_composition(
 
     child_rows = db_fetchall(
         f"""
-        SELECT rc.resident_id, rc.birth_year
+        SELECT DISTINCT rc.id, rc.resident_id, rc.birth_year
         FROM resident_children rc
         JOIN program_enrollments pe ON pe.resident_id = rc.resident_id
         {where_sql}
@@ -54,8 +54,8 @@ def get_family_composition(
     ages_22_65 = 0
 
     for row in child_rows:
-        resident_id = row_get(row, "resident_id", 0)
-        birth_year = to_int(row_get(row, "birth_year", 1), 0)
+        resident_id = row_get(row, "resident_id", 1)
+        birth_year = to_int(row_get(row, "birth_year", 2), 0)
 
         if resident_id:
             resident_ids_with_children.add(resident_id)
