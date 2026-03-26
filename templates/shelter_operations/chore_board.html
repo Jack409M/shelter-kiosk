@@ -146,7 +146,11 @@
   </div>
 
   <div class="no-print" style="flex:1; min-width:280px;">
-    <div class="card">
+    <div style="margin-bottom:10px;">
+      <button type="button" onclick="toggleAssign()" id="assignToggleBtn">+ Assign Chore</button>
+    </div>
+
+    <div id="assignPanel" class="card" style="display:none;">
       <h2>Assign Chore</h2>
 
       <form method="post">
@@ -284,6 +288,21 @@ function goToToday() {
   const d = String(dt.getDate()).padStart(2, "0");
   document.getElementById("assigned_date").value = `${y}-${m}-${d}`;
   document.getElementById("weekForm").submit();
+}
+
+function toggleAssign() {
+  const panel = document.getElementById("assignPanel");
+  const btn = document.getElementById("assignToggleBtn");
+
+  if (!panel || !btn) return;
+
+  if (panel.style.display === "none") {
+    panel.style.display = "block";
+    btn.textContent = "− Hide Assign Chore";
+  } else {
+    panel.style.display = "none";
+    btn.textContent = "+ Assign Chore";
+  }
 }
 </script>
 
