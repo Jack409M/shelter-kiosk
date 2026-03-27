@@ -507,6 +507,28 @@
                       </select>
                     </div>
 
+                    <div class="toggle-field span-2">
+                      <label>Has Driver’s License</label>
+                      <div class="toggle-inputs">
+                        <input type="radio" id="has_drivers_license_yes" name="has_drivers_license" value="yes" {% if form_data.get('has_drivers_license') == 'yes' %}checked{% endif %}>
+                        <label class="toggle-chip toggle-yes" for="has_drivers_license_yes">Yes</label>
+
+                        <input type="radio" id="has_drivers_license_no" name="has_drivers_license" value="no" {% if form_data.get('has_drivers_license') == 'no' %}checked{% endif %}>
+                        <label class="toggle-chip toggle-no" for="has_drivers_license_no">No</label>
+                      </div>
+                    </div>
+
+                    <div class="toggle-field span-2">
+                      <label>Has Social Security Card</label>
+                      <div class="toggle-inputs">
+                        <input type="radio" id="has_social_security_card_yes" name="has_social_security_card" value="yes" {% if form_data.get('has_social_security_card') == 'yes' %}checked{% endif %}>
+                        <label class="toggle-chip toggle-yes" for="has_social_security_card_yes">Yes</label>
+
+                        <input type="radio" id="has_social_security_card_no" name="has_social_security_card" value="no" {% if form_data.get('has_social_security_card') == 'no' %}checked{% endif %}>
+                        <label class="toggle-chip toggle-no" for="has_social_security_card_no">No</label>
+                      </div>
+                    </div>
+
                     <div class="field span-12">
                       <label for="initial_snapshot_notes">Initial Snapshot Notes</label>
                       <textarea id="initial_snapshot_notes" name="initial_snapshot_notes" placeholder="Brief baseline picture of her current situation.">{{ form_data.get('initial_snapshot_notes', '') }}</textarea>
