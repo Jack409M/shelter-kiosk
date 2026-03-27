@@ -1,3 +1,9 @@
+@import url("resident_portal.css");
+@import url("resident_workspace.css");
+@import url("resident_profile.css");
+@import url("staff_residents.css");
+@import url("policy.css");
+
 /* =========================================================
    Theme Tokens
    Central color and radius settings
@@ -802,8 +808,4 @@ input[name="needed_at"] {
   }
 }
 
-@import url("resident_portal.css");
-@import url("resident_workspace.css");
-@import url("resident_profile.css");
-@import url("staff_residents.css");
-@import url("policy.css");
+
