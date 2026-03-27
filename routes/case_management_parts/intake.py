@@ -169,6 +169,8 @@ def _normalize_yes_no_fields(form_data: dict[str, Any]) -> dict[str, Any]:
         "parenting_class_needed",
         "felony_history",
         "probation_parole",
+        "has_drivers_license",
+        "has_social_security_card",
     ]
 
     for field_name in yes_no_fields:
@@ -548,6 +550,8 @@ def submit_intake_assessment_view():
                 vision_need_at_entry = {ph},
                 employment_status_at_entry = {ph},
                 id_documents_status_at_entry = {ph},
+                has_drivers_license = {ph},
+                has_social_security_card = {ph},
                 initial_snapshot_notes = {ph},
                 ace_score = {ph},
                 grit_score = {ph},
@@ -591,6 +595,8 @@ def submit_intake_assessment_view():
                 yes_no_to_int(data.get("vision_need")),
                 data.get("employment_status"),
                 data.get("id_documents_status"),
+                yes_no_to_int(data.get("has_drivers_license")),
+                yes_no_to_int(data.get("has_social_security_card")),
                 data.get("initial_snapshot_notes"),
                 data.get("ace_score"),
                 data.get("grit_score"),
