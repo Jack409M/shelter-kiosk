@@ -9,6 +9,7 @@ from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.needs import normalize_need_status
 
 
 ALLOWED_SERVICE_TYPES = {
@@ -57,6 +58,59 @@ def _parse_quantity(value: str | None):
         return int(value)
     except ValueError:
         return None
+
+
+def _apply_need_updates(enrollment_id: int, staff_user_id: int, form) -> int:
+    ph = placeholder()
+    now = utcnow_iso()
+
+    open_needs = db_fetchall(
+        f"""
+        SELECT
+            id,
+            need_key
+        FROM resident_needs
+        WHERE enrollment_id = {ph}
+          AND status = 'open'
+        """,
+        (enrollment_id,),
+    )
+
+    resolved_count = 0
+
+    for need in open_needs:
+        need_id = need["id"]
+        need_key = need["need_key"]
+
+        status = normalize_need_status(form.get(f"need_status_{need_key}"))
+        if status not in {"addressed", "not_applicable"}:
+            continue
+
+        resolution_note = (form.get(f"need_note_{need_key}") or "").strip()
+
+        db_execute(
+            f"""
+            UPDATE resident_needs
+            SET
+                status = {ph},
+                resolution_note = {ph},
+                resolved_at = {ph},
+                resolved_by_staff_user_id = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                status,
+                resolution_note or None,
+                now,
+                staff_user_id,
+                now,
+                need_id,
+            ),
+        )
+        resolved_count += 1
+
+    return resolved_count
 
 
 def add_case_note_view(resident_id: int):
@@ -122,8 +176,18 @@ def add_case_note_view(resident_id: int):
         flash("Meeting date is required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    if not notes and not progress_notes and not action_items and not service_types:
-        flash("Enter notes, progress notes, action items, or at least one service.", "error")
+    resolved_need_count = _apply_need_updates(enrollment_id, int(staff_user_id), request.form)
+
+    has_structured_progress = (
+        updated_grit is not None
+        or parenting_class_completed is not None
+        or warrants_or_fines_paid is not None
+        or bool(service_types)
+        or resolved_need_count > 0
+    )
+
+    if not notes and not progress_notes and not action_items and not has_structured_progress:
+        flash("Enter notes, progress notes, action items, structured progress, need resolutions, or at least one service.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
