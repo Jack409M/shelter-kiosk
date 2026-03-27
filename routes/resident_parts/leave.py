@@ -118,6 +118,7 @@ def resident_leave_view():
         cur.execute(sql, params)
         req_id = cur.fetchone()[0]
         cur.close()
+        conn.commit()
 
         log_action("leave", req_id, shelter, None, "create", "Resident submitted leave request")
         flash("Your leave request was submitted successfully.", "ok")
