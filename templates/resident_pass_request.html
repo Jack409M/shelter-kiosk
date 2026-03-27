@@ -32,11 +32,26 @@
     </div>
   </div>
 
-  <label for="pass_type">Pass Type</label>
-  <select id="pass_type" name="pass_type" required onchange="togglePassType()">
-    <option value="ordinary">Ordinary Pass (hours / overnight)</option>
-    <option value="extended_special">Extended Special Pass (multi day)</option>
-  </select>
+  <div class="grid tight-row">
+    <div>
+      <label for="resident_level">Level</label>
+      <select id="resident_level" name="resident_level" required>
+        <option value="">Select</option>
+        <option value="Level 1">Level 1</option>
+        <option value="Level 2">Level 2</option>
+        <option value="Level 3">Level 3</option>
+        <option value="Level 4">Level 4</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="pass_type">Pass Type</label>
+      <select id="pass_type" name="pass_type" required onchange="togglePassType()">
+        <option value="ordinary">Ordinary Pass (hours / overnight)</option>
+        <option value="extended_special">Extended Special Pass (multi day)</option>
+      </select>
+    </div>
+  </div>
 
   <label for="destination">Destination</label>
   <input id="destination" name="destination" required>
@@ -73,6 +88,18 @@
       </div>
     </div>
 
+  </div>
+
+  <label for="requirements_acknowledged">Will you meet all program requirements for this pass</label>
+  <select id="requirements_acknowledged" name="requirements_acknowledged" required onchange="toggleRequirementsExplanation()">
+    <option value="">Select</option>
+    <option value="yes">Yes</option>
+    <option value="no">No</option>
+  </select>
+
+  <div id="requirements_explanation_block" style="display:none;">
+    <label for="requirements_not_met_explanation">If no, explain</label>
+    <textarea id="requirements_not_met_explanation" name="requirements_not_met_explanation" rows="3"></textarea>
   </div>
 
   <label for="reason">Reason</label>
@@ -139,7 +166,19 @@ function togglePassType() {
   }
 }
 
+function toggleRequirementsExplanation() {
+  const value = document.getElementById("requirements_acknowledged").value;
+  const block = document.getElementById("requirements_explanation_block");
+
+  if (value === "no") {
+    block.style.display = "block";
+  } else {
+    block.style.display = "none";
+  }
+}
+
 togglePassType();
+toggleRequirementsExplanation();
 </script>
 
 {% endblock %}
