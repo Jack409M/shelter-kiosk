@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 
@@ -21,6 +21,44 @@ def _can_manage_transport() -> bool:
     return can_manage_requests()
 
 
+def _cleanup_transport_requests(shelter: str) -> None:
+    cutoff_iso = (datetime.utcnow() - timedelta(hours=48)).replace(microsecond=0).isoformat()
+
+    db_execute(
+        """
+        DELETE FROM transport_requests
+        WHERE shelter = %s
+          AND status = %s
+          AND needed_at < %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        DELETE FROM transport_requests
+        WHERE shelter = ?
+          AND status = ?
+          AND needed_at < ?
+        """,
+        (shelter, "pending", cutoff_iso),
+    )
+
+    db_execute(
+        """
+        DELETE FROM transport_requests
+        WHERE shelter = %s
+          AND status = %s
+          AND needed_at < %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        DELETE FROM transport_requests
+        WHERE shelter = ?
+          AND status = ?
+          AND needed_at < ?
+        """,
+        (shelter, "scheduled", cutoff_iso),
+    )
+
+
 @transport.route("/staff/transport/pending")
 @require_login
 @require_shelter
@@ -30,6 +68,7 @@ def staff_transport_pending():
         return redirect(url_for("attendance.staff_attendance"))
 
     shelter = session["shelter"]
+    _cleanup_transport_requests(shelter)
 
     rows = db_fetchall(
         "SELECT * FROM transport_requests WHERE status = %s AND shelter = %s ORDER BY id DESC"
@@ -54,6 +93,7 @@ def staff_transport_board():
         return redirect(url_for("attendance.staff_attendance"))
 
     shelter = session["shelter"]
+    _cleanup_transport_requests(shelter)
 
     rows = db_fetchall(
         """
@@ -106,6 +146,7 @@ def staff_transport_print():
     import html as _html
 
     shelter = session["shelter"]
+    _cleanup_transport_requests(shelter)
 
     rows = db_fetchall(
         """
@@ -229,28 +270,25 @@ def staff_transport_schedule(req_id: int):
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
 
-    driver_name = (request.form.get("driver_name") or "").strip()
-    staff_notes = (request.form.get("staff_notes") or "").strip()
+    _cleanup_transport_requests(shelter)
 
-    if not driver_name:
-        flash("Driver name required.", "error")
-        return redirect(url_for("transport.staff_transport_pending"))
+    staff_notes = (request.form.get("staff_notes") or "").strip()
 
     db_execute(
         """
         UPDATE transport_requests
-        SET status = %s, scheduled_at = %s, scheduled_by = %s, driver_name = %s, staff_notes = %s
+        SET status = %s, scheduled_at = %s, scheduled_by = %s, staff_notes = %s
         WHERE id = %s AND shelter = %s AND status = %s
         """
         if g.get("db_kind") == "pg"
         else """
         UPDATE transport_requests
-        SET status = ?, scheduled_at = ?, scheduled_by = ?, driver_name = ?, staff_notes = ?
+        SET status = ?, scheduled_at = ?, scheduled_by = ?, staff_notes = ?
         WHERE id = ? AND shelter = ? AND status = ?
         """,
-        ("scheduled", utcnow_iso(), staff_id, driver_name, staff_notes or None, req_id, shelter, "pending"),
+        ("scheduled", utcnow_iso(), staff_id, staff_notes or None, req_id, shelter, "pending"),
     )
 
-    log_action("transport", req_id, shelter, staff_id, "schedule", f"Driver {driver_name}")
-    flash("Scheduled.", "ok")
+    log_action("transport", req_id, shelter, staff_id, "approve", "Transport request approved")
+    flash("Approved.", "ok")
     return redirect(url_for("transport.staff_transport_pending"))
