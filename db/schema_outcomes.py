@@ -13,8 +13,6 @@ from .schema_helpers import create_table
 def ensure_intake_assessments_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS intake_assessments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,6 +57,8 @@ def ensure_intake_assessments_table(kind: str) -> None:
             medical_need_at_entry INTEGER NOT NULL DEFAULT 0,
             substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0,
             id_documents_status_at_entry TEXT,
+            has_drivers_license INTEGER NOT NULL DEFAULT 0,
+            has_social_security_card INTEGER NOT NULL DEFAULT 0,
             parenting_class_needed INTEGER NOT NULL DEFAULT 0,
             dwc_level_today TEXT,
             created_at TEXT NOT NULL,
@@ -66,8 +66,6 @@ def ensure_intake_assessments_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS intake_assessments (
             id SERIAL PRIMARY KEY,
@@ -112,12 +110,14 @@ def ensure_intake_assessments_table(kind: str) -> None:
             medical_need_at_entry INTEGER NOT NULL DEFAULT 0,
             substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0,
             id_documents_status_at_entry TEXT,
+            has_drivers_license INTEGER NOT NULL DEFAULT 0,
+            has_social_security_card INTEGER NOT NULL DEFAULT 0,
             parenting_class_needed INTEGER NOT NULL DEFAULT 0,
             dwc_level_today TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -185,6 +185,8 @@ def ensure_intake_assessment_columns(kind: str) -> None:
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS medical_need_at_entry INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS id_documents_status_at_entry TEXT",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS has_drivers_license INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS has_social_security_card INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS parenting_class_needed INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS dwc_level_today TEXT",
         ]
@@ -202,8 +204,6 @@ def ensure_intake_assessment_columns(kind: str) -> None:
 def ensure_family_snapshots_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS family_snapshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -220,8 +220,6 @@ def ensure_family_snapshots_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS family_snapshots (
             id SERIAL PRIMARY KEY,
@@ -236,15 +234,13 @@ def ensure_family_snapshots_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
 def ensure_exit_assessments_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS exit_assessments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -271,8 +267,6 @@ def ensure_exit_assessments_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS exit_assessments (
             id SERIAL PRIMARY KEY,
@@ -297,7 +291,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -327,8 +321,6 @@ def ensure_exit_assessment_columns(kind: str) -> None:
 def ensure_followups_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS followups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -343,8 +335,6 @@ def ensure_followups_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS followups (
             id SERIAL PRIMARY KEY,
@@ -357,7 +347,7 @@ def ensure_followups_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
