@@ -1,0 +1,102 @@
+<div class="resident-portal">
+
+  <h1 class="resident-portal-title">Resident Home</h1>
+
+  {% if active_pass %}
+    <div class="active-pass-banner">
+      <strong>You are currently on an approved pass.</strong>
+      {% if active_pass.pass_type == "ordinary" %}
+        Until {{ active_pass.end_at_local.strftime("%m/%d %I:%M %p") if active_pass.end_at_local else "" }}
+      {% else %}
+        Through {{ active_pass.end_date }}
+      {% endif %}
+      {% if active_pass.destination %}
+        — Destination: {{ active_pass.destination }}
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="portal-actions">
+    <a class="portal-btn" href="{{ url_for('resident_requests.resident_pass_request') }}">
+      Request Pass
+    </a>
+
+    <a class="portal-btn" href="{{ url_for('resident_requests.resident_transport') }}">
+      Request Transportation
+    </a>
+
+    <a class="portal-btn portal-btn-light" href="{{ url_for('resident_requests.resident_logout') }}">
+      Sign Out
+    </a>
+  </div>
+
+  <div class="resident-home-sections">
+
+    <section class="resident-home-card">
+      <h3>Recent Pass Requests</h3>
+
+      {% if pass_items %}
+        <ul class="resident-status-list">
+          {% for item in pass_items %}
+            <li class="resident-status-item">
+              <div class="resident-status-row">
+                <span class="status-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
+                {% if item.is_active %}
+                  <span class="active-pill">active now</span>
+                {% endif %}
+              </div>
+
+              <div class="resident-status-row resident-status-main">
+                {% if item.pass_type == "ordinary" %}
+                  {{ item.start_at_local.strftime("%m/%d %I:%M %p") if item.start_at_local else "" }}
+                  to
+                  {{ item.end_at_local.strftime("%m/%d %I:%M %p") if item.end_at_local else "" }}
+                {% else %}
+                  {{ item.start_date }} to {{ item.end_date }}
+                {% endif %}
+              </div>
+
+              {% if item.destination %}
+                <div class="resident-status-row resident-status-destination">
+                  {{ item.destination }}
+                </div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No pass requests yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="resident-home-card">
+      <h3>Recent Transportation Requests</h3>
+
+      {% if transport_items %}
+        <ul class="resident-status-list">
+          {% for item in transport_items %}
+            <li class="resident-status-item">
+              <div class="resident-status-row">
+                <span class="status-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
+              </div>
+
+              <div class="resident-status-row resident-status-main">
+                {{ item.needed_at_local.strftime("%m/%d %I:%M %p") if item.needed_at_local else "" }}
+              </div>
+
+              {% if item.destination %}
+                <div class="resident-status-row resident-status-destination">
+                  {{ item.destination }}
+                </div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No transportation scheduled.</p>
+      {% endif %}
+    </section>
+
+  </div>
+
+</div>
