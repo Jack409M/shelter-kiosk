@@ -3,6 +3,12 @@
   margin: 0 auto;
 }
 
+.resident-portal-title {
+  margin: 0 0 14px 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+
 .portal-actions {
   display: flex;
   flex-wrap: wrap;
@@ -31,23 +37,56 @@
   background: rgba(255, 255, 255, 0.65);
 }
 
-.portal-status {
-  margin-top: 10px;
+.resident-home-sections {
+  display: grid;
+  gap: 16px;
+}
+
+.resident-home-card {
   padding: 16px;
   background: var(--card);
   border: 1px solid #000;
   border-radius: var(--radius);
 }
 
+.resident-home-card h3 {
+  margin: 0 0 12px 0;
+}
+
 .resident-status-list {
-  margin: 10px 0 18px 0;
+  margin: 10px 0 0 0;
   padding-left: 0;
   list-style: none;
 }
 
 .resident-status-item {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
   line-height: 1.5;
+}
+
+.resident-status-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.resident-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.resident-status-main {
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.resident-status-destination {
+  margin-top: 4px;
+  color: var(--text-muted);
 }
 
 .active-pass-banner {
@@ -107,6 +146,11 @@
     max-width: 100%;
   }
 
+  .resident-portal-title {
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+  }
+
   .portal-actions {
     flex-direction: column;
     gap: 10px;
@@ -118,13 +162,21 @@
     box-sizing: border-box;
   }
 
-  .portal-status {
+  .resident-home-sections {
+    gap: 12px;
+  }
+
+  .resident-home-card {
     padding: 12px;
-    margin-top: 8px;
   }
 
   .resident-status-item {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+  }
+
+  .resident-status-row {
+    gap: 4px;
   }
 
   .active-pass-banner {
