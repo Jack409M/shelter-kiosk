@@ -23,6 +23,37 @@
     {{ p.reason or "—" }}
   </p>
 
+  {% if pass_detail %}
+    <p><strong>Resident Phone:</strong> {{ pass_detail.resident_phone or "—" }}</p>
+    <p><strong>Request Date:</strong> {{ pass_detail.request_date or "—" }}</p>
+
+    <p><strong>Who Resident Will Be With:</strong><br>
+      {{ pass_detail.who_with or "—" }}
+    </p>
+
+    <p><strong>Address Where Resident Will Be:</strong><br>
+      {{ pass_detail.destination_address or "—" }}
+    </p>
+
+    <p><strong>Phone Number There:</strong><br>
+      {{ pass_detail.destination_phone or "—" }}
+    </p>
+
+    <p><strong>Companion Names:</strong><br>
+      {{ pass_detail.companion_names or "—" }}
+    </p>
+
+    <p><strong>Companion Phone Numbers:</strong><br>
+      {{ pass_detail.companion_phone_numbers or "—" }}
+    </p>
+
+    <p><strong>Budgeted Amount:</strong> {{ pass_detail.budgeted_amount or "—" }}</p>
+    <p><strong>Approved Amount:</strong> {{ pass_detail.approved_amount or "—" }}</p>
+
+    <p><strong>Reviewed By:</strong> {{ pass_detail.reviewed_by_name or "—" }}</p>
+    <p><strong>Reviewed At:</strong> {{ fmt_dt(pass_detail.reviewed_at_local) if pass_detail.reviewed_at_local else "—" }}</p>
+  {% endif %}
+
   <p><strong>Resident Notes:</strong><br>
     {{ p.resident_notes or "—" }}
   </p>
@@ -36,39 +67,8 @@
 
 {% if p.status == "pending" %}
   <div class="card" style="margin-top:20px;">
-    <h3>Program Compliance Check</h3>
-    <p style="color:#666; font-size:14px;">
-      Verify before approval. This is not yet system tracked.
-    </p>
-
     <form method="post" action="{{ url_for('attendance.staff_pass_approve', pass_id=p.id) }}" style="margin-top:14px;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <label style="display:block; margin-bottom:8px;">
-        <input type="checkbox" name="verify_work_hours">
-        29 Work Hours Completed
-      </label>
-
-      <label style="display:block; margin-bottom:8px;">
-        <input type="checkbox" name="verify_productive_hours">
-        35 Productive Hours Completed
-      </label>
-
-      <label style="display:block; margin-bottom:8px;">
-        <input type="checkbox" name="verify_meetings">
-        All 12 Step Meetings Attended
-      </label>
-
-      <label style="display:block; margin-bottom:8px;">
-        <input type="checkbox" name="verify_chores">
-        All Chores Completed
-      </label>
-
-      <label style="display:block; margin-bottom:14px;">
-        <input type="checkbox" name="verify_room">
-        Room or Apartment Passed Inspection
-      </label>
-
       <button type="submit" style="background:#2e7d32; color:white;">
         Approve Pass
       </button>
