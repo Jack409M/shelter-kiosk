@@ -211,6 +211,7 @@ def dashboard():
 
     now_chicago = datetime.now(CHICAGO_TZ)
     today_local = now_chicago.date()
+    yesterday_local = today_local - timedelta(days=1)
 
     attendance_rows = db_fetchall(
         _sql(
@@ -356,7 +357,7 @@ def dashboard():
         if not check_in_local or not expected_back_local:
             continue
 
-        if check_in_local.date() != today_local:
+        if check_in_local.date() != yesterday_local:
             continue
 
         if check_in_local > expected_back_local:
