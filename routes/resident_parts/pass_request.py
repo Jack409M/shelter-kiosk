@@ -52,6 +52,9 @@ def resident_pass_request_view():
         resident_notes = (request.form.get("resident_notes") or "").strip()
 
         request_date = (request.form.get("request_date") or "").strip()
+        resident_level = (request.form.get("resident_level") or "").strip()
+        requirements_acknowledged = (request.form.get("requirements_acknowledged") or "").strip().lower()
+        requirements_not_met_explanation = (request.form.get("requirements_not_met_explanation") or "").strip()
         who_with = (request.form.get("who_with") or "").strip()
         destination_address = (request.form.get("destination_address") or "").strip()
         destination_phone = (request.form.get("destination_phone") or "").strip()
@@ -71,6 +74,15 @@ def resident_pass_request_view():
 
         if not destination:
             errors.append("Destination is required.")
+
+        if resident_level not in {"Level 1", "Level 2", "Level 3", "Level 4"}:
+            errors.append("Resident level is required.")
+
+        if requirements_acknowledged not in {"yes", "no"}:
+            errors.append("Please answer whether you will meet all requirements for this pass.")
+
+        if requirements_acknowledged == "no" and not requirements_not_met_explanation:
+            errors.append("Please explain why requirements will not be met.")
 
         ordinary_start_iso = None
         ordinary_end_iso = None
@@ -198,6 +210,9 @@ def resident_pass_request_view():
                 pass_id,
                 resident_phone,
                 request_date,
+                resident_level,
+                requirements_acknowledged,
+                requirements_not_met_explanation,
                 reason_for_request,
                 who_with,
                 destination_address,
@@ -212,7 +227,7 @@ def resident_pass_request_view():
                 created_at,
                 updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if kind == "pg"
             else """
@@ -220,6 +235,9 @@ def resident_pass_request_view():
                 pass_id,
                 resident_phone,
                 request_date,
+                resident_level,
+                requirements_acknowledged,
+                requirements_not_met_explanation,
                 reason_for_request,
                 who_with,
                 destination_address,
@@ -234,7 +252,7 @@ def resident_pass_request_view():
                 created_at,
                 updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         )
 
@@ -251,6 +269,9 @@ def resident_pass_request_view():
                 req_id,
                 resident_phone or None,
                 request_date or None,
+                resident_level or None,
+                requirements_acknowledged or None,
+                requirements_not_met_explanation or None,
                 reason or None,
                 who_with or None,
                 destination_address or None,
