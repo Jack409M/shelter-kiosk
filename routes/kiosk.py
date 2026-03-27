@@ -175,7 +175,7 @@ def _manual_expected_back_value(hour_text: str, minute_text: str, ampm_text: str
     if hour_int < 1 or hour_int > 12:
         raise ValueError("Invalid hour")
 
-    if minute_int not in {0, 30}:
+    if minute_int not in {0, 15, 30, 45}:
         raise ValueError("Invalid minute")
 
     if ampm_value not in {"AM", "PM"}:
