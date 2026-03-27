@@ -75,7 +75,7 @@
     <div class="case-section-header">
       <div>
         <h2>Overnight and Attendance Issues</h2>
-        <p>Residents who missed last night check in or returned late today.</p>
+        <p>Residents who missed last night check in or returned late yesterday.</p>
       </div>
     </div>
 
@@ -92,7 +92,7 @@
       <div class="case-summary-card warn" style="cursor: default;">
         <div class="case-summary-icon">⏰</div>
         <div class="case-summary-content">
-          <div class="case-summary-title">Clocked In Late Today</div>
+          <div class="case-summary-title">Clocked In Late Yesterday</div>
           <div class="case-summary-count">{{ late_check_in_rows|length }}</div>
           <div class="case-summary-note">Returned after expected back time</div>
         </div>
@@ -134,7 +134,7 @@
     </div>
 
     <div style="margin-top: 18px;">
-      <h3 style="margin-bottom: 12px;">Clocked In Late Today</h3>
+      <h3 style="margin-bottom: 12px;">Clocked In Late Yesterday</h3>
 
       {% if late_check_in_rows %}
         <ul class="case-list">
@@ -157,7 +157,7 @@
           {% endfor %}
         </ul>
       {% else %}
-        <div class="case-empty good">No late check ins today.</div>
+        <div class="case-empty good">No late check ins yesterday.</div>
       {% endif %}
     </div>
   </section>
