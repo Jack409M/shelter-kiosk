@@ -38,7 +38,7 @@ def resident_pass_request_view():
         resident_identifier = (session.get("resident_identifier") or "").strip()
         first = (session.get("resident_first") or "").strip()
         last = (session.get("resident_last") or "").strip()
-        resident_phone = (session.get("resident_phone") or "").strip()
+        resident_phone = (request.form.get("resident_phone") or session.get("resident_phone") or "").strip()
 
         ip = _client_ip()
         rl_key = f"resident_pass_request:{ip}:{resident_identifier or 'unknown'}"
@@ -50,6 +50,14 @@ def resident_pass_request_view():
         destination = (request.form.get("destination") or "").strip()
         reason = (request.form.get("reason") or "").strip()
         resident_notes = (request.form.get("resident_notes") or "").strip()
+
+        request_date = (request.form.get("request_date") or "").strip()
+        who_with = (request.form.get("who_with") or "").strip()
+        destination_address = (request.form.get("destination_address") or "").strip()
+        destination_phone = (request.form.get("destination_phone") or "").strip()
+        companion_names = (request.form.get("companion_names") or "").strip()
+        companion_phone_numbers = (request.form.get("companion_phone_numbers") or "").strip()
+        budgeted_amount = (request.form.get("budgeted_amount") or "").strip()
 
         start_at_raw = (request.form.get("start_at") or "").strip()
         end_at_raw = (request.form.get("end_at") or "").strip()
@@ -119,7 +127,7 @@ def resident_pass_request_view():
         kind = g.get("db_kind")
         now_iso = utcnow_iso()
 
-        sql = (
+        pass_sql = (
             """
             INSERT INTO resident_passes (
                 resident_id,
@@ -166,7 +174,7 @@ def resident_pass_request_view():
             """
         )
 
-        params = (
+        pass_params = (
             resident_id,
             shelter,
             pass_type,
@@ -184,14 +192,83 @@ def resident_pass_request_view():
             now_iso,
         )
 
+        detail_sql = (
+            """
+            INSERT INTO resident_pass_request_details (
+                pass_id,
+                resident_phone,
+                request_date,
+                reason_for_request,
+                who_with,
+                destination_address,
+                destination_phone,
+                companion_names,
+                companion_phone_numbers,
+                budgeted_amount,
+                approved_amount,
+                reviewed_by_user_id,
+                reviewed_by_name,
+                reviewed_at,
+                created_at,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            if kind == "pg"
+            else """
+            INSERT INTO resident_pass_request_details (
+                pass_id,
+                resident_phone,
+                request_date,
+                reason_for_request,
+                who_with,
+                destination_address,
+                destination_phone,
+                companion_names,
+                companion_phone_numbers,
+                budgeted_amount,
+                approved_amount,
+                reviewed_by_user_id,
+                reviewed_by_name,
+                reviewed_at,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+        )
+
         cur = conn.cursor()
         try:
-            cur.execute(sql, params)
+            cur.execute(pass_sql, pass_params)
             if kind == "pg":
                 req_id = cur.fetchone()[0]
             else:
                 conn.commit()
                 req_id = cur.lastrowid
+
+            detail_params = (
+                req_id,
+                resident_phone or None,
+                request_date or None,
+                reason or None,
+                who_with or None,
+                destination_address or None,
+                destination_phone or None,
+                companion_names or None,
+                companion_phone_numbers or None,
+                budgeted_amount or None,
+                None,
+                None,
+                None,
+                None,
+                now_iso,
+                now_iso,
+            )
+            cur.execute(detail_sql, detail_params)
+
+            if kind != "pg":
+                conn.commit()
         finally:
             cur.close()
 
