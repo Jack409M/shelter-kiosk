@@ -566,6 +566,101 @@ def staff_passes_pending():
     )
 
 
+@attendance.route("/staff/passes/approved")
+@require_login
+@require_shelter
+def staff_passes_approved():
+    shelter = session.get("shelter")
+    role = session.get("role")
+
+    if role not in {"admin", "shelter_director", "case_manager"}:
+        abort(403)
+
+    sql = (
+        """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            r.first_name,
+            r.last_name,
+            rp.shelter,
+            rp.pass_type,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            rp.reason,
+            rp.created_at,
+            rp.approved_at
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.status = 'approved'
+        AND rp.shelter = %s
+        ORDER BY rp.approved_at ASC, rp.created_at ASC
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            r.first_name,
+            r.last_name,
+            rp.shelter,
+            rp.pass_type,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            rp.reason,
+            rp.created_at,
+            rp.approved_at
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.status = 'approved'
+        AND rp.shelter = ?
+        ORDER BY rp.approved_at ASC, rp.created_at ASC
+        """
+    )
+
+    rows = db_fetchall(sql, (shelter,))
+
+    processed = []
+
+    for r in rows:
+        row = dict(r) if isinstance(r, dict) else {
+            "id": r[0],
+            "resident_id": r[1],
+            "first_name": r[2],
+            "last_name": r[3],
+            "shelter": r[4],
+            "pass_type": r[5],
+            "start_at": r[6],
+            "end_at": r[7],
+            "start_date": r[8],
+            "end_date": r[9],
+            "destination": r[10],
+            "reason": r[11],
+            "created_at": r[12],
+            "approved_at": r[13],
+        }
+
+        row["start_at_local"] = _to_local(row.get("start_at"))
+        row["end_at_local"] = _to_local(row.get("end_at"))
+        row["created_at_local"] = _to_local(row.get("created_at"))
+        row["approved_at_local"] = _to_local(row.get("approved_at"))
+
+        processed.append(row)
+
+    return render_template(
+        "staff_passes_approved.html",
+        rows=processed,
+        shelter=shelter,
+        fmt_dt=fmt_dt,
+    )
+
+
 @attendance.route("/staff/passes/<int:pass_id>")
 @require_login
 @require_shelter
