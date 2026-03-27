@@ -71,10 +71,10 @@ def resident_consent_view():
     next_url = (request.args.get("next") or request.form.get("next") or "").strip()
 
     allowed_next = {
-        url_for("resident_requests.resident_leave"),
         url_for("resident_requests.resident_pass_request"),
         url_for("resident_requests.resident_transport"),
         url_for("resident_portal.home"),
+        url_for("resident_portal.resident_chores"),
     }
 
     if next_url not in allowed_next:
