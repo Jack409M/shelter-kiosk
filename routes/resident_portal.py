@@ -162,7 +162,7 @@ def home():
         key=lambda item: (
             0 if item.get("is_active") else 1,
             _status_rank(item.get("status", "")),
-            item.get("created_at") or "",
+            -item["created_at_local"].timestamp() if item.get("created_at_local") else float("inf"),
         )
     )
 
