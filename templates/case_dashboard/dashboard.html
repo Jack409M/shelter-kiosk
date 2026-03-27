@@ -33,6 +33,15 @@
       </div>
     </a>
 
+    <a class="case-summary-card warn" href="{{ url_for('attendance.staff_passes_approved') }}">
+      <div class="case-summary-icon">🚪</div>
+      <div class="case-summary-content">
+        <div class="case-summary-title">Residents Out on Passes</div>
+        <div class="case-summary-count">{{ approved_pass_count }}</div>
+        <div class="case-summary-note">Approved passes currently active</div>
+      </div>
+    </a>
+
     <a class="case-summary-card urgent" href="{{ url_for('transport.staff_transport_pending') }}">
       <div class="case-summary-icon">🚐</div>
       <div class="case-summary-content">
