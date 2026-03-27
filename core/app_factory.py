@@ -135,9 +135,55 @@ def _register_csrf(app: Flask) -> None:
 # ============================================================================
 
 def _register_error_handlers(app: Flask) -> None:
+    def _resident_safe_response():
+        endpoint = str(request.endpoint or "")
+        path = (request.path or "").strip()
+
+        in_resident_context = (
+            "resident_id" in session
+            or endpoint.startswith("resident_")
+            or endpoint.startswith("resident_requests.")
+            or endpoint.startswith("resident_portal.")
+            or path == "/resident"
+            or path.startswith("/resident/")
+            or path in {"/leave", "/pass-request", "/transport", "/sms-consent", "/sms-consent/"}
+        )
+
+        if not in_resident_context:
+            return None
+
+        session.clear()
+        flash("Your session ended. Please sign in again.", "error")
+        return redirect(url_for("public.public_home"))
+
+    @app.errorhandler(403)
+    def page_forbidden(e):
+        resident_response = _resident_safe_response()
+        if resident_response is not None:
+            return resident_response
+        return "Forbidden", 403
+
     @app.errorhandler(404)
     def page_not_found(e):
+        resident_response = _resident_safe_response()
+        if resident_response is not None:
+            return resident_response
         return render_template("404.html"), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(e):
+        resident_response = _resident_safe_response()
+        if resident_response is not None:
+            return resident_response
+        return "Internal Server Error", 500
+
+    @app.errorhandler(Exception)
+    def unhandled_exception(e):
+        resident_response = _resident_safe_response()
+        if resident_response is not None:
+            return resident_response
+        app.logger.exception("Unhandled exception", exc_info=e)
+        return "Internal Server Error", 500
 
 
 # ============================================================================
