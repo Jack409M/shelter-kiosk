@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
+from core.access import require_resident
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
 from core.runtime import init_db
@@ -38,10 +39,8 @@ def _status_rank(status: str) -> int:
 
 
 @resident_portal.route("/home")
+@require_resident
 def home():
-    if not session.get("resident_id"):
-        return redirect(url_for("resident_requests.resident_signin"))
-
     init_db()
 
     resident_id = session.get("resident_id")
@@ -189,10 +188,8 @@ def home():
 
 
 @resident_portal.route("/chores", methods=["GET", "POST"])
+@require_resident
 def resident_chores():
-    if not session.get("resident_id"):
-        return redirect(url_for("resident_requests.resident_signin"))
-
     init_db()
 
     resident_id = session.get("resident_id")
@@ -271,7 +268,7 @@ def resident_chores():
     )
 
     return render_template(
-        "resident/chores.html",
+        "resident_chores.html",
         chores=chores,
         today=today,
     )
