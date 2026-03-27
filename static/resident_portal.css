@@ -1,0 +1,134 @@
+.resident-portal {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.portal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 18px 0 22px 0;
+}
+
+.portal-btn {
+  display: block;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 47, 87, 0.18);
+  background: #ffffff;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 700;
+  text-align: center;
+}
+
+.portal-btn:hover {
+  border-color: rgba(15, 47, 87, 0.35);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.portal-btn-light {
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.portal-status {
+  margin-top: 10px;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid #000;
+  border-radius: var(--radius);
+}
+
+.resident-status-list {
+  margin: 10px 0 18px 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.resident-status-item {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.active-pass-banner {
+  margin: 16px 0 18px 0;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #b7dfc0;
+  background: #eaf8ee;
+  color: #1f5f2d;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-approved {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-denied {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-completed {
+  background-color: #e2e3e5;
+  color: #383d41;
+}
+
+.active-pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #d9eef9;
+  color: #1d5d7a;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 640px) {
+  .resident-portal {
+    max-width: 100%;
+  }
+
+  .portal-actions {
+    flex-direction: column;
+    gap: 10px;
+    margin: 14px 0 18px 0;
+  }
+
+  .portal-btn {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .portal-status {
+    padding: 12px;
+    margin-top: 8px;
+  }
+
+  .resident-status-item {
+    margin-bottom: 12px;
+  }
+
+  .active-pass-banner {
+    padding: 12px 14px;
+    margin: 12px 0 16px 0;
+  }
+}
