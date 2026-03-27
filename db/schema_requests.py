@@ -299,6 +299,43 @@ def ensure_resident_pass_request_details_table(kind: str) -> None:
     )
 
 
+def ensure_resident_pass_request_details_columns(kind: str) -> None:
+    columns = [
+        "resident_phone TEXT",
+        "request_date TEXT",
+        "resident_level TEXT",
+        "requirements_acknowledged TEXT",
+        "requirements_not_met_explanation TEXT",
+        "reason_for_request TEXT",
+        "who_with TEXT",
+        "destination_address TEXT",
+        "destination_phone TEXT",
+        "companion_names TEXT",
+        "companion_phone_numbers TEXT",
+        "budgeted_amount TEXT",
+        "approved_amount TEXT",
+        "reviewed_by_user_id INTEGER",
+        "reviewed_by_name TEXT",
+        "reviewed_at TEXT",
+        "created_at TEXT",
+        "updated_at TEXT",
+    ]
+
+    for column_def in columns:
+        column_name = column_def.split()[0]
+        try:
+            if kind == "pg":
+                db_execute(
+                    f"ALTER TABLE resident_pass_request_details ADD COLUMN IF NOT EXISTS {column_def}"
+                )
+            else:
+                db_execute(
+                    f"ALTER TABLE resident_pass_request_details ADD COLUMN {column_def}"
+                )
+        except Exception:
+            pass
+
+
 def ensure_indexes() -> None:
     try:
         db_execute(
@@ -377,3 +414,4 @@ def ensure_tables(kind: str) -> None:
 def ensure_columns_and_constraints(kind: str) -> None:
     ensure_leave_request_phone_column(kind)
     drop_transport_dob_column_if_present(kind)
+    ensure_resident_pass_request_details_columns(kind)
