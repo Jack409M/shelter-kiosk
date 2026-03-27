@@ -30,8 +30,6 @@ from .schema_helpers import create_table
 def ensure_case_manager_updates_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS case_manager_updates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,8 +47,6 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS case_manager_updates (
             id SERIAL PRIMARY KEY,
@@ -66,15 +62,13 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
 def ensure_case_manager_calendar_events_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS case_manager_calendar_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,8 +84,6 @@ def ensure_case_manager_calendar_events_table(kind: str) -> None:
             updated_at TEXT NOT NULL
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS case_manager_calendar_events (
             id SERIAL PRIMARY KEY,
@@ -106,15 +98,13 @@ def ensure_case_manager_calendar_events_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
 def ensure_client_services_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS client_services (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,8 +121,6 @@ def ensure_client_services_table(kind: str) -> None:
             FOREIGN KEY (case_manager_update_id) REFERENCES case_manager_updates(id)
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS client_services (
             id SERIAL PRIMARY KEY,
@@ -146,15 +134,13 @@ def ensure_client_services_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
 def ensure_child_services_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS child_services (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -172,8 +158,6 @@ def ensure_child_services_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS child_services (
             id SERIAL PRIMARY KEY,
@@ -188,15 +172,13 @@ def ensure_child_services_table(kind: str) -> None:
             created_at TEXT,
             updated_at TEXT
         )
-        """
+        """,
     )
 
 
 def ensure_intake_drafts_table(kind: str) -> None:
     create_table(
         kind,
-
-        # SQLite
         """
         CREATE TABLE IF NOT EXISTS intake_drafts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -215,8 +197,6 @@ def ensure_intake_drafts_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
-        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS intake_drafts (
             id SERIAL PRIMARY KEY,
@@ -232,7 +212,48 @@ def ensure_intake_drafts_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
+        """,
+    )
+
+
+def ensure_resident_needs_table(kind: str) -> None:
+    create_table(
+        kind,
         """
+        CREATE TABLE IF NOT EXISTS resident_needs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            enrollment_id INTEGER NOT NULL,
+            need_key TEXT NOT NULL,
+            need_label TEXT NOT NULL,
+            source_field TEXT,
+            source_value TEXT,
+            status TEXT NOT NULL DEFAULT 'open',
+            resolution_note TEXT,
+            resolved_at TEXT,
+            resolved_by_staff_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id),
+            UNIQUE (enrollment_id, need_key)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_needs (
+            id SERIAL PRIMARY KEY,
+            enrollment_id INTEGER NOT NULL REFERENCES program_enrollments(id),
+            need_key TEXT NOT NULL,
+            need_label TEXT NOT NULL,
+            source_field TEXT,
+            source_value TEXT,
+            status TEXT NOT NULL DEFAULT 'open',
+            resolution_note TEXT,
+            resolved_at TEXT,
+            resolved_by_staff_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE (enrollment_id, need_key)
+        )
+        """,
     )
 
 
@@ -271,7 +292,6 @@ def ensure_intake_drafts_columns() -> None:
         except Exception:
             pass
 
-    # Backfill canonical draft_data from legacy form_payload when possible.
     try:
         db_execute(
             """
@@ -286,7 +306,6 @@ def ensure_intake_drafts_columns() -> None:
     except Exception:
         pass
 
-    # Ensure draft_data is never left empty after migration runs.
     try:
         db_execute(
             """
@@ -317,6 +336,25 @@ def ensure_child_services_columns() -> None:
     statements = [
         "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS quantity INTEGER",
         "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS unit TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_resident_needs_columns() -> None:
+    statements = [
+        "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS source_field TEXT",
+        "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS source_value TEXT",
+        "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'open'",
+        "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS resolution_note TEXT",
+        "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS resolved_at TEXT",
+        "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS resolved_by_staff_user_id INTEGER",
+        "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
 
     for statement in statements:
@@ -587,6 +625,46 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_needs_enrollment_idx
+            ON resident_needs (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_needs_status_idx
+            ON resident_needs (status)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_needs_enrollment_status_idx
+            ON resident_needs (enrollment_id, status)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS resident_needs_enrollment_key_uidx
+            ON resident_needs (enrollment_id, need_key)
+            """
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
@@ -594,8 +672,10 @@ def ensure_tables(kind: str) -> None:
     ensure_client_services_table(kind)
     ensure_child_services_table(kind)
     ensure_intake_drafts_table(kind)
+    ensure_resident_needs_table(kind)
     ensure_case_manager_updates_columns()
     ensure_intake_drafts_columns()
     ensure_client_services_columns()
     ensure_child_services_columns()
+    ensure_resident_needs_columns()
     ensure_indexes()
