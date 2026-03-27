@@ -162,6 +162,8 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "felony_history": clean(form.get("felony_history")),
         "probation_parole": clean(form.get("probation_parole")),
         "id_documents_status": clean(form.get("id_documents_status")),
+        "has_drivers_license": clean(form.get("has_drivers_license")),
+        "has_social_security_card": clean(form.get("has_social_security_card")),
         "barrier_notes": clean(form.get("barrier_notes")),
 
         "days_sober_at_entry": None,
