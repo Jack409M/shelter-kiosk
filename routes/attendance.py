@@ -33,7 +33,7 @@ def _complete_active_passes(resident_id: int, shelter: str) -> None:
         SET status = %s,
             updated_at = %s
         WHERE resident_id = %s
-          AND shelter = %s
+          AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
           AND status = %s
         """
         if g.get("db_kind") == "pg"
@@ -42,7 +42,7 @@ def _complete_active_passes(resident_id: int, shelter: str) -> None:
         SET status = ?,
             updated_at = ?
         WHERE resident_id = ?
-          AND shelter = ?
+          AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
           AND status = ?
         """,
         ("completed", now_iso, resident_id, shelter, "approved"),
@@ -504,7 +504,7 @@ def staff_passes_pending():
         FROM resident_passes rp
         JOIN residents r ON r.id = rp.resident_id
         WHERE rp.status = 'pending'
-        AND rp.shelter = %s
+        AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
         ORDER BY rp.created_at ASC
         """
         if g.get("db_kind") == "pg"
@@ -526,7 +526,7 @@ def staff_passes_pending():
         FROM resident_passes rp
         JOIN residents r ON r.id = rp.resident_id
         WHERE rp.status = 'pending'
-        AND rp.shelter = ?
+        AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
         ORDER BY rp.created_at ASC
         """
     )
@@ -596,7 +596,7 @@ def staff_passes_approved():
         FROM resident_passes rp
         JOIN residents r ON r.id = rp.resident_id
         WHERE rp.status = 'approved'
-        AND rp.shelter = %s
+        AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
         ORDER BY rp.approved_at ASC, rp.created_at ASC
         """
         if g.get("db_kind") == "pg"
@@ -619,7 +619,7 @@ def staff_passes_approved():
         FROM resident_passes rp
         JOIN residents r ON r.id = rp.resident_id
         WHERE rp.status = 'approved'
-        AND rp.shelter = ?
+        AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
         ORDER BY rp.approved_at ASC, rp.created_at ASC
         """
     )
@@ -691,7 +691,7 @@ def staff_pass_detail(pass_id: int):
             rp.status
         FROM resident_passes rp
         JOIN residents r ON r.id = rp.resident_id
-        WHERE rp.id = %s AND rp.shelter = %s
+        WHERE rp.id = %s AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
         """
         if g.get("db_kind") == "pg"
         else """
@@ -714,7 +714,7 @@ def staff_pass_detail(pass_id: int):
             rp.status
         FROM resident_passes rp
         JOIN residents r ON r.id = rp.resident_id
-        WHERE rp.id = ? AND rp.shelter = ?
+        WHERE rp.id = ? AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
         """,
         (pass_id, shelter),
     )
@@ -766,14 +766,14 @@ def staff_pass_approve(pass_id: int):
         """
         SELECT id, resident_id, shelter, status
         FROM resident_passes
-        WHERE id = %s AND shelter = %s
+        WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
         LIMIT 1
         """
         if g.get("db_kind") == "pg"
         else """
         SELECT id, resident_id, shelter, status
         FROM resident_passes
-        WHERE id = ? AND shelter = ?
+        WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
         LIMIT 1
         """,
         (pass_id, shelter),
@@ -799,7 +799,7 @@ def staff_pass_approve(pass_id: int):
             approved_by = %s,
             approved_at = %s,
             updated_at = %s
-        WHERE id = %s AND shelter = %s
+        WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
         """
         if g.get("db_kind") == "pg"
         else """
@@ -808,7 +808,7 @@ def staff_pass_approve(pass_id: int):
             approved_by = ?,
             approved_at = ?,
             updated_at = ?
-        WHERE id = ? AND shelter = ?
+        WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
         """,
         ("approved", staff_id, now_iso, now_iso, pass_id, shelter),
     )
@@ -832,14 +832,14 @@ def staff_pass_deny(pass_id: int):
         """
         SELECT id, resident_id, shelter, status
         FROM resident_passes
-        WHERE id = %s AND shelter = %s
+        WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
         LIMIT 1
         """
         if g.get("db_kind") == "pg"
         else """
         SELECT id, resident_id, shelter, status
         FROM resident_passes
-        WHERE id = ? AND shelter = ?
+        WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
         LIMIT 1
         """,
         (pass_id, shelter),
@@ -865,7 +865,7 @@ def staff_pass_deny(pass_id: int):
             approved_by = %s,
             approved_at = %s,
             updated_at = %s
-        WHERE id = %s AND shelter = %s
+        WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
         """
         if g.get("db_kind") == "pg"
         else """
@@ -874,7 +874,7 @@ def staff_pass_deny(pass_id: int):
             approved_by = ?,
             approved_at = ?,
             updated_at = ?
-        WHERE id = ? AND shelter = ?
+        WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
         """,
         ("denied", staff_id, now_iso, now_iso, pass_id, shelter),
     )
