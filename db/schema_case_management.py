@@ -30,6 +30,8 @@ from .schema_helpers import create_table
 def ensure_case_manager_updates_table(kind: str) -> None:
     create_table(
         kind,
+
+        # SQLite
         """
         CREATE TABLE IF NOT EXISTS case_manager_updates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,6 +49,8 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
+
+        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS case_manager_updates (
             id SERIAL PRIMARY KEY,
@@ -62,13 +66,15 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """,
+        """
     )
 
 
 def ensure_case_manager_calendar_events_table(kind: str) -> None:
     create_table(
         kind,
+
+        # SQLite
         """
         CREATE TABLE IF NOT EXISTS case_manager_calendar_events (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,6 +90,8 @@ def ensure_case_manager_calendar_events_table(kind: str) -> None:
             updated_at TEXT NOT NULL
         )
         """,
+
+        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS case_manager_calendar_events (
             id SERIAL PRIMARY KEY,
@@ -98,13 +106,15 @@ def ensure_case_manager_calendar_events_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """,
+        """
     )
 
 
 def ensure_client_services_table(kind: str) -> None:
     create_table(
         kind,
+
+        # SQLite
         """
         CREATE TABLE IF NOT EXISTS client_services (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -121,6 +131,8 @@ def ensure_client_services_table(kind: str) -> None:
             FOREIGN KEY (case_manager_update_id) REFERENCES case_manager_updates(id)
         )
         """,
+
+        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS client_services (
             id SERIAL PRIMARY KEY,
@@ -134,13 +146,15 @@ def ensure_client_services_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """,
+        """
     )
 
 
 def ensure_child_services_table(kind: str) -> None:
     create_table(
         kind,
+
+        # SQLite
         """
         CREATE TABLE IF NOT EXISTS child_services (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -158,6 +172,8 @@ def ensure_child_services_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
+
+        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS child_services (
             id SERIAL PRIMARY KEY,
@@ -172,13 +188,15 @@ def ensure_child_services_table(kind: str) -> None:
             created_at TEXT,
             updated_at TEXT
         )
-        """,
+        """
     )
 
 
 def ensure_intake_drafts_table(kind: str) -> None:
     create_table(
         kind,
+
+        # SQLite
         """
         CREATE TABLE IF NOT EXISTS intake_drafts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -197,6 +215,8 @@ def ensure_intake_drafts_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
+
+        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS intake_drafts (
             id SERIAL PRIMARY KEY,
@@ -212,13 +232,15 @@ def ensure_intake_drafts_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """,
+        """
     )
 
 
 def ensure_resident_needs_table(kind: str) -> None:
     create_table(
         kind,
+
+        # SQLite
         """
         CREATE TABLE IF NOT EXISTS resident_needs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -237,6 +259,8 @@ def ensure_resident_needs_table(kind: str) -> None:
             UNIQUE (enrollment_id, need_key)
         )
         """,
+
+        # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS resident_needs (
             id SERIAL PRIMARY KEY,
@@ -253,7 +277,7 @@ def ensure_resident_needs_table(kind: str) -> None:
             updated_at TEXT NOT NULL,
             UNIQUE (enrollment_id, need_key)
         )
-        """,
+        """
     )
 
 
@@ -292,6 +316,7 @@ def ensure_intake_drafts_columns() -> None:
         except Exception:
             pass
 
+    # Backfill canonical draft_data from legacy form_payload when possible.
     try:
         db_execute(
             """
@@ -306,6 +331,7 @@ def ensure_intake_drafts_columns() -> None:
     except Exception:
         pass
 
+    # Ensure draft_data is never left empty after migration runs.
     try:
         db_execute(
             """
