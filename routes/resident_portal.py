@@ -179,11 +179,41 @@ def home():
 
         processed_transport_items.append(row)
 
+    today = str(now_local.date())
+
+    chores = db_fetchall(
+        """
+        SELECT
+            ca.id,
+            ca.status,
+            ct.name AS chore_name
+        FROM chore_assignments ca
+        JOIN chore_templates ct ON ct.id = ca.chore_id
+        WHERE ca.resident_id = %s
+          AND ca.assigned_date = %s
+        ORDER BY ct.name
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            ca.id,
+            ca.status,
+            ct.name AS chore_name
+        FROM chore_assignments ca
+        JOIN chore_templates ct ON ct.id = ca.chore_id
+        WHERE ca.resident_id = ?
+          AND ca.assigned_date = ?
+        ORDER BY ct.name
+        """,
+        (resident_id, today),
+    )
+
     return render_template(
         "resident_home.html",
         pass_items=processed_pass_items,
         transport_items=processed_transport_items,
         active_pass=active_pass,
+        chores=chores,
     )
 
 
@@ -268,7 +298,7 @@ def resident_chores():
     )
 
     return render_template(
-        "resident_chores.html",
+        "resident/chores.html",
         chores=chores,
         today=today,
     )
