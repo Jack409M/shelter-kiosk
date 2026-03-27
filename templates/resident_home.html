@@ -29,10 +29,6 @@
       Request Transportation
     </a>
 
-    <a class="portal-btn" href="{{ url_for('resident_portal.resident_chores') }}">
-      View Chores
-    </a>
-
     <span class="portal-btn portal-btn-light" aria-disabled="true">
       JotForms Coming Soon
     </span>
@@ -43,6 +39,40 @@
   </div>
 
   <div class="resident-home-sections">
+
+    <section class="resident-home-card">
+      <h3>Today's Chores</h3>
+
+      {% if chores %}
+        <ul class="resident-status-list">
+          {% for chore in chores %}
+            {% set chore_id = chore.id if chore.id is defined else chore[0] %}
+            {% set chore_status = chore.status if chore.status is defined else chore[1] %}
+            {% set chore_name = chore.chore_name if chore.chore_name is defined else chore[2] %}
+
+            <li class="resident-status-item">
+              <div class="resident-status-row">
+                <span class="status-badge status-{{ chore_status }}">{{ chore_status.replace('_', ' ') }}</span>
+              </div>
+
+              <div class="resident-status-row resident-status-main">
+                {{ chore_name }}
+              </div>
+
+              {% if chore_status != 'completed' %}
+                <form method="post" action="{{ url_for('resident_portal.resident_chores') }}" style="margin-top:12px;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="assignment_id" value="{{ chore_id }}">
+                  <button class="portal-btn" type="submit">Mark Completed</button>
+                </form>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No chores assigned today.</p>
+      {% endif %}
+    </section>
 
     <section class="resident-home-card">
       <h3>Recent Pass Requests</h3>
