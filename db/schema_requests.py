@@ -244,6 +244,55 @@ def ensure_resident_passes_table(kind: str) -> None:
     )
 
 
+def ensure_resident_pass_request_details_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS resident_pass_request_details (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pass_id INTEGER NOT NULL,
+            resident_phone TEXT,
+            request_date TEXT,
+            reason_for_request TEXT,
+            who_with TEXT,
+            destination_address TEXT,
+            destination_phone TEXT,
+            companion_names TEXT,
+            companion_phone_numbers TEXT,
+            budgeted_amount TEXT,
+            approved_amount TEXT,
+            reviewed_by_user_id INTEGER,
+            reviewed_by_name TEXT,
+            reviewed_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY(pass_id) REFERENCES resident_passes(id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_pass_request_details (
+            id SERIAL PRIMARY KEY,
+            pass_id INTEGER NOT NULL REFERENCES resident_passes(id),
+            resident_phone TEXT,
+            request_date TEXT,
+            reason_for_request TEXT,
+            who_with TEXT,
+            destination_address TEXT,
+            destination_phone TEXT,
+            companion_names TEXT,
+            companion_phone_numbers TEXT,
+            budgeted_amount TEXT,
+            approved_amount TEXT,
+            reviewed_by_user_id INTEGER,
+            reviewed_by_name TEXT,
+            reviewed_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+    )
+
+
 def ensure_indexes() -> None:
     try:
         db_execute(
@@ -301,6 +350,14 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_pass_request_details_pass_idx "
+            "ON resident_pass_request_details (pass_id)"
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_leave_requests_table(kind)
@@ -308,6 +365,7 @@ def ensure_tables(kind: str) -> None:
     ensure_resident_transfers_table(kind)
     ensure_attendance_events_table(kind)
     ensure_resident_passes_table(kind)
+    ensure_resident_pass_request_details_table(kind)
 
 
 def ensure_columns_and_constraints(kind: str) -> None:
