@@ -93,7 +93,6 @@ def resident_signin():
         url_for("resident_requests.resident_pass_request"),
         url_for("resident_requests.resident_transport"),
         url_for("resident_portal.home"),
-        url_for("resident_portal.resident_chores"),
     }
 
     if next_url not in allowed_next:
@@ -209,20 +208,20 @@ def resident_transport():
 
 
 @resident_requests.get("/sms-consent")
-def resident_consent():
-    return resident_consent_view()
-
-
-@resident_requests.route("/resident/sms-consent", methods=["GET", "POST"])
-def sms_consent():
-    return sms_consent_view()
-
-
-@resident_requests.route("/resident-consent", methods=["GET", "POST"])
 def sms_consent_public_alias():
     return sms_consent_public_alias_view()
 
 
-@resident_requests.route("/resident-consent/", methods=["GET", "POST"])
+@resident_requests.get("/sms-consent/")
 def sms_consent_public_alias_slash():
     return sms_consent_public_alias_slash_view()
+
+
+@resident_requests.get("/resident/sms-consent")
+def sms_consent():
+    return sms_consent_view()
+
+
+@resident_requests.route("/resident/consent", methods=["GET", "POST"])
+def resident_consent():
+    return resident_consent_view()
