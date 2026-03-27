@@ -697,45 +697,6 @@ input[name="needed_at"] {
 }
 
 /* =========================================================
-   Staff Residents Page
-========================================================= */
-.residents-layout {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 18px;
-  align-items: start;
-}
-
-.residents-side {
-  position: sticky;
-  top: 14px;
-}
-
-.residents-list {
-  overflow-x: auto;
-}
-
-.col-name {
-  width: 42%;
-}
-
-.col-code {
-  width: 18%;
-}
-
-.col-status {
-  width: 12%;
-}
-
-.col-actions {
-  width: 28%;
-}
-
-.h2-tight {
-  margin: 0 0 10px 0;
-}
-
-/* =========================================================
    Print
 ========================================================= */
 @media print {
@@ -759,14 +720,6 @@ input[name="needed_at"] {
    Responsive
 ========================================================= */
 @media (max-width: 900px) {
-  .residents-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .residents-side {
-    position: static;
-  }
-
   .card.tight {
     max-width: none;
   }
