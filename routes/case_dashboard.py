@@ -7,6 +7,7 @@ from flask import Blueprint, g, render_template, session
 
 from core.auth import require_login, require_shelter
 from core.db import db_fetchall, db_fetchone
+from core.helpers import utcnow_iso
 
 case_dashboard = Blueprint(
     "case_dashboard",
@@ -103,14 +104,67 @@ def dashboard():
         ("pending", shelter),
     )
 
+    now_iso = utcnow_iso()
+    today_iso = now_iso[:10]
+
     approved_pass_count_row = db_fetchone(
-        f"""
-        SELECT COUNT(*)
-        FROM resident_passes
-        WHERE status = {placeholder}
-          AND shelter = {placeholder}
-        """,
-        ("approved", shelter),
+        _sql(
+            f"""
+            SELECT COUNT(DISTINCT rp.resident_id) AS count
+            FROM resident_passes rp
+            JOIN residents r
+              ON r.id = rp.resident_id
+             AND r.shelter = rp.shelter
+            WHERE rp.status = {placeholder}
+              AND rp.shelter = {placeholder}
+              AND r.is_active = TRUE
+              AND (
+                    (rp.start_at IS NOT NULL AND rp.end_at IS NOT NULL AND rp.start_at <= {placeholder} AND rp.end_at >= {placeholder})
+                 OR (rp.start_date IS NOT NULL AND rp.end_date IS NOT NULL AND rp.start_date <= {placeholder} AND rp.end_date >= {placeholder})
+              )
+              AND EXISTS (
+                    SELECT 1
+                    FROM attendance_events ae
+                    WHERE ae.id = (
+                        SELECT ae2.id
+                        FROM attendance_events ae2
+                        WHERE ae2.resident_id = rp.resident_id
+                          AND ae2.shelter = rp.shelter
+                        ORDER BY ae2.event_time DESC, ae2.id DESC
+                        LIMIT 1
+                    )
+                      AND ae.event_type = 'check_out'
+              )
+            """,
+            f"""
+            SELECT COUNT(DISTINCT rp.resident_id) AS count
+            FROM resident_passes rp
+            JOIN residents r
+              ON r.id = rp.resident_id
+             AND r.shelter = rp.shelter
+            WHERE rp.status = {placeholder}
+              AND rp.shelter = {placeholder}
+              AND r.is_active = 1
+              AND (
+                    (rp.start_at IS NOT NULL AND rp.end_at IS NOT NULL AND rp.start_at <= {placeholder} AND rp.end_at >= {placeholder})
+                 OR (rp.start_date IS NOT NULL AND rp.end_date IS NOT NULL AND rp.start_date <= {placeholder} AND rp.end_date >= {placeholder})
+              )
+              AND EXISTS (
+                    SELECT 1
+                    FROM attendance_events ae
+                    WHERE ae.id = (
+                        SELECT ae2.id
+                        FROM attendance_events ae2
+                        WHERE ae2.resident_id = rp.resident_id
+                          AND ae2.shelter = rp.shelter
+                        ORDER BY ae2.event_time DESC, ae2.id DESC
+                        LIMIT 1
+                    )
+                      AND ae.event_type = 'check_out'
+              )
+            """,
+        ),
+        ("approved", shelter, now_iso, now_iso, today_iso, today_iso),
     )
 
     pending_transport_count_row = db_fetchone(
