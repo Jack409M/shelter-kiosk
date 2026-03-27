@@ -9,6 +9,8 @@ from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.needs import get_open_enrollment_needs
+from routes.case_management_parts.needs import sync_enrollment_needs
 
 
 def _normalize_exit_assessment(row):
@@ -147,6 +149,7 @@ def resident_case_view(resident_id: int):
     grit_difference = None
     followup_6_month = None
     followup_1_year = None
+    open_needs = []
 
     try:
         children = db_fetchall(
@@ -219,13 +222,26 @@ def resident_case_view(resident_id: int):
         intake_assessment = db_fetchone(
             f"""
             SELECT
-                grit_score
+                grit_score,
+                dental_need_at_entry,
+                vision_need_at_entry,
+                parenting_class_needed,
+                warrants_unpaid,
+                mental_health_need_at_entry,
+                medical_need_at_entry,
+                has_drivers_license,
+                has_social_security_card
             FROM intake_assessments
             WHERE enrollment_id = {ph}
             LIMIT 1
             """,
             (enrollment_id,),
         )
+
+        if intake_assessment:
+            sync_enrollment_needs(enrollment_id, intake_assessment)
+
+        open_needs = get_open_enrollment_needs(enrollment_id)
 
         raw_exit_assessment = db_fetchone(
             f"""
@@ -297,6 +313,9 @@ def resident_case_view(resident_id: int):
                 notes,
                 progress_notes,
                 action_items,
+                updated_grit,
+                parenting_class_completed,
+                warrants_or_fines_paid,
                 created_at
             FROM case_manager_updates
             WHERE enrollment_id = {ph}
@@ -356,6 +375,7 @@ def resident_case_view(resident_id: int):
         notes=notes,
         services=services,
         children=children,
+        open_needs=open_needs,
         followup_6_month=followup_6_month,
         followup_1_year=followup_1_year,
     )
