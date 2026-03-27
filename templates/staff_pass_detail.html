@@ -26,6 +26,12 @@
   {% if pass_detail %}
     <p><strong>Resident Phone:</strong> {{ pass_detail.resident_phone or "—" }}</p>
     <p><strong>Request Date:</strong> {{ pass_detail.request_date or "—" }}</p>
+    <p><strong>Resident Level:</strong> {{ pass_detail.resident_level or "—" }}</p>
+    <p><strong>Will Meet Requirements:</strong> {{ pass_detail.requirements_acknowledged or "—" }}</p>
+
+    <p><strong>If Requirements Will Not Be Met:</strong><br>
+      {{ pass_detail.requirements_not_met_explanation or "—" }}
+    </p>
 
     <p><strong>Who Resident Will Be With:</strong><br>
       {{ pass_detail.who_with or "—" }}
