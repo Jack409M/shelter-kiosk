@@ -103,6 +103,16 @@ def dashboard():
         ("pending", shelter),
     )
 
+    approved_pass_count_row = db_fetchone(
+        f"""
+        SELECT COUNT(*)
+        FROM resident_passes
+        WHERE status = {placeholder}
+          AND shelter = {placeholder}
+        """,
+        ("approved", shelter),
+    )
+
     pending_transport_count_row = db_fetchone(
         f"""
         SELECT COUNT(*)
@@ -184,6 +194,10 @@ def dashboard():
     pending_pass_count = (
         pending_pass_count_row["count"] if isinstance(pending_pass_count_row, dict) and "count" in pending_pass_count_row
         else pending_pass_count_row[0] if pending_pass_count_row else 0
+    )
+    approved_pass_count = (
+        approved_pass_count_row["count"] if isinstance(approved_pass_count_row, dict) and "count" in approved_pass_count_row
+        else approved_pass_count_row[0] if approved_pass_count_row else 0
     )
     pending_transport_count = (
         pending_transport_count_row["count"] if isinstance(pending_transport_count_row, dict) and "count" in pending_transport_count_row
@@ -494,6 +508,7 @@ def dashboard():
     return render_template(
         "case_dashboard/dashboard.html",
         pending_pass_count=pending_pass_count,
+        approved_pass_count=approved_pass_count,
         pending_transport_count=pending_transport_count,
         intake_drafts_count=intake_drafts_count,
         family_intakes_pending_count=family_intakes_pending_count,
