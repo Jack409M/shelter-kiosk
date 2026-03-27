@@ -741,13 +741,79 @@ def staff_pass_detail(pass_id: int):
         "status": row[15],
     }
 
+    detail_row = db_fetchone(
+        """
+        SELECT
+            resident_phone,
+            request_date,
+            reason_for_request,
+            who_with,
+            destination_address,
+            destination_phone,
+            companion_names,
+            companion_phone_numbers,
+            budgeted_amount,
+            approved_amount,
+            reviewed_by_user_id,
+            reviewed_by_name,
+            reviewed_at
+        FROM resident_pass_request_details
+        WHERE pass_id = %s
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            resident_phone,
+            request_date,
+            reason_for_request,
+            who_with,
+            destination_address,
+            destination_phone,
+            companion_names,
+            companion_phone_numbers,
+            budgeted_amount,
+            approved_amount,
+            reviewed_by_user_id,
+            reviewed_by_name,
+            reviewed_at
+        FROM resident_pass_request_details
+        WHERE pass_id = ?
+        LIMIT 1
+        """,
+        (pass_id,),
+    )
+
+    pass_detail = (
+        dict(detail_row) if isinstance(detail_row, dict) else {
+            "resident_phone": detail_row[0],
+            "request_date": detail_row[1],
+            "reason_for_request": detail_row[2],
+            "who_with": detail_row[3],
+            "destination_address": detail_row[4],
+            "destination_phone": detail_row[5],
+            "companion_names": detail_row[6],
+            "companion_phone_numbers": detail_row[7],
+            "budgeted_amount": detail_row[8],
+            "approved_amount": detail_row[9],
+            "reviewed_by_user_id": detail_row[10],
+            "reviewed_by_name": detail_row[11],
+            "reviewed_at": detail_row[12],
+        }
+        if detail_row else None
+    )
+
     p["start_at_local"] = _to_local(p.get("start_at"))
     p["end_at_local"] = _to_local(p.get("end_at"))
     p["created_at_local"] = _to_local(p.get("created_at"))
 
+    if pass_detail:
+        pass_detail["reviewed_at_local"] = _to_local(pass_detail.get("reviewed_at"))
+
     return render_template(
         "staff_pass_detail.html",
         p=p,
+        pass_detail=pass_detail,
         fmt_dt=fmt_dt,
     )
 
@@ -758,6 +824,7 @@ def staff_pass_detail(pass_id: int):
 def staff_pass_approve(pass_id: int):
     shelter = session.get("shelter")
     staff_id = session.get("staff_user_id")
+    staff_name = (session.get("username") or "").strip()
 
     if not _can_manage_passes():
         abort(403)
@@ -813,6 +880,27 @@ def staff_pass_approve(pass_id: int):
         ("approved", staff_id, now_iso, now_iso, pass_id, shelter),
     )
 
+    db_execute(
+        """
+        UPDATE resident_pass_request_details
+        SET reviewed_by_user_id = %s,
+            reviewed_by_name = %s,
+            reviewed_at = %s,
+            updated_at = %s
+        WHERE pass_id = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE resident_pass_request_details
+        SET reviewed_by_user_id = ?,
+            reviewed_by_name = ?,
+            reviewed_at = ?,
+            updated_at = ?
+        WHERE pass_id = ?
+        """,
+        (staff_id, staff_name or None, now_iso, now_iso, pass_id),
+    )
+
     log_action("pass", resident_id, shelter, staff_id, "approve", f"pass_id={pass_id}")
     flash("Pass request approved.", "ok")
     return redirect(url_for("attendance.staff_passes_pending"))
@@ -824,6 +912,7 @@ def staff_pass_approve(pass_id: int):
 def staff_pass_deny(pass_id: int):
     shelter = session.get("shelter")
     staff_id = session.get("staff_user_id")
+    staff_name = (session.get("username") or "").strip()
 
     if not _can_manage_passes():
         abort(403)
@@ -877,6 +966,27 @@ def staff_pass_deny(pass_id: int):
         WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
         """,
         ("denied", staff_id, now_iso, now_iso, pass_id, shelter),
+    )
+
+    db_execute(
+        """
+        UPDATE resident_pass_request_details
+        SET reviewed_by_user_id = %s,
+            reviewed_by_name = %s,
+            reviewed_at = %s,
+            updated_at = %s
+        WHERE pass_id = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE resident_pass_request_details
+        SET reviewed_by_user_id = ?,
+            reviewed_by_name = ?,
+            reviewed_at = ?,
+            updated_at = ?
+        WHERE pass_id = ?
+        """,
+        (staff_id, staff_name or None, now_iso, now_iso, pass_id),
     )
 
     log_action("pass", resident_id, shelter, staff_id, "deny", f"pass_id={pass_id}")
