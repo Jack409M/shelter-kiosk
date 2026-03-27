@@ -75,6 +75,8 @@ def resident_signin():
         return render_template("resident_signin.html"), 401
 
     shelter = ((row.get("shelter") if isinstance(row, dict) else row[1]) or "").strip()
+
+    session.clear()
     resident_session_start(row, shelter, resident_code)
 
     log_action(
@@ -91,6 +93,7 @@ def resident_signin():
         url_for("resident_requests.resident_pass_request"),
         url_for("resident_requests.resident_transport"),
         url_for("resident_portal.home"),
+        url_for("resident_portal.resident_chores"),
     }
 
     if next_url not in allowed_next:
@@ -104,20 +107,8 @@ def resident_signin():
 
 @resident_requests.get("/resident/logout")
 def resident_logout():
-    for k in [
-        "resident_id",
-        "resident_identifier",
-        "resident_first",
-        "resident_last",
-        "resident_phone",
-        "resident_shelter",
-        "resident_code",
-        "sms_consent_done",
-        "sms_opt_in",
-    ]:
-        session.pop(k, None)
-
-    return redirect(url_for("resident_requests.resident_signin"))
+    session.clear()
+    return redirect(url_for("public.public_home"))
 
 
 @resident_requests.route("/leave", methods=["GET", "POST"])
@@ -218,20 +209,20 @@ def resident_transport():
 
 
 @resident_requests.get("/sms-consent")
-def sms_consent_public_alias():
-    return sms_consent_public_alias_view()
+def resident_consent():
+    return resident_consent_view()
 
 
-@resident_requests.get("/sms-consent/")
-def sms_consent_public_alias_slash():
-    return sms_consent_public_alias_slash_view()
-
-
-@resident_requests.get("/resident/sms-consent")
+@resident_requests.route("/resident/sms-consent", methods=["GET", "POST"])
 def sms_consent():
     return sms_consent_view()
 
 
-@resident_requests.route("/resident/consent", methods=["GET", "POST"])
-def resident_consent():
-    return resident_consent_view()
+@resident_requests.route("/resident-consent", methods=["GET", "POST"])
+def sms_consent_public_alias():
+    return sms_consent_public_alias_view()
+
+
+@resident_requests.route("/resident-consent/", methods=["GET", "POST"])
+def sms_consent_public_alias_slash():
+    return sms_consent_public_alias_slash_view()
