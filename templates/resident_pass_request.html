@@ -20,6 +20,18 @@
   <label>Shelter</label>
   <input value="{{ shelter_label }}" readonly class="w-shelter">
 
+  <div class="grid tight-row">
+    <div>
+      <label for="request_date">Request date</label>
+      <input id="request_date" type="date" name="request_date" class="w-date">
+    </div>
+
+    <div>
+      <label for="resident_phone">Cell phone</label>
+      <input id="resident_phone" name="resident_phone">
+    </div>
+  </div>
+
   <label for="pass_type">Pass Type</label>
   <select id="pass_type" name="pass_type" required onchange="togglePassType()">
     <option value="ordinary">Ordinary Pass (hours / overnight)</option>
@@ -63,7 +75,7 @@
 
   </div>
 
-  <label for="reason">Reason optional</label>
+  <label for="reason">Reason</label>
   <select id="reason" name="reason">
     <option value="">Select</option>
     <option>Medical</option>
@@ -72,6 +84,30 @@
     <option>Legal</option>
     <option>Other</option>
   </select>
+
+  <label for="who_with">Who will you be with</label>
+  <textarea id="who_with" name="who_with" rows="2"></textarea>
+
+  <label for="destination_address">Address where you will be</label>
+  <textarea id="destination_address" name="destination_address" rows="2"></textarea>
+
+  <div class="grid tight-row">
+    <div>
+      <label for="destination_phone">Phone number there</label>
+      <input id="destination_phone" name="destination_phone">
+    </div>
+
+    <div>
+      <label for="budgeted_amount">Budgeted amount optional</label>
+      <input id="budgeted_amount" name="budgeted_amount">
+    </div>
+  </div>
+
+  <label for="companion_names">Names of people you will be with</label>
+  <textarea id="companion_names" name="companion_names" rows="2"></textarea>
+
+  <label for="companion_phone_numbers">Phone numbers of people you will be with</label>
+  <textarea id="companion_phone_numbers" name="companion_phone_numbers" rows="2"></textarea>
 
   <label for="resident_notes">Notes optional</label>
   <textarea id="resident_notes" name="resident_notes" rows="3"></textarea>
@@ -102,6 +138,8 @@ function togglePassType() {
     extended.style.display = "none";
   }
 }
+
+togglePassType();
 </script>
 
 {% endblock %}
