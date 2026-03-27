@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from flask import (
@@ -33,6 +33,27 @@ def _can_manage_leave() -> bool:
     return can_manage_requests()
 
 
+def _cleanup_pending_leave_requests(shelter: str) -> None:
+    cutoff_iso = (datetime.utcnow() - timedelta(hours=48)).replace(microsecond=0).isoformat()
+
+    db_execute(
+        """
+        DELETE FROM leave_requests
+        WHERE shelter = %s
+          AND status = %s
+          AND leave_at < %s
+        """
+        if _is_pg()
+        else """
+        DELETE FROM leave_requests
+        WHERE shelter = ?
+          AND status = ?
+          AND leave_at < ?
+        """,
+        (shelter, "pending", cutoff_iso),
+    )
+
+
 # -----------------------------------------------------
 # Leave dashboards
 # -----------------------------------------------------
@@ -46,6 +67,7 @@ def staff_leave_pending():
         return redirect(url_for("auth.staff_home"))
 
     shelter = session["shelter"]
+    _cleanup_pending_leave_requests(shelter)
 
     rows = db_fetchall(
         "SELECT * FROM leave_requests WHERE status = %s AND shelter = %s ORDER BY submitted_at DESC"
@@ -72,6 +94,7 @@ def staff_leave_upcoming():
         return redirect(url_for("auth.staff_home"))
 
     shelter = session["shelter"]
+    _cleanup_pending_leave_requests(shelter)
     now = utcnow_iso()
 
     rows = db_fetchall(
@@ -110,6 +133,7 @@ def staff_leave_away_now():
         return redirect(url_for("auth.staff_home"))
 
     shelter = session["shelter"]
+    _cleanup_pending_leave_requests(shelter)
     now = utcnow_iso()
 
     rows = db_fetchall(
@@ -147,6 +171,7 @@ def staff_leave_overdue():
         return redirect(url_for("auth.staff_home"))
 
     shelter = session["shelter"]
+    _cleanup_pending_leave_requests(shelter)
 
     rows = db_fetchall(
         """
@@ -208,6 +233,8 @@ def staff_leave_approve(req_id: int):
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
+
+    _cleanup_pending_leave_requests(shelter)
 
     row = db_fetchone(
         "SELECT * FROM leave_requests WHERE id = %s AND shelter = %s"
@@ -280,6 +307,8 @@ def staff_leave_deny(req_id: int):
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
 
+    _cleanup_pending_leave_requests(shelter)
+
     if not note:
         flash("Denial note required.", "error")
         return redirect(url_for("staff_portal.staff_leave_pending"))
@@ -327,6 +356,8 @@ def staff_leave_check_in(req_id: int):
     shelter = session["shelter"]
     staff_id = session["staff_user_id"]
     note = (request.form.get("note") or "").strip()
+
+    _cleanup_pending_leave_requests(shelter)
 
     row = db_fetchone(
         "SELECT id, status, check_in_at FROM leave_requests WHERE id = %s AND shelter = %s"
@@ -380,6 +411,7 @@ def staff_leave_print(req_id: int):
         return redirect(url_for("auth.staff_home"))
 
     shelter = session["shelter"]
+    _cleanup_pending_leave_requests(shelter)
 
     row = db_fetchone(
         """
