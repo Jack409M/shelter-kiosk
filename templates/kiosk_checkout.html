@@ -184,7 +184,9 @@
             <select id="expected_back_minute" name="expected_back_minute">
               <option value="">Min</option>
               <option value="00" {% if selected_minute == '00' %}selected{% endif %}>00</option>
+              <option value="15" {% if selected_minute == '15' %}selected{% endif %}>15</option>
               <option value="30" {% if selected_minute == '30' %}selected{% endif %}>30</option>
+              <option value="45" {% if selected_minute == '45' %}selected{% endif %}>45</option>
             </select>
 
             <select id="expected_back_ampm" name="expected_back_ampm">
