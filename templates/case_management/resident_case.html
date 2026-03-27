@@ -116,37 +116,51 @@
       flex-wrap: wrap;
     }
 
- .notebook-tab-btn {
-  background: #f3f4f6 !important;
-  color: #111111 !important;
-  border: 1px solid #d1d5db !important;
-}
+    .notebook-tab-btn {
+      background: #f3f4f6 !important;
+      color: #111111 !important;
+      border: 1px solid #d1d5db !important;
+    }
 
-.notebook-tab-btn:visited,
-.notebook-tab-btn:hover,
-.notebook-tab-btn:focus,
-.notebook-tab-btn:active {
-  color: #111111 !important;
-}
+    .notebook-tab-btn:visited,
+    .notebook-tab-btn:hover,
+    .notebook-tab-btn:focus,
+    .notebook-tab-btn:active {
+      color: #111111 !important;
+    }
 
-.notebook-tab-btn.is-active,
-.notebook-tab-btn.is-active:visited,
-.notebook-tab-btn.is-active:hover,
-.notebook-tab-btn.is-active:focus,
-.notebook-tab-btn.is-active:active {
-  background: #1e3a8a !important;
-  color: #ffffff !important;
-  border-color: #1e3a8a !important;
-  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.25) !important;
-  font-weight: 700 !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
+    .notebook-tab-btn.is-active,
+    .notebook-tab-btn.is-active:visited,
+    .notebook-tab-btn.is-active:hover,
+    .notebook-tab-btn.is-active:focus,
+    .notebook-tab-btn.is-active:active {
+      background: #1e3a8a !important;
+      color: #ffffff !important;
+      border-color: #1e3a8a !important;
+      box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.25) !important;
+      font-weight: 700 !important;
+      -webkit-text-fill-color: #ffffff !important;
+    }
 
-button.notebook-tab-btn.is-active,
-button.notebook-tab-btn.is-active span {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
+    button.notebook-tab-btn.is-active,
+    button.notebook-tab-btn.is-active span {
+      color: #ffffff !important;
+      -webkit-text-fill-color: #ffffff !important;
+    }
+
+    .needs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .need-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fafafa;
+    }
 
     @media print {
       body {
@@ -249,6 +263,42 @@ button.notebook-tab-btn.is-active span {
 
         <label><strong>Meeting Date</strong></label>
         <input type="date" name="meeting_date" required>
+
+        <h3 style="margin-top:16px;">Open Needs</h3>
+
+        {% if open_needs %}
+          <div class="needs-grid">
+            {% for need in open_needs %}
+              {% set need_key = need["need_key"] %}
+              {% set need_label = need["need_label"] %}
+              {% set source_value = need["source_value"] %}
+              <div class="need-card">
+                <div><strong>{{ need_label }}</strong></div>
+                {% if source_value %}
+                  <div style="margin-top:4px; font-size:0.9em; color:#666;">
+                    Intake trigger: {{ source_value }}
+                  </div>
+                {% endif %}
+
+                <label style="margin-top:10px;"><strong>Status</strong></label>
+                <select name="need_status_{{ need_key }}">
+                  <option value="">Leave Open</option>
+                  <option value="addressed">Addressed</option>
+                  <option value="not_applicable">Not Applicable</option>
+                </select>
+
+                <label style="margin-top:10px;"><strong>Resolution Note</strong></label>
+                <textarea
+                  name="need_note_{{ need_key }}"
+                  rows="2"
+                  placeholder="Optional note about this need"
+                ></textarea>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p style="margin-top:8px; color:#666;">No open intake driven needs.</p>
+        {% endif %}
 
         <label><strong>Notes</strong></label>
         <textarea name="notes" rows="3"></textarea>
