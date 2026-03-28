@@ -56,7 +56,7 @@ def staff_attendance_view():
 
         last_checkout = db_fetchone(
             """
-            SELECT event_time, expected_back_time, note
+            SELECT event_time, expected_back_time, note, destination, obligation_start_time, obligation_end_time
             FROM attendance_events
             WHERE resident_id = %s AND shelter = %s AND event_type = %s
             ORDER BY event_time DESC
@@ -64,7 +64,7 @@ def staff_attendance_view():
             """
             if current_app.config.get("DATABASE_URL")
             else """
-            SELECT event_time, expected_back_time, note
+            SELECT event_time, expected_back_time, note, destination, obligation_start_time, obligation_end_time
             FROM attendance_events
             WHERE resident_id = ? AND shelter = ? AND event_type = ?
             ORDER BY event_time DESC
@@ -76,11 +76,17 @@ def staff_attendance_view():
         checkout_time = ""
         expected_back_time = ""
         checkout_note = ""
+        destination = ""
+        obligation_start_time = ""
+        obligation_end_time = ""
 
         if last_checkout:
             checkout_time = last_checkout["event_time"] if isinstance(last_checkout, dict) else last_checkout[0]
             expected_back_time = last_checkout["expected_back_time"] if isinstance(last_checkout, dict) else (last_checkout[1] or "")
             checkout_note = (last_checkout["note"] if isinstance(last_checkout, dict) else last_checkout[2]) or ""
+            destination = (last_checkout["destination"] if isinstance(last_checkout, dict) else last_checkout[3]) or ""
+            obligation_start_time = (last_checkout["obligation_start_time"] if isinstance(last_checkout, dict) else last_checkout[4]) or ""
+            obligation_end_time = (last_checkout["obligation_end_time"] if isinstance(last_checkout, dict) else last_checkout[5]) or ""
 
         is_out = last_event_type == "check_out"
         active_pass = has_active_pass(rid, shelter)
@@ -94,6 +100,9 @@ def staff_attendance_view():
             "expected_back_at": expected_back_time,
             "is_out": is_out,
             "note": checkout_note,
+            "destination": destination,
+            "obligation_start_at": obligation_start_time,
+            "obligation_end_at": obligation_end_time,
             "has_active_pass": active_pass,
         }
 
@@ -131,15 +140,37 @@ def staff_attendance_check_in_view(resident_id: int):
 
     db_execute(
         """
-        INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO attendance_events (
+            resident_id,
+            shelter,
+            event_type,
+            event_time,
+            staff_user_id,
+            note,
+            expected_back_time,
+            destination,
+            obligation_start_time,
+            obligation_end_time
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         if current_app.config.get("DATABASE_URL")
         else """
-        INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO attendance_events (
+            resident_id,
+            shelter,
+            event_type,
+            event_time,
+            staff_user_id,
+            note,
+            expected_back_time,
+            destination,
+            obligation_start_time,
+            obligation_end_time
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (resident_id, shelter, "check_in", utcnow_iso(), staff_id, "Manual check in", None),
+        (resident_id, shelter, "check_in", utcnow_iso(), staff_id, "Manual check in", None, None, None, None),
     )
 
     complete_active_passes(resident_id, shelter)
@@ -201,16 +232,16 @@ def staff_attendance_check_out_global_view():
         stored_note = f"{stored_note} {note}"
 
     sql = (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         if g.get("db_kind") == "pg"
-        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-             "VALUES (?, ?, ?, ?, ?, ?, ?)"
+        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time) "
+             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
 
     db_execute(
         sql,
-        (resident_id, shelter, "check_out", event_time, staff_id, stored_note, expected_back_value),
+        (resident_id, shelter, "check_out", event_time, staff_id, stored_note, expected_back_value, None, None, None),
     )
 
     log_action("attendance", resident_id, shelter, staff_id, "check_out", stored_note)
