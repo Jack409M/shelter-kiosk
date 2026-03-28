@@ -330,6 +330,8 @@ def resident_case_view(resident_id: int):
                 case_manager_update_id,
                 service_type,
                 service_date,
+                quantity,
+                unit,
                 notes
             FROM client_services
             WHERE enrollment_id = {ph}
@@ -345,6 +347,9 @@ def resident_case_view(resident_id: int):
             service = {
                 "service_type": s["service_type"],
                 "service_date": s["service_date"],
+                "quantity": s["quantity"],
+                "unit": s["unit"],
+                "quantity_display": _display_quantity_unit(s["quantity"], s["unit"]),
                 "notes": s["notes"],
             }
             services_by_note.setdefault(note_id, []).append(service)
