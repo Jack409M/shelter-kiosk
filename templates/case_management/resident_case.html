@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328c') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328d') }}">
 {% endblock %}
 
 {% block content %}
@@ -47,6 +47,19 @@
   {% set exit_education_at_exit = none %}
 {% endif %}
 
+{% set rs = recovery_snapshot or {} %}
+{% set rs_level = rs.get("program_level") %}
+{% set rs_sponsor = rs.get("sponsor_name") %}
+{% set rs_employer = rs.get("employer_name") %}
+{% set rs_income_display = rs.get("monthly_income_display") %}
+{% set rs_step = rs.get("aa_step_current") %}
+{% set rs_step_changed_at = rs.get("aa_step_changed_at") %}
+{% set rs_step_days = rs.get("aa_step_days") %}
+{% set rs_medications = rs.get("medications", []) %}
+{% set rs_latest_ua = rs.get("latest_ua") %}
+{% set rs_latest_inspection = rs.get("latest_inspection") %}
+{% set rs_latest_budget = rs.get("latest_budget_session") %}
+
 <h1>Case Management</h1>
 
 <div class="case-header-strip">
@@ -79,6 +92,115 @@
     </p>
   </div>
 </div>
+
+{% if enrollment_id %}
+  <div class="card no-print">
+    <h2>Recovery Snapshot</h2>
+
+    <div class="case-snapshot-grid">
+      <div class="case-snapshot-card">
+        <h3 class="case-snapshot-title">Current Profile</h3>
+        <div class="case-snapshot-list">
+          <div><strong>Level:</strong> {{ rs_level or "—" }}</div>
+          <div><strong>Sponsor:</strong> {{ rs_sponsor or "—" }}</div>
+          <div><strong>Employer:</strong> {{ rs_employer or "—" }}</div>
+          <div><strong>Monthly Income:</strong> {{ rs_income_display or "—" }}</div>
+          <div><strong>AA Step:</strong> {{ rs_step or "—" }}</div>
+          <div>
+            <strong>Step Changed:</strong>
+            {% if rs_step_changed_at %}
+              {{ rs_step_changed_at }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+          <div>
+            <strong>Days on Current Step:</strong>
+            {% if rs_step_days is not none %}
+              {{ rs_step_days }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="case-snapshot-card">
+        <h3 class="case-snapshot-title">Latest Operational Items</h3>
+        <div class="case-snapshot-list">
+          <div>
+            <strong>Latest UA:</strong>
+            {% if rs_latest_ua %}
+              {{ rs_latest_ua["ua_date"] or "—" }}
+              {% if rs_latest_ua["result"] %}
+                — {{ rs_latest_ua["result"] }}
+              {% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+          <div>
+            <strong>Latest Inspection:</strong>
+            {% if rs_latest_inspection %}
+              {{ rs_latest_inspection["inspection_date"] or "—" }}
+              {% if rs_latest_inspection["passed_display"] %}
+                — {{ rs_latest_inspection["passed_display"] }}
+              {% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+          <div>
+            <strong>Latest Budget Session:</strong>
+            {% if rs_latest_budget %}
+              {{ rs_latest_budget["session_date"] or "—" }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="case-snapshot-card case-snapshot-card-wide">
+        <h3 class="case-snapshot-title">Current Medications</h3>
+        {% if rs_medications %}
+          <div class="case-medication-list">
+            {% for med in rs_medications %}
+              <div class="case-medication-item">
+                <div>
+                  <strong>{{ med["medication_name"] or "Medication" }}</strong>
+                  {% if med["dosage"] %}
+                    — {{ med["dosage"] }}
+                  {% endif %}
+                  {% if med["frequency"] %}
+                    — {{ med["frequency"] }}
+                  {% endif %}
+                </div>
+                {% if med["purpose"] %}
+                  <div class="case-medication-meta">
+                    Purpose: {{ med["purpose"] }}
+                  </div>
+                {% endif %}
+                {% if med["prescribed_by"] %}
+                  <div class="case-medication-meta">
+                    Prescribed by: {{ med["prescribed_by"] }}
+                  </div>
+                {% endif %}
+                {% if med["notes"] %}
+                  <div class="case-medication-meta">
+                    {{ med["notes"] }}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="case-empty-muted">No active medications recorded.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endif %}
 
 {% if not enrollment_id %}
   <div class="card no-print">
