@@ -1,5 +1,9 @@
 {% extends "layout.html" %}
 
+{% block extra_head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328b') }}">
+{% endblock %}
+
 {% block content %}
 
 {% if resident is mapping %}
@@ -52,13 +56,13 @@
       name="updated_grit"
       min="0"
       max="100"
-      style="width:70px;"
+      class="edit-case-note-qty"
       inputmode="numeric"
       value="{{ updated_grit_value if updated_grit_value is not none else '' }}"
     >
 
     <label><strong>Parenting Class Completed</strong></label>
-    <label style="display:flex; gap:10px; margin-top:4px;">
+    <label class="edit-case-note-radio-row">
       <input
         type="radio"
         name="parenting_class_completed"
@@ -76,7 +80,7 @@
     </label>
 
     <label><strong>Warrants or Fines Paid</strong></label>
-    <label style="display:flex; gap:10px; margin-top:4px;">
+    <label class="edit-case-note-radio-row">
       <input
         type="radio"
         name="warrants_or_fines_paid"
@@ -97,17 +101,17 @@
 
     <h3>Services Provided</h3>
 
-    <p style="color:#666; font-size:0.9em;">
+    <p class="edit-case-note-help">
       Uncheck a service to remove it from this record.
     </p>
 
     <label><strong>Service Date</strong></label>
     <input type="date" name="service_date" value="{{ meeting_date or '' }}">
 
-    <div style="display:grid; grid-template-columns:repeat(4, minmax(160px, 1fr)); gap:10px; align-items:start; margin-top:10px;">
+    <div class="edit-case-note-service-grid">
       <div>
-        <label style="display:flex; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Counseling" {% if "Counseling" in selected_services %}checked{% endif %} style="margin-top:3px;">
+        <label class="edit-case-note-checkbox-label">
+          <input type="checkbox" name="service_type" value="Counseling" {% if "Counseling" in selected_services %}checked{% endif %}>
           <span>
             Counseling
             {% if "Counseling" in selected_services %}
@@ -119,28 +123,28 @@
           type="number"
           name="quantity_Counseling"
           min="0"
-          style="width:80px; margin-top:4px;"
+          class="edit-case-note-qty"
           placeholder="Qty"
           value="{{ service_quantity_map.get('Counseling', '') }}"
         >
         <input
           type="text"
           name="unit_Counseling"
-          style="width:100%; margin-top:4px;"
+          class="edit-case-note-unit"
           placeholder="sessions"
           value="{{ service_unit_map.get('Counseling', '') }}"
         >
         <textarea
           name="service_notes_Counseling"
           rows="2"
-          style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+          class="edit-case-note-notes"
           placeholder="Counseling notes"
         >{{ service_notes_map.get("Counseling", "") }}</textarea>
       </div>
 
       <div>
-        <label style="display:flex; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Dental" {% if "Dental" in selected_services %}checked{% endif %} style="margin-top:3px;">
+        <label class="edit-case-note-checkbox-label">
+          <input type="checkbox" name="service_type" value="Dental" {% if "Dental" in selected_services %}checked{% endif %}>
           <span>
             Dental
             {% if "Dental" in selected_services %}
@@ -152,28 +156,28 @@
           type="number"
           name="quantity_Dental"
           min="0"
-          style="width:80px; margin-top:4px;"
+          class="edit-case-note-qty"
           placeholder="Qty"
           value="{{ service_quantity_map.get('Dental', '') }}"
         >
         <input
           type="text"
           name="unit_Dental"
-          style="width:100%; margin-top:4px;"
+          class="edit-case-note-unit"
           placeholder="visits"
           value="{{ service_unit_map.get('Dental', '') }}"
         >
         <textarea
           name="service_notes_Dental"
           rows="2"
-          style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+          class="edit-case-note-notes"
           placeholder="Dental notes"
         >{{ service_notes_map.get("Dental", "") }}</textarea>
       </div>
 
       <div>
-        <label style="display:flex; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Vision" {% if "Vision" in selected_services %}checked{% endif %} style="margin-top:3px;">
+        <label class="edit-case-note-checkbox-label">
+          <input type="checkbox" name="service_type" value="Vision" {% if "Vision" in selected_services %}checked{% endif %}>
           <span>
             Vision
             {% if "Vision" in selected_services %}
@@ -185,28 +189,28 @@
           type="number"
           name="quantity_Vision"
           min="0"
-          style="width:80px; margin-top:4px;"
+          class="edit-case-note-qty"
           placeholder="Qty"
           value="{{ service_quantity_map.get('Vision', '') }}"
         >
         <input
           type="text"
           name="unit_Vision"
-          style="width:100%; margin-top:4px;"
+          class="edit-case-note-unit"
           placeholder="visits"
           value="{{ service_unit_map.get('Vision', '') }}"
         >
         <textarea
           name="service_notes_Vision"
           rows="2"
-          style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+          class="edit-case-note-notes"
           placeholder="Vision notes"
         >{{ service_notes_map.get("Vision", "") }}</textarea>
       </div>
 
       <div>
-        <label style="display:flex; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Daycare" {% if "Daycare" in selected_services %}checked{% endif %} style="margin-top:3px;">
+        <label class="edit-case-note-checkbox-label">
+          <input type="checkbox" name="service_type" value="Daycare" {% if "Daycare" in selected_services %}checked{% endif %}>
           <span>
             Daycare
             {% if "Daycare" in selected_services %}
@@ -218,28 +222,28 @@
           type="number"
           name="quantity_Daycare"
           min="0"
-          style="width:80px; margin-top:4px;"
+          class="edit-case-note-qty"
           placeholder="Qty"
           value="{{ service_quantity_map.get('Daycare', '') }}"
         >
         <input
           type="text"
           name="unit_Daycare"
-          style="width:100%; margin-top:4px;"
+          class="edit-case-note-unit"
           placeholder="days"
           value="{{ service_unit_map.get('Daycare', '') }}"
         >
         <textarea
           name="service_notes_Daycare"
           rows="2"
-          style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+          class="edit-case-note-notes"
           placeholder="Daycare notes"
         >{{ service_notes_map.get("Daycare", "") }}</textarea>
       </div>
 
       <div>
-        <label style="display:flex; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Legal Assistance" {% if "Legal Assistance" in selected_services %}checked{% endif %} style="margin-top:3px;">
+        <label class="edit-case-note-checkbox-label">
+          <input type="checkbox" name="service_type" value="Legal Assistance" {% if "Legal Assistance" in selected_services %}checked{% endif %}>
           <span>
             Legal Assistance
             {% if "Legal Assistance" in selected_services %}
@@ -251,28 +255,28 @@
           type="number"
           name="quantity_Legal Assistance"
           min="0"
-          style="width:80px; margin-top:4px;"
+          class="edit-case-note-qty"
           placeholder="Qty"
           value="{{ service_quantity_map.get('Legal Assistance', '') }}"
         >
         <input
           type="text"
           name="unit_Legal Assistance"
-          style="width:100%; margin-top:4px;"
+          class="edit-case-note-unit"
           placeholder="visits"
           value="{{ service_unit_map.get('Legal Assistance', '') }}"
         >
         <textarea
           name="service_notes_Legal Assistance"
           rows="2"
-          style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+          class="edit-case-note-notes"
           placeholder="Legal assistance notes"
         >{{ service_notes_map.get("Legal Assistance", "") }}</textarea>
       </div>
 
       <div>
-        <label style="display:flex; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Transportation" {% if "Transportation" in selected_services %}checked{% endif %} style="margin-top:3px;">
+        <label class="edit-case-note-checkbox-label">
+          <input type="checkbox" name="service_type" value="Transportation" {% if "Transportation" in selected_services %}checked{% endif %}>
           <span>
             Transportation
             {% if "Transportation" in selected_services %}
@@ -284,28 +288,28 @@
           type="number"
           name="quantity_Transportation"
           min="0"
-          style="width:80px; margin-top:4px;"
+          class="edit-case-note-qty"
           placeholder="Qty"
           value="{{ service_quantity_map.get('Transportation', '') }}"
         >
         <input
           type="text"
           name="unit_Transportation"
-          style="width:100%; margin-top:4px;"
+          class="edit-case-note-unit"
           placeholder="rides"
           value="{{ service_unit_map.get('Transportation', '') }}"
         >
         <textarea
           name="service_notes_Transportation"
           rows="2"
-          style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+          class="edit-case-note-notes"
           placeholder="Transportation notes"
         >{{ service_notes_map.get("Transportation", "") }}</textarea>
       </div>
 
       <div>
-        <label style="display:flex; gap:6px; margin:0;">
-          <input type="checkbox" name="service_type" value="Other" {% if "Other" in selected_services %}checked{% endif %} style="margin-top:3px;">
+        <label class="edit-case-note-checkbox-label">
+          <input type="checkbox" name="service_type" value="Other" {% if "Other" in selected_services %}checked{% endif %}>
           <span>
             Other
             {% if "Other" in selected_services %}
@@ -317,27 +321,27 @@
           type="number"
           name="quantity_Other"
           min="0"
-          style="width:80px; margin-top:4px;"
+          class="edit-case-note-qty"
           placeholder="Qty"
           value="{{ service_quantity_map.get('Other', '') }}"
         >
         <input
           type="text"
           name="unit_Other"
-          style="width:100%; margin-top:4px;"
+          class="edit-case-note-unit"
           placeholder="units"
           value="{{ service_unit_map.get('Other', '') }}"
         >
         <textarea
           name="service_notes_Other"
           rows="2"
-          style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+          class="edit-case-note-notes"
           placeholder="Other service notes"
         >{{ service_notes_map.get("Other", "") }}</textarea>
       </div>
     </div>
 
-    <div style="margin-top:10px;">
+    <div class="edit-case-note-actions">
       <button type="submit">Save Changes</button>
       <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
     </div>
