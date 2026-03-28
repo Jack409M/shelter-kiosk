@@ -82,6 +82,10 @@ from routes.case_management_parts.intake_duplicates import duplicate_review_dism
 from routes.case_management_parts.intake_duplicates import duplicate_review_return_to_edit_view
 from routes.case_management_parts.intake_duplicates import duplicate_review_use_existing_view
 from routes.case_management_parts.intake_duplicates import duplicate_review_view
+from routes.case_management_parts.medications import add_medication_view
+from routes.case_management_parts.medications import edit_medication_view
+from routes.case_management_parts.medications import medication_form_view
+from routes.case_management_parts.recovery_profile import update_recovery_profile_view
 from routes.case_management_parts.resident_case import resident_case_view
 from routes.case_management_parts.update import add_case_note_view
 from routes.case_management_parts.update import edit_case_note_view
@@ -342,6 +346,46 @@ def add_appointment(resident_id: int):
 
 
 # ============================================================================
+# Recovery Profile Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.recovery_profile
+# ============================================================================
+
+@case_management.post("/<int:resident_id>/recovery-profile")
+@require_login
+@require_shelter
+def update_recovery_profile(resident_id: int):
+    return update_recovery_profile_view(resident_id)
+
+
+# ============================================================================
+# Medication Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.medications
+# ============================================================================
+
+@case_management.get("/<int:resident_id>/medications")
+@require_login
+@require_shelter
+def medications(resident_id: int):
+    return medication_form_view(resident_id)
+
+
+@case_management.post("/<int:resident_id>/medications")
+@require_login
+@require_shelter
+def add_medication(resident_id: int):
+    return add_medication_view(resident_id)
+
+
+@case_management.route("/<int:resident_id>/medications/<int:medication_id>/edit", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def edit_medication(resident_id: int, medication_id: int):
+    return edit_medication_view(resident_id, medication_id)
+
+
+# ============================================================================
 # Case Manager Update Routes
 # ----------------------------------------------------------------------------
 # Extracted to routes.case_management_parts.update
@@ -391,6 +435,10 @@ def edit_case_note(resident_id: int, update_id: int):
 # - resident_children
 # - resident_substances
 # - client_services
+# - resident_budget_sessions
+# - resident_living_area_inspections
+# - resident_ua_log
+# - resident_medications
 # - program_enrollments
 # - residents
 # ============================================================================
@@ -417,6 +465,10 @@ def wipe_test_residents():
         db_execute("DELETE FROM resident_form_submissions")
         db_execute("DELETE FROM child_services")
         db_execute("DELETE FROM client_services")
+        db_execute("DELETE FROM resident_budget_sessions")
+        db_execute("DELETE FROM resident_living_area_inspections")
+        db_execute("DELETE FROM resident_ua_log")
+        db_execute("DELETE FROM resident_medications")
 
         # Drafts and resident linked supporting records
         db_execute("DELETE FROM assessment_drafts")
