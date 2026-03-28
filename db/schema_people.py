@@ -67,6 +67,12 @@ def ensure_residents_table(kind: str) -> None:
             emergency_contact_phone TEXT,
             medical_alerts TEXT,
             medical_notes TEXT,
+            program_level TEXT,
+            sponsor_name TEXT,
+            employer_name TEXT,
+            monthly_income REAL,
+            aa_step_current INTEGER,
+            aa_step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
@@ -87,6 +93,12 @@ def ensure_residents_table(kind: str) -> None:
             emergency_contact_phone TEXT,
             medical_alerts TEXT,
             medical_notes TEXT,
+            program_level TEXT,
+            sponsor_name TEXT,
+            employer_name TEXT,
+            monthly_income DOUBLE PRECISION,
+            aa_step_current INTEGER,
+            aa_step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
@@ -176,6 +188,33 @@ def ensure_basic_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN emergency_contact_phone TEXT",
             "ALTER TABLE residents ADD COLUMN medical_alerts TEXT",
             "ALTER TABLE residents ADD COLUMN medical_notes TEXT",
+        ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_recovery_profile_columns(kind: str) -> None:
+    if kind == "pg":
+        statements = [
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS program_level TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sponsor_name TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS employer_name TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS monthly_income DOUBLE PRECISION",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS aa_step_current INTEGER",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS aa_step_changed_at TEXT",
+        ]
+    else:
+        statements = [
+            "ALTER TABLE residents ADD COLUMN program_level TEXT",
+            "ALTER TABLE residents ADD COLUMN sponsor_name TEXT",
+            "ALTER TABLE residents ADD COLUMN employer_name TEXT",
+            "ALTER TABLE residents ADD COLUMN monthly_income REAL",
+            "ALTER TABLE residents ADD COLUMN aa_step_current INTEGER",
+            "ALTER TABLE residents ADD COLUMN aa_step_changed_at TEXT",
         ]
 
     for statement in statements:
@@ -389,6 +428,22 @@ def ensure_indexes() -> None:
 
     try:
         db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_program_level_idx "
+            "ON residents (program_level)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS residents_aa_step_current_idx "
+            "ON residents (aa_step_current)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
             "CREATE INDEX IF NOT EXISTS resident_children_resident_idx "
             "ON resident_children (resident_id)"
         )
@@ -456,6 +511,7 @@ def ensure_tables(kind: str) -> None:
 
 def ensure_columns_and_constraints(kind: str) -> None:
     ensure_basic_profile_columns(kind)
+    ensure_recovery_profile_columns(kind)
     ensure_reporting_columns(kind)
     ensure_sms_consent_columns(kind)
     ensure_resident_code_schema(kind)
