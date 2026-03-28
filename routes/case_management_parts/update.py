@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from flask import flash, redirect, request, session, url_for, render_template
@@ -449,4 +448,3 @@ def edit_case_note_view(resident_id: int, update_id: int):
 
     flash("Case note updated.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
-
