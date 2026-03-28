@@ -328,12 +328,29 @@
 
         <h3>Services Provided</h3>
 
+        <label><strong>Service Date</strong></label>
+        <input type="date" name="service_date">
+
         <div style="display:grid; grid-template-columns:repeat(4, minmax(160px, 1fr)); gap:10px; align-items:start; margin-top:10px;">
           <div>
             <label style="display:flex; gap:6px; margin:0;">
               <input type="checkbox" name="service_type" value="Counseling" style="margin-top:3px;">
               <span>Counseling</span>
             </label>
+            <input
+              type="number"
+              name="quantity_Counseling"
+              min="0"
+              style="width:80px; margin-top:4px;"
+              placeholder="Qty"
+            >
+            <input
+              type="text"
+              name="unit_Counseling"
+              style="width:100%; margin-top:4px;"
+              placeholder="sessions"
+              value="sessions"
+            >
             <textarea
               name="service_notes_Counseling"
               rows="2"
@@ -347,6 +364,20 @@
               <input type="checkbox" name="service_type" value="Dental" style="margin-top:3px;">
               <span>Dental</span>
             </label>
+            <input
+              type="number"
+              name="quantity_Dental"
+              min="0"
+              style="width:80px; margin-top:4px;"
+              placeholder="Qty"
+            >
+            <input
+              type="text"
+              name="unit_Dental"
+              style="width:100%; margin-top:4px;"
+              placeholder="visits"
+              value="visits"
+            >
             <textarea
               name="service_notes_Dental"
               rows="2"
@@ -360,6 +391,20 @@
               <input type="checkbox" name="service_type" value="Vision" style="margin-top:3px;">
               <span>Vision</span>
             </label>
+            <input
+              type="number"
+              name="quantity_Vision"
+              min="0"
+              style="width:80px; margin-top:4px;"
+              placeholder="Qty"
+            >
+            <input
+              type="text"
+              name="unit_Vision"
+              style="width:100%; margin-top:4px;"
+              placeholder="visits"
+              value="visits"
+            >
             <textarea
               name="service_notes_Vision"
               rows="2"
@@ -370,14 +415,28 @@
 
           <div>
             <label style="display:flex; gap:6px; margin:0;">
-              <input type="checkbox" name="service_type" value="Parenting Support" style="margin-top:3px;">
-              <span>Parenting Support</span>
+              <input type="checkbox" name="service_type" value="Daycare" style="margin-top:3px;">
+              <span>Daycare</span>
             </label>
+            <input
+              type="number"
+              name="quantity_Daycare"
+              min="0"
+              style="width:80px; margin-top:4px;"
+              placeholder="Qty"
+            >
+            <input
+              type="text"
+              name="unit_Daycare"
+              style="width:100%; margin-top:4px;"
+              placeholder="days"
+              value="days"
+            >
             <textarea
-              name="service_notes_Parenting Support"
+              name="service_notes_Daycare"
               rows="2"
               style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
-              placeholder="Parenting support notes"
+              placeholder="Daycare notes"
             ></textarea>
           </div>
 
@@ -386,6 +445,20 @@
               <input type="checkbox" name="service_type" value="Legal Assistance" style="margin-top:3px;">
               <span>Legal Assistance</span>
             </label>
+            <input
+              type="number"
+              name="quantity_Legal Assistance"
+              min="0"
+              style="width:80px; margin-top:4px;"
+              placeholder="Qty"
+            >
+            <input
+              type="text"
+              name="unit_Legal Assistance"
+              style="width:100%; margin-top:4px;"
+              placeholder="visits"
+              value="visits"
+            >
             <textarea
               name="service_notes_Legal Assistance"
               rows="2"
@@ -399,6 +472,20 @@
               <input type="checkbox" name="service_type" value="Transportation" style="margin-top:3px;">
               <span>Transportation</span>
             </label>
+            <input
+              type="number"
+              name="quantity_Transportation"
+              min="0"
+              style="width:80px; margin-top:4px;"
+              placeholder="Qty"
+            >
+            <input
+              type="text"
+              name="unit_Transportation"
+              style="width:100%; margin-top:4px;"
+              placeholder="rides"
+              value="rides"
+            >
             <textarea
               name="service_notes_Transportation"
               rows="2"
@@ -412,6 +499,20 @@
               <input type="checkbox" name="service_type" value="Other" style="margin-top:3px;">
               <span>Other</span>
             </label>
+            <input
+              type="number"
+              name="quantity_Other"
+              min="0"
+              style="width:80px; margin-top:4px;"
+              placeholder="Qty"
+            >
+            <input
+              type="text"
+              name="unit_Other"
+              style="width:100%; margin-top:4px;"
+              placeholder="units"
+              value="units"
+            >
             <textarea
               name="service_notes_Other"
               rows="2"
@@ -705,12 +806,16 @@
                   {% for service in note_services %}
                     {% set service_type = service["service_type"] %}
                     {% set service_date = service["service_date"] %}
+                    {% set service_quantity_display = service["quantity_display"] %}
                     {% set service_notes_value = service["notes"] %}
 
                     <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
                       <div><strong>{{ service_type or "—" }}</strong></div>
                       <div style="margin-top:4px; font-size:0.88em; color:#666;">
                         {{ service_date or "—" }}
+                        {% if service_quantity_display and service_quantity_display != "—" %}
+                          — {{ service_quantity_display }}
+                        {% endif %}
                       </div>
 
                       {% if service_notes_value %}
@@ -763,12 +868,16 @@
                     {% for service in note_services %}
                       {% set service_type = service["service_type"] %}
                       {% set service_date = service["service_date"] %}
+                      {% set service_quantity_display = service["quantity_display"] %}
                       {% set service_notes_value = service["notes"] %}
 
                       <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
                         <div><strong>{{ service_type or "—" }}</strong></div>
                         <div style="margin-top:4px; font-size:0.88em; color:#666;">
                           {{ service_date or "—" }}
+                          {% if service_quantity_display and service_quantity_display != "—" %}
+                            — {{ service_quantity_display }}
+                          {% endif %}
                         </div>
 
                         {% if service_notes_value %}
