@@ -12,35 +12,99 @@ from routes.admin_parts.helpers import (
 )
 
 
+def _placeholder() -> str:
+    return "%s" if g.get("db_kind") == "pg" else "?"
+
+
+def _load_audit_filter_options():
+    ph = _placeholder()
+
+    shelters = db_fetchall(
+        f"""
+        SELECT DISTINCT a.shelter
+        FROM audit_log a
+        WHERE COALESCE(a.shelter, '') <> ''
+        ORDER BY a.shelter ASC
+        """
+    )
+
+    staff_rows = db_fetchall(
+        """
+        SELECT DISTINCT
+            a.staff_user_id,
+            COALESCE(su.username, '') AS staff_username
+        FROM audit_log a
+        LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        WHERE a.staff_user_id IS NOT NULL
+        ORDER BY staff_username ASC, a.staff_user_id ASC
+        """
+    )
+
+    entity_rows = db_fetchall(
+        """
+        SELECT DISTINCT a.entity_type
+        FROM audit_log a
+        WHERE COALESCE(a.entity_type, '') <> ''
+        ORDER BY a.entity_type ASC
+        """
+    )
+
+    action_rows = db_fetchall(
+        """
+        SELECT DISTINCT a.action_type
+        FROM audit_log a
+        WHERE COALESCE(a.action_type, '') <> ''
+        ORDER BY a.action_type ASC
+        """
+    )
+
+    all_shelters = [row.get("shelter", "") for row in shelters if row.get("shelter")]
+    staff_options = [
+        {
+            "staff_user_id": row.get("staff_user_id"),
+            "staff_username": row.get("staff_username") or f"User {row.get('staff_user_id')}",
+        }
+        for row in staff_rows
+        if row.get("staff_user_id") is not None
+    ]
+    entity_options = [row.get("entity_type", "") for row in entity_rows if row.get("entity_type")]
+    action_options = [row.get("action_type", "") for row in action_rows if row.get("action_type")]
+
+    return all_shelters, staff_options, entity_options, action_options
+
+
 def staff_audit_log_view():
-    # Future extraction note
-    # If audit grows further, split list view and export logic into:
-    # audit_queries.py
-    # audit_exports.py
     if not _require_admin():
         flash("Admin only.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
+    where_sql, params = _audit_where_from_request(request)
+    ph = _placeholder()
+
     sql = (
-        """
-        SELECT a.*, su.username
+        f"""
+        SELECT
+            a.*,
+            COALESCE(su.username, '') AS staff_username
         FROM audit_log a
         LEFT JOIN staff_users su ON su.id = a.staff_user_id
+        {where_sql}
         ORDER BY a.id DESC
-        LIMIT %s
-        """
-        if current_app.config.get("DATABASE_URL")
-        else """
-        SELECT a.*, su.username
-        FROM audit_log a
-        LEFT JOIN staff_users su ON su.id = a.staff_user_id
-        ORDER BY a.id DESC
-        LIMIT ?
+        LIMIT {ph}
         """
     )
 
-    rows = db_fetchall(sql, (200,))
-    return render_template("staff_audit_log.html", rows=rows)
+    rows = db_fetchall(sql, params + (200,))
+    all_shelters, staff_options, entity_options, action_options = _load_audit_filter_options()
+
+    return render_template(
+        "staff_audit_log.html",
+        rows=rows,
+        all_shelters=all_shelters,
+        staff_options=staff_options,
+        entity_options=entity_options,
+        action_options=action_options,
+    )
 
 
 def staff_audit_log_csv_view():
