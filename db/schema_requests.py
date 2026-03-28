@@ -178,7 +178,10 @@ def ensure_attendance_events_table(kind: str) -> None:
             event_time TEXT NOT NULL,
             staff_user_id INTEGER,
             note TEXT,
-            expected_back_time TEXT
+            expected_back_time TEXT,
+            destination TEXT,
+            obligation_start_time TEXT,
+            obligation_end_time TEXT
         )
         """,
         """
@@ -190,10 +193,34 @@ def ensure_attendance_events_table(kind: str) -> None:
             event_time TEXT NOT NULL,
             staff_user_id INTEGER,
             note TEXT,
-            expected_back_time TEXT
+            expected_back_time TEXT,
+            destination TEXT,
+            obligation_start_time TEXT,
+            obligation_end_time TEXT
         )
         """,
     )
+
+
+def ensure_attendance_event_columns(kind: str) -> None:
+    if kind == "pg":
+        statements = [
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS destination TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS obligation_start_time TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS obligation_end_time TEXT",
+        ]
+    else:
+        statements = [
+            "ALTER TABLE attendance_events ADD COLUMN destination TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN obligation_start_time TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN obligation_end_time TEXT",
+        ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
 
 
 def ensure_resident_passes_table(kind: str) -> None:
@@ -414,4 +441,5 @@ def ensure_tables(kind: str) -> None:
 def ensure_columns_and_constraints(kind: str) -> None:
     ensure_leave_request_phone_column(kind)
     drop_transport_dob_column_if_present(kind)
+    ensure_attendance_event_columns(kind)
     ensure_resident_pass_request_details_columns(kind)
