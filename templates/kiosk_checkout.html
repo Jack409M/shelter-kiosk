@@ -166,8 +166,72 @@
           </select>
         </div>
 
-        <div id="time_wrap" class="time-wrap">
-          <label>Expected Back Time</label>
+        <div id="start_time_wrap" class="time-wrap">
+          <label>Start Time</label>
+          <div class="time-row">
+            {% set selected_start_hour = request.form.get('start_time_hour', '') %}
+            {% set selected_start_minute = request.form.get('start_time_minute', '') %}
+            {% set selected_start_ampm = request.form.get('start_time_ampm', '') %}
+
+            <select id="start_time_hour" name="start_time_hour">
+              <option value="">Hour</option>
+              {% for h in range(1, 13) %}
+                {% set h_text = h|string %}
+                <option value="{{ h_text }}" {% if selected_start_hour == h_text %}selected{% endif %}>{{ h }}</option>
+              {% endfor %}
+            </select>
+
+            <select id="start_time_minute" name="start_time_minute">
+              <option value="">Min</option>
+              <option value="00" {% if selected_start_minute == '00' %}selected{% endif %}>00</option>
+              <option value="15" {% if selected_start_minute == '15' %}selected{% endif %}>15</option>
+              <option value="30" {% if selected_start_minute == '30' %}selected{% endif %}>30</option>
+              <option value="45" {% if selected_start_minute == '45' %}selected{% endif %}>45</option>
+            </select>
+
+            <select id="start_time_ampm" name="start_time_ampm">
+              <option value="">AM or PM</option>
+              <option value="AM" {% if selected_start_ampm == 'AM' %}selected{% endif %}>AM</option>
+              <option value="PM" {% if selected_start_ampm == 'PM' %}selected{% endif %}>PM</option>
+            </select>
+          </div>
+          <div class="time-help">Enter the time the obligation begins.</div>
+        </div>
+
+        <div id="end_time_wrap" class="time-wrap">
+          <label>End Time</label>
+          <div class="time-row">
+            {% set selected_end_hour = request.form.get('end_time_hour', '') %}
+            {% set selected_end_minute = request.form.get('end_time_minute', '') %}
+            {% set selected_end_ampm = request.form.get('end_time_ampm', '') %}
+
+            <select id="end_time_hour" name="end_time_hour">
+              <option value="">Hour</option>
+              {% for h in range(1, 13) %}
+                {% set h_text = h|string %}
+                <option value="{{ h_text }}" {% if selected_end_hour == h_text %}selected{% endif %}>{{ h }}</option>
+              {% endfor %}
+            </select>
+
+            <select id="end_time_minute" name="end_time_minute">
+              <option value="">Min</option>
+              <option value="00" {% if selected_end_minute == '00' %}selected{% endif %}>00</option>
+              <option value="15" {% if selected_end_minute == '15' %}selected{% endif %}>15</option>
+              <option value="30" {% if selected_end_minute == '30' %}selected{% endif %}>30</option>
+              <option value="45" {% if selected_end_minute == '45' %}selected{% endif %}>45</option>
+            </select>
+
+            <select id="end_time_ampm" name="end_time_ampm">
+              <option value="">AM or PM</option>
+              <option value="AM" {% if selected_end_ampm == 'AM' %}selected{% endif %}>AM</option>
+              <option value="PM" {% if selected_end_ampm == 'PM' %}selected{% endif %}>PM</option>
+            </select>
+          </div>
+          <div class="time-help">Enter the approximate time the obligation will be finished.</div>
+        </div>
+
+        <div id="expected_back_wrap" class="time-wrap">
+          <label>Expected Back to Shelter</label>
           <div class="time-row">
             {% set selected_hour = request.form.get('expected_back_hour', '') %}
             {% set selected_minute = request.form.get('expected_back_minute', '') %}
@@ -195,7 +259,7 @@
               <option value="PM" {% if selected_ampm == 'PM' %}selected{% endif %}>PM</option>
             </select>
           </div>
-          <div id="time_help" class="time-help">Choose the time the resident expects to return.</div>
+          <div id="time_help" class="time-help">Choose the time the resident expects to return to shelter.</div>
         </div>
 
         <div>
@@ -224,16 +288,78 @@
   <script>
     function toggleExpectedBackTime() {
       const destination = document.getElementById("destination");
-      const timeWrap = document.getElementById("time_wrap");
+
+      const startWrap = document.getElementById("start_time_wrap");
+      const endWrap = document.getElementById("end_time_wrap");
+      const expectedBackWrap = document.getElementById("expected_back_wrap");
       const timeHelp = document.getElementById("time_help");
+
+      const startHour = document.getElementById("start_time_hour");
+      const startMinute = document.getElementById("start_time_minute");
+      const startAmpm = document.getElementById("start_time_ampm");
+
+      const endHour = document.getElementById("end_time_hour");
+      const endMinute = document.getElementById("end_time_minute");
+      const endAmpm = document.getElementById("end_time_ampm");
+
       const hour = document.getElementById("expected_back_hour");
       const minute = document.getElementById("expected_back_minute");
       const ampm = document.getElementById("expected_back_ampm");
 
       const isPass = destination && destination.value === "Pass";
 
-      if (timeWrap) {
-        timeWrap.classList.toggle("hidden", isPass);
+      if (startWrap) {
+        startWrap.classList.toggle("hidden", isPass);
+      }
+
+      if (endWrap) {
+        endWrap.classList.toggle("hidden", isPass);
+      }
+
+      if (expectedBackWrap) {
+        expectedBackWrap.classList.toggle("hidden", isPass);
+      }
+
+      if (startHour) {
+        startHour.required = !isPass;
+        if (isPass) {
+          startHour.value = "";
+        }
+      }
+
+      if (startMinute) {
+        startMinute.required = !isPass;
+        if (isPass) {
+          startMinute.value = "";
+        }
+      }
+
+      if (startAmpm) {
+        startAmpm.required = !isPass;
+        if (isPass) {
+          startAmpm.value = "";
+        }
+      }
+
+      if (endHour) {
+        endHour.required = !isPass;
+        if (isPass) {
+          endHour.value = "";
+        }
+      }
+
+      if (endMinute) {
+        endMinute.required = !isPass;
+        if (isPass) {
+          endMinute.value = "";
+        }
+      }
+
+      if (endAmpm) {
+        endAmpm.required = !isPass;
+        if (isPass) {
+          endAmpm.value = "";
+        }
       }
 
       if (hour) {
@@ -260,7 +386,7 @@
       if (timeHelp) {
         timeHelp.textContent = isPass
           ? "An approved pass already controls the return time."
-          : "Choose the time the resident expects to return.";
+          : "Choose the time the resident expects to return to shelter.";
       }
     }
 
