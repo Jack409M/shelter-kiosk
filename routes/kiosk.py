@@ -70,11 +70,11 @@ def _active_resident_row(shelter: str, resident_code: str):
 
 def _attendance_insert_sql() -> str:
     return (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         if g.get("db_kind") == "pg"
-        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)"
+        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
 
 
@@ -167,7 +167,7 @@ def _complete_active_passes(resident_id: int, shelter: str) -> None:
     )
 
 
-def _manual_expected_back_value(hour_text: str, minute_text: str, ampm_text: str) -> str:
+def _manual_time_value(hour_text: str, minute_text: str, ampm_text: str) -> str:
     hour_int = int(hour_text)
     minute_int = int(minute_text)
     ampm_value = (ampm_text or "").strip().upper()
@@ -382,7 +382,7 @@ def kiosk_checkin(shelter: str):
 
     db_execute(
         _attendance_insert_sql(),
-        (resident_id, shelter, "check_in", utcnow_iso(), None, None, None),
+        (resident_id, shelter, "check_in", utcnow_iso(), None, None, None, None, None, None),
     )
 
     _complete_active_passes(resident_id, shelter)
@@ -536,10 +536,11 @@ def kiosk_checkout(shelter: str):
             )
 
     expected_back_value = None
-    start_time_value = None
-    end_time_value = None
+    obligation_start_value = None
+    obligation_end_value = None
     active_pass = None
     resident_id = int(_row_get(row, "id", 0, 0)) if row else 0
+    destination_value = destination
 
     if destination == "Pass":
         if resident_id:
@@ -548,12 +549,15 @@ def kiosk_checkout(shelter: str):
             errors.append("No approved pass found.")
         else:
             expected_back_value = _pass_expected_back_value(active_pass)
+            pass_destination = (_row_get(active_pass, "destination", 2, "") or "").strip()
+            if pass_destination:
+                destination_value = pass_destination
     else:
         if not start_time_hour or not start_time_minute or not start_time_ampm:
             errors.append("Start Time is required.")
         else:
             try:
-                start_time_value = _manual_expected_back_value(
+                obligation_start_value = _manual_time_value(
                     start_time_hour,
                     start_time_minute,
                     start_time_ampm,
@@ -565,7 +569,7 @@ def kiosk_checkout(shelter: str):
             errors.append("End Time is required.")
         else:
             try:
-                end_time_value = _manual_expected_back_value(
+                obligation_end_value = _manual_time_value(
                     end_time_hour,
                     end_time_minute,
                     end_time_ampm,
@@ -577,7 +581,7 @@ def kiosk_checkout(shelter: str):
             errors.append("Expected Back to Shelter is required.")
         else:
             try:
-                expected_back_value = _manual_expected_back_value(
+                expected_back_value = _manual_time_value(
                     expected_back_hour,
                     expected_back_minute,
                     expected_back_ampm,
@@ -598,27 +602,21 @@ def kiosk_checkout(shelter: str):
         )
         return render_template("kiosk_checkout.html", shelter=shelter), 400
 
-    full_note = f"Destination: {destination}"
-
-    if start_time_value:
-        full_note = f"{full_note} | Start Time: {start_time_value}"
-
-    if end_time_value:
-        full_note = f"{full_note} | End Time: {end_time_value}"
+    note_parts = []
 
     if destination == "Pass" and active_pass:
         pass_id = _row_get(active_pass, "id", 0, "")
-        pass_destination = (_row_get(active_pass, "destination", 2, "") or "").strip()
         pass_type = (_row_get(active_pass, "pass_type", 1, "") or "").strip()
 
-        full_note = f"{full_note} | Pass ID: {pass_id}"
+        if pass_id:
+            note_parts.append(f"Pass ID: {pass_id}")
         if pass_type:
-            full_note = f"{full_note} | Pass Type: {pass_type}"
-        if pass_destination:
-            full_note = f"{full_note} | Pass Destination: {pass_destination}"
+            note_parts.append(f"Pass Type: {pass_type}")
 
     if note:
-        full_note = f"{full_note} | Note: {note}"
+        note_parts.append(note)
+
+    full_note = " | ".join(note_parts) if note_parts else None
 
     db_execute(
         _attendance_insert_sql(),
@@ -630,6 +628,9 @@ def kiosk_checkout(shelter: str):
             None,
             full_note,
             expected_back_value,
+            destination_value,
+            obligation_start_value,
+            obligation_end_value,
         ),
     )
 
@@ -639,7 +640,12 @@ def kiosk_checkout(shelter: str):
         shelter,
         None,
         "kiosk_check_out",
-        f"expected_back={expected_back_value or ''} {full_note}".strip(),
+        (
+            f"destination={destination_value or ''} "
+            f"start={obligation_start_value or ''} "
+            f"end={obligation_end_value or ''} "
+            f"expected_back={expected_back_value or ''}"
+        ).strip(),
     )
 
     flash("Checked out.", "ok")
