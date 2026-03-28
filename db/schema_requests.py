@@ -349,7 +349,6 @@ def ensure_resident_pass_request_details_columns(kind: str) -> None:
     ]
 
     for column_def in columns:
-        column_name = column_def.split()[0]
         try:
             if kind == "pg":
                 db_execute(
