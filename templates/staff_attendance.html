@@ -12,6 +12,15 @@
   {% set shelter_label = shelter %}
 {% endif %}
 
+{% set ns = namespace(pass_out_rows=[], normal_out_rows=[]) %}
+{% for row in out_rows %}
+  {% if row.has_active_pass %}
+    {% set _ = ns.pass_out_rows.append(row) %}
+  {% else %}
+    {% set _ = ns.normal_out_rows.append(row) %}
+  {% endif %}
+{% endfor %}
+
 <style>
   .att_wrap {
     display: flex;
@@ -189,47 +198,100 @@
     <table class="compact">
       <thead>
         <tr>
-          <th style="width: 34%;">Name</th>
-          <th style="width: 16%;">Status</th>
+          <th style="width: 30%;">Name</th>
+          <th style="width: 14%;">Status</th>
           <th style="width: 14%;">Out</th>
-          <th style="width: 18%;">Expected</th>
+          <th style="width: 24%;">Where supposed to be</th>
           <th style="width: 18%;">Actions</th>
         </tr>
       </thead>
       <tbody>
-        {% if not out_rows %}
+        {% if not ns.normal_out_rows %}
           <tr>
             <td colspan="5">No one is currently out.</td>
           </tr>
         {% else %}
-          {% for row in out_rows %}
+          {% for row in ns.normal_out_rows %}
             <tr>
               <td>
                 <div class="att_name_block">
                   <span class="att_icon att_out">←</span>
                   <span>{{ row.name }}</span>
-                  {% if row.has_active_pass %}
-                    <span class="att_badge att_badge_pass">Pass</span>
-                  {% endif %}
                 </div>
               </td>
 
               <td>
                 <div class="att_status_stack">
-                  {% if row.has_active_pass %}
-                    <span class="att_badge att_badge_pass">Out on Pass</span>
-                  {% else %}
-                    <span class="att_badge att_badge_out">Out</span>
-                  {% endif %}
+                  <span class="att_badge att_badge_out">Out</span>
                 </div>
               </td>
 
               <td>{{ fmt_time(row.checked_out_at) }}</td>
 
               <td>
-                {{ fmt_time(row.expected_back_at) }}
-                {% if row.note %}
-                  <div class="att_note_text">{{ row.note }}</div>
+                {% set cleaned_note = (row.note or '')|replace('[OUT]', '')|replace('[PASS]', '')|trim %}
+                {% if cleaned_note %}
+                  {{ cleaned_note }}
+                {% else %}
+                  <span style="color:#666;">Not listed</span>
+                {% endif %}
+              </td>
+
+              <td>
+                <div class="att_actions">
+                  <form method="post" action="{{ url_for('attendance.staff_attendance_check_in', resident_id=row.resident_id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button class="att_btn" type="submit">Check in</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+
+    <h2 class="att_section_title" style="margin-top: 18px;">Out on pass</h2>
+
+    <table class="compact">
+      <thead>
+        <tr>
+          <th style="width: 28%;">Name</th>
+          <th style="width: 14%;">Status</th>
+          <th style="width: 14%;">Out</th>
+          <th style="width: 26%;">Expected back</th>
+          <th style="width: 18%;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not ns.pass_out_rows %}
+          <tr>
+            <td colspan="5">No one is currently out on pass.</td>
+          </tr>
+        {% else %}
+          {% for row in ns.pass_out_rows %}
+            <tr>
+              <td>
+                <div class="att_name_block">
+                  <span class="att_icon att_out">←</span>
+                  <span>{{ row.name }}</span>
+                  <span class="att_badge att_badge_pass">Pass</span>
+                </div>
+              </td>
+
+              <td>
+                <div class="att_status_stack">
+                  <span class="att_badge att_badge_pass">Out on Pass</span>
+                </div>
+              </td>
+
+              <td>{{ fmt_time(row.checked_out_at) }}</td>
+
+              <td>
+                {{ row.expected_back_at | app_dt if row.expected_back_at else "" }}
+                {% set cleaned_note = (row.note or '')|replace('[PASS]', '')|replace('[OUT]', '')|trim %}
+                {% if cleaned_note %}
+                  <div class="att_note_text">{{ cleaned_note }}</div>
                 {% endif %}
               </td>
 
