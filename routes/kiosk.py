@@ -231,21 +231,22 @@ def kiosk_home(shelter: str):
     if not matched_shelter:
         return "Invalid shelter", 404
 
-    shelter = matched_shelter
+    display_shelter = matched_shelter
+    shelter_key = matched_shelter.strip().lower()
     ip = get_client_ip()
 
     if not _kiosk_enabled():
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_disabled_block",
             f"ip={ip}",
         )
         return "Kiosk intake is temporarily disabled.", 503
 
-    return render_template("kiosk_home.html", shelter=shelter)
+    return render_template("kiosk_home.html", shelter=display_shelter)
 
 
 @kiosk.route("/kiosk/<shelter>/checkin", methods=["GET", "POST"])
@@ -263,14 +264,15 @@ def kiosk_checkin(shelter: str):
     if not matched_shelter:
         return "Invalid shelter", 404
 
-    shelter = matched_shelter
+    display_shelter = matched_shelter
+    shelter_key = matched_shelter.strip().lower()
     ip = get_client_ip()
 
     if not _kiosk_enabled():
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_disabled_block",
             f"ip={ip}",
@@ -278,42 +280,42 @@ def kiosk_checkin(shelter: str):
         return "Kiosk intake is temporarily disabled.", 503
 
     if request.method == "GET":
-        return render_template("kiosk_checkin.html", shelter=shelter)
+        return render_template("kiosk_checkin.html", shelter=display_shelter)
 
     resident_code = (request.form.get("resident_code") or "").strip()
     code_key = resident_code if resident_code else "blank"
 
-    kiosk_cooldown_key = f"kiosk_cooldown:{shelter}:{ip}"
-    resident_code_lock_key = f"kiosk_resident_code_lock:{shelter}:{code_key}"
+    kiosk_cooldown_key = f"kiosk_cooldown:{shelter_key}:{ip}"
+    resident_code_lock_key = f"kiosk_resident_code_lock:{shelter_key}:{code_key}"
 
     if is_key_locked(kiosk_cooldown_key):
         seconds_remaining = get_key_lock_seconds_remaining(kiosk_cooldown_key)
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_cooldown_blocked",
             f"ip={ip} seconds_remaining={seconds_remaining}",
         )
         flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template("kiosk_checkin.html", shelter=shelter), 429
+        return render_template("kiosk_checkin.html", shelter=display_shelter), 429
 
     if is_key_locked(resident_code_lock_key):
         seconds_remaining = get_key_lock_seconds_remaining(resident_code_lock_key)
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_resident_code_locked",
             f"ip={ip} resident_code={code_key} seconds_remaining={seconds_remaining}",
         )
         flash("That Resident Code is temporarily locked. Please wait and try again.", "error")
-        return render_template("kiosk_checkin.html", shelter=shelter), 429
+        return render_template("kiosk_checkin.html", shelter=display_shelter), 429
 
     if is_rate_limited(
-        f"kiosk_checkin_cooldown_trigger:{shelter}:{ip}",
+        f"kiosk_checkin_cooldown_trigger:{shelter_key}:{ip}",
         limit=30,
         window_seconds=30,
     ):
@@ -321,37 +323,37 @@ def kiosk_checkin(shelter: str):
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_cooldown_started",
             f"ip={ip} seconds=30",
         )
         flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template("kiosk_checkin.html", shelter=shelter), 429
+        return render_template("kiosk_checkin.html", shelter=display_shelter), 429
 
-    if is_rate_limited(f"kiosk_checkin_ip:{shelter}:{ip}", limit=15, window_seconds=60):
+    if is_rate_limited(f"kiosk_checkin_ip:{shelter_key}:{ip}", limit=15, window_seconds=60):
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_checkin_rate_limited",
             f"ip={ip}",
         )
         flash("Too many attempts. Please wait and try again.", "error")
-        return render_template("kiosk_checkin.html", shelter=shelter), 429
+        return render_template("kiosk_checkin.html", shelter=display_shelter), 429
 
     errors = []
 
     if (not resident_code.isdigit()) or (len(resident_code) != 8):
         errors.append("Enter an 8 digit Resident Code.")
 
-    row = _active_resident_row(shelter, resident_code)
+    row = _active_resident_row(shelter_key, resident_code)
 
     if not row:
         errors.append("Invalid Resident Code.")
         if is_rate_limited(
-            f"kiosk_resident_code_fail:{shelter}:{code_key}",
+            f"kiosk_resident_code_fail:{shelter_key}:{code_key}",
             limit=5,
             window_seconds=300,
         ):
@@ -359,7 +361,7 @@ def kiosk_checkin(shelter: str):
             log_action(
                 "kiosk",
                 None,
-                shelter,
+                shelter_key,
                 None,
                 "kiosk_resident_code_lock_started",
                 f"ip={ip} resident_code={code_key} seconds=180",
@@ -371,33 +373,33 @@ def kiosk_checkin(shelter: str):
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_checkin_failed",
             f"ip={ip} resident_code={code_key} errors={' | '.join(errors)}",
         )
-        return render_template("kiosk_checkin.html", shelter=shelter), 400
+        return render_template("kiosk_checkin.html", shelter=display_shelter), 400
 
     resident_id = int(_row_get(row, "id", 0, 0))
 
     db_execute(
         _attendance_insert_sql(),
-        (resident_id, shelter, "check_in", utcnow_iso(), None, None, None, None, None, None),
+        (resident_id, shelter_key, "check_in", utcnow_iso(), None, None, None, None, None, None),
     )
 
-    _complete_active_passes(resident_id, shelter)
+    _complete_active_passes(resident_id, shelter_key)
 
     log_action(
         "attendance",
         resident_id,
-        shelter,
+        shelter_key,
         None,
         "kiosk_check_in",
         "",
     )
 
     flash("Checked in.", "ok")
-    return redirect(url_for("kiosk.kiosk_home", shelter=shelter))
+    return redirect(url_for("kiosk.kiosk_home", shelter=shelter_key))
 
 
 @kiosk.route("/kiosk/<shelter>/checkout", methods=["GET", "POST"])
@@ -415,14 +417,15 @@ def kiosk_checkout(shelter: str):
     if not matched_shelter:
         return "Invalid shelter", 404
 
-    shelter = matched_shelter
+    display_shelter = matched_shelter
+    shelter_key = matched_shelter.strip().lower()
     ip = get_client_ip()
 
     if not _kiosk_enabled():
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_disabled_block",
             f"ip={ip}",
@@ -430,7 +433,7 @@ def kiosk_checkout(shelter: str):
         return "Kiosk intake is temporarily disabled.", 503
 
     if request.method == "GET":
-        return render_template("kiosk_checkout.html", shelter=shelter)
+        return render_template("kiosk_checkout.html", shelter=display_shelter)
 
     resident_code = (request.form.get("resident_code") or "").strip()
     destination = (request.form.get("destination") or "").strip()
@@ -450,37 +453,37 @@ def kiosk_checkout(shelter: str):
     note = (request.form.get("note") or "").strip()
 
     code_key = resident_code if resident_code else "blank"
-    kiosk_cooldown_key = f"kiosk_cooldown:{shelter}:{ip}"
-    resident_code_lock_key = f"kiosk_resident_code_lock:{shelter}:{code_key}"
+    kiosk_cooldown_key = f"kiosk_cooldown:{shelter_key}:{ip}"
+    resident_code_lock_key = f"kiosk_resident_code_lock:{shelter_key}:{code_key}"
 
     if is_key_locked(kiosk_cooldown_key):
         seconds_remaining = get_key_lock_seconds_remaining(kiosk_cooldown_key)
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_cooldown_blocked",
             f"ip={ip} seconds_remaining={seconds_remaining}",
         )
         flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template("kiosk_checkout.html", shelter=shelter), 429
+        return render_template("kiosk_checkout.html", shelter=display_shelter), 429
 
     if is_key_locked(resident_code_lock_key):
         seconds_remaining = get_key_lock_seconds_remaining(resident_code_lock_key)
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_resident_code_locked",
             f"ip={ip} resident_code={code_key} seconds_remaining={seconds_remaining}",
         )
         flash("That Resident Code is temporarily locked. Please wait and try again.", "error")
-        return render_template("kiosk_checkout.html", shelter=shelter), 429
+        return render_template("kiosk_checkout.html", shelter=display_shelter), 429
 
     if is_rate_limited(
-        f"kiosk_checkout_cooldown_trigger:{shelter}:{ip}",
+        f"kiosk_checkout_cooldown_trigger:{shelter_key}:{ip}",
         limit=30,
         window_seconds=30,
     ):
@@ -488,25 +491,25 @@ def kiosk_checkout(shelter: str):
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_cooldown_started",
             f"ip={ip} seconds=30",
         )
         flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template("kiosk_checkout.html", shelter=shelter), 429
+        return render_template("kiosk_checkout.html", shelter=display_shelter), 429
 
-    if is_rate_limited(f"kiosk_checkout_ip:{shelter}:{ip}", limit=15, window_seconds=60):
+    if is_rate_limited(f"kiosk_checkout_ip:{shelter_key}:{ip}", limit=15, window_seconds=60):
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_checkout_rate_limited",
             f"ip={ip}",
         )
         flash("Too many attempts. Please wait and try again.", "error")
-        return render_template("kiosk_checkout.html", shelter=shelter), 429
+        return render_template("kiosk_checkout.html", shelter=display_shelter), 429
 
     errors = []
 
@@ -516,12 +519,12 @@ def kiosk_checkout(shelter: str):
     if not destination:
         errors.append("Destination is required.")
 
-    row = _active_resident_row(shelter, resident_code)
+    row = _active_resident_row(shelter_key, resident_code)
 
     if not row:
         errors.append("Invalid Resident Code.")
         if is_rate_limited(
-            f"kiosk_resident_code_fail:{shelter}:{code_key}",
+            f"kiosk_resident_code_fail:{shelter_key}:{code_key}",
             limit=5,
             window_seconds=300,
         ):
@@ -529,7 +532,7 @@ def kiosk_checkout(shelter: str):
             log_action(
                 "kiosk",
                 None,
-                shelter,
+                shelter_key,
                 None,
                 "kiosk_resident_code_lock_started",
                 f"ip={ip} resident_code={code_key} seconds=180",
@@ -544,7 +547,7 @@ def kiosk_checkout(shelter: str):
 
     if destination == "Pass":
         if resident_id:
-            active_pass = _active_pass_row(resident_id, shelter)
+            active_pass = _active_pass_row(resident_id, shelter_key)
         if not active_pass:
             errors.append("No approved pass found.")
         else:
@@ -595,12 +598,12 @@ def kiosk_checkout(shelter: str):
         log_action(
             "kiosk",
             None,
-            shelter,
+            shelter_key,
             None,
             "kiosk_checkout_failed",
             f"ip={ip} resident_code={code_key} errors={' | '.join(errors)}",
         )
-        return render_template("kiosk_checkout.html", shelter=shelter), 400
+        return render_template("kiosk_checkout.html", shelter=display_shelter), 400
 
     note_parts = []
 
@@ -622,7 +625,7 @@ def kiosk_checkout(shelter: str):
         _attendance_insert_sql(),
         (
             resident_id,
-            shelter,
+            shelter_key,
             "check_out",
             utcnow_iso(),
             None,
@@ -637,7 +640,7 @@ def kiosk_checkout(shelter: str):
     log_action(
         "attendance",
         resident_id,
-        shelter,
+        shelter_key,
         None,
         "kiosk_check_out",
         (
@@ -649,4 +652,4 @@ def kiosk_checkout(shelter: str):
     )
 
     flash("Checked out.", "ok")
-    return redirect(url_for("kiosk.kiosk_home", shelter=shelter))
+    return redirect(url_for("kiosk.kiosk_home", shelter=shelter_key))
