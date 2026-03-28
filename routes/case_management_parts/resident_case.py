@@ -11,6 +11,7 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.needs import get_open_enrollment_needs
 from routes.case_management_parts.needs import sync_enrollment_needs
+from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
 
 
 def _normalize_exit_assessment(row):
@@ -150,6 +151,7 @@ def resident_case_view(resident_id: int):
     followup_6_month = None
     followup_1_year = None
     open_needs = []
+    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
 
     try:
         children = db_fetchall(
@@ -381,6 +383,7 @@ def resident_case_view(resident_id: int):
         services=services,
         children=children,
         open_needs=open_needs,
+        recovery_snapshot=recovery_snapshot,
         followup_6_month=followup_6_month,
         followup_1_year=followup_1_year,
     )
