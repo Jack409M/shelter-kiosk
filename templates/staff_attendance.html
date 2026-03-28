@@ -198,10 +198,10 @@
     <table class="compact">
       <thead>
         <tr>
-          <th style="width: 30%;">Name</th>
+          <th style="width: 28%;">Name</th>
           <th style="width: 14%;">Status</th>
-          <th style="width: 14%;">Out</th>
-          <th style="width: 24%;">Where supposed to be</th>
+          <th style="width: 12%;">Out</th>
+          <th style="width: 28%;">Where supposed to be</th>
           <th style="width: 18%;">Actions</th>
         </tr>
       </thead>
@@ -230,10 +230,20 @@
 
               <td>
                 {% set cleaned_note = (row.note or '')|replace('[OUT]', '')|replace('[PASS]', '')|trim %}
-                {% if cleaned_note %}
-                  {{ cleaned_note }}
+                {% if row.destination %}
+                  <div>{{ row.destination }}</div>
+                {% elif cleaned_note %}
+                  <div>{{ cleaned_note }}</div>
                 {% else %}
-                  <span style="color:#666;">Not listed</span>
+                  <div style="color:#666;">Not listed</div>
+                {% endif %}
+
+                {% if row.obligation_start_at or row.obligation_end_at %}
+                  <div class="att_note_text">
+                    {% if row.obligation_start_at %}Start: {{ fmt_time(row.obligation_start_at) }}{% endif %}
+                    {% if row.obligation_start_at and row.obligation_end_at %} • {% endif %}
+                    {% if row.obligation_end_at %}End: {{ fmt_time(row.obligation_end_at) }}{% endif %}
+                  </div>
                 {% endif %}
               </td>
 
@@ -256,10 +266,10 @@
     <table class="compact">
       <thead>
         <tr>
-          <th style="width: 28%;">Name</th>
+          <th style="width: 26%;">Name</th>
           <th style="width: 14%;">Status</th>
-          <th style="width: 14%;">Out</th>
-          <th style="width: 26%;">Expected back</th>
+          <th style="width: 12%;">Out</th>
+          <th style="width: 30%;">Expected back</th>
           <th style="width: 18%;">Actions</th>
         </tr>
       </thead>
@@ -289,9 +299,11 @@
 
               <td>
                 {{ row.expected_back_at | app_dt if row.expected_back_at else "" }}
-                {% set cleaned_note = (row.note or '')|replace('[PASS]', '')|replace('[OUT]', '')|trim %}
-                {% if cleaned_note %}
-                  <div class="att_note_text">{{ cleaned_note }}</div>
+                {% if row.destination %}
+                  <div class="att_note_text">{{ row.destination }}</div>
+                {% endif %}
+                {% if row.note %}
+                  <div class="att_note_text">{{ row.note }}</div>
                 {% endif %}
               </td>
 
