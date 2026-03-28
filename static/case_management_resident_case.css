@@ -66,6 +66,56 @@ button.notebook-tab-btn.is-active span {
   background: #fafafa;
 }
 
+.edit-case-note-service-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 10px;
+  align-items: start;
+  margin-top: 10px;
+}
+
+.edit-case-note-radio-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.edit-case-note-help {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.edit-case-note-qty {
+  width: 80px;
+  margin-top: 4px;
+}
+
+.edit-case-note-unit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.edit-case-note-notes {
+  width: 100%;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.edit-case-note-actions {
+  margin-top: 10px;
+}
+
+.edit-case-note-checkbox-label {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+}
+
+.edit-case-note-checkbox-label input[type="checkbox"] {
+  margin-top: 3px;
+}
+
 @media print {
   body {
     background: #fff !important;
