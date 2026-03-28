@@ -434,9 +434,19 @@ def kiosk_checkout(shelter: str):
 
     resident_code = (request.form.get("resident_code") or "").strip()
     destination = (request.form.get("destination") or "").strip()
+
+    start_time_hour = (request.form.get("start_time_hour") or "").strip()
+    start_time_minute = (request.form.get("start_time_minute") or "").strip()
+    start_time_ampm = (request.form.get("start_time_ampm") or "").strip().upper()
+
+    end_time_hour = (request.form.get("end_time_hour") or "").strip()
+    end_time_minute = (request.form.get("end_time_minute") or "").strip()
+    end_time_ampm = (request.form.get("end_time_ampm") or "").strip().upper()
+
     expected_back_hour = (request.form.get("expected_back_hour") or "").strip()
     expected_back_minute = (request.form.get("expected_back_minute") or "").strip()
     expected_back_ampm = (request.form.get("expected_back_ampm") or "").strip().upper()
+
     note = (request.form.get("note") or "").strip()
 
     code_key = resident_code if resident_code else "blank"
@@ -526,6 +536,8 @@ def kiosk_checkout(shelter: str):
             )
 
     expected_back_value = None
+    start_time_value = None
+    end_time_value = None
     active_pass = None
     resident_id = int(_row_get(row, "id", 0, 0)) if row else 0
 
@@ -537,8 +549,32 @@ def kiosk_checkout(shelter: str):
         else:
             expected_back_value = _pass_expected_back_value(active_pass)
     else:
+        if not start_time_hour or not start_time_minute or not start_time_ampm:
+            errors.append("Start Time is required.")
+        else:
+            try:
+                start_time_value = _manual_expected_back_value(
+                    start_time_hour,
+                    start_time_minute,
+                    start_time_ampm,
+                )
+            except Exception:
+                errors.append("Invalid Start Time.")
+
+        if not end_time_hour or not end_time_minute or not end_time_ampm:
+            errors.append("End Time is required.")
+        else:
+            try:
+                end_time_value = _manual_expected_back_value(
+                    end_time_hour,
+                    end_time_minute,
+                    end_time_ampm,
+                )
+            except Exception:
+                errors.append("Invalid End Time.")
+
         if not expected_back_hour or not expected_back_minute or not expected_back_ampm:
-            errors.append("Expected back time is required.")
+            errors.append("Expected Back to Shelter is required.")
         else:
             try:
                 expected_back_value = _manual_expected_back_value(
@@ -547,7 +583,7 @@ def kiosk_checkout(shelter: str):
                     expected_back_ampm,
                 )
             except Exception:
-                errors.append("Invalid expected back time.")
+                errors.append("Invalid Expected Back to Shelter.")
 
     if errors:
         for error_message in errors:
@@ -563,6 +599,12 @@ def kiosk_checkout(shelter: str):
         return render_template("kiosk_checkout.html", shelter=shelter), 400
 
     full_note = f"Destination: {destination}"
+
+    if start_time_value:
+        full_note = f"{full_note} | Start Time: {start_time_value}"
+
+    if end_time_value:
+        full_note = f"{full_note} | End Time: {end_time_value}"
 
     if destination == "Pass" and active_pass:
         pass_id = _row_get(active_pass, "id", 0, "")
