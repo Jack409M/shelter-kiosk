@@ -181,21 +181,9 @@
           <label for="staff_user_id">Staff</label>
           <select id="staff_user_id" name="staff_user_id">
             <option value="">All</option>
-            {% set seen = namespace(ids=[]) %}
-            {% for r in rows %}
-              {% if r.staff_user_id and (r.staff_user_id not in seen.ids) %}
-                {% set _ = seen.ids.append(r.staff_user_id) %}
-              {% endif %}
-            {% endfor %}
-            {% for sid in seen.ids %}
-              {% set display = namespace(value="") %}
-              {% for r in rows %}
-                {% if r.staff_user_id == sid and not display.value %}
-                  {% set display.value = r.staff_username or ("User " ~ sid) %}
-                {% endif %}
-              {% endfor %}
-              <option value="{{ sid }}" {% if staff_user_id_val == (sid|string) %}selected{% endif %}>
-                {{ display.value }}
+            {% for staff in staff_options %}
+              <option value="{{ staff.staff_user_id }}" {% if staff_user_id_val == (staff.staff_user_id|string) %}selected{% endif %}>
+                {{ staff.staff_username }}
               </option>
             {% endfor %}
           </select>
@@ -205,13 +193,7 @@
           <label for="entity_type">Entity</label>
           <select id="entity_type" name="entity_type">
             <option value="">All</option>
-            {% set entities = namespace(vals=[]) %}
-            {% for r in rows %}
-              {% if r.entity_type and (r.entity_type not in entities.vals) %}
-                {% set _ = entities.vals.append(r.entity_type) %}
-              {% endif %}
-            {% endfor %}
-            {% for v in entities.vals|sort %}
+            {% for v in entity_options %}
               <option value="{{ v }}" {% if entity_type_val == v %}selected{% endif %}>{{ v }}</option>
             {% endfor %}
           </select>
@@ -221,13 +203,7 @@
           <label for="action_type">Action</label>
           <select id="action_type" name="action_type">
             <option value="">All</option>
-            {% set actions = namespace(vals=[]) %}
-            {% for r in rows %}
-              {% if r.action_type and (r.action_type not in actions.vals) %}
-                {% set _ = actions.vals.append(r.action_type) %}
-              {% endif %}
-            {% endfor %}
-            {% for v in actions.vals|sort %}
+            {% for v in action_options %}
               <option value="{{ v }}" {% if action_type_val == v %}selected{% endif %}>{{ v }}</option>
             {% endfor %}
           </select>
