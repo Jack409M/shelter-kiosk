@@ -71,8 +71,8 @@ def ensure_residents_table(kind: str) -> None:
             sponsor_name TEXT,
             employer_name TEXT,
             monthly_income REAL,
-            aa_step_current INTEGER,
-            aa_step_changed_at TEXT,
+            step_current INTEGER,
+            step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
@@ -97,8 +97,8 @@ def ensure_residents_table(kind: str) -> None:
             sponsor_name TEXT,
             employer_name TEXT,
             monthly_income DOUBLE PRECISION,
-            aa_step_current INTEGER,
-            aa_step_changed_at TEXT,
+            step_current INTEGER,
+            step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
@@ -204,8 +204,8 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sponsor_name TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS employer_name TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS monthly_income DOUBLE PRECISION",
-            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS aa_step_current INTEGER",
-            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS aa_step_changed_at TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_current INTEGER",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_changed_at TEXT",
         ]
     else:
         statements = [
@@ -213,8 +213,8 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN sponsor_name TEXT",
             "ALTER TABLE residents ADD COLUMN employer_name TEXT",
             "ALTER TABLE residents ADD COLUMN monthly_income REAL",
-            "ALTER TABLE residents ADD COLUMN aa_step_current INTEGER",
-            "ALTER TABLE residents ADD COLUMN aa_step_changed_at TEXT",
+            "ALTER TABLE residents ADD COLUMN step_current INTEGER",
+            "ALTER TABLE residents ADD COLUMN step_changed_at TEXT",
         ]
 
     for statement in statements:
@@ -222,6 +222,31 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             db_execute(statement)
         except Exception:
             pass
+
+    try:
+        db_execute(
+            """
+            UPDATE residents
+            SET step_current = aa_step_current
+            WHERE step_current IS NULL
+              AND aa_step_current IS NOT NULL
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            UPDATE residents
+            SET step_changed_at = aa_step_changed_at
+            WHERE (step_changed_at IS NULL OR step_changed_at = '')
+              AND aa_step_changed_at IS NOT NULL
+              AND aa_step_changed_at <> ''
+            """
+        )
+    except Exception:
+        pass
 
 
 def ensure_reporting_columns(kind: str) -> None:
@@ -436,8 +461,8 @@ def ensure_indexes() -> None:
 
     try:
         db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_aa_step_current_idx "
-            "ON residents (aa_step_current)"
+            "CREATE INDEX IF NOT EXISTS residents_step_current_idx "
+            "ON residents (step_current)"
         )
     except Exception:
         pass
