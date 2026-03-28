@@ -19,6 +19,7 @@ ALLOWED_SERVICE_TYPES = {
     "Parenting Support",
     "Legal Assistance",
     "Transportation",
+    "Daycare",
     "Other",
 }
 
