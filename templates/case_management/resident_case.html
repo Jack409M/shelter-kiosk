@@ -1,5 +1,9 @@
 {% extends "layout.html" %}
 
+{% block extra_head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328a') }}">
+{% endblock %}
+
 {% block content %}
 
 {% set resident_id = resident["id"] %}
@@ -92,140 +96,6 @@
     </form>
   </div>
 {% else %}
-
-  <style>
-    .case-note-tile.is-active {
-      border-color: #555 !important;
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
-    }
-
-    .print-only-note {
-      display: none;
-    }
-
-    .case-note-text-block {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-    }
-
-    .notebook-tabs {
-      display: flex;
-      gap: 8px;
-      margin: 12px 0;
-      flex-wrap: wrap;
-    }
-
-    .notebook-tab-btn {
-      background: #f3f4f6 !important;
-      color: #111111 !important;
-      border: 1px solid #d1d5db !important;
-    }
-
-    .notebook-tab-btn:visited,
-    .notebook-tab-btn:hover,
-    .notebook-tab-btn:focus,
-    .notebook-tab-btn:active {
-      color: #111111 !important;
-    }
-
-    .notebook-tab-btn.is-active,
-    .notebook-tab-btn.is-active:visited,
-    .notebook-tab-btn.is-active:hover,
-    .notebook-tab-btn.is-active:focus,
-    .notebook-tab-btn.is-active:active {
-      background: #1e3a8a !important;
-      color: #ffffff !important;
-      border-color: #1e3a8a !important;
-      box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.25) !important;
-      font-weight: 700 !important;
-      -webkit-text-fill-color: #ffffff !important;
-    }
-
-    button.notebook-tab-btn.is-active,
-    button.notebook-tab-btn.is-active span {
-      color: #ffffff !important;
-      -webkit-text-fill-color: #ffffff !important;
-    }
-
-    .needs-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 12px;
-      margin-top: 10px;
-    }
-
-    .need-card {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 12px;
-      background: #fafafa;
-    }
-
-    @media print {
-      body {
-        background: #fff !important;
-      }
-
-      .no-print,
-      .notebook-tabs,
-      #case-note-scroll-lane,
-      .case-note-tile,
-      .print-hide,
-      h1,
-      .case-note-panel,
-      .progress-notes-heading,
-      .progress-notes-empty {
-        display: none !important;
-      }
-
-      .case-header-strip {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px !important;
-        margin-bottom: 6px !important;
-      }
-
-      .case-header-print {
-        display: block !important;
-        border: 1px solid #ccc !important;
-        padding: 8px !important;
-        box-shadow: none !important;
-      }
-
-      .case-header-print h2 {
-        margin: 0 0 4px 0 !important;
-        font-size: 1.05em !important;
-      }
-
-      .case-header-print p {
-        margin: 0 !important;
-        line-height: 1.2 !important;
-        font-size: 0.92em !important;
-      }
-
-      .print-only-note {
-        display: block !important;
-        margin-top: 6px !important;
-      }
-
-      .print-only-note .card {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-      }
-
-      .case-note-text-block {
-        white-space: pre-wrap !important;
-        overflow-wrap: anywhere !important;
-        word-break: break-word !important;
-      }
-    }
-  </style>
 
   <div class="notebook-tabs no-print">
     <button
@@ -896,84 +766,12 @@
       </div>
 
       <div id="print-selected-note" class="print-only-note"></div>
-
-      <script>
-        (function () {
-          var lane = document.getElementById("case-note-scroll-lane");
-          var tiles = Array.prototype.slice.call(document.querySelectorAll(".case-note-tile"));
-          var panels = Array.prototype.slice.call(document.querySelectorAll(".case-note-panel"));
-          var printBox = document.getElementById("print-selected-note");
-
-          function showPanel(panelId, printId) {
-            panels.forEach(function (panel) {
-              panel.style.display = panel.id === panelId ? "block" : "none";
-            });
-
-            tiles.forEach(function (tile) {
-              if (tile.getAttribute("data-note-target") === panelId) {
-                tile.classList.add("is-active");
-              } else {
-                tile.classList.remove("is-active");
-              }
-            });
-
-            if (printBox && printId) {
-              var tpl = document.getElementById(printId);
-              if (tpl) {
-                printBox.innerHTML = tpl.innerHTML;
-              }
-            }
-          }
-
-          tiles.forEach(function (tile) {
-            tile.addEventListener("click", function () {
-              showPanel(
-                tile.getAttribute("data-note-target"),
-                tile.getAttribute("data-print-target")
-              );
-            });
-          });
-
-          if (lane) {
-            lane.scrollLeft = lane.scrollWidth;
-          }
-
-          if (tiles.length > 0) {
-            var newestTile = tiles[tiles.length - 1];
-            showPanel(
-              newestTile.getAttribute("data-note-target"),
-              newestTile.getAttribute("data-print-target")
-            );
-          }
-        })();
-      </script>
     {% else %}
       <p class="progress-notes-empty">No monthly meetings recorded.</p>
     {% endif %}
   </div>
 
-  <script>
-    function showResidentNotebookTab(tabId, btnEl) {
-      var tabs = document.querySelectorAll(".resident-notebook-tab");
-      tabs.forEach(function (tab) {
-        tab.style.display = "none";
-      });
-
-      var buttons = document.querySelectorAll(".notebook-tab-btn");
-      buttons.forEach(function (button) {
-        button.classList.remove("is-active");
-      });
-
-      var target = document.getElementById(tabId);
-      if (target) {
-        target.style.display = "block";
-      }
-
-      if (btnEl) {
-        btnEl.classList.add("is-active");
-      }
-    }
-  </script>
+  <script src="{{ url_for('static', filename='resident_case_notebook.js', v='20260328a') }}"></script>
 
 {% endif %}
 
