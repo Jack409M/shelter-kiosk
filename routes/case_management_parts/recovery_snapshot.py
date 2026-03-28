@@ -74,8 +74,8 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             sponsor_name,
             employer_name,
             monthly_income,
-            aa_step_current,
-            aa_step_changed_at
+            step_current,
+            step_changed_at
         FROM residents
         WHERE id = {ph}
         LIMIT 1
@@ -150,8 +150,8 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         (resident_id,),
     )
 
-    aa_step_changed_at = resident.get("aa_step_changed_at")
-    aa_step_days = _days_since(aa_step_changed_at)
+    step_changed_at = resident.get("step_changed_at")
+    step_days = _days_since(step_changed_at)
 
     medication_items = []
     for med in medications or []:
@@ -176,9 +176,9 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "employer_name": resident.get("employer_name"),
         "monthly_income": resident.get("monthly_income"),
         "monthly_income_display": _money_display(resident.get("monthly_income")),
-        "aa_step_current": resident.get("aa_step_current"),
-        "aa_step_changed_at": aa_step_changed_at,
-        "aa_step_days": aa_step_days,
+        "step_current": resident.get("step_current"),
+        "step_changed_at": step_changed_at,
+        "step_days": step_days,
         "medications": medication_items,
         "medication_count": len(medication_items),
         "latest_ua": None,
