@@ -281,6 +281,172 @@ def ensure_resident_needs_table(kind: str) -> None:
     )
 
 
+def ensure_resident_medications_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS resident_medications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            enrollment_id INTEGER,
+            medication_name TEXT NOT NULL,
+            dosage TEXT,
+            frequency TEXT,
+            purpose TEXT,
+            prescribed_by TEXT,
+            started_on TEXT,
+            ended_on TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            notes TEXT,
+            created_by_staff_user_id INTEGER,
+            updated_by_staff_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (resident_id) REFERENCES residents(id),
+            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS resident_medications (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            enrollment_id INTEGER REFERENCES program_enrollments(id),
+            medication_name TEXT NOT NULL,
+            dosage TEXT,
+            frequency TEXT,
+            purpose TEXT,
+            prescribed_by TEXT,
+            started_on TEXT,
+            ended_on TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            notes TEXT,
+            created_by_staff_user_id INTEGER,
+            updated_by_staff_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def ensure_resident_ua_log_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS resident_ua_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            enrollment_id INTEGER,
+            ua_date TEXT NOT NULL,
+            result TEXT,
+            substances_detected TEXT,
+            administered_by_staff_user_id INTEGER,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (resident_id) REFERENCES residents(id),
+            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS resident_ua_log (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            enrollment_id INTEGER REFERENCES program_enrollments(id),
+            ua_date TEXT NOT NULL,
+            result TEXT,
+            substances_detected TEXT,
+            administered_by_staff_user_id INTEGER,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def ensure_resident_living_area_inspections_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS resident_living_area_inspections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            enrollment_id INTEGER,
+            inspection_date TEXT NOT NULL,
+            passed BOOLEAN NOT NULL DEFAULT FALSE,
+            inspected_by_staff_user_id INTEGER,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (resident_id) REFERENCES residents(id),
+            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS resident_living_area_inspections (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            enrollment_id INTEGER REFERENCES program_enrollments(id),
+            inspection_date TEXT NOT NULL,
+            passed BOOLEAN NOT NULL DEFAULT FALSE,
+            inspected_by_staff_user_id INTEGER,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def ensure_resident_budget_sessions_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS resident_budget_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            enrollment_id INTEGER,
+            session_date TEXT NOT NULL,
+            staff_user_id INTEGER,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (resident_id) REFERENCES residents(id),
+            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS resident_budget_sessions (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            enrollment_id INTEGER REFERENCES program_enrollments(id),
+            session_date TEXT NOT NULL,
+            staff_user_id INTEGER,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_case_manager_updates_columns() -> None:
     statements = [
         "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS updated_grit INTEGER",
@@ -316,7 +482,6 @@ def ensure_intake_drafts_columns() -> None:
         except Exception:
             pass
 
-    # Backfill canonical draft_data from legacy form_payload when possible.
     try:
         db_execute(
             """
@@ -331,7 +496,6 @@ def ensure_intake_drafts_columns() -> None:
     except Exception:
         pass
 
-    # Ensure draft_data is never left empty after migration runs.
     try:
         db_execute(
             """
@@ -381,6 +545,81 @@ def ensure_resident_needs_columns() -> None:
         "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS resolved_by_staff_user_id INTEGER",
         "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS created_at TEXT",
         "ALTER TABLE resident_needs ADD COLUMN IF NOT EXISTS updated_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_resident_medications_columns() -> None:
+    statements = [
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS enrollment_id INTEGER",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS dosage TEXT",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS frequency TEXT",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS purpose TEXT",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS prescribed_by TEXT",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS started_on TEXT",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS ended_on TEXT",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS notes TEXT",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS created_by_staff_user_id INTEGER",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS updated_by_staff_user_id INTEGER",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE resident_medications ADD COLUMN IF NOT EXISTS updated_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_resident_ua_log_columns() -> None:
+    statements = [
+        "ALTER TABLE resident_ua_log ADD COLUMN IF NOT EXISTS enrollment_id INTEGER",
+        "ALTER TABLE resident_ua_log ADD COLUMN IF NOT EXISTS result TEXT",
+        "ALTER TABLE resident_ua_log ADD COLUMN IF NOT EXISTS substances_detected TEXT",
+        "ALTER TABLE resident_ua_log ADD COLUMN IF NOT EXISTS administered_by_staff_user_id INTEGER",
+        "ALTER TABLE resident_ua_log ADD COLUMN IF NOT EXISTS notes TEXT",
+        "ALTER TABLE resident_ua_log ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE resident_ua_log ADD COLUMN IF NOT EXISTS updated_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_resident_living_area_inspections_columns() -> None:
+    statements = [
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS enrollment_id INTEGER",
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS passed BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS inspected_by_staff_user_id INTEGER",
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS notes TEXT",
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS updated_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_resident_budget_sessions_columns() -> None:
+    statements = [
+        "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS enrollment_id INTEGER",
+        "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS staff_user_id INTEGER",
+        "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS notes TEXT",
+        "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
 
     for statement in statements:
@@ -691,6 +930,156 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_medications_resident_idx
+            ON resident_medications (resident_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_medications_enrollment_idx
+            ON resident_medications (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_medications_active_idx
+            ON resident_medications (resident_id, is_active)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_ua_log_resident_idx
+            ON resident_ua_log (resident_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_ua_log_enrollment_idx
+            ON resident_ua_log (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_ua_log_date_idx
+            ON resident_ua_log (ua_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_ua_log_resident_date_idx
+            ON resident_ua_log (resident_id, ua_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_living_area_inspections_resident_idx
+            ON resident_living_area_inspections (resident_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_living_area_inspections_enrollment_idx
+            ON resident_living_area_inspections (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_living_area_inspections_date_idx
+            ON resident_living_area_inspections (inspection_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_living_area_inspections_resident_date_idx
+            ON resident_living_area_inspections (resident_id, inspection_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_budget_sessions_resident_idx
+            ON resident_budget_sessions (resident_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_budget_sessions_enrollment_idx
+            ON resident_budget_sessions (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_budget_sessions_date_idx
+            ON resident_budget_sessions (session_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_budget_sessions_resident_date_idx
+            ON resident_budget_sessions (resident_id, session_date)
+            """
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
@@ -699,9 +1088,17 @@ def ensure_tables(kind: str) -> None:
     ensure_child_services_table(kind)
     ensure_intake_drafts_table(kind)
     ensure_resident_needs_table(kind)
+    ensure_resident_medications_table(kind)
+    ensure_resident_ua_log_table(kind)
+    ensure_resident_living_area_inspections_table(kind)
+    ensure_resident_budget_sessions_table(kind)
     ensure_case_manager_updates_columns()
     ensure_intake_drafts_columns()
     ensure_client_services_columns()
     ensure_child_services_columns()
     ensure_resident_needs_columns()
+    ensure_resident_medications_columns()
+    ensure_resident_ua_log_columns()
+    ensure_resident_living_area_inspections_columns()
+    ensure_resident_budget_sessions_columns()
     ensure_indexes()
