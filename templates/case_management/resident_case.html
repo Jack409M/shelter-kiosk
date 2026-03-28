@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328a') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328c') }}">
 {% endblock %}
 
 {% block content %}
@@ -49,7 +49,7 @@
 
 <h1>Case Management</h1>
 
-<div style="display:grid; grid-template-columns:repeat(2, minmax(280px, 1fr)); gap:12px;" class="case-header-strip">
+<div class="case-header-strip">
   <div class="card case-header-print">
     <h2>{{ first_name }} {{ last_name }}</h2>
 
@@ -90,7 +90,7 @@
       <label><strong>Program Entry Date</strong></label>
       <input type="date" name="entry_date" required>
 
-      <div style="margin-top:10px;">
+      <div class="case-section-top">
         <button type="submit">Start Enrollment</button>
       </div>
     </form>
@@ -134,7 +134,7 @@
         <label><strong>Meeting Date</strong></label>
         <input type="date" name="meeting_date" required>
 
-        <h3 style="margin-top:16px;">Open Needs</h3>
+        <h3 class="case-subsection-heading">Open Needs</h3>
 
         {% if open_needs %}
           <div class="needs-grid">
@@ -145,19 +145,19 @@
               <div class="need-card">
                 <div><strong>{{ need_label }}</strong></div>
                 {% if source_value %}
-                  <div style="margin-top:4px; font-size:0.9em; color:#666;">
+                  <div class="case-help-text case-help-text-top">
                     Intake trigger: {{ source_value }}
                   </div>
                 {% endif %}
 
-                <label style="margin-top:10px;"><strong>Status</strong></label>
+                <label class="case-label-top"><strong>Status</strong></label>
                 <select name="need_status_{{ need_key }}">
                   <option value="">Leave Open</option>
                   <option value="addressed">Addressed</option>
                   <option value="not_applicable">Not Applicable</option>
                 </select>
 
-                <label style="margin-top:10px;"><strong>Resolution Note</strong></label>
+                <label class="case-label-top"><strong>Resolution Note</strong></label>
                 <textarea
                   name="need_note_{{ need_key }}"
                   rows="2"
@@ -167,7 +167,7 @@
             {% endfor %}
           </div>
         {% else %}
-          <p style="margin-top:8px; color:#666;">No open intake driven needs.</p>
+          <p class="case-help-text case-help-text-top">No open intake driven needs.</p>
         {% endif %}
 
         <label><strong>Notes</strong></label>
@@ -180,16 +180,16 @@
         <textarea name="action_items" rows="3"></textarea>
 
         <label><strong>Updated Grit</strong></label>
-        <input type="number" name="updated_grit" min="0" max="100" style="width:70px;" inputmode="numeric">
+        <input type="number" name="updated_grit" min="0" max="100" class="case-compact-number" inputmode="numeric">
 
         <label><strong>Parenting Class Completed</strong></label>
-        <label style="display:flex; gap:10px; margin-top:4px;">
+        <label class="case-radio-row">
           <input type="radio" name="parenting_class_completed" value="yes"> Yes
           <input type="radio" name="parenting_class_completed" value="no"> No
         </label>
 
         <label><strong>Warrants or Fines Paid</strong></label>
-        <label style="display:flex; gap:10px; margin-top:4px;">
+        <label class="case-radio-row">
           <input type="radio" name="warrants_or_fines_paid" value="yes"> Yes
           <input type="radio" name="warrants_or_fines_paid" value="no"> No
         </label>
@@ -201,198 +201,198 @@
         <label><strong>Service Date</strong></label>
         <input type="date" name="service_date">
 
-        <div style="display:grid; grid-template-columns:repeat(4, minmax(160px, 1fr)); gap:10px; align-items:start; margin-top:10px;">
+        <div class="case-service-grid">
           <div>
-            <label style="display:flex; gap:6px; margin:0;">
-              <input type="checkbox" name="service_type" value="Counseling" style="margin-top:3px;">
+            <label class="case-checkbox-label">
+              <input type="checkbox" name="service_type" value="Counseling" class="case-checkbox-input">
               <span>Counseling</span>
             </label>
             <input
               type="number"
               name="quantity_Counseling"
               min="0"
-              style="width:80px; margin-top:4px;"
+              class="case-service-qty"
               placeholder="Qty"
             >
             <input
               type="text"
               name="unit_Counseling"
-              style="width:100%; margin-top:4px;"
+              class="case-service-unit"
               placeholder="sessions"
               value="sessions"
             >
             <textarea
               name="service_notes_Counseling"
               rows="2"
-              style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+              class="case-service-notes"
               placeholder="Counseling notes"
             ></textarea>
           </div>
 
           <div>
-            <label style="display:flex; gap:6px; margin:0;">
-              <input type="checkbox" name="service_type" value="Dental" style="margin-top:3px;">
+            <label class="case-checkbox-label">
+              <input type="checkbox" name="service_type" value="Dental" class="case-checkbox-input">
               <span>Dental</span>
             </label>
             <input
               type="number"
               name="quantity_Dental"
               min="0"
-              style="width:80px; margin-top:4px;"
+              class="case-service-qty"
               placeholder="Qty"
             >
             <input
               type="text"
               name="unit_Dental"
-              style="width:100%; margin-top:4px;"
+              class="case-service-unit"
               placeholder="visits"
               value="visits"
             >
             <textarea
               name="service_notes_Dental"
               rows="2"
-              style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+              class="case-service-notes"
               placeholder="Dental notes"
             ></textarea>
           </div>
 
           <div>
-            <label style="display:flex; gap:6px; margin:0;">
-              <input type="checkbox" name="service_type" value="Vision" style="margin-top:3px;">
+            <label class="case-checkbox-label">
+              <input type="checkbox" name="service_type" value="Vision" class="case-checkbox-input">
               <span>Vision</span>
             </label>
             <input
               type="number"
               name="quantity_Vision"
               min="0"
-              style="width:80px; margin-top:4px;"
+              class="case-service-qty"
               placeholder="Qty"
             >
             <input
               type="text"
               name="unit_Vision"
-              style="width:100%; margin-top:4px;"
+              class="case-service-unit"
               placeholder="visits"
               value="visits"
             >
             <textarea
               name="service_notes_Vision"
               rows="2"
-              style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+              class="case-service-notes"
               placeholder="Vision notes"
             ></textarea>
           </div>
 
           <div>
-            <label style="display:flex; gap:6px; margin:0;">
-              <input type="checkbox" name="service_type" value="Daycare" style="margin-top:3px;">
+            <label class="case-checkbox-label">
+              <input type="checkbox" name="service_type" value="Daycare" class="case-checkbox-input">
               <span>Daycare</span>
             </label>
             <input
               type="number"
               name="quantity_Daycare"
               min="0"
-              style="width:80px; margin-top:4px;"
+              class="case-service-qty"
               placeholder="Qty"
             >
             <input
               type="text"
               name="unit_Daycare"
-              style="width:100%; margin-top:4px;"
+              class="case-service-unit"
               placeholder="days"
               value="days"
             >
             <textarea
               name="service_notes_Daycare"
               rows="2"
-              style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+              class="case-service-notes"
               placeholder="Daycare notes"
             ></textarea>
           </div>
 
           <div>
-            <label style="display:flex; gap:6px; margin:0;">
-              <input type="checkbox" name="service_type" value="Legal Assistance" style="margin-top:3px;">
+            <label class="case-checkbox-label">
+              <input type="checkbox" name="service_type" value="Legal Assistance" class="case-checkbox-input">
               <span>Legal Assistance</span>
             </label>
             <input
               type="number"
               name="quantity_Legal Assistance"
               min="0"
-              style="width:80px; margin-top:4px;"
+              class="case-service-qty"
               placeholder="Qty"
             >
             <input
               type="text"
               name="unit_Legal Assistance"
-              style="width:100%; margin-top:4px;"
+              class="case-service-unit"
               placeholder="visits"
               value="visits"
             >
             <textarea
               name="service_notes_Legal Assistance"
               rows="2"
-              style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+              class="case-service-notes"
               placeholder="Legal assistance notes"
             ></textarea>
           </div>
 
           <div>
-            <label style="display:flex; gap:6px; margin:0;">
-              <input type="checkbox" name="service_type" value="Transportation" style="margin-top:3px;">
+            <label class="case-checkbox-label">
+              <input type="checkbox" name="service_type" value="Transportation" class="case-checkbox-input">
               <span>Transportation</span>
             </label>
             <input
               type="number"
               name="quantity_Transportation"
               min="0"
-              style="width:80px; margin-top:4px;"
+              class="case-service-qty"
               placeholder="Qty"
             >
             <input
               type="text"
               name="unit_Transportation"
-              style="width:100%; margin-top:4px;"
+              class="case-service-unit"
               placeholder="rides"
               value="rides"
             >
             <textarea
               name="service_notes_Transportation"
               rows="2"
-              style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+              class="case-service-notes"
               placeholder="Transportation notes"
             ></textarea>
           </div>
 
           <div>
-            <label style="display:flex; gap:6px; margin:0;">
-              <input type="checkbox" name="service_type" value="Other" style="margin-top:3px;">
+            <label class="case-checkbox-label">
+              <input type="checkbox" name="service_type" value="Other" class="case-checkbox-input">
               <span>Other</span>
             </label>
             <input
               type="number"
               name="quantity_Other"
               min="0"
-              style="width:80px; margin-top:4px;"
+              class="case-service-qty"
               placeholder="Qty"
             >
             <input
               type="text"
               name="unit_Other"
-              style="width:100%; margin-top:4px;"
+              class="case-service-unit"
               placeholder="units"
               value="units"
             >
             <textarea
               name="service_notes_Other"
               rows="2"
-              style="width:100%; margin-top:4px; white-space:pre-wrap; overflow-wrap:break-word;"
+              class="case-service-notes"
               placeholder="Other service notes"
             ></textarea>
           </div>
         </div>
 
-        <div style="margin-top:10px;">
+        <div class="case-section-top">
           <button type="submit">Save Monthly Update</button>
         </div>
       </form>
@@ -522,7 +522,7 @@
               <tr>
                 <td colspan="5">
                   {% if child.services %}
-                    <div style="font-size:0.9em; color:#555;">
+                    <div class="case-child-services-list">
                       {% for s in child.services %}
                         <div>
                           <strong>{{ s.service_date_display }}</strong> —
@@ -534,7 +534,7 @@
                             — {{ s.outcome_display }}
                           {% endif %}
                           {% if s.notes %}
-                            <div style="margin-left:10px; color:#555;">
+                            <div class="case-child-service-note">
                               {{ s.notes }}
                             </div>
                           {% endif %}
@@ -542,7 +542,7 @@
                       {% endfor %}
                     </div>
                   {% else %}
-                    <div style="font-size:0.9em; color:#999;">
+                    <div class="case-empty-muted">
                       No services recorded
                     </div>
                   {% endif %}
@@ -561,11 +561,7 @@
     <h2 class="progress-notes-heading">Progress Notes</h2>
 
     {% if notes %}
-      <div
-        id="case-note-scroll-lane"
-        class="no-print"
-        style="display:flex; gap:10px; overflow-x:auto; padding:4px 2px 10px 2px; scroll-behavior:smooth;"
-      >
+      <div id="case-note-scroll-lane" class="no-print case-note-scroll-lane">
         {% for note in notes %}
           {% set note_id = note["id"] %}
           {% set note_meeting_date = note["meeting_date"] %}
@@ -576,11 +572,10 @@
             class="case-note-tile"
             data-note-target="case-note-panel-{{ note_id }}"
             data-print-target="print-case-note-{{ note_id }}"
-            style="flex:0 0 15.5%; min-width:170px; max-width:220px; border:1px solid #ddd; border-radius:8px; background:#fff; padding:10px; cursor:pointer; text-align:center;"
           >
             <div><strong>{{ note_meeting_date or "—" }}</strong></div>
             {% if note_services %}
-              <div style="margin-top:4px; font-size:0.82em; color:#666;">
+              <div class="case-note-tile-meta">
                 {{ note_services|length }} svc
               </div>
             {% endif %}
@@ -604,18 +599,17 @@
           <div
             id="case-note-panel-{{ note_id }}"
             class="card case-note-panel"
-            style="display:none; margin-top:10px;"
           >
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+            <div class="case-note-panel-header">
               <div>
-                <h3 style="margin-bottom:6px;">Progress Notes {{ note_meeting_date or "—" }}</h3>
-                <div style="font-size:0.95em; color:#666;">
+                <h3 class="case-note-panel-title">Progress Notes {{ note_meeting_date or "—" }}</h3>
+                <div class="case-note-created">
                   Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
                 </div>
               </div>
 
               {% if note_id %}
-                <div class="print-hide" style="display:flex; gap:8px; align-items:center;">
+                <div class="print-hide case-note-actions">
                   <button type="button" class="btn" onclick="window.print()">
                     Print
                   </button>
@@ -627,30 +621,30 @@
             </div>
 
             {% if note_notes %}
-              <div style="margin-top:14px;">
+              <div class="case-note-section">
                 <strong>Notes:</strong><br>
                 <div class="case-note-text-block">{{ note_notes }}</div>
               </div>
             {% endif %}
 
             {% if note_progress_notes %}
-              <div style="margin-top:14px;">
+              <div class="case-note-section">
                 <strong>Progress Notes:</strong><br>
                 <div class="case-note-text-block">{{ note_progress_notes }}</div>
               </div>
             {% endif %}
 
             {% if note_action_items %}
-              <div style="margin-top:14px;">
+              <div class="case-note-section">
                 <strong>Action Items:</strong><br>
                 <div class="case-note-text-block">{{ note_action_items }}</div>
               </div>
             {% endif %}
 
             {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
-              <div style="margin-top:14px;">
+              <div class="case-note-section">
                 <strong>Structured Progress:</strong>
-                <span style="margin-left:10px;">
+                <span class="case-note-structured">
                   {% if note_updated_grit is not none %}
                     Grit: {{ note_updated_grit }}
                   {% endif %}
@@ -669,19 +663,19 @@
             {% endif %}
 
             {% if note_services %}
-              <div style="margin-top:14px;">
+              <div class="case-note-section">
                 <strong>Services Provided:</strong>
 
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:10px;">
+                <div class="case-note-service-card-grid">
                   {% for service in note_services %}
                     {% set service_type = service["service_type"] %}
                     {% set service_date = service["service_date"] %}
                     {% set service_quantity_display = service["quantity_display"] %}
                     {% set service_notes_value = service["notes"] %}
 
-                    <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+                    <div class="case-note-service-card">
                       <div><strong>{{ service_type or "—" }}</strong></div>
-                      <div style="margin-top:4px; font-size:0.88em; color:#666;">
+                      <div class="case-note-service-meta">
                         {{ service_date or "—" }}
                         {% if service_quantity_display and service_quantity_display != "—" %}
                           — {{ service_quantity_display }}
@@ -689,7 +683,7 @@
                       </div>
 
                       {% if service_notes_value %}
-                        <div style="margin-top:8px;" class="case-note-text-block">
+                        <div class="case-note-service-text case-note-text-block">
                           {{ service_notes_value }}
                         </div>
                       {% endif %}
@@ -703,47 +697,47 @@
           <template id="print-case-note-{{ note_id }}">
             <div class="card">
               <div>
-                <h3 style="margin-bottom:6px;">Progress Notes {{ note_meeting_date or "—" }}</h3>
-                <div style="font-size:0.95em; color:#666;">
+                <h3 class="case-note-panel-title">Progress Notes {{ note_meeting_date or "—" }}</h3>
+                <div class="case-note-created">
                   Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
                 </div>
               </div>
 
               {% if note_notes %}
-                <div style="margin-top:14px;">
+                <div class="case-note-section">
                   <strong>Notes:</strong><br>
                   <div class="case-note-text-block">{{ note_notes }}</div>
                 </div>
               {% endif %}
 
               {% if note_progress_notes %}
-                <div style="margin-top:14px;">
+                <div class="case-note-section">
                   <strong>Progress Notes:</strong><br>
                   <div class="case-note-text-block">{{ note_progress_notes }}</div>
                 </div>
               {% endif %}
 
               {% if note_action_items %}
-                <div style="margin-top:14px;">
+                <div class="case-note-section">
                   <strong>Action Items:</strong><br>
                   <div class="case-note-text-block">{{ note_action_items }}</div>
                 </div>
               {% endif %}
 
               {% if note_services %}
-                <div style="margin-top:14px;">
+                <div class="case-note-section">
                   <strong>Services Provided:</strong>
 
-                  <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:10px;">
+                  <div class="case-note-service-card-grid">
                     {% for service in note_services %}
                       {% set service_type = service["service_type"] %}
                       {% set service_date = service["service_date"] %}
                       {% set service_quantity_display = service["quantity_display"] %}
                       {% set service_notes_value = service["notes"] %}
 
-                      <div style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+                      <div class="case-note-service-card">
                         <div><strong>{{ service_type or "—" }}</strong></div>
-                        <div style="margin-top:4px; font-size:0.88em; color:#666;">
+                        <div class="case-note-service-meta">
                           {{ service_date or "—" }}
                           {% if service_quantity_display and service_quantity_display != "—" %}
                             — {{ service_quantity_display }}
@@ -751,7 +745,7 @@
                         </div>
 
                         {% if service_notes_value %}
-                          <div style="margin-top:8px;" class="case-note-text-block">
+                          <div class="case-note-service-text case-note-text-block">
                             {{ service_notes_value }}
                           </div>
                         {% endif %}
