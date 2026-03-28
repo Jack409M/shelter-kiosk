@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Medications</h1>
+
+<div class="card">
+  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
+  <p>
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+      Back to Case Management
+    </a>
+  </p>
+</div>
+
+<div class="card">
+  <h2>Add Medication</h2>
+
+  <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident['id']) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Medication Name</strong></label>
+    <input type="text" name="medication_name" required>
+
+    <label><strong>Dosage</strong></label>
+    <input type="text" name="dosage">
+
+    <label><strong>Frequency</strong></label>
+    <input type="text" name="frequency">
+
+    <label><strong>Purpose</strong></label>
+    <input type="text" name="purpose">
+
+    <label><strong>Prescribed By</strong></label>
+    <input type="text" name="prescribed_by">
+
+    <label><strong>Started On</strong></label>
+    <input type="date" name="started_on">
+
+    <label><strong>Ended On</strong></label>
+    <input type="date" name="ended_on">
+
+    <label><strong>Active</strong></label>
+    <select name="is_active">
+      <option value="yes" selected>Yes</option>
+      <option value="no">No</option>
+    </select>
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes" rows="3"></textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Medication</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Recorded Medications</h2>
+
+  {% if medications %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Dosage</th>
+          <th>Frequency</th>
+          <th>Active</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for med in medications %}
+          <tr>
+            <td>{{ med["medication_name"] or "—" }}</td>
+            <td>{{ med["dosage"] or "—" }}</td>
+            <td>{{ med["frequency"] or "—" }}</td>
+            <td>{{ "Yes" if med["is_active"] else "No" }}</td>
+            <td>
+              <a class="btn btn-sm" href="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=med['id']) }}">
+                Edit
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No medications recorded.</p>
+  {% endif %}
+</div>
+{% endblock %}
