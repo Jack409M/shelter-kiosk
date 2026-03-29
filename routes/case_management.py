@@ -68,6 +68,9 @@ from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.helpers import yes_no_to_int
 from routes.case_management_parts.index import index_view
 from routes.case_management_parts.index import intake_index_view
+from routes.case_management_parts.inspection_log import add_inspection_log_view
+from routes.case_management_parts.inspection_log import edit_inspection_log_view
+from routes.case_management_parts.inspection_log import inspection_log_view
 from routes.case_management_parts.intake import child_services_view
 from routes.case_management_parts.intake import delete_child_service_view
 from routes.case_management_parts.intake import delete_child_view
@@ -413,6 +416,33 @@ def add_ua_log(resident_id: int):
 @require_shelter
 def edit_ua_log(resident_id: int, ua_id: int):
     return edit_ua_log_view(resident_id, ua_id)
+
+
+# ============================================================================
+# Inspection Log Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.inspection_log
+# ============================================================================
+
+@case_management.get("/<int:resident_id>/inspection-log")
+@require_login
+@require_shelter
+def inspection_log(resident_id: int):
+    return inspection_log_view(resident_id)
+
+
+@case_management.post("/<int:resident_id>/inspection-log")
+@require_login
+@require_shelter
+def add_inspection_log(resident_id: int):
+    return add_inspection_log_view(resident_id)
+
+
+@case_management.route("/<int:resident_id>/inspection-log/<int:inspection_id>/edit", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def edit_inspection_log(resident_id: int, inspection_id: int):
+    return edit_inspection_log_view(resident_id, inspection_id)
 
 
 # ============================================================================
