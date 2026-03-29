@@ -87,6 +87,9 @@ from routes.case_management_parts.medications import edit_medication_view
 from routes.case_management_parts.medications import medication_form_view
 from routes.case_management_parts.recovery_profile import update_recovery_profile_view
 from routes.case_management_parts.resident_case import resident_case_view
+from routes.case_management_parts.ua_log import add_ua_log_view
+from routes.case_management_parts.ua_log import edit_ua_log_view
+from routes.case_management_parts.ua_log import ua_log_view
 from routes.case_management_parts.update import add_case_note_view
 from routes.case_management_parts.update import edit_case_note_view
 
@@ -383,6 +386,33 @@ def add_medication(resident_id: int):
 @require_shelter
 def edit_medication(resident_id: int, medication_id: int):
     return edit_medication_view(resident_id, medication_id)
+
+
+# ============================================================================
+# UA Log Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.ua_log
+# ============================================================================
+
+@case_management.get("/<int:resident_id>/ua-log")
+@require_login
+@require_shelter
+def ua_log(resident_id: int):
+    return ua_log_view(resident_id)
+
+
+@case_management.post("/<int:resident_id>/ua-log")
+@require_login
+@require_shelter
+def add_ua_log(resident_id: int):
+    return add_ua_log_view(resident_id)
+
+
+@case_management.route("/<int:resident_id>/ua-log/<int:ua_id>/edit", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def edit_ua_log(resident_id: int, ua_id: int):
+    return edit_ua_log_view(resident_id, ua_id)
 
 
 # ============================================================================
