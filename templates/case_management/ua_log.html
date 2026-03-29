@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>UA Log</h1>
+
+<div class="card">
+  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
+  <p>
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+      Back to Case Management
+    </a>
+  </p>
+</div>
+
+<div class="card">
+  <h2>Add UA Entry</h2>
+
+  <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident['id']) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>UA Date</strong></label>
+    <input type="date" name="ua_date" required>
+
+    <label><strong>Result</strong></label>
+    <input type="text" name="result" placeholder="Negative, Positive, Refused, etc.">
+
+    <label><strong>Substances Detected</strong></label>
+    <input type="text" name="substances_detected">
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes" rows="3"></textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save UA Entry</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Recorded UA Entries</h2>
+
+  {% if ua_rows %}
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Result</th>
+          <th>Substances</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in ua_rows %}
+          <tr>
+            <td>{{ row["ua_date"] or "—" }}</td>
+            <td>{{ row["result"] or "—" }}</td>
+            <td>{{ row["substances_detected"] or "—" }}</td>
+            <td>
+              <a class="btn btn-sm" href="{{ url_for('case_management.edit_ua_log', resident_id=resident['id'], ua_id=row['id']) }}">
+                Edit
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No UA entries recorded.</p>
+  {% endif %}
+</div>
+{% endblock %}
