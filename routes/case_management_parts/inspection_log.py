@@ -91,7 +91,7 @@ def add_inspection_log_view(resident_id: int):
 
     inspection_date = _clean(request.form.get("inspection_date"))
     passed_value = (request.form.get("passed") or "").strip().lower()
-    passed = 1 if passed_value == "yes" else 0
+    passed = passed_value == "yes"
     notes = _clean(request.form.get("notes"))
 
     if not inspection_date:
@@ -175,7 +175,7 @@ def edit_inspection_log_view(resident_id: int, inspection_id: int):
 
     inspection_date = _clean(request.form.get("inspection_date"))
     passed_value = (request.form.get("passed") or "").strip().lower()
-    passed = 1 if passed_value == "yes" else 0
+    passed = passed_value == "yes"
     notes = _clean(request.form.get("notes"))
 
     if not inspection_date:
