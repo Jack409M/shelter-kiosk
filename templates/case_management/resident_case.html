@@ -207,6 +207,12 @@
           {% else %}
             <p class="case-empty-muted">No active medications recorded.</p>
           {% endif %}
+
+          <div class="case-section-top">
+            <a class="btn" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">
+              Manage Medications
+            </a>
+          </div>
         </div>
       </div>
     </form>
