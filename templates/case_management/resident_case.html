@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328g') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328h') }}">
 {% endblock %}
 
 {% block content %}
@@ -176,6 +176,9 @@
             </a>
             <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">
               Inspection Log
+            </a>
+            <a class="btn" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}">
+              Budget Sessions
             </a>
           </div>
         </div>
