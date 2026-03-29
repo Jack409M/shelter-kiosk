@@ -289,8 +289,9 @@ button.notebook-tab-btn.is-active span {
 
 .case-snapshot-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
   gap: 10px;
+  align-items: start;
 }
 
 .case-snapshot-card {
@@ -372,6 +373,10 @@ button.notebook-tab-btn.is-active span {
   width: min(100%, 50ch);
 }
 
+.case-input-12ch {
+  width: 12ch;
+}
+
 .case-input-10ch {
   width: 10ch;
 }
@@ -396,19 +401,23 @@ button.notebook-tab-btn.is-active span {
 
 .case-profile-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(0, 50ch) max-content;
   gap: 10px;
   align-items: end;
   margin-bottom: 8px;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .case-profile-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .case-profile-field-wide input {
+  width: min(100%, 50ch);
   max-width: 100%;
 }
 
@@ -429,6 +438,30 @@ button.notebook-tab-btn.is-active span {
 .case-no-spinner {
   appearance: textfield;
   -moz-appearance: textfield;
+}
+
+@media (max-width: 1180px) {
+  .case-snapshot-grid {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .case-snapshot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .case-profile-row {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .case-profile-field-wide input,
+  .case-input-12ch,
+  .case-input-4ch {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 @media print {
