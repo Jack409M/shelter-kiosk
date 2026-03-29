@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328h') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328k') }}">
 {% endblock %}
 
 {% block content %}
@@ -51,6 +51,7 @@
 {% set rs_level = rs.get("program_level") %}
 {% set rs_sponsor = rs.get("sponsor_name") %}
 {% set rs_employer = rs.get("employer_name") %}
+{% set rs_income = rs.get("monthly_income") %}
 {% set rs_income_display = rs.get("monthly_income_display") %}
 {% set rs_step = rs.get("step_current") %}
 {% set rs_step_changed_at = rs.get("step_changed_at") %}
@@ -88,148 +89,37 @@
       <strong>Program Status:</strong> {{ enrollment_program_status|replace("_", " ")|title if enrollment_program_status else "Not enrolled" }}<br>
       <strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}<br>
       <strong>Entry Date:</strong> {{ enrollment_entry_date or "—" }}<br>
-      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}
+      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}<br>
+      <strong>Level:</strong>
+      {% if rs_level %}
+        Level {{ rs_level }}
+      {% else %}
+        —
+      {% endif %}
     </p>
+
+    {% if enrollment_id %}
+      <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}" class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="sponsor_name" value="{{ rs_sponsor or '' }}">
+        <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
+        <input type="hidden" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
+        <input type="hidden" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          name="program_level"
+          value="{{ rs_level or '' }}"
+          style="width:4ch;"
+        >
+
+        <button type="submit" class="btn">Edit</button>
+      </form>
+    {% endif %}
   </div>
 </div>
-
-{% if enrollment_id %}
-  <div class="card no-print">
-    <h2>Recovery Snapshot</h2>
-
-    <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-      <div class="case-snapshot-grid">
-        <div class="case-snapshot-card">
-          <h3 class="case-snapshot-title">Current Profile</h3>
-
-          <label><strong>Level</strong></label>
-          <input type="text" name="program_level" value="{{ rs_level or '' }}">
-
-          <label><strong>Sponsor</strong></label>
-          <input type="text" name="sponsor_name" value="{{ rs_sponsor or '' }}">
-
-          <label><strong>Employer</strong></label>
-          <input type="text" name="employer_name" value="{{ rs_employer or '' }}">
-
-          <label><strong>Monthly Income</strong></label>
-          <input type="number" step="0.01" min="0" name="monthly_income" value="{{ rs.get('monthly_income') if rs.get('monthly_income') is not none else '' }}">
-
-          <label><strong>Current Step</strong></label>
-          <input type="number" min="1" max="12" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
-
-          <div class="case-help-text case-help-text-top">
-            {% if rs_step_changed_at %}
-              Step changed: {{ rs_step_changed_at }}
-              {% if rs_step_days is not none %}
-                — {{ rs_step_days }} day{% if rs_step_days != 1 %}s{% endif %} on current step
-              {% endif %}
-            {% else %}
-              No step change date recorded yet.
-            {% endif %}
-          </div>
-
-          <div class="case-section-top">
-            <button type="submit">Save Recovery Profile</button>
-          </div>
-        </div>
-
-        <div class="case-snapshot-card">
-          <h3 class="case-snapshot-title">Latest Operational Items</h3>
-          <div class="case-snapshot-list">
-            <div>
-              <strong>Latest UA:</strong>
-              {% if rs_latest_ua %}
-                {{ rs_latest_ua["ua_date"] or "—" }}
-                {% if rs_latest_ua["result"] %}
-                  — {{ rs_latest_ua["result"] }}
-                {% endif %}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-            <div>
-              <strong>Latest Inspection:</strong>
-              {% if rs_latest_inspection %}
-                {{ rs_latest_inspection["inspection_date"] or "—" }}
-                {% if rs_latest_inspection["passed_display"] %}
-                  — {{ rs_latest_inspection["passed_display"] }}
-                {% endif %}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-            <div>
-              <strong>Latest Budget Session:</strong>
-              {% if rs_latest_budget %}
-                {{ rs_latest_budget["session_date"] or "—" }}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="case-section-top">
-            <a class="btn" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">
-              UA Log
-            </a>
-            <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">
-              Inspection Log
-            </a>
-            <a class="btn" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}">
-              Budget Sessions
-            </a>
-          </div>
-        </div>
-
-        <div class="case-snapshot-card case-snapshot-card-wide">
-          <h3 class="case-snapshot-title">Current Medications</h3>
-          {% if rs_medications %}
-            <div class="case-medication-list">
-              {% for med in rs_medications %}
-                <div class="case-medication-item">
-                  <div>
-                    <strong>{{ med["medication_name"] or "Medication" }}</strong>
-                    {% if med["dosage"] %}
-                      — {{ med["dosage"] }}
-                    {% endif %}
-                    {% if med["frequency"] %}
-                      — {{ med["frequency"] }}
-                    {% endif %}
-                  </div>
-                  {% if med["purpose"] %}
-                    <div class="case-medication-meta">
-                      Purpose: {{ med["purpose"] }}
-                    </div>
-                  {% endif %}
-                  {% if med["prescribed_by"] %}
-                    <div class="case-medication-meta">
-                      Prescribed by: {{ med["prescribed_by"] }}
-                    </div>
-                  {% endif %}
-                  {% if med["notes"] %}
-                    <div class="case-medication-meta">
-                      {{ med["notes"] }}
-                    </div>
-                  {% endif %}
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <p class="case-empty-muted">No active medications recorded.</p>
-          {% endif %}
-
-          <div class="case-section-top">
-            <a class="btn" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">
-              Manage Medications
-            </a>
-          </div>
-        </div>
-      </div>
-    </form>
-  </div>
-{% endif %}
 
 {% if not enrollment_id %}
   <div class="card no-print">
@@ -277,7 +167,19 @@
 
   <div id="resident-file-tab" class="resident-notebook-tab">
     <div class="card no-print">
-      <h2>Monthly Case Manager Meeting</h2>
+      <h2>Progress Notes</h2>
+
+      <div class="case-help-text case-help-text-top" style="margin-bottom:12px;">
+        <strong>Latest Inspection:</strong>
+        {% if rs_latest_inspection %}
+          {{ rs_latest_inspection["inspection_date"] or "—" }}
+          {% if rs_latest_inspection["passed_display"] %}
+            — {{ rs_latest_inspection["passed_display"] }}
+          {% endif %}
+        {% else %}
+          —
+        {% endif %}
+      </div>
 
       <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -544,7 +446,167 @@
         </div>
 
         <div class="case-section-top">
-          <button type="submit">Save Monthly Update</button>
+          <button type="submit">Save Progress Notes</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card no-print">
+      <h2>Recovery Snapshot</h2>
+
+      <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="program_level" value="{{ rs_level or '' }}">
+
+        <div class="case-snapshot-grid">
+          <div class="case-snapshot-card">
+            <h3 class="case-snapshot-title">Current Profile</h3>
+
+            <label><strong>Sponsor</strong></label>
+            <input
+              type="text"
+              name="sponsor_name"
+              value="{{ rs_sponsor or '' }}"
+              maxlength="50"
+              style="width:min(100%, 50ch);"
+            >
+
+            <label><strong>Employer</strong></label>
+            <input
+              type="text"
+              name="employer_name"
+              value="{{ rs_employer or '' }}"
+              maxlength="50"
+              style="width:min(100%, 50ch);"
+            >
+
+            <label><strong>Monthly Income</strong></label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              name="monthly_income"
+              value="{{ rs_income if rs_income is not none else '' }}"
+              style="width:10ch;"
+            >
+
+            <label><strong>Current Step</strong></label>
+            <input
+              type="number"
+              min="1"
+              max="12"
+              name="step_current"
+              value="{{ rs_step if rs_step is not none else '' }}"
+              style="width:4ch;"
+            >
+
+            <div class="case-help-text case-help-text-top">
+              {% if rs_step_changed_at %}
+                Step changed: {{ rs_step_changed_at }}
+                {% if rs_step_days is not none %}
+                  — {{ rs_step_days }} day{% if rs_step_days != 1 %}s{% endif %} on current step
+                {% endif %}
+              {% else %}
+                No step change date recorded yet.
+              {% endif %}
+            </div>
+
+            <div class="case-section-top">
+              <button type="submit">Save Recovery Profile</button>
+            </div>
+          </div>
+
+          <div class="case-snapshot-card">
+            <h3 class="case-snapshot-title">Latest Operational Items</h3>
+            <div class="case-snapshot-list">
+              <div>
+                <strong>Latest UA:</strong>
+                {% if rs_latest_ua %}
+                  {{ rs_latest_ua["ua_date"] or "—" }}
+                  {% if rs_latest_ua["result"] %}
+                    — {{ rs_latest_ua["result"] }}
+                  {% endif %}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+              <div>
+                <strong>Latest Inspection:</strong>
+                {% if rs_latest_inspection %}
+                  {{ rs_latest_inspection["inspection_date"] or "—" }}
+                  {% if rs_latest_inspection["passed_display"] %}
+                    — {{ rs_latest_inspection["passed_display"] }}
+                  {% endif %}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+              <div>
+                <strong>Latest Budget Session:</strong>
+                {% if rs_latest_budget %}
+                  {{ rs_latest_budget["session_date"] or "—" }}
+                {% else %}
+                  —
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="case-section-top">
+              <a class="btn" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">
+                UA Log
+              </a>
+              <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">
+                Inspection Log
+              </a>
+              <a class="btn" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}">
+                Budget Sessions
+              </a>
+            </div>
+          </div>
+
+          <div class="case-snapshot-card case-snapshot-card-wide">
+            <h3 class="case-snapshot-title">Current Medications</h3>
+            {% if rs_medications %}
+              <div class="case-medication-list">
+                {% for med in rs_medications %}
+                  <div class="case-medication-item">
+                    <div>
+                      <strong>{{ med["medication_name"] or "Medication" }}</strong>
+                      {% if med["dosage"] %}
+                        — {{ med["dosage"] }}
+                      {% endif %}
+                      {% if med["frequency"] %}
+                        — {{ med["frequency"] }}
+                      {% endif %}
+                    </div>
+                    {% if med["purpose"] %}
+                      <div class="case-medication-meta">
+                        Purpose: {{ med["purpose"] }}
+                      </div>
+                    {% endif %}
+                    {% if med["prescribed_by"] %}
+                      <div class="case-medication-meta">
+                        Prescribed by: {{ med["prescribed_by"] }}
+                      </div>
+                    {% endif %}
+                    {% if med["notes"] %}
+                      <div class="case-medication-meta">
+                        {{ med["notes"] }}
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="case-empty-muted">No active medications recorded.</p>
+            {% endif %}
+
+            <div class="case-section-top">
+              <a class="btn" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">
+                Manage Medications
+              </a>
+            </div>
+          </div>
         </div>
       </form>
     </div>
