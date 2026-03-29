@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Edit UA Entry</h1>
+
+<div class="card">
+  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
+  <p>
+    <a class="btn" href="{{ url_for('case_management.ua_log', resident_id=resident['id']) }}">
+      Back to UA Log
+    </a>
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+      Back to Case Management
+    </a>
+  </p>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('case_management.edit_ua_log', resident_id=resident['id'], ua_id=ua_row['id']) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>UA Date</strong></label>
+    <input type="date" name="ua_date" value="{{ ua_row['ua_date'] or '' }}" required>
+
+    <label><strong>Result</strong></label>
+    <input type="text" name="result" value="{{ ua_row['result'] or '' }}">
+
+    <label><strong>Substances Detected</strong></label>
+    <input type="text" name="substances_detected" value="{{ ua_row['substances_detected'] or '' }}">
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes" rows="4">{{ ua_row['notes'] or '' }}</textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Changes</button>
+    </div>
+  </form>
+</div>
