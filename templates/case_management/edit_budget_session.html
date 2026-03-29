@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Edit Budget Session</h1>
+
+<div class="card">
+  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
+  <p>
+    <a class="btn" href="{{ url_for('case_management.budget_sessions', resident_id=resident['id']) }}">
+      Back to Budget Sessions
+    </a>
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+      Back to Case Management
+    </a>
+  </p>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=budget_row['id']) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Session Date</strong></label>
+    <input type="date" name="session_date" value="{{ budget_row['session_date'] or '' }}" required>
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes" rows="4">{{ budget_row['notes'] or '' }}</textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Changes</button>
+    </div>
+  </form>
+</div>
