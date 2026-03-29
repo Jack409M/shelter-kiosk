@@ -64,6 +64,28 @@ def _bool_display(value: Any) -> str:
     return "Yes" if bool(value) else "No"
 
 
+def _employment_status_display(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return "—"
+    if normalized == "employed":
+        return "Employed"
+    if normalized == "unemployed":
+        return "Unemployed"
+    return str(value)
+
+
+def _employment_type_display(value: Any) -> str:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return "—"
+    if normalized == "full_time":
+        return "Full Time"
+    if normalized == "part_time":
+        return "Part Time"
+    return str(value).replace("_", " ").title()
+
+
 def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     ph = placeholder()
 
@@ -73,7 +95,14 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             program_level,
             sponsor_name,
             employer_name,
+            employment_status_current,
+            employment_type_current,
+            supervisor_name,
+            supervisor_phone,
+            unemployment_reason,
+            employment_notes,
             monthly_income,
+            employment_updated_at,
             step_current,
             step_changed_at
         FROM residents
@@ -152,6 +181,8 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
 
     step_changed_at = resident.get("step_changed_at")
     step_days = _days_since(step_changed_at)
+    employment_updated_at = resident.get("employment_updated_at")
+    employment_days = _days_since(employment_updated_at)
 
     medication_items = []
     for med in medications or []:
@@ -174,8 +205,18 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "program_level": resident.get("program_level"),
         "sponsor_name": resident.get("sponsor_name"),
         "employer_name": resident.get("employer_name"),
+        "employment_status_current": resident.get("employment_status_current"),
+        "employment_status_display": _employment_status_display(resident.get("employment_status_current")),
+        "employment_type_current": resident.get("employment_type_current"),
+        "employment_type_display": _employment_type_display(resident.get("employment_type_current")),
+        "supervisor_name": resident.get("supervisor_name"),
+        "supervisor_phone": resident.get("supervisor_phone"),
+        "unemployment_reason": resident.get("unemployment_reason"),
+        "employment_notes": resident.get("employment_notes"),
         "monthly_income": resident.get("monthly_income"),
         "monthly_income_display": _money_display(resident.get("monthly_income")),
+        "employment_updated_at": employment_updated_at,
+        "employment_days": employment_days,
         "step_current": resident.get("step_current"),
         "step_changed_at": step_changed_at,
         "step_days": step_days,
