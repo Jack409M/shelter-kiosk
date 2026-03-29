@@ -185,7 +185,7 @@
           {% if rs_latest_inspection %}
             {{ rs_latest_inspection["inspection_date"] or "—" }}
             {% if rs_latest_inspection["passed_display"] %}
-              — {{ rs_latest_inspection["passed_display"] }}
+              — {{ "Passed" if rs_latest_inspection["passed_display"] == "Yes" else rs_latest_inspection["passed_display"] }}
             {% endif %}
           {% else %}
             —
@@ -603,7 +603,7 @@
                 {% if rs_latest_inspection %}
                   {{ rs_latest_inspection["inspection_date"] or "—" }}
                   {% if rs_latest_inspection["passed_display"] %}
-                    — {{ rs_latest_inspection["passed_display"] }}
+                    — {{ "Passed" if rs_latest_inspection["passed_display"] == "Yes" else rs_latest_inspection["passed_display"] }}
                   {% endif %}
                 {% else %}
                   —
