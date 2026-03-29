@@ -289,15 +289,19 @@ button.notebook-tab-btn.is-active span {
 
 .case-snapshot-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 10px;
 }
 
 .case-snapshot-card {
   border: 1px solid #d6d6d6;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   background: #fafafa;
+}
+
+.case-snapshot-card-compact {
+  padding: 10px;
 }
 
 .case-snapshot-card-wide {
@@ -305,7 +309,7 @@ button.notebook-tab-btn.is-active span {
 }
 
 .case-snapshot-title {
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
 }
 
 .case-snapshot-list {
@@ -313,13 +317,22 @@ button.notebook-tab-btn.is-active span {
   gap: 8px;
 }
 
+.case-snapshot-list-compact {
+  gap: 6px;
+  font-size: 0.95em;
+}
+
 .case-medication-list {
   display: grid;
   gap: 10px;
 }
 
+.case-medication-list-compact {
+  gap: 8px;
+}
+
 .case-medication-item {
-  padding: 10px;
+  padding: 8px 10px;
   border: 1px solid #ddd;
   border-radius: 6px;
   background: #fff;
@@ -351,6 +364,10 @@ button.notebook-tab-btn.is-active span {
   flex-wrap: wrap;
 }
 
+.case-level-select {
+  min-width: 5ch;
+}
+
 .case-input-50ch {
   width: min(100%, 50ch);
 }
@@ -371,10 +388,47 @@ button.notebook-tab-btn.is-active span {
 
 .case-external-summary {
   margin-bottom: 12px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #ddd;
   border-radius: 8px;
   background: #fafafa;
+}
+
+.case-profile-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 8px;
+}
+
+.case-profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.case-profile-field-wide input {
+  max-width: 100%;
+}
+
+.case-profile-field-compact input {
+  max-width: 100%;
+}
+
+.case-recovery-section {
+  margin-top: 12px;
+}
+
+.case-no-spinner::-webkit-outer-spin-button,
+.case-no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.case-no-spinner {
+  appearance: textfield;
+  -moz-appearance: textfield;
 }
 
 @media print {
