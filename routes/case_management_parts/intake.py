@@ -24,6 +24,10 @@ from routes.case_management_parts.intake_inserts import _insert_program_enrollme
 from routes.case_management_parts.intake_inserts import _insert_resident
 from routes.case_management_parts.intake_validation import _find_possible_duplicate
 from routes.case_management_parts.intake_validation import _validate_intake_form
+from routes.case_management_parts.needs import OFFICIAL_NEEDS
+from routes.case_management_parts.needs import build_triggered_needs
+from routes.case_management_parts.needs import list_enrollment_need_keys
+from routes.case_management_parts.needs import sync_enrollment_needs
 
 
 def _intake_template_context(
@@ -39,6 +43,7 @@ def _intake_template_context(
         "review_passed": review_passed,
         "is_edit_mode": is_edit_mode,
         "resident_id": resident_id,
+        "official_needs": OFFICIAL_NEEDS,
         "shelters": [
             {"value": "abba", "label": "Abba House"},
             {"value": "haven", "label": "Haven House"},
@@ -154,26 +159,20 @@ def _normalize_yes_no_fields(form_data: dict[str, Any]) -> dict[str, Any]:
     yes_no_fields = [
         "veteran",
         "pregnant",
-        "dental_need",
-        "vision_need",
         "sexual_survivor",
         "domestic_violence_history",
         "human_trafficking_history",
         "drug_court",
-        "warrants_unpaid",
-        "mental_health_need",
-        "medical_need",
-        "mh_exam_completed",
-        "med_exam_completed",
-        "substance_use_need",
-        "parenting_class_needed",
         "felony_history",
         "probation_parole",
-        "has_drivers_license",
-        "has_social_security_card",
     ]
 
     for field_name in yes_no_fields:
+        if field_name in form_data:
+            form_data[field_name] = _normalize_yes_no_value(form_data.get(field_name))
+
+    for need in OFFICIAL_NEEDS:
+        field_name = f"need_{need['need_key']}"
         if field_name in form_data:
             form_data[field_name] = _normalize_yes_no_value(form_data.get(field_name))
 
@@ -188,19 +187,27 @@ def _apply_intake_edit_aliases(form_data: dict[str, Any]) -> dict[str, Any]:
         "domestic_violence_history": "dv_survivor",
         "human_trafficking_history": "human_trafficking_survivor",
         "pregnant": "pregnant_at_entry",
-        "dental_need": "dental_need_at_entry",
-        "vision_need": "vision_need_at_entry",
         "employment_status": "employment_status_at_entry",
-        "mental_health_need": "mental_health_need_at_entry",
-        "medical_need": "medical_need_at_entry",
-        "substance_use_need": "substance_use_need_at_entry",
-        "id_documents_status": "id_documents_status_at_entry",
         "last_zipcode_residence": "last_zipcode_of_residence",
     }
 
     for form_key, db_key in field_aliases.items():
         if form_data.get(form_key) in (None, "") and db_key in form_data:
             form_data[form_key] = form_data.get(db_key)
+
+    return form_data
+
+
+def _apply_selected_need_flags(
+    form_data: dict[str, Any],
+    selected_need_keys: list[str],
+) -> dict[str, Any]:
+    for need in OFFICIAL_NEEDS:
+        field_name = f"need_{need['need_key']}"
+        if need["need_key"] in selected_need_keys:
+            form_data[field_name] = "yes"
+        elif field_name not in form_data:
+            form_data[field_name] = ""
 
     return form_data
 
@@ -223,6 +230,7 @@ def intake_form_view():
             flash("Intake draft not found.", "error")
             return redirect(url_for("case_management.intake_index"))
 
+        form_data = _normalize_yes_no_fields(form_data)
         review_passed = _form_review_passed(form_data)
 
     return render_template(
@@ -311,6 +319,16 @@ def intake_edit_view(resident_id: int):
 
     form_data = _apply_intake_edit_aliases(form_data)
     form_data = _normalize_yes_no_fields(form_data)
+
+    selected_need_keys = list_enrollment_need_keys(enrollment_id)
+
+    if not selected_need_keys and intake:
+        selected_need_keys = [
+            need["need_key"]
+            for need in build_triggered_needs(intake_row=dict(intake))
+        ]
+
+    form_data = _apply_selected_need_flags(form_data, selected_need_keys)
     form_data["review_passed"] = "1"
 
     return render_template(
@@ -474,6 +492,13 @@ def submit_intake_assessment_view():
         enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
         now = datetime.utcnow().isoformat()
 
+        dental_need = yes_no_to_int(data.get("need_dental"))
+        vision_need = yes_no_to_int(data.get("need_vision_glasses"))
+        parenting_class_needed = yes_no_to_int(data.get("need_parenting_class_needed"))
+        warrants_unpaid = yes_no_to_int(data.get("need_warrants_fine_resolution"))
+        has_drivers_license = 0 if data.get("need_state_id_drivers_license") == "yes" else None
+        has_social_security_card = 0 if data.get("need_social_security_card") == "yes" else None
+
         db_execute(
             f"""
             UPDATE residents
@@ -591,12 +616,12 @@ def submit_intake_assessment_view():
                 data.get("last_zipcode_residence"),
                 data.get("entry_notes"),
                 yes_no_to_int(data.get("pregnant")),
-                yes_no_to_int(data.get("dental_need")),
-                yes_no_to_int(data.get("vision_need")),
+                dental_need,
+                vision_need,
                 data.get("employment_status"),
-                data.get("id_documents_status"),
-                yes_no_to_int(data.get("has_drivers_license")),
-                yes_no_to_int(data.get("has_social_security_card")),
+                None,
+                has_drivers_license,
+                has_social_security_card,
                 data.get("initial_snapshot_notes"),
                 data.get("ace_score"),
                 data.get("grit_score"),
@@ -604,13 +629,12 @@ def submit_intake_assessment_view():
                 yes_no_to_int(data.get("domestic_violence_history")),
                 yes_no_to_int(data.get("human_trafficking_history")),
                 yes_no_to_int(data.get("drug_court")),
-                yes_no_to_int(data.get("warrants_unpaid")),
-                yes_no_to_int(data.get("mental_health_need")),
-                yes_no_to_int(data.get("medical_need")),
-                yes_no_to_int(data.get("mh_exam_completed")),
-                yes_no_to_int(data.get("med_exam_completed")),
-                yes_no_to_int(data.get("substance_use_need")),
-                yes_no_to_int(data.get("parenting_class_needed")),
+                warrants_unpaid,
+                None,
+                None,
+                None,
+                None,
+                parenting_class_needed,
                 data.get("dwc_level_today"),
                 data.get("trauma_notes"),
                 yes_no_to_int(data.get("felony_history")),
@@ -631,6 +655,11 @@ def submit_intake_assessment_view():
                 now,
                 enrollment_id,
             ),
+        )
+
+        sync_enrollment_needs(
+            enrollment_id,
+            selected_need_keys=data.get("entry_need_keys", []),
         )
 
         flash("Intake updated successfully.", "success")
@@ -657,7 +686,6 @@ def family_intake_view(resident_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-
     ph = placeholder()
 
     if request.method == "POST":
