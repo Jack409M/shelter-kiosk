@@ -357,6 +357,18 @@
                       </select>
                     </div>
 
+                    <div class="field span-4 field-max-20">
+                      <label for="employment_status">Employment Status</label>
+                      <select id="employment_status" name="employment_status" class="{% if form_data.get('employment_status', '') %}has-value{% endif %}">
+                        <option value="">Select</option>
+                        <option value="employed_full_time" {% if form_data.get('employment_status', '') == 'employed_full_time' %}selected{% endif %}>Employed Full Time</option>
+                        <option value="employed_part_time" {% if form_data.get('employment_status', '') == 'employed_part_time' %}selected{% endif %}>Employed Part Time</option>
+                        <option value="unemployed" {% if form_data.get('employment_status', '') == 'unemployed' %}selected{% endif %}>Unemployed</option>
+                        <option value="disabled" {% if form_data.get('employment_status', '') == 'disabled' %}selected{% endif %}>Disabled</option>
+                        <option value="unknown" {% if form_data.get('employment_status', '') == 'unknown' %}selected{% endif %}>Unknown</option>
+                      </select>
+                    </div>
+
                     <div class="field span-3 field-max-20">
                       <label for="disability">Disability Type</label>
                       <select id="disability" name="disability" class="{% if form_data.get('disability', '') %}has-value{% endif %}">
@@ -458,80 +470,82 @@
 
               <section class="section-card">
                 <div class="section-card-head">
-                  <h2>Initial Snapshot</h2>
-                  <p>A quick baseline of immediate need areas at the time of entry.</p>
+                  <h2>Needs at Entry</h2>
+                  <p>Select each official need identified at intake. Selected needs will carry into the progress workflow until they are addressed.</p>
                 </div>
                 <div class="section-card-body">
                   <div class="field-grid">
-                    <div class="toggle-field span-2">
-                      <label>Dental Need</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="dental_need_yes" name="dental_need" value="yes" {% if form_data.get('dental_need') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="dental_need_yes">Yes</label>
-
-                        <input type="radio" id="dental_need_no" name="dental_need" value="no" {% if form_data.get('dental_need') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="dental_need_no">No</label>
+                    <div class="field span-3">
+                      <label>Health</label>
+                      <div>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="dental" {% if form_data.get('need_dental') == 'yes' %}checked{% endif %}>
+                          Dental
+                        </label><br>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="vision_glasses" {% if form_data.get('need_vision_glasses') == 'yes' %}checked{% endif %}>
+                          Vision/Glasses
+                        </label><br>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="rhn_physical" {% if form_data.get('need_rhn_physical') == 'yes' %}checked{% endif %}>
+                          RHN physical
+                        </label><br>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="pap_smear" {% if form_data.get('need_pap_smear') == 'yes' %}checked{% endif %}>
+                          Pap smear
+                        </label>
                       </div>
                     </div>
 
-                    <div class="toggle-field span-2">
-                      <label>Vision Need</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="vision_need_yes" name="vision_need" value="yes" {% if form_data.get('vision_need') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="vision_need_yes">Yes</label>
-
-                        <input type="radio" id="vision_need_no" name="vision_need" value="no" {% if form_data.get('vision_need') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="vision_need_no">No</label>
+                    <div class="field span-3">
+                      <label>Documents</label>
+                      <div>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="birth_certificate" {% if form_data.get('need_birth_certificate') == 'yes' %}checked{% endif %}>
+                          Birth certificate
+                        </label><br>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="social_security_card" {% if form_data.get('need_social_security_card') == 'yes' %}checked{% endif %}>
+                          Social security card
+                        </label><br>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="state_id_drivers_license" {% if form_data.get('need_state_id_drivers_license') == 'yes' %}checked{% endif %}>
+                          State ID/Driver’s license
+                        </label>
                       </div>
                     </div>
 
-                    <div class="field span-4 field-max-20">
-                      <label for="employment_status">Employment Status</label>
-                      <select id="employment_status" name="employment_status" class="{% if form_data.get('employment_status', '') %}has-value{% endif %}">
-                        <option value="">Select</option>
-                        <option value="employed_full_time" {% if form_data.get('employment_status', '') == 'employed_full_time' %}selected{% endif %}>Employed Full Time</option>
-                        <option value="employed_part_time" {% if form_data.get('employment_status', '') == 'employed_part_time' %}selected{% endif %}>Employed Part Time</option>
-                        <option value="unemployed" {% if form_data.get('employment_status', '') == 'unemployed' %}selected{% endif %}>Unemployed</option>
-                        <option value="disabled" {% if form_data.get('employment_status', '') == 'disabled' %}selected{% endif %}>Disabled</option>
-                        <option value="unknown" {% if form_data.get('employment_status', '') == 'unknown' %}selected{% endif %}>Unknown</option>
-                      </select>
-                    </div>
-
-                    <div class="field span-4 field-max-15">
-                      <label for="id_documents_status">ID Documents Status</label>
-                      <select id="id_documents_status" name="id_documents_status" class="{% if form_data.get('id_documents_status', '') %}has-value{% endif %}">
-                        <option value="">Select</option>
-                        <option value="has_all" {% if form_data.get('id_documents_status', '') == 'has_all' %}selected{% endif %}>Has All</option>
-                        <option value="missing_some" {% if form_data.get('id_documents_status', '') == 'missing_some' %}selected{% endif %}>Missing Some</option>
-                        <option value="missing_all" {% if form_data.get('id_documents_status', '') == 'missing_all' %}selected{% endif %}>Missing All</option>
-                      </select>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Has Driver’s License</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="has_drivers_license_yes" name="has_drivers_license" value="yes" {% if form_data.get('has_drivers_license') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="has_drivers_license_yes">Yes</label>
-
-                        <input type="radio" id="has_drivers_license_no" name="has_drivers_license" value="no" {% if form_data.get('has_drivers_license') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="has_drivers_license_no">No</label>
+                    <div class="field span-3">
+                      <label>Program and Legal</label>
+                      <div>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="jo_wyatt" {% if form_data.get('need_jo_wyatt') == 'yes' %}checked{% endif %}>
+                          JO Wyatt
+                        </label><br>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="warrants_fine_resolution" {% if form_data.get('need_warrants_fine_resolution') == 'yes' %}checked{% endif %}>
+                          Warrants/fine resolution
+                        </label><br>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="parenting_class_needed" {% if form_data.get('need_parenting_class_needed') == 'yes' %}checked{% endif %}>
+                          Parenting class needed
+                        </label>
                       </div>
                     </div>
 
-                    <div class="toggle-field span-2">
-                      <label>Has Social Security Card</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="has_social_security_card_yes" name="has_social_security_card" value="yes" {% if form_data.get('has_social_security_card') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="has_social_security_card_yes">Yes</label>
-
-                        <input type="radio" id="has_social_security_card_no" name="has_social_security_card" value="no" {% if form_data.get('has_social_security_card') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="has_social_security_card_no">No</label>
+                    <div class="field span-3">
+                      <label>Benefits</label>
+                      <div>
+                        <label>
+                          <input type="checkbox" name="entry_need" value="food_stamps_snap" {% if form_data.get('need_food_stamps_snap') == 'yes' %}checked{% endif %}>
+                          Food stamps/SNAP
+                        </label>
                       </div>
                     </div>
 
                     <div class="field span-12">
-                      <label for="initial_snapshot_notes">Initial Snapshot Notes</label>
-                      <textarea id="initial_snapshot_notes" name="initial_snapshot_notes" placeholder="Brief baseline picture of her current situation.">{{ form_data.get('initial_snapshot_notes', '') }}</textarea>
+                      <label for="initial_snapshot_notes">Needs Notes</label>
+                      <textarea id="initial_snapshot_notes" name="initial_snapshot_notes" placeholder="Brief notes about identified needs at entry.">{{ form_data.get('initial_snapshot_notes', '') }}</textarea>
                     </div>
                   </div>
                 </div>
@@ -595,83 +609,6 @@
 
                         <input type="radio" id="drug_court_no_assess" name="drug_court" value="no" {% if form_data.get('drug_court') == 'no' %}checked{% endif %}>
                         <label class="toggle-chip toggle-no" for="drug_court_no_assess">No</label>
-                      </div>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Warrants</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="warrants_unpaid_yes" name="warrants_unpaid" value="yes" {% if form_data.get('warrants_unpaid') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="warrants_unpaid_yes">Yes</label>
-
-                        <input type="radio" id="warrants_unpaid_no" name="warrants_unpaid" value="no" {% if form_data.get('warrants_unpaid') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="warrants_unpaid_no">No</label>
-                      </div>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Mental Health Need</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="mental_health_need_yes" name="mental_health_need" value="yes" {% if form_data.get('mental_health_need') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="mental_health_need_yes">Yes</label>
-
-                        <input type="radio" id="mental_health_need_no" name="mental_health_need" value="no" {% if form_data.get('mental_health_need') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="mental_health_need_no">No</label>
-                      </div>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Medical Need</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="medical_need_yes" name="medical_need" value="yes" {% if form_data.get('medical_need') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="medical_need_yes">Yes</label>
-
-                        <input type="radio" id="medical_need_no" name="medical_need" value="no" {% if form_data.get('medical_need') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="medical_need_no">No</label>
-                      </div>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>MH Exam Completed</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="mh_exam_completed_yes" name="mh_exam_completed" value="yes" {% if form_data.get('mh_exam_completed') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="mh_exam_completed_yes">Yes</label>
-
-                        <input type="radio" id="mh_exam_completed_no" name="mh_exam_completed" value="no" {% if form_data.get('mh_exam_completed') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="mh_exam_completed_no">No</label>
-                      </div>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Medical Exam Completed</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="med_exam_completed_yes" name="med_exam_completed" value="yes" {% if form_data.get('med_exam_completed') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="med_exam_completed_yes">Yes</label>
-
-                        <input type="radio" id="med_exam_completed_no" name="med_exam_completed" value="no" {% if form_data.get('med_exam_completed') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="med_exam_completed_no">No</label>
-                      </div>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Substance Use Need</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="substance_use_need_yes" name="substance_use_need" value="yes" {% if form_data.get('substance_use_need') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="substance_use_need_yes">Yes</label>
-
-                        <input type="radio" id="substance_use_need_no" name="substance_use_need" value="no" {% if form_data.get('substance_use_need') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="substance_use_need_no">No</label>
-                      </div>
-                    </div>
-
-                    <div class="toggle-field span-2">
-                      <label>Parenting Class Needed</label>
-                      <div class="toggle-inputs">
-                        <input type="radio" id="parenting_class_needed_yes" name="parenting_class_needed" value="yes" {% if form_data.get('parenting_class_needed') == 'yes' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-yes" for="parenting_class_needed_yes">Yes</label>
-
-                        <input type="radio" id="parenting_class_needed_no" name="parenting_class_needed" value="no" {% if form_data.get('parenting_class_needed') == 'no' %}checked{% endif %}>
-                        <label class="toggle-chip toggle-no" for="parenting_class_needed_no">No</label>
                       </div>
                     </div>
 
