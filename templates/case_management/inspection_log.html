@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Living Area Inspection Log</h1>
+
+<div class="card">
+  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
+  <p>
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+      Back to Case Management
+    </a>
+  </p>
+</div>
+
+<div class="card">
+  <h2>Add Inspection Entry</h2>
+
+  <form method="post" action="{{ url_for('case_management.add_inspection_log', resident_id=resident['id']) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Inspection Date</strong></label>
+    <input type="date" name="inspection_date" required>
+
+    <label><strong>Passed</strong></label>
+    <select name="passed">
+      <option value="yes">Yes</option>
+      <option value="no">No</option>
+    </select>
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes" rows="3"></textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Inspection Entry</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Recorded Inspection Entries</h2>
+
+  {% if inspection_rows %}
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Passed</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in inspection_rows %}
+          <tr>
+            <td>{{ row["inspection_date"] or "—" }}</td>
+            <td>{{ "Yes" if row["passed"] else "No" }}</td>
+            <td>
+              <a class="btn btn-sm" href="{{ url_for('case_management.edit_inspection_log', resident_id=resident['id'], inspection_id=row['id']) }}">
+                Edit
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No inspection entries recorded.</p>
+  {% endif %}
+</div>
+{% endblock %}
