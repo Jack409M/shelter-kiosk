@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328f') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328g') }}">
 {% endblock %}
 
 {% block content %}
@@ -173,6 +173,9 @@
           <div class="case-section-top">
             <a class="btn" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">
               UA Log
+            </a>
+            <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">
+              Inspection Log
             </a>
           </div>
         </div>
