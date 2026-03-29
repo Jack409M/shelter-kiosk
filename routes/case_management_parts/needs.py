@@ -7,53 +7,84 @@ from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import placeholder
 
 
-NEED_DEFINITIONS = [
+OFFICIAL_NEEDS = [
     {
         "need_key": "dental",
         "need_label": "Dental",
-        "source_field": "dental_need_at_entry",
-        "trigger_value": 1,
     },
     {
-        "need_key": "vision",
-        "need_label": "Vision",
-        "source_field": "vision_need_at_entry",
-        "trigger_value": 1,
+        "need_key": "vision_glasses",
+        "need_label": "Vision/Glasses",
     },
     {
-        "need_key": "parenting_class",
-        "need_label": "Parenting Class",
-        "source_field": "parenting_class_needed",
-        "trigger_value": 1,
+        "need_key": "rhn_physical",
+        "need_label": "RHN Physical",
     },
     {
-        "need_key": "warrants_fines",
-        "need_label": "Warrants/Fines",
-        "source_field": "warrants_unpaid",
-        "trigger_value": 1,
+        "need_key": "pap_smear",
+        "need_label": "Pap Smear",
     },
     {
-        "need_key": "mental_health",
-        "need_label": "Mental Health",
-        "source_field": "mental_health_need_at_entry",
-        "trigger_value": 1,
+        "need_key": "jo_wyatt",
+        "need_label": "JO Wyatt",
     },
     {
-        "need_key": "medical",
-        "need_label": "Medical",
-        "source_field": "medical_need_at_entry",
-        "trigger_value": 1,
-    },
-    {
-        "need_key": "drivers_license",
-        "need_label": "Drivers License",
-        "source_field": "has_drivers_license",
-        "trigger_value": 0,
+        "need_key": "birth_certificate",
+        "need_label": "Birth Certificate",
     },
     {
         "need_key": "social_security_card",
         "need_label": "Social Security Card",
+    },
+    {
+        "need_key": "state_id_drivers_license",
+        "need_label": "State ID/Driver’s License",
+    },
+    {
+        "need_key": "warrants_fine_resolution",
+        "need_label": "Warrants/Fine Resolution",
+    },
+    {
+        "need_key": "food_stamps_snap",
+        "need_label": "Food Stamps/SNAP",
+    },
+    {
+        "need_key": "parenting_class_needed",
+        "need_label": "Parenting Class Needed",
+    },
+]
+
+OFFICIAL_NEEDS_BY_KEY = {row["need_key"]: row for row in OFFICIAL_NEEDS}
+
+LEGACY_INTAKE_RULES = [
+    {
+        "need_key": "dental",
+        "source_field": "dental_need_at_entry",
+        "trigger_value": 1,
+    },
+    {
+        "need_key": "vision_glasses",
+        "source_field": "vision_need_at_entry",
+        "trigger_value": 1,
+    },
+    {
+        "need_key": "parenting_class_needed",
+        "source_field": "parenting_class_needed",
+        "trigger_value": 1,
+    },
+    {
+        "need_key": "warrants_fine_resolution",
+        "source_field": "warrants_unpaid",
+        "trigger_value": 1,
+    },
+    {
+        "need_key": "social_security_card",
         "source_field": "has_social_security_card",
+        "trigger_value": 0,
+    },
+    {
+        "need_key": "state_id_drivers_license",
+        "source_field": "has_drivers_license",
         "trigger_value": 0,
     },
 ]
@@ -66,6 +97,32 @@ def normalize_need_status(value: Any) -> str | None:
     if normalized in VALID_NEED_STATUSES:
         return normalized
     return None
+
+
+def normalize_selected_need_keys(raw_values: Any) -> list[str]:
+    if raw_values is None:
+        return []
+
+    if isinstance(raw_values, str):
+        values = [raw_values]
+    else:
+        values = list(raw_values)
+
+    cleaned: list[str] = []
+    seen: set[str] = set()
+
+    for value in values:
+        key = (str(value or "").strip().lower()).replace(" ", "_")
+        if not key:
+            continue
+        if key not in OFFICIAL_NEEDS_BY_KEY:
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(key)
+
+    return cleaned
 
 
 def _source_value_display(value: Any) -> str:
@@ -91,21 +148,42 @@ def _is_triggered(value: Any, trigger_value: Any) -> bool:
     return False
 
 
-def build_triggered_needs(intake_row: dict[str, Any] | None) -> list[dict[str, Any]]:
+def build_triggered_needs(
+    intake_row: dict[str, Any] | None = None,
+    selected_need_keys: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    selected_keys = normalize_selected_need_keys(selected_need_keys)
+
+    if selected_keys:
+        return [
+            {
+                "need_key": need_key,
+                "need_label": OFFICIAL_NEEDS_BY_KEY[need_key]["need_label"],
+                "source_field": "entry_needs",
+                "source_value": "Yes",
+            }
+            for need_key in selected_keys
+        ]
+
     if not intake_row:
         return []
 
     triggered: list[dict[str, Any]] = []
 
-    for definition in NEED_DEFINITIONS:
+    for definition in LEGACY_INTAKE_RULES:
         source_field = definition["source_field"]
         source_value = intake_row.get(source_field)
 
         if _is_triggered(source_value, definition["trigger_value"]):
+            need_key = definition["need_key"]
+            need_meta = OFFICIAL_NEEDS_BY_KEY.get(need_key)
+            if not need_meta:
+                continue
+
             triggered.append(
                 {
-                    "need_key": definition["need_key"],
-                    "need_label": definition["need_label"],
+                    "need_key": need_key,
+                    "need_label": need_meta["need_label"],
                     "source_field": source_field,
                     "source_value": _source_value_display(source_value),
                 }
@@ -114,8 +192,31 @@ def build_triggered_needs(intake_row: dict[str, Any] | None) -> list[dict[str, A
     return triggered
 
 
-def sync_enrollment_needs(enrollment_id: int, intake_row: dict[str, Any] | None) -> None:
-    if not enrollment_id or not intake_row:
+def list_enrollment_need_keys(enrollment_id: int) -> list[str]:
+    if not enrollment_id:
+        return []
+
+    ph = placeholder()
+
+    rows = db_fetchall(
+        f"""
+        SELECT need_key
+        FROM resident_needs
+        WHERE enrollment_id = {ph}
+        ORDER BY id ASC
+        """,
+        (enrollment_id,),
+    )
+
+    return normalize_selected_need_keys([row["need_key"] for row in rows])
+
+
+def sync_enrollment_needs(
+    enrollment_id: int,
+    intake_row: dict[str, Any] | None = None,
+    selected_need_keys: list[str] | None = None,
+) -> None:
+    if not enrollment_id:
         return
 
     ph = placeholder()
@@ -134,7 +235,10 @@ def sync_enrollment_needs(enrollment_id: int, intake_row: dict[str, Any] | None)
     )
 
     existing_by_key = {row["need_key"]: row for row in existing_rows}
-    triggered_needs = build_triggered_needs(intake_row)
+    triggered_needs = build_triggered_needs(
+        intake_row=intake_row,
+        selected_need_keys=selected_need_keys,
+    )
 
     for need in triggered_needs:
         existing = existing_by_key.get(need["need_key"])
