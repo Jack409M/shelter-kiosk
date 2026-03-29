@@ -287,6 +287,96 @@ button.notebook-tab-btn.is-active span {
   margin-top: 3px;
 }
 
+.case-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.case-snapshot-card {
+  border: 1px solid #d6d6d6;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.case-snapshot-card-wide {
+  grid-column: 1 / -1;
+}
+
+.case-snapshot-title {
+  margin: 0 0 10px 0;
+}
+
+.case-snapshot-list {
+  display: grid;
+  gap: 8px;
+}
+
+.case-medication-list {
+  display: grid;
+  gap: 10px;
+}
+
+.case-medication-item {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.case-medication-meta {
+  margin-top: 4px;
+  color: #555;
+  font-size: 0.92em;
+}
+
+.case-program-level-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.case-program-level-display {
+  font-size: 0.98em;
+}
+
+.case-level-edit-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.case-input-50ch {
+  width: min(100%, 50ch);
+}
+
+.case-input-10ch {
+  width: 10ch;
+}
+
+.case-input-4ch {
+  width: 4ch;
+}
+
+.case-button-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.case-external-summary {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
 @media print {
   body {
     background: #fff !important;
@@ -349,48 +439,4 @@ button.notebook-tab-btn.is-active span {
     overflow-wrap: anywhere !important;
     word-break: break-word !important;
   }
-}
-
-.case-snapshot-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.case-snapshot-card {
-  border: 1px solid #d6d6d6;
-  border-radius: 8px;
-  padding: 12px;
-  background: #fafafa;
-}
-
-.case-snapshot-card-wide {
-  grid-column: 1 / -1;
-}
-
-.case-snapshot-title {
-  margin: 0 0 10px 0;
-}
-
-.case-snapshot-list {
-  display: grid;
-  gap: 8px;
-}
-
-.case-medication-list {
-  display: grid;
-  gap: 10px;
-}
-
-.case-medication-item {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.case-medication-meta {
-  margin-top: 4px;
-  color: #555;
-  font-size: 0.92em;
 }
