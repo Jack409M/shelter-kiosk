@@ -301,8 +301,8 @@
                   <p>Entry details that should create the initial program enrollment.</p>
                 </div>
                 <div class="section-card-body">
-                  <div class="field-grid">
-                    <div class="field span-3 field-max-15">
+                  <div class="field-grid field-grid-entry">
+                    <div class="field span-3">
                       <label for="program_status">Program Status</label>
                       {% set selected_program_status = form_data.get('program_status', 'active') %}
                       <select id="program_status" name="program_status" class="{% if selected_program_status %}has-value{% endif %}">
@@ -312,7 +312,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-3 field-max-20">
+                    <div class="field span-3">
                       <label for="prior_living">Where Was She Staying Before Entry</label>
                       <select id="prior_living" name="prior_living" class="{% if form_data.get('prior_living', '') %}has-value{% endif %}">
                         <option value="">Select</option>
@@ -322,17 +322,17 @@
                       </select>
                     </div>
 
-                    <div class="field span-3 field-compact">
+                    <div class="field span-2 field-date-tight">
                       <label for="sobriety_date">Sobriety Date</label>
                       <input id="sobriety_date" name="sobriety_date" type="date" value="{{ form_data.get('sobriety_date', '') }}">
                     </div>
 
-                    <div class="field span-3 field-compact">
+                    <div class="field span-2 field-date-tight">
                       <label for="treatment_grad_date">Treatment Graduation Date</label>
                       <input id="treatment_grad_date" name="treatment_grad_date" type="date" value="{{ form_data.get('treatment_grad_date', '') }}">
                     </div>
 
-                    <div class="field span-3 field-max-10">
+                    <div class="field span-2 field-select-tight">
                       <label for="drug_of_choice">Drug of Choice</label>
                       <select id="drug_of_choice" name="drug_of_choice" class="{% if form_data.get('drug_of_choice', '') %}has-value{% endif %}">
                         <option value="">Select</option>
@@ -342,12 +342,12 @@
                       </select>
                     </div>
 
-                    <div class="field span-3 field-compact">
+                    <div class="field span-2 field-money-tight">
                       <label for="income_at_entry">Monthly Income at Entry</label>
                       <input id="income_at_entry" name="income_at_entry" type="number" min="0" step="0.01" value="{{ form_data.get('income_at_entry', '') }}">
                     </div>
 
-                    <div class="field span-3 field-max-15">
+                    <div class="field span-2 field-select-tight">
                       <label for="education_at_entry">Education at Entry</label>
                       <select id="education_at_entry" name="education_at_entry" class="{% if form_data.get('education_at_entry', '') %}has-value{% endif %}">
                         <option value="">Select</option>
@@ -357,7 +357,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-4 field-max-20">
+                    <div class="field span-2 field-select-tight">
                       <label for="employment_status">Employment Status</label>
                       <select id="employment_status" name="employment_status" class="{% if form_data.get('employment_status', '') %}has-value{% endif %}">
                         <option value="">Select</option>
@@ -369,7 +369,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-3 field-max-20">
+                    <div class="field span-2 field-select-tight">
                       <label for="disability">Disability Type</label>
                       <select id="disability" name="disability" class="{% if form_data.get('disability', '') %}has-value{% endif %}">
                         <option value="">Select</option>
@@ -384,22 +384,22 @@
                       </select>
                     </div>
 
-                    <div class="field span-3 field-max-25">
+                    <div class="field span-3">
                       <label for="city">City</label>
                       <input id="city" name="city" type="text" maxlength="25" value="{{ form_data.get('city') or '' }}">
                     </div>
 
-                    <div class="field span-3 field-max-25">
+                    <div class="field span-2">
                       <label for="county">County</label>
                       <input id="county" name="county" type="text" maxlength="25" value="{{ form_data.get('county') or '' }}">
                     </div>
 
-                    <div class="field span-1 field-max-7">
+                    <div class="field span-1 field-zip-tight">
                       <label for="last_zipcode_residence">Zipcode</label>
                       <input id="last_zipcode_residence" name="last_zipcode_residence" type="text" maxlength="7" value="{{ form_data.get('last_zipcode_residence') or '' }}">
                     </div>
 
-                    <div class="field span-4 field-max-20">
+                    <div class="field span-2 field-select-tight">
                       <label for="length_of_time_in_amarillo">Length of Time in Amarillo</label>
                       <select id="length_of_time_in_amarillo" name="length_of_time_in_amarillo" class="{% if form_data.get('length_of_time_in_amarillo', '') %}has-value{% endif %}">
                         <option value="">Select</option>
@@ -409,7 +409,7 @@
                       </select>
                     </div>
 
-                    <div class="field span-2 field-max-10">
+                    <div class="field span-2 field-select-tight">
                       <label for="marital_status">Marital Status</label>
                       <select id="marital_status" name="marital_status" class="{% if form_data.get('marital_status', '') %}has-value{% endif %}">
                         <option value="">Select</option>
@@ -474,75 +474,80 @@
                   <p>Select each official need identified at intake. Selected needs will carry into the progress workflow until they are addressed.</p>
                 </div>
                 <div class="section-card-body">
-                  <div class="field-grid">
-                    <div class="field span-3">
-                      <label>Health</label>
-                      <div>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="dental" {% if form_data.get('need_dental') == 'yes' %}checked{% endif %}>
-                          Dental
-                        </label><br>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="vision_glasses" {% if form_data.get('need_vision_glasses') == 'yes' %}checked{% endif %}>
-                          Vision/Glasses
-                        </label><br>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="rhn_physical" {% if form_data.get('need_rhn_physical') == 'yes' %}checked{% endif %}>
-                          RHN physical
-                        </label><br>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="pap_smear" {% if form_data.get('need_pap_smear') == 'yes' %}checked{% endif %}>
-                          Pap smear
-                        </label>
-                      </div>
+                  <div class="needs-entry-grid">
+                    <div class="needs-entry-column">
+                      <div class="needs-entry-heading">Health</div>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="dental" {% if form_data.get('need_dental') == 'yes' %}checked{% endif %}>
+                        <span>Dental</span>
+                      </label>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="vision_glasses" {% if form_data.get('need_vision_glasses') == 'yes' %}checked{% endif %}>
+                        <span>Vision/Glasses</span>
+                      </label>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="rhn_physical" {% if form_data.get('need_rhn_physical') == 'yes' %}checked{% endif %}>
+                        <span>RHN physical</span>
+                      </label>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="pap_smear" {% if form_data.get('need_pap_smear') == 'yes' %}checked{% endif %}>
+                        <span>Pap smear</span>
+                      </label>
                     </div>
 
-                    <div class="field span-3">
-                      <label>Documents</label>
-                      <div>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="birth_certificate" {% if form_data.get('need_birth_certificate') == 'yes' %}checked{% endif %}>
-                          Birth certificate
-                        </label><br>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="social_security_card" {% if form_data.get('need_social_security_card') == 'yes' %}checked{% endif %}>
-                          Social security card
-                        </label><br>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="state_id_drivers_license" {% if form_data.get('need_state_id_drivers_license') == 'yes' %}checked{% endif %}>
-                          State ID/Driver’s license
-                        </label>
-                      </div>
+                    <div class="needs-entry-column">
+                      <div class="needs-entry-heading">Documents</div>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="birth_certificate" {% if form_data.get('need_birth_certificate') == 'yes' %}checked{% endif %}>
+                        <span>Birth certificate</span>
+                      </label>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="social_security_card" {% if form_data.get('need_social_security_card') == 'yes' %}checked{% endif %}>
+                        <span>Social security card</span>
+                      </label>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="state_id_drivers_license" {% if form_data.get('need_state_id_drivers_license') == 'yes' %}checked{% endif %}>
+                        <span>State ID/Driver’s license</span>
+                      </label>
                     </div>
 
-                    <div class="field span-3">
-                      <label>Program and Legal</label>
-                      <div>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="jo_wyatt" {% if form_data.get('need_jo_wyatt') == 'yes' %}checked{% endif %}>
-                          JO Wyatt
-                        </label><br>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="warrants_fine_resolution" {% if form_data.get('need_warrants_fine_resolution') == 'yes' %}checked{% endif %}>
-                          Warrants/fine resolution
-                        </label><br>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="parenting_class_needed" {% if form_data.get('need_parenting_class_needed') == 'yes' %}checked{% endif %}>
-                          Parenting class needed
-                        </label>
-                      </div>
+                    <div class="needs-entry-column">
+                      <div class="needs-entry-heading">Program and Legal</div>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="jo_wyatt" {% if form_data.get('need_jo_wyatt') == 'yes' %}checked{% endif %}>
+                        <span>JO Wyatt</span>
+                      </label>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="warrants_fine_resolution" {% if form_data.get('need_warrants_fine_resolution') == 'yes' %}checked{% endif %}>
+                        <span>Warrants/fine resolution</span>
+                      </label>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="parenting_class_needed" {% if form_data.get('need_parenting_class_needed') == 'yes' %}checked{% endif %}>
+                        <span>Parenting class needed</span>
+                      </label>
                     </div>
 
-                    <div class="field span-3">
-                      <label>Benefits</label>
-                      <div>
-                        <label>
-                          <input type="checkbox" name="entry_need" value="food_stamps_snap" {% if form_data.get('need_food_stamps_snap') == 'yes' %}checked{% endif %}>
-                          Food stamps/SNAP
-                        </label>
-                      </div>
-                    </div>
+                    <div class="needs-entry-column">
+                      <div class="needs-entry-heading">Benefits</div>
 
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="food_stamps_snap" {% if form_data.get('need_food_stamps_snap') == 'yes' %}checked{% endif %}>
+                        <span>Food stamps/SNAP</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="field-grid needs-notes-row">
                     <div class="field span-12">
                       <label for="initial_snapshot_notes">Needs Notes</label>
                       <textarea id="initial_snapshot_notes" name="initial_snapshot_notes" placeholder="Brief notes about identified needs at entry.">{{ form_data.get('initial_snapshot_notes', '') }}</textarea>
