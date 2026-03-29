@@ -190,6 +190,7 @@
 .toggle-field {
   display: grid;
   gap: 4px;
+  align-content: start;
 }
 
 .field.span-12,
@@ -225,6 +226,11 @@
 .field.span-2,
 .toggle-field.span-2 {
   grid-column: span 2;
+}
+
+.field.span-1,
+.toggle-field.span-1 {
+  grid-column: span 1;
 }
 
 .field label,
@@ -389,6 +395,72 @@
   font-size: 13px;
 }
 
+.field-grid-entry .field input,
+.field-grid-entry .field select {
+  max-width: 100%;
+}
+
+.field-date-tight input[type="date"] {
+  max-width: 132px;
+}
+
+.field-money-tight input[type="number"] {
+  max-width: 132px;
+}
+
+.field-zip-tight input[type="text"] {
+  max-width: 90px;
+}
+
+.field-select-tight select {
+  max-width: 100%;
+}
+
+.needs-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px 22px;
+  align-items: start;
+}
+
+.needs-entry-column {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.needs-entry-heading {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.needs-entry-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  align-items: start;
+  font-size: 13px;
+  color: #13202c;
+  cursor: pointer;
+  line-height: 1.25;
+}
+
+.needs-entry-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0 0;
+}
+
+.needs-entry-item span {
+  display: block;
+}
+
+.needs-notes-row {
+  margin-top: 10px;
+}
+
 @media (max-width: 980px) {
   .field.span-9,
   .toggle-field.span-9,
@@ -401,7 +473,9 @@
   .field.span-3,
   .toggle-field.span-3,
   .field.span-2,
-  .toggle-field.span-2 {
+  .toggle-field.span-2,
+  .field.span-1,
+  .toggle-field.span-1 {
     grid-column: span 12;
   }
 
@@ -416,8 +490,16 @@
   .field.field-max-15 input[type="text"],
   .field.field-max-20 select,
   .field.field-max-20 input[type="text"],
-  .field.field-max-25 input[type="text"] {
+  .field.field-max-25 input[type="text"],
+  .field-date-tight input[type="date"],
+  .field-money-tight input[type="number"],
+  .field-zip-tight input[type="text"],
+  .field-select-tight select {
     max-width: 100%;
+  }
+
+  .needs-entry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -429,5 +511,11 @@
   .footer-actions {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .needs-entry-grid {
+    grid-template-columns: 1fr;
   }
 }
