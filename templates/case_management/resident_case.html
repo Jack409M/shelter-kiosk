@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328k') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328l') }}">
 {% endblock %}
 
 {% block content %}
@@ -89,34 +89,44 @@
       <strong>Program Status:</strong> {{ enrollment_program_status|replace("_", " ")|title if enrollment_program_status else "Not enrolled" }}<br>
       <strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}<br>
       <strong>Entry Date:</strong> {{ enrollment_entry_date or "—" }}<br>
-      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}<br>
-      <strong>Level:</strong>
-      {% if rs_level %}
-        Level {{ rs_level }}
-      {% else %}
-        —
-      {% endif %}
+      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}
     </p>
 
     {% if enrollment_id %}
-      <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}" class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="sponsor_name" value="{{ rs_sponsor or '' }}">
-        <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
-        <input type="hidden" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
-        <input type="hidden" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
+      <div class="case-program-level-row no-print">
+        <div class="case-program-level-display">
+          <strong>Level:</strong>
+          {% if rs_level %}
+            Level {{ rs_level }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
 
-        <input
-          type="number"
-          min="0"
-          step="1"
-          name="program_level"
-          value="{{ rs_level or '' }}"
-          style="width:4ch;"
-        >
+        <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}" class="case-level-edit-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="sponsor_name" value="{{ rs_sponsor or '' }}">
+          <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
+          <input type="hidden" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
+          <input type="hidden" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
 
-        <button type="submit" class="btn">Edit</button>
-      </form>
+          <select name="program_level" class="case-input-4ch case-level-select">
+            <option value="" {% if not rs_level %}selected{% endif %}>—</option>
+            <option value="1" {% if rs_level|string == "1" %}selected{% endif %}>1</option>
+            <option value="2" {% if rs_level|string == "2" %}selected{% endif %}>2</option>
+            <option value="3" {% if rs_level|string == "3" %}selected{% endif %}>3</option>
+            <option value="4" {% if rs_level|string == "4" %}selected{% endif %}>4</option>
+            <option value="5" {% if rs_level|string == "5" %}selected{% endif %}>5</option>
+            <option value="6" {% if rs_level|string == "6" %}selected{% endif %}>6</option>
+            <option value="7" {% if rs_level|string == "7" %}selected{% endif %}>7</option>
+            <option value="8" {% if rs_level|string == "8" %}selected{% endif %}>8</option>
+            <option value="9" {% if rs_level|string == "9" %}selected{% endif %}>9</option>
+            <option value="10" {% if rs_level|string == "10" %}selected{% endif %}>10</option>
+          </select>
+
+          <button type="submit" class="btn">Edit</button>
+        </form>
+      </div>
     {% endif %}
   </div>
 </div>
@@ -169,16 +179,18 @@
     <div class="card no-print">
       <h2>Progress Notes</h2>
 
-      <div class="case-help-text case-help-text-top" style="margin-bottom:12px;">
-        <strong>Latest Inspection:</strong>
-        {% if rs_latest_inspection %}
-          {{ rs_latest_inspection["inspection_date"] or "—" }}
-          {% if rs_latest_inspection["passed_display"] %}
-            — {{ rs_latest_inspection["passed_display"] }}
+      <div class="case-external-summary">
+        <div>
+          <strong>Latest Inspection:</strong>
+          {% if rs_latest_inspection %}
+            {{ rs_latest_inspection["inspection_date"] or "—" }}
+            {% if rs_latest_inspection["passed_display"] %}
+              — {{ rs_latest_inspection["passed_display"] }}
+            {% endif %}
+          {% else %}
+            —
           {% endif %}
-        {% else %}
-          —
-        {% endif %}
+        </div>
       </div>
 
       <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
@@ -451,7 +463,7 @@
       </form>
     </div>
 
-    <div class="card no-print">
+    <div class="card no-print case-recovery-section">
       <h2>Recovery Snapshot</h2>
 
       <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
@@ -459,46 +471,57 @@
         <input type="hidden" name="program_level" value="{{ rs_level or '' }}">
 
         <div class="case-snapshot-grid">
-          <div class="case-snapshot-card">
+          <div class="case-snapshot-card case-snapshot-card-compact">
             <h3 class="case-snapshot-title">Current Profile</h3>
 
-            <label><strong>Sponsor</strong></label>
-            <input
-              type="text"
-              name="sponsor_name"
-              value="{{ rs_sponsor or '' }}"
-              maxlength="50"
-              style="width:min(100%, 50ch);"
-            >
+            <div class="case-profile-row">
+              <div class="case-profile-field case-profile-field-wide">
+                <label><strong>Sponsor</strong></label>
+                <input
+                  type="text"
+                  name="sponsor_name"
+                  value="{{ rs_sponsor or '' }}"
+                  maxlength="50"
+                  class="case-input-50ch"
+                >
+              </div>
 
-            <label><strong>Employer</strong></label>
-            <input
-              type="text"
-              name="employer_name"
-              value="{{ rs_employer or '' }}"
-              maxlength="50"
-              style="width:min(100%, 50ch);"
-            >
+              <div class="case-profile-field case-profile-field-compact">
+                <label><strong>Current Step</strong></label>
+                <input
+                  type="number"
+                  min="1"
+                  max="12"
+                  name="step_current"
+                  value="{{ rs_step if rs_step is not none else '' }}"
+                  class="case-input-4ch"
+                >
+              </div>
+            </div>
 
-            <label><strong>Monthly Income</strong></label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              name="monthly_income"
-              value="{{ rs_income if rs_income is not none else '' }}"
-              style="width:10ch;"
-            >
+            <div class="case-profile-row">
+              <div class="case-profile-field case-profile-field-wide">
+                <label><strong>Employer</strong></label>
+                <input
+                  type="text"
+                  name="employer_name"
+                  value="{{ rs_employer or '' }}"
+                  maxlength="50"
+                  class="case-input-50ch"
+                >
+              </div>
 
-            <label><strong>Current Step</strong></label>
-            <input
-              type="number"
-              min="1"
-              max="12"
-              name="step_current"
-              value="{{ rs_step if rs_step is not none else '' }}"
-              style="width:4ch;"
-            >
+              <div class="case-profile-field case-profile-field-compact">
+                <label><strong>Monthly Income</strong></label>
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  name="monthly_income"
+                  value="{{ rs_income if rs_income is not none else '' }}"
+                  class="case-input-10ch case-no-spinner"
+                >
+              </div>
+            </div>
 
             <div class="case-help-text case-help-text-top">
               {% if rs_step_changed_at %}
@@ -516,9 +539,9 @@
             </div>
           </div>
 
-          <div class="case-snapshot-card">
+          <div class="case-snapshot-card case-snapshot-card-compact">
             <h3 class="case-snapshot-title">Latest Operational Items</h3>
-            <div class="case-snapshot-list">
+            <div class="case-snapshot-list case-snapshot-list-compact">
               <div>
                 <strong>Latest UA:</strong>
                 {% if rs_latest_ua %}
@@ -551,7 +574,7 @@
               </div>
             </div>
 
-            <div class="case-section-top">
+            <div class="case-section-top case-button-row">
               <a class="btn" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">
                 UA Log
               </a>
@@ -564,10 +587,10 @@
             </div>
           </div>
 
-          <div class="case-snapshot-card case-snapshot-card-wide">
+          <div class="case-snapshot-card case-snapshot-card-wide case-snapshot-card-compact">
             <h3 class="case-snapshot-title">Current Medications</h3>
             {% if rs_medications %}
-              <div class="case-medication-list">
+              <div class="case-medication-list case-medication-list-compact">
                 {% for med in rs_medications %}
                   <div class="case-medication-item">
                     <div>
