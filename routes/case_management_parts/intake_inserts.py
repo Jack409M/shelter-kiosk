@@ -206,18 +206,24 @@ def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: 
     return int(row["id"])
 
 
+def _checked_need(data: dict[str, Any], need_key: str) -> int | None:
+    return yes_no_to_int(data.get(f"need_{need_key}"))
+
+
+def _missing_item_value(data: dict[str, Any], need_key: str) -> int | None:
+    return 0 if data.get(f"need_{need_key}") == "yes" else None
+
+
 def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     ph = placeholder()
     now = utcnow_iso()
 
-    dental_need = yes_no_to_int(data.get("dental_need"))
-    vision_need = yes_no_to_int(data.get("vision_need"))
-    parenting_class_needed = yes_no_to_int(data.get("parenting_class_needed"))
-    warrants_unpaid = yes_no_to_int(data.get("warrants_unpaid"))
-    mental_health_need = yes_no_to_int(data.get("mental_health_need"))
-    medical_need = yes_no_to_int(data.get("medical_need"))
-    has_drivers_license = yes_no_to_int(data.get("has_drivers_license"))
-    has_social_security_card = yes_no_to_int(data.get("has_social_security_card"))
+    dental_need = _checked_need(data, "dental")
+    vision_need = _checked_need(data, "vision_glasses")
+    parenting_class_needed = _checked_need(data, "parenting_class_needed")
+    warrants_unpaid = _checked_need(data, "warrants_fine_resolution")
+    has_drivers_license = _missing_item_value(data, "state_id_drivers_license")
+    has_social_security_card = _missing_item_value(data, "social_security_card")
 
     if g.get("db_kind") == "pg":
         db_execute(
@@ -353,18 +359,18 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 yes_no_to_int(data.get("domestic_violence_history")),
                 yes_no_to_int(data.get("human_trafficking_history")),
                 warrants_unpaid,
-                yes_no_to_int(data.get("mh_exam_completed")),
-                yes_no_to_int(data.get("med_exam_completed")),
+                None,
+                None,
                 yes_no_to_int(data.get("car_at_entry")),
                 yes_no_to_int(data.get("car_insurance_at_entry")),
                 yes_no_to_int(data.get("pregnant")),
                 dental_need,
                 vision_need,
                 data.get("employment_status"),
-                mental_health_need,
-                medical_need,
-                yes_no_to_int(data.get("substance_use_need")),
-                data.get("id_documents_status"),
+                None,
+                None,
+                None,
+                None,
                 has_drivers_license,
                 has_social_security_card,
                 parenting_class_needed,
@@ -505,18 +511,18 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 yes_no_to_int(data.get("domestic_violence_history")),
                 yes_no_to_int(data.get("human_trafficking_history")),
                 warrants_unpaid,
-                yes_no_to_int(data.get("mh_exam_completed")),
-                yes_no_to_int(data.get("med_exam_completed")),
+                None,
+                None,
                 yes_no_to_int(data.get("car_at_entry")),
                 yes_no_to_int(data.get("car_insurance_at_entry")),
                 yes_no_to_int(data.get("pregnant")),
                 dental_need,
                 vision_need,
                 data.get("employment_status"),
-                mental_health_need,
-                medical_need,
-                yes_no_to_int(data.get("substance_use_need")),
-                data.get("id_documents_status"),
+                None,
+                None,
+                None,
+                None,
                 has_drivers_license,
                 has_social_security_card,
                 parenting_class_needed,
@@ -528,16 +534,7 @@ def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
 
     sync_enrollment_needs(
         enrollment_id,
-        {
-            "dental_need_at_entry": dental_need,
-            "vision_need_at_entry": vision_need,
-            "parenting_class_needed": parenting_class_needed,
-            "warrants_unpaid": warrants_unpaid,
-            "mental_health_need_at_entry": mental_health_need,
-            "medical_need_at_entry": medical_need,
-            "has_drivers_license": has_drivers_license,
-            "has_social_security_card": has_social_security_card,
-        },
+        selected_need_keys=data.get("entry_need_keys", []),
     )
 
 
