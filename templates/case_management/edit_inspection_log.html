@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Edit Inspection Entry</h1>
+
+<div class="card">
+  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
+  <p>
+    <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident['id']) }}">
+      Back to Inspection Log
+    </a>
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+      Back to Case Management
+    </a>
+  </p>
+</div>
+
+<div class="card">
+  <form method="post" action="{{ url_for('case_management.edit_inspection_log', resident_id=resident['id'], inspection_id=inspection_row['id']) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Inspection Date</strong></label>
+    <input type="date" name="inspection_date" value="{{ inspection_row['inspection_date'] or '' }}" required>
+
+    <label><strong>Passed</strong></label>
+    <select name="passed">
+      <option value="yes" {% if inspection_row['passed'] %}selected{% endif %}>Yes</option>
+      <option value="no" {% if not inspection_row['passed'] %}selected{% endif %}>No</option>
+    </select>
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes" rows="4">{{ inspection_row['notes'] or '' }}</textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Changes</button>
+    </div>
+  </form>
+</div>
