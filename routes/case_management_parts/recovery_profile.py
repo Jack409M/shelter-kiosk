@@ -13,6 +13,25 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
+def _clean_text(value: str | None) -> str | None:
+    cleaned = (value or "").strip()
+    return cleaned or None
+
+
+def _normalize_employment_status(value: str | None) -> str | None:
+    normalized = (value or "").strip().lower()
+    if normalized in {"employed", "unemployed"}:
+        return normalized
+    return None
+
+
+def _normalize_employment_type(value: str | None) -> str | None:
+    normalized = (value or "").strip().lower()
+    if normalized in {"full_time", "part_time"}:
+        return normalized
+    return None
+
+
 def update_recovery_profile_view(resident_id: int):
     init_db()
 
@@ -27,7 +46,15 @@ def update_recovery_profile_view(resident_id: int):
         f"""
         SELECT
             id,
-            step_current
+            step_current,
+            employment_status_current,
+            employment_type_current,
+            employer_name,
+            supervisor_name,
+            supervisor_phone,
+            unemployment_reason,
+            employment_notes,
+            monthly_income
         FROM residents
         WHERE id = {ph}
           AND {shelter_equals_sql("shelter")}
@@ -46,16 +73,43 @@ def update_recovery_profile_view(resident_id: int):
         flash("Step must be between 1 and 12.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    program_level = (request.form.get("program_level") or "").strip() or None
-    sponsor_name = (request.form.get("sponsor_name") or "").strip() or None
-    employer_name = (request.form.get("employer_name") or "").strip() or None
+    program_level = _clean_text(request.form.get("program_level"))
+    sponsor_name = _clean_text(request.form.get("sponsor_name"))
+    employer_name = _clean_text(request.form.get("employer_name"))
+    employment_status_current = _normalize_employment_status(request.form.get("employment_status_current"))
+    employment_type_current = _normalize_employment_type(request.form.get("employment_type_current"))
+    supervisor_name = _clean_text(request.form.get("supervisor_name"))
+    supervisor_phone = _clean_text(request.form.get("supervisor_phone"))
+    unemployment_reason = _clean_text(request.form.get("unemployment_reason"))
+    employment_notes = _clean_text(request.form.get("employment_notes"))
     monthly_income = parse_money(request.form.get("monthly_income"))
+
+    if employment_status_current == "unemployed":
+        employer_name = None
+        supervisor_name = None
+        supervisor_phone = None
+        employment_type_current = None
+    else:
+        unemployment_reason = None
 
     step_changed_at = None
     if new_step != current_step:
         step_changed_at = utcnow_iso()
 
-    if step_changed_at is not None:
+    employment_changed = (
+        employment_status_current != resident.get("employment_status_current")
+        or employment_type_current != resident.get("employment_type_current")
+        or employer_name != resident.get("employer_name")
+        or supervisor_name != resident.get("supervisor_name")
+        or supervisor_phone != resident.get("supervisor_phone")
+        or unemployment_reason != resident.get("unemployment_reason")
+        or employment_notes != resident.get("employment_notes")
+        or monthly_income != resident.get("monthly_income")
+    )
+
+    employment_updated_at = utcnow_iso() if employment_changed else None
+
+    if step_changed_at is not None and employment_updated_at is not None:
         db_execute(
             f"""
             UPDATE residents
@@ -63,6 +117,49 @@ def update_recovery_profile_view(resident_id: int):
                 program_level = {ph},
                 sponsor_name = {ph},
                 employer_name = {ph},
+                employment_status_current = {ph},
+                employment_type_current = {ph},
+                supervisor_name = {ph},
+                supervisor_phone = {ph},
+                unemployment_reason = {ph},
+                employment_notes = {ph},
+                monthly_income = {ph},
+                employment_updated_at = {ph},
+                step_current = {ph},
+                step_changed_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                program_level,
+                sponsor_name,
+                employer_name,
+                employment_status_current,
+                employment_type_current,
+                supervisor_name,
+                supervisor_phone,
+                unemployment_reason,
+                employment_notes,
+                monthly_income,
+                employment_updated_at,
+                new_step,
+                step_changed_at,
+                resident_id,
+            ),
+        )
+    elif step_changed_at is not None:
+        db_execute(
+            f"""
+            UPDATE residents
+            SET
+                program_level = {ph},
+                sponsor_name = {ph},
+                employer_name = {ph},
+                employment_status_current = {ph},
+                employment_type_current = {ph},
+                supervisor_name = {ph},
+                supervisor_phone = {ph},
+                unemployment_reason = {ph},
+                employment_notes = {ph},
                 monthly_income = {ph},
                 step_current = {ph},
                 step_changed_at = {ph}
@@ -72,9 +169,50 @@ def update_recovery_profile_view(resident_id: int):
                 program_level,
                 sponsor_name,
                 employer_name,
+                employment_status_current,
+                employment_type_current,
+                supervisor_name,
+                supervisor_phone,
+                unemployment_reason,
+                employment_notes,
                 monthly_income,
                 new_step,
                 step_changed_at,
+                resident_id,
+            ),
+        )
+    elif employment_updated_at is not None:
+        db_execute(
+            f"""
+            UPDATE residents
+            SET
+                program_level = {ph},
+                sponsor_name = {ph},
+                employer_name = {ph},
+                employment_status_current = {ph},
+                employment_type_current = {ph},
+                supervisor_name = {ph},
+                supervisor_phone = {ph},
+                unemployment_reason = {ph},
+                employment_notes = {ph},
+                monthly_income = {ph},
+                employment_updated_at = {ph},
+                step_current = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                program_level,
+                sponsor_name,
+                employer_name,
+                employment_status_current,
+                employment_type_current,
+                supervisor_name,
+                supervisor_phone,
+                unemployment_reason,
+                employment_notes,
+                monthly_income,
+                employment_updated_at,
+                new_step,
                 resident_id,
             ),
         )
@@ -86,6 +224,12 @@ def update_recovery_profile_view(resident_id: int):
                 program_level = {ph},
                 sponsor_name = {ph},
                 employer_name = {ph},
+                employment_status_current = {ph},
+                employment_type_current = {ph},
+                supervisor_name = {ph},
+                supervisor_phone = {ph},
+                unemployment_reason = {ph},
+                employment_notes = {ph},
                 monthly_income = {ph},
                 step_current = {ph}
             WHERE id = {ph}
@@ -94,6 +238,12 @@ def update_recovery_profile_view(resident_id: int):
                 program_level,
                 sponsor_name,
                 employer_name,
+                employment_status_current,
+                employment_type_current,
+                supervisor_name,
+                supervisor_phone,
+                unemployment_reason,
+                employment_notes,
                 monthly_income,
                 new_step,
                 resident_id,
