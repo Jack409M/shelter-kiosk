@@ -52,6 +52,9 @@ from routes.case_management_parts.actions import add_goal_view
 from routes.case_management_parts.actions import create_enrollment_view
 from routes.case_management_parts.assessment import assessment_form_view
 from routes.case_management_parts.assessment import submit_assessment_view
+from routes.case_management_parts.budget_sessions import add_budget_session_view
+from routes.case_management_parts.budget_sessions import budget_sessions_view
+from routes.case_management_parts.budget_sessions import edit_budget_session_view
 from routes.case_management_parts.exit import exit_assessment_form_view
 from routes.case_management_parts.exit import submit_exit_assessment_view
 from routes.case_management_parts.followups import followup_form_view
@@ -443,6 +446,33 @@ def add_inspection_log(resident_id: int):
 @require_shelter
 def edit_inspection_log(resident_id: int, inspection_id: int):
     return edit_inspection_log_view(resident_id, inspection_id)
+
+
+# ============================================================================
+# Budget Session Routes
+# ----------------------------------------------------------------------------
+# Extracted to routes.case_management_parts.budget_sessions
+# ============================================================================
+
+@case_management.get("/<int:resident_id>/budget-sessions")
+@require_login
+@require_shelter
+def budget_sessions(resident_id: int):
+    return budget_sessions_view(resident_id)
+
+
+@case_management.post("/<int:resident_id>/budget-sessions")
+@require_login
+@require_shelter
+def add_budget_session(resident_id: int):
+    return add_budget_session_view(resident_id)
+
+
+@case_management.route("/<int:resident_id>/budget-sessions/<int:budget_id>/edit", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def edit_budget_session(resident_id: int, budget_id: int):
+    return edit_budget_session_view(resident_id, budget_id)
 
 
 # ============================================================================
