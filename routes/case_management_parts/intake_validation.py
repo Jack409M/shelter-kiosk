@@ -11,6 +11,7 @@ from routes.case_management_parts.helpers import parse_int
 from routes.case_management_parts.helpers import parse_iso_date
 from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.needs import normalize_selected_need_keys
 
 
 ALLOWED_GENDER_VALUES = {"m", "f"}
@@ -101,6 +102,7 @@ def _find_possible_duplicate(
 
 def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list[str]]:
     normalized_selected_shelter = normalize_shelter_name(shelter)
+    selected_need_keys = normalize_selected_need_keys(form.getlist("entry_need"))
 
     data: dict[str, Any] = {
         "first_name": clean(form.get("first_name")),
@@ -118,7 +120,6 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "entry_date": clean(form.get("entry_date")),
         "shelter": normalize_shelter_name(form.get("shelter") or shelter),
         "program_status": clean(form.get("program_status")) or "active",
-
         "prior_living": clean(form.get("prior_living")),
         "city": clean(form.get("city")),
         "county": clean(form.get("county")),
@@ -131,43 +132,28 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "income_at_entry": clean(form.get("income_at_entry")),
         "education_at_entry": clean(form.get("education_at_entry")),
         "disability": clean(form.get("disability")),
-
-        "parenting_class_needed": clean(form.get("parenting_class_needed")),
         "dwc_level_today": clean(form.get("dwc_level_today")),
-
         "entry_notes": clean(form.get("entry_notes")),
         "race": clean(form.get("race")),
         "ethnicity": clean(form.get("ethnicity")),
-
         "pregnant": clean(form.get("pregnant")),
-        "dental_need": clean(form.get("dental_need")),
-        "vision_need": clean(form.get("vision_need")),
         "employment_status": clean(form.get("employment_status")),
         "initial_snapshot_notes": clean(form.get("initial_snapshot_notes")),
-
         "ace_score": clean(form.get("ace_score")),
         "grit_score": clean(form.get("grit_score")),
-
         "sexual_survivor": clean(form.get("sexual_survivor")),
         "domestic_violence_history": clean(form.get("domestic_violence_history")),
         "human_trafficking_history": clean(form.get("human_trafficking_history")),
         "drug_court": clean(form.get("drug_court")),
-        "warrants_unpaid": clean(form.get("warrants_unpaid")),
-        "mh_exam_completed": clean(form.get("mh_exam_completed")),
-        "med_exam_completed": clean(form.get("med_exam_completed")),
-        "mental_health_need": clean(form.get("mental_health_need")),
-        "medical_need": clean(form.get("medical_need")),
-        "substance_use_need": clean(form.get("substance_use_need")),
-        "trauma_notes": clean(form.get("trauma_notes")),
         "felony_history": clean(form.get("felony_history")),
         "probation_parole": clean(form.get("probation_parole")),
-        "id_documents_status": clean(form.get("id_documents_status")),
-        "has_drivers_license": clean(form.get("has_drivers_license")),
-        "has_social_security_card": clean(form.get("has_social_security_card")),
         "barrier_notes": clean(form.get("barrier_notes")),
-
+        "entry_need_keys": selected_need_keys,
         "days_sober_at_entry": None,
     }
+
+    for need_key in selected_need_keys:
+        data[f"need_{need_key}"] = "yes"
 
     errors: list[str] = []
 
