@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Budget Sessions</h1>
+
+<div class="card">
+  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
+  <p>
+    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+      Back to Case Management
+    </a>
+  </p>
+</div>
+
+<div class="card">
+  <h2>Add Budget Session</h2>
+
+  <form method="post" action="{{ url_for('case_management.add_budget_session', resident_id=resident['id']) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Session Date</strong></label>
+    <input type="date" name="session_date" required>
+
+    <label><strong>Notes</strong></label>
+    <textarea name="notes" rows="3"></textarea>
+
+    <div style="margin-top:10px;">
+      <button type="submit">Save Budget Session</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Recorded Budget Sessions</h2>
+
+  {% if budget_rows %}
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in budget_rows %}
+          <tr>
+            <td>{{ row["session_date"] or "—" }}</td>
+            <td>
+              <a class="btn btn-sm" href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id']) }}">
+                Edit
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No budget sessions recorded.</p>
+  {% endif %}
+</div>
+{% endblock %}
