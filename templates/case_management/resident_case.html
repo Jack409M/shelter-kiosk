@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328l') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328m') }}">
 {% endblock %}
 
 {% block content %}
@@ -476,7 +476,7 @@
 
             <div class="case-profile-row">
               <div class="case-profile-field case-profile-field-wide">
-                <label><strong>Sponsor</strong></label>
+                <label><strong>Sponsor Name</strong></label>
                 <input
                   type="text"
                   name="sponsor_name"
@@ -518,7 +518,8 @@
                   inputmode="decimal"
                   name="monthly_income"
                   value="{{ rs_income if rs_income is not none else '' }}"
-                  class="case-input-10ch case-no-spinner"
+                  class="case-input-12ch case-no-spinner"
+                  maxlength="12"
                 >
               </div>
             </div>
@@ -536,6 +537,50 @@
 
             <div class="case-section-top">
               <button type="submit">Save Recovery Profile</button>
+            </div>
+          </div>
+
+          <div class="case-snapshot-card case-snapshot-card-compact">
+            <h3 class="case-snapshot-title">Current Medications</h3>
+            {% if rs_medications %}
+              <div class="case-medication-list case-medication-list-compact">
+                {% for med in rs_medications %}
+                  <div class="case-medication-item">
+                    <div>
+                      <strong>{{ med["medication_name"] or "Medication" }}</strong>
+                      {% if med["dosage"] %}
+                        — {{ med["dosage"] }}
+                      {% endif %}
+                      {% if med["frequency"] %}
+                        — {{ med["frequency"] }}
+                      {% endif %}
+                    </div>
+                    {% if med["purpose"] %}
+                      <div class="case-medication-meta">
+                        Purpose: {{ med["purpose"] }}
+                      </div>
+                    {% endif %}
+                    {% if med["prescribed_by"] %}
+                      <div class="case-medication-meta">
+                        Prescribed by: {{ med["prescribed_by"] }}
+                      </div>
+                    {% endif %}
+                    {% if med["notes"] %}
+                      <div class="case-medication-meta">
+                        {{ med["notes"] }}
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="case-empty-muted">No active medications recorded.</p>
+            {% endif %}
+
+            <div class="case-section-top">
+              <a class="btn" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">
+                Manage Medications
+              </a>
             </div>
           </div>
 
@@ -583,50 +628,6 @@
               </a>
               <a class="btn" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}">
                 Budget Sessions
-              </a>
-            </div>
-          </div>
-
-          <div class="case-snapshot-card case-snapshot-card-wide case-snapshot-card-compact">
-            <h3 class="case-snapshot-title">Current Medications</h3>
-            {% if rs_medications %}
-              <div class="case-medication-list case-medication-list-compact">
-                {% for med in rs_medications %}
-                  <div class="case-medication-item">
-                    <div>
-                      <strong>{{ med["medication_name"] or "Medication" }}</strong>
-                      {% if med["dosage"] %}
-                        — {{ med["dosage"] }}
-                      {% endif %}
-                      {% if med["frequency"] %}
-                        — {{ med["frequency"] }}
-                      {% endif %}
-                    </div>
-                    {% if med["purpose"] %}
-                      <div class="case-medication-meta">
-                        Purpose: {{ med["purpose"] }}
-                      </div>
-                    {% endif %}
-                    {% if med["prescribed_by"] %}
-                      <div class="case-medication-meta">
-                        Prescribed by: {{ med["prescribed_by"] }}
-                      </div>
-                    {% endif %}
-                    {% if med["notes"] %}
-                      <div class="case-medication-meta">
-                        {{ med["notes"] }}
-                      </div>
-                    {% endif %}
-                  </div>
-                {% endfor %}
-              </div>
-            {% else %}
-              <p class="case-empty-muted">No active medications recorded.</p>
-            {% endif %}
-
-            <div class="case-section-top">
-              <a class="btn" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">
-                Manage Medications
               </a>
             </div>
           </div>
