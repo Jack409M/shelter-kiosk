@@ -59,26 +59,49 @@
           <strong>{{ summary_group["group_label"] }}:</strong>
 
           {% for item in summary_group["items"] %}
-            <div class="case-note-service-card">
-              <div><strong>{{ item["item_label"] or "—" }}</strong></div>
+            {% set item_label = item["item_label"] or "—" %}
+            {% set old_value = item["old_value"] %}
+            {% set new_value = item["new_value"] %}
+            {% set detail = item["detail"] %}
+            {% set change_type_display = item["change_type_display"] %}
+            {% set normalized_new = (new_value|string|trim) if new_value is not none else "" %}
+            {% set normalized_detail = (detail|string|trim) if detail is not none else "" %}
+            {% set show_meta = false %}
+            {% set show_detail = false %}
 
-              {% if item["old_value"] and item["new_value"] and item["old_value"] != item["new_value"] %}
+            {% if old_value and new_value and old_value != new_value %}
+              {% set show_meta = true %}
+              {% set show_detail = normalized_detail != "" and normalized_detail != normalized_new %}
+            {% elif new_value %}
+              {% set show_meta = true %}
+              {% set show_detail = normalized_detail != "" and normalized_detail != normalized_new %}
+            {% elif change_type_display and change_type_display != "Snapshot" %}
+              {% set show_meta = true %}
+              {% set show_detail = normalized_detail != "" %}
+            {% else %}
+              {% set show_detail = normalized_detail != "" %}
+            {% endif %}
+
+            <div class="case-note-service-card">
+              <div><strong>{{ item_label }}</strong></div>
+
+              {% if old_value and new_value and old_value != new_value %}
                 <div class="case-note-service-meta">
-                  {{ item["old_value"] }} → {{ item["new_value"] }}
+                  {{ old_value }} → {{ new_value }}
                 </div>
-              {% elif item["new_value"] %}
+              {% elif new_value %}
                 <div class="case-note-service-meta">
-                  {{ item["new_value"] }}
+                  {{ new_value }}
                 </div>
-              {% elif item["change_type_display"] and item["change_type_display"] != "Snapshot" %}
+              {% elif change_type_display and change_type_display != "Snapshot" %}
                 <div class="case-note-service-meta">
-                  {{ item["change_type_display"] }}
+                  {{ change_type_display }}
                 </div>
               {% endif %}
 
-              {% if item["detail"] %}
+              {% if show_detail %}
                 <div class="case-note-service-text case-note-text-block">
-                  {{ item["detail"] }}
+                  {{ detail }}
                 </div>
               {% endif %}
             </div>
