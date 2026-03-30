@@ -50,7 +50,17 @@
 {% set rs = recovery_snapshot or {} %}
 {% set rs_level = rs.get("program_level") %}
 {% set rs_sponsor = rs.get("sponsor_name") %}
+{% set rs_employment_status = rs.get("employment_status_current") %}
+{% set rs_employment_status_display = rs.get("employment_status_display") %}
+{% set rs_employment_type = rs.get("employment_type_current") %}
+{% set rs_employment_type_display = rs.get("employment_type_display") %}
 {% set rs_employer = rs.get("employer_name") %}
+{% set rs_supervisor_name = rs.get("supervisor_name") %}
+{% set rs_supervisor_phone = rs.get("supervisor_phone") %}
+{% set rs_unemployment_reason = rs.get("unemployment_reason") %}
+{% set rs_employment_notes = rs.get("employment_notes") %}
+{% set rs_employment_updated_at = rs.get("employment_updated_at") %}
+{% set rs_employment_days = rs.get("employment_days") %}
 {% set rs_income = rs.get("monthly_income") %}
 {% set rs_income_display = rs.get("monthly_income_display") %}
 {% set rs_step = rs.get("step_current") %}
@@ -106,7 +116,13 @@
         <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}" class="case-level-edit-form">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="sponsor_name" value="{{ rs_sponsor or '' }}">
+          <input type="hidden" name="employment_status_current" value="{{ rs_employment_status or '' }}">
+          <input type="hidden" name="employment_type_current" value="{{ rs_employment_type or '' }}">
           <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
+          <input type="hidden" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
+          <input type="hidden" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
+          <input type="hidden" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
+          <input type="hidden" name="employment_notes" value="{{ rs_employment_notes or '' }}">
           <input type="hidden" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
           <input type="hidden" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
 
@@ -501,14 +517,17 @@
 
             <div class="case-profile-row">
               <div class="case-profile-field case-profile-field-wide">
-                <label><strong>Employer</strong></label>
-                <input
-                  type="text"
-                  name="employer_name"
-                  value="{{ rs_employer or '' }}"
-                  maxlength="50"
+                <label><strong>Employment Status</strong></label>
+                <select
+                  name="employment_status_current"
+                  id="employment_status_current"
                   class="case-input-50ch"
+                  onchange="toggleEmploymentProfileFields()"
                 >
+                  <option value="" {% if not rs_employment_status %}selected{% endif %}>—</option>
+                  <option value="employed" {% if rs_employment_status == "employed" %}selected{% endif %}>Employed</option>
+                  <option value="unemployed" {% if rs_employment_status == "unemployed" %}selected{% endif %}>Unemployed</option>
+                </select>
               </div>
 
               <div class="case-profile-field case-profile-field-compact">
@@ -524,6 +543,70 @@
               </div>
             </div>
 
+            <div id="employment_fields_employed">
+              <div class="case-profile-row">
+                <div class="case-profile-field case-profile-field-wide">
+                  <label><strong>Employer</strong></label>
+                  <input
+                    type="text"
+                    name="employer_name"
+                    value="{{ rs_employer or '' }}"
+                    maxlength="50"
+                    class="case-input-50ch"
+                  >
+                </div>
+
+                <div class="case-profile-field case-profile-field-compact">
+                  <label><strong>Employment Type</strong></label>
+                  <select name="employment_type_current" class="case-input-12ch">
+                    <option value="" {% if not rs_employment_type %}selected{% endif %}>—</option>
+                    <option value="full_time" {% if rs_employment_type == "full_time" %}selected{% endif %}>Full Time</option>
+                    <option value="part_time" {% if rs_employment_type == "part_time" %}selected{% endif %}>Part Time</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="case-profile-row">
+                <div class="case-profile-field case-profile-field-wide">
+                  <label><strong>Supervisor Name</strong></label>
+                  <input
+                    type="text"
+                    name="supervisor_name"
+                    value="{{ rs_supervisor_name or '' }}"
+                    maxlength="50"
+                    class="case-input-50ch"
+                  >
+                </div>
+
+                <div class="case-profile-field case-profile-field-compact">
+                  <label><strong>Supervisor Phone</strong></label>
+                  <input
+                    type="text"
+                    name="supervisor_phone"
+                    value="{{ rs_supervisor_phone or '' }}"
+                    maxlength="25"
+                    class="case-input-18ch"
+                    inputmode="tel"
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div id="employment_fields_unemployed">
+              <div class="case-profile-row">
+                <div class="case-profile-field case-profile-field-wide">
+                  <label><strong>Unemployment Reason</strong></label>
+                  <input
+                    type="text"
+                    name="unemployment_reason"
+                    value="{{ rs_unemployment_reason or '' }}"
+                    maxlength="100"
+                    class="case-input-50ch"
+                  >
+                </div>
+              </div>
+            </div>
+
             <div class="case-help-text case-help-text-top">
               {% if rs_step_changed_at %}
                 Step changed: {{ rs_step_changed_at }}
@@ -532,6 +615,17 @@
                 {% endif %}
               {% else %}
                 No step change date recorded yet.
+              {% endif %}
+            </div>
+
+            <div class="case-help-text case-help-text-top">
+              {% if rs_employment_updated_at %}
+                Employment updated: {{ rs_employment_updated_at }}
+                {% if rs_employment_days is not none %}
+                  — {{ rs_employment_days }} day{% if rs_employment_days != 1 %}s{% endif %} since employment update
+                {% endif %}
+              {% else %}
+                No employment update date recorded yet.
               {% endif %}
             </div>
 
@@ -742,8 +836,6 @@
             {% for child in children %}
               {% set child_name = child["child_name"] %}
               {% set child_birth_year = child["birth_year"] %}
-              {% set child_relationship = child["relationship"] %}
-              {% set child_living_status = child["living_status"] %}
               {% set child_id = child["id"] %}
               <tr>
                 <td>{{ child_name or "—" }}</td>
@@ -1003,6 +1095,34 @@
   </div>
 
   <script src="{{ url_for('static', filename='resident_case_notebook.js', v='20260328a') }}"></script>
+  <script>
+    function toggleEmploymentProfileFields() {
+      var statusField = document.getElementById("employment_status_current");
+      var employedSection = document.getElementById("employment_fields_employed");
+      var unemployedSection = document.getElementById("employment_fields_unemployed");
+
+      if (!statusField || !employedSection || !unemployedSection) {
+        return;
+      }
+
+      var value = statusField.value || "";
+
+      if (value === "employed") {
+        employedSection.style.display = "block";
+        unemployedSection.style.display = "none";
+      } else if (value === "unemployed") {
+        employedSection.style.display = "none";
+        unemployedSection.style.display = "block";
+      } else {
+        employedSection.style.display = "none";
+        unemployedSection.style.display = "none";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      toggleEmploymentProfileFields();
+    });
+  </script>
 
 {% endif %}
 
