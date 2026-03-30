@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 
@@ -19,6 +20,15 @@ def parse_dt(dt_str: str) -> datetime:
 
 def _can_manage_transport() -> bool:
     return can_manage_requests()
+
+
+def _row_value(row: Any, key: str, index: int, default=None):
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        return row[index]
+    except Exception:
+        return default
 
 
 def _cleanup_transport_requests(shelter: str) -> None:
@@ -71,9 +81,21 @@ def staff_transport_pending():
     _cleanup_transport_requests(shelter)
 
     rows = db_fetchall(
-        "SELECT * FROM transport_requests WHERE status = %s AND shelter = %s ORDER BY id DESC"
+        """
+        SELECT *
+        FROM transport_requests
+        WHERE status = %s
+          AND shelter = %s
+        ORDER BY needed_at ASC, id ASC
+        """
         if current_app.config.get("DATABASE_URL")
-        else "SELECT * FROM transport_requests WHERE status = ? AND shelter = ? ORDER BY id DESC",
+        else """
+        SELECT *
+        FROM transport_requests
+        WHERE status = ?
+          AND shelter = ?
+        ORDER BY needed_at ASC, id ASC
+        """,
         ("pending", shelter),
     )
 
@@ -101,7 +123,7 @@ def staff_transport_board():
         FROM transport_requests
         WHERE shelter = %s
           AND status IN (%s, %s)
-        ORDER BY needed_at ASC
+        ORDER BY needed_at ASC, id ASC
         """
         if current_app.config.get("DATABASE_URL")
         else """
@@ -109,7 +131,7 @@ def staff_transport_board():
         FROM transport_requests
         WHERE shelter = ?
           AND status IN (?, ?)
-        ORDER BY needed_at ASC
+        ORDER BY needed_at ASC, id ASC
         """,
         (shelter, "pending", "scheduled"),
     )
@@ -119,7 +141,7 @@ def staff_transport_board():
         filtered = []
         for r in rows:
             try:
-                needed_at_val = r.get("needed_at") if isinstance(r, dict) else r["needed_at"]
+                needed_at_val = _row_value(r, "needed_at", 5, "")
                 dt = parse_dt(needed_at_val)
                 if dt.strftime("%Y-%m-%d") == day:
                     filtered.append(r)
@@ -154,7 +176,7 @@ def staff_transport_print():
         FROM transport_requests
         WHERE shelter = %s
           AND status IN (%s, %s)
-        ORDER BY needed_at ASC
+        ORDER BY needed_at ASC, id ASC
         """
         if g.get("db_kind") == "pg"
         else """
@@ -162,7 +184,7 @@ def staff_transport_print():
         FROM transport_requests
         WHERE shelter = ?
           AND status IN (?, ?)
-        ORDER BY needed_at ASC
+        ORDER BY needed_at ASC, id ASC
         """,
         (shelter, "pending", "scheduled"),
     )
@@ -174,7 +196,7 @@ def staff_transport_print():
     filtered = []
     for r in rows:
         try:
-            needed_at_val = r.get("needed_at") if isinstance(r, dict) else r["needed_at"]
+            needed_at_val = _row_value(r, "needed_at", 5, "")
             dt = parse_dt(needed_at_val)
             if dt.strftime("%Y-%m-%d") == day:
                 filtered.append(r)
@@ -188,13 +210,13 @@ def staff_transport_print():
 
     trs = []
     for r in rows:
-        needed_at_val = r.get("needed_at") if isinstance(r, dict) else r["needed_at"]
+        needed_at_val = _row_value(r, "needed_at", 5)
         needed_at = fmt_dt(needed_at_val)
-        first = r.get("first_name") if isinstance(r, dict) else r["first_name"]
-        last = r.get("last_name") if isinstance(r, dict) else r["last_name"]
-        pickup = r.get("pickup_location") if isinstance(r, dict) else r["pickup_location"]
-        dest = r.get("destination") if isinstance(r, dict) else r["destination"]
-        status = r.get("status") if isinstance(r, dict) else r["status"]
+        first = _row_value(r, "first_name", 3, "")
+        last = _row_value(r, "last_name", 4, "")
+        pickup = _row_value(r, "pickup_location", 6, "")
+        dest = _row_value(r, "destination", 7, "")
+        status = _row_value(r, "status", 11, "")
 
         name = f"{last}, {first}"
 
