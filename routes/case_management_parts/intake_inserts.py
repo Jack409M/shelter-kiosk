@@ -12,132 +12,153 @@ from routes.case_management_parts.helpers import yes_no_to_int
 from routes.case_management_parts.needs import sync_enrollment_needs
 
 
+def _is_unique_violation(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "unique" in message or "duplicate" in message
+
+
 def _insert_resident(data: dict[str, Any], shelter: str) -> tuple[int, str, str]:
     ph = placeholder()
-    resident_identifier = generate_resident_identifier()
-    resident_code = generate_resident_code()
+    max_attempts = 5
+    last_error: Exception | None = None
 
-    if g.get("db_kind") == "pg":
-        row = db_fetchone(
-            f"""
-            INSERT INTO residents
-            (
-                resident_identifier,
-                resident_code,
-                first_name,
-                last_name,
-                birth_year,
-                phone,
-                email,
-                emergency_contact_name,
-                emergency_contact_relationship,
-                emergency_contact_phone,
-                shelter,
-                gender,
-                race,
-                ethnicity,
-                is_active,
-                created_at
+    for _ in range(max_attempts):
+        resident_identifier = generate_resident_identifier()
+        resident_code = generate_resident_code()
+
+        try:
+            if g.get("db_kind") == "pg":
+                row = db_fetchone(
+                    f"""
+                    INSERT INTO residents
+                    (
+                        resident_identifier,
+                        resident_code,
+                        first_name,
+                        last_name,
+                        birth_year,
+                        phone,
+                        email,
+                        emergency_contact_name,
+                        emergency_contact_relationship,
+                        emergency_contact_phone,
+                        shelter,
+                        gender,
+                        race,
+                        ethnicity,
+                        is_active,
+                        created_at
+                    )
+                    VALUES (
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        TRUE,
+                        NOW()
+                    )
+                    RETURNING id
+                    """,
+                    (
+                        resident_identifier,
+                        resident_code,
+                        data["first_name"],
+                        data["last_name"],
+                        data["birth_year"],
+                        data["phone"],
+                        data["email"],
+                        data["emergency_contact_name"],
+                        data["emergency_contact_relationship"],
+                        data["emergency_contact_phone"],
+                        shelter,
+                        data["gender"],
+                        data["race"],
+                        data["ethnicity"],
+                    ),
+                )
+                return int(row["id"]), resident_identifier, resident_code
+
+            db_execute(
+                f"""
+                INSERT INTO residents
+                (
+                    resident_identifier,
+                    resident_code,
+                    first_name,
+                    last_name,
+                    birth_year,
+                    phone,
+                    email,
+                    emergency_contact_name,
+                    emergency_contact_relationship,
+                    emergency_contact_phone,
+                    shelter,
+                    gender,
+                    race,
+                    ethnicity,
+                    is_active,
+                    created_at
+                )
+                VALUES (
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    1,
+                    CURRENT_TIMESTAMP
+                )
+                """,
+                (
+                    resident_identifier,
+                    resident_code,
+                    data["first_name"],
+                    data["last_name"],
+                    data["birth_year"],
+                    data["phone"],
+                    data["email"],
+                    data["emergency_contact_name"],
+                    data["emergency_contact_relationship"],
+                    data["emergency_contact_phone"],
+                    shelter,
+                    data["gender"],
+                    data["race"],
+                    data["ethnicity"],
+                ),
             )
-            VALUES (
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                TRUE,
-                NOW()
-            )
-            RETURNING id
-            """,
-            (
-                resident_identifier,
-                resident_code,
-                data["first_name"],
-                data["last_name"],
-                data["birth_year"],
-                data["phone"],
-                data["email"],
-                data["emergency_contact_name"],
-                data["emergency_contact_relationship"],
-                data["emergency_contact_phone"],
-                shelter,
-                data["gender"],
-                data["race"],
-                data["ethnicity"],
-            ),
-        )
-        return int(row["id"]), resident_identifier, resident_code
 
-    db_execute(
-        f"""
-        INSERT INTO residents
-        (
-            resident_identifier,
-            resident_code,
-            first_name,
-            last_name,
-            birth_year,
-            phone,
-            email,
-            emergency_contact_name,
-            emergency_contact_relationship,
-            emergency_contact_phone,
-            shelter,
-            gender,
-            race,
-            ethnicity,
-            is_active,
-            created_at
-        )
-        VALUES (
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            1,
-            CURRENT_TIMESTAMP
-        )
-        """,
-        (
-            resident_identifier,
-            resident_code,
-            data["first_name"],
-            data["last_name"],
-            data["birth_year"],
-            data["phone"],
-            data["email"],
-            data["emergency_contact_name"],
-            data["emergency_contact_relationship"],
-            data["emergency_contact_phone"],
-            shelter,
-            data["gender"],
-            data["race"],
-            data["ethnicity"],
-        ),
-    )
+            row = db_fetchone("SELECT last_insert_rowid() AS id")
+            return int(row["id"]), resident_identifier, resident_code
 
-    row = db_fetchone("SELECT last_insert_rowid() AS id")
-    return int(row["id"]), resident_identifier, resident_code
+        except Exception as exc:
+            last_error = exc
+            if _is_unique_violation(exc):
+                continue
+            raise
+
+    if last_error is not None:
+        raise last_error
+
+    raise RuntimeError("Unable to generate a unique resident identifier and code.")
 
 
 def _insert_program_enrollment(resident_id: int, data: dict[str, Any], shelter: str) -> int:
