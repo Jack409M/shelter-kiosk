@@ -64,8 +64,13 @@ def parse_money(value: str | None) -> float | None:
         return None
 
 
-def yes_no_to_int(value: str | None) -> int:
-    return 1 if (value or "").strip().lower() == "yes" else 0
+def yes_no_to_int(value: str | None) -> int | None:
+    normalized = (value or "").strip().lower()
+    if normalized == "yes":
+        return 1
+    if normalized == "no":
+        return 0
+    return None
 
 
 def draft_display_name(form: Any) -> str:
