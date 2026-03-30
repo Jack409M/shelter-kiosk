@@ -32,6 +32,25 @@
       return;
     }
 
+    function setPrintMarkup(printId) {
+      if (!printBox) {
+        return;
+      }
+
+      if (!printId) {
+        printBox.innerHTML = "";
+        return;
+      }
+
+      var tpl = document.getElementById(printId);
+      if (!tpl) {
+        printBox.innerHTML = "";
+        return;
+      }
+
+      printBox.innerHTML = tpl.innerHTML;
+    }
+
     function showPanel(panelId, printId) {
       panels.forEach(function (panel) {
         panel.style.display = panel.id === panelId ? "block" : "none";
@@ -45,12 +64,28 @@
         }
       });
 
-      if (printBox && printId) {
-        var tpl = document.getElementById(printId);
-        if (tpl) {
-          printBox.innerHTML = tpl.innerHTML;
-        }
+      setPrintMarkup(printId);
+    }
+
+    function getActiveTile() {
+      var activeTile = tiles.find(function (tile) {
+        return tile.classList.contains("is-active");
+      });
+
+      if (activeTile) {
+        return activeTile;
       }
+
+      return tiles[tiles.length - 1] || null;
+    }
+
+    function syncPrintSelectionToActiveTile() {
+      var activeTile = getActiveTile();
+      if (!activeTile) {
+        return;
+      }
+
+      setPrintMarkup(activeTile.getAttribute("data-print-target"));
     }
 
     tiles.forEach(function (tile) {
@@ -67,10 +102,26 @@
     }
 
     var newestTile = tiles[tiles.length - 1];
-    showPanel(
-      newestTile.getAttribute("data-note-target"),
-      newestTile.getAttribute("data-print-target")
-    );
+    if (newestTile) {
+      showPanel(
+        newestTile.getAttribute("data-note-target"),
+        newestTile.getAttribute("data-print-target")
+      );
+    }
+
+    window.addEventListener("beforeprint", function () {
+      syncPrintSelectionToActiveTile();
+    });
+
+    document.addEventListener("keydown", function (event) {
+      var isPrintShortcut =
+        (event.ctrlKey || event.metaKey) &&
+        String(event.key || "").toLowerCase() === "p";
+
+      if (isPrintShortcut) {
+        syncPrintSelectionToActiveTile();
+      }
+    });
   }
 
   document.addEventListener("DOMContentLoaded", function () {
