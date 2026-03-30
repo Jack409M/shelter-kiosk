@@ -14,6 +14,7 @@ from routes.case_management_parts.helpers import (
     parse_iso_date,
     parse_money,
     placeholder,
+    shelter_equals_sql,
     yes_no_to_int,
 )
 
@@ -81,7 +82,8 @@ def _fetch_resident_and_enrollment(resident_id: int):
         f"""
         SELECT id, resident_identifier, first_name, last_name, resident_code, shelter, is_active
         FROM residents
-        WHERE id = {ph} AND shelter = {ph}
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
         """,
         (resident_id, shelter),
     )
@@ -93,8 +95,15 @@ def _fetch_resident_and_enrollment(resident_id: int):
         f"""
         SELECT id, resident_id, shelter, entry_date, exit_date, program_status
         FROM program_enrollments
-        WHERE resident_id = {ph} AND shelter = {ph}
-        ORDER BY id DESC
+        WHERE resident_id = {ph}
+          AND {shelter_equals_sql("shelter")}
+        ORDER BY
+            CASE
+                WHEN COALESCE(program_status, '') = 'active' THEN 0
+                ELSE 1
+            END,
+            COALESCE(entry_date, '') DESC,
+            id DESC
         LIMIT 1
         """,
         (resident_id, shelter),
@@ -408,14 +417,27 @@ def _close_enrollment_and_resident(enrollment_id: int, resident_id: int, data: d
         (data["date_exit_dwc"], now, enrollment_id),
     )
 
-    db_execute(
+    active_other = db_fetchone(
         f"""
-        UPDATE residents
-        SET is_active = FALSE
-        WHERE id = {ph}
+        SELECT id
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+          AND program_status = 'active'
+          AND id <> {ph}
+        LIMIT 1
         """,
-        (resident_id,),
+        (resident_id, enrollment_id),
     )
+
+    if not active_other:
+        db_execute(
+            f"""
+            UPDATE residents
+            SET is_active = FALSE
+            WHERE id = {ph}
+            """,
+            (resident_id,),
+        )
 
 
 def exit_assessment_form_view(resident_id: int):
@@ -425,7 +447,6 @@ def exit_assessment_form_view(resident_id: int):
 
     init_db()
 
-    normalize_shelter_name(session.get("shelter"))
     resident, enrollment = _fetch_resident_and_enrollment(resident_id)
 
     if not resident:
@@ -454,7 +475,6 @@ def submit_exit_assessment_view(resident_id: int):
 
     init_db()
 
-    normalize_shelter_name(session.get("shelter"))
     resident, enrollment = _fetch_resident_and_enrollment(resident_id)
 
     if not resident:
