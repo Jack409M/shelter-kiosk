@@ -81,11 +81,15 @@ def get_family_composition(
     family_row = db_fetchone(
         f"""
         SELECT
-            COALESCE(SUM(fs.kids_reunited_while_in_program), 0) AS reunited,
-            COALESCE(SUM(fs.healthy_babies_born_at_dwc), 0) AS babies_born
-        FROM program_enrollments pe
-        LEFT JOIN family_snapshots fs ON fs.enrollment_id = pe.id
-        {where_sql}
+            COALESCE(SUM(COALESCE(fs.kids_reunited_while_in_program, 0)), 0) AS reunited,
+            COALESCE(SUM(COALESCE(fs.healthy_babies_born_at_dwc, 0)), 0) AS babies_born
+        FROM family_snapshots fs
+        JOIN (
+            SELECT DISTINCT pe.id
+            FROM program_enrollments pe
+            {where_sql}
+        ) filtered_enrollments
+          ON filtered_enrollments.id = fs.enrollment_id
         """,
         tuple(where_params),
     )
