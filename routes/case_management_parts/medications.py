@@ -105,7 +105,7 @@ def add_medication_view(resident_id: int):
     started_on = _clean(request.form.get("started_on"))
     ended_on = _clean(request.form.get("ended_on"))
     notes = _clean(request.form.get("notes"))
-    is_active = 1 if (request.form.get("is_active") or "").strip().lower() == "yes" else 0
+    is_active = (request.form.get("is_active") or "").strip().lower() == "yes"
 
     if not medication_name:
         flash("Medication name is required.", "error")
@@ -214,7 +214,7 @@ def edit_medication_view(resident_id: int, medication_id: int):
     started_on = _clean(request.form.get("started_on"))
     ended_on = _clean(request.form.get("ended_on"))
     notes = _clean(request.form.get("notes"))
-    is_active = 1 if (request.form.get("is_active") or "").strip().lower() == "yes" else 0
+    is_active = (request.form.get("is_active") or "").strip().lower() == "yes"
 
     if not medication_name:
         flash("Medication name is required.", "error")
