@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from threading import Lock
 from typing import Any
 
@@ -56,16 +57,19 @@ def get_db() -> Any:
     _init_pg_pool()
     if PG_POOL is None:
         raise RuntimeError("Postgres pool was not initialized.")
+
     conn = PG_POOL.getconn()
     conn.autocommit = True
     g.db = conn
     g.db_kind = "pg"
+    g.db_in_transaction = False
     return conn
 
 
 def close_db(e: Exception | None = None) -> None:
     conn = g.pop("db", None)
     g.pop("db_kind", None)
+    g.pop("db_in_transaction", None)
 
     if conn is None:
         return
@@ -116,3 +120,27 @@ def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
         return cur.fetchall()
     finally:
         cur.close()
+
+
+@contextmanager
+def db_transaction():
+    conn = get_db()
+    already_in_transaction = bool(g.get("db_in_transaction"))
+
+    if already_in_transaction:
+        yield conn
+        return
+
+    previous_autocommit = conn.autocommit
+    conn.autocommit = False
+    g.db_in_transaction = True
+
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        g.db_in_transaction = False
+        conn.autocommit = previous_autocommit
