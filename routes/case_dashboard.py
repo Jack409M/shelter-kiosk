@@ -198,9 +198,27 @@ def dashboard():
                 COUNT(rc.id) AS actual_children
             FROM residents r
             JOIN program_enrollments pe
-              ON pe.resident_id = r.id
+              ON pe.id = (
+                SELECT pe2.id
+                FROM program_enrollments pe2
+                WHERE pe2.resident_id = r.id
+                ORDER BY
+                    CASE
+                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
+                        ELSE 1
+                    END,
+                    COALESCE(pe2.entry_date, '') DESC,
+                    pe2.id DESC
+                LIMIT 1
+              )
             JOIN family_snapshots fs
-              ON fs.enrollment_id = pe.id
+              ON fs.id = (
+                SELECT fs2.id
+                FROM family_snapshots fs2
+                WHERE fs2.enrollment_id = pe.id
+                ORDER BY fs2.id DESC
+                LIMIT 1
+              )
             LEFT JOIN resident_children rc
               ON rc.resident_id = r.id
              AND rc.is_active = TRUE
@@ -213,7 +231,7 @@ def dashboard():
                 fs.kids_at_dwc,
                 fs.kids_served_outside_under_18
             HAVING (COALESCE(fs.kids_at_dwc, 0) + COALESCE(fs.kids_served_outside_under_18, 0)) > COUNT(rc.id)
-            ORDER BY r.last_name, r.first_name
+            ORDER BY r.last_name, r.first_name, r.id
             """,
             """
             SELECT
@@ -224,9 +242,27 @@ def dashboard():
                 COUNT(rc.id) AS actual_children
             FROM residents r
             JOIN program_enrollments pe
-              ON pe.resident_id = r.id
+              ON pe.id = (
+                SELECT pe2.id
+                FROM program_enrollments pe2
+                WHERE pe2.resident_id = r.id
+                ORDER BY
+                    CASE
+                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
+                        ELSE 1
+                    END,
+                    COALESCE(pe2.entry_date, '') DESC,
+                    pe2.id DESC
+                LIMIT 1
+              )
             JOIN family_snapshots fs
-              ON fs.enrollment_id = pe.id
+              ON fs.id = (
+                SELECT fs2.id
+                FROM family_snapshots fs2
+                WHERE fs2.enrollment_id = pe.id
+                ORDER BY fs2.id DESC
+                LIMIT 1
+              )
             LEFT JOIN resident_children rc
               ON rc.resident_id = r.id
              AND rc.is_active = 1
@@ -239,7 +275,7 @@ def dashboard():
                 fs.kids_at_dwc,
                 fs.kids_served_outside_under_18
             HAVING (COALESCE(fs.kids_at_dwc, 0) + COALESCE(fs.kids_served_outside_under_18, 0)) > COUNT(rc.id)
-            ORDER BY r.last_name, r.first_name
+            ORDER BY r.last_name, r.first_name, r.id
             """,
         ),
         (shelter,),
@@ -435,11 +471,23 @@ def dashboard():
                 a.appointment_type,
                 a.appointment_date,
                 a.notes
-            FROM appointments a
+            FROM residents r
             JOIN program_enrollments pe
-              ON pe.id = a.enrollment_id
-            JOIN residents r
-              ON r.id = pe.resident_id
+              ON pe.id = (
+                SELECT pe2.id
+                FROM program_enrollments pe2
+                WHERE pe2.resident_id = r.id
+                ORDER BY
+                    CASE
+                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
+                        ELSE 1
+                    END,
+                    COALESCE(pe2.entry_date, '') DESC,
+                    pe2.id DESC
+                LIMIT 1
+              )
+            JOIN appointments a
+              ON a.enrollment_id = pe.id
             WHERE r.is_active = TRUE
               AND r.shelter = %s
               AND a.appointment_date = %s
@@ -453,11 +501,23 @@ def dashboard():
                 a.appointment_type,
                 a.appointment_date,
                 a.notes
-            FROM appointments a
+            FROM residents r
             JOIN program_enrollments pe
-              ON pe.id = a.enrollment_id
-            JOIN residents r
-              ON r.id = pe.resident_id
+              ON pe.id = (
+                SELECT pe2.id
+                FROM program_enrollments pe2
+                WHERE pe2.resident_id = r.id
+                ORDER BY
+                    CASE
+                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
+                        ELSE 1
+                    END,
+                    COALESCE(pe2.entry_date, '') DESC,
+                    pe2.id DESC
+                LIMIT 1
+              )
+            JOIN appointments a
+              ON a.enrollment_id = pe.id
             WHERE r.is_active = 1
               AND r.shelter = ?
               AND a.appointment_date = ?
