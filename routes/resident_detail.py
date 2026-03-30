@@ -199,7 +199,13 @@ def _load_resident_for_shelter(resident_id: int, shelter: str):
             LEFT JOIN intake_assessments ia
                 ON ia.enrollment_id = pe.id
             WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY pe.id DESC
+            ORDER BY
+                CASE
+                    WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
+                    ELSE 1
+                END,
+                COALESCE(pe.entry_date, '') DESC,
+                pe.id DESC
             LIMIT 1
             """,
             f"""
@@ -231,7 +237,13 @@ def _load_resident_for_shelter(resident_id: int, shelter: str):
             LEFT JOIN intake_assessments ia
                 ON ia.enrollment_id = pe.id
             WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY pe.id DESC
+            ORDER BY
+                CASE
+                    WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
+                    ELSE 1
+                END,
+                COALESCE(pe.entry_date, '') DESC,
+                pe.id DESC
             LIMIT 1
             """,
         ),
@@ -240,6 +252,49 @@ def _load_resident_for_shelter(resident_id: int, shelter: str):
 
 
 def _next_appointment_for_enrollment(enrollment_id: int):
+    today_iso = datetime.utcnow().date().isoformat()
+
+    row = db_fetchone(
+        _sql(
+            """
+            SELECT
+                appointment_date,
+                appointment_type,
+                notes,
+                reminder_sent,
+                created_at
+            FROM appointments
+            WHERE enrollment_id = %s
+              AND appointment_date IS NOT NULL
+              AND appointment_date >= %s
+            ORDER BY
+                appointment_date ASC,
+                id ASC
+            LIMIT 1
+            """,
+            """
+            SELECT
+                appointment_date,
+                appointment_type,
+                notes,
+                reminder_sent,
+                created_at
+            FROM appointments
+            WHERE enrollment_id = ?
+              AND appointment_date IS NOT NULL
+              AND appointment_date >= ?
+            ORDER BY
+                appointment_date ASC,
+                id ASC
+            LIMIT 1
+            """,
+        ),
+        (enrollment_id, today_iso),
+    )
+
+    if row:
+        return row
+
     return db_fetchone(
         _sql(
             """
@@ -251,8 +306,9 @@ def _next_appointment_for_enrollment(enrollment_id: int):
                 created_at
             FROM appointments
             WHERE enrollment_id = %s
+              AND appointment_date IS NOT NULL
             ORDER BY
-                created_at DESC,
+                appointment_date DESC,
                 id DESC
             LIMIT 1
             """,
@@ -265,8 +321,9 @@ def _next_appointment_for_enrollment(enrollment_id: int):
                 created_at
             FROM appointments
             WHERE enrollment_id = ?
+              AND appointment_date IS NOT NULL
             ORDER BY
-                created_at DESC,
+                appointment_date DESC,
                 id DESC
             LIMIT 1
             """,
@@ -286,7 +343,13 @@ def _resident_enrollment_for_shelter(resident_id: int, shelter: str):
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
             WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY pe.id DESC
+            ORDER BY
+                CASE
+                    WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
+                    ELSE 1
+                END,
+                COALESCE(pe.entry_date, '') DESC,
+                pe.id DESC
             LIMIT 1
             """,
             f"""
@@ -297,7 +360,13 @@ def _resident_enrollment_for_shelter(resident_id: int, shelter: str):
             LEFT JOIN program_enrollments pe
                 ON pe.resident_id = r.id
             WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY pe.id DESC
+            ORDER BY
+                CASE
+                    WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
+                    ELSE 1
+                END,
+                COALESCE(pe.entry_date, '') DESC,
+                pe.id DESC
             LIMIT 1
             """,
         ),
@@ -327,7 +396,7 @@ def _load_timeline(enrollment_id: int):
                 sort_order
             FROM (
                 SELECT
-                    pe.created_at AS event_time,
+                    pe.entry_date AS event_time,
                     'enrollment_started' AS event_type,
                     'Program enrollment started' AS title,
                     CONCAT('Status: ', COALESCE(pe.program_status, 'active')) AS detail,
@@ -418,7 +487,7 @@ def _load_timeline(enrollment_id: int):
                 sort_order
             FROM (
                 SELECT
-                    pe.created_at AS event_time,
+                    pe.entry_date AS event_time,
                     'enrollment_started' AS event_type,
                     'Program enrollment started' AS title,
                     'Status: ' || COALESCE(pe.program_status, 'active') AS detail,
@@ -885,7 +954,6 @@ def create_enrollment(resident_id: int):
                 id
             FROM program_enrollments
             WHERE resident_id = %s AND program_status = %s
-            ORDER BY id DESC
             LIMIT 1
             """,
             """
@@ -893,7 +961,6 @@ def create_enrollment(resident_id: int):
                 id
             FROM program_enrollments
             WHERE resident_id = ? AND program_status = ?
-            ORDER BY id DESC
             LIMIT 1
             """,
         ),
