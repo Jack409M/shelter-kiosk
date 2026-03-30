@@ -19,6 +19,8 @@ from __future__ import annotations
 #   resident, enrollment, intake assessment, and family snapshot inserts
 # - routes.case_management_parts.intake
 #   intake form flow shell
+# - routes.case_management_parts.family
+#   family intake, child records, and child services
 # - routes.case_management_parts.intake_duplicates
 #   duplicate review flow for pending intake records
 # - routes.case_management_parts.resident_case
@@ -57,6 +59,12 @@ from routes.case_management_parts.budget_sessions import budget_sessions_view
 from routes.case_management_parts.budget_sessions import edit_budget_session_view
 from routes.case_management_parts.exit import exit_assessment_form_view
 from routes.case_management_parts.exit import submit_exit_assessment_view
+from routes.case_management_parts.family import child_services_view
+from routes.case_management_parts.family import delete_child_service_view
+from routes.case_management_parts.family import delete_child_view
+from routes.case_management_parts.family import edit_child_service_view
+from routes.case_management_parts.family import edit_child_view
+from routes.case_management_parts.family import family_intake_view
 from routes.case_management_parts.followups import followup_form_view
 from routes.case_management_parts.followups import submit_followup_view
 from routes.case_management_parts.helpers import case_manager_allowed
@@ -74,12 +82,6 @@ from routes.case_management_parts.index import intake_index_view
 from routes.case_management_parts.inspection_log import add_inspection_log_view
 from routes.case_management_parts.inspection_log import edit_inspection_log_view
 from routes.case_management_parts.inspection_log import inspection_log_view
-from routes.case_management_parts.intake import child_services_view
-from routes.case_management_parts.intake import delete_child_service_view
-from routes.case_management_parts.intake import delete_child_view
-from routes.case_management_parts.intake import edit_child_service_view
-from routes.case_management_parts.intake import edit_child_view
-from routes.case_management_parts.intake import family_intake_view
 from routes.case_management_parts.intake import intake_edit_view
 from routes.case_management_parts.intake import intake_form_view
 from routes.case_management_parts.intake import submit_intake_assessment_view
@@ -543,7 +545,6 @@ def wipe_test_residents():
     init_db()
 
     try:
-        # Deepest child records first
         db_execute("DELETE FROM weekly_resident_summary")
         db_execute("DELETE FROM exit_assessments")
         db_execute("DELETE FROM followups")
@@ -560,7 +561,6 @@ def wipe_test_residents():
         db_execute("DELETE FROM resident_ua_log")
         db_execute("DELETE FROM resident_medications")
 
-        # Drafts and resident linked supporting records
         db_execute("DELETE FROM assessment_drafts")
         db_execute("DELETE FROM intake_drafts")
         db_execute("DELETE FROM resident_transfers")
@@ -569,7 +569,6 @@ def wipe_test_residents():
         db_execute("DELETE FROM resident_children")
         db_execute("DELETE FROM resident_substances")
 
-        # Parent records last
         db_execute("DELETE FROM program_enrollments")
         db_execute("DELETE FROM residents")
 
