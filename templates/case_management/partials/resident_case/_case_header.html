@@ -1,0 +1,73 @@
+<div class="case-header-strip">
+  <div class="card case-header-print">
+    <h2>{{ first_name }} {{ last_name }}</h2>
+
+    <p>
+      <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
+      <strong>Shelter:</strong> {{ shelter | shelter if shelter else "—" }}<br>
+      <strong>Status:</strong> {{ "Active" if resident_active else "Inactive" }}
+    </p>
+
+    <a class="btn no-print" href="{{ url_for('case_management.index') }}">
+      Back to Case List
+    </a>
+
+    <a class="btn no-print" href="{{ url_for('case_management.intake_edit', resident_id=resident_id) }}">
+      Edit Intake
+    </a>
+  </div>
+
+  <div class="card case-header-print">
+    <h2>Program Information</h2>
+
+    <p>
+      <strong>Program Status:</strong> {{ enrollment_program_status|replace("_", " ")|title if enrollment_program_status else "Not enrolled" }}<br>
+      <strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}<br>
+      <strong>Entry Date:</strong> {{ enrollment_entry_date or "—" }}<br>
+      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}
+    </p>
+
+    {% if enrollment_id %}
+      <div class="case-program-level-row no-print">
+        <div class="case-program-level-display">
+          <strong>Level:</strong>
+          {% if rs_level %}
+            Level {{ rs_level }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+
+        <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}" class="case-level-edit-form">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="sponsor_name" value="{{ rs_sponsor or '' }}">
+          <input type="hidden" name="employment_status_current" value="{{ rs_employment_status or '' }}">
+          <input type="hidden" name="employment_type_current" value="{{ rs_employment_type or '' }}">
+          <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
+          <input type="hidden" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
+          <input type="hidden" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
+          <input type="hidden" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
+          <input type="hidden" name="employment_notes" value="{{ rs_employment_notes or '' }}">
+          <input type="hidden" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
+          <input type="hidden" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
+
+          <select name="program_level" class="case-input-4ch case-level-select">
+            <option value="" {% if not rs_level %}selected{% endif %}>—</option>
+            <option value="1" {% if rs_level|string == "1" %}selected{% endif %}>1</option>
+            <option value="2" {% if rs_level|string == "2" %}selected{% endif %}>2</option>
+            <option value="3" {% if rs_level|string == "3" %}selected{% endif %}>3</option>
+            <option value="4" {% if rs_level|string == "4" %}selected{% endif %}>4</option>
+            <option value="5" {% if rs_level|string == "5" %}selected{% endif %}>5</option>
+            <option value="6" {% if rs_level|string == "6" %}selected{% endif %}>6</option>
+            <option value="7" {% if rs_level|string == "7" %}selected{% endif %}>7</option>
+            <option value="8" {% if rs_level|string == "8" %}selected{% endif %}>8</option>
+            <option value="9" {% if rs_level|string == "9" %}selected{% endif %}>9</option>
+            <option value="10" {% if rs_level|string == "10" %}selected{% endif %}>10</option>
+          </select>
+
+          <button type="submit" class="btn">Edit</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+</div>
