@@ -67,7 +67,8 @@ def update_recovery_profile_view(resident_id: int):
         return redirect(url_for("case_management.index"))
 
     current_step = resident.get("step_current")
-    new_step = parse_int(request.form.get("step_current"))
+    parsed_step = parse_int(request.form.get("step_current"))
+    new_step = current_step if parsed_step is None else parsed_step
 
     if new_step is not None and (new_step < 1 or new_step > 12):
         flash("Step must be between 1 and 12.", "error")
