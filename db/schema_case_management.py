@@ -1,25 +1,3 @@
-"""
-Case management schema.
-
-Tracks structured case manager interactions with residents
-during program participation.
-
-Locked intake rule for this project:
-
-There is one official intake baseline.
-Drafts may be saved and resumed any number of times,
-but draft data is not reportable and does not become official
-until final submit.
-
-This schema keeps intake drafts in a single draft table.
-assessment_drafts is no longer owned here.
-
-Important transition note:
-draft_data is the new canonical JSON payload column.
-form_payload is kept temporarily as a legacy compatibility bridge
-until route code is fully migrated.
-"""
-
 from __future__ import annotations
 
 from core.db import db_execute
@@ -65,6 +43,47 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             warrants_or_fines_paid INTEGER,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def ensure_case_manager_update_summary_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS case_manager_update_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            case_manager_update_id INTEGER NOT NULL,
+            change_group TEXT NOT NULL,
+            change_type TEXT,
+            item_key TEXT,
+            item_label TEXT,
+            old_value TEXT,
+            new_value TEXT,
+            detail TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (case_manager_update_id) REFERENCES case_manager_updates(id)
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS case_manager_update_summary (
+            id SERIAL PRIMARY KEY,
+            case_manager_update_id INTEGER NOT NULL REFERENCES case_manager_updates(id),
+            change_group TEXT NOT NULL,
+            change_type TEXT,
+            item_key TEXT,
+            item_label TEXT,
+            old_value TEXT,
+            new_value TEXT,
+            detail TEXT,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
         )
         """
     )
@@ -461,6 +480,25 @@ def ensure_case_manager_updates_columns() -> None:
             pass
 
 
+def ensure_case_manager_update_summary_columns() -> None:
+    statements = [
+        "ALTER TABLE case_manager_update_summary ADD COLUMN IF NOT EXISTS change_type TEXT",
+        "ALTER TABLE case_manager_update_summary ADD COLUMN IF NOT EXISTS item_key TEXT",
+        "ALTER TABLE case_manager_update_summary ADD COLUMN IF NOT EXISTS item_label TEXT",
+        "ALTER TABLE case_manager_update_summary ADD COLUMN IF NOT EXISTS old_value TEXT",
+        "ALTER TABLE case_manager_update_summary ADD COLUMN IF NOT EXISTS new_value TEXT",
+        "ALTER TABLE case_manager_update_summary ADD COLUMN IF NOT EXISTS detail TEXT",
+        "ALTER TABLE case_manager_update_summary ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0",
+        "ALTER TABLE case_manager_update_summary ADD COLUMN IF NOT EXISTS created_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
 def ensure_intake_drafts_columns() -> None:
     statements = [
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS resident_id INTEGER",
@@ -665,6 +703,36 @@ def ensure_indexes() -> None:
             """
             CREATE INDEX IF NOT EXISTS case_manager_updates_staff_meeting_idx
             ON case_manager_updates (staff_user_id, meeting_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS case_manager_update_summary_note_idx
+            ON case_manager_update_summary (case_manager_update_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS case_manager_update_summary_group_idx
+            ON case_manager_update_summary (change_group)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS case_manager_update_summary_note_group_idx
+            ON case_manager_update_summary (case_manager_update_id, change_group, sort_order)
             """
         )
     except Exception:
@@ -1083,6 +1151,7 @@ def ensure_indexes() -> None:
 
 def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
+    ensure_case_manager_update_summary_table(kind)
     ensure_case_manager_calendar_events_table(kind)
     ensure_client_services_table(kind)
     ensure_child_services_table(kind)
@@ -1093,6 +1162,7 @@ def ensure_tables(kind: str) -> None:
     ensure_resident_living_area_inspections_table(kind)
     ensure_resident_budget_sessions_table(kind)
     ensure_case_manager_updates_columns()
+    ensure_case_manager_update_summary_columns()
     ensure_intake_drafts_columns()
     ensure_client_services_columns()
     ensure_child_services_columns()
