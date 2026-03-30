@@ -36,7 +36,7 @@ def staff_attendance_view():
             SELECT event_type, event_time, expected_back_time, note
             FROM attendance_events
             WHERE resident_id = %s AND shelter = %s
-            ORDER BY event_time DESC
+            ORDER BY event_time DESC, id DESC
             LIMIT 1
             """
             if current_app.config.get("DATABASE_URL")
@@ -44,7 +44,7 @@ def staff_attendance_view():
             SELECT event_type, event_time, expected_back_time, note
             FROM attendance_events
             WHERE resident_id = ? AND shelter = ?
-            ORDER BY event_time DESC
+            ORDER BY event_time DESC, id DESC
             LIMIT 1
             """,
             (rid, shelter),
@@ -59,7 +59,7 @@ def staff_attendance_view():
             SELECT event_time, expected_back_time, note, destination, obligation_start_time, obligation_end_time
             FROM attendance_events
             WHERE resident_id = %s AND shelter = %s AND event_type = %s
-            ORDER BY event_time DESC
+            ORDER BY event_time DESC, id DESC
             LIMIT 1
             """
             if current_app.config.get("DATABASE_URL")
@@ -67,7 +67,7 @@ def staff_attendance_view():
             SELECT event_time, expected_back_time, note, destination, obligation_start_time, obligation_end_time
             FROM attendance_events
             WHERE resident_id = ? AND shelter = ? AND event_type = ?
-            ORDER BY event_time DESC
+            ORDER BY event_time DESC, id DESC
             LIMIT 1
             """,
             (rid, shelter, "check_out"),
