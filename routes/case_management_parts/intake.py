@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from flask import abort, flash, redirect, render_template, request, session, url_for
+from flask import abort, current_app, flash, redirect, render_template, request, session, url_for
 
 from core.constants import EDUCATION_LEVEL_OPTIONS
 from core.db import db_execute, db_fetchone, db_transaction
@@ -534,203 +534,221 @@ def submit_intake_assessment_view():
         has_drivers_license = 0 if data.get("need_state_id_drivers_license") == "yes" else None
         has_social_security_card = 0 if data.get("need_social_security_card") == "yes" else None
 
-        with db_transaction():
-            db_execute(
-                f"""
-                UPDATE residents
-                SET
-                    first_name = {ph},
-                    last_name = {ph},
-                    birth_year = {ph},
-                    phone = {ph},
-                    email = {ph},
-                    emergency_contact_name = {ph},
-                    emergency_contact_relationship = {ph},
-                    emergency_contact_phone = {ph},
-                    gender = {ph},
-                    race = {ph},
-                    ethnicity = {ph},
-                    updated_at = {ph}
-                WHERE id = {ph}
-                """,
-                (
-                    data.get("first_name"),
-                    data.get("last_name"),
-                    data.get("birth_year"),
-                    data.get("phone"),
-                    data.get("email"),
-                    data.get("emergency_contact_name"),
-                    data.get("emergency_contact_relationship"),
-                    data.get("emergency_contact_phone"),
-                    data.get("gender"),
-                    data.get("race"),
-                    data.get("ethnicity"),
-                    now,
-                    resident_id,
-                ),
-            )
-
-            db_execute(
-                f"""
-                UPDATE program_enrollments
-                SET
-                    entry_date = {ph},
-                    program_status = {ph},
-                    updated_at = {ph}
-                WHERE id = {ph}
-                """,
-                (
-                    data.get("entry_date"),
-                    data.get("program_status"),
-                    now,
-                    enrollment_id,
-                ),
-            )
-
-            db_execute(
-                f"""
-                UPDATE intake_assessments
-                SET
-                    veteran = {ph},
-                    notes_basic = {ph},
-                    place_staying_before_entry = {ph},
-                    sobriety_date = {ph},
-                    treatment_grad_date = {ph},
-                    days_sober_at_entry = {ph},
-                    drug_of_choice = {ph},
-                    income_at_entry = {ph},
-                    education_at_entry = {ph},
-                    disability = {ph},
-                    length_of_time_in_amarillo = {ph},
-                    marital_status = {ph},
-                    city = {ph},
-                    county = {ph},
-                    last_zipcode_residence = {ph},
-                    entry_notes = {ph},
-                    car_at_entry = {ph},
-                    car_insurance_at_entry = {ph},
-                    pregnant_at_entry = {ph},
-                    dental_need_at_entry = {ph},
-                    vision_need_at_entry = {ph},
-                    employment_status_at_entry = {ph},
-                    id_documents_status_at_entry = {ph},
-                    has_drivers_license = {ph},
-                    has_social_security_card = {ph},
-                    initial_snapshot_notes = {ph},
-                    ace_score = {ph},
-                    grit_score = {ph},
-                    sexual_survivor = {ph},
-                    dv_survivor = {ph},
-                    human_trafficking_survivor = {ph},
-                    drug_court = {ph},
-                    warrants_unpaid = {ph},
-                    mental_health_need_at_entry = {ph},
-                    medical_need_at_entry = {ph},
-                    mh_exam_completed = {ph},
-                    med_exam_completed = {ph},
-                    substance_use_need_at_entry = {ph},
-                    parenting_class_needed = {ph},
-                    dwc_level_today = {ph},
-                    trauma_notes = {ph},
-                    entry_felony_conviction = {ph},
-                    entry_parole_probation = {ph},
-                    barrier_notes = {ph},
-                    updated_at = {ph}
-                WHERE id = {ph}
-                """,
-                (
-                    yes_no_to_int(data.get("veteran")),
-                    data.get("notes_basic"),
-                    data.get("prior_living"),
-                    data.get("sobriety_date"),
-                    data.get("treatment_grad_date"),
-                    data.get("days_sober_at_entry"),
-                    data.get("drug_of_choice"),
-                    data.get("income_at_entry"),
-                    data.get("education_at_entry"),
-                    data.get("disability"),
-                    data.get("length_of_time_in_amarillo"),
-                    data.get("marital_status"),
-                    data.get("city"),
-                    data.get("county"),
-                    data.get("last_zipcode_residence"),
-                    data.get("entry_notes"),
-                    yes_no_to_int(data.get("car_at_entry")),
-                    yes_no_to_int(data.get("car_insurance_at_entry")),
-                    yes_no_to_int(data.get("pregnant")),
-                    dental_need,
-                    vision_need,
-                    data.get("employment_status"),
-                    None,
-                    has_drivers_license,
-                    has_social_security_card,
-                    data.get("initial_snapshot_notes"),
-                    data.get("ace_score"),
-                    data.get("grit_score"),
-                    yes_no_to_int(data.get("sexual_survivor")),
-                    yes_no_to_int(data.get("domestic_violence_history")),
-                    yes_no_to_int(data.get("human_trafficking_history")),
-                    yes_no_to_int(data.get("drug_court")),
-                    warrants_unpaid,
-                    None,
-                    None,
-                    None,
-                    None,
-                    parenting_class_needed,
-                    data.get("dwc_level_today"),
-                    data.get("trauma_notes"),
-                    yes_no_to_int(data.get("felony_history")),
-                    yes_no_to_int(data.get("probation_parole")),
-                    data.get("barrier_notes"),
-                    now,
-                    intake_assessment_id,
-                ),
-            )
-
-            existing_family = db_fetchone(
-                f"""
-                SELECT id
-                FROM family_snapshots
-                WHERE enrollment_id = {ph}
-                ORDER BY id DESC
-                LIMIT 1
-                """,
-                (enrollment_id,),
-            )
-
-            if existing_family:
+        try:
+            with db_transaction():
                 db_execute(
                     f"""
-                    UPDATE family_snapshots
+                    UPDATE residents
                     SET
-                        kids_at_dwc = {ph},
-                        kids_served_outside_under_18 = {ph},
-                        kids_ages_0_5 = {ph},
-                        kids_ages_6_11 = {ph},
-                        kids_ages_12_17 = {ph},
-                        kids_reunited_while_in_program = {ph},
-                        healthy_babies_born_at_dwc = {ph},
+                        first_name = {ph},
+                        last_name = {ph},
+                        birth_year = {ph},
+                        phone = {ph},
+                        email = {ph},
+                        emergency_contact_name = {ph},
+                        emergency_contact_relationship = {ph},
+                        emergency_contact_phone = {ph},
+                        gender = {ph},
+                        race = {ph},
+                        ethnicity = {ph},
                         updated_at = {ph}
-                    WHERE enrollment_id = {ph}
+                    WHERE id = {ph}
                     """,
                     (
-                        _safe_int_or_none(data.get("kids_at_dwc")),
-                        _safe_int_or_none(data.get("kids_served_outside_under_18")),
-                        _safe_int_or_none(data.get("kids_ages_0_5")),
-                        _safe_int_or_none(data.get("kids_ages_6_11")),
-                        _safe_int_or_none(data.get("kids_ages_12_17")),
-                        _safe_int_or_none(data.get("kids_reunited_while_in_program")),
-                        _safe_int_or_none(data.get("healthy_babies_born_at_dwc")),
+                        data.get("first_name"),
+                        data.get("last_name"),
+                        data.get("birth_year"),
+                        data.get("phone"),
+                        data.get("email"),
+                        data.get("emergency_contact_name"),
+                        data.get("emergency_contact_relationship"),
+                        data.get("emergency_contact_phone"),
+                        data.get("gender"),
+                        data.get("race"),
+                        data.get("ethnicity"),
+                        now,
+                        resident_id,
+                    ),
+                )
+
+                db_execute(
+                    f"""
+                    UPDATE program_enrollments
+                    SET
+                        entry_date = {ph},
+                        program_status = {ph},
+                        updated_at = {ph}
+                    WHERE id = {ph}
+                    """,
+                    (
+                        data.get("entry_date"),
+                        data.get("program_status"),
                         now,
                         enrollment_id,
                     ),
                 )
-            else:
-                _insert_family_snapshot(enrollment_id, data)
 
-            sync_enrollment_needs(
+                db_execute(
+                    f"""
+                    UPDATE intake_assessments
+                    SET
+                        veteran = {ph},
+                        notes_basic = {ph},
+                        place_staying_before_entry = {ph},
+                        sobriety_date = {ph},
+                        treatment_grad_date = {ph},
+                        days_sober_at_entry = {ph},
+                        drug_of_choice = {ph},
+                        income_at_entry = {ph},
+                        education_at_entry = {ph},
+                        disability = {ph},
+                        length_of_time_in_amarillo = {ph},
+                        marital_status = {ph},
+                        city = {ph},
+                        county = {ph},
+                        last_zipcode_residence = {ph},
+                        entry_notes = {ph},
+                        car_at_entry = {ph},
+                        car_insurance_at_entry = {ph},
+                        pregnant_at_entry = {ph},
+                        dental_need_at_entry = {ph},
+                        vision_need_at_entry = {ph},
+                        employment_status_at_entry = {ph},
+                        id_documents_status_at_entry = {ph},
+                        has_drivers_license = {ph},
+                        has_social_security_card = {ph},
+                        initial_snapshot_notes = {ph},
+                        ace_score = {ph},
+                        grit_score = {ph},
+                        sexual_survivor = {ph},
+                        dv_survivor = {ph},
+                        human_trafficking_survivor = {ph},
+                        drug_court = {ph},
+                        warrants_unpaid = {ph},
+                        mental_health_need_at_entry = {ph},
+                        medical_need_at_entry = {ph},
+                        mh_exam_completed = {ph},
+                        med_exam_completed = {ph},
+                        substance_use_need_at_entry = {ph},
+                        parenting_class_needed = {ph},
+                        dwc_level_today = {ph},
+                        trauma_notes = {ph},
+                        entry_felony_conviction = {ph},
+                        entry_parole_probation = {ph},
+                        barrier_notes = {ph},
+                        updated_at = {ph}
+                    WHERE id = {ph}
+                    """,
+                    (
+                        yes_no_to_int(data.get("veteran")),
+                        data.get("notes_basic"),
+                        data.get("prior_living"),
+                        data.get("sobriety_date"),
+                        data.get("treatment_grad_date"),
+                        data.get("days_sober_at_entry"),
+                        data.get("drug_of_choice"),
+                        data.get("income_at_entry"),
+                        data.get("education_at_entry"),
+                        data.get("disability"),
+                        data.get("length_of_time_in_amarillo"),
+                        data.get("marital_status"),
+                        data.get("city"),
+                        data.get("county"),
+                        data.get("last_zipcode_residence"),
+                        data.get("entry_notes"),
+                        yes_no_to_int(data.get("car_at_entry")),
+                        yes_no_to_int(data.get("car_insurance_at_entry")),
+                        yes_no_to_int(data.get("pregnant")),
+                        dental_need,
+                        vision_need,
+                        data.get("employment_status"),
+                        None,
+                        has_drivers_license,
+                        has_social_security_card,
+                        data.get("initial_snapshot_notes"),
+                        data.get("ace_score"),
+                        data.get("grit_score"),
+                        yes_no_to_int(data.get("sexual_survivor")),
+                        yes_no_to_int(data.get("domestic_violence_history")),
+                        yes_no_to_int(data.get("human_trafficking_history")),
+                        yes_no_to_int(data.get("drug_court")),
+                        warrants_unpaid,
+                        None,
+                        None,
+                        None,
+                        None,
+                        parenting_class_needed,
+                        data.get("dwc_level_today"),
+                        data.get("trauma_notes"),
+                        yes_no_to_int(data.get("felony_history")),
+                        yes_no_to_int(data.get("probation_parole")),
+                        data.get("barrier_notes"),
+                        now,
+                        intake_assessment_id,
+                    ),
+                )
+
+                existing_family = db_fetchone(
+                    f"""
+                    SELECT id
+                    FROM family_snapshots
+                    WHERE enrollment_id = {ph}
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (enrollment_id,),
+                )
+
+                if existing_family:
+                    db_execute(
+                        f"""
+                        UPDATE family_snapshots
+                        SET
+                            kids_at_dwc = {ph},
+                            kids_served_outside_under_18 = {ph},
+                            kids_ages_0_5 = {ph},
+                            kids_ages_6_11 = {ph},
+                            kids_ages_12_17 = {ph},
+                            kids_reunited_while_in_program = {ph},
+                            healthy_babies_born_at_dwc = {ph},
+                            updated_at = {ph}
+                        WHERE enrollment_id = {ph}
+                        """,
+                        (
+                            _safe_int_or_none(data.get("kids_at_dwc")),
+                            _safe_int_or_none(data.get("kids_served_outside_under_18")),
+                            _safe_int_or_none(data.get("kids_ages_0_5")),
+                            _safe_int_or_none(data.get("kids_ages_6_11")),
+                            _safe_int_or_none(data.get("kids_ages_12_17")),
+                            _safe_int_or_none(data.get("kids_reunited_while_in_program")),
+                            _safe_int_or_none(data.get("healthy_babies_born_at_dwc")),
+                            now,
+                            enrollment_id,
+                        ),
+                    )
+                else:
+                    _insert_family_snapshot(enrollment_id, data)
+
+                sync_enrollment_needs(
+                    enrollment_id,
+                    selected_need_keys=data.get("entry_need_keys", []),
+                )
+        except Exception:
+            current_app.logger.exception(
+                "Failed to update intake for resident_id=%s enrollment_id=%s",
+                resident_id,
                 enrollment_id,
-                selected_need_keys=data.get("entry_need_keys", []),
+            )
+            flash("Unable to save intake changes. Please try again or contact an administrator.", "error")
+            return render_template(
+                "case_management/intake_assessment.html",
+                **_intake_template_context(
+                    current_shelter=current_shelter,
+                    form_data=request.form.to_dict(flat=True),
+                    review_passed=review_passed,
+                    is_edit_mode=is_edit_mode,
+                    resident_id=resident_id,
+                ),
             )
 
         flash("Intake updated successfully.", "success")
@@ -777,8 +795,14 @@ def submit_intake_assessment_view():
             if draft_id is not None:
                 _complete_intake_draft(draft_id)
 
-    except Exception as exc:
-        flash(f"Intake save failed: {exc}", "error")
+    except Exception:
+        current_app.logger.exception(
+            "Failed to create intake for shelter=%s first_name=%s last_name=%s",
+            current_shelter,
+            data.get("first_name"),
+            data.get("last_name"),
+        )
+        flash("Unable to save intake. Please try again or contact an administrator.", "error")
         return render_template(
             "case_management/intake_assessment.html",
             **_intake_template_context(
