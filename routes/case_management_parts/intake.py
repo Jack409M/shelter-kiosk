@@ -164,6 +164,8 @@ def _normalize_yes_no_fields(form_data: dict[str, Any]) -> dict[str, Any]:
         "drug_court",
         "felony_history",
         "probation_parole",
+        "car_at_entry",
+        "car_insurance_at_entry",
     ]
 
     for field_name in yes_no_fields:
@@ -193,6 +195,12 @@ def _apply_intake_edit_aliases(form_data: dict[str, Any]) -> dict[str, Any]:
     for form_key, db_key in field_aliases.items():
         if form_data.get(form_key) in (None, "") and db_key in form_data:
             form_data[form_key] = form_data.get(db_key)
+
+    if form_data.get("car_at_entry") in (None, "") and "car_at_entry" in form_data:
+        form_data["car_at_entry"] = _normalize_yes_no_value(form_data.get("car_at_entry"))
+
+    if form_data.get("car_insurance_at_entry") in (None, "") and "car_insurance_at_entry" in form_data:
+        form_data["car_insurance_at_entry"] = _normalize_yes_no_value(form_data.get("car_insurance_at_entry"))
 
     return form_data
 
@@ -567,6 +575,7 @@ def submit_intake_assessment_view():
                     place_staying_before_entry = {ph},
                     sobriety_date = {ph},
                     treatment_grad_date = {ph},
+                    days_sober_at_entry = {ph},
                     drug_of_choice = {ph},
                     income_at_entry = {ph},
                     education_at_entry = {ph},
@@ -577,6 +586,8 @@ def submit_intake_assessment_view():
                     county = {ph},
                     last_zipcode_residence = {ph},
                     entry_notes = {ph},
+                    car_at_entry = {ph},
+                    car_insurance_at_entry = {ph},
                     pregnant_at_entry = {ph},
                     dental_need_at_entry = {ph},
                     vision_need_at_entry = {ph},
@@ -612,6 +623,7 @@ def submit_intake_assessment_view():
                     data.get("prior_living"),
                     data.get("sobriety_date"),
                     data.get("treatment_grad_date"),
+                    data.get("days_sober_at_entry"),
                     data.get("drug_of_choice"),
                     data.get("income_at_entry"),
                     data.get("education_at_entry"),
@@ -622,6 +634,8 @@ def submit_intake_assessment_view():
                     data.get("county"),
                     data.get("last_zipcode_residence"),
                     data.get("entry_notes"),
+                    yes_no_to_int(data.get("car_at_entry")),
+                    yes_no_to_int(data.get("car_insurance_at_entry")),
                     yes_no_to_int(data.get("pregnant")),
                     dental_need,
                     vision_need,
