@@ -22,6 +22,7 @@ from routes.case_management_parts.intake_inserts import _insert_family_snapshot
 from routes.case_management_parts.intake_inserts import _insert_intake_assessment
 from routes.case_management_parts.intake_inserts import _insert_program_enrollment
 from routes.case_management_parts.intake_inserts import _insert_resident
+from routes.case_management_parts.intake_inserts import _safe_int_or_none
 from routes.case_management_parts.intake_validation import _find_possible_duplicate
 from routes.case_management_parts.intake_validation import _validate_intake_form
 from routes.case_management_parts.needs import OFFICIAL_NEEDS
@@ -666,14 +667,31 @@ def submit_intake_assessment_view():
                 db_execute(
                     f"""
                     UPDATE family_snapshots
-                    SET updated_at = {ph}
+                    SET
+                        kids_at_dwc = {ph},
+                        kids_served_outside_under_18 = {ph},
+                        kids_ages_0_5 = {ph},
+                        kids_ages_6_11 = {ph},
+                        kids_ages_12_17 = {ph},
+                        kids_reunited_while_in_program = {ph},
+                        healthy_babies_born_at_dwc = {ph},
+                        updated_at = {ph}
                     WHERE enrollment_id = {ph}
                     """,
                     (
+                        _safe_int_or_none(data.get("kids_at_dwc")),
+                        _safe_int_or_none(data.get("kids_served_outside_under_18")),
+                        _safe_int_or_none(data.get("kids_ages_0_5")),
+                        _safe_int_or_none(data.get("kids_ages_6_11")),
+                        _safe_int_or_none(data.get("kids_ages_12_17")),
+                        _safe_int_or_none(data.get("kids_reunited_while_in_program")),
+                        _safe_int_or_none(data.get("healthy_babies_born_at_dwc")),
                         now,
                         enrollment_id,
                     ),
                 )
+            else:
+                _insert_family_snapshot(enrollment_id, data)
 
             sync_enrollment_needs(
                 enrollment_id,
