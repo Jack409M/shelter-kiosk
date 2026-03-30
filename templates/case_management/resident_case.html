@@ -195,20 +195,6 @@
     <div class="card no-print">
       <h2>Progress Notes</h2>
 
-      <div class="case-external-summary">
-        <div>
-          <strong>Latest Inspection:</strong>
-          {% if rs_latest_inspection %}
-            {{ rs_latest_inspection["inspection_date"] or "—" }}
-            {% if rs_latest_inspection["passed_display"] %}
-              — {{ "Passed" if rs_latest_inspection["passed_display"] == "Yes" else rs_latest_inspection["passed_display"] }}
-            {% endif %}
-          {% else %}
-            —
-          {% endif %}
-        </div>
-      </div>
-
       <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
@@ -278,9 +264,6 @@
         <hr>
 
         <h3>Services Provided</h3>
-
-        <label><strong>Service Date</strong></label>
-        <input type="date" name="service_date">
 
         <div class="case-service-grid">
           <div>
@@ -1050,6 +1033,27 @@
                 <div class="case-note-section">
                   <strong>Action Items:</strong><br>
                   <div class="case-note-text-block">{{ note_action_items }}</div>
+                </div>
+              {% endif %}
+
+              {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
+                <div class="case-note-section">
+                  <strong>Structured Progress:</strong>
+                  <span class="case-note-structured">
+                    {% if note_updated_grit is not none %}
+                      Grit: {{ note_updated_grit }}
+                    {% endif %}
+
+                    {% if note_parenting_class_completed is not none %}
+                      {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+                      Parenting: {{ "Yes" if note_parenting_class_completed else "No" }}
+                    {% endif %}
+
+                    {% if note_warrants_or_fines_paid is not none %}
+                      {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+                      Warrants: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
+                    {% endif %}
+                  </span>
                 </div>
               {% endif %}
 
