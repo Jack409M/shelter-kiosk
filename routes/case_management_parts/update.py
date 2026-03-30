@@ -213,8 +213,29 @@ def _get_next_summary_sort_order(case_manager_update_id: int) -> int:
     return int(max_sort_order) + 1
 
 
-def _get_previous_note_id(enrollment_id: int, current_note_id: int) -> int | None:
+def _get_previous_note_id(
+    enrollment_id: int,
+    current_note_id: int,
+    current_meeting_date: str | None,
+) -> int | None:
     ph = placeholder()
+
+    if current_meeting_date:
+        row = db_fetchone(
+            f"""
+            SELECT id
+            FROM case_manager_updates
+            WHERE enrollment_id = {ph}
+              AND (
+                    meeting_date < {ph}
+                    OR (meeting_date = {ph} AND id < {ph})
+                  )
+            ORDER BY meeting_date DESC, id DESC
+            LIMIT 1
+            """,
+            (enrollment_id, current_meeting_date, current_meeting_date, current_note_id),
+        )
+        return row["id"] if row else None
 
     row = db_fetchone(
         f"""
@@ -686,12 +707,17 @@ def _build_note_summary(
     case_manager_update_id: int,
     enrollment_id: int,
     resident_id: int,
+    meeting_date: str | None,
     form,
     service_types: list[str],
     changed_needs: list[dict],
     created_at: str,
 ) -> None:
-    previous_note_id = _get_previous_note_id(enrollment_id, case_manager_update_id)
+    previous_note_id = _get_previous_note_id(
+        enrollment_id=enrollment_id,
+        current_note_id=case_manager_update_id,
+        current_meeting_date=meeting_date,
+    )
 
     previous_child_snapshot = _load_previous_snapshot_map(previous_note_id, "child")
     previous_medication_snapshot = _load_previous_snapshot_map(previous_note_id, "medication")
@@ -947,6 +973,7 @@ def add_case_note_view(resident_id: int):
                 case_manager_update_id=note_id,
                 enrollment_id=enrollment_id,
                 resident_id=resident_id,
+                meeting_date=meeting_date,
                 form=request.form,
                 service_types=service_types,
                 changed_needs=changed_needs,
