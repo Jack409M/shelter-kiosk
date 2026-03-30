@@ -143,6 +143,11 @@ def _parse_service_date(value: str | None) -> str | None:
     return value
 
 
+def _is_unique_constraint_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "unique" in message or "duplicate" in message
+
+
 def family_intake_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -240,7 +245,16 @@ def family_intake_view(resident_id: int):
                     now,
                 ),
             )
-        except Exception:
+        except Exception as exc:
+            if _is_unique_constraint_error(exc):
+                children = _active_children_for_resident(resident_id)
+                flash("This child already exists for this resident.", "error")
+                return render_template(
+                    "case_management/family_intake.html",
+                    resident_id=resident_id,
+                    children=children,
+                )
+
             current_app.logger.exception(
                 "Failed to add child for resident_id=%s",
                 resident_id,
@@ -338,7 +352,11 @@ def edit_child_view(child_id: int):
                     child_id,
                 ),
             )
-        except Exception:
+        except Exception as exc:
+            if _is_unique_constraint_error(exc):
+                flash("This child already exists for this resident.", "error")
+                return redirect(url_for("case_management.edit_child", child_id=child_id))
+
             current_app.logger.exception(
                 "Failed to edit child_id=%s resident_id=%s",
                 child_id,
