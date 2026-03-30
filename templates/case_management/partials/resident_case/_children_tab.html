@@ -1,0 +1,68 @@
+<div id="children-tab" class="resident-notebook-tab" style="display:none;">
+  <div class="card no-print">
+    <h2>Family</h2>
+
+    {% if children is defined and children %}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Birth Year</th>
+            <th>Relationship</th>
+            <th>Living Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for child in children %}
+            {% set child_name = child["child_name"] %}
+            {% set child_birth_year = child["birth_year"] %}
+            {% set child_id = child["id"] %}
+            <tr>
+              <td>{{ child_name or "—" }}</td>
+              <td>{{ child_birth_year or "—" }}</td>
+              <td>{{ child.relationship_display or "—" }}</td>
+              <td>{{ child.living_status_display or "—" }}</td>
+              <td>
+                <a class="btn btn-sm" href="{{ url_for('case_management.child_services', child_id=child_id) }}">
+                  Services
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="5">
+                {% if child.services %}
+                  <div class="case-child-services-list">
+                    {% for s in child.services %}
+                      <div>
+                        <strong>{{ s.service_date_display }}</strong> —
+                        {{ s.service_type_display }}
+                        {% if s.quantity_display and s.quantity_display != "—" %}
+                          ({{ s.quantity_display }})
+                        {% endif %}
+                        {% if s.outcome_display and s.outcome_display != "—" %}
+                          — {{ s.outcome_display }}
+                        {% endif %}
+                        {% if s.notes %}
+                          <div class="case-child-service-note">
+                            {{ s.notes }}
+                          </div>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="case-empty-muted">
+                    No services recorded
+                  </div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No children recorded.</p>
+    {% endif %}
+  </div>
+</div>
