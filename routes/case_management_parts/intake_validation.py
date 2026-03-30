@@ -54,7 +54,9 @@ def _find_possible_duplicate(
     match_clauses: list[str] = []
     params: list[Any] = []
 
-    match_clauses.append("(LOWER(first_name) = LOWER(" + ph + ") AND LOWER(last_name) = LOWER(" + ph + "))")
+    match_clauses.append(
+        "(LOWER(first_name) = LOWER(" + ph + ") AND LOWER(last_name) = LOWER(" + ph + "))"
+    )
     params.extend([first_name, last_name])
 
     if birth_year is not None:
