@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
+from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
-from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.needs import normalize_need_status
 
 
@@ -953,8 +953,13 @@ def add_case_note_view(resident_id: int):
                 created_at=now,
             )
 
-    except Exception as exc:
-        flash(f"Case manager update failed: {exc}", "error")
+    except Exception:
+        current_app.logger.exception(
+            "Failed to add case note for resident_id=%s enrollment_id=%s",
+            resident_id,
+            enrollment_id,
+        )
+        flash("Unable to save the case manager update. Please try again or contact an administrator.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     flash("Case manager update saved.", "success")
@@ -1150,8 +1155,13 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 starting_sort_order=next_sort_order,
             )
 
-    except Exception as exc:
-        flash(f"Case note update failed: {exc}", "error")
+    except Exception:
+        current_app.logger.exception(
+            "Failed to edit case note update_id=%s resident_id=%s",
+            update_id,
+            resident_id,
+        )
+        flash("Unable to update the case note. Please try again or contact an administrator.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     flash("Case note updated.", "success")
