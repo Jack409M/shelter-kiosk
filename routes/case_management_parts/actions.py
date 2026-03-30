@@ -19,13 +19,22 @@ def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict
         f"""
         SELECT
             r.id,
-            pe.id AS enrollment_id
+            pe.id AS enrollment_id,
+            pe.program_status,
+            pe.entry_date,
+            pe.exit_date
         FROM residents r
         LEFT JOIN program_enrollments pe
             ON pe.resident_id = r.id
         WHERE r.id = {ph}
           AND {shelter_equals_sql("r.shelter")}
-        ORDER BY pe.id DESC
+        ORDER BY
+            CASE
+                WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
+                ELSE 1
+            END,
+            COALESCE(pe.entry_date, '') DESC,
+            pe.id DESC
         LIMIT 1
         """,
         (resident_id, shelter),
@@ -71,7 +80,6 @@ def create_enrollment_view(resident_id: int):
         FROM program_enrollments
         WHERE resident_id = {ph}
           AND program_status = {ph}
-        ORDER BY id DESC
         LIMIT 1
         """,
         (resident_id, "active"),
