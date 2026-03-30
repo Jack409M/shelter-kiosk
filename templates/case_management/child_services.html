@@ -13,6 +13,9 @@
   <form method="post">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
+    <label><strong>Service Date</strong></label>
+    <input type="date" name="service_date">
+
     <label><strong>Service Type</strong></label>
     <select name="service_type">
       <option value="counseling">Counseling</option>
