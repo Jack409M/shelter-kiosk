@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, render_template
+
 from core.auth import require_login
 from core.db import db_fetchall
 
@@ -10,7 +11,6 @@ compliance = Blueprint("compliance", __name__, url_prefix="/staff/compliance")
 @compliance.route("")
 @require_login
 def compliance_dashboard():
-
     rows = db_fetchall(
         """
         SELECT
@@ -23,18 +23,38 @@ def compliance_dashboard():
             wrs.meeting_count
         FROM residents r
         LEFT JOIN program_enrollments pe
-            ON pe.resident_id = r.id
+            ON pe.id = (
+                SELECT pe2.id
+                FROM program_enrollments pe2
+                WHERE pe2.resident_id = r.id
+                ORDER BY
+                    CASE
+                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
+                        ELSE 1
+                    END,
+                    COALESCE(pe2.entry_date, '') DESC,
+                    pe2.id DESC
+                LIMIT 1
+            )
         LEFT JOIN weekly_resident_summary wrs
-            ON wrs.enrollment_id = pe.id
-        WHERE pe.program_status = 'active'
-        ORDER BY r.last_name ASC, r.first_name ASC
+            ON wrs.id = (
+                SELECT wrs2.id
+                FROM weekly_resident_summary wrs2
+                WHERE wrs2.enrollment_id = pe.id
+                ORDER BY
+                    COALESCE(wrs2.week_start, wrs2.submitted_at, '') DESC,
+                    COALESCE(wrs2.submitted_at, '') DESC,
+                    wrs2.id DESC
+                LIMIT 1
+            )
+        WHERE COALESCE(pe.program_status, '') = 'active'
+        ORDER BY r.last_name ASC, r.first_name ASC, r.id ASC
         """
     )
 
     results = []
 
     for row in rows:
-
         if isinstance(row, dict):
             productive = row.get("productive_hours") or 0
             work = row.get("work_hours") or 0
@@ -55,5 +75,5 @@ def compliance_dashboard():
 
     return render_template(
         "compliance/dashboard.html",
-        rows=results
+        rows=results,
     )
