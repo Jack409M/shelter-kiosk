@@ -529,6 +529,21 @@ def ensure_indexes() -> None:
 
     try:
         db_execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS resident_children_active_dedupe_uidx
+            ON resident_children (
+                resident_id,
+                LOWER(COALESCE(child_name, '')),
+                COALESCE(birth_year, -1),
+                is_active
+            )
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
             "CREATE INDEX IF NOT EXISTS resident_substances_resident_idx "
             "ON resident_substances (resident_id)"
         )
