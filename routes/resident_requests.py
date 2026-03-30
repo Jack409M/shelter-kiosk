@@ -170,12 +170,21 @@ def resident_transport():
                 flash(e, "error")
             return render_template("resident_transport.html", shelter=shelter), 400
 
-        sql = """
+        kind = g.get("db_kind")
+        sql = (
+            """
             INSERT INTO transport_requests
             (shelter, resident_identifier, first_name, last_name, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', %s)
             RETURNING id
-        """
+            """
+            if kind == "pg"
+            else """
+            INSERT INTO transport_requests
+            (shelter, resident_identifier, first_name, last_name, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+            """
+        )
 
         needed_iso = needed_dt.replace(microsecond=0).isoformat()
         submitted = utcnow_iso()
@@ -196,9 +205,15 @@ def resident_transport():
 
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(sql, params)
-        req_id = cur.fetchone()[0]
-        cur.close()
+        try:
+            cur.execute(sql, params)
+            if kind == "pg":
+                req_id = cur.fetchone()[0]
+            else:
+                conn.commit()
+                req_id = cur.lastrowid
+        finally:
+            cur.close()
 
         log_action("transport", req_id, shelter, None, "create", "Resident submitted transport request")
         flash("Your transportation request was submitted successfully.", "ok")
