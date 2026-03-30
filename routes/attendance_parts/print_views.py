@@ -57,7 +57,7 @@ def staff_attendance_resident_print_view(resident_id: int):
         WHERE ae.resident_id = {"%s" if g.get("db_kind") == "pg" else "?"}
         AND ae.shelter = {"%s" if g.get("db_kind") == "pg" else "?"}
         {date_filter}
-        ORDER BY ae.event_time ASC
+        ORDER BY ae.event_time ASC, ae.id ASC
         """,
         tuple(params),
     )
@@ -138,11 +138,18 @@ def staff_attendance_print_today_view():
             su.username
         FROM residents r
         LEFT JOIN attendance_events ae
-            ON ae.resident_id = r.id
+            ON ae.id = (
+                SELECT ae2.id
+                FROM attendance_events ae2
+                WHERE ae2.resident_id = r.id
+                  AND ae2.shelter = r.shelter
+                ORDER BY ae2.event_time DESC, ae2.id DESC
+                LIMIT 1
+            )
         LEFT JOIN staff_users su
             ON su.id = ae.staff_user_id
         WHERE r.shelter = %s
-        ORDER BY r.last_name, ae.event_time DESC
+        ORDER BY r.last_name, r.first_name, r.id
         """
         if g.get("db_kind") == "pg"
         else """
@@ -157,16 +164,23 @@ def staff_attendance_print_today_view():
             su.username
         FROM residents r
         LEFT JOIN attendance_events ae
-            ON ae.resident_id = r.id
+            ON ae.id = (
+                SELECT ae2.id
+                FROM attendance_events ae2
+                WHERE ae2.resident_id = r.id
+                  AND ae2.shelter = r.shelter
+                ORDER BY ae2.event_time DESC, ae2.id DESC
+                LIMIT 1
+            )
         LEFT JOIN staff_users su
             ON su.id = ae.staff_user_id
         WHERE r.shelter = ?
-        ORDER BY r.last_name, ae.event_time DESC
+        ORDER BY r.last_name, r.first_name, r.id
         """,
         (shelter,),
     )
 
-    residents: dict[int, dict[str, Any]] = {}
+    residents: list[dict[str, Any]] = []
 
     for r in rows:
         rid = r["id"] if isinstance(r, dict) else r[0]
@@ -178,27 +192,21 @@ def staff_attendance_print_today_view():
         note = r["note"] if isinstance(r, dict) else r[6]
         staff = r["username"] if isinstance(r, dict) else r[7]
 
-        if rid not in residents:
-            residents[rid] = {
+        residents.append(
+            {
                 "name": f"{last}, {first}",
-                "status": "IN",
-                "out_time": None,
-                "expected": None,
-                "staff": "",
-                "note": "",
+                "status": "OUT" if event_type == "check_out" else "IN",
+                "out_time": event_time if event_type == "check_out" else None,
+                "expected": expected if event_type == "check_out" else None,
+                "staff": (staff or "") if event_type == "check_out" else "",
+                "note": (note or "") if event_type == "check_out" else "",
                 "has_active_pass": has_active_pass(rid, shelter),
             }
-
-        if event_type == "check_out":
-            residents[rid]["status"] = "OUT"
-            residents[rid]["out_time"] = event_time
-            residents[rid]["expected"] = expected
-            residents[rid]["staff"] = staff or ""
-            residents[rid]["note"] = note or ""
+        )
 
     return render_template(
         "staff_attendance_today_print.html",
-        residents=residents.values(),
+        residents=residents,
         shelter=shelter,
         printed_on=fmt_dt(utcnow_iso()),
         fmt_dt=fmt_time_only,
