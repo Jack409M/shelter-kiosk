@@ -1,3 +1,5 @@
+{% from "case_management/partials/resident_case/_service_fields.html" import render_service_field %}
+
 {% set case_services = [
   {
     "value": "Counseling",
@@ -126,32 +128,13 @@
 
       <div class="case-service-grid">
         {% for service in case_services %}
-          <div>
-            <label class="case-checkbox-label">
-              <input type="checkbox" name="service_type" value="{{ service['value'] }}" class="case-checkbox-input">
-              <span>{{ service["label"] }}</span>
-            </label>
-            <input
-              type="number"
-              name="quantity_{{ service['value'] }}"
-              min="0"
-              class="case-service-qty"
-              placeholder="Qty"
-            >
-            <input
-              type="text"
-              name="unit_{{ service['value'] }}"
-              class="case-service-unit"
-              placeholder="{{ service['unit_placeholder'] }}"
-              value="{{ service['unit_default'] }}"
-            >
-            <textarea
-              name="service_notes_{{ service['value'] }}"
-              rows="2"
-              class="case-service-notes"
-              placeholder="{{ service['notes_placeholder'] }}"
-            ></textarea>
-          </div>
+          {{ render_service_field(
+            service["value"],
+            service["label"],
+            service["unit_placeholder"],
+            service["unit_default"],
+            service["notes_placeholder"]
+          ) }}
         {% endfor %}
       </div>
 
