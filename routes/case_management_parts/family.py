@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import abort, flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
@@ -204,41 +204,54 @@ def family_intake_view(resident_id: int):
 
         now = datetime.utcnow().isoformat()
 
-        db_execute(
-            f"""
-            INSERT INTO resident_children
-            (
-                resident_id,
-                child_name,
-                birth_year,
-                relationship,
-                living_status,
-                is_active,
-                created_at,
-                updated_at
+        try:
+            db_execute(
+                f"""
+                INSERT INTO resident_children
+                (
+                    resident_id,
+                    child_name,
+                    birth_year,
+                    relationship,
+                    living_status,
+                    is_active,
+                    created_at,
+                    updated_at
+                )
+                VALUES
+                (
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    TRUE,
+                    {ph},
+                    {ph}
+                )
+                """,
+                (
+                    resident_id,
+                    child_name,
+                    birth_year,
+                    relationship,
+                    living_status,
+                    now,
+                    now,
+                ),
             )
-            VALUES
-            (
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                TRUE,
-                {ph},
-                {ph}
-            )
-            """,
-            (
+        except Exception:
+            current_app.logger.exception(
+                "Failed to add child for resident_id=%s",
                 resident_id,
-                child_name,
-                birth_year,
-                relationship,
-                living_status,
-                now,
-                now,
-            ),
-        )
+            )
+            children = _active_children_for_resident(resident_id)
+            flash("Unable to add child. Please try again or contact an administrator.", "error")
+            return render_template(
+                "case_management/family_intake.html",
+                resident_id=resident_id,
+                children=children,
+            )
 
         flash("Child added.", "success")
         return redirect(url_for("case_management.family_intake", resident_id=resident_id))
@@ -304,26 +317,35 @@ def edit_child_view(child_id: int):
             flash("This child already exists for this resident.", "error")
             return redirect(url_for("case_management.edit_child", child_id=child_id))
 
-        db_execute(
-            f"""
-            UPDATE resident_children
-            SET
-                child_name = {ph},
-                birth_year = {ph},
-                relationship = {ph},
-                living_status = {ph},
-                updated_at = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                child_name,
-                birth_year,
-                relationship,
-                living_status,
-                datetime.utcnow().isoformat(),
+        try:
+            db_execute(
+                f"""
+                UPDATE resident_children
+                SET
+                    child_name = {ph},
+                    birth_year = {ph},
+                    relationship = {ph},
+                    living_status = {ph},
+                    updated_at = {ph}
+                WHERE id = {ph}
+                """,
+                (
+                    child_name,
+                    birth_year,
+                    relationship,
+                    living_status,
+                    datetime.utcnow().isoformat(),
+                    child_id,
+                ),
+            )
+        except Exception:
+            current_app.logger.exception(
+                "Failed to edit child_id=%s resident_id=%s",
                 child_id,
-            ),
-        )
+                resident_id,
+            )
+            flash("Unable to update child. Please try again or contact an administrator.", "error")
+            return redirect(url_for("case_management.edit_child", child_id=child_id))
 
         flash("Child updated.", "success")
         return redirect(url_for("case_management.family_intake", resident_id=resident_id))
@@ -349,19 +371,28 @@ def delete_child_view(child_id: int):
     resident_id = child["resident_id"]
     ph = placeholder()
 
-    db_execute(
-        f"""
-        UPDATE resident_children
-        SET
-            is_active = FALSE,
-            updated_at = {ph}
-        WHERE id = {ph}
-        """,
-        (
-            datetime.utcnow().isoformat(),
+    try:
+        db_execute(
+            f"""
+            UPDATE resident_children
+            SET
+                is_active = FALSE,
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                datetime.utcnow().isoformat(),
+                child_id,
+            ),
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Failed to delete child_id=%s resident_id=%s",
             child_id,
-        ),
-    )
+            resident_id,
+        )
+        flash("Unable to remove child. Please try again or contact an administrator.", "error")
+        return redirect(url_for("case_management.family_intake", resident_id=resident_id))
 
     flash("Child removed.", "success")
     return redirect(url_for("case_management.family_intake", resident_id=resident_id))
@@ -396,30 +427,39 @@ def edit_child_service_view(service_id: int):
 
         ph = placeholder()
 
-        db_execute(
-            f"""
-            UPDATE child_services
-            SET
-                service_type = {ph},
-                outcome = {ph},
-                quantity = {ph},
-                unit = {ph},
-                notes = {ph},
-                service_date = {ph},
-                updated_at = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                service_type,
-                outcome,
-                quantity,
-                unit,
-                notes,
-                service_date,
-                datetime.utcnow().isoformat(),
+        try:
+            db_execute(
+                f"""
+                UPDATE child_services
+                SET
+                    service_type = {ph},
+                    outcome = {ph},
+                    quantity = {ph},
+                    unit = {ph},
+                    notes = {ph},
+                    service_date = {ph},
+                    updated_at = {ph}
+                WHERE id = {ph}
+                """,
+                (
+                    service_type,
+                    outcome,
+                    quantity,
+                    unit,
+                    notes,
+                    service_date,
+                    datetime.utcnow().isoformat(),
+                    service_id,
+                ),
+            )
+        except Exception:
+            current_app.logger.exception(
+                "Failed to edit child service_id=%s resident_id=%s",
                 service_id,
-            ),
-        )
+                resident_id,
+            )
+            flash("Unable to update child service. Please try again or contact an administrator.", "error")
+            return redirect(url_for("case_management.edit_child_service", service_id=service_id))
 
         flash("Service updated.", "success")
         return redirect(url_for("case_management.child_services", child_id=child_id))
@@ -446,23 +486,32 @@ def delete_child_service_view(service_id: int):
     child_id = service["resident_child_id"]
     ph = placeholder()
 
-    db_execute(
-        f"""
-        UPDATE child_services
-        SET
-            outcome = COALESCE(outcome, 'deleted'),
-            notes = CASE
-                WHEN notes IS NULL OR notes = '' THEN 'Deleted by staff'
-                ELSE notes || ' | Deleted by staff'
-            END,
-            updated_at = {ph}
-        WHERE id = {ph}
-        """,
-        (
-            datetime.utcnow().isoformat(),
+    try:
+        db_execute(
+            f"""
+            UPDATE child_services
+            SET
+                outcome = COALESCE(outcome, 'deleted'),
+                notes = CASE
+                    WHEN notes IS NULL OR notes = '' THEN 'Deleted by staff'
+                    ELSE notes || ' | Deleted by staff'
+                END,
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                datetime.utcnow().isoformat(),
+                service_id,
+            ),
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Failed to delete child service_id=%s child_id=%s",
             service_id,
-        ),
-    )
+            child_id,
+        )
+        flash("Unable to remove child service. Please try again or contact an administrator.", "error")
+        return redirect(url_for("case_management.child_services", child_id=child_id))
 
     flash("Service deleted.", "success")
     return redirect(url_for("case_management.child_services", child_id=child_id))
@@ -504,48 +553,58 @@ def child_services_view(child_id: int):
 
         now = datetime.utcnow().isoformat()
 
-        db_execute(
-            f"""
-            INSERT INTO child_services
-            (
-                resident_child_id,
-                enrollment_id,
-                service_date,
-                service_type,
-                outcome,
-                quantity,
-                unit,
-                notes,
-                created_at,
-                updated_at
+        try:
+            db_execute(
+                f"""
+                INSERT INTO child_services
+                (
+                    resident_child_id,
+                    enrollment_id,
+                    service_date,
+                    service_type,
+                    outcome,
+                    quantity,
+                    unit,
+                    notes,
+                    created_at,
+                    updated_at
+                )
+                VALUES
+                (
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph}
+                )
+                """,
+                (
+                    child_id,
+                    enrollment_id,
+                    service_date or now,
+                    service_type,
+                    outcome,
+                    quantity,
+                    unit,
+                    notes,
+                    now,
+                    now,
+                ),
             )
-            VALUES
-            (
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph}
-            )
-            """,
-            (
+        except Exception:
+            current_app.logger.exception(
+                "Failed to add child service for child_id=%s resident_id=%s enrollment_id=%s",
                 child_id,
+                resident_id,
                 enrollment_id,
-                service_date or now,
-                service_type,
-                outcome,
-                quantity,
-                unit,
-                notes,
-                now,
-                now,
-            ),
-        )
+            )
+            flash("Unable to add child service. Please try again or contact an administrator.", "error")
+            return redirect(url_for("case_management.child_services", child_id=child_id))
 
         flash("Child service added.", "success")
         return redirect(url_for("case_management.child_services", child_id=child_id))
