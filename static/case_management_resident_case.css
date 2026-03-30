@@ -1,617 +1,131 @@
-.case-header-strip {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.case-section-top {
-  margin-top: 10px;
-}
-
-.case-subsection-heading {
-  margin-top: 16px;
-}
-
-.case-help-text {
-  color: #666;
-  font-size: 0.9em;
-}
-
-.case-help-text-top {
-  margin-top: 8px;
-}
-
-.case-label-top {
-  margin-top: 10px;
-}
-
-.case-compact-number {
-  width: 70px;
-}
-
-.case-radio-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.case-service-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  gap: 10px;
-  align-items: start;
-  margin-top: 10px;
-}
-
-.case-checkbox-label {
-  display: flex;
-  gap: 6px;
-  margin: 0;
-}
-
-.case-checkbox-input {
-  margin-top: 3px;
-}
-
-.case-service-qty {
-  width: 80px;
-  margin-top: 4px;
-}
-
-.case-service-unit {
-  width: 100%;
-  margin-top: 4px;
-}
-
-.case-service-notes {
-  width: 100%;
-  margin-top: 4px;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-}
-
-.case-note-tile.is-active {
-  border-color: #555 !important;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
-}
-
-.case-note-scroll-lane {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 4px 2px 10px 2px;
-  scroll-behavior: smooth;
-}
-
-.case-note-tile {
-  flex: 0 0 15.5%;
-  min-width: 170px;
-  max-width: 220px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fff;
-  padding: 10px;
-  cursor: pointer;
-  text-align: center;
-}
-
-.case-note-tile-meta {
-  margin-top: 4px;
-  font-size: 0.82em;
-  color: #666;
-}
-
-.case-note-panel {
-  display: none;
-  margin-top: 10px;
-}
-
-.case-note-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.case-note-panel-title {
-  margin-bottom: 6px;
-}
-
-.case-note-created {
-  font-size: 0.95em;
-  color: #666;
-}
-
-.case-note-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.case-note-section {
-  margin-top: 14px;
-}
-
-.case-note-structured {
-  margin-left: 10px;
-}
-
-.case-note-service-card-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.case-note-service-card {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.case-note-service-meta {
-  margin-top: 4px;
-  font-size: 0.88em;
-  color: #666;
-}
-
-.case-note-service-text {
-  margin-top: 8px;
-}
-
-.print-only-note {
-  display: none;
-}
-
-.case-note-text-block {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.notebook-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 12px 0;
-  flex-wrap: wrap;
-}
-
-.notebook-tab-btn {
-  background: #f3f4f6 !important;
-  color: #111111 !important;
-  border: 1px solid #d1d5db !important;
-}
-
-.notebook-tab-btn:visited,
-.notebook-tab-btn:hover,
-.notebook-tab-btn:focus,
-.notebook-tab-btn:active {
-  color: #111111 !important;
-}
-
-.notebook-tab-btn.is-active,
-.notebook-tab-btn.is-active:visited,
-.notebook-tab-btn.is-active:hover,
-.notebook-tab-btn.is-active:focus,
-.notebook-tab-btn.is-active:active {
-  background: #1e3a8a !important;
-  color: #ffffff !important;
-  border-color: #1e3a8a !important;
-  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.25) !important;
-  font-weight: 700 !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-
-button.notebook-tab-btn.is-active,
-button.notebook-tab-btn.is-active span {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-}
-
-.needs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.need-card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 12px;
-  background: #fafafa;
-}
-
-.case-child-services-list {
-  font-size: 0.9em;
-  color: #555;
-}
-
-.case-child-service-note {
-  margin-left: 10px;
-  color: #555;
-}
-
-.case-empty-muted {
-  font-size: 0.9em;
-  color: #999;
-}
-
-.edit-case-note-service-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  gap: 10px;
-  align-items: start;
-  margin-top: 10px;
-}
-
-.edit-case-note-radio-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.edit-case-note-help {
-  color: #666;
-  font-size: 0.9em;
-}
-
-.edit-case-note-qty {
-  width: 80px;
-  margin-top: 4px;
-}
-
-.edit-case-note-unit {
-  width: 100%;
-  margin-top: 4px;
-}
-
-.edit-case-note-notes {
-  width: 100%;
-  margin-top: 4px;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-}
-
-.edit-case-note-actions {
-  margin-top: 10px;
-}
-
-.edit-case-note-checkbox-label {
-  display: flex;
-  gap: 6px;
-  margin: 0;
-}
-
-.edit-case-note-checkbox-label input[type="checkbox"] {
-  margin-top: 3px;
-}
-
-.case-snapshot-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(220px, 1fr));
-  gap: 10px;
-  align-items: start;
-}
-
-.case-snapshot-card {
-  border: 1px solid #d6d6d6;
-  border-radius: 8px;
-  padding: 10px;
-  background: #fafafa;
-}
-
-.case-snapshot-card-compact {
-  padding: 10px;
-}
-
-.case-snapshot-card-wide {
-  grid-column: 1 / -1;
-}
-
-.case-snapshot-title {
-  margin: 0 0 8px 0;
-}
-
-.case-snapshot-list {
-  display: grid;
-  gap: 8px;
-}
-
-.case-snapshot-list-compact {
-  gap: 6px;
-  font-size: 0.95em;
-}
-
-.case-medication-list {
-  display: grid;
-  gap: 10px;
-}
-
-.case-medication-list-compact {
-  gap: 8px;
-}
-
-.case-medication-item {
-  padding: 8px 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.case-medication-meta {
-  margin-top: 4px;
-  color: #555;
-  font-size: 0.92em;
-}
-
-.case-program-level-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-  flex-wrap: wrap;
-}
-
-.case-program-level-display {
-  font-size: 0.98em;
-}
-
-.case-level-edit-form {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.case-level-select {
-  min-width: 5ch;
-}
-
-.case-input-50ch {
-  width: min(100%, 50ch);
-}
-
-.case-input-12ch {
-  width: 12ch;
-}
-
-.case-input-10ch {
-  width: 10ch;
-}
-
-.case-input-4ch {
-  width: 4ch;
-}
-
-.case-button-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.case-external-summary {
-  margin-bottom: 12px;
-  padding: 8px 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fafafa;
-}
-
-.case-profile-row {
-  display: grid;
-  grid-template-columns: minmax(0, 50ch) max-content;
-  gap: 10px;
-  align-items: end;
-  margin-bottom: 8px;
-  width: fit-content;
-  max-width: 100%;
-}
-
-.case-profile-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.case-profile-field-wide input {
-  width: min(100%, 50ch);
-  max-width: 100%;
-}
-
-.case-profile-field-compact input {
-  max-width: 100%;
-}
-
-.case-recovery-section {
-  margin-top: 12px;
-}
-
-.case-no-spinner::-webkit-outer-spin-button,
-.case-no-spinner::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.case-no-spinner {
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-@media (max-width: 1180px) {
-  .case-snapshot-grid {
-    grid-template-columns: repeat(2, minmax(240px, 1fr));
-  }
-}
-
-@media (max-width: 760px) {
-  .case-snapshot-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .case-profile-row {
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  .case-profile-field-wide input,
-  .case-input-12ch,
-  .case-input-4ch {
-    width: 100%;
-    max-width: 100%;
-  }
-}
-
-@media print {
-  @page {
-    margin: 0.5in;
-    size: auto;
-  }
-
-  html,
-  body {
-    background: #fff !important;
-    color: #000 !important;
-  }
-
-  .no-print,
-  .notebook-tabs,
-  #case-note-scroll-lane,
-  .case-note-tile,
-  .print-hide,
-  h1,
-  .case-note-panel,
-  .progress-notes-heading,
-  .progress-notes-empty,
-  button,
-  .btn,
-  nav,
-  header,
-  footer {
-    display: none !important;
-  }
-
-  .card,
-  .case-header-print,
-  .case-note-service-card,
-  .case-snapshot-card,
-  .need-card,
-  .case-medication-item {
-    box-shadow: none !important;
-  }
-
-  .case-header-strip {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    margin-bottom: 8px !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .case-header-print {
-    display: block !important;
-    border: 1px solid #bdbdbd !important;
-    padding: 8px !important;
-    background: #fff !important;
-  }
-
-  .case-header-print h2 {
-    margin: 0 0 4px 0 !important;
-    font-size: 12pt !important;
-    line-height: 1.2 !important;
-  }
-
-  .case-header-print p {
-    margin: 0 !important;
-    line-height: 1.25 !important;
-    font-size: 9pt !important;
-  }
-
-  .print-note-panel {
-    display: block !important;
-  }
-
-  .print-only-note {
-    display: block !important;
-    margin-top: 6px !important;
-  }
-
-  .print-only-note .card {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-    background: #fff !important;
-  }
-
-  .print-only-note .case-note-section {
-    margin-top: 10px !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .print-only-note .case-note-panel-title {
-    margin: 0 0 4px 0 !important;
-    font-size: 13pt !important;
-    line-height: 1.2 !important;
-  }
-
-  .print-only-note .case-note-created {
-    margin-bottom: 8px !important;
-    color: #333 !important;
-    font-size: 9pt !important;
-  }
-
-  .print-only-note .case-note-structured {
-    display: inline !important;
-    margin-left: 6px !important;
-    font-size: 10pt !important;
-  }
-
-  .print-only-note .case-note-service-card-grid {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    margin-top: 6px !important;
-  }
-
-  .print-only-note .case-note-service-card {
-    padding: 6px 8px !important;
-    border: 1px solid #cfcfcf !important;
-    border-radius: 4px !important;
-    background: #fff !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .print-only-note .case-note-service-meta {
-    margin-top: 2px !important;
-    font-size: 8.5pt !important;
-    color: #444 !important;
-  }
-
-  .print-only-note .case-note-service-text {
-    margin-top: 4px !important;
-    font-size: 9pt !important;
-  }
-
-  .print-only-note .case-note-text-block {
-    white-space: pre-wrap !important;
-    overflow-wrap: anywhere !important;
-    word-break: break-word !important;
-  }
-
-  .print-only-note strong {
-    color: #000 !important;
-  }
-
-  .print-note-panel template {
-    display: none !important;
-  }
-}
+{% macro render_progress_note(note) %}
+  {% set note_notes = note["notes"] %}
+  {% set note_progress_notes = note["progress_notes"] %}
+  {% set note_action_items = note["action_items"] %}
+  {% set note_updated_grit = note["updated_grit"] %}
+  {% set note_parenting_class_completed = note["parenting_class_completed"] %}
+  {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
+  {% set note_services = note["services"] %}
+  {% set note_summary_groups = note["summary_groups"] or [] %}
+
+  {% if note_notes %}
+    <div class="case-note-section">
+      <strong>Notes:</strong><br>
+      <div class="case-note-text-block">{{ note_notes }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_progress_notes %}
+    <div class="case-note-section">
+      <strong>Progress Notes:</strong><br>
+      <div class="case-note-text-block">{{ note_progress_notes }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_action_items %}
+    <div class="case-note-section">
+      <strong>Action Items:</strong><br>
+      <div class="case-note-text-block">{{ note_action_items }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
+    <div class="case-note-section">
+      <strong>Structured Progress:</strong>
+      <span class="case-note-structured">
+        {% if note_updated_grit is not none %}
+          Grit: {{ note_updated_grit }}
+        {% endif %}
+
+        {% if note_parenting_class_completed is not none %}
+          {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+          Parenting: {{ "Yes" if note_parenting_class_completed else "No" }}
+        {% endif %}
+
+        {% if note_warrants_or_fines_paid is not none %}
+          {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+          Warrants: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
+        {% endif %}
+      </span>
+    </div>
+  {% endif %}
+
+  {% if note_summary_groups %}
+    <div class="case-note-section">
+      <strong>Meeting Changes Summary:</strong>
+
+      <div class="case-note-summary-grid">
+        {% for summary_group in note_summary_groups %}
+          <section class="case-note-summary-group">
+            <h4 class="case-note-summary-group-title">{{ summary_group["group_label"] }}</h4>
+
+            <div class="case-note-summary-list">
+              {% for item in summary_group["items"] %}
+                {% set item_label = item["item_label"] or "—" %}
+                {% set old_value = item["old_value"] %}
+                {% set new_value = item["new_value"] %}
+                {% set detail = item["detail"] %}
+                {% set change_type_display = item["change_type_display"] %}
+                {% set normalized_new = (new_value|string|trim) if new_value is not none else "" %}
+                {% set normalized_detail = (detail|string|trim) if detail is not none else "" %}
+
+                <div class="case-note-summary-item">
+                  <div class="case-note-summary-item-label">{{ item_label }}</div>
+
+                  {% if old_value and new_value and old_value != new_value %}
+                    <div class="case-note-summary-item-value">{{ old_value }} → {{ new_value }}</div>
+                    {% if normalized_detail and normalized_detail != normalized_new %}
+                      <div class="case-note-summary-item-detail">{{ detail }}</div>
+                    {% endif %}
+                  {% elif new_value %}
+                    <div class="case-note-summary-item-value">{{ new_value }}</div>
+                    {% if normalized_detail and normalized_detail != normalized_new %}
+                      <div class="case-note-summary-item-detail">{{ detail }}</div>
+                    {% endif %}
+                  {% elif change_type_display and change_type_display != "Snapshot" %}
+                    <div class="case-note-summary-item-value">{{ change_type_display }}</div>
+                    {% if normalized_detail %}
+                      <div class="case-note-summary-item-detail">{{ detail }}</div>
+                    {% endif %}
+                  {% elif normalized_detail %}
+                    <div class="case-note-summary-item-value">{{ detail }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </section>
+        {% endfor %}
+      </div>
+    </div>
+  {% elif note_services %}
+    <div class="case-note-section">
+      <strong>Services Provided:</strong>
+
+      <div class="case-note-summary-grid">
+        <section class="case-note-summary-group">
+          <div class="case-note-summary-list">
+            {% for service in note_services %}
+              {% set service_type = service["service_type"] %}
+              {% set service_date = service["service_date"] %}
+              {% set service_quantity_display = service["quantity_display"] %}
+              {% set service_notes_value = service["notes"] %}
+
+              <div class="case-note-summary-item">
+                <div class="case-note-summary-item-label">{{ service_type or "—" }}</div>
+                <div class="case-note-summary-item-value">
+                  {{ service_date or "—" }}
+                  {% if service_quantity_display and service_quantity_display != "—" %}
+                    — {{ service_quantity_display }}
+                  {% endif %}
+                </div>
+                {% if service_notes_value %}
+                  <div class="case-note-summary-item-detail">{{ service_notes_value }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+    </div>
+  {% endif %}
+{% endmacro %}
