@@ -1,98 +1,131 @@
-{% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note %}
+{% macro render_progress_note(note) %}
+  {% set note_notes = note["notes"] %}
+  {% set note_progress_notes = note["progress_notes"] %}
+  {% set note_action_items = note["action_items"] %}
+  {% set note_updated_grit = note["updated_grit"] %}
+  {% set note_parenting_class_completed = note["parenting_class_completed"] %}
+  {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
+  {% set note_services = note["services"] %}
+  {% set note_summary_groups = note["summary_groups"] or [] %}
 
-<div id="progress-notes-tab" class="resident-notebook-tab" style="display:none;">
-  <h2 class="progress-notes-heading">Progress Notes</h2>
-
-  {% if notes %}
-    <div id="case-note-scroll-lane" class="no-print case-note-scroll-lane">
-      {% for note in notes %}
-        {% set note_id = note["id"] %}
-        {% set note_meeting_date = note["meeting_date"] %}
-        {% set note_services = note["services"] %}
-        {% set note_summary_groups = note["summary_groups"] or [] %}
-
-        <button
-          type="button"
-          class="case-note-tile"
-          data-note-target="case-note-panel-{{ note_id }}"
-          data-print-target="print-case-note-{{ note_id }}"
-        >
-          <div><strong>{{ note_meeting_date or "—" }}</strong></div>
-          {% if note_services %}
-            <div class="case-note-tile-meta">
-              {{ note_services|length }} svc
-            </div>
-          {% elif note_summary_groups %}
-            <div class="case-note-tile-meta">
-              {{ note_summary_groups|length }} chg
-            </div>
-          {% endif %}
-        </button>
-      {% endfor %}
+  {% if note_notes %}
+    <div class="case-note-section">
+      <strong>Notes:</strong><br>
+      <div class="case-note-text-block">{{ note_notes }}</div>
     </div>
-
-    <div class="print-note-panel">
-      {% for note in notes %}
-        {% set note_id = note["id"] %}
-        {% set note_meeting_date = note["meeting_date"] %}
-        {% set note_created_at = note["created_at"] %}
-
-        <div id="case-note-panel-{{ note_id }}" class="card case-note-panel">
-          <div class="case-note-panel-header">
-            <div>
-              <h3 class="case-note-panel-title">Progress Notes {{ note_meeting_date or "—" }}</h3>
-              <div class="case-note-created">
-                Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
-              </div>
-            </div>
-
-            {% if note_id %}
-              <div class="print-hide case-note-actions">
-                <button type="button" class="btn" onclick="window.print()">
-                  Print
-                </button>
-                <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
-                  Edit Note
-                </a>
-              </div>
-            {% endif %}
-          </div>
-
-          {{ render_progress_note(note) }}
-        </div>
-
-        <template id="print-case-note-{{ note_id }}">
-          <div class="case-print-report">
-            <div class="case-print-report-header">
-              <h2 class="case-print-report-title">Shelter Operations</h2>
-              <div class="case-print-report-resident">
-                {{ resident["first_name"] }} {{ resident["last_name"] }}
-              </div>
-              <div class="case-print-report-meta">
-                {% if resident["resident_code"] %}<span>Resident Code: {{ resident["resident_code"] }}</span>{% endif %}
-                {% if resident["shelter"] %}<span>Shelter: {{ resident["shelter"] | title }}</span>{% endif %}
-                {% if enrollment and enrollment["program_status"] %}<span>Status: {{ enrollment["program_status"] | title }}</span>{% endif %}
-                {% if enrollment_id %}<span>Enrollment ID: {{ enrollment_id }}</span>{% endif %}
-              </div>
-            </div>
-
-            <div class="case-print-note">
-              <div>
-                <h3 class="case-note-panel-title">Progress Notes {{ note_meeting_date or "—" }}</h3>
-                <div class="case-note-created">
-                  Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
-                </div>
-              </div>
-
-              {{ render_progress_note(note) }}
-            </div>
-          </div>
-        </template>
-      {% endfor %}
-    </div>
-
-    <div id="print-selected-note" class="print-only-note"></div>
-  {% else %}
-    <p class="progress-notes-empty">No monthly meetings recorded.</p>
   {% endif %}
-</div>
+
+  {% if note_progress_notes %}
+    <div class="case-note-section">
+      <strong>Progress Notes:</strong><br>
+      <div class="case-note-text-block">{{ note_progress_notes }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_action_items %}
+    <div class="case-note-section">
+      <strong>Action Items:</strong><br>
+      <div class="case-note-text-block">{{ note_action_items }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
+    <div class="case-note-section">
+      <strong>Structured Progress:</strong>
+      <span class="case-note-structured">
+        {% if note_updated_grit is not none %}
+          Grit: {{ note_updated_grit }}
+        {% endif %}
+
+        {% if note_parenting_class_completed is not none %}
+          {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+          Parenting: {{ "Yes" if note_parenting_class_completed else "No" }}
+        {% endif %}
+
+        {% if note_warrants_or_fines_paid is not none %}
+          {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+          Warrants: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
+        {% endif %}
+      </span>
+    </div>
+  {% endif %}
+
+  {% if note_summary_groups %}
+    <div class="case-note-section">
+      <strong>Meeting Changes Summary:</strong>
+
+      <div class="case-note-summary-grid">
+        {% for summary_group in note_summary_groups %}
+          <section class="case-note-summary-group">
+            <h4 class="case-note-summary-group-title">{{ summary_group["group_label"] }}</h4>
+
+            <div class="case-note-summary-list">
+              {% for item in summary_group["items"] %}
+                {% set item_label = item["item_label"] or "—" %}
+                {% set old_value = item["old_value"] %}
+                {% set new_value = item["new_value"] %}
+                {% set detail = item["detail"] %}
+                {% set change_type_display = item["change_type_display"] %}
+                {% set normalized_new = (new_value|string|trim) if new_value is not none else "" %}
+                {% set normalized_detail = (detail|string|trim) if detail is not none else "" %}
+
+                <div class="case-note-summary-item">
+                  <div class="case-note-summary-item-label">{{ item_label }}</div>
+
+                  {% if old_value and new_value and old_value != new_value %}
+                    <div class="case-note-summary-item-value">{{ old_value }} → {{ new_value }}</div>
+                    {% if normalized_detail and normalized_detail != normalized_new %}
+                      <div class="case-note-summary-item-detail">{{ detail }}</div>
+                    {% endif %}
+                  {% elif new_value %}
+                    <div class="case-note-summary-item-value">{{ new_value }}</div>
+                    {% if normalized_detail and normalized_detail != normalized_new %}
+                      <div class="case-note-summary-item-detail">{{ detail }}</div>
+                    {% endif %}
+                  {% elif change_type_display and change_type_display != "Snapshot" %}
+                    <div class="case-note-summary-item-value">{{ change_type_display }}</div>
+                    {% if normalized_detail %}
+                      <div class="case-note-summary-item-detail">{{ detail }}</div>
+                    {% endif %}
+                  {% elif normalized_detail %}
+                    <div class="case-note-summary-item-value">{{ detail }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          </section>
+        {% endfor %}
+      </div>
+    </div>
+  {% elif note_services %}
+    <div class="case-note-section">
+      <strong>Services Provided:</strong>
+
+      <div class="case-note-summary-grid">
+        <section class="case-note-summary-group">
+          <div class="case-note-summary-list">
+            {% for service in note_services %}
+              {% set service_type = service["service_type"] %}
+              {% set service_date = service["service_date"] %}
+              {% set service_quantity_display = service["quantity_display"] %}
+              {% set service_notes_value = service["notes"] %}
+
+              <div class="case-note-summary-item">
+                <div class="case-note-summary-item-label">{{ service_type or "—" }}</div>
+                <div class="case-note-summary-item-value">
+                  {{ service_date or "—" }}
+                  {% if service_quantity_display and service_quantity_display != "—" %}
+                    — {{ service_quantity_display }}
+                  {% endif %}
+                </div>
+                {% if service_notes_value %}
+                  <div class="case-note-summary-item-detail">{{ service_notes_value }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+    </div>
+  {% endif %}
+{% endmacro %}
