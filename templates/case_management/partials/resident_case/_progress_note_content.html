@@ -1,4 +1,3 @@
-
 {% macro render_progress_note(note) %}
   {% set note_notes = note["notes"] %}
   {% set note_progress_notes = note["progress_notes"] %}
@@ -140,4 +139,182 @@
       </div>
     </div>
   {% endif %}
+{% endmacro %}
+
+
+{% macro render_progress_note_print_summary(note) %}
+  {% set note_notes = note["notes"] %}
+  {% set note_progress_notes = note["progress_notes"] %}
+  {% set note_action_items = note["action_items"] %}
+  {% set note_updated_grit = note["updated_grit"] %}
+  {% set note_parenting_class_completed = note["parenting_class_completed"] %}
+  {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
+  {% set note_services = note["services"] or [] %}
+  {% set note_summary_groups = note["summary_groups"] or [] %}
+
+  {% set ns = namespace(
+    resident_services=[],
+    child_services=[],
+    file_changes=[],
+    outstanding_needs=[]
+  ) %}
+
+  {% for service in note_services %}
+    {% set service_type = service["service_type"] or "" %}
+    {% if service_type and service_type not in ns.resident_services %}
+      {% set _ = ns.resident_services.append(service_type) %}
+    {% endif %}
+  {% endfor %}
+
+  {% for summary_group in note_summary_groups %}
+    {% set group_key = summary_group.get("group_key", "") %}
+    {% set group_label = summary_group.get("group_label", "") %}
+
+    {% if group_key == "service" or group_label == "Services Provided" %}
+      {% for item in summary_group["items"] %}
+        {% set label = item["item_label"] or item["detail"] or item["new_value"] or "" %}
+        {% if label and label not in ns.resident_services %}
+          {% set _ = ns.resident_services.append(label) %}
+        {% endif %}
+      {% endfor %}
+    {% elif group_key == "child" or group_label == "Children Changes" %}
+      {% for item in summary_group["items"] %}
+        {% set label = item["item_label"] or "" %}
+        {% set detail = item["detail"] or item["new_value"] or item["change_type_display"] or "" %}
+        {% set entry = detail if detail else label %}
+        {% if entry and entry not in ns.file_changes %}
+          {% set _ = ns.file_changes.append("Child update: " ~ entry) %}
+        {% endif %}
+      {% endfor %}
+    {% elif group_key == "medication" or group_label == "Medication Changes" %}
+      {% for item in summary_group["items"] %}
+        {% set detail = item["detail"] or item["new_value"] or item["item_label"] or "" %}
+        {% if detail and detail not in ns.file_changes %}
+          {% set _ = ns.file_changes.append("Medication: " ~ detail) %}
+        {% endif %}
+      {% endfor %}
+    {% elif group_key == "employment" or group_label == "Employment Changes" %}
+      {% for item in summary_group["items"] %}
+        {% set label = item["item_label"] or "Employment" %}
+        {% set value = item["new_value"] or item["detail"] or item["change_type_display"] or "" %}
+        {% set entry = label ~ ": " ~ value if value else label %}
+        {% if entry and entry not in ns.file_changes %}
+          {% set _ = ns.file_changes.append(entry) %}
+        {% endif %}
+      {% endfor %}
+    {% elif group_key == "sobriety" or group_label == "Sobriety Changes" %}
+      {% for item in summary_group["items"] %}
+        {% set label = item["item_label"] or "Sobriety" %}
+        {% set value = item["new_value"] or item["detail"] or item["change_type_display"] or "" %}
+        {% set entry = label ~ ": " ~ value if value else label %}
+        {% if entry and entry not in ns.file_changes %}
+          {% set _ = ns.file_changes.append(entry) %}
+        {% endif %}
+      {% endfor %}
+    {% elif group_key == "need_outstanding" or group_label == "Needs Still Outstanding" %}
+      {% for item in summary_group["items"] %}
+        {% set label = item["item_label"] or item["detail"] or item["new_value"] or "" %}
+        {% if label and label not in ns.outstanding_needs %}
+          {% set _ = ns.outstanding_needs.append(label) %}
+        {% endif %}
+      {% endfor %}
+    {% elif group_key == "need_addressed" or group_label == "Needs Taken Care Of" %}
+      {% for item in summary_group["items"] %}
+        {% set label = item["item_label"] or item["detail"] or item["new_value"] or "" %}
+        {% if label and label not in ns.file_changes %}
+          {% set _ = ns.file_changes.append("Need addressed: " ~ label) %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+
+  {% if note_notes %}
+    <div class="case-note-section">
+      <strong>Notes:</strong><br>
+      <div class="case-note-text-block">{{ note_notes }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_progress_notes %}
+    <div class="case-note-section">
+      <strong>Progress Notes:</strong><br>
+      <div class="case-note-text-block">{{ note_progress_notes }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_action_items %}
+    <div class="case-note-section">
+      <strong>Action Items:</strong><br>
+      <div class="case-note-text-block">{{ note_action_items }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
+    <div class="case-note-section">
+      <strong>Structured Progress:</strong>
+      <span class="case-note-structured">
+        {% if note_updated_grit is not none %}
+          Grit: {{ note_updated_grit }}
+        {% endif %}
+        {% if note_parenting_class_completed is not none %}
+          {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+          Parenting: {{ "Yes" if note_parenting_class_completed else "No" }}
+        {% endif %}
+        {% if note_warrants_or_fines_paid is not none %}
+          {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+          Warrants: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
+        {% endif %}
+      </span>
+    </div>
+  {% endif %}
+
+  <div class="case-note-section">
+    <strong>Summary:</strong>
+
+    <div class="case-print-summary-grid">
+      {% if ns.resident_services %}
+        <div class="case-print-summary-section">
+          <div class="case-print-summary-title">Resident received the following services</div>
+          <ul class="case-print-summary-list">
+            {% for item in ns.resident_services %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if ns.child_services %}
+        <div class="case-print-summary-section">
+          <div class="case-print-summary-title">Her children received the following services</div>
+          <ul class="case-print-summary-list">
+            {% for item in ns.child_services %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if ns.file_changes %}
+        <div class="case-print-summary-section">
+          <div class="case-print-summary-title">Changes to her file include</div>
+          <ul class="case-print-summary-list">
+            {% for item in ns.file_changes %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if ns.outstanding_needs %}
+        <div class="case-print-summary-section">
+          <div class="case-print-summary-title">Outstanding needs</div>
+          <ul class="case-print-summary-list">
+            {% for item in ns.outstanding_needs %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
 {% endmacro %}
