@@ -3,11 +3,12 @@
 
 {% set service_id = service["id"] if service is mapping else service[0] %}
 {% set child_id = service["resident_child_id"] if service is mapping else service[1] %}
-{% set service_type = service["service_type"] if service is mapping else service[2] %}
-{% set outcome = service["outcome"] if service is mapping else service[3] %}
-{% set quantity = service["quantity"] if service is mapping else service[4] %}
-{% set unit = service["unit"] if service is mapping else service[5] %}
-{% set notes = service["notes"] if service is mapping else service[6] %}
+{% set service_date = service["service_date"] if service is mapping else service[3] %}
+{% set service_type = service["service_type"] if service is mapping else service[4] %}
+{% set outcome = service["outcome"] if service is mapping else service[5] %}
+{% set quantity = service["quantity"] if service is mapping else service[6] %}
+{% set unit = service["unit"] if service is mapping else service[7] %}
+{% set notes = service["notes"] if service is mapping else service[8] %}
 {% set resident_id = resident_id if resident_id is defined else None %}
 
 <h1>Edit Child Service</h1>
@@ -26,6 +27,9 @@
 <div class="card">
   <form method="post" action="{{ url_for('case_management.edit_child_service', service_id=service_id) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Service Date</strong></label>
+    <input type="date" name="service_date" value="{{ service_date or '' }}">
 
     <label><strong>Service Type</strong></label>
     <select name="service_type">
