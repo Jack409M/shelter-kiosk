@@ -171,11 +171,12 @@ def add_case_note_view(resident_id: int):
     warrants_or_fines_paid = _yes_no_to_int(request.form.get("warrants_or_fines_paid"))
 
     service_types = _clean_service_types(request.form.getlist("service_type"))
-    service_date = (request.form.get("service_date") or "").strip() or meeting_date
 
     if not meeting_date:
         flash("Meeting date is required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    service_date = meeting_date
 
     resolved_need_count = _apply_need_updates(enrollment_id, int(staff_user_id), request.form)
 
@@ -370,11 +371,12 @@ def edit_case_note_view(resident_id: int, update_id: int):
     warrants_or_fines_paid = _yes_no_to_int(request.form.get("warrants_or_fines_paid"))
 
     service_types = _clean_service_types(request.form.getlist("service_type"))
-    service_date = (request.form.get("service_date") or "").strip() or meeting_date
 
     if not meeting_date:
         flash("Meeting date is required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    service_date = meeting_date
 
     now = utcnow_iso()
 
