@@ -390,6 +390,14 @@ def ensure_resident_code_schema(kind: str) -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_identifier_uq "
+            "ON residents (resident_identifier)"
+        )
+    except Exception:
+        pass
+
 
 def backfill_birth_year_from_legacy_dob(kind: str) -> None:
     if not column_exists(kind, "residents", "dob"):
@@ -499,6 +507,14 @@ def ensure_indexes() -> None:
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_children_resident_idx "
             "ON resident_children (resident_id)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_children_resident_active_idx "
+            "ON resident_children (resident_id, is_active)"
         )
     except Exception:
         pass
