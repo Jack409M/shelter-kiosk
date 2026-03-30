@@ -19,6 +19,7 @@ def can_manage_passes() -> bool:
 
 def complete_active_passes(resident_id: int, shelter: str) -> None:
     now_iso = utcnow_iso()
+    today_iso = now_iso[:10]
 
     db_execute(
         """
@@ -28,6 +29,10 @@ def complete_active_passes(resident_id: int, shelter: str) -> None:
         WHERE resident_id = %s
           AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
           AND status = %s
+          AND (
+                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= %s)
+             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= %s AND end_date >= %s)
+          )
         """
         if g.get("db_kind") == "pg"
         else """
@@ -37,8 +42,12 @@ def complete_active_passes(resident_id: int, shelter: str) -> None:
         WHERE resident_id = ?
           AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
           AND status = ?
+          AND (
+                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= ?)
+             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= ? AND end_date >= ?)
+          )
         """,
-        ("completed", now_iso, resident_id, shelter, "approved"),
+        ("completed", now_iso, resident_id, shelter, "approved", now_iso, today_iso, today_iso),
     )
 
 
