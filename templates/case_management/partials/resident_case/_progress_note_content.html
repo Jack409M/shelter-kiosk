@@ -1,130 +1,119 @@
-{% macro render_progress_note(note, print_mode=false) %}
-  {% set note_meeting_date = note["meeting_date"] %}
+{% macro render_progress_note(note) %}
   {% set note_notes = note["notes"] %}
   {% set note_progress_notes = note["progress_notes"] %}
   {% set note_action_items = note["action_items"] %}
   {% set note_updated_grit = note["updated_grit"] %}
   {% set note_parenting_class_completed = note["parenting_class_completed"] %}
   {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
-  {% set note_created_at = note["created_at"] %}
   {% set note_services = note["services"] %}
   {% set note_summary_groups = note["summary_groups"] or [] %}
 
-  <div class="card">
-    <div>
-      <h3 class="case-note-panel-title">Progress Notes {{ note_meeting_date or "—" }}</h3>
-      <div class="case-note-created">
-        Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
-      </div>
+  {% if note_notes %}
+    <div class="case-note-section">
+      <strong>Notes:</strong><br>
+      <div class="case-note-text-block">{{ note_notes }}</div>
     </div>
+  {% endif %}
 
-    {% if note_notes %}
-      <div class="case-note-section">
-        <strong>Notes:</strong><br>
-        <div class="case-note-text-block">{{ note_notes }}</div>
-      </div>
-    {% endif %}
+  {% if note_progress_notes %}
+    <div class="case-note-section">
+      <strong>Progress Notes:</strong><br>
+      <div class="case-note-text-block">{{ note_progress_notes }}</div>
+    </div>
+  {% endif %}
 
-    {% if note_progress_notes %}
-      <div class="case-note-section">
-        <strong>Progress Notes:</strong><br>
-        <div class="case-note-text-block">{{ note_progress_notes }}</div>
-      </div>
-    {% endif %}
+  {% if note_action_items %}
+    <div class="case-note-section">
+      <strong>Action Items:</strong><br>
+      <div class="case-note-text-block">{{ note_action_items }}</div>
+    </div>
+  {% endif %}
 
-    {% if note_action_items %}
-      <div class="case-note-section">
-        <strong>Action Items:</strong><br>
-        <div class="case-note-text-block">{{ note_action_items }}</div>
-      </div>
-    {% endif %}
+  {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
+    <div class="case-note-section">
+      <strong>Structured Progress:</strong>
+      <span class="case-note-structured">
+        {% if note_updated_grit is not none %}
+          Grit: {{ note_updated_grit }}
+        {% endif %}
 
-    {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
-      <div class="case-note-section">
-        <strong>Structured Progress:</strong>
-        <span class="case-note-structured">
-          {% if note_updated_grit is not none %}
-            Grit: {{ note_updated_grit }}
-          {% endif %}
+        {% if note_parenting_class_completed is not none %}
+          {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+          Parenting: {{ "Yes" if note_parenting_class_completed else "No" }}
+        {% endif %}
 
-          {% if note_parenting_class_completed is not none %}
-            {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
-            Parenting: {{ "Yes" if note_parenting_class_completed else "No" }}
-          {% endif %}
+        {% if note_warrants_or_fines_paid is not none %}
+          {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
+          Warrants: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
+        {% endif %}
+      </span>
+    </div>
+  {% endif %}
 
-          {% if note_warrants_or_fines_paid is not none %}
-            {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
-            Warrants: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
-          {% endif %}
-        </span>
-      </div>
-    {% endif %}
+  {% if note_summary_groups %}
+    <div class="case-note-section">
+      <strong>Meeting Changes Summary:</strong>
 
-    {% if note_summary_groups %}
-      <div class="case-note-section">
-        <strong>Meeting Changes Summary:</strong>
+      {% for summary_group in note_summary_groups %}
+        <div class="case-note-section">
+          <strong>{{ summary_group["group_label"] }}:</strong>
 
-        {% for summary_group in note_summary_groups %}
-          <div class="case-note-section">
-            <strong>{{ summary_group["group_label"] }}:</strong>
-
-            {% for item in summary_group["items"] %}
-              <div class="case-note-service-card">
-                <div><strong>{{ item["item_label"] or "—" }}</strong></div>
-
-                {% if item["old_value"] and item["new_value"] and item["old_value"] != item["new_value"] %}
-                  <div class="case-note-service-meta">
-                    {{ item["old_value"] }} → {{ item["new_value"] }}
-                  </div>
-                {% elif item["new_value"] %}
-                  <div class="case-note-service-meta">
-                    {{ item["new_value"] }}
-                  </div>
-                {% elif item["change_type_display"] and item["change_type_display"] != "Snapshot" %}
-                  <div class="case-note-service-meta">
-                    {{ item["change_type_display"] }}
-                  </div>
-                {% endif %}
-
-                {% if item["detail"] %}
-                  <div class="case-note-service-text case-note-text-block">
-                    {{ item["detail"] }}
-                  </div>
-                {% endif %}
-              </div>
-            {% endfor %}
-          </div>
-        {% endfor %}
-      </div>
-    {% elif note_services %}
-      <div class="case-note-section">
-        <strong>Services Provided:</strong>
-
-        <div class="case-note-service-card-grid">
-          {% for service in note_services %}
-            {% set service_type = service["service_type"] %}
-            {% set service_date = service["service_date"] %}
-            {% set service_quantity_display = service["quantity_display"] %}
-            {% set service_notes_value = service["notes"] %}
-
+          {% for item in summary_group["items"] %}
             <div class="case-note-service-card">
-              <div><strong>{{ service_type or "—" }}</strong></div>
-              <div class="case-note-service-meta">
-                {{ service_date or "—" }}
-                {% if service_quantity_display and service_quantity_display != "—" %}
-                  — {{ service_quantity_display }}
-                {% endif %}
-              </div>
+              <div><strong>{{ item["item_label"] or "—" }}</strong></div>
 
-              {% if service_notes_value %}
+              {% if item["old_value"] and item["new_value"] and item["old_value"] != item["new_value"] %}
+                <div class="case-note-service-meta">
+                  {{ item["old_value"] }} → {{ item["new_value"] }}
+                </div>
+              {% elif item["new_value"] %}
+                <div class="case-note-service-meta">
+                  {{ item["new_value"] }}
+                </div>
+              {% elif item["change_type_display"] and item["change_type_display"] != "Snapshot" %}
+                <div class="case-note-service-meta">
+                  {{ item["change_type_display"] }}
+                </div>
+              {% endif %}
+
+              {% if item["detail"] %}
                 <div class="case-note-service-text case-note-text-block">
-                  {{ service_notes_value }}
+                  {{ item["detail"] }}
                 </div>
               {% endif %}
             </div>
           {% endfor %}
         </div>
+      {% endfor %}
+    </div>
+  {% elif note_services %}
+    <div class="case-note-section">
+      <strong>Services Provided:</strong>
+
+      <div class="case-note-service-card-grid">
+        {% for service in note_services %}
+          {% set service_type = service["service_type"] %}
+          {% set service_date = service["service_date"] %}
+          {% set service_quantity_display = service["quantity_display"] %}
+          {% set service_notes_value = service["notes"] %}
+
+          <div class="case-note-service-card">
+            <div><strong>{{ service_type or "—" }}</strong></div>
+            <div class="case-note-service-meta">
+              {{ service_date or "—" }}
+              {% if service_quantity_display and service_quantity_display != "—" %}
+                — {{ service_quantity_display }}
+              {% endif %}
+            </div>
+
+            {% if service_notes_value %}
+              <div class="case-note-service-text case-note-text-block">
+                {{ service_notes_value }}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
-    {% endif %}
-  </div>
+    </div>
+  {% endif %}
 {% endmacro %}
