@@ -1,0 +1,28 @@
+{% macro render_service_field(service_value, service_label, unit_placeholder, unit_default, notes_placeholder) %}
+  <div>
+    <label class="case-checkbox-label">
+      <input type="checkbox" name="service_type" value="{{ service_value }}" class="case-checkbox-input">
+      <span>{{ service_label }}</span>
+    </label>
+    <input
+      type="number"
+      name="quantity_{{ service_value }}"
+      min="0"
+      class="case-service-qty"
+      placeholder="Qty"
+    >
+    <input
+      type="text"
+      name="unit_{{ service_value }}"
+      class="case-service-unit"
+      placeholder="{{ unit_placeholder }}"
+      value="{{ unit_default }}"
+    >
+    <textarea
+      name="service_notes_{{ service_value }}"
+      rows="2"
+      class="case-service-notes"
+      placeholder="{{ notes_placeholder }}"
+    ></textarea>
+  </div>
+{% endmacro %}
