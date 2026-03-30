@@ -1,0 +1,14 @@
+<div class="card no-print">
+  <h2>Start Program Enrollment</h2>
+
+  <form method="post" action="{{ url_for('case_management.create_enrollment', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Program Entry Date</strong></label>
+    <input type="date" name="entry_date" required>
+
+    <div class="case-section-top">
+      <button type="submit">Start Enrollment</button>
+    </div>
+  </form>
+</div>
