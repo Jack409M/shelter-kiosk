@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, g, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
 from core.audit import log_action
@@ -88,12 +88,21 @@ def resident_leave_view():
                 flash(e, "error")
             return render_template("resident_leave.html", shelter=shelter), 400
 
-        sql = """
+        kind = g.get("db_kind")
+        sql = (
+            """
             INSERT INTO leave_requests
             (shelter, resident_identifier, first_name, last_name, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', %s)
             RETURNING id
-        """
+            """
+            if kind == "pg"
+            else """
+            INSERT INTO leave_requests
+            (shelter, resident_identifier, first_name, last_name, resident_phone, destination, reason, resident_notes, leave_at, return_at, status, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+            """
+        )
 
         leave_iso = leave_dt.replace(microsecond=0).isoformat()
         return_iso = return_dt.replace(microsecond=0).isoformat()
@@ -115,10 +124,15 @@ def resident_leave_view():
 
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(sql, params)
-        req_id = cur.fetchone()[0]
-        cur.close()
-        conn.commit()
+        try:
+            cur.execute(sql, params)
+            if kind == "pg":
+                req_id = cur.fetchone()[0]
+            else:
+                conn.commit()
+                req_id = cur.lastrowid
+        finally:
+            cur.close()
 
         log_action("leave", req_id, shelter, None, "create", "Resident submitted leave request")
         flash("Your leave request was submitted successfully.", "ok")
