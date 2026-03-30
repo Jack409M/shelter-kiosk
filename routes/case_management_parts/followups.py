@@ -68,7 +68,9 @@ def _fetch_resident_and_enrollment(resident_id: int):
             program_status
         FROM program_enrollments
         WHERE resident_id = {ph}
-        ORDER BY id DESC
+        ORDER BY
+            COALESCE(entry_date, '') DESC,
+            id DESC
         LIMIT 1
         """,
         (resident_id,),
@@ -83,6 +85,7 @@ def _load_followup_form_data(enrollment_id: int, followup_type: str) -> dict[str
     row = db_fetchone(
         f"""
         SELECT
+            id,
             followup_date,
             followup_type,
             income_at_followup,
@@ -91,7 +94,9 @@ def _load_followup_form_data(enrollment_id: int, followup_type: str) -> dict[str
         FROM followups
         WHERE enrollment_id = {ph}
           AND followup_type = {ph}
-        ORDER BY id DESC
+        ORDER BY
+            COALESCE(followup_date, '') DESC,
+            id DESC
         LIMIT 1
         """,
         (enrollment_id, followup_type),
@@ -107,11 +112,11 @@ def _load_followup_form_data(enrollment_id: int, followup_type: str) -> dict[str
         }
 
     return {
-        "followup_date": _row_value(row, "followup_date", 0) or "",
-        "followup_type": _row_value(row, "followup_type", 1) or followup_type,
-        "income_at_followup": _row_value(row, "income_at_followup", 2) or "",
-        "sober_at_followup": "yes" if int(_row_value(row, "sober_at_followup", 3) or 0) else "no",
-        "notes": _row_value(row, "notes", 4) or "",
+        "followup_date": _row_value(row, "followup_date", 1) or "",
+        "followup_type": _row_value(row, "followup_type", 2) or followup_type,
+        "income_at_followup": _row_value(row, "income_at_followup", 3) or "",
+        "sober_at_followup": "yes" if int(_row_value(row, "sober_at_followup", 4) or 0) else "no",
+        "notes": _row_value(row, "notes", 5) or "",
     }
 
 
@@ -154,10 +159,11 @@ def _upsert_followup(enrollment_id: int, data: dict[str, Any]) -> None:
         FROM followups
         WHERE enrollment_id = {ph}
           AND followup_type = {ph}
+          AND followup_date = {ph}
         ORDER BY id DESC
         LIMIT 1
         """,
-        (enrollment_id, data["followup_type"]),
+        (enrollment_id, data["followup_type"], data["followup_date"]),
     )
 
     if existing:
