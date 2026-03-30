@@ -54,77 +54,65 @@
     <div class="case-note-section">
       <strong>Meeting Changes Summary:</strong>
 
-      <div class="case-note-summary-grid">
-        {% for summary_group in note_summary_groups %}
-          <section class="case-note-summary-group">
-            <h4 class="case-note-summary-group-title">{{ summary_group["group_label"] }}</h4>
+      {% for summary_group in note_summary_groups %}
+        <div class="case-note-section">
+          <strong>{{ summary_group["group_label"] }}:</strong>
 
-            <div class="case-note-summary-list">
-              {% for item in summary_group["items"] %}
-                {% set item_label = item["item_label"] or "—" %}
-                {% set old_value = item["old_value"] %}
-                {% set new_value = item["new_value"] %}
-                {% set detail = item["detail"] %}
-                {% set change_type_display = item["change_type_display"] %}
-                {% set normalized_new = (new_value|string|trim) if new_value is not none else "" %}
-                {% set normalized_detail = (detail|string|trim) if detail is not none else "" %}
+          {% for item in summary_group["items"] %}
+            <div class="case-note-service-card">
+              <div><strong>{{ item["item_label"] or "—" }}</strong></div>
 
-                <div class="case-note-summary-item">
-                  <div class="case-note-summary-item-label">{{ item_label }}</div>
-
-                  {% if old_value and new_value and old_value != new_value %}
-                    <div class="case-note-summary-item-value">{{ old_value }} → {{ new_value }}</div>
-                    {% if normalized_detail and normalized_detail != normalized_new %}
-                      <div class="case-note-summary-item-detail">{{ detail }}</div>
-                    {% endif %}
-                  {% elif new_value %}
-                    <div class="case-note-summary-item-value">{{ new_value }}</div>
-                    {% if normalized_detail and normalized_detail != normalized_new %}
-                      <div class="case-note-summary-item-detail">{{ detail }}</div>
-                    {% endif %}
-                  {% elif change_type_display and change_type_display != "Snapshot" %}
-                    <div class="case-note-summary-item-value">{{ change_type_display }}</div>
-                    {% if normalized_detail %}
-                      <div class="case-note-summary-item-detail">{{ detail }}</div>
-                    {% endif %}
-                  {% elif normalized_detail %}
-                    <div class="case-note-summary-item-value">{{ detail }}</div>
-                  {% endif %}
+              {% if item["old_value"] and item["new_value"] and item["old_value"] != item["new_value"] %}
+                <div class="case-note-service-meta">
+                  {{ item["old_value"] }} → {{ item["new_value"] }}
                 </div>
-              {% endfor %}
+              {% elif item["new_value"] %}
+                <div class="case-note-service-meta">
+                  {{ item["new_value"] }}
+                </div>
+              {% elif item["change_type_display"] and item["change_type_display"] != "Snapshot" %}
+                <div class="case-note-service-meta">
+                  {{ item["change_type_display"] }}
+                </div>
+              {% endif %}
+
+              {% if item["detail"] %}
+                <div class="case-note-service-text case-note-text-block">
+                  {{ item["detail"] }}
+                </div>
+              {% endif %}
             </div>
-          </section>
-        {% endfor %}
-      </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
     </div>
   {% elif note_services %}
     <div class="case-note-section">
       <strong>Services Provided:</strong>
 
-      <div class="case-note-summary-grid">
-        <section class="case-note-summary-group">
-          <div class="case-note-summary-list">
-            {% for service in note_services %}
-              {% set service_type = service["service_type"] %}
-              {% set service_date = service["service_date"] %}
-              {% set service_quantity_display = service["quantity_display"] %}
-              {% set service_notes_value = service["notes"] %}
+      <div class="case-note-service-card-grid">
+        {% for service in note_services %}
+          {% set service_type = service["service_type"] %}
+          {% set service_date = service["service_date"] %}
+          {% set service_quantity_display = service["quantity_display"] %}
+          {% set service_notes_value = service["notes"] %}
 
-              <div class="case-note-summary-item">
-                <div class="case-note-summary-item-label">{{ service_type or "—" }}</div>
-                <div class="case-note-summary-item-value">
-                  {{ service_date or "—" }}
-                  {% if service_quantity_display and service_quantity_display != "—" %}
-                    — {{ service_quantity_display }}
-                  {% endif %}
-                </div>
-                {% if service_notes_value %}
-                  <div class="case-note-summary-item-detail">{{ service_notes_value }}</div>
-                {% endif %}
+          <div class="case-note-service-card">
+            <div><strong>{{ service_type or "—" }}</strong></div>
+            <div class="case-note-service-meta">
+              {{ service_date or "—" }}
+              {% if service_quantity_display and service_quantity_display != "—" %}
+                — {{ service_quantity_display }}
+              {% endif %}
+            </div>
+
+            {% if service_notes_value %}
+              <div class="case-note-service-text case-note-text-block">
+                {{ service_notes_value }}
               </div>
-            {% endfor %}
+            {% endif %}
           </div>
-        </section>
+        {% endfor %}
       </div>
     </div>
   {% endif %}
