@@ -1,3 +1,55 @@
+{% set case_services = [
+  {
+    "value": "Counseling",
+    "label": "Counseling",
+    "unit_placeholder": "sessions",
+    "unit_default": "sessions",
+    "notes_placeholder": "Counseling notes"
+  },
+  {
+    "value": "Dental",
+    "label": "Dental",
+    "unit_placeholder": "visits",
+    "unit_default": "visits",
+    "notes_placeholder": "Dental notes"
+  },
+  {
+    "value": "Vision",
+    "label": "Vision",
+    "unit_placeholder": "visits",
+    "unit_default": "visits",
+    "notes_placeholder": "Vision notes"
+  },
+  {
+    "value": "Daycare",
+    "label": "Daycare",
+    "unit_placeholder": "days",
+    "unit_default": "days",
+    "notes_placeholder": "Daycare notes"
+  },
+  {
+    "value": "Legal Assistance",
+    "label": "Legal Assistance",
+    "unit_placeholder": "visits",
+    "unit_default": "visits",
+    "notes_placeholder": "Legal assistance notes"
+  },
+  {
+    "value": "Transportation",
+    "label": "Transportation",
+    "unit_placeholder": "rides",
+    "unit_default": "rides",
+    "notes_placeholder": "Transportation notes"
+  },
+  {
+    "value": "Other",
+    "label": "Other",
+    "unit_placeholder": "units",
+    "unit_default": "units",
+    "notes_placeholder": "Other service notes"
+  }
+] %}
+
 <div id="resident-file-tab" class="resident-notebook-tab">
   <div class="card no-print">
     <h2>Progress Notes</h2>
@@ -73,194 +125,34 @@
       <h3>Services Provided</h3>
 
       <div class="case-service-grid">
-        <div>
-          <label class="case-checkbox-label">
-            <input type="checkbox" name="service_type" value="Counseling" class="case-checkbox-input">
-            <span>Counseling</span>
-          </label>
-          <input
-            type="number"
-            name="quantity_Counseling"
-            min="0"
-            class="case-service-qty"
-            placeholder="Qty"
-          >
-          <input
-            type="text"
-            name="unit_Counseling"
-            class="case-service-unit"
-            placeholder="sessions"
-            value="sessions"
-          >
-          <textarea
-            name="service_notes_Counseling"
-            rows="2"
-            class="case-service-notes"
-            placeholder="Counseling notes"
-          ></textarea>
-        </div>
-
-        <div>
-          <label class="case-checkbox-label">
-            <input type="checkbox" name="service_type" value="Dental" class="case-checkbox-input">
-            <span>Dental</span>
-          </label>
-          <input
-            type="number"
-            name="quantity_Dental"
-            min="0"
-            class="case-service-qty"
-            placeholder="Qty"
-          >
-          <input
-            type="text"
-            name="unit_Dental"
-            class="case-service-unit"
-            placeholder="visits"
-            value="visits"
-          >
-          <textarea
-            name="service_notes_Dental"
-            rows="2"
-            class="case-service-notes"
-            placeholder="Dental notes"
-          ></textarea>
-        </div>
-
-        <div>
-          <label class="case-checkbox-label">
-            <input type="checkbox" name="service_type" value="Vision" class="case-checkbox-input">
-            <span>Vision</span>
-          </label>
-          <input
-            type="number"
-            name="quantity_Vision"
-            min="0"
-            class="case-service-qty"
-            placeholder="Qty"
-          >
-          <input
-            type="text"
-            name="unit_Vision"
-            class="case-service-unit"
-            placeholder="visits"
-            value="visits"
-          >
-          <textarea
-            name="service_notes_Vision"
-            rows="2"
-            class="case-service-notes"
-            placeholder="Vision notes"
-          ></textarea>
-        </div>
-
-        <div>
-          <label class="case-checkbox-label">
-            <input type="checkbox" name="service_type" value="Daycare" class="case-checkbox-input">
-            <span>Daycare</span>
-          </label>
-          <input
-            type="number"
-            name="quantity_Daycare"
-            min="0"
-            class="case-service-qty"
-            placeholder="Qty"
-          >
-          <input
-            type="text"
-            name="unit_Daycare"
-            class="case-service-unit"
-            placeholder="days"
-            value="days"
-          >
-          <textarea
-            name="service_notes_Daycare"
-            rows="2"
-            class="case-service-notes"
-            placeholder="Daycare notes"
-          ></textarea>
-        </div>
-
-        <div>
-          <label class="case-checkbox-label">
-            <input type="checkbox" name="service_type" value="Legal Assistance" class="case-checkbox-input">
-            <span>Legal Assistance</span>
-          </label>
-          <input
-            type="number"
-            name="quantity_Legal Assistance"
-            min="0"
-            class="case-service-qty"
-            placeholder="Qty"
-          >
-          <input
-            type="text"
-            name="unit_Legal Assistance"
-            class="case-service-unit"
-            placeholder="visits"
-            value="visits"
-          >
-          <textarea
-            name="service_notes_Legal Assistance"
-            rows="2"
-            class="case-service-notes"
-            placeholder="Legal assistance notes"
-          ></textarea>
-        </div>
-
-        <div>
-          <label class="case-checkbox-label">
-            <input type="checkbox" name="service_type" value="Transportation" class="case-checkbox-input">
-            <span>Transportation</span>
-          </label>
-          <input
-            type="number"
-            name="quantity_Transportation"
-            min="0"
-            class="case-service-qty"
-            placeholder="Qty"
-          >
-          <input
-            type="text"
-            name="unit_Transportation"
-            class="case-service-unit"
-            placeholder="rides"
-            value="rides"
-          >
-          <textarea
-            name="service_notes_Transportation"
-            rows="2"
-            class="case-service-notes"
-            placeholder="Transportation notes"
-          ></textarea>
-        </div>
-
-        <div>
-          <label class="case-checkbox-label">
-            <input type="checkbox" name="service_type" value="Other" class="case-checkbox-input">
-            <span>Other</span>
-          </label>
-          <input
-            type="number"
-            name="quantity_Other"
-            min="0"
-            class="case-service-qty"
-            placeholder="Qty"
-          >
-          <input
-            type="text"
-            name="unit_Other"
-            class="case-service-unit"
-            placeholder="units"
-            value="units"
-          >
-          <textarea
-            name="service_notes_Other"
-            rows="2"
-            class="case-service-notes"
-            placeholder="Other service notes"
-          ></textarea>
-        </div>
+        {% for service in case_services %}
+          <div>
+            <label class="case-checkbox-label">
+              <input type="checkbox" name="service_type" value="{{ service['value'] }}" class="case-checkbox-input">
+              <span>{{ service["label"] }}</span>
+            </label>
+            <input
+              type="number"
+              name="quantity_{{ service['value'] }}"
+              min="0"
+              class="case-service-qty"
+              placeholder="Qty"
+            >
+            <input
+              type="text"
+              name="unit_{{ service['value'] }}"
+              class="case-service-unit"
+              placeholder="{{ service['unit_placeholder'] }}"
+              value="{{ service['unit_default'] }}"
+            >
+            <textarea
+              name="service_notes_{{ service['value'] }}"
+              rows="2"
+              class="case-service-notes"
+              placeholder="{{ service['notes_placeholder'] }}"
+            ></textarea>
+          </div>
+        {% endfor %}
       </div>
 
       <div class="case-section-top">
