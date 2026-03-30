@@ -1,4 +1,4 @@
-{% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note %}
+{% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note, render_progress_note_print_summary %}
 
 <div id="progress-notes-tab" class="resident-notebook-tab" style="display:none;">
   <h2 class="progress-notes-heading">Progress Notes</h2>
@@ -63,19 +63,6 @@
 
         <template id="print-case-note-{{ note_id }}">
           <div class="case-print-report">
-            <div class="case-print-report-header">
-              <h2 class="case-print-report-title">Shelter Operations</h2>
-              <div class="case-print-report-resident">
-                {{ resident["first_name"] }} {{ resident["last_name"] }}
-              </div>
-              <div class="case-print-report-meta">
-                {% if resident["resident_code"] %}<span>Resident Code: {{ resident["resident_code"] }}</span>{% endif %}
-                {% if resident["shelter"] %}<span>Shelter: {{ resident["shelter"] | title }}</span>{% endif %}
-                {% if enrollment and enrollment["program_status"] %}<span>Status: {{ enrollment["program_status"] | title }}</span>{% endif %}
-                {% if enrollment_id %}<span>Enrollment ID: {{ enrollment_id }}</span>{% endif %}
-              </div>
-            </div>
-
             <div class="case-print-note">
               <div>
                 <h3 class="case-note-panel-title">Progress Notes {{ note_meeting_date or "—" }}</h3>
@@ -84,7 +71,7 @@
                 </div>
               </div>
 
-              {{ render_progress_note(note) }}
+              {{ render_progress_note_print_summary(note) }}
             </div>
           </div>
         </template>
