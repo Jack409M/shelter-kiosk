@@ -21,6 +21,10 @@ def _coerce_form_dict(form: Any) -> dict[str, Any]:
     return dict(form)
 
 
+def _draft_staff_user_id() -> int | None:
+    return session.get("staff_user_id") or session.get("user_id")
+
+
 def _save_intake_draft(
     current_shelter: str,
     form: Any,
@@ -36,6 +40,8 @@ def _save_intake_draft(
     allowed_statuses = {"draft", "pending_duplicate_review"}
     if status not in allowed_statuses:
         status = "draft"
+
+    created_by_user_id = _draft_staff_user_id()
 
     if g.get("db_kind") == "pg":
         if draft_id is not None:
@@ -101,7 +107,7 @@ def _save_intake_draft(
                 entry_date,
                 payload,
                 payload,
-                session.get("user_id"),
+                created_by_user_id,
             ),
         )
         return int(row["id"])
@@ -177,7 +183,7 @@ def _save_intake_draft(
             entry_date,
             payload,
             payload,
-            session.get("user_id"),
+            created_by_user_id,
         ),
     )
 
