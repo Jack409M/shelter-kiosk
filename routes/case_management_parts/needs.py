@@ -239,9 +239,10 @@ def sync_enrollment_needs(
         intake_row=intake_row,
         selected_need_keys=selected_need_keys,
     )
+    triggered_by_key = {need["need_key"]: need for need in triggered_needs}
 
-    for need in triggered_needs:
-        existing = existing_by_key.get(need["need_key"])
+    for need_key, need in triggered_by_key.items():
+        existing = existing_by_key.get(need_key)
 
         if existing:
             db_execute(
@@ -298,6 +299,26 @@ def sync_enrollment_needs(
                 "open",
                 now,
                 now,
+            ),
+        )
+
+    for need_key, existing in existing_by_key.items():
+        if need_key in triggered_by_key:
+            continue
+        if existing["status"] != "open":
+            continue
+
+        db_execute(
+            f"""
+            UPDATE resident_needs
+            SET
+                status = 'not_applicable',
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                now,
+                existing["id"],
             ),
         )
 
