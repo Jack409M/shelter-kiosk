@@ -891,6 +891,16 @@ def ensure_indexes() -> None:
     try:
         db_execute(
             """
+            CREATE INDEX IF NOT EXISTS child_services_child_outcome_idx
+            ON child_services (resident_child_id, outcome)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
             CREATE INDEX IF NOT EXISTS intake_drafts_status_idx
             ON intake_drafts (status)
             """
