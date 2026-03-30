@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from core.db import db_fetchone
+from core.db import db_fetchall
 from routes.case_management_parts.helpers import clean
 from routes.case_management_parts.helpers import digits_only
 from routes.case_management_parts.helpers import normalize_shelter_name
@@ -28,6 +28,25 @@ ALLOWED_DISABILITY_VALUES = {
 }
 
 
+def _rank_duplicate_match(row: dict[str, Any], phone: str | None, email: str | None) -> tuple[int, int]:
+    row_phone = digits_only(row.get("phone"))
+    row_email = clean(row.get("email"))
+    if row_email:
+        row_email = row_email.lower()
+
+    if phone and row_phone and row_phone == phone:
+        return (1, -int(row.get("id") or 0))
+
+    if email and row_email and row_email == email:
+        return (2, -int(row.get("id") or 0))
+
+    birth_year = row.get("birth_year")
+    if birth_year is not None:
+        return (3, -int(row.get("id") or 0))
+
+    return (4, -int(row.get("id") or 0))
+
+
 def _find_possible_duplicate(
     first_name: str | None,
     last_name: str | None,
@@ -37,13 +56,15 @@ def _find_possible_duplicate(
     shelter: str,
     shelter_equals_sql,
 ):
+    del shelter
+    del shelter_equals_sql
+
     ph = placeholder()
 
     first_name = clean(first_name)
     last_name = clean(last_name)
     phone = digits_only(phone)
     email = clean(email)
-    shelter = normalize_shelter_name(shelter)
 
     if email:
         email = email.lower()
@@ -51,34 +72,55 @@ def _find_possible_duplicate(
     if not first_name or not last_name:
         return None
 
-    match_clauses: list[str] = []
-    params: list[Any] = []
-
-    match_clauses.append(
-        "(LOWER(first_name) = LOWER(" + ph + ") AND LOWER(last_name) = LOWER(" + ph + "))"
-    )
-    params.extend([first_name, last_name])
-
-    if birth_year is not None:
-        match_clauses.append(
-            "(LOWER(first_name) = LOWER(" + ph + ") AND LOWER(last_name) = LOWER(" + ph + ") AND birth_year = " + ph + ")"
-        )
-        params.extend([first_name, last_name, birth_year])
+    exact_match_clauses: list[str] = []
+    exact_match_params: list[Any] = []
 
     if phone:
-        match_clauses.append("(phone = " + ph + ")")
-        params.append(phone)
+        exact_match_clauses.append(f"(phone = {ph})")
+        exact_match_params.append(phone)
 
     if email:
-        match_clauses.append("(LOWER(email) = LOWER(" + ph + "))")
-        params.append(email)
+        exact_match_clauses.append(f"(LOWER(email) = LOWER({ph}))")
+        exact_match_params.append(email)
 
-    if not match_clauses:
-        return None
+    if birth_year is not None:
+        exact_match_clauses.append(
+            f"(LOWER(first_name) = LOWER({ph}) AND LOWER(last_name) = LOWER({ph}) AND birth_year = {ph})"
+        )
+        exact_match_params.extend([first_name, last_name, birth_year])
 
-    shelter_sql = shelter_equals_sql("shelter")
+    if exact_match_clauses:
+        exact_rows = db_fetchall(
+            f"""
+            SELECT
+                id,
+                resident_code,
+                first_name,
+                last_name,
+                birth_year,
+                phone,
+                resident_identifier,
+                email,
+                shelter
+            FROM residents
+            WHERE is_active = TRUE
+              AND (
+                {" OR ".join(exact_match_clauses)}
+              )
+            ORDER BY id DESC
+            """,
+            tuple(exact_match_params),
+        )
 
-    sql = f"""
+        if exact_rows:
+            ranked_rows = sorted(
+                exact_rows,
+                key=lambda row: _rank_duplicate_match(row, phone, email),
+            )
+            return ranked_rows[0]
+
+    weak_name_only_rows = db_fetchall(
+        f"""
         SELECT
             id,
             resident_code,
@@ -91,15 +133,21 @@ def _find_possible_duplicate(
             shelter
         FROM residents
         WHERE is_active = TRUE
-          AND ({shelter_sql})
-          AND (
-            {" OR ".join(match_clauses)}
-          )
+          AND LOWER(first_name) = LOWER({ph})
+          AND LOWER(last_name) = LOWER({ph})
         ORDER BY id DESC
-        LIMIT 1
-    """
+        """,
+        (first_name, last_name),
+    )
 
-    return db_fetchone(sql, tuple([shelter] + params))
+    if weak_name_only_rows:
+        ranked_rows = sorted(
+            weak_name_only_rows,
+            key=lambda row: _rank_duplicate_match(row, phone, email),
+        )
+        return ranked_rows[0]
+
+    return None
 
 
 def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list[str]]:
@@ -150,6 +198,15 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "felony_history": clean(form.get("felony_history")),
         "probation_parole": clean(form.get("probation_parole")),
         "barrier_notes": clean(form.get("barrier_notes")),
+        "car_at_entry": clean(form.get("car_at_entry")),
+        "car_insurance_at_entry": clean(form.get("car_insurance_at_entry")),
+        "kids_at_dwc": clean(form.get("kids_at_dwc")),
+        "kids_served_outside_under_18": clean(form.get("kids_served_outside_under_18")),
+        "kids_ages_0_5": clean(form.get("kids_ages_0_5")),
+        "kids_ages_6_11": clean(form.get("kids_ages_6_11")),
+        "kids_ages_12_17": clean(form.get("kids_ages_12_17")),
+        "kids_reunited_while_in_program": clean(form.get("kids_reunited_while_in_program")),
+        "healthy_babies_born_at_dwc": clean(form.get("healthy_babies_born_at_dwc")),
         "entry_need_keys": selected_need_keys,
         "days_sober_at_entry": None,
     }
@@ -245,5 +302,23 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
     if income_at_entry is not None and income_at_entry < 0:
         errors.append("Monthly Income cannot be negative.")
     data["income_at_entry"] = income_at_entry
+
+    family_count_fields = [
+        "kids_at_dwc",
+        "kids_served_outside_under_18",
+        "kids_ages_0_5",
+        "kids_ages_6_11",
+        "kids_ages_12_17",
+        "kids_reunited_while_in_program",
+        "healthy_babies_born_at_dwc",
+    ]
+
+    for field_name in family_count_fields:
+        parsed_value = parse_int(data[field_name])
+        if data[field_name] not in (None, "") and parsed_value is None:
+            errors.append(f"{field_name.replace('_', ' ').title()} must be a whole number.")
+        if parsed_value is not None and parsed_value < 0:
+            errors.append(f"{field_name.replace('_', ' ').title()} cannot be negative.")
+        data[field_name] = parsed_value
 
     return data, errors
