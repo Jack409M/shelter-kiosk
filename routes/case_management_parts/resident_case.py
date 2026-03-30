@@ -10,7 +10,6 @@ from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.needs import get_open_enrollment_needs
-from routes.case_management_parts.needs import sync_enrollment_needs
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
 
 
@@ -88,11 +87,9 @@ def _display_quantity_unit(quantity, unit: str | None) -> str:
         return "—"
     if quantity is None:
         return _display_label(unit)
-
     unit_clean = (unit or "").strip()
     if not unit_clean:
         return str(quantity)
-
     return f"{quantity} {unit_clean}"
 
 
@@ -115,7 +112,10 @@ def _normalize_child_service_row(service):
 def _normalize_summary_row(row):
     return {
         "change_group": row.get("change_group"),
-        "change_group_label": SUMMARY_GROUP_LABELS.get(row.get("change_group"), _display_label(row.get("change_group"))),
+        "change_group_label": SUMMARY_GROUP_LABELS.get(
+            row.get("change_group"),
+            _display_label(row.get("change_group")),
+        ),
         "change_type": row.get("change_type"),
         "change_type_display": _display_label(row.get("change_type")),
         "item_key": row.get("item_key"),
@@ -250,7 +250,6 @@ def resident_case_view(resident_id: int):
         )
 
         child_ids = [child["id"] for child in children]
-
         child_services = []
 
         if child_ids:
@@ -267,6 +266,7 @@ def resident_case_view(resident_id: int):
                     service_date
                 FROM child_services
                 WHERE resident_child_id IN ({child_placeholders})
+                  AND COALESCE(outcome, '') <> 'deleted'
                 ORDER BY service_date DESC, id DESC
                 """,
                 tuple(child_ids),
@@ -274,13 +274,11 @@ def resident_case_view(resident_id: int):
             child_services = [_normalize_child_service_row(service) for service in child_services_raw]
 
         services_by_child = {}
-
         for service in child_services:
             child_id = service["resident_child_id"]
             services_by_child.setdefault(child_id, []).append(service)
 
         enriched_children = []
-
         for child in children:
             child_id = child["id"]
             child_obj = dict(child)
@@ -312,13 +310,11 @@ def resident_case_view(resident_id: int):
                 has_social_security_card
             FROM intake_assessments
             WHERE enrollment_id = {ph}
+            ORDER BY id DESC
             LIMIT 1
             """,
             (enrollment_id,),
         )
-
-        if intake_assessment:
-            sync_enrollment_needs(enrollment_id, intake_assessment)
 
         open_needs = get_open_enrollment_needs(enrollment_id)
 
@@ -344,6 +340,7 @@ def resident_case_view(resident_id: int):
                 private_insurance
             FROM exit_assessments
             WHERE enrollment_id = {ph}
+            ORDER BY id DESC
             LIMIT 1
             """,
             (enrollment_id,),
@@ -420,7 +417,6 @@ def resident_case_view(resident_id: int):
         )
 
         services_by_note = {}
-
         for s in services_raw:
             note_id = s["case_manager_update_id"]
             service = {
@@ -458,13 +454,11 @@ def resident_case_view(resident_id: int):
             )
 
         summary_by_note = {}
-
         for row in summary_rows_raw:
             note_id = row["case_manager_update_id"]
             summary_by_note.setdefault(note_id, []).append(_normalize_summary_row(row))
 
         notes = []
-
         for n in notes_raw:
             note_id = n["id"]
             note_obj = dict(n)
@@ -474,7 +468,6 @@ def resident_case_view(resident_id: int):
             notes.append(note_obj)
 
         services = services_raw
-
         followup_6_month = _get_latest_followup(enrollment_id, "6_month")
         followup_1_year = _get_latest_followup(enrollment_id, "1_year")
 
