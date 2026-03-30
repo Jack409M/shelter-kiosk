@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 
@@ -12,6 +13,8 @@ from core.helpers import fmt_dt, utcnow_iso
 
 
 transport = Blueprint("transport", __name__)
+
+CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
 def parse_dt(dt_str: str) -> datetime:
@@ -29,6 +32,28 @@ def _row_value(row: Any, key: str, index: int, default=None):
         return row[index]
     except Exception:
         return default
+
+
+def _to_chicago(dt_str: str | None):
+    if not dt_str:
+        return None
+
+    try:
+        dt = datetime.fromisoformat(dt_str)
+    except Exception:
+        return None
+
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    return dt.astimezone(CHICAGO_TZ)
+
+
+def _local_day(dt_str: str | None) -> str | None:
+    local_dt = _to_chicago(dt_str)
+    if not local_dt:
+        return None
+    return local_dt.strftime("%Y-%m-%d")
 
 
 def _cleanup_transport_requests(shelter: str) -> None:
@@ -140,13 +165,9 @@ def staff_transport_board():
     if day:
         filtered = []
         for r in rows:
-            try:
-                needed_at_val = _row_value(r, "needed_at", 5, "")
-                dt = parse_dt(needed_at_val)
-                if dt.strftime("%Y-%m-%d") == day:
-                    filtered.append(r)
-            except Exception:
-                pass
+            needed_at_val = _row_value(r, "needed_at", 5, "")
+            if _local_day(needed_at_val) == day:
+                filtered.append(r)
         rows = filtered
 
     return render_template(
@@ -191,17 +212,13 @@ def staff_transport_print():
 
     day = (request.args.get("date") or "").strip()
     if not day:
-        day = datetime.utcnow().strftime("%Y-%m-%d")
+        day = datetime.now(CHICAGO_TZ).strftime("%Y-%m-%d")
 
     filtered = []
     for r in rows:
-        try:
-            needed_at_val = _row_value(r, "needed_at", 5, "")
-            dt = parse_dt(needed_at_val)
-            if dt.strftime("%Y-%m-%d") == day:
-                filtered.append(r)
-        except Exception:
-            pass
+        needed_at_val = _row_value(r, "needed_at", 5, "")
+        if _local_day(needed_at_val) == day:
+            filtered.append(r)
 
     rows = filtered
 
