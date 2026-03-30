@@ -196,10 +196,10 @@ def _apply_intake_edit_aliases(form_data: dict[str, Any]) -> dict[str, Any]:
         if form_data.get(form_key) in (None, "") and db_key in form_data:
             form_data[form_key] = form_data.get(db_key)
 
-    if form_data.get("car_at_entry") in (None, "") and "car_at_entry" in form_data:
+    if "car_at_entry" in form_data:
         form_data["car_at_entry"] = _normalize_yes_no_value(form_data.get("car_at_entry"))
 
-    if form_data.get("car_insurance_at_entry") in (None, "") and "car_insurance_at_entry" in form_data:
+    if "car_insurance_at_entry" in form_data:
         form_data["car_insurance_at_entry"] = _normalize_yes_no_value(form_data.get("car_insurance_at_entry"))
 
     return form_data
@@ -248,6 +248,20 @@ def _resident_enrollment_in_scope(resident_id: int, current_shelter: str):
     )
 
     return resident, enrollment
+
+
+def _latest_intake_for_enrollment(enrollment_id: int):
+    ph = placeholder()
+    return db_fetchone(
+        f"""
+        SELECT *
+        FROM intake_assessments
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
 
 
 def intake_form_view():
@@ -503,6 +517,13 @@ def submit_intake_assessment_view():
             return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
         enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+        existing_intake = _latest_intake_for_enrollment(enrollment_id)
+
+        if not existing_intake:
+            flash("No intake assessment found for update.", "error")
+            return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+        intake_assessment_id = existing_intake["id"] if isinstance(existing_intake, dict) else existing_intake[0]
         now = datetime.utcnow().isoformat()
         ph = placeholder()
 
@@ -615,7 +636,7 @@ def submit_intake_assessment_view():
                     entry_parole_probation = {ph},
                     barrier_notes = {ph},
                     updated_at = {ph}
-                WHERE enrollment_id = {ph}
+                WHERE id = {ph}
                 """,
                 (
                     yes_no_to_int(data.get("veteran")),
@@ -662,7 +683,7 @@ def submit_intake_assessment_view():
                     yes_no_to_int(data.get("probation_parole")),
                     data.get("barrier_notes"),
                     now,
-                    enrollment_id,
+                    intake_assessment_id,
                 ),
             )
 
