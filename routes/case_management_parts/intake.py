@@ -1187,5 +1187,6 @@ def child_services_view(child_id: int):
     return render_template(
         "case_management/child_services.html",
         child_id=child_id,
+        resident_id=resident_id,
         services=services,
     )
