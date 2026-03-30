@@ -1,0 +1,74 @@
+{% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note %}
+
+<div id="progress-notes-tab" class="resident-notebook-tab" style="display:none;">
+  <h2 class="progress-notes-heading">Progress Notes</h2>
+
+  {% if notes %}
+    <div id="case-note-scroll-lane" class="no-print case-note-scroll-lane">
+      {% for note in notes %}
+        {% set note_id = note["id"] %}
+        {% set note_meeting_date = note["meeting_date"] %}
+        {% set note_services = note["services"] %}
+        {% set note_summary_groups = note["summary_groups"] or [] %}
+
+        <button
+          type="button"
+          class="case-note-tile"
+          data-note-target="case-note-panel-{{ note_id }}"
+          data-print-target="print-case-note-{{ note_id }}"
+        >
+          <div><strong>{{ note_meeting_date or "—" }}</strong></div>
+          {% if note_services %}
+            <div class="case-note-tile-meta">
+              {{ note_services|length }} svc
+            </div>
+          {% elif note_summary_groups %}
+            <div class="case-note-tile-meta">
+              {{ note_summary_groups|length }} chg
+            </div>
+          {% endif %}
+        </button>
+      {% endfor %}
+    </div>
+
+    <div class="print-note-panel">
+      {% for note in notes %}
+        {% set note_id = note["id"] %}
+        {% set note_meeting_date = note["meeting_date"] %}
+        {% set note_created_at = note["created_at"] %}
+
+        <div id="case-note-panel-{{ note_id }}" class="card case-note-panel">
+          <div class="case-note-panel-header">
+            <div>
+              <h3 class="case-note-panel-title">Progress Notes {{ note_meeting_date or "—" }}</h3>
+              <div class="case-note-created">
+                Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
+              </div>
+            </div>
+
+            {% if note_id %}
+              <div class="print-hide case-note-actions">
+                <button type="button" class="btn" onclick="window.print()">
+                  Print
+                </button>
+                <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
+                  Edit Note
+                </a>
+              </div>
+            {% endif %}
+          </div>
+
+          {{ render_progress_note(note) }}
+        </div>
+
+        <template id="print-case-note-{{ note_id }}">
+          {{ render_progress_note(note, true) }}
+        </template>
+      {% endfor %}
+    </div>
+
+    <div id="print-selected-note" class="print-only-note"></div>
+  {% else %}
+    <p class="progress-notes-empty">No monthly meetings recorded.</p>
+  {% endif %}
+</div>
