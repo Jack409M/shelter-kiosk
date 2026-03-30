@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
@@ -160,46 +160,55 @@ def add_medication_view(resident_id: int):
     now = utcnow_iso()
     ph = placeholder()
 
-    db_execute(
-        f"""
-        INSERT INTO resident_medications
-        (
-            resident_id,
-            enrollment_id,
-            medication_name,
-            dosage,
-            frequency,
-            purpose,
-            prescribed_by,
-            started_on,
-            ended_on,
-            is_active,
-            notes,
-            created_by_staff_user_id,
-            updated_by_staff_user_id,
-            created_at,
-            updated_at
+    try:
+        db_execute(
+            f"""
+            INSERT INTO resident_medications
+            (
+                resident_id,
+                enrollment_id,
+                medication_name,
+                dosage,
+                frequency,
+                purpose,
+                prescribed_by,
+                started_on,
+                ended_on,
+                is_active,
+                notes,
+                created_by_staff_user_id,
+                updated_by_staff_user_id,
+                created_at,
+                updated_at
+            )
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+            """,
+            (
+                resident_id,
+                resident.get("enrollment_id"),
+                data["medication_name"],
+                data["dosage"],
+                data["frequency"],
+                data["purpose"],
+                data["prescribed_by"],
+                data["started_on"],
+                data["ended_on"],
+                data["is_active"],
+                data["notes"],
+                session.get("staff_user_id"),
+                session.get("staff_user_id"),
+                now,
+                now,
+            ),
         )
-        VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
-        """,
-        (
+    except Exception:
+        current_app.logger.exception(
+            "Failed to add medication for resident_id=%s enrollment_id=%s",
             resident_id,
             resident.get("enrollment_id"),
-            data["medication_name"],
-            data["dosage"],
-            data["frequency"],
-            data["purpose"],
-            data["prescribed_by"],
-            data["started_on"],
-            data["ended_on"],
-            data["is_active"],
-            data["notes"],
-            session.get("staff_user_id"),
-            session.get("staff_user_id"),
-            now,
-            now,
-        ),
-    )
+        )
+        flash("Unable to add medication. Please try again or contact an administrator.", "error")
+        return redirect(url_for("case_management.medications", resident_id=resident_id))
 
     flash("Medication added.", "success")
     return redirect(url_for("case_management.medications", resident_id=resident_id))
@@ -265,40 +274,55 @@ def edit_medication_view(resident_id: int, medication_id: int):
 
     now = utcnow_iso()
 
-    db_execute(
-        f"""
-        UPDATE resident_medications
-        SET
-            medication_name = {ph},
-            dosage = {ph},
-            frequency = {ph},
-            purpose = {ph},
-            prescribed_by = {ph},
-            started_on = {ph},
-            ended_on = {ph},
-            is_active = {ph},
-            notes = {ph},
-            updated_by_staff_user_id = {ph},
-            updated_at = {ph}
-        WHERE id = {ph}
-          AND resident_id = {ph}
-        """,
-        (
-            data["medication_name"],
-            data["dosage"],
-            data["frequency"],
-            data["purpose"],
-            data["prescribed_by"],
-            data["started_on"],
-            data["ended_on"],
-            data["is_active"],
-            data["notes"],
-            session.get("staff_user_id"),
-            now,
+    try:
+        db_execute(
+            f"""
+            UPDATE resident_medications
+            SET
+                medication_name = {ph},
+                dosage = {ph},
+                frequency = {ph},
+                purpose = {ph},
+                prescribed_by = {ph},
+                started_on = {ph},
+                ended_on = {ph},
+                is_active = {ph},
+                notes = {ph},
+                updated_by_staff_user_id = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
+              AND resident_id = {ph}
+            """,
+            (
+                data["medication_name"],
+                data["dosage"],
+                data["frequency"],
+                data["purpose"],
+                data["prescribed_by"],
+                data["started_on"],
+                data["ended_on"],
+                data["is_active"],
+                data["notes"],
+                session.get("staff_user_id"),
+                now,
+                medication_id,
+                resident_id,
+            ),
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Failed to edit medication_id=%s resident_id=%s",
             medication_id,
             resident_id,
-        ),
-    )
+        )
+        flash("Unable to update medication. Please try again or contact an administrator.", "error")
+        return redirect(
+            url_for(
+                "case_management.edit_medication",
+                resident_id=resident_id,
+                medication_id=medication_id,
+            )
+        )
 
     flash("Medication updated.", "success")
     return redirect(url_for("case_management.medications", resident_id=resident_id))
