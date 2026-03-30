@@ -64,6 +64,8 @@
           <th>Name</th>
           <th>Dosage</th>
           <th>Frequency</th>
+          <th>Started</th>
+          <th>Ended</th>
           <th>Active</th>
           <th>Actions</th>
         </tr>
@@ -74,6 +76,8 @@
             <td>{{ med["medication_name"] or "—" }}</td>
             <td>{{ med["dosage"] or "—" }}</td>
             <td>{{ med["frequency"] or "—" }}</td>
+            <td>{{ med["started_on"] or "—" }}</td>
+            <td>{{ med["ended_on"] or "—" }}</td>
             <td>{{ "Yes" if med["is_active"] else "No" }}</td>
             <td>
               <a class="btn btn-sm" href="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=med['id']) }}">
@@ -81,6 +85,17 @@
               </a>
             </td>
           </tr>
+          {% if med["purpose"] or med["prescribed_by"] or med["notes"] %}
+            <tr>
+              <td colspan="7" style="color:#555; font-size:0.95em;">
+                {% if med["purpose"] %}<strong>Purpose:</strong> {{ med["purpose"] }}{% endif %}
+                {% if med["purpose"] and med["prescribed_by"] %} | {% endif %}
+                {% if med["prescribed_by"] %}<strong>Prescribed By:</strong> {{ med["prescribed_by"] }}{% endif %}
+                {% if (med["purpose"] or med["prescribed_by"]) and med["notes"] %} | {% endif %}
+                {% if med["notes"] %}{{ med["notes"] }}{% endif %}
+              </td>
+            </tr>
+          {% endif %}
         {% endfor %}
       </tbody>
     </table>
