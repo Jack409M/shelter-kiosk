@@ -79,6 +79,19 @@ def _parse_quantity(value: str | None):
         return None
 
 
+def _parse_grit(value: str | None):
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        grit_value = int(value)
+    except ValueError:
+        return None
+    if grit_value < 0 or grit_value > 100:
+        return None
+    return grit_value
+
+
 def _display_label(value: str | None) -> str:
     if not value:
         return "—"
@@ -159,6 +172,45 @@ def _delete_summary_rows(case_manager_update_id: int) -> None:
         """,
         (case_manager_update_id,),
     )
+
+
+def _delete_summary_rows_by_group(case_manager_update_id: int, change_groups: list[str]) -> None:
+    if not change_groups:
+        return
+
+    ph = placeholder()
+    group_placeholders = ",".join([ph] * len(change_groups))
+
+    db_execute(
+        f"""
+        DELETE FROM case_manager_update_summary
+        WHERE case_manager_update_id = {ph}
+          AND change_group IN ({group_placeholders})
+        """,
+        (case_manager_update_id, *change_groups),
+    )
+
+
+def _get_next_summary_sort_order(case_manager_update_id: int) -> int:
+    ph = placeholder()
+
+    row = db_fetchone(
+        f"""
+        SELECT COALESCE(MAX(sort_order), -1) AS max_sort_order
+        FROM case_manager_update_summary
+        WHERE case_manager_update_id = {ph}
+        """,
+        (case_manager_update_id,),
+    )
+
+    if not row:
+        return 0
+
+    max_sort_order = row["max_sort_order"]
+    if max_sort_order is None:
+        return 0
+
+    return int(max_sort_order) + 1
 
 
 def _get_previous_note_id(enrollment_id: int, current_note_id: int) -> int | None:
@@ -748,11 +800,15 @@ def add_case_note_view(resident_id: int):
     action_items = (request.form.get("action_items") or "").strip()
 
     updated_grit_raw = (request.form.get("updated_grit") or "").strip()
-    updated_grit = int(updated_grit_raw) if updated_grit_raw else None
+    updated_grit = _parse_grit(updated_grit_raw)
     parenting_class_completed = _yes_no_to_int(request.form.get("parenting_class_completed"))
     warrants_or_fines_paid = _yes_no_to_int(request.form.get("warrants_or_fines_paid"))
 
     service_types = _clean_service_types(request.form.getlist("service_type"))
+
+    if updated_grit_raw and updated_grit is None:
+        flash("Updated grit must be a whole number between 0 and 100.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     if not meeting_date:
         flash("Meeting date is required.", "error")
@@ -958,14 +1014,29 @@ def edit_case_note_view(resident_id: int, update_id: int):
     action_items = (request.form.get("action_items") or "").strip()
 
     updated_grit_raw = (request.form.get("updated_grit") or "").strip()
-    updated_grit = int(updated_grit_raw) if updated_grit_raw else None
+    updated_grit = _parse_grit(updated_grit_raw)
     parenting_class_completed = _yes_no_to_int(request.form.get("parenting_class_completed"))
     warrants_or_fines_paid = _yes_no_to_int(request.form.get("warrants_or_fines_paid"))
 
     service_types = _clean_service_types(request.form.getlist("service_type"))
 
+    if updated_grit_raw and updated_grit is None:
+        flash("Updated grit must be a whole number between 0 and 100.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
     if not meeting_date:
         flash("Meeting date is required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    has_structured_progress = (
+        updated_grit is not None
+        or parenting_class_completed is not None
+        or warrants_or_fines_paid is not None
+        or bool(service_types)
+    )
+
+    if not notes and not progress_notes and not action_items and not has_structured_progress:
+        flash("Enter notes, progress notes, action items, structured progress, or at least one service.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     service_date = meeting_date
@@ -1040,16 +1111,14 @@ def edit_case_note_view(resident_id: int, update_id: int):
             ),
         )
 
-    _delete_summary_rows(update_id)
+    _delete_summary_rows_by_group(update_id, ["service"])
 
-    _build_note_summary(
+    _record_service_summary(
         case_manager_update_id=update_id,
-        enrollment_id=note["enrollment_id"],
-        resident_id=resident_id,
-        form=request.form,
         service_types=service_types,
-        changed_needs=[],
+        form=request.form,
         created_at=now,
+        starting_sort_order=_get_next_summary_sort_order(update_id),
     )
 
     flash("Case note updated.", "success")
