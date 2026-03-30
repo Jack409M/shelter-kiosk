@@ -229,11 +229,11 @@
             </tr>
             <tr>
               <th>Snapshot Recorded</th>
-              <td>{{ fmt_dt(intake_snapshot_created_at) if intake_snapshot_created_at else "—" }}</td>
+              <td>{{ intake_snapshot_created_at or "—" }}</td>
             </tr>
             <tr>
               <th>Snapshot Last Updated</th>
-              <td>{{ fmt_dt(intake_snapshot_updated_at) if intake_snapshot_updated_at else "—" }}</td>
+              <td>{{ intake_snapshot_updated_at or "—" }}</td>
             </tr>
           </tbody>
         </table>
