@@ -2,14 +2,145 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import flash, redirect, render_template, request, url_for
+from flask import abort, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
+from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import parse_int
 from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import shelter_equals_sql
+
+
+def _current_shelter() -> str:
+    return normalize_shelter_name(session.get("shelter"))
+
+
+def _resident_in_scope(resident_id: int):
+    ph = placeholder()
+    shelter = _current_shelter()
+
+    return db_fetchone(
+        f"""
+        SELECT
+            r.id,
+            r.first_name,
+            r.last_name,
+            r.shelter
+        FROM residents r
+        WHERE r.id = {ph}
+          AND {shelter_equals_sql("r.shelter")}
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
+
+
+def _child_in_scope(child_id: int):
+    ph = placeholder()
+    shelter = _current_shelter()
+
+    return db_fetchone(
+        f"""
+        SELECT
+            rc.id,
+            rc.resident_id,
+            rc.child_name,
+            rc.birth_year,
+            rc.relationship,
+            rc.living_status,
+            rc.is_active
+        FROM resident_children rc
+        JOIN residents r
+          ON r.id = rc.resident_id
+        WHERE rc.id = {ph}
+          AND {shelter_equals_sql("r.shelter")}
+        LIMIT 1
+        """,
+        (child_id, shelter),
+    )
+
+
+def _child_service_in_scope(service_id: int):
+    ph = placeholder()
+    shelter = _current_shelter()
+
+    return db_fetchone(
+        f"""
+        SELECT
+            cs.id,
+            cs.resident_child_id,
+            cs.enrollment_id,
+            cs.service_date,
+            cs.service_type,
+            cs.outcome,
+            cs.quantity,
+            cs.unit,
+            cs.notes,
+            rc.resident_id
+        FROM child_services cs
+        JOIN resident_children rc
+          ON rc.id = cs.resident_child_id
+        JOIN residents r
+          ON r.id = rc.resident_id
+        WHERE cs.id = {ph}
+          AND {shelter_equals_sql("r.shelter")}
+        LIMIT 1
+        """,
+        (service_id, shelter),
+    )
+
+
+def _active_children_for_resident(resident_id: int):
+    ph = placeholder()
+
+    return db_fetchall(
+        f"""
+        SELECT
+            id,
+            resident_id,
+            child_name,
+            birth_year,
+            relationship,
+            living_status
+        FROM resident_children
+        WHERE resident_id = {ph}
+          AND is_active = TRUE
+        ORDER BY id ASC
+        """,
+        (resident_id,),
+    )
+
+
+def _latest_enrollment_for_resident(resident_id: int):
+    ph = placeholder()
+
+    return db_fetchone(
+        f"""
+        SELECT
+            id
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+
+def _parse_service_date(value: str | None) -> str | None:
+    value = clean(value)
+    if not value:
+        return None
+
+    try:
+        datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+    return value
 
 
 def family_intake_view(resident_id: int):
@@ -18,6 +149,12 @@ def family_intake_view(resident_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+
+    resident = _resident_in_scope(resident_id)
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
     ph = placeholder()
 
     if request.method == "POST":
@@ -27,23 +164,7 @@ def family_intake_view(resident_id: int):
         living_status = clean(request.form.get("living_status"))
 
         if not child_name:
-            children = db_fetchall(
-                f"""
-                SELECT
-                    id,
-                    resident_id,
-                    child_name,
-                    birth_year,
-                    relationship,
-                    living_status
-                FROM resident_children
-                WHERE resident_id = {ph}
-                  AND is_active = TRUE
-                ORDER BY id ASC
-                """,
-                (resident_id,),
-            )
-
+            children = _active_children_for_resident(resident_id)
             flash("Child name is required.", "error")
             return render_template(
                 "case_management/family_intake.html",
@@ -73,23 +194,7 @@ def family_intake_view(resident_id: int):
         )
 
         if existing_child:
-            children = db_fetchall(
-                f"""
-                SELECT
-                    id,
-                    resident_id,
-                    child_name,
-                    birth_year,
-                    relationship,
-                    living_status
-                FROM resident_children
-                WHERE resident_id = {ph}
-                  AND is_active = TRUE
-                ORDER BY id ASC
-                """,
-                (resident_id,),
-            )
-
+            children = _active_children_for_resident(resident_id)
             flash("This child already exists for this resident.", "error")
             return render_template(
                 "case_management/family_intake.html",
@@ -138,22 +243,7 @@ def family_intake_view(resident_id: int):
         flash("Child added.", "success")
         return redirect(url_for("case_management.family_intake", resident_id=resident_id))
 
-    children = db_fetchall(
-        f"""
-        SELECT
-            id,
-            resident_id,
-            child_name,
-            birth_year,
-            relationship,
-            living_status
-        FROM resident_children
-        WHERE resident_id = {ph}
-          AND is_active = TRUE
-        ORDER BY id ASC
-        """,
-        (resident_id,),
-    )
+    children = _active_children_for_resident(resident_id)
 
     return render_template(
         "case_management/family_intake.html",
@@ -168,34 +258,25 @@ def edit_child_view(child_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-    ph = placeholder()
 
-    child = db_fetchone(
-        f"""
-        SELECT
-            id,
-            resident_id,
-            child_name,
-            birth_year,
-            relationship,
-            living_status
-        FROM resident_children
-        WHERE id = {ph}
-        """,
-        (child_id,),
-    )
-
+    child = _child_in_scope(child_id)
     if not child:
         flash("Child not found.", "error")
         return redirect(url_for("case_management.index"))
+
+    resident_id = child["resident_id"]
 
     if request.method == "POST":
         child_name = clean(request.form.get("child_name"))
         birth_year = parse_int(request.form.get("birth_year"))
         relationship = clean(request.form.get("relationship"))
         living_status = clean(request.form.get("living_status"))
-        resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
 
+        if not child_name:
+            flash("Child name is required.", "error")
+            return redirect(url_for("case_management.edit_child", child_id=child_id))
+
+        ph = placeholder()
         existing_child = db_fetchone(
             f"""
             SELECT id
@@ -259,24 +340,14 @@ def delete_child_view(child_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-    ph = placeholder()
 
-    child = db_fetchone(
-        f"""
-        SELECT
-            id,
-            resident_id
-        FROM resident_children
-        WHERE id = {ph}
-        """,
-        (child_id,),
-    )
-
+    child = _child_in_scope(child_id)
     if not child:
         flash("Child not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
+    resident_id = child["resident_id"]
+    ph = placeholder()
 
     db_execute(
         f"""
@@ -302,28 +373,14 @@ def edit_child_service_view(service_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-    ph = placeholder()
 
-    service = db_fetchone(
-        f"""
-        SELECT
-            id,
-            resident_child_id,
-            service_type,
-            outcome,
-            quantity,
-            unit,
-            notes,
-            service_date
-        FROM child_services
-        WHERE id = {ph}
-        """,
-        (service_id,),
-    )
-
+    service = _child_service_in_scope(service_id)
     if not service:
         flash("Service not found.", "error")
         return redirect(url_for("case_management.index"))
+
+    child_id = service["resident_child_id"]
+    resident_id = service["resident_id"]
 
     if request.method == "POST":
         service_type = clean(request.form.get("service_type"))
@@ -331,7 +388,13 @@ def edit_child_service_view(service_id: int):
         quantity = parse_int(request.form.get("quantity"))
         unit = clean(request.form.get("unit"))
         notes = clean(request.form.get("notes"))
-        now = datetime.utcnow().isoformat()
+        service_date = _parse_service_date(request.form.get("service_date"))
+
+        if request.form.get("service_date") and not service_date:
+            flash("Service date must be valid.", "error")
+            return redirect(url_for("case_management.edit_child_service", service_id=service_id))
+
+        ph = placeholder()
 
         db_execute(
             f"""
@@ -342,6 +405,7 @@ def edit_child_service_view(service_id: int):
                 quantity = {ph},
                 unit = {ph},
                 notes = {ph},
+                service_date = {ph},
                 updated_at = {ph}
             WHERE id = {ph}
             """,
@@ -351,12 +415,11 @@ def edit_child_service_view(service_id: int):
                 quantity,
                 unit,
                 notes,
-                now,
+                service_date,
+                datetime.utcnow().isoformat(),
                 service_id,
             ),
         )
-
-        child_id = service["resident_child_id"] if isinstance(service, dict) else service[1]
 
         flash("Service updated.", "success")
         return redirect(url_for("case_management.child_services", child_id=child_id))
@@ -364,6 +427,7 @@ def edit_child_service_view(service_id: int):
     return render_template(
         "case_management/edit_child_service.html",
         service=service,
+        resident_id=resident_id,
     )
 
 
@@ -373,29 +437,31 @@ def delete_child_service_view(service_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-    ph = placeholder()
 
-    service = db_fetchone(
-        f"""
-        SELECT resident_child_id
-        FROM child_services
-        WHERE id = {ph}
-        """,
-        (service_id,),
-    )
-
+    service = _child_service_in_scope(service_id)
     if not service:
         flash("Service not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    child_id = service["resident_child_id"] if isinstance(service, dict) else service[0]
+    child_id = service["resident_child_id"]
+    ph = placeholder()
 
     db_execute(
         f"""
-        DELETE FROM child_services
+        UPDATE child_services
+        SET
+            outcome = COALESCE(outcome, 'deleted'),
+            notes = CASE
+                WHEN notes IS NULL OR notes = '' THEN 'Deleted by staff'
+                ELSE notes || ' | Deleted by staff'
+            END,
+            updated_at = {ph}
         WHERE id = {ph}
         """,
-        (service_id,),
+        (
+            datetime.utcnow().isoformat(),
+            service_id,
+        ),
     )
 
     flash("Service deleted.", "success")
@@ -408,42 +474,21 @@ def child_services_view(child_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
-    ph = placeholder()
 
-    child = db_fetchone(
-        f"""
-        SELECT
-            id,
-            resident_id
-        FROM resident_children
-        WHERE id = {ph}
-        """,
-        (child_id,),
-    )
-
+    child = _child_in_scope(child_id)
     if not child:
         flash("Child not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    resident_id = child["resident_id"] if isinstance(child, dict) else child[1]
-
-    enrollment = db_fetchone(
-        f"""
-        SELECT
-            id
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
+    resident_id = child["resident_id"]
+    enrollment = _latest_enrollment_for_resident(resident_id)
 
     if not enrollment:
         flash("No active enrollment found.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+    enrollment_id = enrollment["id"]
+    ph = placeholder()
 
     if request.method == "POST":
         service_type = clean(request.form.get("service_type"))
@@ -451,6 +496,12 @@ def child_services_view(child_id: int):
         quantity = parse_int(request.form.get("quantity"))
         unit = clean(request.form.get("unit"))
         notes = clean(request.form.get("notes"))
+        service_date = _parse_service_date(request.form.get("service_date"))
+
+        if request.form.get("service_date") and not service_date:
+            flash("Service date must be valid.", "error")
+            return redirect(url_for("case_management.child_services", child_id=child_id))
+
         now = datetime.utcnow().isoformat()
 
         db_execute(
@@ -485,7 +536,7 @@ def child_services_view(child_id: int):
             (
                 child_id,
                 enrollment_id,
-                now,
+                service_date or now,
                 service_type,
                 outcome,
                 quantity,
@@ -511,6 +562,7 @@ def child_services_view(child_id: int):
             notes
         FROM child_services
         WHERE resident_child_id = {ph}
+          AND COALESCE(outcome, '') <> 'deleted'
         ORDER BY service_date DESC, id DESC
         """,
         (child_id,),
