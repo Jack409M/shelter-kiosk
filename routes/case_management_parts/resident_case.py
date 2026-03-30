@@ -14,6 +14,27 @@ from routes.case_management_parts.needs import sync_enrollment_needs
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
 
 
+SUMMARY_GROUP_ORDER = [
+    "child",
+    "medication",
+    "service",
+    "need_addressed",
+    "need_outstanding",
+    "employment",
+    "sobriety",
+]
+
+SUMMARY_GROUP_LABELS = {
+    "child": "Children Changes",
+    "medication": "Medication Changes",
+    "service": "Services Provided",
+    "need_addressed": "Needs Taken Care Of",
+    "need_outstanding": "Needs Still Outstanding",
+    "employment": "Employment Changes",
+    "sobriety": "Sobriety Changes",
+}
+
+
 def _normalize_exit_assessment(row):
     if not row:
         return None
@@ -89,6 +110,62 @@ def _normalize_child_service_row(service):
         "service_date": service.get("service_date"),
         "service_date_display": fmt_dt(service.get("service_date")),
     }
+
+
+def _normalize_summary_row(row):
+    return {
+        "change_group": row.get("change_group"),
+        "change_group_label": SUMMARY_GROUP_LABELS.get(row.get("change_group"), _display_label(row.get("change_group"))),
+        "change_type": row.get("change_type"),
+        "change_type_display": _display_label(row.get("change_type")),
+        "item_key": row.get("item_key"),
+        "item_label": row.get("item_label") or "—",
+        "old_value": row.get("old_value"),
+        "new_value": row.get("new_value"),
+        "detail": row.get("detail"),
+        "sort_order": row.get("sort_order") or 0,
+    }
+
+
+def _group_summary_rows(rows: list[dict]) -> list[dict]:
+    grouped = {group_key: [] for group_key in SUMMARY_GROUP_ORDER}
+    extra_groups: dict[str, list[dict]] = {}
+
+    for row in rows:
+        group_key = row.get("change_group") or ""
+        if group_key in grouped:
+            grouped[group_key].append(row)
+        else:
+            extra_groups.setdefault(group_key, []).append(row)
+
+    result = []
+
+    for group_key in SUMMARY_GROUP_ORDER:
+        items = grouped.get(group_key, [])
+        display_items = [item for item in items if item.get("change_type") != "snapshot"]
+        if not display_items:
+            continue
+        result.append(
+            {
+                "group_key": group_key,
+                "group_label": SUMMARY_GROUP_LABELS.get(group_key, _display_label(group_key)),
+                "items": display_items,
+            }
+        )
+
+    for group_key in sorted(extra_groups.keys()):
+        items = [item for item in extra_groups[group_key] if item.get("change_type") != "snapshot"]
+        if not items:
+            continue
+        result.append(
+            {
+                "group_key": group_key,
+                "group_label": SUMMARY_GROUP_LABELS.get(group_key, _display_label(group_key)),
+                "items": items,
+            }
+        )
+
+    return result
 
 
 def resident_case_view(resident_id: int):
@@ -356,12 +433,44 @@ def resident_case_view(resident_id: int):
             }
             services_by_note.setdefault(note_id, []).append(service)
 
+        note_ids = [note["id"] for note in notes_raw]
+        summary_rows_raw = []
+
+        if note_ids:
+            note_placeholders = ",".join([ph] * len(note_ids))
+            summary_rows_raw = db_fetchall(
+                f"""
+                SELECT
+                    case_manager_update_id,
+                    change_group,
+                    change_type,
+                    item_key,
+                    item_label,
+                    old_value,
+                    new_value,
+                    detail,
+                    sort_order
+                FROM case_manager_update_summary
+                WHERE case_manager_update_id IN ({note_placeholders})
+                ORDER BY case_manager_update_id ASC, sort_order ASC, id ASC
+                """,
+                tuple(note_ids),
+            )
+
+        summary_by_note = {}
+
+        for row in summary_rows_raw:
+            note_id = row["case_manager_update_id"]
+            summary_by_note.setdefault(note_id, []).append(_normalize_summary_row(row))
+
         notes = []
 
         for n in notes_raw:
             note_id = n["id"]
             note_obj = dict(n)
             note_obj["services"] = services_by_note.get(note_id, [])
+            note_obj["summary_rows"] = summary_by_note.get(note_id, [])
+            note_obj["summary_groups"] = _group_summary_rows(note_obj["summary_rows"])
             notes.append(note_obj)
 
         services = services_raw
