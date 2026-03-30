@@ -222,6 +222,7 @@ def resident_case_view(resident_id: int):
     notes = []
     services = []
     children = []
+    family_snapshot = None
     intake_assessment = None
     exit_assessment = None
     grit_difference = None
@@ -296,6 +297,28 @@ def resident_case_view(resident_id: int):
         children = []
 
     if enrollment_id:
+        family_snapshot = db_fetchone(
+            f"""
+            SELECT
+                id,
+                enrollment_id,
+                kids_at_dwc,
+                kids_served_outside_under_18,
+                kids_ages_0_5,
+                kids_ages_6_11,
+                kids_ages_12_17,
+                kids_reunited_while_in_program,
+                healthy_babies_born_at_dwc,
+                created_at,
+                updated_at
+            FROM family_snapshots
+            WHERE enrollment_id = {ph}
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (enrollment_id,),
+        )
+
         intake_assessment = db_fetchone(
             f"""
             SELECT
@@ -476,6 +499,7 @@ def resident_case_view(resident_id: int):
         resident=resident,
         enrollment=enrollment,
         enrollment_id=enrollment_id,
+        family_snapshot=family_snapshot,
         intake_assessment=intake_assessment,
         exit_assessment=exit_assessment,
         grit_difference=grit_difference,
