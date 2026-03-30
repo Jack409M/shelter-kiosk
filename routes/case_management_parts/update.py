@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from flask import flash, redirect, request, session, url_for, render_template
+from flask import flash, redirect, render_template, request, session, url_for
 
-from core.db import db_execute, db_fetchone, db_fetchall
+from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
@@ -276,7 +276,39 @@ def _current_open_needs(enrollment_id: int) -> list[dict]:
     )
 
 
-def _apply_need_updates(enrollment_id: int, staff_user_id: int, form) -> list[dict]:
+def _collect_need_updates(form) -> list[dict]:
+    updates: list[dict] = []
+
+    for key in form.keys():
+        if not key.startswith("need_status_"):
+            continue
+
+        need_key = key.removeprefix("need_status_")
+        status = normalize_need_status(form.get(key))
+        if status not in {"addressed", "not_applicable"}:
+            continue
+
+        resolution_note = (form.get(f"need_note_{need_key}") or "").strip()
+
+        updates.append(
+            {
+                "need_key": need_key,
+                "status": status,
+                "resolution_note": resolution_note,
+            }
+        )
+
+    return updates
+
+
+def _apply_need_updates(
+    enrollment_id: int,
+    staff_user_id: int,
+    need_updates: list[dict],
+) -> list[dict]:
+    if not need_updates:
+        return []
+
     ph = placeholder()
     now = utcnow_iso()
 
@@ -294,18 +326,13 @@ def _apply_need_updates(enrollment_id: int, staff_user_id: int, form) -> list[di
         (enrollment_id,),
     )
 
+    open_needs_by_key = {row["need_key"]: row for row in open_needs}
     changed_needs: list[dict] = []
 
-    for need in open_needs:
-        need_id = need["id"]
-        need_key = need["need_key"]
-        need_label = need["need_label"]
-
-        status = normalize_need_status(form.get(f"need_status_{need_key}"))
-        if status not in {"addressed", "not_applicable"}:
+    for update in need_updates:
+        need = open_needs_by_key.get(update["need_key"])
+        if not need:
             continue
-
-        resolution_note = (form.get(f"need_note_{need_key}") or "").strip()
 
         db_execute(
             f"""
@@ -319,21 +346,21 @@ def _apply_need_updates(enrollment_id: int, staff_user_id: int, form) -> list[di
             WHERE id = {ph}
             """,
             (
-                status,
-                resolution_note or None,
+                update["status"],
+                update["resolution_note"] or None,
                 now,
                 staff_user_id,
                 now,
-                need_id,
+                need["id"],
             ),
         )
 
         changed_needs.append(
             {
-                "need_key": need_key,
-                "need_label": need_label,
-                "status": status,
-                "resolution_note": resolution_note,
+                "need_key": need["need_key"],
+                "need_label": need["need_label"],
+                "status": update["status"],
+                "resolution_note": update["resolution_note"],
             }
         )
 
@@ -748,16 +775,8 @@ def _build_note_summary(
     )
 
 
-def add_case_note_view(resident_id: int):
-    init_db()
-
-    shelter = normalize_shelter_name(session.get("shelter"))
-    staff_user_id = session.get("staff_user_id")
+def _get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
     ph = placeholder()
-
-    if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     resident = db_fetchone(
         f"""
@@ -770,8 +789,7 @@ def add_case_note_view(resident_id: int):
     )
 
     if not resident:
-        flash("Resident not found.", "error")
-        return redirect(url_for("case_management.index"))
+        return None, None
 
     enrollment = db_fetchone(
         f"""
@@ -783,6 +801,26 @@ def add_case_note_view(resident_id: int):
         """,
         (resident_id,),
     )
+
+    return resident, enrollment
+
+
+def add_case_note_view(resident_id: int):
+    init_db()
+
+    shelter = normalize_shelter_name(session.get("shelter"))
+    staff_user_id = session.get("staff_user_id")
+    ph = placeholder()
+
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    resident, enrollment = _get_resident_and_enrollment_in_scope(resident_id, shelter)
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
 
     enrollment_id = enrollment["id"] if enrollment else None
 
@@ -805,6 +843,7 @@ def add_case_note_view(resident_id: int):
     warrants_or_fines_paid = _yes_no_to_int(request.form.get("warrants_or_fines_paid"))
 
     service_types = _clean_service_types(request.form.getlist("service_type"))
+    need_updates = _collect_need_updates(request.form)
 
     if updated_grit_raw and updated_grit is None:
         flash("Updated grit must be a whole number between 0 and 100.", "error")
@@ -816,14 +855,12 @@ def add_case_note_view(resident_id: int):
 
     service_date = meeting_date
 
-    changed_needs = _apply_need_updates(enrollment_id, int(staff_user_id), request.form)
-
     has_structured_progress = (
         updated_grit is not None
         or parenting_class_completed is not None
         or warrants_or_fines_paid is not None
         or bool(service_types)
-        or bool(changed_needs)
+        or bool(need_updates)
     )
 
     if not notes and not progress_notes and not action_items and not has_structured_progress:
@@ -832,95 +869,93 @@ def add_case_note_view(resident_id: int):
 
     now = utcnow_iso()
 
-    db_execute(
-        f"""
-        INSERT INTO case_manager_updates
-        (
-            enrollment_id,
-            staff_user_id,
-            meeting_date,
-            notes,
-            progress_notes,
-            action_items,
-            updated_grit,
-            parenting_class_completed,
-            warrants_or_fines_paid,
-            created_at,
-            updated_at
-        )
-        VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
-        """,
-        (
-            enrollment_id,
-            staff_user_id,
-            meeting_date,
-            notes or None,
-            progress_notes or None,
-            action_items or None,
-            updated_grit,
-            parenting_class_completed,
-            warrants_or_fines_paid,
-            now,
-            now,
-        ),
-    )
+    try:
+        with db_transaction():
+            changed_needs = _apply_need_updates(enrollment_id, int(staff_user_id), need_updates)
 
-    note = db_fetchone(
-        f"""
-        SELECT id
-        FROM case_manager_updates
-        WHERE enrollment_id = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (enrollment_id,),
-    )
-
-    note_id = note["id"]
-
-    for service_type in service_types:
-        service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
-        quantity = _parse_quantity(request.form.get(f"quantity_{service_type}"))
-        unit = (request.form.get(f"unit_{service_type}") or "").strip()
-
-        db_execute(
-            f"""
-            INSERT INTO client_services
-            (
-                enrollment_id,
-                case_manager_update_id,
-                service_type,
-                service_date,
-                quantity,
-                unit,
-                notes,
-                created_at,
-                updated_at
+            note = db_fetchone(
+                f"""
+                INSERT INTO case_manager_updates
+                (
+                    enrollment_id,
+                    staff_user_id,
+                    meeting_date,
+                    notes,
+                    progress_notes,
+                    action_items,
+                    updated_grit,
+                    parenting_class_completed,
+                    warrants_or_fines_paid,
+                    created_at,
+                    updated_at
+                )
+                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                RETURNING id
+                """,
+                (
+                    enrollment_id,
+                    staff_user_id,
+                    meeting_date,
+                    notes or None,
+                    progress_notes or None,
+                    action_items or None,
+                    updated_grit,
+                    parenting_class_completed,
+                    warrants_or_fines_paid,
+                    now,
+                    now,
+                ),
             )
-            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
-            """,
-            (
-                enrollment_id,
-                note_id,
-                service_type,
-                service_date,
-                quantity,
-                unit or None,
-                service_note or None,
-                now,
-                now,
-            ),
-        )
 
-    _build_note_summary(
-        case_manager_update_id=note_id,
-        enrollment_id=enrollment_id,
-        resident_id=resident_id,
-        form=request.form,
-        service_types=service_types,
-        changed_needs=changed_needs,
-        created_at=now,
-    )
+            note_id = note["id"]
+
+            for service_type in service_types:
+                service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
+                quantity = _parse_quantity(request.form.get(f"quantity_{service_type}"))
+                unit = (request.form.get(f"unit_{service_type}") or "").strip()
+
+                db_execute(
+                    f"""
+                    INSERT INTO client_services
+                    (
+                        enrollment_id,
+                        case_manager_update_id,
+                        service_type,
+                        service_date,
+                        quantity,
+                        unit,
+                        notes,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                    """,
+                    (
+                        enrollment_id,
+                        note_id,
+                        service_type,
+                        service_date,
+                        quantity,
+                        unit or None,
+                        service_note or None,
+                        now,
+                        now,
+                    ),
+                )
+
+            _build_note_summary(
+                case_manager_update_id=note_id,
+                enrollment_id=enrollment_id,
+                resident_id=resident_id,
+                form=request.form,
+                service_types=service_types,
+                changed_needs=changed_needs,
+                created_at=now,
+            )
+
+    except Exception as exc:
+        flash(f"Case manager update failed: {exc}", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     flash("Case manager update saved.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
@@ -941,15 +976,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
         flash("Session expired. Please log in again.", "error")
         return redirect(url_for("auth.staff_login"))
 
-    resident = db_fetchone(
-        f"""
-        SELECT id, resident_identifier
-        FROM residents
-        WHERE id = {ph}
-          AND {shelter_equals_sql("shelter")}
-        """,
-        (resident_id, shelter),
-    )
+    resident, _ = _get_resident_and_enrollment_in_scope(resident_id, shelter)
 
     if not resident:
         flash("Resident not found.", "error")
@@ -1040,86 +1067,93 @@ def edit_case_note_view(resident_id: int, update_id: int):
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     service_date = meeting_date
-
     now = utcnow_iso()
 
-    db_execute(
-        f"""
-        UPDATE case_manager_updates
-        SET meeting_date = {ph},
-            notes = {ph},
-            progress_notes = {ph},
-            action_items = {ph},
-            updated_grit = {ph},
-            parenting_class_completed = {ph},
-            warrants_or_fines_paid = {ph},
-            updated_at = {ph}
-        WHERE id = {ph}
-        """,
-        (
-            meeting_date,
-            notes or None,
-            progress_notes or None,
-            action_items or None,
-            updated_grit,
-            parenting_class_completed,
-            warrants_or_fines_paid,
-            now,
-            update_id,
-        ),
-    )
-
-    db_execute(
-        f"""
-        DELETE FROM client_services
-        WHERE case_manager_update_id = {ph}
-        """,
-        (update_id,),
-    )
-
-    for service_type in service_types:
-        service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
-        quantity = _parse_quantity(request.form.get(f"quantity_{service_type}"))
-        unit = (request.form.get(f"unit_{service_type}") or "").strip()
-
-        db_execute(
-            f"""
-            INSERT INTO client_services
-            (
-                enrollment_id,
-                case_manager_update_id,
-                service_type,
-                service_date,
-                quantity,
-                unit,
-                notes,
-                created_at,
-                updated_at
+    try:
+        with db_transaction():
+            db_execute(
+                f"""
+                UPDATE case_manager_updates
+                SET meeting_date = {ph},
+                    notes = {ph},
+                    progress_notes = {ph},
+                    action_items = {ph},
+                    updated_grit = {ph},
+                    parenting_class_completed = {ph},
+                    warrants_or_fines_paid = {ph},
+                    updated_at = {ph}
+                WHERE id = {ph}
+                """,
+                (
+                    meeting_date,
+                    notes or None,
+                    progress_notes or None,
+                    action_items or None,
+                    updated_grit,
+                    parenting_class_completed,
+                    warrants_or_fines_paid,
+                    now,
+                    update_id,
+                ),
             )
-            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
-            """,
-            (
-                note["enrollment_id"],
-                update_id,
-                service_type,
-                service_date,
-                quantity,
-                unit or None,
-                service_note or None,
-                now,
-                now,
-            ),
-        )
 
-    _delete_summary_rows_by_group(update_id, ["service"])
+            db_execute(
+                f"""
+                DELETE FROM client_services
+                WHERE case_manager_update_id = {ph}
+                """,
+                (update_id,),
+            )
 
-    _record_service_summary(
-        case_manager_update_id=update_id,
-        service_types=service_types,
-        form=request.form,
-        created_at=now,
-        starting_sort_order=_get_next_summary_sort_order(update_id),
-    )
+            for service_type in service_types:
+                service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
+                quantity = _parse_quantity(request.form.get(f"quantity_{service_type}"))
+                unit = (request.form.get(f"unit_{service_type}") or "").strip()
+
+                db_execute(
+                    f"""
+                    INSERT INTO client_services
+                    (
+                        enrollment_id,
+                        case_manager_update_id,
+                        service_type,
+                        service_date,
+                        quantity,
+                        unit,
+                        notes,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                    """,
+                    (
+                        note["enrollment_id"],
+                        update_id,
+                        service_type,
+                        service_date,
+                        quantity,
+                        unit or None,
+                        service_note or None,
+                        now,
+                        now,
+                    ),
+                )
+
+            _delete_summary_rows(update_id)
+
+            _build_note_summary(
+                case_manager_update_id=update_id,
+                enrollment_id=note["enrollment_id"],
+                resident_id=resident_id,
+                form=request.form,
+                service_types=service_types,
+                changed_needs=[],
+                created_at=now,
+            )
+
+    except Exception as exc:
+        flash(f"Case note update failed: {exc}", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     flash("Case note updated.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
