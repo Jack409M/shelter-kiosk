@@ -609,7 +609,7 @@
 
             <div class="case-help-text case-help-text-top">
               {% if rs_step_changed_at %}
-                Step changed: {{ rs_step_changed_at }}
+                Step changed: {{ rs_step_changed_at | app_pretty_dt }}
                 {% if rs_step_days is not none %}
                   — {{ rs_step_days }} day{% if rs_step_days != 1 %}s{% endif %} on current step
                 {% endif %}
@@ -620,7 +620,7 @@
 
             <div class="case-help-text case-help-text-top">
               {% if rs_employment_updated_at %}
-                Employment updated: {{ rs_employment_updated_at }}
+                Employment updated: {{ rs_employment_updated_at | app_pretty_dt }}
                 {% if rs_employment_days is not none %}
                   — {{ rs_employment_days }} day{% if rs_employment_days != 1 %}s{% endif %} since employment update
                 {% endif %}
