@@ -214,6 +214,15 @@ def _missing_item_value(data: dict[str, Any], need_key: str) -> int | None:
     return 0 if data.get(f"need_{need_key}") == "yes" else None
 
 
+def _safe_int_or_none(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _insert_intake_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     ph = placeholder()
     now = utcnow_iso()
@@ -573,13 +582,13 @@ def _insert_family_snapshot(enrollment_id: int, data: dict[str, Any]) -> None:
         """,
         (
             enrollment_id,
-            int(data.get("kids_at_dwc") or 0),
-            int(data.get("kids_served_outside_under_18") or 0),
-            int(data.get("kids_ages_0_5") or 0),
-            int(data.get("kids_ages_6_11") or 0),
-            int(data.get("kids_ages_12_17") or 0),
-            int(data.get("kids_reunited_while_in_program") or 0),
-            int(data.get("healthy_babies_born_at_dwc") or 0),
+            _safe_int_or_none(data.get("kids_at_dwc")),
+            _safe_int_or_none(data.get("kids_served_outside_under_18")),
+            _safe_int_or_none(data.get("kids_ages_0_5")),
+            _safe_int_or_none(data.get("kids_ages_6_11")),
+            _safe_int_or_none(data.get("kids_ages_12_17")),
+            _safe_int_or_none(data.get("kids_reunited_while_in_program")),
+            _safe_int_or_none(data.get("healthy_babies_born_at_dwc")),
             now,
             now,
         ),
