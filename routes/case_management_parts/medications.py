@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from flask import flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
@@ -14,6 +16,19 @@ from routes.case_management_parts.helpers import shelter_equals_sql
 def _clean(value: str | None) -> str | None:
     value = (value or "").strip()
     return value or None
+
+
+def _parse_iso_date(value: str | None) -> str | None:
+    value = _clean(value)
+    if not value:
+        return None
+
+    try:
+        date.fromisoformat(value)
+    except ValueError:
+        return None
+
+    return value
 
 
 def _resident_context(resident_id: int):
@@ -40,6 +55,46 @@ def _resident_context(resident_id: int):
     )
 
     return resident
+
+
+def _validate_medication_form():
+    medication_name = _clean(request.form.get("medication_name"))
+    dosage = _clean(request.form.get("dosage"))
+    frequency = _clean(request.form.get("frequency"))
+    purpose = _clean(request.form.get("purpose"))
+    prescribed_by = _clean(request.form.get("prescribed_by"))
+    started_on_raw = request.form.get("started_on")
+    ended_on_raw = request.form.get("ended_on")
+    notes = _clean(request.form.get("notes"))
+    is_active = (request.form.get("is_active") or "").strip().lower() == "yes"
+
+    started_on = _parse_iso_date(started_on_raw)
+    ended_on = _parse_iso_date(ended_on_raw)
+
+    if not medication_name:
+        return None, "Medication name is required."
+
+    if started_on_raw and not started_on:
+        return None, "Started On must be a valid date."
+
+    if ended_on_raw and not ended_on:
+        return None, "Ended On must be a valid date."
+
+    if started_on and ended_on and ended_on < started_on:
+        return None, "Ended On cannot be earlier than Started On."
+
+    data = {
+        "medication_name": medication_name,
+        "dosage": dosage,
+        "frequency": frequency,
+        "purpose": purpose,
+        "prescribed_by": prescribed_by,
+        "started_on": started_on,
+        "ended_on": ended_on,
+        "is_active": is_active,
+        "notes": notes,
+    }
+    return data, None
 
 
 def medication_form_view(resident_id: int):
@@ -97,18 +152,9 @@ def add_medication_view(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    medication_name = _clean(request.form.get("medication_name"))
-    dosage = _clean(request.form.get("dosage"))
-    frequency = _clean(request.form.get("frequency"))
-    purpose = _clean(request.form.get("purpose"))
-    prescribed_by = _clean(request.form.get("prescribed_by"))
-    started_on = _clean(request.form.get("started_on"))
-    ended_on = _clean(request.form.get("ended_on"))
-    notes = _clean(request.form.get("notes"))
-    is_active = (request.form.get("is_active") or "").strip().lower() == "yes"
-
-    if not medication_name:
-        flash("Medication name is required.", "error")
+    data, error = _validate_medication_form()
+    if error:
+        flash(error, "error")
         return redirect(url_for("case_management.medications", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -139,15 +185,15 @@ def add_medication_view(resident_id: int):
         (
             resident_id,
             resident.get("enrollment_id"),
-            medication_name,
-            dosage,
-            frequency,
-            purpose,
-            prescribed_by,
-            started_on,
-            ended_on,
-            is_active,
-            notes,
+            data["medication_name"],
+            data["dosage"],
+            data["frequency"],
+            data["purpose"],
+            data["prescribed_by"],
+            data["started_on"],
+            data["ended_on"],
+            data["is_active"],
+            data["notes"],
             session.get("staff_user_id"),
             session.get("staff_user_id"),
             now,
@@ -206,19 +252,16 @@ def edit_medication_view(resident_id: int, medication_id: int):
             medication=medication,
         )
 
-    medication_name = _clean(request.form.get("medication_name"))
-    dosage = _clean(request.form.get("dosage"))
-    frequency = _clean(request.form.get("frequency"))
-    purpose = _clean(request.form.get("purpose"))
-    prescribed_by = _clean(request.form.get("prescribed_by"))
-    started_on = _clean(request.form.get("started_on"))
-    ended_on = _clean(request.form.get("ended_on"))
-    notes = _clean(request.form.get("notes"))
-    is_active = (request.form.get("is_active") or "").strip().lower() == "yes"
-
-    if not medication_name:
-        flash("Medication name is required.", "error")
-        return redirect(url_for("case_management.edit_medication", resident_id=resident_id, medication_id=medication_id))
+    data, error = _validate_medication_form()
+    if error:
+        flash(error, "error")
+        return redirect(
+            url_for(
+                "case_management.edit_medication",
+                resident_id=resident_id,
+                medication_id=medication_id,
+            )
+        )
 
     now = utcnow_iso()
 
@@ -241,15 +284,15 @@ def edit_medication_view(resident_id: int, medication_id: int):
           AND resident_id = {ph}
         """,
         (
-            medication_name,
-            dosage,
-            frequency,
-            purpose,
-            prescribed_by,
-            started_on,
-            ended_on,
-            is_active,
-            notes,
+            data["medication_name"],
+            data["dosage"],
+            data["frequency"],
+            data["purpose"],
+            data["prescribed_by"],
+            data["started_on"],
+            data["ended_on"],
+            data["is_active"],
+            data["notes"],
             session.get("staff_user_id"),
             now,
             medication_id,
