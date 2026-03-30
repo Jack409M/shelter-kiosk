@@ -185,6 +185,9 @@ def ensure_child_services_table(kind: str) -> None:
             quantity INTEGER,
             unit TEXT,
             notes TEXT,
+            is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+            deleted_at TEXT,
+            deleted_by_staff_user_id INTEGER,
             created_at TEXT,
             updated_at TEXT,
             FOREIGN KEY (resident_child_id) REFERENCES resident_children(id),
@@ -204,6 +207,9 @@ def ensure_child_services_table(kind: str) -> None:
             quantity INTEGER,
             unit TEXT,
             notes TEXT,
+            is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+            deleted_at TEXT,
+            deleted_by_staff_user_id INTEGER,
             created_at TEXT,
             updated_at TEXT
         )
@@ -564,6 +570,9 @@ def ensure_child_services_columns() -> None:
     statements = [
         "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS quantity INTEGER",
         "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS unit TEXT",
+        "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS deleted_at TEXT",
+        "ALTER TABLE child_services ADD COLUMN IF NOT EXISTS deleted_by_staff_user_id INTEGER",
     ]
 
     for statement in statements:
@@ -571,6 +580,19 @@ def ensure_child_services_columns() -> None:
             db_execute(statement)
         except Exception:
             pass
+
+    try:
+        db_execute(
+            """
+            UPDATE child_services
+            SET
+                is_deleted = TRUE,
+                deleted_at = COALESCE(deleted_at, updated_at)
+            WHERE COALESCE(outcome, '') = 'deleted'
+            """
+        )
+    except Exception:
+        pass
 
 
 def ensure_resident_needs_columns() -> None:
@@ -891,8 +913,18 @@ def ensure_indexes() -> None:
     try:
         db_execute(
             """
-            CREATE INDEX IF NOT EXISTS child_services_child_outcome_idx
-            ON child_services (resident_child_id, outcome)
+            CREATE INDEX IF NOT EXISTS child_services_child_deleted_idx
+            ON child_services (resident_child_id, is_deleted)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS child_services_enrollment_deleted_idx
+            ON child_services (enrollment_id, is_deleted)
             """
         )
     except Exception:
