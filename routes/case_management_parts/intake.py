@@ -264,6 +264,67 @@ def _latest_intake_for_enrollment(enrollment_id: int):
     )
 
 
+def _build_intake_assessment_payload(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "veteran": yes_no_to_int(data.get("veteran")),
+        "notes_basic": data.get("notes_basic"),
+        "place_staying_before_entry": data.get("prior_living"),
+        "sobriety_date": data.get("sobriety_date"),
+        "treatment_grad_date": data.get("treatment_grad_date"),
+        "days_sober_at_entry": data.get("days_sober_at_entry"),
+        "drug_of_choice": data.get("drug_of_choice"),
+        "income_at_entry": data.get("income_at_entry"),
+        "education_at_entry": data.get("education_at_entry"),
+        "disability": data.get("disability"),
+        "length_of_time_in_amarillo": data.get("length_of_time_in_amarillo"),
+        "marital_status": data.get("marital_status"),
+        "city": data.get("city"),
+        "county": data.get("county"),
+        "last_zipcode_residence": data.get("last_zipcode_residence"),
+        "entry_notes": data.get("entry_notes"),
+        "car_at_entry": yes_no_to_int(data.get("car_at_entry")),
+        "car_insurance_at_entry": yes_no_to_int(data.get("car_insurance_at_entry")),
+        "pregnant_at_entry": yes_no_to_int(data.get("pregnant")),
+        "dental_need_at_entry": yes_no_to_int(data.get("need_dental")),
+        "vision_need_at_entry": yes_no_to_int(data.get("need_vision_glasses")),
+        "employment_status_at_entry": data.get("employment_status"),
+        "id_documents_status_at_entry": None,
+        "has_drivers_license": 0 if data.get("need_state_id_drivers_license") == "yes" else None,
+        "has_social_security_card": 0 if data.get("need_social_security_card") == "yes" else None,
+        "initial_snapshot_notes": data.get("initial_snapshot_notes"),
+        "ace_score": data.get("ace_score"),
+        "grit_score": data.get("grit_score"),
+        "sexual_survivor": yes_no_to_int(data.get("sexual_survivor")),
+        "dv_survivor": yes_no_to_int(data.get("domestic_violence_history")),
+        "human_trafficking_survivor": yes_no_to_int(data.get("human_trafficking_history")),
+        "drug_court": yes_no_to_int(data.get("drug_court")),
+        "warrants_unpaid": yes_no_to_int(data.get("need_warrants_fine_resolution")),
+        "mental_health_need_at_entry": None,
+        "medical_need_at_entry": None,
+        "mh_exam_completed": None,
+        "med_exam_completed": None,
+        "substance_use_need_at_entry": None,
+        "parenting_class_needed": yes_no_to_int(data.get("need_parenting_class_needed")),
+        "dwc_level_today": data.get("dwc_level_today"),
+        "trauma_notes": data.get("trauma_notes"),
+        "entry_felony_conviction": yes_no_to_int(data.get("felony_history")),
+        "entry_parole_probation": yes_no_to_int(data.get("probation_parole")),
+        "barrier_notes": data.get("barrier_notes"),
+    }
+
+
+def _build_family_snapshot_payload(data: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "kids_at_dwc": _safe_int_or_none(data.get("kids_at_dwc")),
+        "kids_served_outside_under_18": _safe_int_or_none(data.get("kids_served_outside_under_18")),
+        "kids_ages_0_5": _safe_int_or_none(data.get("kids_ages_0_5")),
+        "kids_ages_6_11": _safe_int_or_none(data.get("kids_ages_6_11")),
+        "kids_ages_12_17": _safe_int_or_none(data.get("kids_ages_12_17")),
+        "kids_reunited_while_in_program": _safe_int_or_none(data.get("kids_reunited_while_in_program")),
+        "healthy_babies_born_at_dwc": _safe_int_or_none(data.get("healthy_babies_born_at_dwc")),
+    }
+
+
 def intake_form_view():
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -526,13 +587,8 @@ def submit_intake_assessment_view():
         intake_assessment_id = existing_intake["id"] if isinstance(existing_intake, dict) else existing_intake[0]
         now = datetime.utcnow().isoformat()
         ph = placeholder()
-
-        dental_need = yes_no_to_int(data.get("need_dental"))
-        vision_need = yes_no_to_int(data.get("need_vision_glasses"))
-        parenting_class_needed = yes_no_to_int(data.get("need_parenting_class_needed"))
-        warrants_unpaid = yes_no_to_int(data.get("need_warrants_fine_resolution"))
-        has_drivers_license = 0 if data.get("need_state_id_drivers_license") == "yes" else None
-        has_social_security_card = 0 if data.get("need_social_security_card") == "yes" else None
+        intake_payload = _build_intake_assessment_payload(data)
+        family_payload = _build_family_snapshot_payload(data)
 
         try:
             with db_transaction():
@@ -640,49 +696,50 @@ def submit_intake_assessment_view():
                     WHERE id = {ph}
                     """,
                     (
-                        yes_no_to_int(data.get("veteran")),
-                        data.get("notes_basic"),
-                        data.get("prior_living"),
-                        data.get("sobriety_date"),
-                        data.get("treatment_grad_date"),
-                        data.get("days_sober_at_entry"),
-                        data.get("drug_of_choice"),
-                        data.get("income_at_entry"),
-                        data.get("education_at_entry"),
-                        data.get("disability"),
-                        data.get("length_of_time_in_amarillo"),
-                        data.get("marital_status"),
-                        data.get("city"),
-                        data.get("county"),
-                        data.get("last_zipcode_residence"),
-                        data.get("entry_notes"),
-                        yes_no_to_int(data.get("car_at_entry")),
-                        yes_no_to_int(data.get("car_insurance_at_entry")),
-                        yes_no_to_int(data.get("pregnant")),
-                        dental_need,
-                        vision_need,
-                        data.get("employment_status"),
-                        None,
-                        has_drivers_license,
-                        has_social_security_card,
-                        data.get("initial_snapshot_notes"),
-                        data.get("ace_score"),
-                        data.get("grit_score"),
-                        yes_no_to_int(data.get("sexual_survivor")),
-                        yes_no_to_int(data.get("domestic_violence_history")),
-                        yes_no_to_int(data.get("human_trafficking_history")),
-                        yes_no_to_int(data.get("drug_court")),
-                        warrants_unpaid,
-                        None,
-                        None,
-                        None,
-                        None,
-                        parenting_class_needed,
-                        data.get("dwc_level_today"),
-                        data.get("trauma_notes"),
-                        yes_no_to_int(data.get("felony_history")),
-                        yes_no_to_int(data.get("probation_parole")),
-                        data.get("barrier_notes"),
+                        intake_payload["veteran"],
+                        intake_payload["notes_basic"],
+                        intake_payload["place_staying_before_entry"],
+                        intake_payload["sobriety_date"],
+                        intake_payload["treatment_grad_date"],
+                        intake_payload["days_sober_at_entry"],
+                        intake_payload["drug_of_choice"],
+                        intake_payload["income_at_entry"],
+                        intake_payload["education_at_entry"],
+                        intake_payload["disability"],
+                        intake_payload["length_of_time_in_amarillo"],
+                        intake_payload["marital_status"],
+                        intake_payload["city"],
+                        intake_payload["county"],
+                        intake_payload["last_zipcode_residence"],
+                        intake_payload["entry_notes"],
+                        intake_payload["car_at_entry"],
+                        intake_payload["car_insurance_at_entry"],
+                        intake_payload["pregnant_at_entry"],
+                        intake_payload["dental_need_at_entry"],
+                        intake_payload["vision_need_at_entry"],
+                        intake_payload["employment_status_at_entry"],
+                        intake_payload["id_documents_status_at_entry"],
+                        intake_payload["has_drivers_license"],
+                        intake_payload["has_social_security_card"],
+                        intake_payload["initial_snapshot_notes"],
+                        intake_payload["ace_score"],
+                        intake_payload["grit_score"],
+                        intake_payload["sexual_survivor"],
+                        intake_payload["dv_survivor"],
+                        intake_payload["human_trafficking_survivor"],
+                        intake_payload["drug_court"],
+                        intake_payload["warrants_unpaid"],
+                        intake_payload["mental_health_need_at_entry"],
+                        intake_payload["medical_need_at_entry"],
+                        intake_payload["mh_exam_completed"],
+                        intake_payload["med_exam_completed"],
+                        intake_payload["substance_use_need_at_entry"],
+                        intake_payload["parenting_class_needed"],
+                        intake_payload["dwc_level_today"],
+                        intake_payload["trauma_notes"],
+                        intake_payload["entry_felony_conviction"],
+                        intake_payload["entry_parole_probation"],
+                        intake_payload["barrier_notes"],
                         now,
                         intake_assessment_id,
                     ),
@@ -715,13 +772,13 @@ def submit_intake_assessment_view():
                         WHERE enrollment_id = {ph}
                         """,
                         (
-                            _safe_int_or_none(data.get("kids_at_dwc")),
-                            _safe_int_or_none(data.get("kids_served_outside_under_18")),
-                            _safe_int_or_none(data.get("kids_ages_0_5")),
-                            _safe_int_or_none(data.get("kids_ages_6_11")),
-                            _safe_int_or_none(data.get("kids_ages_12_17")),
-                            _safe_int_or_none(data.get("kids_reunited_while_in_program")),
-                            _safe_int_or_none(data.get("healthy_babies_born_at_dwc")),
+                            family_payload["kids_at_dwc"],
+                            family_payload["kids_served_outside_under_18"],
+                            family_payload["kids_ages_0_5"],
+                            family_payload["kids_ages_6_11"],
+                            family_payload["kids_ages_12_17"],
+                            family_payload["kids_reunited_while_in_program"],
+                            family_payload["healthy_babies_born_at_dwc"],
                             now,
                             enrollment_id,
                         ),
