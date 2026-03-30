@@ -54,6 +54,32 @@ def _normalize_exit_assessment(row):
     return normalized
 
 
+def _load_current_enrollment(resident_id: int):
+    ph = placeholder()
+
+    return db_fetchone(
+        f"""
+        SELECT
+            id,
+            shelter,
+            program_status,
+            entry_date,
+            exit_date
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+        ORDER BY
+            CASE
+                WHEN COALESCE(program_status, '') = 'active' THEN 0
+                ELSE 1
+            END,
+            COALESCE(entry_date, '') DESC,
+            id DESC
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+
 def _get_latest_followup(enrollment_id: int, followup_type: str):
     ph = placeholder()
 
@@ -67,7 +93,9 @@ def _get_latest_followup(enrollment_id: int, followup_type: str):
         FROM followups
         WHERE enrollment_id = {ph}
           AND followup_type = {ph}
-        ORDER BY id DESC
+        ORDER BY
+            COALESCE(followup_date, '') DESC,
+            id DESC
         LIMIT 1
         """,
         (enrollment_id, followup_type),
@@ -199,22 +227,7 @@ def resident_case_view(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    enrollment = db_fetchone(
-        f"""
-        SELECT
-            id,
-            shelter,
-            program_status,
-            entry_date,
-            exit_date
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
-
+    enrollment = _load_current_enrollment(resident_id)
     enrollment_id = enrollment["id"] if enrollment else None
 
     goals = []
@@ -267,7 +280,7 @@ def resident_case_view(resident_id: int):
                     service_date
                 FROM child_services
                 WHERE resident_child_id IN ({child_placeholders})
-                  AND COALESCE(outcome, '') <> 'deleted'
+                  AND COALESCE(is_deleted, FALSE) = FALSE
                 ORDER BY service_date DESC, id DESC
                 """,
                 tuple(child_ids),
@@ -386,7 +399,7 @@ def resident_case_view(resident_id: int):
                 created_at
             FROM goals
             WHERE enrollment_id = {ph}
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id DESC
             """,
             (enrollment_id,),
         )
