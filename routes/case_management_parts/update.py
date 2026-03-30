@@ -5,10 +5,10 @@ from flask import flash, redirect, render_template, request, session, url_for
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.needs import normalize_need_status
 
 
@@ -1139,16 +1139,15 @@ def edit_case_note_view(resident_id: int, update_id: int):
                     ),
                 )
 
-            _delete_summary_rows(update_id)
+            _delete_summary_rows_by_group(update_id, ["service"])
 
-            _build_note_summary(
+            next_sort_order = _get_next_summary_sort_order(update_id)
+            _record_service_summary(
                 case_manager_update_id=update_id,
-                enrollment_id=note["enrollment_id"],
-                resident_id=resident_id,
-                form=request.form,
                 service_types=service_types,
-                changed_needs=[],
+                form=request.form,
                 created_at=now,
+                starting_sort_order=next_sort_order,
             )
 
     except Exception as exc:
