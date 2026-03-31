@@ -105,9 +105,9 @@
 
     .cmx-stats {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
-      min-width: 360px;
+      min-width: 460px;
     }
 
     .cmx-stat {
@@ -890,7 +890,10 @@
 
 {% set rs = recovery_snapshot or {} %}
 {% set rs_level = rs.get("program_level") %}
+{% set rs_level_start_date = rs.get("level_start_date") %}
+{% set rs_days_on_level = rs.get("days_on_level") %}
 {% set rs_sponsor = rs.get("sponsor_name") %}
+{% set rs_sponsor_active_display = rs.get("sponsor_active_display") %}
 {% set rs_employment_status = rs.get("employment_status_current") %}
 {% set rs_employer = rs.get("employer_name") %}
 {% set rs_supervisor_name = rs.get("supervisor_name") %}
@@ -899,6 +902,7 @@
 {% set rs_employment_notes = rs.get("employment_notes") %}
 {% set rs_income = rs.get("monthly_income") %}
 {% set rs_step = rs.get("step_current") %}
+{% set rs_step_work_active_display = rs.get("step_work_active_display") %}
 {% set rs_medications = rs.get("medications", []) %}
 {% set rs_ua_rows = rs.get("ua_rows", []) %}
 {% set rs_latest_inspection = rs.get("latest_inspection") %}
@@ -910,10 +914,16 @@
 {% set meeting_defaults = meeting_defaults if meeting_defaults is defined else {} %}
 {% set workspace_header = workspace_header if workspace_header is defined else {} %}
 {% set header_days_sober = workspace_header.get("days_sober") %}
+{% set header_days_on_level = workspace_header.get("days_on_level") %}
 {% set header_open_needs_count = workspace_header.get("open_needs_count", 0) %}
+{% set header_program_status = workspace_header.get("program_status") %}
 {% set last_note = notes[-1] if notes else none %}
 {% set last_meeting_date = last_note["meeting_date"] if last_note else "—" %}
 {% set next_appt = last_note["next_appointment"] if last_note and last_note["next_appointment"] else "—" %}
+{% set last_ready_for_next_level_display = last_note["ready_for_next_level_display"] if last_note else "—" %}
+{% set last_recommended_next_level = last_note["recommended_next_level"] if last_note and last_note["recommended_next_level"] else "—" %}
+{% set last_blocker_reason = last_note["blocker_reason"] if last_note and last_note["blocker_reason"] else "—" %}
+{% set last_override_or_exception = last_note["override_or_exception"] if last_note and last_note["override_or_exception"] else "—" %}
 
 <div class="cmx-page">
   <div class="cmx-shell">
@@ -936,7 +946,9 @@
                 <div class="cmx-meta">
                   <span class="cmx-pill">Shelter: {{ shelter | shelter if shelter else "—" }}</span>
                   <span class="cmx-pill cmx-pill-success">Status: {{ "Active" if resident_active else "Inactive" }}</span>
+                  <span class="cmx-pill">Program Status: {{ header_program_status or "—" }}</span>
                   <span class="cmx-pill">Entry Date: {{ enrollment_entry_date or "—" }}</span>
+                  <span class="cmx-pill">Level Start: {{ rs_level_start_date or "—" }}</span>
                   <span class="cmx-pill">Last Meeting: {{ last_meeting_date or "—" }}</span>
                 </div>
               </div>
@@ -947,6 +959,11 @@
                 <div class="cmx-stat-value">{{ rs_level or "—" }}</div>
                 <div class="cmx-stat-label">Level</div>
                 <div class="cmx-stat-hint">Editable</div>
+              </div>
+
+              <div class="cmx-stat">
+                <div class="cmx-stat-value">{{ header_days_on_level if header_days_on_level is not none else "—" }}</div>
+                <div class="cmx-stat-label">Days On Level</div>
               </div>
 
               <div class="cmx-stat">
@@ -994,7 +1011,7 @@
             <div class="cmx-section-head">
               <div>
                 <h2 class="cmx-section-title">Meeting Workspace</h2>
-                <div class="cmx-section-subtitle">One working area for notes, services, and needs addressed today.</div>
+                <div class="cmx-section-subtitle">One working area for notes, services, needs addressed today, and advancement review.</div>
               </div>
 
               <div class="cmx-inline-pill">
@@ -1038,12 +1055,12 @@
                 <div class="cmx-field-card">
                   <div class="cmx-field-card-label">Focus</div>
                   <div class="cmx-field">
-                    <input type="text" value="Recovery + employment" readonly>
+                    <input type="text" value="Recovery + advancement review" readonly>
                   </div>
                 </div>
               </div>
 
-              <div class="cmx-grid cmx-grid-3" style="margin-top:20px;">
+              <div class="cmx-grid cmx-grid-4" style="margin-top:20px;">
                 <div class="cmx-text-card">
                   <div class="cmx-text-card-title">Meeting Notes</div>
                   <div class="cmx-field">
@@ -1055,6 +1072,13 @@
                   <div class="cmx-text-card-title">Progress Since Last Meeting</div>
                   <div class="cmx-field">
                     <textarea name="progress_notes" rows="7" placeholder="What progress has been made">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
+                  </div>
+                </div>
+
+                <div class="cmx-text-card">
+                  <div class="cmx-text-card-title">Setbacks Or Incidents</div>
+                  <div class="cmx-field">
+                    <textarea name="setbacks_or_incidents" rows="7" placeholder="Record setbacks, incidents, or concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
                   </div>
                 </div>
 
@@ -1147,6 +1171,63 @@
                   {% else %}
                     <p class="cmx-muted">No open needs recorded.</p>
                   {% endif %}
+                </div>
+              </div>
+
+              <div class="cmx-grid cmx-grid-2" style="margin-top:24px;">
+                <div class="cmx-panel-soft">
+                  <div class="cmx-panel-head">
+                    <h3>Program And Compliance Snapshot</h3>
+                    <span>compact current status</span>
+                  </div>
+
+                  <div class="cmx-stack">
+                    <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "—" }}</span></div>
+                    <div class="cmx-row-block"><span>Level</span><span>{{ rs_level or "—" }}</span></div>
+                    <div class="cmx-row-block"><span>Level Start Date</span><span>{{ rs_level_start_date or "—" }}</span></div>
+                    <div class="cmx-row-block"><span>Days On Level</span><span>{{ rs_days_on_level if rs_days_on_level is not none else "—" }}</span></div>
+                    <div class="cmx-row-block"><span>Sponsor Active</span><span>{{ rs_sponsor_active_display or "—" }}</span></div>
+                    <div class="cmx-row-block"><span>Step Work Active</span><span>{{ rs_step_work_active_display or "—" }}</span></div>
+                    <div class="cmx-row-block"><span>Open Needs</span><span>{{ header_open_needs_count }}</span></div>
+                  </div>
+                </div>
+
+                <div class="cmx-panel-soft">
+                  <div class="cmx-panel-head">
+                    <h3>Advancement Review</h3>
+                    <span>meeting decision fields</span>
+                  </div>
+
+                  <div class="cmx-grid cmx-grid-2">
+                    <div class="cmx-field">
+                      <label>Ready For Next Level</label>
+                      <select name="ready_for_next_level">
+                        <option value="" {% if not meeting_defaults.ready_for_next_level %}selected{% endif %}>—</option>
+                        <option value="yes" {% if meeting_defaults.ready_for_next_level == "yes" %}selected{% endif %}>Yes</option>
+                        <option value="no" {% if meeting_defaults.ready_for_next_level == "no" %}selected{% endif %}>No</option>
+                      </select>
+                    </div>
+
+                    <div class="cmx-field">
+                      <label>Recommended Next Level</label>
+                      <input type="text" name="recommended_next_level" value="{{ meeting_defaults.recommended_next_level if meeting_defaults.recommended_next_level else '' }}" placeholder="Optional">
+                    </div>
+                  </div>
+
+                  <div class="cmx-field" style="margin-top:12px;">
+                    <label>Blocker Reason</label>
+                    <textarea name="blocker_reason" rows="3" placeholder="What is preventing advancement">{{ meeting_defaults.blocker_reason if meeting_defaults.blocker_reason else '' }}</textarea>
+                  </div>
+
+                  <div class="cmx-field" style="margin-top:12px;">
+                    <label>Override Or Exception</label>
+                    <textarea name="override_or_exception" rows="3" placeholder="Record any exception or override">{{ meeting_defaults.override_or_exception if meeting_defaults.override_or_exception else '' }}</textarea>
+                  </div>
+
+                  <div class="cmx-field" style="margin-top:12px;">
+                    <label>Staff Review Note</label>
+                    <textarea name="staff_review_note" rows="3" placeholder="Professional recommendation or rationale">{{ meeting_defaults.staff_review_note if meeting_defaults.staff_review_note else '' }}</textarea>
+                  </div>
                 </div>
               </div>
             </form>
@@ -1301,20 +1382,33 @@
             <div class="cmx-section-head">
               <div>
                 <h2 class="cmx-section-title">Profile Editor</h2>
-                <div class="cmx-section-subtitle">Edit recovery, employment, employer, income, and supervisor details without losing meeting notes.</div>
+                <div class="cmx-section-subtitle">Edit recovery, employment, level timing, sponsor activity, and step work without losing meeting notes.</div>
               </div>
               <button type="submit" class="cmx-btn" form="profile-editor-form">Save Profile</button>
             </div>
 
             <form id="profile-editor-form" method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="program_level" value="{{ rs_level or '' }}">
 
               <div class="cmx-grid cmx-grid-4">
                 <div class="cmx-field-card">
                   <div class="cmx-field-card-label">Level</div>
                   <div class="cmx-field">
-                    <input type="text" value="{{ rs_level or '—' }}" readonly>
+                    <input type="text" name="program_level" value="{{ rs_level or '' }}" placeholder="Current level">
+                  </div>
+                </div>
+
+                <div class="cmx-field-card">
+                  <div class="cmx-field-card-label">Level Start Date</div>
+                  <div class="cmx-field">
+                    <input type="date" name="level_start_date" value="{{ rs_level_start_date or '' }}">
+                  </div>
+                </div>
+
+                <div class="cmx-field-card">
+                  <div class="cmx-field-card-label">Days On Level</div>
+                  <div class="cmx-field">
+                    <input type="text" value="{{ rs_days_on_level if rs_days_on_level is not none else '—' }} (derived)" readonly>
                   </div>
                 </div>
 
@@ -1322,6 +1416,35 @@
                   <div class="cmx-field-card-label">Step</div>
                   <div class="cmx-field">
                     <input type="number" min="1" max="12" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
+                  </div>
+                </div>
+
+                <div class="cmx-field-card">
+                  <div class="cmx-field-card-label">Sponsor Name</div>
+                  <div class="cmx-field">
+                    <input type="text" name="sponsor_name" value="{{ rs_sponsor or '' }}">
+                  </div>
+                </div>
+
+                <div class="cmx-field-card">
+                  <div class="cmx-field-card-label">Sponsor Active</div>
+                  <div class="cmx-field">
+                    <select name="sponsor_active">
+                      <option value="" {% if rs.get('sponsor_active') is none %}selected{% endif %}>—</option>
+                      <option value="yes" {% if rs.get('sponsor_active') is sameas true or rs.get('sponsor_active') == 1 %}selected{% endif %}>Yes</option>
+                      <option value="no" {% if rs.get('sponsor_active') is sameas false or rs.get('sponsor_active') == 0 %}selected{% endif %}>No</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="cmx-field-card">
+                  <div class="cmx-field-card-label">Step Work Active</div>
+                  <div class="cmx-field">
+                    <select name="step_work_active">
+                      <option value="" {% if rs.get('step_work_active') is none %}selected{% endif %}>—</option>
+                      <option value="yes" {% if rs.get('step_work_active') is sameas true or rs.get('step_work_active') == 1 %}selected{% endif %}>Yes</option>
+                      <option value="no" {% if rs.get('step_work_active') is sameas false or rs.get('step_work_active') == 0 %}selected{% endif %}>No</option>
+                    </select>
                   </div>
                 </div>
 
@@ -1361,13 +1484,6 @@
                   <div class="cmx-field-card-label">Supervisor Phone</div>
                   <div class="cmx-field">
                     <input type="text" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
-                  </div>
-                </div>
-
-                <div class="cmx-field-card">
-                  <div class="cmx-field-card-label">Sponsor</div>
-                  <div class="cmx-field">
-                    <input type="text" name="sponsor_name" value="{{ rs_sponsor or '' }}">
                   </div>
                 </div>
               </div>
@@ -1548,19 +1664,39 @@
 
           <div class="cmx-card">
             <div class="cmx-side-card-head">
-              <h3>Recovery and Employment Snapshot</h3>
+              <h3>Recovery And Compliance Snapshot</h3>
               <a class="cmx-side-action" href="#profile-editor-form">Open Profile Editor</a>
             </div>
 
             <div class="cmx-stack">
+              <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "—" }}</span></div>
+              <div class="cmx-row-block"><span>Level</span><span>{{ rs_level or "—" }}</span></div>
+              <div class="cmx-row-block"><span>Level Start</span><span>{{ rs_level_start_date or "—" }}</span></div>
+              <div class="cmx-row-block"><span>Days On Level</span><span>{{ rs_days_on_level if rs_days_on_level is not none else "—" }}</span></div>
               <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
               <div class="cmx-row-block"><span>Drug of Choice</span><span>{{ rs_drug_of_choice or "—" }}</span></div>
               <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
+              <div class="cmx-row-block"><span>Sponsor Active</span><span>{{ rs_sponsor_active_display or "—" }}</span></div>
+              <div class="cmx-row-block"><span>Step Work Active</span><span>{{ rs_step_work_active_display or "—" }}</span></div>
               <div class="cmx-row-block"><span>Employment Status</span><span>{{ rs_employment_status or "—" }}</span></div>
               <div class="cmx-row-block"><span>Employer</span><span>{{ rs_employer or "—" }}</span></div>
               <div class="cmx-row-block"><span>Monthly Income</span><span>{{ rs_income if rs_income is not none else "—" }}</span></div>
               <div class="cmx-row-block"><span>Supervisor</span><span>{{ rs_supervisor_name or "—" }}</span></div>
               <div class="cmx-row-block"><span>Supervisor Phone</span><span>{{ rs_supervisor_phone or "—" }}</span></div>
+            </div>
+          </div>
+
+          <div class="cmx-card">
+            <div class="cmx-side-card-head">
+              <h3>Latest Advancement Snapshot</h3>
+              <a class="cmx-side-action" href="#meeting-workspace-form">Meeting Review</a>
+            </div>
+
+            <div class="cmx-stack">
+              <div class="cmx-row-block"><span>Ready For Next Level</span><span>{{ last_ready_for_next_level_display or "—" }}</span></div>
+              <div class="cmx-row-block"><span>Recommended Level</span><span>{{ last_recommended_next_level or "—" }}</span></div>
+              <div class="cmx-chip-block"><strong>Blocker</strong><br>{{ last_blocker_reason or "—" }}</div>
+              <div class="cmx-chip-block"><strong>Override Or Exception</strong><br>{{ last_override_or_exception or "—" }}</div>
             </div>
           </div>
 
