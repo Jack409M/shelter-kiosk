@@ -6,6 +6,8 @@ from typing import Any
 from flask import g
 from flask import session
 
+from core.db import db_fetchone
+
 
 def case_manager_allowed() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
@@ -23,6 +25,38 @@ def shelter_equals_sql(column_name: str) -> str:
 
 def placeholder() -> str:
     return "%s" if g.get("db_kind") == "pg" else "?"
+
+
+def current_enrollment_order_sql(alias: str = "") -> str:
+    prefix = f"{alias}." if alias else ""
+    return (
+        f"CASE WHEN COALESCE({prefix}program_status, '') = 'active' THEN 0 ELSE 1 END, "
+        f"COALESCE({prefix}entry_date, '') DESC, "
+        f"{prefix}id DESC"
+    )
+
+
+def fetch_current_enrollment_for_resident(resident_id: int, columns: str = "*"):
+    ph = placeholder()
+    return db_fetchone(
+        f"""
+        SELECT {columns}
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+        ORDER BY {current_enrollment_order_sql()}
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+
+def fetch_current_enrollment_id_for_resident(resident_id: int) -> int | None:
+    row = fetch_current_enrollment_for_resident(resident_id, columns="id")
+    if not row:
+        return None
+    if isinstance(row, dict):
+        return row.get("id")
+    return row[0]
 
 
 def clean(value: str | None) -> str | None:
