@@ -4,12 +4,11 @@ from typing import Any
 
 from flask import flash, redirect, render_template, session, url_for
 
-from core.db import db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import parse_int
-from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.intake_drafts import _complete_intake_draft
 from routes.case_management_parts.intake_drafts import _dismiss_intake_draft
@@ -42,28 +41,15 @@ def _fetch_existing_duplicate_for_draft(current_shelter: str, pending_form_data:
 
 
 def _fetch_existing_enrollment_for_resident(resident_id: int):
-    ph = placeholder()
-
-    return db_fetchone(
-        f"""
-        SELECT
+    return fetch_current_enrollment_for_resident(
+        resident_id,
+        columns="""
             id,
             entry_date,
             exit_date,
             program_status,
             shelter
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY
-            CASE
-                WHEN COALESCE(program_status, '') = 'active' THEN 0
-                ELSE 1
-            END,
-            COALESCE(entry_date, '') DESC,
-            id DESC
-        LIMIT 1
         """,
-        (resident_id,),
     )
 
 
