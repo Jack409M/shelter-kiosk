@@ -1,0 +1,225 @@
+<div class="card no-print case-recovery-section">
+  <h2>Sobriety and Recovery</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    This section is the resident's current recovery profile. It should stay editable without leaving the workspace.
+  </p>
+
+  <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    {# keep current level support intact during the transition #}
+    <input type="hidden" name="program_level" value="{{ rs_level or '' }}">
+
+    <div class="case-snapshot-grid">
+      <div class="case-snapshot-card case-snapshot-card-compact">
+        <h3 class="case-snapshot-title">Recovery Profile</h3>
+
+        <div class="case-profile-row">
+          <div class="case-profile-field case-profile-field-wide">
+            <label><strong>Sobriety Date</strong></label>
+            <input
+              type="date"
+              name="sobriety_date"
+              value="{{ rs.get('sobriety_date', '') if rs else '' }}"
+            >
+          </div>
+
+          <div class="case-profile-field case-profile-field-compact">
+            <label><strong>Days Sober Today</strong></label>
+            <input
+              type="text"
+              value="{{ rs.get('days_sober_today', '—') if rs else '—' }}"
+              readonly
+            >
+          </div>
+
+          <div class="case-profile-field case-profile-field-compact">
+            <label><strong>Days Sober at Entry</strong></label>
+            <input
+              type="text"
+              value="{{ rs.get('days_sober_at_entry', '—') if rs else '—' }}"
+              readonly
+            >
+          </div>
+        </div>
+
+        <div class="case-profile-row">
+          <div class="case-profile-field case-profile-field-wide">
+            <label><strong>Drug of Choice</strong></label>
+            <input
+              type="text"
+              name="drug_of_choice"
+              value="{{ rs.get('drug_of_choice', '') if rs else '' }}"
+              maxlength="100"
+              class="case-input-50ch"
+            >
+          </div>
+
+          <div class="case-profile-field case-profile-field-wide">
+            <label><strong>Treatment Graduation Date</strong></label>
+            <input
+              type="date"
+              name="treatment_graduation_date"
+              value="{{ rs.get('treatment_graduation_date', '') if rs else '' }}"
+            >
+          </div>
+        </div>
+
+        <div class="case-profile-row">
+          <div class="case-profile-field case-profile-field-wide">
+            <label><strong>Sponsor</strong></label>
+            <input
+              type="text"
+              name="sponsor_name"
+              value="{{ rs_sponsor or '' }}"
+              maxlength="50"
+              class="case-input-50ch"
+            >
+          </div>
+
+          <div class="case-profile-field case-profile-field-compact">
+            <label><strong>Current Step</strong></label>
+            <input
+              type="number"
+              min="1"
+              max="12"
+              name="step_current"
+              value="{{ rs_step if rs_step is not none else '' }}"
+              class="case-input-4ch"
+            >
+          </div>
+        </div>
+
+        <div class="case-profile-row">
+          <div class="case-profile-field case-profile-field-wide">
+            <label><strong>Employment Status</strong></label>
+            <select
+              name="employment_status_current"
+              id="employment_status_current"
+              class="case-input-50ch"
+              onchange="toggleEmploymentProfileFields()"
+            >
+              <option value="" {% if not rs_employment_status %}selected{% endif %}>—</option>
+              <option value="employed" {% if rs_employment_status == "employed" %}selected{% endif %}>Employed</option>
+              <option value="unemployed" {% if rs_employment_status == "unemployed" %}selected{% endif %}>Unemployed</option>
+            </select>
+          </div>
+
+          <div class="case-profile-field case-profile-field-compact">
+            <label><strong>Income</strong></label>
+            <input
+              type="text"
+              inputmode="decimal"
+              name="monthly_income"
+              value="{{ rs_income if rs_income is not none else '' }}"
+              class="case-input-12ch case-no-spinner"
+              maxlength="12"
+            >
+          </div>
+        </div>
+
+        <div id="employment_fields_employed">
+          <div class="case-profile-row">
+            <div class="case-profile-field case-profile-field-wide">
+              <label><strong>Employer</strong></label>
+              <input
+                type="text"
+                name="employer_name"
+                value="{{ rs_employer or '' }}"
+                maxlength="50"
+                class="case-input-50ch"
+              >
+            </div>
+
+            <div class="case-profile-field case-profile-field-compact">
+              <label><strong>Employment Type</strong></label>
+              <select name="employment_type_current" class="case-input-12ch">
+                <option value="" {% if not rs_employment_type %}selected{% endif %}>—</option>
+                <option value="full_time" {% if rs_employment_type == "full_time" %}selected{% endif %}>Full Time</option>
+                <option value="part_time" {% if rs_employment_type == "part_time" %}selected{% endif %}>Part Time</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="case-profile-row">
+            <div class="case-profile-field case-profile-field-wide">
+              <label><strong>Supervisor Name</strong></label>
+              <input
+                type="text"
+                name="supervisor_name"
+                value="{{ rs_supervisor_name or '' }}"
+                maxlength="50"
+                class="case-input-50ch"
+              >
+            </div>
+
+            <div class="case-profile-field case-profile-field-compact">
+              <label><strong>Supervisor Phone</strong></label>
+              <input
+                type="text"
+                name="supervisor_phone"
+                value="{{ rs_supervisor_phone or '' }}"
+                maxlength="25"
+                class="case-input-18ch"
+                inputmode="tel"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div id="employment_fields_unemployed">
+          <div class="case-profile-row">
+            <div class="case-profile-field case-profile-field-wide">
+              <label><strong>Unemployment Reason</strong></label>
+              <input
+                type="text"
+                name="unemployment_reason"
+                value="{{ rs_unemployment_reason or '' }}"
+                maxlength="100"
+                class="case-input-50ch"
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="case-profile-row">
+          <div class="case-profile-field case-profile-field-wide">
+            <label><strong>Recovery Notes</strong></label>
+            <textarea
+              name="employment_notes"
+              rows="4"
+              class="case-input-50ch"
+              placeholder="Recovery notes"
+            >{{ rs_employment_notes or '' }}</textarea>
+          </div>
+        </div>
+
+        <div class="case-help-text case-help-text-top">
+          {% if rs_step_changed_at %}
+            Step changed: {{ rs_step_changed_at | app_pretty_dt }}
+            {% if rs_step_days is not none %}
+              {{ rs_step_days }} day{% if rs_step_days != 1 %}s{% endif %} on current step
+            {% endif %}
+          {% else %}
+            No step change date recorded yet.
+          {% endif %}
+        </div>
+
+        <div class="case-help-text case-help-text-top">
+          {% if rs_employment_updated_at %}
+            Employment updated: {{ rs_employment_updated_at | app_pretty_dt }}
+            {% if rs_employment_days is not none %}
+              {{ rs_employment_days }} day{% if rs_employment_days != 1 %}s{% endif %} since employment update
+            {% endif %}
+          {% else %}
+            No employment update date recorded yet.
+          {% endif %}
+        </div>
+
+        <div class="case-section-top">
+          <button type="submit">Save Recovery Profile</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
