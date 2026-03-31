@@ -24,6 +24,7 @@ SUMMARY_GROUP_ORDER = [
     "need_outstanding",
     "employment",
     "sobriety",
+    "advancement",
 ]
 
 SUMMARY_GROUP_LABELS = {
@@ -34,6 +35,7 @@ SUMMARY_GROUP_LABELS = {
     "need_outstanding": "Needs Still Outstanding",
     "employment": "Employment Changes",
     "sobriety": "Sobriety Changes",
+    "advancement": "Advancement Review",
 }
 
 
@@ -206,9 +208,15 @@ def _build_meeting_defaults():
         "meeting_date": "",
         "notes": "",
         "progress_notes": "",
+        "setbacks_or_incidents": "",
         "action_items": "",
         "next_appointment": "",
         "overall_summary": "",
+        "ready_for_next_level": "",
+        "recommended_next_level": "",
+        "blocker_reason": "",
+        "override_or_exception": "",
+        "staff_review_note": "",
         "updated_grit": None,
         "parenting_class_completed": "",
         "warrants_or_fines_paid": "",
@@ -223,6 +231,11 @@ def _build_workspace_header(*, resident, enrollment, recovery_snapshot, open_nee
     if days_sober is None:
         days_sober = _safe_days_since(sobriety_date)
 
+    level_start_date = rs.get("level_start_date")
+    days_on_level = rs.get("days_on_level")
+    if days_on_level is None:
+        days_on_level = _safe_days_since(level_start_date)
+
     return {
         "resident_name": f"{resident.get('first_name', '')} {resident.get('last_name', '')}".strip(),
         "shelter": resident.get("shelter"),
@@ -230,6 +243,8 @@ def _build_workspace_header(*, resident, enrollment, recovery_snapshot, open_nee
         "program_status": enrollment.get("program_status") if enrollment else None,
         "entry_date": enrollment.get("entry_date") if enrollment else None,
         "level": rs.get("program_level"),
+        "level_start_date": level_start_date,
+        "days_on_level": days_on_level,
         "step": rs.get("step_current"),
         "days_sober": days_sober,
         "open_needs_count": len(open_needs or []),
@@ -478,9 +493,15 @@ def resident_case_view(resident_id: int):
                 meeting_date,
                 notes,
                 progress_notes,
+                setbacks_or_incidents,
                 action_items,
                 next_appointment,
                 overall_summary,
+                ready_for_next_level,
+                recommended_next_level,
+                blocker_reason,
+                override_or_exception,
+                staff_review_note,
                 updated_grit,
                 parenting_class_completed,
                 warrants_or_fines_paid,
@@ -554,6 +575,9 @@ def resident_case_view(resident_id: int):
         for n in notes_raw:
             note_id = n["id"]
             note_obj = dict(n)
+            note_obj["ready_for_next_level_display"] = (
+                _display_label("yes") if n.get("ready_for_next_level") else (_display_label("no") if n.get("ready_for_next_level") is not None else "—")
+            )
             note_obj["services"] = services_by_note.get(note_id, [])
             note_obj["summary_rows"] = summary_by_note.get(note_id, [])
             note_obj["summary_groups"] = _group_summary_rows(note_obj["summary_rows"])
