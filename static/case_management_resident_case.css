@@ -1,7 +1,9 @@
 .case-header-strip {
   display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
   gap: 12px;
+  align-items: start;
+  margin-bottom: 12px;
 }
 
 .case-section-top {
@@ -126,6 +128,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .case-note-section {
@@ -171,10 +174,7 @@
 }
 
 .notebook-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 12px 0;
-  flex-wrap: wrap;
+  display: none;
 }
 
 .notebook-tab-btn {
@@ -223,9 +223,15 @@ button.notebook-tab-btn.is-active span {
   background: #fafafa;
 }
 
+.case-child-services-block {
+  padding: 8px 0;
+}
+
 .case-child-services-list {
   font-size: 0.9em;
   color: #555;
+  display: grid;
+  gap: 8px;
 }
 
 .case-child-service-note {
@@ -276,6 +282,9 @@ button.notebook-tab-btn.is-active span {
 
 .edit-case-note-actions {
   margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .edit-case-note-checkbox-label {
@@ -300,6 +309,7 @@ button.notebook-tab-btn.is-active span {
   border-radius: 8px;
   padding: 10px;
   background: #fafafa;
+  min-width: 0;
 }
 
 .case-snapshot-card-compact {
@@ -402,11 +412,11 @@ button.notebook-tab-btn.is-active span {
 
 .case-profile-row {
   display: grid;
-  grid-template-columns: minmax(0, 50ch) max-content;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, max-content) minmax(120px, max-content);
   gap: 10px;
   align-items: end;
   margin-bottom: 8px;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -417,12 +427,15 @@ button.notebook-tab-btn.is-active span {
   min-width: 0;
 }
 
-.case-profile-field-wide input {
+.case-profile-field-wide input,
+.case-profile-field-wide textarea,
+.case-profile-field-wide select {
   width: min(100%, 50ch);
   max-width: 100%;
 }
 
-.case-profile-field-compact input {
+.case-profile-field-compact input,
+.case-profile-field-compact select {
   max-width: 100%;
 }
 
@@ -469,14 +482,31 @@ button.notebook-tab-btn.is-active span {
   margin-bottom: 3px;
 }
 
+table {
+  width: 100%;
+}
+
 @media (max-width: 1180px) {
+  .case-header-strip {
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+  }
+
   .case-snapshot-grid {
     grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+
+  .case-service-grid,
+  .edit-case-note-service-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
   }
 }
 
 @media (max-width: 760px) {
-  .case-snapshot-grid {
+  .case-header-strip,
+  .case-snapshot-grid,
+  .case-service-grid,
+  .edit-case-note-service-grid,
+  .needs-grid {
     grid-template-columns: 1fr;
   }
 
@@ -486,10 +516,20 @@ button.notebook-tab-btn.is-active span {
   }
 
   .case-profile-field-wide input,
+  .case-profile-field-wide textarea,
+  .case-profile-field-wide select,
   .case-input-12ch,
   .case-input-4ch {
     width: 100%;
     max-width: 100%;
+  }
+
+  .case-note-panel-header,
+  .case-program-level-row,
+  .case-button-row,
+  .edit-case-note-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .case-print-summary-grid {
