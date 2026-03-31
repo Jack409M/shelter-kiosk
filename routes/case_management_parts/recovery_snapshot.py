@@ -87,6 +87,75 @@ def _employment_type_display(value: Any) -> str:
     return str(value).replace("_", " ").title()
 
 
+def _result_display(value: Any) -> str:
+    normalized = str(value or "").strip()
+    return normalized or "—"
+
+
+def _medication_items(rows):
+    items = []
+    for med in rows or []:
+        items.append(
+            {
+                "id": med.get("id"),
+                "medication_name": med.get("medication_name"),
+                "dosage": med.get("dosage"),
+                "frequency": med.get("frequency"),
+                "purpose": med.get("purpose"),
+                "prescribed_by": med.get("prescribed_by"),
+                "started_on": med.get("started_on"),
+                "ended_on": med.get("ended_on"),
+                "is_active": med.get("is_active"),
+                "notes": med.get("notes"),
+            }
+        )
+    return items
+
+
+def _ua_items(rows):
+    items = []
+    for row in rows or []:
+        items.append(
+            {
+                "id": row.get("id"),
+                "ua_date": row.get("ua_date"),
+                "result": row.get("result"),
+                "result_display": _result_display(row.get("result")),
+                "substances_detected": row.get("substances_detected"),
+                "notes": row.get("notes"),
+            }
+        )
+    return items
+
+
+def _inspection_items(rows):
+    items = []
+    for row in rows or []:
+        items.append(
+            {
+                "id": row.get("id"),
+                "inspection_date": row.get("inspection_date"),
+                "passed": row.get("passed"),
+                "passed_display": _bool_display(row.get("passed")),
+                "notes": row.get("notes"),
+            }
+        )
+    return items
+
+
+def _budget_items(rows):
+    items = []
+    for row in rows or []:
+        items.append(
+            {
+                "id": row.get("id"),
+                "session_date": row.get("session_date"),
+                "notes": row.get("notes"),
+            }
+        )
+    return items
+
+
 def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     ph = placeholder()
     current_enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
@@ -115,7 +184,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     ) or {}
 
     if current_enrollment_id is not None:
-        medications = db_fetchall(
+        medications_raw = db_fetchall(
             f"""
             SELECT
                 id,
@@ -141,9 +210,10 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             (resident_id, current_enrollment_id),
         )
 
-        latest_ua = db_fetchone(
+        ua_rows_raw = db_fetchall(
             f"""
             SELECT
+                id,
                 ua_date,
                 result,
                 substances_detected,
@@ -152,14 +222,14 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             WHERE resident_id = {ph}
               AND enrollment_id = {ph}
             ORDER BY ua_date DESC, id DESC
-            LIMIT 1
             """,
             (resident_id, current_enrollment_id),
         )
 
-        latest_inspection = db_fetchone(
+        inspection_rows_raw = db_fetchall(
             f"""
             SELECT
+                id,
                 inspection_date,
                 passed,
                 notes
@@ -167,26 +237,25 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             WHERE resident_id = {ph}
               AND enrollment_id = {ph}
             ORDER BY inspection_date DESC, id DESC
-            LIMIT 1
             """,
             (resident_id, current_enrollment_id),
         )
 
-        latest_budget_session = db_fetchone(
+        budget_rows_raw = db_fetchall(
             f"""
             SELECT
+                id,
                 session_date,
                 notes
             FROM resident_budget_sessions
             WHERE resident_id = {ph}
               AND enrollment_id = {ph}
             ORDER BY session_date DESC, id DESC
-            LIMIT 1
             """,
             (resident_id, current_enrollment_id),
         )
     else:
-        medications = db_fetchall(
+        medications_raw = db_fetchall(
             f"""
             SELECT
                 id,
@@ -211,9 +280,10 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             (resident_id,),
         )
 
-        latest_ua = db_fetchone(
+        ua_rows_raw = db_fetchall(
             f"""
             SELECT
+                id,
                 ua_date,
                 result,
                 substances_detected,
@@ -221,34 +291,33 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             FROM resident_ua_log
             WHERE resident_id = {ph}
             ORDER BY ua_date DESC, id DESC
-            LIMIT 1
             """,
             (resident_id,),
         )
 
-        latest_inspection = db_fetchone(
+        inspection_rows_raw = db_fetchall(
             f"""
             SELECT
+                id,
                 inspection_date,
                 passed,
                 notes
             FROM resident_living_area_inspections
             WHERE resident_id = {ph}
             ORDER BY inspection_date DESC, id DESC
-            LIMIT 1
             """,
             (resident_id,),
         )
 
-        latest_budget_session = db_fetchone(
+        budget_rows_raw = db_fetchall(
             f"""
             SELECT
+                id,
                 session_date,
                 notes
             FROM resident_budget_sessions
             WHERE resident_id = {ph}
             ORDER BY session_date DESC, id DESC
-            LIMIT 1
             """,
             (resident_id,),
         )
@@ -258,22 +327,10 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     employment_updated_at = resident.get("employment_updated_at")
     employment_days = _days_since(employment_updated_at)
 
-    medication_items = []
-    for med in medications or []:
-        medication_items.append(
-            {
-                "id": med.get("id"),
-                "medication_name": med.get("medication_name"),
-                "dosage": med.get("dosage"),
-                "frequency": med.get("frequency"),
-                "purpose": med.get("purpose"),
-                "prescribed_by": med.get("prescribed_by"),
-                "started_on": med.get("started_on"),
-                "ended_on": med.get("ended_on"),
-                "is_active": med.get("is_active"),
-                "notes": med.get("notes"),
-            }
-        )
+    medication_items = _medication_items(medications_raw)
+    ua_items = _ua_items(ua_rows_raw)
+    inspection_items = _inspection_items(inspection_rows_raw)
+    budget_items = _budget_items(budget_rows_raw)
 
     snapshot = {
         "program_level": resident.get("program_level"),
@@ -296,31 +353,12 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "step_days": step_days,
         "medications": medication_items,
         "medication_count": len(medication_items),
-        "latest_ua": None,
-        "latest_inspection": None,
-        "latest_budget_session": None,
+        "ua_rows": ua_items,
+        "inspection_rows": inspection_items,
+        "budget_rows": budget_items,
+        "latest_ua": ua_items[0] if ua_items else None,
+        "latest_inspection": inspection_items[0] if inspection_items else None,
+        "latest_budget_session": budget_items[0] if budget_items else None,
     }
-
-    if latest_ua:
-        snapshot["latest_ua"] = {
-            "ua_date": latest_ua.get("ua_date"),
-            "result": latest_ua.get("result"),
-            "substances_detected": latest_ua.get("substances_detected"),
-            "notes": latest_ua.get("notes"),
-        }
-
-    if latest_inspection:
-        snapshot["latest_inspection"] = {
-            "inspection_date": latest_inspection.get("inspection_date"),
-            "passed": latest_inspection.get("passed"),
-            "passed_display": _bool_display(latest_inspection.get("passed")),
-            "notes": latest_inspection.get("notes"),
-        }
-
-    if latest_budget_session:
-        snapshot["latest_budget_session"] = {
-            "session_date": latest_budget_session.get("session_date"),
-            "notes": latest_budget_session.get("notes"),
-        }
 
     return snapshot
