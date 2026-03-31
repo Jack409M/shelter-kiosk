@@ -1,5 +1,5 @@
 <div class="card no-print">
-  <h2>Meeting Note</h2>
+  <h2 id="meeting-note">Meeting Note</h2>
   <p class="case-empty-muted" style="margin-top: -4px;">
     Record the core details of this meeting here. Services provided should be entered in the separate Services Provided section.
   </p>
@@ -51,11 +51,6 @@
       placeholder="Brief overall summary of the meeting"
     >{{ meeting_defaults.overall_summary if meeting_defaults is defined and meeting_defaults.overall_summary else '' }}</textarea>
 
-    {# ------------------------------------------------------------------ #}
-    {# Compatibility fields for current add_case_note route               #}
-    {# Keep these hidden for now so the new workspace partial can land    #}
-    {# before the route is rewritten.                                     #}
-    {# ------------------------------------------------------------------ #}
     <input
       type="hidden"
       name="updated_grit"
