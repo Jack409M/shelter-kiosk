@@ -1,0 +1,130 @@
+{% from "case_management/partials/resident_case/_service_fields.html" import render_service_field %}
+
+{% set case_services = [
+  {
+    "value": "Counseling",
+    "label": "Counseling",
+    "unit_placeholder": "sessions",
+    "unit_default": "sessions",
+    "notes_placeholder": "Counseling notes"
+  },
+  {
+    "value": "Dental",
+    "label": "Dental",
+    "unit_placeholder": "visits",
+    "unit_default": "visits",
+    "notes_placeholder": "Dental notes"
+  },
+  {
+    "value": "Vision",
+    "label": "Vision",
+    "unit_placeholder": "visits",
+    "unit_default": "visits",
+    "notes_placeholder": "Vision notes"
+  },
+  {
+    "value": "Daycare",
+    "label": "Daycare",
+    "unit_placeholder": "days",
+    "unit_default": "days",
+    "notes_placeholder": "Daycare notes"
+  },
+  {
+    "value": "Legal Assistance",
+    "label": "Legal Assistance",
+    "unit_placeholder": "visits",
+    "unit_default": "visits",
+    "notes_placeholder": "Legal assistance notes"
+  },
+  {
+    "value": "Transportation",
+    "label": "Transportation",
+    "unit_placeholder": "rides",
+    "unit_default": "rides",
+    "notes_placeholder": "Transportation notes"
+  },
+  {
+    "value": "Other",
+    "label": "Other",
+    "unit_placeholder": "units",
+    "unit_default": "units",
+    "notes_placeholder": "Other service notes"
+  }
+] %}
+
+<div class="card no-print">
+  <h2>Services Provided</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    Record the services provided during this meeting. These save with the meeting note.
+  </p>
+
+  <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Meeting Date</strong></label>
+    <input
+      type="date"
+      name="meeting_date"
+      value="{{ meeting_defaults.meeting_date if meeting_defaults is defined and meeting_defaults.meeting_date else '' }}"
+      required
+    >
+
+    {# ------------------------------------------------------------------ #}
+    {# Compatibility fields for current add_case_note route               #}
+    {# The current backend expects one case note save that can also       #}
+    {# create linked client_services rows. Keep note fields present here  #}
+    {# until the route is split into true meeting plus service saves.     #}
+    {# ------------------------------------------------------------------ #}
+    <input
+      type="hidden"
+      name="notes"
+      value="{{ meeting_defaults.notes if meeting_defaults is defined and meeting_defaults.notes else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="progress_notes"
+      value="{{ meeting_defaults.progress_notes if meeting_defaults is defined and meeting_defaults.progress_notes else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="action_items"
+      value="{{ meeting_defaults.action_items if meeting_defaults is defined and meeting_defaults.action_items else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="updated_grit"
+      value="{{ meeting_defaults.updated_grit if meeting_defaults is defined and meeting_defaults.updated_grit is not none else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="parenting_class_completed"
+      value="{{ meeting_defaults.parenting_class_completed if meeting_defaults is defined and meeting_defaults.parenting_class_completed else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="warrants_or_fines_paid"
+      value="{{ meeting_defaults.warrants_or_fines_paid if meeting_defaults is defined and meeting_defaults.warrants_or_fines_paid else '' }}"
+    >
+
+    <div class="case-service-grid">
+      {% for service in case_services %}
+        {{ render_service_field(
+          service["value"],
+          service["label"],
+          service["unit_placeholder"],
+          service["unit_default"],
+          service["notes_placeholder"]
+        ) }}
+      {% endfor %}
+    </div>
+
+    <div class="case-section-top">
+      <button type="submit">Save Services</button>
+    </div>
+  </form>
+</div>
