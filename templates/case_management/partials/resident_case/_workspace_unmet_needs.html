@@ -15,12 +15,6 @@
       required
     >
 
-    {# ------------------------------------------------------------------ #}
-    {# Compatibility fields for current add_case_note route               #}
-    {# Open need resolution currently rides on the note save flow.        #}
-    {# Keep the note fields present so this partial can land safely       #}
-    {# before we split needs into their own write route.                  #}
-    {# ------------------------------------------------------------------ #}
     <input
       type="hidden"
       name="notes"
@@ -37,6 +31,18 @@
       type="hidden"
       name="action_items"
       value="{{ meeting_defaults.action_items if meeting_defaults is defined and meeting_defaults.action_items else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="next_appointment"
+      value="{{ meeting_defaults.next_appointment if meeting_defaults is defined and meeting_defaults.next_appointment else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="overall_summary"
+      value="{{ meeting_defaults.overall_summary if meeting_defaults is defined and meeting_defaults.overall_summary else '' }}"
     >
 
     <input
