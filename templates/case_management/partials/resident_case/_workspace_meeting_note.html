@@ -1,0 +1,81 @@
+<div class="card no-print">
+  <h2>Meeting Note</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    Record the core details of this meeting here. Services provided should be entered in the separate Services Provided section.
+  </p>
+
+  <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Meeting Date</strong></label>
+    <input
+      type="date"
+      name="meeting_date"
+      value="{{ meeting_defaults.meeting_date if meeting_defaults is defined and meeting_defaults.meeting_date else '' }}"
+      required
+    >
+
+    <label><strong>Notes</strong></label>
+    <textarea
+      name="notes"
+      rows="4"
+      placeholder="Main notes from the meeting"
+    >{{ meeting_defaults.notes if meeting_defaults is defined and meeting_defaults.notes else '' }}</textarea>
+
+    <label><strong>Progress Notes</strong></label>
+    <textarea
+      name="progress_notes"
+      rows="4"
+      placeholder="Progress made since the last meeting"
+    >{{ meeting_defaults.progress_notes if meeting_defaults is defined and meeting_defaults.progress_notes else '' }}</textarea>
+
+    <label><strong>Action Items</strong></label>
+    <textarea
+      name="action_items"
+      rows="4"
+      placeholder="Next actions for staff or resident"
+    >{{ meeting_defaults.action_items if meeting_defaults is defined and meeting_defaults.action_items else '' }}</textarea>
+
+    <label><strong>Next Appointment</strong></label>
+    <input
+      type="text"
+      name="next_appointment"
+      value="{{ meeting_defaults.next_appointment if meeting_defaults is defined and meeting_defaults.next_appointment else '' }}"
+      placeholder="Example: 2026-04-15 10:00 AM"
+    >
+
+    <label><strong>Overall Summary of Meeting</strong></label>
+    <textarea
+      name="overall_summary"
+      rows="4"
+      placeholder="Brief overall summary of the meeting"
+    >{{ meeting_defaults.overall_summary if meeting_defaults is defined and meeting_defaults.overall_summary else '' }}</textarea>
+
+    {# ------------------------------------------------------------------ #}
+    {# Compatibility fields for current add_case_note route               #}
+    {# Keep these hidden for now so the new workspace partial can land    #}
+    {# before the route is rewritten.                                     #}
+    {# ------------------------------------------------------------------ #}
+    <input
+      type="hidden"
+      name="updated_grit"
+      value="{{ meeting_defaults.updated_grit if meeting_defaults is defined and meeting_defaults.updated_grit is not none else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="parenting_class_completed"
+      value="{{ meeting_defaults.parenting_class_completed if meeting_defaults is defined and meeting_defaults.parenting_class_completed else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="warrants_or_fines_paid"
+      value="{{ meeting_defaults.warrants_or_fines_paid if meeting_defaults is defined and meeting_defaults.warrants_or_fines_paid else '' }}"
+    >
+
+    <div class="case-section-top">
+      <button type="submit">Save Meeting Note</button>
+    </div>
+  </form>
+</div>
