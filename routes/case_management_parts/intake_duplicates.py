@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, redirect, render_template, session, url_for
 
 from core.db import db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import parse_int
+from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.intake_drafts import _complete_intake_draft
 from routes.case_management_parts.intake_drafts import _dismiss_intake_draft
@@ -28,55 +29,6 @@ def _row_value(row: Any, key: str, index: int):
     return row[index]
 
 
-def _duplicate_review_context(
-    *,
-    current_shelter: str,
-    draft_id: int,
-    pending_form_data: dict[str, Any],
-    existing_resident: Any,
-) -> dict[str, Any]:
-    existing_resident_id = _row_value(existing_resident, "id", 0)
-
-    existing_enrollment = None
-    if existing_resident_id is not None:
-        existing_enrollment = db_fetchone(
-            """
-            SELECT
-                id,
-                entry_date,
-                exit_date,
-                program_status,
-                shelter
-            FROM program_enrollments
-            WHERE resident_id = ?
-            ORDER BY id DESC
-            LIMIT 1
-            """
-            if session.get("db_kind") == "sqlite_dummy_never_used"
-            else """
-            SELECT
-                id,
-                entry_date,
-                exit_date,
-                program_status,
-                shelter
-            FROM program_enrollments
-            WHERE resident_id = %s
-            ORDER BY id DESC
-            LIMIT 1
-            """,
-            (),
-        )
-
-    return {
-        "current_shelter": current_shelter,
-        "draft_id": draft_id,
-        "pending_form_data": pending_form_data,
-        "existing_resident": existing_resident,
-        "existing_enrollment": existing_enrollment,
-    }
-
-
 def _fetch_existing_duplicate_for_draft(current_shelter: str, pending_form_data: dict[str, Any]):
     return _find_possible_duplicate(
         first_name=pending_form_data.get("first_name"),
@@ -90,10 +42,8 @@ def _fetch_existing_duplicate_for_draft(current_shelter: str, pending_form_data:
 
 
 def _fetch_existing_enrollment_for_resident(resident_id: int):
-    from core.db import db_fetchone
-    from routes.case_management_parts.helpers import placeholder
-
     ph = placeholder()
+
     return db_fetchone(
         f"""
         SELECT
@@ -104,7 +54,13 @@ def _fetch_existing_enrollment_for_resident(resident_id: int):
             shelter
         FROM program_enrollments
         WHERE resident_id = {ph}
-        ORDER BY id DESC
+        ORDER BY
+            CASE
+                WHEN COALESCE(program_status, '') = 'active' THEN 0
+                ELSE 1
+            END,
+            COALESCE(entry_date, '') DESC,
+            id DESC
         LIMIT 1
         """,
         (resident_id,),
