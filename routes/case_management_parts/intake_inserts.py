@@ -34,6 +34,10 @@ def _missing_item_value(data: dict[str, Any], need_key: str) -> int | None:
     return 0 if data.get(f"need_{need_key}") == "yes" else None
 
 
+def _flag_or_zero(value: int | None) -> int:
+    return 0 if value is None else int(value)
+
+
 def _build_intake_assessment_payload(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "city": data.get("city"),
@@ -48,7 +52,7 @@ def _build_intake_assessment_payload(data: dict[str, Any]) -> dict[str, Any]:
         "drug_of_choice": data.get("drug_of_choice"),
         "ace_score": data.get("ace_score"),
         "grit_score": data.get("grit_score"),
-        "veteran": yes_no_to_int(data.get("veteran")),
+        "veteran": _flag_or_zero(yes_no_to_int(data.get("veteran"))),
         "disability": data.get("disability") or "unknown",
         "marital_status": data.get("marital_status"),
         "notes_basic": data.get("notes_basic"),
@@ -57,28 +61,28 @@ def _build_intake_assessment_payload(data: dict[str, Any]) -> dict[str, Any]:
         "trauma_notes": data.get("trauma_notes"),
         "barrier_notes": data.get("barrier_notes"),
         "place_staying_before_entry": data.get("prior_living"),
-        "entry_felony_conviction": yes_no_to_int(data.get("felony_history")),
-        "entry_parole_probation": yes_no_to_int(data.get("probation_parole")),
-        "drug_court": yes_no_to_int(data.get("drug_court")),
-        "sexual_survivor": yes_no_to_int(data.get("sexual_survivor")),
-        "dv_survivor": yes_no_to_int(data.get("domestic_violence_history")),
-        "human_trafficking_survivor": yes_no_to_int(data.get("human_trafficking_history")),
-        "warrants_unpaid": _checked_need(data, "warrants_fine_resolution"),
+        "entry_felony_conviction": _flag_or_zero(yes_no_to_int(data.get("felony_history"))),
+        "entry_parole_probation": _flag_or_zero(yes_no_to_int(data.get("probation_parole"))),
+        "drug_court": _flag_or_zero(yes_no_to_int(data.get("drug_court"))),
+        "sexual_survivor": _flag_or_zero(yes_no_to_int(data.get("sexual_survivor"))),
+        "dv_survivor": _flag_or_zero(yes_no_to_int(data.get("domestic_violence_history"))),
+        "human_trafficking_survivor": _flag_or_zero(yes_no_to_int(data.get("human_trafficking_history"))),
+        "warrants_unpaid": _flag_or_zero(_checked_need(data, "warrants_fine_resolution")),
         "mh_exam_completed": 0,
         "med_exam_completed": 0,
-        "car_at_entry": yes_no_to_int(data.get("car_at_entry")),
-        "car_insurance_at_entry": yes_no_to_int(data.get("car_insurance_at_entry")),
-        "pregnant_at_entry": yes_no_to_int(data.get("pregnant")),
-        "dental_need_at_entry": _checked_need(data, "dental"),
-        "vision_need_at_entry": _checked_need(data, "vision_glasses"),
+        "car_at_entry": _flag_or_zero(yes_no_to_int(data.get("car_at_entry"))),
+        "car_insurance_at_entry": _flag_or_zero(yes_no_to_int(data.get("car_insurance_at_entry"))),
+        "pregnant_at_entry": _flag_or_zero(yes_no_to_int(data.get("pregnant"))),
+        "dental_need_at_entry": _flag_or_zero(_checked_need(data, "dental")),
+        "vision_need_at_entry": _flag_or_zero(_checked_need(data, "vision_glasses")),
         "employment_status_at_entry": data.get("employment_status"),
-        "mental_health_need_at_entry": None,
-        "medical_need_at_entry": None,
-        "substance_use_need_at_entry": None,
+        "mental_health_need_at_entry": 0,
+        "medical_need_at_entry": 0,
+        "substance_use_need_at_entry": 0,
         "id_documents_status_at_entry": None,
-        "has_drivers_license": _missing_item_value(data, "state_id_drivers_license"),
-        "has_social_security_card": _missing_item_value(data, "social_security_card"),
-        "parenting_class_needed": _checked_need(data, "parenting_class_needed"),
+        "has_drivers_license": _flag_or_zero(_missing_item_value(data, "state_id_drivers_license")),
+        "has_social_security_card": _flag_or_zero(_missing_item_value(data, "social_security_card")),
+        "parenting_class_needed": _flag_or_zero(_checked_need(data, "parenting_class_needed")),
         "dwc_level_today": data.get("dwc_level_today"),
     }
 
