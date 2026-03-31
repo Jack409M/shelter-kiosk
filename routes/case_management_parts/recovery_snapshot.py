@@ -163,7 +163,9 @@ def _load_resident_profile(resident_id: int):
         f"""
         SELECT
             program_level,
+            level_start_date,
             sponsor_name,
+            sponsor_active,
             employer_name,
             employment_status_current,
             employment_type_current,
@@ -174,6 +176,7 @@ def _load_resident_profile(resident_id: int):
             monthly_income,
             employment_updated_at,
             step_current,
+            step_work_active,
             step_changed_at,
             sobriety_date,
             drug_of_choice,
@@ -349,6 +352,9 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
 
     resident = _load_resident_profile(resident_id)
 
+    level_start_date = resident.get("level_start_date")
+    days_on_level = _days_since(level_start_date)
+
     step_changed_at = resident.get("step_changed_at")
     step_days = _days_since(step_changed_at)
 
@@ -370,7 +376,11 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
 
     snapshot = {
         "program_level": resident.get("program_level"),
+        "level_start_date": level_start_date,
+        "days_on_level": days_on_level,
         "sponsor_name": resident.get("sponsor_name"),
+        "sponsor_active": resident.get("sponsor_active"),
+        "sponsor_active_display": _bool_display(resident.get("sponsor_active")),
         "employer_name": resident.get("employer_name"),
         "employment_status_current": resident.get("employment_status_current"),
         "employment_status_display": _employment_status_display(resident.get("employment_status_current")),
@@ -385,6 +395,8 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "employment_updated_at": employment_updated_at,
         "employment_days": employment_days,
         "step_current": resident.get("step_current"),
+        "step_work_active": resident.get("step_work_active"),
+        "step_work_active_display": _bool_display(resident.get("step_work_active")),
         "step_changed_at": step_changed_at,
         "step_days": step_days,
         "sobriety_date": sobriety_date,
