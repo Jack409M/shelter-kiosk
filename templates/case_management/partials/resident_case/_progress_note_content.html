@@ -1,9 +1,16 @@
 {% macro render_progress_note(note) %}
   {% set note_notes = note["notes"] %}
   {% set note_progress_notes = note["progress_notes"] %}
+  {% set note_setbacks_or_incidents = note["setbacks_or_incidents"] %}
   {% set note_action_items = note["action_items"] %}
   {% set note_next_appointment = note["next_appointment"] %}
   {% set note_overall_summary = note["overall_summary"] %}
+  {% set note_ready_for_next_level = note["ready_for_next_level"] %}
+  {% set note_ready_for_next_level_display = note["ready_for_next_level_display"] %}
+  {% set note_recommended_next_level = note["recommended_next_level"] %}
+  {% set note_blocker_reason = note["blocker_reason"] %}
+  {% set note_override_or_exception = note["override_or_exception"] %}
+  {% set note_staff_review_note = note["staff_review_note"] %}
   {% set note_updated_grit = note["updated_grit"] %}
   {% set note_parenting_class_completed = note["parenting_class_completed"] %}
   {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
@@ -24,6 +31,13 @@
     </div>
   {% endif %}
 
+  {% if note_setbacks_or_incidents %}
+    <div class="case-note-section">
+      <strong>Setbacks Or Incidents:</strong><br>
+      <div class="case-note-text-block">{{ note_setbacks_or_incidents }}</div>
+    </div>
+  {% endif %}
+
   {% if note_action_items %}
     <div class="case-note-section">
       <strong>Action Items:</strong><br>
@@ -40,8 +54,51 @@
 
   {% if note_overall_summary %}
     <div class="case-note-section">
-      <strong>Overall Summary of Meeting:</strong><br>
+      <strong>Overall Summary Of Meeting:</strong><br>
       <div class="case-note-text-block">{{ note_overall_summary }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_ready_for_next_level is not none or note_recommended_next_level or note_blocker_reason or note_override_or_exception or note_staff_review_note %}
+    <div class="case-note-section">
+      <strong>Advancement Review:</strong>
+
+      <div class="case-note-service-card-grid">
+        {% if note_ready_for_next_level is not none %}
+          <div class="case-note-service-card">
+            <div><strong>Ready For Next Level</strong></div>
+            <div class="case-note-service-meta">{{ note_ready_for_next_level_display or "—" }}</div>
+          </div>
+        {% endif %}
+
+        {% if note_recommended_next_level %}
+          <div class="case-note-service-card">
+            <div><strong>Recommended Next Level</strong></div>
+            <div class="case-note-service-meta">{{ note_recommended_next_level }}</div>
+          </div>
+        {% endif %}
+
+        {% if note_blocker_reason %}
+          <div class="case-note-service-card">
+            <div><strong>Blocker Reason</strong></div>
+            <div class="case-note-service-text case-note-text-block">{{ note_blocker_reason }}</div>
+          </div>
+        {% endif %}
+
+        {% if note_override_or_exception %}
+          <div class="case-note-service-card">
+            <div><strong>Override Or Exception</strong></div>
+            <div class="case-note-service-text case-note-text-block">{{ note_override_or_exception }}</div>
+          </div>
+        {% endif %}
+
+        {% if note_staff_review_note %}
+          <div class="case-note-service-card">
+            <div><strong>Staff Review Note</strong></div>
+            <div class="case-note-service-text case-note-text-block">{{ note_staff_review_note }}</div>
+          </div>
+        {% endif %}
+      </div>
     </div>
   {% endif %}
 
@@ -82,17 +139,13 @@
             {% set change_type_display = item["change_type_display"] %}
             {% set normalized_new = (new_value|string|trim) if new_value is not none else "" %}
             {% set normalized_detail = (detail|string|trim) if detail is not none else "" %}
-            {% set show_meta = false %}
             {% set show_detail = false %}
 
             {% if old_value and new_value and old_value != new_value %}
-              {% set show_meta = true %}
               {% set show_detail = normalized_detail != "" and normalized_detail != normalized_new %}
             {% elif new_value %}
-              {% set show_meta = true %}
               {% set show_detail = normalized_detail != "" and normalized_detail != normalized_new %}
             {% elif change_type_display and change_type_display != "Snapshot" %}
-              {% set show_meta = true %}
               {% set show_detail = normalized_detail != "" %}
             {% else %}
               {% set show_detail = normalized_detail != "" %}
@@ -161,9 +214,15 @@
 {% macro render_progress_note_print_summary(note) %}
   {% set note_notes = note["notes"] %}
   {% set note_progress_notes = note["progress_notes"] %}
+  {% set note_setbacks_or_incidents = note["setbacks_or_incidents"] %}
   {% set note_action_items = note["action_items"] %}
   {% set note_next_appointment = note["next_appointment"] %}
   {% set note_overall_summary = note["overall_summary"] %}
+  {% set note_ready_for_next_level_display = note["ready_for_next_level_display"] %}
+  {% set note_recommended_next_level = note["recommended_next_level"] %}
+  {% set note_blocker_reason = note["blocker_reason"] %}
+  {% set note_override_or_exception = note["override_or_exception"] %}
+  {% set note_staff_review_note = note["staff_review_note"] %}
   {% set note_updated_grit = note["updated_grit"] %}
   {% set note_parenting_class_completed = note["parenting_class_completed"] %}
   {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
@@ -174,7 +233,8 @@
     resident_services=[],
     child_services=[],
     file_changes=[],
-    outstanding_needs=[]
+    outstanding_needs=[],
+    advancement_items=[]
   ) %}
 
   {% for service in note_services %}
@@ -183,6 +243,22 @@
       {% set _ = ns.resident_services.append(service_type) %}
     {% endif %}
   {% endfor %}
+
+  {% if note_ready_for_next_level_display and note_ready_for_next_level_display != "—" %}
+    {% set _ = ns.advancement_items.append("Ready For Next Level: " ~ note_ready_for_next_level_display) %}
+  {% endif %}
+  {% if note_recommended_next_level %}
+    {% set _ = ns.advancement_items.append("Recommended Next Level: " ~ note_recommended_next_level) %}
+  {% endif %}
+  {% if note_blocker_reason %}
+    {% set _ = ns.advancement_items.append("Blocker Reason: " ~ note_blocker_reason) %}
+  {% endif %}
+  {% if note_override_or_exception %}
+    {% set _ = ns.advancement_items.append("Override Or Exception: " ~ note_override_or_exception) %}
+  {% endif %}
+  {% if note_staff_review_note %}
+    {% set _ = ns.advancement_items.append("Staff Review Note: " ~ note_staff_review_note) %}
+  {% endif %}
 
   {% for summary_group in note_summary_groups %}
     {% set group_key = summary_group.get("group_key", "") %}
@@ -229,6 +305,15 @@
           {% set _ = ns.file_changes.append(entry) %}
         {% endif %}
       {% endfor %}
+    {% elif group_key == "advancement" or group_label == "Advancement Review" %}
+      {% for item in summary_group["items"] %}
+        {% set label = item["item_label"] or "Advancement" %}
+        {% set value = item["new_value"] or item["detail"] or item["change_type_display"] or "" %}
+        {% set entry = label ~ ": " ~ value if value else label %}
+        {% if entry and entry not in ns.advancement_items %}
+          {% set _ = ns.advancement_items.append(entry) %}
+        {% endif %}
+      {% endfor %}
     {% elif group_key == "need_outstanding" or group_label == "Needs Still Outstanding" %}
       {% for item in summary_group["items"] %}
         {% set label = item["item_label"] or item["detail"] or item["new_value"] or "" %}
@@ -260,6 +345,13 @@
     </div>
   {% endif %}
 
+  {% if note_setbacks_or_incidents %}
+    <div class="case-note-section">
+      <strong>Setbacks Or Incidents:</strong><br>
+      <div class="case-note-text-block">{{ note_setbacks_or_incidents }}</div>
+    </div>
+  {% endif %}
+
   {% if note_action_items %}
     <div class="case-note-section">
       <strong>Action Items:</strong><br>
@@ -276,7 +368,7 @@
 
   {% if note_overall_summary %}
     <div class="case-note-section">
-      <strong>Overall Summary of Meeting:</strong><br>
+      <strong>Overall Summary Of Meeting:</strong><br>
       <div class="case-note-text-block">{{ note_overall_summary }}</div>
     </div>
   {% endif %}
@@ -331,6 +423,17 @@
           <div class="case-print-summary-title">Changes to her file include</div>
           <ul class="case-print-summary-list">
             {% for item in ns.file_changes %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if ns.advancement_items %}
+        <div class="case-print-summary-section">
+          <div class="case-print-summary-title">Advancement review</div>
+          <ul class="case-print-summary-list">
+            {% for item in ns.advancement_items %}
               <li>{{ item }}</li>
             {% endfor %}
           </ul>
