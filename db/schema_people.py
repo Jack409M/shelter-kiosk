@@ -68,7 +68,9 @@ def ensure_residents_table(kind: str) -> None:
             medical_alerts TEXT,
             medical_notes TEXT,
             program_level TEXT,
+            level_start_date TEXT,
             sponsor_name TEXT,
+            sponsor_active INTEGER,
             sobriety_date TEXT,
             drug_of_choice TEXT,
             treatment_graduation_date TEXT,
@@ -82,6 +84,7 @@ def ensure_residents_table(kind: str) -> None:
             monthly_income REAL,
             employment_updated_at TEXT,
             step_current INTEGER,
+            step_work_active INTEGER,
             step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
@@ -104,7 +107,9 @@ def ensure_residents_table(kind: str) -> None:
             medical_alerts TEXT,
             medical_notes TEXT,
             program_level TEXT,
+            level_start_date TEXT,
             sponsor_name TEXT,
+            sponsor_active BOOLEAN,
             sobriety_date TEXT,
             drug_of_choice TEXT,
             treatment_graduation_date TEXT,
@@ -118,6 +123,7 @@ def ensure_residents_table(kind: str) -> None:
             monthly_income DOUBLE PRECISION,
             employment_updated_at TEXT,
             step_current INTEGER,
+            step_work_active BOOLEAN,
             step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
@@ -221,7 +227,9 @@ def ensure_recovery_profile_columns(kind: str) -> None:
     if kind == "pg":
         statements = [
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS program_level TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS level_start_date TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sponsor_name TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sponsor_active BOOLEAN",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sobriety_date TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS drug_of_choice TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS treatment_graduation_date TEXT",
@@ -235,12 +243,15 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS monthly_income DOUBLE PRECISION",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS employment_updated_at TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_current INTEGER",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_work_active BOOLEAN",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_changed_at TEXT",
         ]
     else:
         statements = [
             "ALTER TABLE residents ADD COLUMN program_level TEXT",
+            "ALTER TABLE residents ADD COLUMN level_start_date TEXT",
             "ALTER TABLE residents ADD COLUMN sponsor_name TEXT",
+            "ALTER TABLE residents ADD COLUMN sponsor_active INTEGER",
             "ALTER TABLE residents ADD COLUMN sobriety_date TEXT",
             "ALTER TABLE residents ADD COLUMN drug_of_choice TEXT",
             "ALTER TABLE residents ADD COLUMN treatment_graduation_date TEXT",
@@ -254,6 +265,7 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN monthly_income REAL",
             "ALTER TABLE residents ADD COLUMN employment_updated_at TEXT",
             "ALTER TABLE residents ADD COLUMN step_current INTEGER",
+            "ALTER TABLE residents ADD COLUMN step_work_active INTEGER",
             "ALTER TABLE residents ADD COLUMN step_changed_at TEXT",
         ]
 
