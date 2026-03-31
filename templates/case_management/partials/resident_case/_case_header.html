@@ -1,73 +1,90 @@
+{% set wh = workspace_header if workspace_header is defined and workspace_header else {} %}
+{% set header_resident_name = wh.get("resident_name") or (first_name ~ " " ~ last_name) %}
+{% set header_shelter = wh.get("shelter") or shelter %}
+{% set header_resident_status = wh.get("resident_status") or ("Active" if resident_active else "Inactive") %}
+{% set header_program_status = wh.get("program_status") or enrollment_program_status %}
+{% set header_entry_date = wh.get("entry_date") or enrollment_entry_date %}
+{% set header_level = wh.get("level") %}
+{% set header_step = wh.get("step") %}
+{% set header_days_sober = wh.get("days_sober") %}
+{% set header_open_needs_count = wh.get("open_needs_count", 0) %}
+
 <div class="case-header-strip">
   <div class="card case-header-print">
-    <h2>{{ first_name }} {{ last_name }}</h2>
+    <h2>{{ header_resident_name }}</h2>
 
     <p>
       <strong>Resident Code:</strong> {{ resident_code or "—" }}<br>
-      <strong>Shelter:</strong> {{ shelter | shelter if shelter else "—" }}<br>
-      <strong>Status:</strong> {{ "Active" if resident_active else "Inactive" }}
+      <strong>Shelter:</strong> {{ header_shelter | shelter if header_shelter else "—" }}<br>
+      <strong>Status:</strong> {{ header_resident_status }}<br>
+      <strong>Program Status:</strong> {{ header_program_status|replace("_", " ")|title if header_program_status else "Not enrolled" }}<br>
+      <strong>Entry Date:</strong> {{ header_entry_date or "—" }}
     </p>
-
-    <a class="btn no-print" href="{{ url_for('case_management.index') }}">
-      Back to Case List
-    </a>
-
-    <a class="btn no-print" href="{{ url_for('case_management.intake_edit', resident_id=resident_id) }}">
-      Edit Intake
-    </a>
   </div>
 
   <div class="card case-header-print">
-    <h2>Program Information</h2>
+    <h2>Workspace Snapshot</h2>
 
     <p>
-      <strong>Program Status:</strong> {{ enrollment_program_status|replace("_", " ")|title if enrollment_program_status else "Not enrolled" }}<br>
-      <strong>Enrollment ID:</strong> {{ enrollment_id or "—" }}<br>
-      <strong>Entry Date:</strong> {{ enrollment_entry_date or "—" }}<br>
-      <strong>Exit Date:</strong> {{ enrollment_exit_date or "—" }}
+      <strong>Level:</strong>
+      {% if header_level %}
+        Level {{ header_level }}
+      {% else %}
+        —
+      {% endif %}
+      <br>
+
+      <strong>Step:</strong>
+      {% if header_step is not none and header_step != "" %}
+        {{ header_step }}
+      {% else %}
+        —
+      {% endif %}
+      <br>
+
+      <strong>Days Sober:</strong>
+      {% if header_days_sober is not none %}
+        {{ header_days_sober }}
+      {% else %}
+        —
+      {% endif %}
+      <br>
+
+      <strong>Open Needs:</strong> {{ header_open_needs_count }}
     </p>
 
     {% if enrollment_id %}
       <div class="case-program-level-row no-print">
-        <div class="case-program-level-display">
-          <strong>Level:</strong>
-          {% if rs_level %}
-            Level {{ rs_level }}
-          {% else %}
-            —
-          {% endif %}
-        </div>
+        <a class="btn" href="#meeting-note">
+          Save Meeting
+        </a>
 
-        <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}" class="case-level-edit-form">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="sponsor_name" value="{{ rs_sponsor or '' }}">
-          <input type="hidden" name="employment_status_current" value="{{ rs_employment_status or '' }}">
-          <input type="hidden" name="employment_type_current" value="{{ rs_employment_type or '' }}">
-          <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
-          <input type="hidden" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
-          <input type="hidden" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
-          <input type="hidden" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
-          <input type="hidden" name="employment_notes" value="{{ rs_employment_notes or '' }}">
-          <input type="hidden" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
-          <input type="hidden" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
+        <button type="button" class="btn" onclick="window.print()">
+          Print Summary
+        </button>
 
-          <select name="program_level" class="case-input-4ch case-level-select">
-            <option value="" {% if not rs_level %}selected{% endif %}>—</option>
-            <option value="1" {% if rs_level|string == "1" %}selected{% endif %}>1</option>
-            <option value="2" {% if rs_level|string == "2" %}selected{% endif %}>2</option>
-            <option value="3" {% if rs_level|string == "3" %}selected{% endif %}>3</option>
-            <option value="4" {% if rs_level|string == "4" %}selected{% endif %}>4</option>
-            <option value="5" {% if rs_level|string == "5" %}selected{% endif %}>5</option>
-            <option value="6" {% if rs_level|string == "6" %}selected{% endif %}>6</option>
-            <option value="7" {% if rs_level|string == "7" %}selected{% endif %}>7</option>
-            <option value="8" {% if rs_level|string == "8" %}selected{% endif %}>8</option>
-            <option value="9" {% if rs_level|string == "9" %}selected{% endif %}>9</option>
-            <option value="10" {% if rs_level|string == "10" %}selected{% endif %}>10</option>
-          </select>
-
-          <button type="submit" class="btn">Edit</button>
-        </form>
+        <button type="button" class="btn" onclick="window.print()">
+          Print Full File
+        </button>
       </div>
+    {% endif %}
+  </div>
+
+  <div class="card case-header-print no-print">
+    <h2>Actions</h2>
+
+    <a class="btn" href="{{ url_for('case_management.index') }}">
+      Back to Case List
+    </a>
+
+    <a class="btn" href="{{ url_for('case_management.intake_edit', resident_id=resident_id) }}">
+      Edit Intake
+    </a>
+
+    {% if enrollment_id %}
+      <a class="btn" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">
+        Family Intake
+      </a>
     {% endif %}
   </div>
 </div>
