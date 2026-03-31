@@ -1,9 +1,8 @@
 {% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note, render_progress_note_print_summary %}
 
-<div class="card">
-  <h2>Meeting History</h2>
-  <p class="case-empty-muted" style="margin-top: -4px;">
-    Review prior meeting notes, services, and summarized changes here.
+<div class="cmx-history-list-wrap">
+  <p class="cmx-muted" style="margin-top:-4px; margin-bottom:14px;">
+    Review prior meetings, services, setbacks, and advancement decisions here.
   </p>
 
   {% if notes %}
@@ -13,6 +12,7 @@
         {% set note_meeting_date = note["meeting_date"] %}
         {% set note_services = note["services"] %}
         {% set note_summary_groups = note["summary_groups"] or [] %}
+        {% set note_ready_display = note["ready_for_next_level_display"] if note["ready_for_next_level_display"] else "—" %}
 
         <button
           type="button"
@@ -21,13 +21,14 @@
           data-print-target="print-case-note-{{ note_id }}"
         >
           <div><strong>{{ note_meeting_date or "—" }}</strong></div>
+          <div class="case-note-tile-meta">Ready: {{ note_ready_display }}</div>
           {% if note_services %}
             <div class="case-note-tile-meta">
-              {{ note_services|length }} svc
+              {{ note_services|length }} services
             </div>
           {% elif note_summary_groups %}
             <div class="case-note-tile-meta">
-              {{ note_summary_groups|length }} chg
+              {{ note_summary_groups|length }} change groups
             </div>
           {% endif %}
         </button>
@@ -40,7 +41,7 @@
         {% set note_meeting_date = note["meeting_date"] %}
         {% set note_created_at = note["created_at"] %}
 
-        <div id="case-note-panel-{{ note_id }}" class="card case-note-panel">
+        <div id="case-note-panel-{{ note_id }}" class="cmx-card case-note-panel">
           <div class="case-note-panel-header">
             <div>
               <h3 class="case-note-panel-title">Meeting {{ note_meeting_date or "—" }}</h3>
@@ -51,10 +52,10 @@
 
             {% if note_id %}
               <div class="print-hide case-note-actions">
-                <button type="button" class="btn" onclick="window.print()">
+                <button type="button" class="cmx-btn-muted" onclick="window.print()">
                   Print
                 </button>
-                <a class="btn" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
+                <a class="cmx-btn-muted" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
                   Edit Note
                 </a>
               </div>
@@ -83,6 +84,6 @@
 
     <div id="print-selected-note" class="print-only-note"></div>
   {% else %}
-    <p class="progress-notes-empty">No meetings recorded.</p>
+    <p class="cmx-muted">No meetings recorded.</p>
   {% endif %}
 </div>
