@@ -147,11 +147,7 @@
                 <td>{{ child_birth_year or "—" }}</td>
                 <td>{{ child.relationship_display or "—" }}</td>
                 <td>{{ child.living_status_display or "—" }}</td>
-                <td>
-                  <a class="btn btn-sm" href="{{ url_for('case_management.child_services', child_id=child_id) }}">
-                    Services
-                  </a>
-                </td>
+                <td>Inline Below</td>
               </tr>
               <tr>
                 <td colspan="5">
@@ -180,6 +176,32 @@
                       No services recorded
                     </div>
                   {% endif %}
+
+                  <form method="post" action="{{ url_for('case_management.child_services', child_id=child_id) }}" style="margin-top:12px;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                    <label><strong>Service Date</strong></label>
+                    <input type="date" name="service_date">
+
+                    <label><strong>Service Type</strong></label>
+                    <input type="text" name="service_type">
+
+                    <label><strong>Outcome</strong></label>
+                    <input type="text" name="outcome">
+
+                    <label><strong>Quantity</strong></label>
+                    <input type="number" name="quantity" min="0">
+
+                    <label><strong>Unit</strong></label>
+                    <input type="text" name="unit">
+
+                    <label><strong>Notes</strong></label>
+                    <textarea name="notes" rows="2"></textarea>
+
+                    <div style="margin-top:10px;">
+                      <button type="submit">Save Child Service</button>
+                    </div>
+                  </form>
                 </td>
               </tr>
             {% endfor %}
