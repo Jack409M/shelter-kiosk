@@ -1,4 +1,31 @@
 (function () {
+  function currentResidentPathKey() {
+    var path = window.location.pathname || "";
+    return "resident_case_state:" + path;
+  }
+
+  function readState() {
+    try {
+      var raw = window.localStorage.getItem(currentResidentPathKey());
+      if (!raw) {
+        return {};
+      }
+      var parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (err) {
+      return {};
+    }
+  }
+
+  function writeState(nextState) {
+    try {
+      var current = readState();
+      var merged = Object.assign({}, current, nextState || {});
+      window.localStorage.setItem(currentResidentPathKey(), JSON.stringify(merged));
+    } catch (err) {
+    }
+  }
+
   function showResidentNotebookTab(tabId, btnEl) {
     var tabs = document.querySelectorAll(".resident-notebook-tab");
     tabs.forEach(function (tab) {
@@ -13,10 +40,16 @@
     var target = document.getElementById(tabId);
     if (target) {
       target.style.display = "block";
+      writeState({ activeTabId: tabId });
     }
 
     if (btnEl) {
       btnEl.classList.add("is-active");
+    } else {
+      var fallbackButton = document.querySelector('[data-tab-target="' + tabId + '"]');
+      if (fallbackButton) {
+        fallbackButton.classList.add("is-active");
+      }
     }
   }
 
@@ -65,6 +98,10 @@
       });
 
       setPrintMarkup(printId);
+      writeState({
+        activeNotePanelId: panelId || "",
+        activeNotePrintId: printId || ""
+      });
     }
 
     function getActiveTile() {
@@ -101,12 +138,23 @@
       lane.scrollLeft = lane.scrollWidth;
     }
 
-    var newestTile = tiles[tiles.length - 1];
-    if (newestTile) {
-      showPanel(
-        newestTile.getAttribute("data-note-target"),
-        newestTile.getAttribute("data-print-target")
-      );
+    var state = readState();
+    var savedPanelId = state.activeNotePanelId || "";
+    var savedPrintId = state.activeNotePrintId || "";
+    var savedTile = tiles.find(function (tile) {
+      return tile.getAttribute("data-note-target") === savedPanelId;
+    });
+
+    if (savedTile) {
+      showPanel(savedPanelId, savedPrintId || savedTile.getAttribute("data-print-target"));
+    } else {
+      var newestTile = tiles[tiles.length - 1];
+      if (newestTile) {
+        showPanel(
+          newestTile.getAttribute("data-note-target"),
+          newestTile.getAttribute("data-print-target")
+        );
+      }
     }
 
     window.addEventListener("beforeprint", function () {
@@ -125,6 +173,9 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    var state = readState();
+    var activeTabId = state.activeTabId || "resident-file-tab";
+    showResidentNotebookTab(activeTabId, null);
     initCaseNotePanels();
   });
 })();
