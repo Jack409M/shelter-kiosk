@@ -8,6 +8,7 @@ from flask import Blueprint, g, render_template, session
 from core.auth import require_login, require_shelter
 from core.db import db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
+from routes.case_management_parts.helpers import current_enrollment_order_sql
 
 case_dashboard = Blueprint(
     "case_dashboard",
@@ -189,7 +190,7 @@ def dashboard():
 
     family_intakes_pending_rows = db_fetchall(
         _sql(
-            """
+            f"""
             SELECT
                 r.id,
                 r.first_name,
@@ -202,13 +203,7 @@ def dashboard():
                 SELECT pe2.id
                 FROM program_enrollments pe2
                 WHERE pe2.resident_id = r.id
-                ORDER BY
-                    CASE
-                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
-                        ELSE 1
-                    END,
-                    COALESCE(pe2.entry_date, '') DESC,
-                    pe2.id DESC
+                ORDER BY {current_enrollment_order_sql("pe2")}
                 LIMIT 1
               )
             JOIN family_snapshots fs
@@ -233,7 +228,7 @@ def dashboard():
             HAVING (COALESCE(fs.kids_at_dwc, 0) + COALESCE(fs.kids_served_outside_under_18, 0)) > COUNT(rc.id)
             ORDER BY r.last_name, r.first_name, r.id
             """,
-            """
+            f"""
             SELECT
                 r.id,
                 r.first_name,
@@ -246,13 +241,7 @@ def dashboard():
                 SELECT pe2.id
                 FROM program_enrollments pe2
                 WHERE pe2.resident_id = r.id
-                ORDER BY
-                    CASE
-                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
-                        ELSE 1
-                    END,
-                    COALESCE(pe2.entry_date, '') DESC,
-                    pe2.id DESC
+                ORDER BY {current_enrollment_order_sql("pe2")}
                 LIMIT 1
               )
             JOIN family_snapshots fs
@@ -463,7 +452,7 @@ def dashboard():
 
     appointments_today_rows = db_fetchall(
         _sql(
-            """
+            f"""
             SELECT
                 r.id,
                 r.first_name,
@@ -477,13 +466,7 @@ def dashboard():
                 SELECT pe2.id
                 FROM program_enrollments pe2
                 WHERE pe2.resident_id = r.id
-                ORDER BY
-                    CASE
-                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
-                        ELSE 1
-                    END,
-                    COALESCE(pe2.entry_date, '') DESC,
-                    pe2.id DESC
+                ORDER BY {current_enrollment_order_sql("pe2")}
                 LIMIT 1
               )
             JOIN appointments a
@@ -493,7 +476,7 @@ def dashboard():
               AND a.appointment_date = %s
             ORDER BY r.last_name, r.first_name, a.id
             """,
-            """
+            f"""
             SELECT
                 r.id,
                 r.first_name,
@@ -507,13 +490,7 @@ def dashboard():
                 SELECT pe2.id
                 FROM program_enrollments pe2
                 WHERE pe2.resident_id = r.id
-                ORDER BY
-                    CASE
-                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
-                        ELSE 1
-                    END,
-                    COALESCE(pe2.entry_date, '') DESC,
-                    pe2.id DESC
+                ORDER BY {current_enrollment_order_sql("pe2")}
                 LIMIT 1
               )
             JOIN appointments a
