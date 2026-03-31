@@ -18,6 +18,10 @@ def _resident_case_redirect(resident_id: int):
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
+def _medications_redirect(resident_id: int):
+    return redirect(url_for("case_management.medications", resident_id=resident_id))
+
+
 def _clean(value: str | None) -> str | None:
     value = (value or "").strip()
     return value or None
@@ -34,6 +38,16 @@ def _parse_iso_date(value: str | None) -> str | None:
         return None
 
     return value
+
+
+def _quick_add_requested() -> bool:
+    return (request.form.get("redirect_to") or "").strip().lower() == "resident_case"
+
+
+def _post_submit_redirect(resident_id: int):
+    if _quick_add_requested():
+        return _resident_case_redirect(resident_id)
+    return _medications_redirect(resident_id)
 
 
 def _resident_context(resident_id: int):
@@ -161,7 +175,7 @@ def add_medication_view(resident_id: int):
     data, error = _validate_medication_form()
     if error:
         flash(error, "error")
-        return redirect(url_for("case_management.medications", resident_id=resident_id))
+        return _post_submit_redirect(resident_id)
 
     now = utcnow_iso()
     ph = placeholder()
@@ -214,7 +228,7 @@ def add_medication_view(resident_id: int):
             resident.get("enrollment_id"),
         )
         flash("Unable to add medication. Please try again or contact an administrator.", "error")
-        return redirect(url_for("case_management.medications", resident_id=resident_id))
+        return _post_submit_redirect(resident_id)
 
     flash("Medication added.", "success")
     return _resident_case_redirect(resident_id)

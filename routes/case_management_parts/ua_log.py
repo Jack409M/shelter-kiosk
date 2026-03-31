@@ -16,9 +16,23 @@ def _resident_case_redirect(resident_id: int):
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
+def _ua_log_redirect(resident_id: int):
+    return redirect(url_for("case_management.ua_log", resident_id=resident_id))
+
+
 def _clean(value: str | None) -> str | None:
     value = (value or "").strip()
     return value or None
+
+
+def _quick_add_requested() -> bool:
+    return (request.form.get("redirect_to") or "").strip().lower() == "resident_case"
+
+
+def _post_submit_redirect(resident_id: int):
+    if _quick_add_requested():
+        return _resident_case_redirect(resident_id)
+    return _ua_log_redirect(resident_id)
 
 
 def _resident_context(resident_id: int):
@@ -103,7 +117,7 @@ def add_ua_log_view(resident_id: int):
 
     if not ua_date:
         flash("UA date is required.", "error")
-        return redirect(url_for("case_management.ua_log", resident_id=resident_id))
+        return _post_submit_redirect(resident_id)
 
     now = utcnow_iso()
     ph = placeholder()
