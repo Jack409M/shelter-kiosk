@@ -1,114 +1,217 @@
 from __future__ import annotations
 
-from datetime import date
-from typing import Any
+from flask import flash, redirect, render_template, request, session, url_for
 
-from flask import g
-from flask import session
-
-from core.db import db_fetchone
-
-
-def case_manager_allowed() -> bool:
-    return session.get("role") in {"admin", "shelter_director", "case_manager"}
-
-
-def normalize_shelter_name(value: str | None) -> str:
-    return (value or "").strip().lower()
+from core.db import db_execute, db_fetchall, db_fetchone
+from core.helpers import utcnow_iso
+from core.runtime import init_db
+from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
+from routes.case_management_parts.helpers import normalize_shelter_name
+from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import shelter_equals_sql
 
 
-def shelter_equals_sql(column_name: str) -> str:
-    if g.get("db_kind") == "pg":
-        return f"LOWER(COALESCE({column_name}, '')) = %s"
-    return f"LOWER(COALESCE({column_name}, '')) = ?"
-
-
-def placeholder() -> str:
-    return "%s" if g.get("db_kind") == "pg" else "?"
-
-
-def current_enrollment_order_sql(alias: str = "") -> str:
-    prefix = f"{alias}." if alias else ""
-    return (
-        f"CASE WHEN COALESCE({prefix}program_status, '') = 'active' THEN 0 ELSE 1 END, "
-        f"COALESCE({prefix}entry_date, '') DESC, "
-        f"{prefix}id DESC"
-    )
-
-
-def fetch_current_enrollment_for_resident(resident_id: int, columns: str = "*"):
-    ph = placeholder()
-    return db_fetchone(
-        f"""
-        SELECT {columns}
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY {current_enrollment_order_sql()}
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
-
-
-def fetch_current_enrollment_id_for_resident(resident_id: int) -> int | None:
-    row = fetch_current_enrollment_for_resident(resident_id, columns="id")
-    if not row:
-        return None
-    if isinstance(row, dict):
-        return row.get("id")
-    return row[0]
-
-
-def clean(value: str | None) -> str | None:
+def _clean(value: str | None) -> str | None:
     value = (value or "").strip()
     return value or None
 
 
-def digits_only(value: str | None) -> str:
-    return "".join(ch for ch in (value or "") if ch.isdigit())
+def _resident_context(resident_id: int):
+    shelter = normalize_shelter_name(session.get("shelter"))
+    ph = placeholder()
 
+    resident = db_fetchone(
+        f"""
+        SELECT
+            r.id,
+            r.first_name,
+            r.last_name,
+            r.shelter
+        FROM residents r
+        WHERE r.id = {ph}
+          AND {shelter_equals_sql("r.shelter")}
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
 
-def parse_iso_date(value: str | None) -> date | None:
-    value = clean(value)
-    if not value:
-        return None
-    try:
-        return date.fromisoformat(value)
-    except ValueError:
-        return None
-
-
-def parse_int(value: str | None) -> int | None:
-    value = clean(value)
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except ValueError:
-        return None
-
-
-def parse_money(value: str | None) -> float | None:
-    value = clean(value)
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except ValueError:
+    if not resident:
         return None
 
-
-def yes_no_to_int(value: str | None) -> int | None:
-    normalized = (value or "").strip().lower()
-    if normalized == "yes":
-        return 1
-    if normalized == "no":
-        return 0
-    return None
+    resident = dict(resident)
+    resident["enrollment_id"] = fetch_current_enrollment_id_for_resident(resident_id)
+    return resident
 
 
-def draft_display_name(form: Any) -> str:
-    first_name = clean(form.get("first_name")) or ""
-    last_name = clean(form.get("last_name")) or ""
-    full_name = f"{first_name} {last_name}".strip()
-    return full_name or "Unnamed intake draft"
+def ua_log_view(resident_id: int):
+    init_db()
+
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    resident = _resident_context(resident_id)
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    ph = placeholder()
+
+    ua_rows = db_fetchall(
+        f"""
+        SELECT
+            id,
+            ua_date,
+            result,
+            substances_detected,
+            notes
+        FROM resident_ua_log
+        WHERE resident_id = {ph}
+        ORDER BY ua_date DESC, id DESC
+        """,
+        (resident_id,),
+    )
+
+    return render_template(
+        "case_management/ua_log.html",
+        resident=resident,
+        ua_rows=ua_rows,
+    )
+
+
+def add_ua_log_view(resident_id: int):
+    init_db()
+
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    resident = _resident_context(resident_id)
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    ua_date = _clean(request.form.get("ua_date"))
+    result = _clean(request.form.get("result"))
+    substances_detected = _clean(request.form.get("substances_detected"))
+    notes = _clean(request.form.get("notes"))
+
+    if not ua_date:
+        flash("UA date is required.", "error")
+        return redirect(url_for("case_management.ua_log", resident_id=resident_id))
+
+    now = utcnow_iso()
+    ph = placeholder()
+
+    db_execute(
+        f"""
+        INSERT INTO resident_ua_log
+        (
+            resident_id,
+            enrollment_id,
+            ua_date,
+            result,
+            substances_detected,
+            administered_by_staff_user_id,
+            notes,
+            created_at,
+            updated_at
+        )
+        VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+        """,
+        (
+            resident_id,
+            resident.get("enrollment_id"),
+            ua_date,
+            result,
+            substances_detected,
+            session.get("staff_user_id"),
+            notes,
+            now,
+            now,
+        ),
+    )
+
+    flash("UA log entry added.", "success")
+    return redirect(url_for("case_management.ua_log", resident_id=resident_id))
+
+
+def edit_ua_log_view(resident_id: int, ua_id: int):
+    init_db()
+
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    resident = _resident_context(resident_id)
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    ph = placeholder()
+
+    ua_row = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_id,
+            ua_date,
+            result,
+            substances_detected,
+            notes
+        FROM resident_ua_log
+        WHERE id = {ph}
+          AND resident_id = {ph}
+        LIMIT 1
+        """,
+        (ua_id, resident_id),
+    )
+
+    if not ua_row:
+        flash("UA log entry not found.", "error")
+        return redirect(url_for("case_management.ua_log", resident_id=resident_id))
+
+    if request.method == "GET":
+        return render_template(
+            "case_management/edit_ua_log.html",
+            resident=resident,
+            ua_row=ua_row,
+        )
+
+    ua_date = _clean(request.form.get("ua_date"))
+    result = _clean(request.form.get("result"))
+    substances_detected = _clean(request.form.get("substances_detected"))
+    notes = _clean(request.form.get("notes"))
+
+    if not ua_date:
+        flash("UA date is required.", "error")
+        return redirect(url_for("case_management.edit_ua_log", resident_id=resident_id, ua_id=ua_id))
+
+    now = utcnow_iso()
+
+    db_execute(
+        f"""
+        UPDATE resident_ua_log
+        SET
+            ua_date = {ph},
+            result = {ph},
+            substances_detected = {ph},
+            notes = {ph},
+            updated_at = {ph}
+        WHERE id = {ph}
+          AND resident_id = {ph}
+        """,
+        (
+            ua_date,
+            result,
+            substances_detected,
+            notes,
+            now,
+            ua_id,
+            resident_id,
+        ),
+    )
+
+    flash("UA log entry updated.", "success")
+    return redirect(url_for("case_management.ua_log", resident_id=resident_id))
