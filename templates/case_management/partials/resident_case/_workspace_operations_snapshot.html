@@ -1,0 +1,34 @@
+<div class="card no-print">
+  <h2>Shelter Operations Snapshot</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    This is a read only operational view from the latest inspection record. Edit inspection details in the separate operational workflow, not here.
+  </p>
+
+  <div class="case-snapshot-grid">
+    <div class="case-snapshot-card case-snapshot-card-compact">
+      <h3 class="case-snapshot-title">Latest Inspection</h3>
+
+      {% if rs_latest_inspection %}
+        <p>
+          <strong>Latest Inspection Date:</strong> {{ rs_latest_inspection["inspection_date"] or "—" }}<br>
+          <strong>Result:</strong> {{ rs_latest_inspection["passed_display"] or "—" }}<br>
+          <strong>Short Note:</strong> {{ rs_latest_inspection["notes"] or "—" }}
+        </p>
+
+        <div class="case-section-top">
+          <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">
+            View Inspection Record
+          </a>
+        </div>
+      {% else %}
+        <p class="case-empty-muted">No inspection record found.</p>
+
+        <div class="case-section-top">
+          <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">
+            Open Inspection History
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
