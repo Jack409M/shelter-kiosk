@@ -19,6 +19,8 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             notes TEXT,
             progress_notes TEXT,
             action_items TEXT,
+            next_appointment TEXT,
+            overall_summary TEXT,
             updated_grit INTEGER,
             parenting_class_completed INTEGER,
             warrants_or_fines_paid INTEGER,
@@ -38,6 +40,8 @@ def ensure_case_manager_updates_table(kind: str) -> None:
             notes TEXT,
             progress_notes TEXT,
             action_items TEXT,
+            next_appointment TEXT,
+            overall_summary TEXT,
             updated_grit INTEGER,
             parenting_class_completed INTEGER,
             warrants_or_fines_paid INTEGER,
@@ -474,6 +478,8 @@ def ensure_resident_budget_sessions_table(kind: str) -> None:
 
 def ensure_case_manager_updates_columns() -> None:
     statements = [
+        "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS next_appointment TEXT",
+        "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS overall_summary TEXT",
         "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS updated_grit INTEGER",
         "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS parenting_class_completed INTEGER",
         "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS warrants_or_fines_paid INTEGER",
