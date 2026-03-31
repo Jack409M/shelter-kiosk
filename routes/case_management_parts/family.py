@@ -8,6 +8,7 @@ from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
+from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import parse_int
 from routes.case_management_parts.helpers import placeholder
@@ -115,25 +116,7 @@ def _active_children_for_resident(resident_id: int):
 
 
 def _latest_enrollment_for_resident(resident_id: int):
-    ph = placeholder()
-
-    return db_fetchone(
-        f"""
-        SELECT
-            id
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY
-            CASE
-                WHEN COALESCE(program_status, '') = 'active' THEN 0
-                ELSE 1
-            END,
-            COALESCE(entry_date, '') DESC,
-            id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
+    return fetch_current_enrollment_for_resident(resident_id, columns="id")
 
 
 def _parse_service_date(value: str | None) -> str | None:
@@ -511,6 +494,7 @@ def delete_child_service_view(service_id: int):
     ph = placeholder()
 
     try:
+        now = datetime.utcnow().isoformat()
         db_execute(
             f"""
             UPDATE child_services
@@ -522,9 +506,9 @@ def delete_child_service_view(service_id: int):
             WHERE id = {ph}
             """,
             (
-                datetime.utcnow().isoformat(),
+                now,
                 session.get("staff_user_id"),
-                datetime.utcnow().isoformat(),
+                now,
                 service_id,
             ),
         )
@@ -560,7 +544,7 @@ def child_services_view(child_id: int):
         flash("No active enrollment found.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    enrollment_id = enrollment["id"]
+    enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
     ph = placeholder()
 
     if request.method == "POST":
