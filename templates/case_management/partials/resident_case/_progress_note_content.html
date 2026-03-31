@@ -2,6 +2,8 @@
   {% set note_notes = note["notes"] %}
   {% set note_progress_notes = note["progress_notes"] %}
   {% set note_action_items = note["action_items"] %}
+  {% set note_next_appointment = note["next_appointment"] %}
+  {% set note_overall_summary = note["overall_summary"] %}
   {% set note_updated_grit = note["updated_grit"] %}
   {% set note_parenting_class_completed = note["parenting_class_completed"] %}
   {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
@@ -26,6 +28,20 @@
     <div class="case-note-section">
       <strong>Action Items:</strong><br>
       <div class="case-note-text-block">{{ note_action_items }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_next_appointment %}
+    <div class="case-note-section">
+      <strong>Next Appointment:</strong><br>
+      <div class="case-note-text-block">{{ note_next_appointment }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_overall_summary %}
+    <div class="case-note-section">
+      <strong>Overall Summary of Meeting:</strong><br>
+      <div class="case-note-text-block">{{ note_overall_summary }}</div>
     </div>
   {% endif %}
 
@@ -146,6 +162,8 @@
   {% set note_notes = note["notes"] %}
   {% set note_progress_notes = note["progress_notes"] %}
   {% set note_action_items = note["action_items"] %}
+  {% set note_next_appointment = note["next_appointment"] %}
+  {% set note_overall_summary = note["overall_summary"] %}
   {% set note_updated_grit = note["updated_grit"] %}
   {% set note_parenting_class_completed = note["parenting_class_completed"] %}
   {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
@@ -246,6 +264,20 @@
     <div class="case-note-section">
       <strong>Action Items:</strong><br>
       <div class="case-note-text-block">{{ note_action_items }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_next_appointment %}
+    <div class="case-note-section">
+      <strong>Next Appointment:</strong><br>
+      <div class="case-note-text-block">{{ note_next_appointment }}</div>
+    </div>
+  {% endif %}
+
+  {% if note_overall_summary %}
+    <div class="case-note-section">
+      <strong>Overall Summary of Meeting:</strong><br>
+      <div class="case-note-text-block">{{ note_overall_summary }}</div>
     </div>
   {% endif %}
 
