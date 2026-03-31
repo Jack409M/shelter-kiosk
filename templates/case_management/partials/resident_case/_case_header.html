@@ -73,18 +73,20 @@
   <div class="card case-header-print no-print">
     <h2>Actions</h2>
 
-    <a class="btn" href="{{ url_for('case_management.index') }}">
-      Back to Case List
-    </a>
-
-    <a class="btn" href="{{ url_for('case_management.intake_edit', resident_id=resident_id) }}">
-      Edit Intake
-    </a>
-
-    {% if enrollment_id %}
-      <a class="btn" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">
-        Family Intake
+    <div class="case-button-row">
+      <a class="btn" href="{{ url_for('case_management.index') }}">
+        Back to Case List
       </a>
-    {% endif %}
+
+      <a class="btn" href="{{ url_for('case_management.intake_edit', resident_id=resident_id) }}">
+        Edit Intake
+      </a>
+
+      {% if enrollment_id %}
+        <a class="btn" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">
+          Family Intake
+        </a>
+      {% endif %}
+    </div>
   </div>
 </div>
