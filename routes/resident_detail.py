@@ -7,6 +7,10 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
+from routes.case_management_parts.helpers import case_manager_allowed as _shared_case_manager_allowed
+from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
+from routes.case_management_parts.helpers import normalize_shelter_name as _shared_normalize_shelter_name
+from routes.case_management_parts.helpers import shelter_equals_sql as _shared_shelter_equals_sql
 
 resident_detail = Blueprint(
     "resident_detail",
@@ -20,17 +24,15 @@ def _sql(pg_sql: str, sqlite_sql: str) -> str:
 
 
 def _normalize_shelter_name(value: str | None) -> str:
-    return (value or "").strip().lower()
+    return _shared_normalize_shelter_name(value)
 
 
 def _shelter_equals_sql(column_name: str) -> str:
-    if g.get("db_kind") == "pg":
-        return f"LOWER(COALESCE({column_name}, '')) = %s"
-    return f"LOWER(COALESCE({column_name}, '')) = ?"
+    return _shared_shelter_equals_sql(column_name)
 
 
 def _case_manager_allowed() -> bool:
-    return session.get("role") in {"admin", "shelter_director", "case_manager"}
+    return _shared_case_manager_allowed()
 
 
 def _resident_detail_view_allowed() -> bool:
@@ -168,87 +170,99 @@ def _compliance_snapshot_text(compliance) -> str:
 
 
 def _load_resident_for_shelter(resident_id: int, shelter: str):
-    return db_fetchone(
+    resident = db_fetchone(
         _sql(
             f"""
             SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter AS resident_shelter,
-                r.is_active,
-                pe.id AS enrollment_id,
-                pe.shelter AS enrollment_shelter,
-                pe.program_status,
-                pe.entry_date,
-                pe.exit_date,
-                r.resident_code,
-                r.birth_year,
-                r.phone,
-                r.email,
-                r.emergency_contact_name,
-                r.emergency_contact_relationship,
-                r.emergency_contact_phone,
-                r.medical_alerts,
-                r.medical_notes,
-                ia.sobriety_date,
-                ia.days_sober_at_entry
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            LEFT JOIN intake_assessments ia
-                ON ia.enrollment_id = pe.id
-            WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY
-                CASE
-                    WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
-                    ELSE 1
-                END,
-                COALESCE(pe.entry_date, '') DESC,
-                pe.id DESC
+                id,
+                first_name,
+                last_name,
+                shelter AS resident_shelter,
+                is_active,
+                resident_code,
+                birth_year,
+                phone,
+                email,
+                emergency_contact_name,
+                emergency_contact_relationship,
+                emergency_contact_phone,
+                medical_alerts,
+                medical_notes
+            FROM residents
+            WHERE id = %s
+              AND {_shelter_equals_sql("shelter")}
             LIMIT 1
             """,
             f"""
             SELECT
-                r.id,
-                r.first_name,
-                r.last_name,
-                r.shelter AS resident_shelter,
-                r.is_active,
-                pe.id AS enrollment_id,
-                pe.shelter AS enrollment_shelter,
-                pe.program_status,
-                pe.entry_date,
-                pe.exit_date,
-                r.resident_code,
-                r.birth_year,
-                r.phone,
-                r.email,
-                r.emergency_contact_name,
-                r.emergency_contact_relationship,
-                r.emergency_contact_phone,
-                r.medical_alerts,
-                r.medical_notes,
-                ia.sobriety_date,
-                ia.days_sober_at_entry
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            LEFT JOIN intake_assessments ia
-                ON ia.enrollment_id = pe.id
-            WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY
-                CASE
-                    WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
-                    ELSE 1
-                END,
-                COALESCE(pe.entry_date, '') DESC,
-                pe.id DESC
+                id,
+                first_name,
+                last_name,
+                shelter AS resident_shelter,
+                is_active,
+                resident_code,
+                birth_year,
+                phone,
+                email,
+                emergency_contact_name,
+                emergency_contact_relationship,
+                emergency_contact_phone,
+                medical_alerts,
+                medical_notes
+            FROM residents
+            WHERE id = ?
+              AND {_shelter_equals_sql("shelter")}
             LIMIT 1
             """,
         ),
         (resident_id, shelter),
     )
+
+    if not resident:
+        return None
+
+    enrollment = fetch_current_enrollment_for_resident(
+        resident_id,
+        columns="""
+            id AS enrollment_id,
+            shelter AS enrollment_shelter,
+            program_status,
+            entry_date,
+            exit_date,
+            (
+                SELECT ia.sobriety_date
+                FROM intake_assessments ia
+                WHERE ia.enrollment_id = program_enrollments.id
+                ORDER BY id DESC
+                LIMIT 1
+            ) AS sobriety_date,
+            (
+                SELECT ia.days_sober_at_entry
+                FROM intake_assessments ia
+                WHERE ia.enrollment_id = program_enrollments.id
+                ORDER BY id DESC
+                LIMIT 1
+            ) AS days_sober_at_entry
+        """,
+    )
+
+    merged = dict(resident)
+    if enrollment:
+        merged.update(dict(enrollment))
+    else:
+        merged.update(
+            {
+                "enrollment_id": None,
+                "enrollment_shelter": None,
+                "program_status": None,
+                "entry_date": None,
+                "exit_date": None,
+                "sobriety_date": None,
+                "days_sober_at_entry": None,
+            }
+        )
+
+    return merged
 
 
 def _next_appointment_for_enrollment(enrollment_id: int):
@@ -333,45 +347,39 @@ def _next_appointment_for_enrollment(enrollment_id: int):
 
 
 def _resident_enrollment_for_shelter(resident_id: int, shelter: str):
-    return db_fetchone(
+    resident = db_fetchone(
         _sql(
             f"""
             SELECT
-                r.id,
-                pe.id AS enrollment_id
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = %s AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY
-                CASE
-                    WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
-                    ELSE 1
-                END,
-                COALESCE(pe.entry_date, '') DESC,
-                pe.id DESC
+                id
+            FROM residents
+            WHERE id = %s
+              AND {_shelter_equals_sql("shelter")}
             LIMIT 1
             """,
             f"""
             SELECT
-                r.id,
-                pe.id AS enrollment_id
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-                ON pe.resident_id = r.id
-            WHERE r.id = ? AND {_shelter_equals_sql("r.shelter")}
-            ORDER BY
-                CASE
-                    WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
-                    ELSE 1
-                END,
-                COALESCE(pe.entry_date, '') DESC,
-                pe.id DESC
+                id
+            FROM residents
+            WHERE id = ?
+              AND {_shelter_equals_sql("shelter")}
             LIMIT 1
             """,
         ),
         (resident_id, shelter),
     )
+
+    if not resident:
+        return None
+
+    enrollment = fetch_current_enrollment_for_resident(
+        resident_id,
+        columns="id AS enrollment_id",
+    )
+
+    merged = dict(resident)
+    merged["enrollment_id"] = _row_value(enrollment, "enrollment_id", 0)
+    return merged
 
 
 def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict[str, object]:
