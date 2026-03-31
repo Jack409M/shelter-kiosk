@@ -12,6 +12,10 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
+def _resident_case_redirect(resident_id: int, anchor: str = "recovery-snapshot"):
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + f"#{anchor}")
+
+
 def _clean(value: str | None) -> str | None:
     value = (value or "").strip()
     return value or None
@@ -49,7 +53,7 @@ def inspection_log_view(resident_id: int):
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     resident = _resident_context(resident_id)
     if not resident:
@@ -84,7 +88,7 @@ def add_inspection_log_view(resident_id: int):
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     resident = _resident_context(resident_id)
     if not resident:
@@ -131,7 +135,7 @@ def add_inspection_log_view(resident_id: int):
     )
 
     flash("Inspection entry added.", "success")
-    return redirect(url_for("case_management.inspection_log", resident_id=resident_id))
+    return _resident_case_redirect(resident_id)
 
 
 def edit_inspection_log_view(resident_id: int, inspection_id: int):
@@ -139,7 +143,7 @@ def edit_inspection_log_view(resident_id: int, inspection_id: int):
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     resident = _resident_context(resident_id)
     if not resident:
@@ -214,4 +218,4 @@ def edit_inspection_log_view(resident_id: int, inspection_id: int):
     )
 
     flash("Inspection entry updated.", "success")
-    return redirect(url_for("case_management.inspection_log", resident_id=resident_id))
+    return _resident_case_redirect(resident_id)
