@@ -23,8 +23,6 @@
   {% set enrollment_exit_date = "" %}
 {% endif %}
 
-{% set intake_grit_score = intake_assessment["grit_score"] if intake_assessment else none %}
-
 {% if exit_assessment %}
   {% set exit_date_graduated = exit_assessment["date_graduated"] %}
   {% set exit_date_exit_dwc = exit_assessment["date_exit_dwc"] %}
