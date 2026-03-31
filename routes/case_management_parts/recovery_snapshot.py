@@ -112,72 +112,144 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         (resident_id,),
     ) or {}
 
-    medications = db_fetchall(
-        f"""
-        SELECT
-            id,
-            medication_name,
-            dosage,
-            frequency,
-            purpose,
-            prescribed_by,
-            started_on,
-            ended_on,
-            is_active,
-            notes,
-            updated_at,
-            created_at
-        FROM resident_medications
-        WHERE resident_id = {ph}
-          AND COALESCE(is_active, TRUE) = {('TRUE' if ph == '%s' else '1')}
-        ORDER BY
-            COALESCE(updated_at, created_at) DESC,
-            id DESC
-        """,
-        (resident_id,),
-    )
+    if enrollment_id is not None:
+        medications = db_fetchall(
+            f"""
+            SELECT
+                id,
+                medication_name,
+                dosage,
+                frequency,
+                purpose,
+                prescribed_by,
+                started_on,
+                ended_on,
+                is_active,
+                notes,
+                updated_at,
+                created_at
+            FROM resident_medications
+            WHERE resident_id = {ph}
+              AND enrollment_id = {ph}
+              AND COALESCE(is_active, TRUE) = {('TRUE' if ph == '%s' else '1')}
+            ORDER BY
+                COALESCE(updated_at, created_at) DESC,
+                id DESC
+            """,
+            (resident_id, enrollment_id),
+        )
 
-    latest_ua = db_fetchone(
-        f"""
-        SELECT
-            ua_date,
-            result,
-            substances_detected,
-            notes
-        FROM resident_ua_log
-        WHERE resident_id = {ph}
-        ORDER BY ua_date DESC, id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
+        latest_ua = db_fetchone(
+            f"""
+            SELECT
+                ua_date,
+                result,
+                substances_detected,
+                notes
+            FROM resident_ua_log
+            WHERE resident_id = {ph}
+              AND enrollment_id = {ph}
+            ORDER BY ua_date DESC, id DESC
+            LIMIT 1
+            """,
+            (resident_id, enrollment_id),
+        )
 
-    latest_inspection = db_fetchone(
-        f"""
-        SELECT
-            inspection_date,
-            passed,
-            notes
-        FROM resident_living_area_inspections
-        WHERE resident_id = {ph}
-        ORDER BY inspection_date DESC, id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
+        latest_inspection = db_fetchone(
+            f"""
+            SELECT
+                inspection_date,
+                passed,
+                notes
+            FROM resident_living_area_inspections
+            WHERE resident_id = {ph}
+              AND enrollment_id = {ph}
+            ORDER BY inspection_date DESC, id DESC
+            LIMIT 1
+            """,
+            (resident_id, enrollment_id),
+        )
 
-    latest_budget_session = db_fetchone(
-        f"""
-        SELECT
-            session_date,
-            notes
-        FROM resident_budget_sessions
-        WHERE resident_id = {ph}
-        ORDER BY session_date DESC, id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
+        latest_budget_session = db_fetchone(
+            f"""
+            SELECT
+                session_date,
+                notes
+            FROM resident_budget_sessions
+            WHERE resident_id = {ph}
+              AND enrollment_id = {ph}
+            ORDER BY session_date DESC, id DESC
+            LIMIT 1
+            """,
+            (resident_id, enrollment_id),
+        )
+    else:
+        medications = db_fetchall(
+            f"""
+            SELECT
+                id,
+                medication_name,
+                dosage,
+                frequency,
+                purpose,
+                prescribed_by,
+                started_on,
+                ended_on,
+                is_active,
+                notes,
+                updated_at,
+                created_at
+            FROM resident_medications
+            WHERE resident_id = {ph}
+              AND COALESCE(is_active, TRUE) = {('TRUE' if ph == '%s' else '1')}
+            ORDER BY
+                COALESCE(updated_at, created_at) DESC,
+                id DESC
+            """,
+            (resident_id,),
+        )
+
+        latest_ua = db_fetchone(
+            f"""
+            SELECT
+                ua_date,
+                result,
+                substances_detected,
+                notes
+            FROM resident_ua_log
+            WHERE resident_id = {ph}
+            ORDER BY ua_date DESC, id DESC
+            LIMIT 1
+            """,
+            (resident_id,),
+        )
+
+        latest_inspection = db_fetchone(
+            f"""
+            SELECT
+                inspection_date,
+                passed,
+                notes
+            FROM resident_living_area_inspections
+            WHERE resident_id = {ph}
+            ORDER BY inspection_date DESC, id DESC
+            LIMIT 1
+            """,
+            (resident_id,),
+        )
+
+        latest_budget_session = db_fetchone(
+            f"""
+            SELECT
+                session_date,
+                notes
+            FROM resident_budget_sessions
+            WHERE resident_id = {ph}
+            ORDER BY session_date DESC, id DESC
+            LIMIT 1
+            """,
+            (resident_id,),
+        )
 
     step_changed_at = resident.get("step_changed_at")
     step_days = _days_since(step_changed_at)
