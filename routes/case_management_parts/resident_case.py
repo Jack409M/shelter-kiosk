@@ -479,6 +479,8 @@ def resident_case_view(resident_id: int):
                 notes,
                 progress_notes,
                 action_items,
+                next_appointment,
+                overall_summary,
                 updated_grit,
                 parenting_class_completed,
                 warrants_or_fines_paid,
