@@ -37,8 +37,26 @@ EMPLOYMENT_FIELD_LABELS = {
 
 SOBRIETY_FIELD_LABELS = {
     "sobriety_date": "Sobriety Date",
-    "drug_of_choice": "Drug of Choice",
+    "drug_of_choice": "Drug Of Choice",
     "treatment_graduation_date": "Treatment Graduation Date",
+}
+
+
+ADVANCEMENT_BOOL_FIELD_LABELS = {
+    "ready_for_next_level": "Ready For Next Level",
+}
+
+
+ADVANCEMENT_TEXT_FIELD_LABELS = {
+    "recommended_next_level": "Recommended Next Level",
+    "blocker_reason": "Blocker Reason",
+    "override_or_exception": "Override Or Exception",
+    "staff_review_note": "Staff Review Note",
+}
+
+
+MEETING_TEXT_FIELD_LABELS = {
+    "setbacks_or_incidents": "Setbacks Or Incidents",
 }
 
 
@@ -529,6 +547,50 @@ def _get_current_sobriety_snapshot(resident_id: int) -> dict[str, str]:
     return snapshot
 
 
+def _get_current_advancement_snapshot(enrollment_id: int) -> dict[str, str]:
+    ph = placeholder()
+
+    row = db_fetchone(
+        f"""
+        SELECT
+            setbacks_or_incidents,
+            ready_for_next_level,
+            recommended_next_level,
+            blocker_reason,
+            override_or_exception,
+            staff_review_note
+        FROM case_manager_updates
+        WHERE enrollment_id = {ph}
+        ORDER BY meeting_date DESC, id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    if not row:
+        snapshot = {key: "" for key in MEETING_TEXT_FIELD_LABELS}
+        snapshot.update({key: "" for key in ADVANCEMENT_TEXT_FIELD_LABELS})
+        snapshot.update({key: "" for key in ADVANCEMENT_BOOL_FIELD_LABELS})
+        return snapshot
+
+    snapshot: dict[str, str] = {}
+
+    for field_name in MEETING_TEXT_FIELD_LABELS:
+        snapshot[field_name] = _clean_value(row.get(field_name))
+
+    for field_name in ADVANCEMENT_TEXT_FIELD_LABELS:
+        snapshot[field_name] = _clean_value(row.get(field_name))
+
+    for field_name in ADVANCEMENT_BOOL_FIELD_LABELS:
+        value = row.get(field_name)
+        if value is None:
+            snapshot[field_name] = ""
+        else:
+            snapshot[field_name] = _display_label("yes" if bool(value) else "no")
+
+    return snapshot
+
+
 def _record_snapshot_change_group(
     case_manager_update_id: int,
     change_group: str,
@@ -707,11 +769,13 @@ def _build_note_summary(
     previous_medication_snapshot = _load_previous_snapshot_map(previous_note_id, "medication")
     previous_employment_snapshot = _load_previous_snapshot_map(previous_note_id, "employment")
     previous_sobriety_snapshot = _load_previous_snapshot_map(previous_note_id, "sobriety")
+    previous_advancement_snapshot = _load_previous_snapshot_map(previous_note_id, "advancement")
 
     current_child_snapshot = _get_current_children_snapshot(resident_id)
     current_medication_snapshot = _get_current_medication_snapshot(resident_id)
     current_employment_snapshot = _get_current_employment_snapshot(resident_id)
     current_sobriety_snapshot = _get_current_sobriety_snapshot(resident_id)
+    current_advancement_snapshot = _get_current_advancement_snapshot(enrollment_id)
     current_outstanding_needs = _current_open_needs(enrollment_id)
 
     sort_order = 0
@@ -771,12 +835,29 @@ def _build_note_summary(
         starting_sort_order=sort_order,
     )
 
-    _record_snapshot_change_group(
+    sort_order = _record_snapshot_change_group(
         case_manager_update_id=case_manager_update_id,
         change_group="sobriety",
         previous_snapshot=previous_sobriety_snapshot,
         current_snapshot=current_sobriety_snapshot,
         label_map=SOBRIETY_FIELD_LABELS,
+        added_label="",
+        removed_label="",
+        updated_label="",
+        created_at=created_at,
+        starting_sort_order=sort_order,
+    )
+
+    _record_snapshot_change_group(
+        case_manager_update_id=case_manager_update_id,
+        change_group="advancement",
+        previous_snapshot=previous_advancement_snapshot,
+        current_snapshot=current_advancement_snapshot,
+        label_map={
+            **MEETING_TEXT_FIELD_LABELS,
+            **ADVANCEMENT_BOOL_FIELD_LABELS,
+            **ADVANCEMENT_TEXT_FIELD_LABELS,
+        },
         added_label="",
         removed_label="",
         updated_label="",
@@ -835,9 +916,15 @@ def add_case_note_view(resident_id: int):
     meeting_date = (request.form.get("meeting_date") or "").strip()
     notes = (request.form.get("notes") or "").strip()
     progress_notes = (request.form.get("progress_notes") or "").strip()
+    setbacks_or_incidents = (request.form.get("setbacks_or_incidents") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
     next_appointment = (request.form.get("next_appointment") or "").strip()
     overall_summary = (request.form.get("overall_summary") or "").strip()
+    ready_for_next_level = _yes_no_to_int(request.form.get("ready_for_next_level"))
+    recommended_next_level = (request.form.get("recommended_next_level") or "").strip()
+    blocker_reason = (request.form.get("blocker_reason") or "").strip()
+    override_or_exception = (request.form.get("override_or_exception") or "").strip()
+    staff_review_note = (request.form.get("staff_review_note") or "").strip()
 
     updated_grit_raw = (request.form.get("updated_grit") or "").strip()
     updated_grit = _parse_grit(updated_grit_raw)
@@ -861,6 +948,11 @@ def add_case_note_view(resident_id: int):
         updated_grit is not None
         or parenting_class_completed is not None
         or warrants_or_fines_paid is not None
+        or ready_for_next_level is not None
+        or bool(recommended_next_level)
+        or bool(blocker_reason)
+        or bool(override_or_exception)
+        or bool(staff_review_note)
         or bool(service_types)
         or bool(need_updates)
     )
@@ -868,13 +960,14 @@ def add_case_note_view(resident_id: int):
     if (
         not notes
         and not progress_notes
+        and not setbacks_or_incidents
         and not action_items
         and not next_appointment
         and not overall_summary
         and not has_structured_progress
     ):
         flash(
-            "Enter notes, progress notes, action items, next appointment, meeting summary, structured progress, need resolutions, or at least one service.",
+            "Enter notes, progress notes, setbacks or incidents, action items, next appointment, meeting summary, advancement review details, structured progress, need resolutions, or at least one service.",
             "error",
         )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
@@ -894,16 +987,22 @@ def add_case_note_view(resident_id: int):
                     meeting_date,
                     notes,
                     progress_notes,
+                    setbacks_or_incidents,
                     action_items,
                     next_appointment,
                     overall_summary,
                     updated_grit,
                     parenting_class_completed,
                     warrants_or_fines_paid,
+                    ready_for_next_level,
+                    recommended_next_level,
+                    blocker_reason,
+                    override_or_exception,
+                    staff_review_note,
                     created_at,
                     updated_at
                 )
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
                 RETURNING id
                 """,
                 (
@@ -912,12 +1011,18 @@ def add_case_note_view(resident_id: int):
                     meeting_date,
                     notes or None,
                     progress_notes or None,
+                    setbacks_or_incidents or None,
                     action_items or None,
                     next_appointment or None,
                     overall_summary or None,
                     updated_grit,
                     parenting_class_completed,
                     warrants_or_fines_paid,
+                    ready_for_next_level,
+                    recommended_next_level or None,
+                    blocker_reason or None,
+                    override_or_exception or None,
+                    staff_review_note or None,
                     now,
                     now,
                 ),
@@ -1060,9 +1165,15 @@ def edit_case_note_view(resident_id: int, update_id: int):
     meeting_date = (request.form.get("meeting_date") or "").strip()
     notes = (request.form.get("notes") or "").strip()
     progress_notes = (request.form.get("progress_notes") or "").strip()
+    setbacks_or_incidents = (request.form.get("setbacks_or_incidents") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
     next_appointment = (request.form.get("next_appointment") or "").strip()
     overall_summary = (request.form.get("overall_summary") or "").strip()
+    ready_for_next_level = _yes_no_to_int(request.form.get("ready_for_next_level"))
+    recommended_next_level = (request.form.get("recommended_next_level") or "").strip()
+    blocker_reason = (request.form.get("blocker_reason") or "").strip()
+    override_or_exception = (request.form.get("override_or_exception") or "").strip()
+    staff_review_note = (request.form.get("staff_review_note") or "").strip()
 
     updated_grit_raw = (request.form.get("updated_grit") or "").strip()
     updated_grit = _parse_grit(updated_grit_raw)
@@ -1083,19 +1194,25 @@ def edit_case_note_view(resident_id: int, update_id: int):
         updated_grit is not None
         or parenting_class_completed is not None
         or warrants_or_fines_paid is not None
+        or ready_for_next_level is not None
+        or bool(recommended_next_level)
+        or bool(blocker_reason)
+        or bool(override_or_exception)
+        or bool(staff_review_note)
         or bool(service_types)
     )
 
     if (
         not notes
         and not progress_notes
+        and not setbacks_or_incidents
         and not action_items
         and not next_appointment
         and not overall_summary
         and not has_structured_progress
     ):
         flash(
-            "Enter notes, progress notes, action items, next appointment, meeting summary, structured progress, or at least one service.",
+            "Enter notes, progress notes, setbacks or incidents, action items, next appointment, meeting summary, advancement review details, structured progress, or at least one service.",
             "error",
         )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
@@ -1111,12 +1228,18 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 SET meeting_date = {ph},
                     notes = {ph},
                     progress_notes = {ph},
+                    setbacks_or_incidents = {ph},
                     action_items = {ph},
                     next_appointment = {ph},
                     overall_summary = {ph},
                     updated_grit = {ph},
                     parenting_class_completed = {ph},
                     warrants_or_fines_paid = {ph},
+                    ready_for_next_level = {ph},
+                    recommended_next_level = {ph},
+                    blocker_reason = {ph},
+                    override_or_exception = {ph},
+                    staff_review_note = {ph},
                     updated_at = {ph}
                 WHERE id = {ph}
                 """,
@@ -1124,12 +1247,18 @@ def edit_case_note_view(resident_id: int, update_id: int):
                     meeting_date,
                     notes or None,
                     progress_notes or None,
+                    setbacks_or_incidents or None,
                     action_items or None,
                     next_appointment or None,
                     overall_summary or None,
                     updated_grit,
                     parenting_class_completed,
                     warrants_or_fines_paid,
+                    ready_for_next_level,
+                    recommended_next_level or None,
+                    blocker_reason or None,
+                    override_or_exception or None,
+                    staff_review_note or None,
                     now,
                     update_id,
                 ),
@@ -1177,13 +1306,37 @@ def edit_case_note_view(resident_id: int, update_id: int):
                     ),
                 )
 
-            _delete_summary_rows_by_group(update_id, ["service"])
+            _delete_summary_rows_by_group(update_id, ["service", "advancement"])
 
             next_sort_order = _get_next_summary_sort_order(update_id)
-            _record_service_summary(
+            next_sort_order = _record_service_summary(
                 case_manager_update_id=update_id,
                 service_types=service_types,
                 form=request.form,
+                created_at=now,
+                starting_sort_order=next_sort_order,
+            )
+
+            _record_snapshot_change_group(
+                case_manager_update_id=update_id,
+                change_group="advancement",
+                previous_snapshot=_load_previous_snapshot_map(_get_previous_note_id(note["enrollment_id"], update_id, meeting_date), "advancement"),
+                current_snapshot={
+                    "setbacks_or_incidents": setbacks_or_incidents,
+                    "ready_for_next_level": _display_label("yes" if ready_for_next_level == 1 else "no") if ready_for_next_level is not None else "",
+                    "recommended_next_level": recommended_next_level,
+                    "blocker_reason": blocker_reason,
+                    "override_or_exception": override_or_exception,
+                    "staff_review_note": staff_review_note,
+                },
+                label_map={
+                    **MEETING_TEXT_FIELD_LABELS,
+                    **ADVANCEMENT_BOOL_FIELD_LABELS,
+                    **ADVANCEMENT_TEXT_FIELD_LABELS,
+                },
+                added_label="",
+                removed_label="",
+                updated_label="",
                 created_at=now,
                 starting_sort_order=next_sort_order,
             )
