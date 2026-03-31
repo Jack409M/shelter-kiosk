@@ -10,6 +10,7 @@ from core.runtime import init_db
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
     clean,
+    fetch_current_enrollment_for_resident,
     normalize_shelter_name,
     parse_iso_date,
     parse_money,
@@ -57,23 +58,16 @@ def _fetch_resident_and_enrollment(resident_id: int):
     if not resident:
         return None, None
 
-    enrollment = db_fetchone(
-        f"""
-        SELECT
+    enrollment = fetch_current_enrollment_for_resident(
+        resident_id,
+        columns="""
             id,
             resident_id,
             shelter,
             entry_date,
             exit_date,
             program_status
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY
-            COALESCE(entry_date, '') DESC,
-            id DESC
-        LIMIT 1
         """,
-        (resident_id,),
     )
 
     return resident, enrollment
