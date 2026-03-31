@@ -123,7 +123,13 @@ def _latest_enrollment_for_resident(resident_id: int):
             id
         FROM program_enrollments
         WHERE resident_id = {ph}
-        ORDER BY id DESC
+        ORDER BY
+            CASE
+                WHEN COALESCE(program_status, '') = 'active' THEN 0
+                ELSE 1
+            END,
+            COALESCE(entry_date, '') DESC,
+            id DESC
         LIMIT 1
         """,
         (resident_id,),
@@ -509,15 +515,15 @@ def delete_child_service_view(service_id: int):
             f"""
             UPDATE child_services
             SET
-                outcome = COALESCE(outcome, 'deleted'),
-                notes = CASE
-                    WHEN notes IS NULL OR notes = '' THEN 'Deleted by staff'
-                    ELSE notes || ' | Deleted by staff'
-                END,
+                is_deleted = TRUE,
+                deleted_at = {ph},
+                deleted_by_staff_user_id = {ph},
                 updated_at = {ph}
             WHERE id = {ph}
             """,
             (
+                datetime.utcnow().isoformat(),
+                session.get("staff_user_id"),
                 datetime.utcnow().isoformat(),
                 service_id,
             ),
@@ -639,7 +645,7 @@ def child_services_view(child_id: int):
             notes
         FROM child_services
         WHERE resident_child_id = {ph}
-          AND COALESCE(outcome, '') <> 'deleted'
+          AND COALESCE(is_deleted, FALSE) = FALSE
         ORDER BY service_date DESC, id DESC
         """,
         (child_id,),
