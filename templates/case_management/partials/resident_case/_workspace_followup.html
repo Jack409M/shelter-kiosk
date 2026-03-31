@@ -1,0 +1,74 @@
+<div class="card no-print">
+  <h2>Follow Up</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    Six month and one year follow up status should stay visible here, with quick access to update the record.
+  </p>
+
+  <div class="case-snapshot-grid">
+    <div class="case-snapshot-card case-snapshot-card-compact">
+      <h3 class="case-snapshot-title">Follow Up Actions</h3>
+
+      <p>
+        <a class="btn" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='6_month') }}">
+          6 Month Follow Up
+        </a>
+      </p>
+
+      <p>
+        <a class="btn" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='1_year') }}">
+          1 Year Follow Up
+        </a>
+      </p>
+    </div>
+
+    <div class="case-snapshot-card case-snapshot-card-compact">
+      <h3 class="case-snapshot-title">6 Month Status</h3>
+
+      {% if followup_6_month %}
+        <p>
+          <strong>Date:</strong> {{ followup_6_month.followup_date or "—" }}<br>
+          <strong>Income:</strong> {{ followup_6_month.income_at_followup if followup_6_month.income_at_followup is not none else "—" }}<br>
+          <strong>Sober:</strong>
+          {% if followup_6_month.sober_at_followup is none %}
+            —
+          {% else %}
+            {{ "Yes" if followup_6_month.sober_at_followup else "No" }}
+          {% endif %}
+        </p>
+
+        {% if followup_6_month.notes %}
+          <div class="case-help-text case-help-text-top">
+            {{ followup_6_month.notes }}
+          </div>
+        {% endif %}
+      {% else %}
+        <p class="case-empty-muted">No 6 month follow up recorded.</p>
+      {% endif %}
+    </div>
+
+    <div class="case-snapshot-card case-snapshot-card-compact">
+      <h3 class="case-snapshot-title">1 Year Status</h3>
+
+      {% if followup_1_year %}
+        <p>
+          <strong>Date:</strong> {{ followup_1_year.followup_date or "—" }}<br>
+          <strong>Income:</strong> {{ followup_1_year.income_at_followup if followup_1_year.income_at_followup is not none else "—" }}<br>
+          <strong>Sober:</strong>
+          {% if followup_1_year.sober_at_followup is none %}
+            —
+          {% else %}
+            {{ "Yes" if followup_1_year.sober_at_followup else "No" }}
+          {% endif %}
+        </p>
+
+        {% if followup_1_year.notes %}
+          <div class="case-help-text case-help-text-top">
+            {{ followup_1_year.notes }}
+          </div>
+        {% endif %}
+      {% else %}
+        <p class="case-empty-muted">No 1 year follow up recorded.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
