@@ -4,6 +4,7 @@ from flask import Blueprint, render_template
 
 from core.auth import require_login
 from core.db import db_fetchall
+from routes.case_management_parts.helpers import current_enrollment_order_sql
 
 compliance = Blueprint("compliance", __name__, url_prefix="/staff/compliance")
 
@@ -12,7 +13,7 @@ compliance = Blueprint("compliance", __name__, url_prefix="/staff/compliance")
 @require_login
 def compliance_dashboard():
     rows = db_fetchall(
-        """
+        f"""
         SELECT
             r.id,
             r.first_name,
@@ -27,13 +28,7 @@ def compliance_dashboard():
                 SELECT pe2.id
                 FROM program_enrollments pe2
                 WHERE pe2.resident_id = r.id
-                ORDER BY
-                    CASE
-                        WHEN COALESCE(pe2.program_status, '') = 'active' THEN 0
-                        ELSE 1
-                    END,
-                    COALESCE(pe2.entry_date, '') DESC,
-                    pe2.id DESC
+                ORDER BY {current_enrollment_order_sql("pe2")}
                 LIMIT 1
             )
         LEFT JOIN weekly_resident_summary wrs
