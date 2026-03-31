@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260328b') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260330b') }}">
 {% endblock %}
 
 {% block content %}
@@ -18,6 +18,8 @@
   {% set notes_value = note["notes"] %}
   {% set progress_notes_value = note["progress_notes"] %}
   {% set action_items_value = note["action_items"] %}
+  {% set next_appointment_value = note["next_appointment"] %}
+  {% set overall_summary_value = note["overall_summary"] %}
   {% set updated_grit_value = note["updated_grit"] %}
   {% set parenting_class_completed_value = note["parenting_class_completed"] %}
   {% set warrants_or_fines_paid_value = note["warrants_or_fines_paid"] %}
@@ -27,9 +29,11 @@
   {% set notes_value = note[4] %}
   {% set progress_notes_value = note[5] %}
   {% set action_items_value = note[6] %}
-  {% set updated_grit_value = note[7] %}
-  {% set parenting_class_completed_value = note[8] %}
-  {% set warrants_or_fines_paid_value = note[9] %}
+  {% set next_appointment_value = note[7] %}
+  {% set overall_summary_value = note[8] %}
+  {% set updated_grit_value = note[9] %}
+  {% set parenting_class_completed_value = note[10] %}
+  {% set warrants_or_fines_paid_value = note[11] %}
 {% endif %}
 
 <h1>Edit Case Note</h1>
@@ -49,6 +53,17 @@
 
     <label><strong>Action Items</strong></label>
     <textarea name="action_items" rows="3">{{ action_items_value or "" }}</textarea>
+
+    <label><strong>Next Appointment</strong></label>
+    <input
+      type="text"
+      name="next_appointment"
+      value="{{ next_appointment_value or '' }}"
+      placeholder="Example: 2026-04-15 10:00 AM"
+    >
+
+    <label><strong>Overall Summary of Meeting</strong></label>
+    <textarea name="overall_summary" rows="3">{{ overall_summary_value or "" }}</textarea>
 
     <label><strong>Updated Grit</strong></label>
     <input
