@@ -164,17 +164,6 @@ def _insert_summary_row(
     )
 
 
-def _delete_summary_rows(case_manager_update_id: int) -> None:
-    ph = placeholder()
-    db_execute(
-        f"""
-        DELETE FROM case_manager_update_summary
-        WHERE case_manager_update_id = {ph}
-        """,
-        (case_manager_update_id,),
-    )
-
-
 def _delete_summary_rows_by_group(case_manager_update_id: int, change_groups: list[str]) -> None:
     if not change_groups:
         return
@@ -441,11 +430,7 @@ def _get_current_medication_snapshot(resident_id: int) -> dict[str, str]:
             dosage,
             frequency,
             purpose,
-            prescribed_by,
-            started_on,
-            ended_on,
-            is_active,
-            notes
+            prescribed_by
         FROM resident_medications
         WHERE resident_id = {ph}
           AND is_active = TRUE
