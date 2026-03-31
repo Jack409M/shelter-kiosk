@@ -15,6 +15,10 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
+def _resident_case_redirect(resident_id: int, anchor: str = "children-tab"):
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + f"#{anchor}")
+
+
 def _current_shelter() -> str:
     return normalize_shelter_name(session.get("shelter"))
 
@@ -257,7 +261,7 @@ def family_intake_view(resident_id: int):
             )
 
         flash("Child added.", "success")
-        return redirect(url_for("case_management.family_intake", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     children = _active_children_for_resident(resident_id)
 
@@ -355,7 +359,7 @@ def edit_child_view(child_id: int):
             return redirect(url_for("case_management.edit_child", child_id=child_id))
 
         flash("Child updated.", "success")
-        return redirect(url_for("case_management.family_intake", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     return render_template(
         "case_management/edit_child.html",
@@ -402,7 +406,7 @@ def delete_child_view(child_id: int):
         return redirect(url_for("case_management.family_intake", resident_id=resident_id))
 
     flash("Child removed.", "success")
-    return redirect(url_for("case_management.family_intake", resident_id=resident_id))
+    return _resident_case_redirect(resident_id)
 
 
 def edit_child_service_view(service_id: int):
@@ -469,7 +473,7 @@ def edit_child_service_view(service_id: int):
             return redirect(url_for("case_management.edit_child_service", service_id=service_id))
 
         flash("Service updated.", "success")
-        return redirect(url_for("case_management.child_services", child_id=child_id))
+        return _resident_case_redirect(resident_id)
 
     return render_template(
         "case_management/edit_child_service.html",
@@ -491,6 +495,7 @@ def delete_child_service_view(service_id: int):
         return redirect(url_for("case_management.index"))
 
     child_id = service["resident_child_id"]
+    resident_id = service["resident_id"]
     ph = placeholder()
 
     try:
@@ -522,7 +527,7 @@ def delete_child_service_view(service_id: int):
         return redirect(url_for("case_management.child_services", child_id=child_id))
 
     flash("Service deleted.", "success")
-    return redirect(url_for("case_management.child_services", child_id=child_id))
+    return _resident_case_redirect(resident_id)
 
 
 def child_services_view(child_id: int):
@@ -542,7 +547,7 @@ def child_services_view(child_id: int):
 
     if not enrollment:
         flash("No active enrollment found.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
     ph = placeholder()
@@ -615,7 +620,7 @@ def child_services_view(child_id: int):
             return redirect(url_for("case_management.child_services", child_id=child_id))
 
         flash("Child service added.", "success")
-        return redirect(url_for("case_management.child_services", child_id=child_id))
+        return _resident_case_redirect(resident_id)
 
     services = db_fetchall(
         f"""
