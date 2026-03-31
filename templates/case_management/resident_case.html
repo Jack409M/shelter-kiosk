@@ -1454,6 +1454,7 @@
 
               <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident_id) }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="redirect_to" value="resident_case">
 
                 <div class="cmx-field">
                   <label>UA Date</label>
@@ -1555,6 +1556,7 @@
 
               <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident_id) }}">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="redirect_to" value="resident_case">
 
                 <div class="cmx-field">
                   <label>Medication</label>
