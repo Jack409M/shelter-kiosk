@@ -1436,7 +1436,7 @@
               <h2 class="cmx-section-title" style="font-size:1.2rem;">Exit Assessment</h2>
               <div style="margin-top:12px;">
                 <a class="cmx-btn-muted" href="{{ url_for('case_management.exit_assessment', resident_id=resident_id) }}">
-                  {% if enrollment.exit_date if enrollment else false %}
+                  {% if enrollment and enrollment["exit_date"] %}
                     View or Edit Exit Assessment
                   {% else %}
                     Complete Exit Assessment
