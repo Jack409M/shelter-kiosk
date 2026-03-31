@@ -4,6 +4,7 @@ from datetime import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
+from core.auth import require_login, require_shelter
 from routes.case_management_parts.helpers import case_manager_allowed as _shared_case_manager_allowed
 from routes.case_management_parts.helpers import normalize_shelter_name as _shared_normalize_shelter_name
 from routes.case_management_parts.helpers import shelter_equals_sql as _shared_shelter_equals_sql
@@ -12,6 +13,7 @@ from routes.resident_detail_parts.actions import add_case_note_view
 from routes.resident_detail_parts.actions import add_goal_view
 from routes.resident_detail_parts.actions import complete_goal_view
 from routes.resident_detail_parts.actions import create_enrollment_view
+from routes.resident_detail_parts.read import load_enrollment_context_for_shelter
 from routes.resident_detail_parts.read import load_resident_for_shelter
 from routes.resident_detail_parts.read import row_value
 from routes.resident_detail_parts.timeline import build_calendar_context
@@ -20,8 +22,6 @@ from routes.resident_detail_parts.timeline import load_timeline
 from routes.resident_detail_parts.timeline import normalize_timeline
 from routes.resident_detail_parts.timeline import parse_anchor_date
 from routes.resident_detail_parts.timeline import parse_dt
-
-from core.auth import require_login, require_shelter
 
 resident_detail = Blueprint(
     "resident_detail",
@@ -187,8 +187,6 @@ def create_enrollment(resident_id: int):
 @require_shelter
 def add_goal(resident_id: int):
     shelter = _normalize_shelter_name(session.get("shelter"))
-    from routes.resident_detail_parts.read import load_enrollment_context_for_shelter
-
     return add_goal_view(
         resident_id,
         shelter,
@@ -219,8 +217,6 @@ def complete_goal(goal_id: int):
 @require_shelter
 def add_case_note(resident_id: int):
     shelter = _normalize_shelter_name(session.get("shelter"))
-    from routes.resident_detail_parts.read import load_enrollment_context_for_shelter
-
     return add_case_note_view(
         resident_id,
         shelter,
@@ -236,8 +232,6 @@ def add_case_note(resident_id: int):
 @require_shelter
 def add_appointment(resident_id: int):
     shelter = _normalize_shelter_name(session.get("shelter"))
-    from routes.resident_detail_parts.read import load_enrollment_context_for_shelter
-
     return add_appointment_view(
         resident_id,
         shelter,
