@@ -15,8 +15,8 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
-def _resident_case_redirect(resident_id: int, anchor: str = "children-tab"):
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + f"#{anchor}")
+def _resident_case_redirect(resident_id: int):
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
 def _current_shelter() -> str:
