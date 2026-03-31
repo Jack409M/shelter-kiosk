@@ -2,14 +2,228 @@
 
 {% block extra_head %}
   <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260330b') }}">
+  <style>
+    .edit-note-shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    .edit-note-card {
+      background: #ffffff;
+      border: 1px solid #dbe5f0;
+      border-radius: 22px;
+      padding: 22px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+    }
+
+    .edit-note-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .edit-note-title {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .edit-note-subtitle {
+      margin-top: 4px;
+      color: #475569;
+      font-size: 0.95rem;
+    }
+
+    .edit-note-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1d4ed8;
+      padding: 8px 12px;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .edit-note-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .edit-note-grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .edit-note-grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .edit-note-panel {
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid #dbe5f0;
+      padding: 16px;
+    }
+
+    .edit-note-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .edit-note-field {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .edit-note-field label,
+    .edit-note-panel > label,
+    .edit-note-card > label {
+      font-weight: 800;
+      color: #0f172a;
+      font-size: 0.92rem;
+    }
+
+    .edit-note-card input,
+    .edit-note-card select,
+    .edit-note-card textarea {
+      width: 100%;
+      border: 1px solid #cfd9e5;
+      border-radius: 14px;
+      background: #ffffff;
+      color: #0f172a;
+      padding: 11px 12px;
+      font: inherit;
+    }
+
+    .edit-note-card textarea {
+      min-height: 130px;
+      resize: vertical;
+    }
+
+    .edit-note-card input:focus,
+    .edit-note-card select:focus,
+    .edit-note-card textarea:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.16);
+    }
+
+    .edit-note-help {
+      color: #475569;
+      font-size: 0.9rem;
+      margin: 0 0 10px 0;
+    }
+
+    .edit-note-radio-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    .edit-note-radio-row input[type="radio"] {
+      width: auto;
+      margin: 0;
+    }
+
+    .edit-note-service-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .edit-note-service-card {
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid #dbe5f0;
+      padding: 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .edit-note-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .edit-note-checkbox-label input[type="checkbox"] {
+      width: auto;
+      margin: 0;
+      accent-color: #2563eb;
+    }
+
+    .edit-note-qty,
+    .edit-note-unit,
+    .edit-note-notes {
+      margin: 0;
+    }
+
+    .edit-note-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .edit-note-actions button,
+    .edit-note-actions .btn {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      border-radius: 14px;
+      padding: 11px 16px;
+      font-weight: 700;
+      text-decoration: none;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .edit-note-actions button {
+      background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+      color: #ffffff;
+    }
+
+    .edit-note-actions .btn {
+      background: #ffffff;
+      color: #0f172a;
+      border-color: #cfd9e5;
+    }
+
+    @media (max-width: 900px) {
+      .edit-note-grid-4,
+      .edit-note-grid-2,
+      .edit-note-service-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 {% endblock %}
 
 {% block content %}
 
 {% if resident is mapping %}
   {% set resident_id = resident["id"] %}
+  {% set resident_name = (resident.get("first_name", "") ~ " " ~ resident.get("last_name", ""))|trim %}
 {% else %}
   {% set resident_id = resident[0] %}
+  {% set resident_name = "Resident" %}
 {% endif %}
 
 {% if note is mapping %}
@@ -17,9 +231,15 @@
   {% set meeting_date = note["meeting_date"] %}
   {% set notes_value = note["notes"] %}
   {% set progress_notes_value = note["progress_notes"] %}
+  {% set setbacks_or_incidents_value = note["setbacks_or_incidents"] %}
   {% set action_items_value = note["action_items"] %}
   {% set next_appointment_value = note["next_appointment"] %}
   {% set overall_summary_value = note["overall_summary"] %}
+  {% set ready_for_next_level_value = note["ready_for_next_level"] %}
+  {% set recommended_next_level_value = note["recommended_next_level"] %}
+  {% set blocker_reason_value = note["blocker_reason"] %}
+  {% set override_or_exception_value = note["override_or_exception"] %}
+  {% set staff_review_note_value = note["staff_review_note"] %}
   {% set updated_grit_value = note["updated_grit"] %}
   {% set parenting_class_completed_value = note["parenting_class_completed"] %}
   {% set warrants_or_fines_paid_value = note["warrants_or_fines_paid"] %}
@@ -28,339 +248,230 @@
   {% set meeting_date = note[3] %}
   {% set notes_value = note[4] %}
   {% set progress_notes_value = note[5] %}
+  {% set setbacks_or_incidents_value = "" %}
   {% set action_items_value = note[6] %}
   {% set next_appointment_value = note[7] %}
   {% set overall_summary_value = note[8] %}
+  {% set ready_for_next_level_value = none %}
+  {% set recommended_next_level_value = "" %}
+  {% set blocker_reason_value = "" %}
+  {% set override_or_exception_value = "" %}
+  {% set staff_review_note_value = "" %}
   {% set updated_grit_value = note[9] %}
   {% set parenting_class_completed_value = note[10] %}
   {% set warrants_or_fines_paid_value = note[11] %}
 {% endif %}
 
-<h1>Edit Case Note</h1>
-
-<div class="card">
-  <form method="post" action="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    <label><strong>Meeting Date</strong></label>
-    <input type="date" name="meeting_date" value="{{ meeting_date or '' }}" required>
-
-    <label><strong>Notes</strong></label>
-    <textarea name="notes" rows="3">{{ notes_value or "" }}</textarea>
-
-    <label><strong>Progress Notes</strong></label>
-    <textarea name="progress_notes" rows="3">{{ progress_notes_value or "" }}</textarea>
-
-    <label><strong>Action Items</strong></label>
-    <textarea name="action_items" rows="3">{{ action_items_value or "" }}</textarea>
-
-    <label><strong>Next Appointment</strong></label>
-    <input
-      type="text"
-      name="next_appointment"
-      value="{{ next_appointment_value or '' }}"
-      placeholder="Example: 2026-04-15 10:00 AM"
-    >
-
-    <label><strong>Overall Summary of Meeting</strong></label>
-    <textarea name="overall_summary" rows="3">{{ overall_summary_value or "" }}</textarea>
-
-    <label><strong>Updated Grit</strong></label>
-    <input
-      type="number"
-      name="updated_grit"
-      min="0"
-      max="100"
-      class="edit-case-note-qty"
-      inputmode="numeric"
-      value="{{ updated_grit_value if updated_grit_value is not none else '' }}"
-    >
-
-    <label><strong>Parenting Class Completed</strong></label>
-    <label class="edit-case-note-radio-row">
-      <input
-        type="radio"
-        name="parenting_class_completed"
-        value="yes"
-        {% if parenting_class_completed_value == 1 %}checked{% endif %}
-      >
-      Yes
-      <input
-        type="radio"
-        name="parenting_class_completed"
-        value="no"
-        {% if parenting_class_completed_value == 0 %}checked{% endif %}
-      >
-      No
-    </label>
-
-    <label><strong>Warrants or Fines Paid</strong></label>
-    <label class="edit-case-note-radio-row">
-      <input
-        type="radio"
-        name="warrants_or_fines_paid"
-        value="yes"
-        {% if warrants_or_fines_paid_value == 1 %}checked{% endif %}
-      >
-      Yes
-      <input
-        type="radio"
-        name="warrants_or_fines_paid"
-        value="no"
-        {% if warrants_or_fines_paid_value == 0 %}checked{% endif %}
-      >
-      No
-    </label>
-
-    <hr>
-
-    <h3>Services Provided</h3>
-
-    <p class="edit-case-note-help">
-      Uncheck a service to remove it from this record.
-    </p>
-
-    <label><strong>Service Date</strong></label>
-    <input type="date" name="service_date" value="{{ meeting_date or '' }}">
-
-    <div class="edit-case-note-service-grid">
+<div class="edit-note-shell">
+  <div class="edit-note-card">
+    <div class="edit-note-head">
       <div>
-        <label class="edit-case-note-checkbox-label">
-          <input type="checkbox" name="service_type" value="Counseling" {% if "Counseling" in selected_services %}checked{% endif %}>
-          <span>
-            Counseling
-            {% if "Counseling" in selected_services %}
-              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
-            {% endif %}
-          </span>
-        </label>
-        <input
-          type="number"
-          name="quantity_Counseling"
-          min="0"
-          class="edit-case-note-qty"
-          placeholder="Qty"
-          value="{{ service_quantity_map.get('Counseling', '') }}"
-        >
-        <input
-          type="text"
-          name="unit_Counseling"
-          class="edit-case-note-unit"
-          placeholder="sessions"
-          value="{{ service_unit_map.get('Counseling', '') }}"
-        >
-        <textarea
-          name="service_notes_Counseling"
-          rows="2"
-          class="edit-case-note-notes"
-          placeholder="Counseling notes"
-        >{{ service_notes_map.get("Counseling", "") }}</textarea>
+        <h1 class="edit-note-title">Edit Case Note</h1>
+        <div class="edit-note-subtitle">{{ resident_name or "Resident" }} · update the meeting record, services, and advancement review.</div>
       </div>
-
-      <div>
-        <label class="edit-case-note-checkbox-label">
-          <input type="checkbox" name="service_type" value="Dental" {% if "Dental" in selected_services %}checked{% endif %}>
-          <span>
-            Dental
-            {% if "Dental" in selected_services %}
-              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
-            {% endif %}
-          </span>
-        </label>
-        <input
-          type="number"
-          name="quantity_Dental"
-          min="0"
-          class="edit-case-note-qty"
-          placeholder="Qty"
-          value="{{ service_quantity_map.get('Dental', '') }}"
-        >
-        <input
-          type="text"
-          name="unit_Dental"
-          class="edit-case-note-unit"
-          placeholder="visits"
-          value="{{ service_unit_map.get('Dental', '') }}"
-        >
-        <textarea
-          name="service_notes_Dental"
-          rows="2"
-          class="edit-case-note-notes"
-          placeholder="Dental notes"
-        >{{ service_notes_map.get("Dental", "") }}</textarea>
-      </div>
-
-      <div>
-        <label class="edit-case-note-checkbox-label">
-          <input type="checkbox" name="service_type" value="Vision" {% if "Vision" in selected_services %}checked{% endif %}>
-          <span>
-            Vision
-            {% if "Vision" in selected_services %}
-              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
-            {% endif %}
-          </span>
-        </label>
-        <input
-          type="number"
-          name="quantity_Vision"
-          min="0"
-          class="edit-case-note-qty"
-          placeholder="Qty"
-          value="{{ service_quantity_map.get('Vision', '') }}"
-        >
-        <input
-          type="text"
-          name="unit_Vision"
-          class="edit-case-note-unit"
-          placeholder="visits"
-          value="{{ service_unit_map.get('Vision', '') }}"
-        >
-        <textarea
-          name="service_notes_Vision"
-          rows="2"
-          class="edit-case-note-notes"
-          placeholder="Vision notes"
-        >{{ service_notes_map.get("Vision", "") }}</textarea>
-      </div>
-
-      <div>
-        <label class="edit-case-note-checkbox-label">
-          <input type="checkbox" name="service_type" value="Daycare" {% if "Daycare" in selected_services %}checked{% endif %}>
-          <span>
-            Daycare
-            {% if "Daycare" in selected_services %}
-              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
-            {% endif %}
-          </span>
-        </label>
-        <input
-          type="number"
-          name="quantity_Daycare"
-          min="0"
-          class="edit-case-note-qty"
-          placeholder="Qty"
-          value="{{ service_quantity_map.get('Daycare', '') }}"
-        >
-        <input
-          type="text"
-          name="unit_Daycare"
-          class="edit-case-note-unit"
-          placeholder="days"
-          value="{{ service_unit_map.get('Daycare', '') }}"
-        >
-        <textarea
-          name="service_notes_Daycare"
-          rows="2"
-          class="edit-case-note-notes"
-          placeholder="Daycare notes"
-        >{{ service_notes_map.get("Daycare", "") }}</textarea>
-      </div>
-
-      <div>
-        <label class="edit-case-note-checkbox-label">
-          <input type="checkbox" name="service_type" value="Legal Assistance" {% if "Legal Assistance" in selected_services %}checked{% endif %}>
-          <span>
-            Legal Assistance
-            {% if "Legal Assistance" in selected_services %}
-              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
-            {% endif %}
-          </span>
-        </label>
-        <input
-          type="number"
-          name="quantity_Legal Assistance"
-          min="0"
-          class="edit-case-note-qty"
-          placeholder="Qty"
-          value="{{ service_quantity_map.get('Legal Assistance', '') }}"
-        >
-        <input
-          type="text"
-          name="unit_Legal Assistance"
-          class="edit-case-note-unit"
-          placeholder="visits"
-          value="{{ service_unit_map.get('Legal Assistance', '') }}"
-        >
-        <textarea
-          name="service_notes_Legal Assistance"
-          rows="2"
-          class="edit-case-note-notes"
-          placeholder="Legal assistance notes"
-        >{{ service_notes_map.get("Legal Assistance", "") }}</textarea>
-      </div>
-
-      <div>
-        <label class="edit-case-note-checkbox-label">
-          <input type="checkbox" name="service_type" value="Transportation" {% if "Transportation" in selected_services %}checked{% endif %}>
-          <span>
-            Transportation
-            {% if "Transportation" in selected_services %}
-              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
-            {% endif %}
-          </span>
-        </label>
-        <input
-          type="number"
-          name="quantity_Transportation"
-          min="0"
-          class="edit-case-note-qty"
-          placeholder="Qty"
-          value="{{ service_quantity_map.get('Transportation', '') }}"
-        >
-        <input
-          type="text"
-          name="unit_Transportation"
-          class="edit-case-note-unit"
-          placeholder="rides"
-          value="{{ service_unit_map.get('Transportation', '') }}"
-        >
-        <textarea
-          name="service_notes_Transportation"
-          rows="2"
-          class="edit-case-note-notes"
-          placeholder="Transportation notes"
-        >{{ service_notes_map.get("Transportation", "") }}</textarea>
-      </div>
-
-      <div>
-        <label class="edit-case-note-checkbox-label">
-          <input type="checkbox" name="service_type" value="Other" {% if "Other" in selected_services %}checked{% endif %}>
-          <span>
-            Other
-            {% if "Other" in selected_services %}
-              <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
-            {% endif %}
-          </span>
-        </label>
-        <input
-          type="number"
-          name="quantity_Other"
-          min="0"
-          class="edit-case-note-qty"
-          placeholder="Qty"
-          value="{{ service_quantity_map.get('Other', '') }}"
-        >
-        <input
-          type="text"
-          name="unit_Other"
-          class="edit-case-note-unit"
-          placeholder="units"
-          value="{{ service_unit_map.get('Other', '') }}"
-        >
-        <textarea
-          name="service_notes_Other"
-          rows="2"
-          class="edit-case-note-notes"
-          placeholder="Other service notes"
-        >{{ service_notes_map.get("Other", "") }}</textarea>
-      </div>
+      <div class="edit-note-pill">Meeting {{ meeting_date or "—" }}</div>
     </div>
 
-    <div class="edit-case-note-actions">
-      <button type="submit">Save Changes</button>
-      <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
-    </div>
-  </form>
+    <form method="post" action="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div class="edit-note-grid edit-note-grid-4">
+        <div class="edit-note-field">
+          <label><strong>Meeting Date</strong></label>
+          <input type="date" name="meeting_date" value="{{ meeting_date or '' }}" required>
+        </div>
+
+        <div class="edit-note-field">
+          <label><strong>Next Appointment</strong></label>
+          <input
+            type="text"
+            name="next_appointment"
+            value="{{ next_appointment_value or '' }}"
+            placeholder="Example: 2026-04-15 10:00 AM"
+          >
+        </div>
+
+        <div class="edit-note-field">
+          <label><strong>Updated Grit</strong></label>
+          <input
+            type="number"
+            name="updated_grit"
+            min="0"
+            max="100"
+            class="edit-note-qty"
+            inputmode="numeric"
+            value="{{ updated_grit_value if updated_grit_value is not none else '' }}"
+          >
+        </div>
+
+        <div class="edit-note-field">
+          <label><strong>Ready For Next Level</strong></label>
+          <select name="ready_for_next_level">
+            <option value="" {% if ready_for_next_level_value is none %}selected{% endif %}>—</option>
+            <option value="yes" {% if ready_for_next_level_value == 1 or ready_for_next_level_value is sameas true %}selected{% endif %}>Yes</option>
+            <option value="no" {% if ready_for_next_level_value == 0 or ready_for_next_level_value is sameas false %}selected{% endif %}>No</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="edit-note-grid edit-note-grid-2" style="margin-top:16px;">
+        <div class="edit-note-panel">
+          <h3>Meeting Narrative</h3>
+
+          <div class="edit-note-field">
+            <label><strong>Notes</strong></label>
+            <textarea name="notes" rows="4">{{ notes_value or "" }}</textarea>
+          </div>
+
+          <div class="edit-note-field" style="margin-top:12px;">
+            <label><strong>Progress Notes</strong></label>
+            <textarea name="progress_notes" rows="4">{{ progress_notes_value or "" }}</textarea>
+          </div>
+
+          <div class="edit-note-field" style="margin-top:12px;">
+            <label><strong>Setbacks Or Incidents</strong></label>
+            <textarea name="setbacks_or_incidents" rows="4">{{ setbacks_or_incidents_value or "" }}</textarea>
+          </div>
+
+          <div class="edit-note-field" style="margin-top:12px;">
+            <label><strong>Action Items</strong></label>
+            <textarea name="action_items" rows="4">{{ action_items_value or "" }}</textarea>
+          </div>
+
+          <div class="edit-note-field" style="margin-top:12px;">
+            <label><strong>Overall Summary of Meeting</strong></label>
+            <textarea name="overall_summary" rows="4">{{ overall_summary_value or "" }}</textarea>
+          </div>
+        </div>
+
+        <div class="edit-note-panel">
+          <h3>Advancement Review</h3>
+
+          <div class="edit-note-field">
+            <label><strong>Recommended Next Level</strong></label>
+            <input type="text" name="recommended_next_level" value="{{ recommended_next_level_value or '' }}">
+          </div>
+
+          <div class="edit-note-field" style="margin-top:12px;">
+            <label><strong>Blocker Reason</strong></label>
+            <textarea name="blocker_reason" rows="4">{{ blocker_reason_value or "" }}</textarea>
+          </div>
+
+          <div class="edit-note-field" style="margin-top:12px;">
+            <label><strong>Override Or Exception</strong></label>
+            <textarea name="override_or_exception" rows="4">{{ override_or_exception_value or "" }}</textarea>
+          </div>
+
+          <div class="edit-note-field" style="margin-top:12px;">
+            <label><strong>Staff Review Note</strong></label>
+            <textarea name="staff_review_note" rows="4">{{ staff_review_note_value or "" }}</textarea>
+          </div>
+
+          <div class="edit-note-grid edit-note-grid-2" style="margin-top:12px;">
+            <div class="edit-note-field">
+              <label><strong>Parenting Class Completed</strong></label>
+              <label class="edit-note-radio-row">
+                <input
+                  type="radio"
+                  name="parenting_class_completed"
+                  value="yes"
+                  {% if parenting_class_completed_value == 1 %}checked{% endif %}
+                >
+                Yes
+                <input
+                  type="radio"
+                  name="parenting_class_completed"
+                  value="no"
+                  {% if parenting_class_completed_value == 0 %}checked{% endif %}
+                >
+                No
+              </label>
+            </div>
+
+            <div class="edit-note-field">
+              <label><strong>Warrants or Fines Paid</strong></label>
+              <label class="edit-note-radio-row">
+                <input
+                  type="radio"
+                  name="warrants_or_fines_paid"
+                  value="yes"
+                  {% if warrants_or_fines_paid_value == 1 %}checked{% endif %}
+                >
+                Yes
+                <input
+                  type="radio"
+                  name="warrants_or_fines_paid"
+                  value="no"
+                  {% if warrants_or_fines_paid_value == 0 %}checked{% endif %}
+                >
+                No
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-note-panel" style="margin-top:18px;">
+        <h3>Services Provided</h3>
+        <p class="edit-note-help">Uncheck a service to remove it from this record.</p>
+
+        <div class="edit-note-service-grid">
+          {% set meeting_services = [
+            ("Counseling", "sessions", "Counseling notes"),
+            ("Dental", "visits", "Dental notes"),
+            ("Vision", "visits", "Vision notes"),
+            ("Daycare", "days", "Daycare notes"),
+            ("Legal Assistance", "visits", "Legal assistance notes"),
+            ("Transportation", "rides", "Transportation notes"),
+            ("Other", "units", "Other service notes")
+          ] %}
+
+          {% for service_name, unit_hint, note_hint in meeting_services %}
+            <div class="edit-note-service-card">
+              <label class="edit-note-checkbox-label">
+                <input type="checkbox" name="service_type" value="{{ service_name }}" {% if service_name in selected_services %}checked{% endif %}>
+                <span>
+                  {{ service_name }}
+                  {% if service_name in selected_services %}
+                    <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
+                  {% endif %}
+                </span>
+              </label>
+
+              <input
+                type="number"
+                name="quantity_{{ service_name }}"
+                min="0"
+                class="edit-note-qty"
+                placeholder="Qty"
+                value="{{ service_quantity_map.get(service_name, '') }}"
+              >
+
+              <input
+                type="text"
+                name="unit_{{ service_name }}"
+                class="edit-note-unit"
+                placeholder="{{ unit_hint }}"
+                value="{{ service_unit_map.get(service_name, '') }}"
+              >
+
+              <textarea
+                name="service_notes_{{ service_name }}"
+                rows="2"
+                class="edit-note-notes"
+                placeholder="{{ note_hint }}"
+              >{{ service_notes_map.get(service_name, "") }}</textarea>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="edit-note-actions">
+        <button type="submit">Save Changes</button>
+        <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
+      </div>
+    </form>
+  </div>
 </div>
 
 {% endblock %}
