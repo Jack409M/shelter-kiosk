@@ -12,6 +12,10 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
+def _resident_case_redirect(resident_id: int, anchor: str = "recovery-snapshot"):
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id) + f"#{anchor}")
+
+
 def _clean(value: str | None) -> str | None:
     value = (value or "").strip()
     return value or None
@@ -49,7 +53,7 @@ def budget_sessions_view(resident_id: int):
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     resident = _resident_context(resident_id)
     if not resident:
@@ -83,7 +87,7 @@ def add_budget_session_view(resident_id: int):
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     resident = _resident_context(resident_id)
     if not resident:
@@ -126,7 +130,7 @@ def add_budget_session_view(resident_id: int):
     )
 
     flash("Budget session added.", "success")
-    return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
+    return _resident_case_redirect(resident_id)
 
 
 def edit_budget_session_view(resident_id: int, budget_id: int):
@@ -134,7 +138,7 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _resident_case_redirect(resident_id)
 
     resident = _resident_context(resident_id)
     if not resident:
@@ -204,4 +208,4 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
     )
 
     flash("Budget session updated.", "success")
-    return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
+    return _resident_case_redirect(resident_id)
