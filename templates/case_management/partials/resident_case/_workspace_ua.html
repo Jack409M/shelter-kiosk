@@ -1,1 +1,75 @@
+<div class="card no-print">
+  <h2>UA Section</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    Keep UA history visible in the workspace and allow new entries without leaving the page.
+  </p>
 
+  <div class="case-snapshot-grid">
+    <div class="case-snapshot-card case-snapshot-card-compact">
+      <h3 class="case-snapshot-title">Add UA Entry</h3>
+
+      <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident_id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <label><strong>UA Date</strong></label>
+        <input type="date" name="ua_date" required>
+
+        <label><strong>Result</strong></label>
+        <input
+          type="text"
+          name="result"
+          value=""
+          placeholder="Example: Negative or Positive"
+        >
+
+        <label><strong>Substances Detected</strong></label>
+        <input
+          type="text"
+          name="substances_detected"
+          value=""
+          placeholder="List substances if detected"
+        >
+
+        <label><strong>Notes</strong></label>
+        <textarea
+          name="notes"
+          rows="3"
+          placeholder="Optional UA notes"
+        ></textarea>
+
+        <div class="case-section-top">
+          <button type="submit">Save UA Entry</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="case-snapshot-card case-snapshot-card-compact">
+      <h3 class="case-snapshot-title">UA History</h3>
+
+      {% if rs_ua_rows %}
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Result</th>
+              <th>Substances Detected</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rs_ua_rows %}
+              <tr>
+                <td>{{ row["ua_date"] or "—" }}</td>
+                <td>{{ row["result_display"] or "—" }}</td>
+                <td>{{ row["substances_detected"] or "—" }}</td>
+                <td>{{ row["notes"] or "—" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="case-empty-muted">No UA entries recorded.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
