@@ -39,6 +39,15 @@ def _normalize_employment_type(value: str | None) -> str | None:
     return None
 
 
+def _normalize_tristate_bool(value: str | None):
+    normalized = (value or "").strip().lower()
+    if normalized in {"yes", "true", "1", "on"}:
+        return True
+    if normalized in {"no", "false", "0", "off"}:
+        return False
+    return None
+
+
 def update_recovery_profile_view(resident_id: int):
     init_db()
 
@@ -54,8 +63,11 @@ def update_recovery_profile_view(resident_id: int):
         SELECT
             id,
             program_level,
+            level_start_date,
             sponsor_name,
+            sponsor_active,
             step_current,
+            step_work_active,
             employment_status_current,
             employment_type_current,
             employer_name,
@@ -87,7 +99,10 @@ def update_recovery_profile_view(resident_id: int):
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     program_level = _clean_text(request.form.get("program_level"))
+    level_start_date = _clean_date_text(request.form.get("level_start_date"))
     sponsor_name = _clean_text(request.form.get("sponsor_name"))
+    sponsor_active = _normalize_tristate_bool(request.form.get("sponsor_active"))
+    step_work_active = _normalize_tristate_bool(request.form.get("step_work_active"))
 
     sobriety_date = _clean_date_text(request.form.get("sobriety_date"))
     drug_of_choice = _clean_text(request.form.get("drug_of_choice"))
@@ -133,7 +148,9 @@ def update_recovery_profile_view(resident_id: int):
             UPDATE residents
             SET
                 program_level = {ph},
+                level_start_date = {ph},
                 sponsor_name = {ph},
+                sponsor_active = {ph},
                 sobriety_date = {ph},
                 drug_of_choice = {ph},
                 treatment_graduation_date = {ph},
@@ -147,12 +164,15 @@ def update_recovery_profile_view(resident_id: int):
                 monthly_income = {ph},
                 employment_updated_at = {ph},
                 step_current = {ph},
+                step_work_active = {ph},
                 step_changed_at = {ph}
             WHERE id = {ph}
             """,
             (
                 program_level,
+                level_start_date,
                 sponsor_name,
+                sponsor_active,
                 sobriety_date,
                 drug_of_choice,
                 treatment_graduation_date,
@@ -166,6 +186,7 @@ def update_recovery_profile_view(resident_id: int):
                 monthly_income,
                 employment_updated_at,
                 new_step,
+                step_work_active,
                 step_changed_at,
                 resident_id,
             ),
@@ -176,7 +197,9 @@ def update_recovery_profile_view(resident_id: int):
             UPDATE residents
             SET
                 program_level = {ph},
+                level_start_date = {ph},
                 sponsor_name = {ph},
+                sponsor_active = {ph},
                 sobriety_date = {ph},
                 drug_of_choice = {ph},
                 treatment_graduation_date = {ph},
@@ -189,12 +212,15 @@ def update_recovery_profile_view(resident_id: int):
                 employment_notes = {ph},
                 monthly_income = {ph},
                 step_current = {ph},
+                step_work_active = {ph},
                 step_changed_at = {ph}
             WHERE id = {ph}
             """,
             (
                 program_level,
+                level_start_date,
                 sponsor_name,
+                sponsor_active,
                 sobriety_date,
                 drug_of_choice,
                 treatment_graduation_date,
@@ -207,6 +233,7 @@ def update_recovery_profile_view(resident_id: int):
                 employment_notes,
                 monthly_income,
                 new_step,
+                step_work_active,
                 step_changed_at,
                 resident_id,
             ),
@@ -217,7 +244,9 @@ def update_recovery_profile_view(resident_id: int):
             UPDATE residents
             SET
                 program_level = {ph},
+                level_start_date = {ph},
                 sponsor_name = {ph},
+                sponsor_active = {ph},
                 sobriety_date = {ph},
                 drug_of_choice = {ph},
                 treatment_graduation_date = {ph},
@@ -230,12 +259,15 @@ def update_recovery_profile_view(resident_id: int):
                 employment_notes = {ph},
                 monthly_income = {ph},
                 employment_updated_at = {ph},
-                step_current = {ph}
+                step_current = {ph},
+                step_work_active = {ph}
             WHERE id = {ph}
             """,
             (
                 program_level,
+                level_start_date,
                 sponsor_name,
+                sponsor_active,
                 sobriety_date,
                 drug_of_choice,
                 treatment_graduation_date,
@@ -249,6 +281,7 @@ def update_recovery_profile_view(resident_id: int):
                 monthly_income,
                 employment_updated_at,
                 new_step,
+                step_work_active,
                 resident_id,
             ),
         )
@@ -258,7 +291,9 @@ def update_recovery_profile_view(resident_id: int):
             UPDATE residents
             SET
                 program_level = {ph},
+                level_start_date = {ph},
                 sponsor_name = {ph},
+                sponsor_active = {ph},
                 sobriety_date = {ph},
                 drug_of_choice = {ph},
                 treatment_graduation_date = {ph},
@@ -270,12 +305,15 @@ def update_recovery_profile_view(resident_id: int):
                 unemployment_reason = {ph},
                 employment_notes = {ph},
                 monthly_income = {ph},
-                step_current = {ph}
+                step_current = {ph},
+                step_work_active = {ph}
             WHERE id = {ph}
             """,
             (
                 program_level,
+                level_start_date,
                 sponsor_name,
+                sponsor_active,
                 sobriety_date,
                 drug_of_choice,
                 treatment_graduation_date,
@@ -288,6 +326,7 @@ def update_recovery_profile_view(resident_id: int):
                 employment_notes,
                 monthly_income,
                 new_step,
+                step_work_active,
                 resident_id,
             ),
         )
