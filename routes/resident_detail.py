@@ -10,6 +10,7 @@ from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import case_manager_allowed as _shared_case_manager_allowed
 from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 from routes.case_management_parts.helpers import normalize_shelter_name as _shared_normalize_shelter_name
+from routes.case_management_parts.helpers import resident_has_active_enrollment
 from routes.case_management_parts.helpers import shelter_equals_sql as _shared_shelter_equals_sql
 
 resident_detail = Blueprint(
@@ -955,27 +956,7 @@ def create_enrollment(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("residents.staff_residents"))
 
-    existing = db_fetchone(
-        _sql(
-            """
-            SELECT
-                id
-            FROM program_enrollments
-            WHERE resident_id = %s AND program_status = %s
-            LIMIT 1
-            """,
-            """
-            SELECT
-                id
-            FROM program_enrollments
-            WHERE resident_id = ? AND program_status = ?
-            LIMIT 1
-            """,
-        ),
-        (resident_id, "active"),
-    )
-
-    if existing:
+    if resident_has_active_enrollment(resident_id):
         flash("Resident already has an active enrollment.", "error")
         return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id))
 
