@@ -6,6 +6,7 @@ from core.db import db_fetchall, db_fetchone
 from core.helpers import fmt_dt
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
@@ -55,28 +56,15 @@ def _normalize_exit_assessment(row):
 
 
 def _load_current_enrollment(resident_id: int):
-    ph = placeholder()
-
-    return db_fetchone(
-        f"""
-        SELECT
+    return fetch_current_enrollment_for_resident(
+        resident_id,
+        columns="""
             id,
             shelter,
             program_status,
             entry_date,
             exit_date
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY
-            CASE
-                WHEN COALESCE(program_status, '') = 'active' THEN 0
-                ELSE 1
-            END,
-            COALESCE(entry_date, '') DESC,
-            id DESC
-        LIMIT 1
         """,
-        (resident_id,),
     )
 
 
