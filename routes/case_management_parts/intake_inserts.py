@@ -26,6 +26,15 @@ def _safe_int_or_none(value: Any) -> int | None:
         return None
 
 
+def _safe_int_or_zero(value: Any) -> int:
+    if value in (None, ""):
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _checked_need(data: dict[str, Any], need_key: str) -> int | None:
     return yes_no_to_int(data.get(f"need_{need_key}"))
 
@@ -89,13 +98,13 @@ def _build_intake_assessment_payload(data: dict[str, Any]) -> dict[str, Any]:
 
 def _build_family_snapshot_payload(data: dict[str, Any]) -> dict[str, Any]:
     return {
-        "kids_at_dwc": _safe_int_or_none(data.get("kids_at_dwc")),
-        "kids_served_outside_under_18": _safe_int_or_none(data.get("kids_served_outside_under_18")),
-        "kids_ages_0_5": _safe_int_or_none(data.get("kids_ages_0_5")),
-        "kids_ages_6_11": _safe_int_or_none(data.get("kids_ages_6_11")),
-        "kids_ages_12_17": _safe_int_or_none(data.get("kids_ages_12_17")),
-        "kids_reunited_while_in_program": _safe_int_or_none(data.get("kids_reunited_while_in_program")),
-        "healthy_babies_born_at_dwc": _safe_int_or_none(data.get("healthy_babies_born_at_dwc")),
+        "kids_at_dwc": _safe_int_or_zero(data.get("kids_at_dwc")),
+        "kids_served_outside_under_18": _safe_int_or_zero(data.get("kids_served_outside_under_18")),
+        "kids_ages_0_5": _safe_int_or_zero(data.get("kids_ages_0_5")),
+        "kids_ages_6_11": _safe_int_or_zero(data.get("kids_ages_6_11")),
+        "kids_ages_12_17": _safe_int_or_zero(data.get("kids_ages_12_17")),
+        "kids_reunited_while_in_program": _safe_int_or_zero(data.get("kids_reunited_while_in_program")),
+        "healthy_babies_born_at_dwc": _safe_int_or_zero(data.get("healthy_babies_born_at_dwc")),
     }
 
 
