@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Any
 
 from core.db import db_fetchall, db_fetchone
+from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
 from routes.case_management_parts.helpers import placeholder
 
 
@@ -88,6 +89,7 @@ def _employment_type_display(value: Any) -> str:
 
 def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     ph = placeholder()
+    current_enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
 
     resident = db_fetchone(
         f"""
@@ -112,7 +114,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         (resident_id,),
     ) or {}
 
-    if enrollment_id is not None:
+    if current_enrollment_id is not None:
         medications = db_fetchall(
             f"""
             SELECT
@@ -136,7 +138,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
                 COALESCE(updated_at, created_at) DESC,
                 id DESC
             """,
-            (resident_id, enrollment_id),
+            (resident_id, current_enrollment_id),
         )
 
         latest_ua = db_fetchone(
@@ -152,7 +154,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             ORDER BY ua_date DESC, id DESC
             LIMIT 1
             """,
-            (resident_id, enrollment_id),
+            (resident_id, current_enrollment_id),
         )
 
         latest_inspection = db_fetchone(
@@ -167,7 +169,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             ORDER BY inspection_date DESC, id DESC
             LIMIT 1
             """,
-            (resident_id, enrollment_id),
+            (resident_id, current_enrollment_id),
         )
 
         latest_budget_session = db_fetchone(
@@ -181,7 +183,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             ORDER BY session_date DESC, id DESC
             LIMIT 1
             """,
-            (resident_id, enrollment_id),
+            (resident_id, current_enrollment_id),
         )
     else:
         medications = db_fetchall(
