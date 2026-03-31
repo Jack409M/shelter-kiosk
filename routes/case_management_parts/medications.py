@@ -48,7 +48,13 @@ def _resident_context(resident_id: int):
           ON pe.resident_id = r.id
         WHERE r.id = {ph}
           AND {shelter_equals_sql("r.shelter")}
-        ORDER BY pe.id DESC
+        ORDER BY
+            CASE
+                WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
+                ELSE 1
+            END,
+            COALESCE(pe.entry_date, '') DESC,
+            pe.id DESC
         LIMIT 1
         """,
         (resident_id, shelter),
