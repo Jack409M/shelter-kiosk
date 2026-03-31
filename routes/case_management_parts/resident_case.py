@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from flask import current_app, flash, redirect, render_template, session, url_for
 
 from core.db import db_fetchall, db_fetchone
@@ -184,6 +186,69 @@ def _group_summary_rows(rows: list[dict]) -> list[dict]:
     return result
 
 
+def _safe_days_since(date_text: str | None):
+    if not date_text:
+        return None
+
+    try:
+        parsed = date.fromisoformat(str(date_text)[:10])
+    except Exception:
+        return None
+
+    days = (date.today() - parsed).days
+    if days < 0:
+        return 0
+    return days
+
+
+def _build_meeting_defaults():
+    return {
+        "meeting_date": "",
+        "notes": "",
+        "progress_notes": "",
+        "action_items": "",
+        "next_appointment": "",
+        "overall_summary": "",
+        "updated_grit": None,
+        "parenting_class_completed": "",
+        "warrants_or_fines_paid": "",
+    }
+
+
+def _build_workspace_header(*, resident, enrollment, recovery_snapshot, open_needs):
+    rs = recovery_snapshot or {}
+
+    sobriety_date = rs.get("sobriety_date")
+    days_sober = rs.get("days_sober_today")
+    if days_sober is None:
+        days_sober = _safe_days_since(sobriety_date)
+
+    return {
+        "resident_name": f"{resident.get('first_name', '')} {resident.get('last_name', '')}".strip(),
+        "shelter": resident.get("shelter"),
+        "resident_status": "Active" if resident.get("is_active") else "Inactive",
+        "program_status": enrollment.get("program_status") if enrollment else None,
+        "entry_date": enrollment.get("entry_date") if enrollment else None,
+        "level": rs.get("program_level"),
+        "step": rs.get("step_current"),
+        "days_sober": days_sober,
+        "open_needs_count": len(open_needs or []),
+    }
+
+
+def _build_operations_snapshot(recovery_snapshot):
+    rs = recovery_snapshot or {}
+    latest = rs.get("latest_inspection")
+    if not latest:
+        return None
+
+    return {
+        "inspection_date": latest.get("inspection_date"),
+        "result_display": latest.get("passed_display"),
+        "notes": latest.get("notes"),
+    }
+
+
 def resident_case_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -231,6 +296,7 @@ def resident_case_view(resident_id: int):
     followup_1_year = None
     open_needs = []
     recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
+    meeting_defaults = _build_meeting_defaults()
 
     try:
         children = db_fetchall(
@@ -495,6 +561,14 @@ def resident_case_view(resident_id: int):
         followup_6_month = _get_latest_followup(enrollment_id, "6_month")
         followup_1_year = _get_latest_followup(enrollment_id, "1_year")
 
+    workspace_header = _build_workspace_header(
+        resident=resident,
+        enrollment=enrollment,
+        recovery_snapshot=recovery_snapshot,
+        open_needs=open_needs,
+    )
+    operations_snapshot = _build_operations_snapshot(recovery_snapshot)
+
     return render_template(
         "case_management/resident_case.html",
         resident=resident,
@@ -513,4 +587,7 @@ def resident_case_view(resident_id: int):
         recovery_snapshot=recovery_snapshot,
         followup_6_month=followup_6_month,
         followup_1_year=followup_1_year,
+        meeting_defaults=meeting_defaults,
+        workspace_header=workspace_header,
+        operations_snapshot=operations_snapshot,
     )
