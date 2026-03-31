@@ -52,6 +52,10 @@
   }
 ] %}
 
+{% set rs_ua_rows = rs.get("ua_rows", []) %}
+{% set rs_inspection_rows = rs.get("inspection_rows", []) %}
+{% set rs_budget_rows = rs.get("budget_rows", []) %}
+
 <div id="resident-file-tab" class="resident-notebook-tab">
   <div class="card no-print">
     <h2>Progress Notes</h2>
@@ -145,7 +149,7 @@
   </div>
 
   <div class="card no-print case-recovery-section">
-    <h2>Recovery Snapshot</h2>
+    <h2 id="recovery-snapshot">Recovery Snapshot</h2>
 
     <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -276,7 +280,7 @@
             {% if rs_step_changed_at %}
               Step changed: {{ rs_step_changed_at | app_pretty_dt }}
               {% if rs_step_days is not none %}
-                — {{ rs_step_days }} day{% if rs_step_days != 1 %}s{% endif %} on current step
+                {{ rs_step_days }} day{% if rs_step_days != 1 %}s{% endif %} on current step
               {% endif %}
             {% else %}
               No step change date recorded yet.
@@ -287,7 +291,7 @@
             {% if rs_employment_updated_at %}
               Employment updated: {{ rs_employment_updated_at | app_pretty_dt }}
               {% if rs_employment_days is not none %}
-                — {{ rs_employment_days }} day{% if rs_employment_days != 1 %}s{% endif %} since employment update
+                {{ rs_employment_days }} day{% if rs_employment_days != 1 %}s{% endif %} since employment update
               {% endif %}
             {% else %}
               No employment update date recorded yet.
@@ -300,7 +304,46 @@
         </div>
 
         <div class="case-snapshot-card case-snapshot-card-compact">
-          <h3 class="case-snapshot-title">Current Medications</h3>
+          <h3 id="medications" class="case-snapshot-title">Current Medications</h3>
+
+          <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident_id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+            <label><strong>Medication Name</strong></label>
+            <input type="text" name="medication_name" required>
+
+            <label><strong>Dosage</strong></label>
+            <input type="text" name="dosage">
+
+            <label><strong>Frequency</strong></label>
+            <input type="text" name="frequency">
+
+            <label><strong>Purpose</strong></label>
+            <input type="text" name="purpose">
+
+            <label><strong>Prescribed By</strong></label>
+            <input type="text" name="prescribed_by">
+
+            <label><strong>Started On</strong></label>
+            <input type="date" name="started_on">
+
+            <label><strong>Ended On</strong></label>
+            <input type="date" name="ended_on">
+
+            <label><strong>Active</strong></label>
+            <select name="is_active">
+              <option value="yes" selected>Yes</option>
+              <option value="no">No</option>
+            </select>
+
+            <label><strong>Notes</strong></label>
+            <textarea name="notes" rows="2"></textarea>
+
+            <div class="case-section-top">
+              <button type="submit">Save Medication</button>
+            </div>
+          </form>
+
           {% if rs_medications %}
             <div class="case-medication-list case-medication-list-compact">
               {% for med in rs_medications %}
@@ -308,10 +351,10 @@
                   <div>
                     <strong>{{ med["medication_name"] or "Medication" }}</strong>
                     {% if med["dosage"] %}
-                      — {{ med["dosage"] }}
+                      {{ med["dosage"] }}
                     {% endif %}
                     {% if med["frequency"] %}
-                      — {{ med["frequency"] }}
+                      {{ med["frequency"] }}
                     {% endif %}
                   </div>
                   {% if med["purpose"] %}
@@ -322,6 +365,13 @@
                   {% if med["prescribed_by"] %}
                     <div class="case-medication-meta">
                       Prescribed by: {{ med["prescribed_by"] }}
+                    </div>
+                  {% endif %}
+                  {% if med["started_on"] or med["ended_on"] %}
+                    <div class="case-medication-meta">
+                      {% if med["started_on"] %}Started: {{ med["started_on"] }}{% endif %}
+                      {% if med["started_on"] and med["ended_on"] %} | {% endif %}
+                      {% if med["ended_on"] %}Ended: {{ med["ended_on"] }}{% endif %}
                     </div>
                   {% endif %}
                   {% if med["notes"] %}
@@ -335,60 +385,141 @@
           {% else %}
             <p class="case-empty-muted">No active medications recorded.</p>
           {% endif %}
-
-          <div class="case-section-top">
-            <a class="btn" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">
-              Manage Medications
-            </a>
-          </div>
         </div>
 
         <div class="case-snapshot-card case-snapshot-card-compact">
-          <h3 class="case-snapshot-title">Latest Operational Items</h3>
-          <div class="case-snapshot-list case-snapshot-list-compact">
-            <div>
-              <strong>Latest UA:</strong>
-              {% if rs_latest_ua %}
-                {{ rs_latest_ua["ua_date"] or "—" }}
-                {% if rs_latest_ua["result"] %}
-                  — {{ rs_latest_ua["result"] }}
-                {% endif %}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-            <div>
-              <strong>Latest Inspection:</strong>
-              {% if rs_latest_inspection %}
-                {{ rs_latest_inspection["inspection_date"] or "—" }}
-                {% if rs_latest_inspection["passed_display"] %}
-                  — {{ "Passed" if rs_latest_inspection["passed_display"] == "Yes" else rs_latest_inspection["passed_display"] }}
-                {% endif %}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-            <div>
-              <strong>Latest Budget Session:</strong>
-              {% if rs_latest_budget %}
-                {{ rs_latest_budget["session_date"] or "—" }}
-              {% else %}
-                —
-              {% endif %}
-            </div>
-          </div>
+          <h3 class="case-snapshot-title">UA Log</h3>
 
-          <div class="case-section-top case-button-row">
-            <a class="btn" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">
-              UA Log
-            </a>
-            <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">
-              Inspection Log
-            </a>
-            <a class="btn" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}">
-              Budget Sessions
-            </a>
-          </div>
+          <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident_id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+            <label><strong>UA Date</strong></label>
+            <input type="date" name="ua_date" required>
+
+            <label><strong>Result</strong></label>
+            <input type="text" name="result">
+
+            <label><strong>Substances Detected</strong></label>
+            <input type="text" name="substances_detected">
+
+            <label><strong>Notes</strong></label>
+            <textarea name="notes" rows="2"></textarea>
+
+            <div class="case-section-top">
+              <button type="submit">Save UA Entry</button>
+            </div>
+          </form>
+
+          {% if rs_ua_rows %}
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Result</th>
+                  <th>Substances</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rs_ua_rows %}
+                  <tr>
+                    <td>{{ row["ua_date"] or "—" }}</td>
+                    <td>{{ row["result_display"] or "—" }}</td>
+                    <td>{{ row["substances_detected"] or "—" }}</td>
+                    <td>{{ row["notes"] or "—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="case-empty-muted">No UA entries recorded.</p>
+          {% endif %}
+        </div>
+
+        <div class="case-snapshot-card case-snapshot-card-compact">
+          <h3 class="case-snapshot-title">Inspection Log</h3>
+
+          <form method="post" action="{{ url_for('case_management.add_inspection_log', resident_id=resident_id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+            <label><strong>Inspection Date</strong></label>
+            <input type="date" name="inspection_date" required>
+
+            <label><strong>Passed</strong></label>
+            <select name="passed">
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+
+            <label><strong>Notes</strong></label>
+            <textarea name="notes" rows="2"></textarea>
+
+            <div class="case-section-top">
+              <button type="submit">Save Inspection</button>
+            </div>
+          </form>
+
+          {% if rs_inspection_rows %}
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Passed</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rs_inspection_rows %}
+                  <tr>
+                    <td>{{ row["inspection_date"] or "—" }}</td>
+                    <td>{{ row["passed_display"] or "—" }}</td>
+                    <td>{{ row["notes"] or "—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="case-empty-muted">No inspections recorded.</p>
+          {% endif %}
+        </div>
+
+        <div class="case-snapshot-card case-snapshot-card-compact">
+          <h3 class="case-snapshot-title">Budget Sessions</h3>
+
+          <form method="post" action="{{ url_for('case_management.add_budget_session', resident_id=resident_id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+            <label><strong>Session Date</strong></label>
+            <input type="date" name="session_date" required>
+
+            <label><strong>Notes</strong></label>
+            <textarea name="notes" rows="2"></textarea>
+
+            <div class="case-section-top">
+              <button type="submit">Save Budget Session</button>
+            </div>
+          </form>
+
+          {% if rs_budget_rows %}
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in rs_budget_rows %}
+                  <tr>
+                    <td>{{ row["session_date"] or "—" }}</td>
+                    <td>{{ row["notes"] or "—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="case-empty-muted">No budget sessions recorded.</p>
+          {% endif %}
         </div>
       </div>
     </form>
