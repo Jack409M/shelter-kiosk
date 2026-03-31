@@ -6,6 +6,7 @@ from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
+    fetch_current_enrollment_id_for_resident,
     normalize_shelter_name,
     placeholder,
     shelter_equals_sql,
@@ -18,23 +19,11 @@ def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict
     resident = db_fetchone(
         f"""
         SELECT
-            r.id,
-            pe.id AS enrollment_id,
-            pe.program_status,
-            pe.entry_date,
-            pe.exit_date
-        FROM residents r
-        LEFT JOIN program_enrollments pe
-            ON pe.resident_id = r.id
-        WHERE r.id = {ph}
-          AND {shelter_equals_sql("r.shelter")}
-        ORDER BY
-            CASE
-                WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
-                ELSE 1
-            END,
-            COALESCE(pe.entry_date, '') DESC,
-            pe.id DESC
+            id,
+            shelter
+        FROM residents
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
         LIMIT 1
         """,
         (resident_id, shelter),
@@ -42,7 +31,7 @@ def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict
 
     enrollment_id = None
     if resident:
-        enrollment_id = resident["enrollment_id"] if isinstance(resident, dict) else resident[1]
+        enrollment_id = fetch_current_enrollment_id_for_resident(resident_id)
 
     return {
         "resident": resident,
