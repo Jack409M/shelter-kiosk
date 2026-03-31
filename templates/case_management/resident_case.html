@@ -20,9 +20,9 @@
     }
 
     .cmx-card {
-      background: rgba(255, 255, 255, 0.94);
+      background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(10px);
-      border: 1px solid rgba(226, 232, 240, 0.92);
+      border: 1px solid rgba(226, 232, 240, 0.94);
       border-radius: 26px;
       padding: 24px;
       box-shadow:
@@ -42,8 +42,8 @@
       flex-direction: column;
       gap: 18px;
       background:
-        linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.96) 54%, rgba(37, 99, 235, 0.88) 100%);
-      border: 1px solid rgba(30, 41, 59, 0.7);
+        linear-gradient(135deg, #0b1220 0%, #172335 52%, #1d4ed8 100%);
+      border: 1px solid rgba(15, 23, 42, 0.82);
       color: #ffffff;
       overflow: hidden;
       position: relative;
@@ -54,8 +54,8 @@
       position: absolute;
       inset: 0;
       background:
-        radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.18), transparent 18%),
-        radial-gradient(circle at 18% 88%, rgba(96, 165, 250, 0.22), transparent 24%);
+        radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.12), transparent 18%),
+        radial-gradient(circle at 18% 88%, rgba(96, 165, 250, 0.18), transparent 24%);
       pointer-events: none;
     }
 
@@ -88,7 +88,7 @@
       font-weight: 800;
       box-shadow: 0 12px 30px rgba(15, 23, 42, 0.24);
       flex: 0 0 auto;
-      border: 3px solid rgba(255, 255, 255, 0.55);
+      border: 3px solid rgba(255, 255, 255, 0.65);
     }
 
     .cmx-title {
@@ -99,10 +99,21 @@
       letter-spacing: -0.02em;
     }
 
+    .cmx-header-main .cmx-title,
+    .cmx-header-main .cmx-subtitle,
+    .cmx-header-main .cmx-pill,
+    .cmx-header-main .cmx-stat-value,
+    .cmx-header-main .cmx-stat-label,
+    .cmx-header-main .cmx-stat-hint {
+      position: relative;
+      z-index: 1;
+    }
+
     .cmx-subtitle {
       margin-top: 6px;
-      color: rgba(255, 255, 255, 0.82);
-      font-size: 0.98rem;
+      color: rgba(255, 255, 255, 0.96);
+      font-size: 1rem;
+      font-weight: 500;
     }
 
     .cmx-meta {
@@ -116,19 +127,19 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(255, 255, 255, 0.14);
-      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.22);
       border-radius: 999px;
       padding: 8px 12px;
-      font-size: 0.88rem;
-      color: #e2e8f0;
+      font-size: 0.9rem;
+      color: #ffffff;
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
 
     .cmx-pill-success {
-      background: rgba(16, 185, 129, 0.18);
-      color: #d1fae5;
-      border-color: rgba(167, 243, 208, 0.28);
+      background: rgba(16, 185, 129, 0.22);
+      color: #ecfdf5;
+      border-color: rgba(167, 243, 208, 0.34);
     }
 
     .cmx-stats {
@@ -139,8 +150,8 @@
     }
 
     .cmx-stat {
-      background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 20px;
       padding: 14px 12px;
       text-align: center;
@@ -156,16 +167,18 @@
 
     .cmx-stat-label {
       margin-top: 5px;
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: rgba(226, 232, 240, 0.78);
+      color: rgba(255, 255, 255, 0.92);
+      font-weight: 700;
     }
 
     .cmx-stat-hint {
       margin-top: 4px;
-      font-size: 0.68rem;
-      color: #bbf7d0;
+      font-size: 0.7rem;
+      color: #dcfce7;
+      font-weight: 700;
     }
 
     .cmx-actions {
@@ -214,14 +227,14 @@
 
     .cmx-btn-muted {
       background: #ffffff;
-      color: #334155;
-      border-color: #dbe4ee;
+      color: #0f172a;
+      border-color: #cfd9e5;
       box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
     }
 
     .cmx-btn-warn {
       background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-      color: #92400e;
+      color: #7c2d12;
       border-color: #fcd34d;
       box-shadow: 0 10px 18px rgba(245, 158, 11, 0.14);
     }
@@ -233,11 +246,11 @@
     .cmx-draft {
       border-radius: 18px;
       background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-      border: 1px solid #a7f3d0;
+      border: 1px solid #86efac;
       padding: 12px 14px;
       font-size: 0.9rem;
-      color: #047857;
-      font-weight: 600;
+      color: #065f46;
+      font-weight: 700;
     }
 
     .cmx-appt {
@@ -245,8 +258,8 @@
       background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
       border: 1px solid #e2e8f0;
       padding: 12px 14px;
-      font-size: 0.9rem;
-      color: #475569;
+      font-size: 0.92rem;
+      color: #334155;
     }
 
     .cmx-layout {
@@ -277,22 +290,24 @@
       font-weight: 800;
       line-height: 1.15;
       letter-spacing: -0.02em;
+      color: #0f172a;
     }
 
     .cmx-section-subtitle {
       margin-top: 4px;
-      font-size: 0.92rem;
-      color: #64748b;
+      font-size: 0.94rem;
+      color: #475569;
+      font-weight: 500;
     }
 
     .cmx-inline-pill {
       border-radius: 16px;
-      background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
-      border: 1px solid #dbeafe;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 1px solid #bfdbfe;
       padding: 10px 14px;
       font-size: 0.9rem;
       color: #1e3a8a;
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .cmx-grid {
@@ -302,6 +317,10 @@
 
     .cmx-grid-4 {
       grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cmx-grid-4.cmx-writing-grid {
+      align-items: stretch;
     }
 
     .cmx-grid-3 {
@@ -316,10 +335,10 @@
     .cmx-text-card,
     .cmx-panel-soft {
       border-radius: 20px;
-      background: linear-gradient(180deg, #fbfdff 0%, #f8fbff 100%);
-      border: 1px solid #e2e8f0;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid #dbe5f0;
       padding: 16px;
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96);
     }
 
     .cmx-panel-soft {
@@ -340,11 +359,11 @@
 
     .cmx-field-card-label {
       margin-bottom: 6px;
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: #64748b;
-      font-weight: 700;
+      color: #475569;
+      font-weight: 800;
     }
 
     .cmx-field,
@@ -357,30 +376,36 @@
     }
 
     .cmx-field label {
-      font-weight: 700;
-      color: #1e293b;
+      font-weight: 800;
+      color: #0f172a;
     }
 
     .cmx-field input,
     .cmx-field select,
     .cmx-field textarea {
       width: 100%;
-      border: 1px solid #d8e2ee;
+      border: 1px solid #cfd9e5;
       border-radius: 14px;
       background: #ffffff;
       padding: 11px 12px;
       font: inherit;
-      color: #334155;
+      color: #0f172a;
       box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.02);
       transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+    }
+
+    .cmx-field input::placeholder,
+    .cmx-field textarea::placeholder {
+      color: #64748b;
+      opacity: 1;
     }
 
     .cmx-field input:focus,
     .cmx-field select:focus,
     .cmx-field textarea:focus {
       outline: none;
-      border-color: #60a5fa;
-      box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.18);
       background: #ffffff;
     }
 
@@ -399,10 +424,24 @@
       min-height: 170px;
     }
 
+    .cmx-text-card.is-active-writer {
+      grid-column: 1 / -1;
+      background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);
+      border-color: #93c5fd;
+      box-shadow:
+        0 22px 38px rgba(37, 99, 235, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.96),
+        0 0 0 4px rgba(147, 197, 253, 0.18);
+    }
+
+    .cmx-text-card.is-active-writer textarea {
+      min-height: 320px;
+    }
+
     .cmx-summary-text {
-      font-size: 0.95rem;
+      font-size: 0.96rem;
       line-height: 1.7;
-      color: #475569;
+      color: #334155;
     }
 
     .cmx-panel-head {
@@ -426,10 +465,10 @@
 
     .cmx-panel-head span {
       font-size: 0.76rem;
-      color: #64748b;
+      color: #475569;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .cmx-service-grid {
@@ -446,7 +485,7 @@
       gap: 12px;
       border-radius: 18px;
       background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-      border: 1px solid #dfe8f3;
+      border: 1px solid #d8e3ef;
       padding: 14px;
       box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
       transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
@@ -460,7 +499,7 @@
     .case-note-tile:hover {
       transform: translateY(-1px);
       box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
-      border-color: #bfdbfe;
+      border-color: #93c5fd;
     }
 
     .cmx-service-item input[type="checkbox"] {
@@ -474,9 +513,10 @@
     }
 
     .cmx-service-meta {
-      font-size: 0.76rem;
-      color: #64748b;
+      font-size: 0.78rem;
+      color: #475569;
       margin-top: 2px;
+      font-weight: 500;
     }
 
     .cmx-service-fields {
@@ -495,7 +535,7 @@
     .cmx-need-item {
       border-radius: 18px;
       background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-      border: 1px solid #dfe8f3;
+      border: 1px solid #d8e3ef;
       padding: 14px;
       display: grid;
       gap: 10px;
@@ -508,8 +548,9 @@
     }
 
     .cmx-need-trigger {
-      font-size: 0.82rem;
-      color: #64748b;
+      font-size: 0.84rem;
+      color: #475569;
+      font-weight: 500;
     }
 
     .cmx-quick-grid {
@@ -522,7 +563,7 @@
       display: grid;
       gap: 14px;
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
+        linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(248, 250, 252, 0.97) 100%);
       position: relative;
       overflow: hidden;
     }
@@ -546,8 +587,9 @@
 
     .cmx-quick-subtitle {
       margin-top: 4px;
-      font-size: 0.9rem;
-      color: #64748b;
+      font-size: 0.92rem;
+      color: #475569;
+      font-weight: 500;
     }
 
     .cmx-history-list {
@@ -568,8 +610,8 @@
     }
 
     .cmx-history-text {
-      color: #475569;
-      font-size: 0.95rem;
+      color: #334155;
+      font-size: 0.96rem;
       line-height: 1.6;
     }
 
@@ -598,10 +640,10 @@
     .cmx-side-action {
       border-radius: 12px;
       background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
-      border: 1px solid #dbeafe;
+      border: 1px solid #bfdbfe;
       padding: 8px 10px;
       font-size: 0.75rem;
-      font-weight: 700;
+      font-weight: 800;
       color: #1d4ed8;
       text-decoration: none;
       transition: transform 0.18s ease, box-shadow 0.18s ease;
@@ -616,10 +658,10 @@
     .cmx-row-block {
       border-radius: 18px;
       background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-      border: 1px solid #e2e8f0;
+      border: 1px solid #dbe5f0;
       padding: 12px;
-      color: #475569;
-      font-size: 0.9rem;
+      color: #334155;
+      font-size: 0.92rem;
       box-shadow: 0 8px 16px rgba(15, 23, 42, 0.04);
     }
 
@@ -627,11 +669,12 @@
       display: flex;
       justify-content: space-between;
       gap: 16px;
+      font-weight: 600;
     }
 
     .cmx-muted {
-      color: #64748b;
-      font-size: 0.9rem;
+      color: #475569;
+      font-size: 0.92rem;
     }
 
     .cmx-button-row {
@@ -666,12 +709,14 @@
       cursor: pointer;
       text-align: center;
       transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      color: #0f172a;
     }
 
     .case-note-tile-meta {
       margin-top: 4px;
-      font-size: 0.82em;
-      color: #64748b;
+      font-size: 0.84em;
+      color: #475569;
+      font-weight: 500;
     }
 
     .case-note-panel {
@@ -688,11 +733,13 @@
 
     .case-note-panel-title {
       margin-bottom: 6px;
+      color: #0f172a;
     }
 
     .case-note-created {
       font-size: 0.95em;
-      color: #64748b;
+      color: #475569;
+      font-weight: 500;
     }
 
     .case-note-actions {
@@ -704,10 +751,12 @@
 
     .case-note-section {
       margin-top: 14px;
+      color: #0f172a;
     }
 
     .case-note-structured {
       margin-left: 10px;
+      color: #334155;
     }
 
     .case-note-service-card-grid {
@@ -723,22 +772,26 @@
       border-radius: 14px;
       background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
       box-shadow: 0 8px 16px rgba(15, 23, 42, 0.04);
+      color: #0f172a;
     }
 
     .case-note-service-meta {
       margin-top: 4px;
-      font-size: 0.88em;
-      color: #64748b;
+      font-size: 0.9em;
+      color: #475569;
+      font-weight: 500;
     }
 
     .case-note-service-text {
       margin-top: 8px;
+      color: #334155;
     }
 
     .case-note-text-block {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
       word-break: break-word;
+      color: #0f172a;
     }
 
     .print-only-note {
@@ -757,8 +810,9 @@
     }
 
     .case-print-summary-title {
-      font-weight: 700;
+      font-weight: 800;
       margin-bottom: 6px;
+      color: #0f172a;
     }
 
     .case-print-summary-list {
@@ -766,6 +820,7 @@
       padding-left: 18px;
       column-count: 2;
       column-gap: 18px;
+      color: #334155;
     }
 
     .case-print-summary-list li {
@@ -826,6 +881,10 @@
       .cmx-side {
         grid-template-columns: 1fr;
         min-width: 0;
+      }
+
+      .cmx-text-card.is-active-writer {
+        grid-column: auto;
       }
 
       .case-print-summary-grid {
@@ -1213,29 +1272,29 @@
                 </div>
               </div>
 
-              <div class="cmx-grid cmx-grid-4" style="margin-top:20px;">
-                <div class="cmx-text-card">
+              <div class="cmx-grid cmx-grid-4 cmx-writing-grid" style="margin-top:20px;">
+                <div class="cmx-text-card cmx-writing-card">
                   <div class="cmx-text-card-title">Meeting Notes</div>
                   <div class="cmx-field">
                     <textarea name="notes" rows="7" placeholder="Notes from today’s meeting">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
                   </div>
                 </div>
 
-                <div class="cmx-text-card">
+                <div class="cmx-text-card cmx-writing-card">
                   <div class="cmx-text-card-title">Progress Since Last Meeting</div>
                   <div class="cmx-field">
                     <textarea name="progress_notes" rows="7" placeholder="What progress has been made">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
                   </div>
                 </div>
 
-                <div class="cmx-text-card">
+                <div class="cmx-text-card cmx-writing-card">
                   <div class="cmx-text-card-title">Setbacks Or Incidents</div>
                   <div class="cmx-field">
                     <textarea name="setbacks_or_incidents" rows="7" placeholder="Record setbacks, incidents, or concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
                   </div>
                 </div>
 
-                <div class="cmx-text-card">
+                <div class="cmx-text-card cmx-writing-card">
                   <div class="cmx-text-card-title">Action Items</div>
                   <div class="cmx-field">
                     <textarea name="action_items" rows="7" placeholder="What needs to happen before next time">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
@@ -1993,10 +2052,42 @@
     loadDraft();
   }
 
+  function setupWriterExpansion() {
+    var cards = document.querySelectorAll('.cmx-writing-card');
+    if (!cards.length) {
+      return;
+    }
+
+    function clearActive() {
+      cards.forEach(function(card) {
+        card.classList.remove('is-active-writer');
+      });
+    }
+
+    cards.forEach(function(card) {
+      var textarea = card.querySelector('textarea');
+      if (!textarea) {
+        return;
+      }
+
+      textarea.addEventListener('focus', function() {
+        clearActive();
+        card.classList.add('is-active-writer');
+      });
+
+      textarea.addEventListener('blur', function() {
+        if (!textarea.value.trim()) {
+          card.classList.remove('is-active-writer');
+        }
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     toggleEmploymentProfileFields();
     bindQuickChildServiceAction();
     setupMeetingDraft();
+    setupWriterExpansion();
   });
 </script>
 {% endblock %}
