@@ -1521,7 +1521,7 @@
 
                   <div id="quick_child_service_other_wrap" class="cmx-field" style="display:none;">
                     <label>Other Service</label>
-                    <input type="text" id="quick_child_service_other" placeholder="Enter custom service">
+                    <input type="text" id="quick_child_service_other" name="service_type_other" placeholder="Enter custom service">
                   </div>
 
                   <div class="cmx-field">
@@ -1969,10 +1969,8 @@
       function toggleOtherService() {
         if (serviceSelect.value === "Other") {
           otherWrap.style.display = "block";
-          otherInput.setAttribute("name", "service_type");
         } else {
           otherWrap.style.display = "none";
-          otherInput.removeAttribute("name");
           otherInput.value = "";
         }
       }
