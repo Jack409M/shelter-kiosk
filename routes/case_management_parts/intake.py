@@ -241,7 +241,13 @@ def _resident_enrollment_in_scope(resident_id: int, current_shelter: str):
         SELECT *
         FROM program_enrollments
         WHERE resident_id = {ph}
-        ORDER BY id DESC
+        ORDER BY
+            CASE
+                WHEN COALESCE(program_status, '') = 'active' THEN 0
+                ELSE 1
+            END,
+            COALESCE(entry_date, '') DESC,
+            id DESC
         LIMIT 1
         """,
         (resident_id,),
