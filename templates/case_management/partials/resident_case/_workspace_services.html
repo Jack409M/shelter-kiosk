@@ -55,7 +55,7 @@
 <div class="card no-print">
   <h2>Services Provided</h2>
   <p class="case-empty-muted" style="margin-top: -4px;">
-    Record the services provided during this meeting. These save with the meeting note.
+    Record services provided during this meeting. These still save through the current meeting update flow.
   </p>
 
   <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
@@ -69,12 +69,6 @@
       required
     >
 
-    {# ------------------------------------------------------------------ #}
-    {# Compatibility fields for current add_case_note route               #}
-    {# The current backend expects one case note save that can also       #}
-    {# create linked client_services rows. Keep note fields present here  #}
-    {# until the route is split into true meeting plus service saves.     #}
-    {# ------------------------------------------------------------------ #}
     <input
       type="hidden"
       name="notes"
@@ -91,6 +85,18 @@
       type="hidden"
       name="action_items"
       value="{{ meeting_defaults.action_items if meeting_defaults is defined and meeting_defaults.action_items else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="next_appointment"
+      value="{{ meeting_defaults.next_appointment if meeting_defaults is defined and meeting_defaults.next_appointment else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="overall_summary"
+      value="{{ meeting_defaults.overall_summary if meeting_defaults is defined and meeting_defaults.overall_summary else '' }}"
     >
 
     <input
