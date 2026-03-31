@@ -1,0 +1,113 @@
+<div class="card no-print">
+  <h2>Unmet Needs</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    Open needs from intake and later case management work should stay visible here until resolved.
+  </p>
+
+  <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <label><strong>Meeting Date</strong></label>
+    <input
+      type="date"
+      name="meeting_date"
+      value="{{ meeting_defaults.meeting_date if meeting_defaults is defined and meeting_defaults.meeting_date else '' }}"
+      required
+    >
+
+    {# ------------------------------------------------------------------ #}
+    {# Compatibility fields for current add_case_note route               #}
+    {# Open need resolution currently rides on the note save flow.        #}
+    {# Keep the note fields present so this partial can land safely       #}
+    {# before we split needs into their own write route.                  #}
+    {# ------------------------------------------------------------------ #}
+    <input
+      type="hidden"
+      name="notes"
+      value="{{ meeting_defaults.notes if meeting_defaults is defined and meeting_defaults.notes else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="progress_notes"
+      value="{{ meeting_defaults.progress_notes if meeting_defaults is defined and meeting_defaults.progress_notes else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="action_items"
+      value="{{ meeting_defaults.action_items if meeting_defaults is defined and meeting_defaults.action_items else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="updated_grit"
+      value="{{ meeting_defaults.updated_grit if meeting_defaults is defined and meeting_defaults.updated_grit is not none else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="parenting_class_completed"
+      value="{{ meeting_defaults.parenting_class_completed if meeting_defaults is defined and meeting_defaults.parenting_class_completed else '' }}"
+    >
+
+    <input
+      type="hidden"
+      name="warrants_or_fines_paid"
+      value="{{ meeting_defaults.warrants_or_fines_paid if meeting_defaults is defined and meeting_defaults.warrants_or_fines_paid else '' }}"
+    >
+
+    {% if open_needs %}
+      <div class="needs-grid">
+        {% for need in open_needs %}
+          {% set need_key = need["need_key"] %}
+          {% set need_label = need["need_label"] %}
+          {% set source_value = need["source_value"] %}
+          {% set need_status = need["status"] if need["status"] is defined else "open" %}
+          {% set resolution_note = need["resolution_note"] if need["resolution_note"] is defined else "" %}
+
+          <div class="need-card">
+            <div><strong>{{ need_label }}</strong></div>
+
+            {% if source_value %}
+              <div class="case-help-text case-help-text-top">
+                Intake trigger: {{ source_value }}
+              </div>
+            {% endif %}
+
+            <div class="case-help-text case-help-text-top">
+              Current status:
+              {% if need_status == "addressed" %}
+                Addressed
+              {% elif need_status == "not_applicable" %}
+                Not Applicable
+              {% else %}
+                Open
+              {% endif %}
+            </div>
+
+            <label class="case-label-top"><strong>Status</strong></label>
+            <select name="need_status_{{ need_key }}">
+              <option value="" {% if need_status == "open" %}selected{% endif %}>Leave Open</option>
+              <option value="addressed" {% if need_status == "addressed" %}selected{% endif %}>Addressed</option>
+              <option value="not_applicable" {% if need_status == "not_applicable" %}selected{% endif %}>Not Applicable</option>
+            </select>
+
+            <label class="case-label-top"><strong>Resolution Note</strong></label>
+            <textarea
+              name="need_note_{{ need_key }}"
+              rows="2"
+              placeholder="Optional note about this need"
+            >{{ resolution_note }}</textarea>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="case-help-text case-help-text-top">No open needs recorded.</p>
+    {% endif %}
+
+    <div class="case-section-top">
+      <button type="submit">Save Need Updates</button>
+    </div>
+  </form>
+</div>
