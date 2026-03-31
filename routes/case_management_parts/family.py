@@ -23,6 +23,20 @@ def _current_shelter() -> str:
     return normalize_shelter_name(session.get("shelter"))
 
 
+def _quick_add_requested() -> bool:
+    return (request.form.get("redirect_to") or "").strip().lower() == "resident_case"
+
+
+def _child_services_redirect(child_id: int):
+    return redirect(url_for("case_management.child_services", child_id=child_id))
+
+
+def _post_child_service_redirect(child_id: int, resident_id: int):
+    if _quick_add_requested():
+        return _resident_case_redirect(resident_id)
+    return _child_services_redirect(child_id)
+
+
 def _resident_in_scope(resident_id: int):
     ph = placeholder()
     shelter = _current_shelter()
@@ -575,7 +589,7 @@ def child_services_view(child_id: int):
 
         if request.form.get("service_date") and not service_date:
             flash("Service date must be valid.", "error")
-            return redirect(url_for("case_management.child_services", child_id=child_id))
+            return _post_child_service_redirect(child_id, resident_id)
 
         now = datetime.utcnow().isoformat()
 
@@ -630,7 +644,7 @@ def child_services_view(child_id: int):
                 enrollment_id,
             )
             flash("Unable to add child service. Please try again or contact an administrator.", "error")
-            return redirect(url_for("case_management.child_services", child_id=child_id))
+            return _post_child_service_redirect(child_id, resident_id)
 
         flash("Child service added.", "success")
         return _resident_case_redirect(resident_id)
