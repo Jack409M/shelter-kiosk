@@ -9,6 +9,7 @@ from routes.case_management_parts.helpers import (
     fetch_current_enrollment_id_for_resident,
     normalize_shelter_name,
     placeholder,
+    resident_has_active_enrollment,
     shelter_equals_sql,
 )
 
@@ -63,18 +64,7 @@ def create_enrollment_view(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("residents.staff_residents"))
 
-    existing = db_fetchone(
-        f"""
-        SELECT id
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-          AND program_status = {ph}
-        LIMIT 1
-        """,
-        (resident_id, "active"),
-    )
-
-    if existing:
+    if resident_has_active_enrollment(resident_id):
         flash("Resident already has an active enrollment.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
