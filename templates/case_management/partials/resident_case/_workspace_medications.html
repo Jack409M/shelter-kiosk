@@ -1,0 +1,100 @@
+<div class="card no-print">
+  <h2>Medications</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    Show active medications here and allow updates without leaving the workspace.
+  </p>
+
+  <div class="case-snapshot-grid">
+    <div class="case-snapshot-card case-snapshot-card-compact">
+      <h3 class="case-snapshot-title">Add Medication</h3>
+
+      <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident_id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <label><strong>Medication Name</strong></label>
+        <input type="text" name="medication_name" required>
+
+        <label><strong>Dosage</strong></label>
+        <input type="text" name="dosage">
+
+        <label><strong>Frequency</strong></label>
+        <input type="text" name="frequency">
+
+        <label><strong>Purpose</strong></label>
+        <input type="text" name="purpose">
+
+        <label><strong>Prescribed By</strong></label>
+        <input type="text" name="prescribed_by">
+
+        <label><strong>Started On</strong></label>
+        <input type="date" name="started_on">
+
+        <label><strong>Ended On</strong></label>
+        <input type="date" name="ended_on">
+
+        <label><strong>Active</strong></label>
+        <select name="is_active">
+          <option value="yes" selected>Yes</option>
+          <option value="no">No</option>
+        </select>
+
+        <label><strong>Notes</strong></label>
+        <textarea name="notes" rows="3"></textarea>
+
+        <div class="case-section-top">
+          <button type="submit">Save Medication</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="case-snapshot-card case-snapshot-card-compact">
+      <h3 class="case-snapshot-title">Active Medications</h3>
+
+      {% if rs_medications %}
+        <div class="case-medication-list case-medication-list-compact">
+          {% for med in rs_medications %}
+            <div class="case-medication-item">
+              <div>
+                <strong>{{ med["medication_name"] or "Medication" }}</strong>
+                {% if med["dosage"] %}
+                  {{ med["dosage"] }}
+                {% endif %}
+                {% if med["frequency"] %}
+                  {{ med["frequency"] }}
+                {% endif %}
+              </div>
+
+              {% if med["purpose"] %}
+                <div class="case-medication-meta">
+                  Purpose: {{ med["purpose"] }}
+                </div>
+              {% endif %}
+
+              {% if med["prescribed_by"] %}
+                <div class="case-medication-meta">
+                  Prescribed by: {{ med["prescribed_by"] }}
+                </div>
+              {% endif %}
+
+              {% if med["started_on"] or med["ended_on"] %}
+                <div class="case-medication-meta">
+                  {% if med["started_on"] %}Started: {{ med["started_on"] }}{% endif %}
+                  {% if med["started_on"] and med["ended_on"] %} | {% endif %}
+                  {% if med["ended_on"] %}Ended: {{ med["ended_on"] }}{% endif %}
+                </div>
+              {% endif %}
+
+              {% if med["notes"] %}
+                <div class="case-medication-meta">
+                  {{ med["notes"] }}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="case-empty-muted">No active medications recorded.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
