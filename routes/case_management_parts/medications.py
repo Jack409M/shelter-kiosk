@@ -8,6 +8,7 @@ from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
@@ -41,25 +42,20 @@ def _resident_context(resident_id: int):
             r.id,
             r.first_name,
             r.last_name,
-            r.shelter,
-            pe.id AS enrollment_id
+            r.shelter
         FROM residents r
-        LEFT JOIN program_enrollments pe
-          ON pe.resident_id = r.id
         WHERE r.id = {ph}
           AND {shelter_equals_sql("r.shelter")}
-        ORDER BY
-            CASE
-                WHEN COALESCE(pe.program_status, '') = 'active' THEN 0
-                ELSE 1
-            END,
-            COALESCE(pe.entry_date, '') DESC,
-            pe.id DESC
         LIMIT 1
         """,
         (resident_id, shelter),
     )
 
+    if not resident:
+        return None
+
+    resident = dict(resident)
+    resident["enrollment_id"] = fetch_current_enrollment_id_for_resident(resident_id)
     return resident
 
 
