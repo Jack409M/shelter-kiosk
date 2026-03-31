@@ -59,6 +59,21 @@ def fetch_current_enrollment_id_for_resident(resident_id: int) -> int | None:
     return row[0]
 
 
+def resident_has_active_enrollment(resident_id: int) -> bool:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT id
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+          AND program_status = {ph}
+        LIMIT 1
+        """,
+        (resident_id, "active"),
+    )
+    return bool(row)
+
+
 def clean(value: str | None) -> str | None:
     value = (value or "").strip()
     return value or None
