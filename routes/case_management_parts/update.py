@@ -39,7 +39,7 @@ EMPLOYMENT_FIELD_LABELS = {
 SOBRIETY_FIELD_LABELS = {
     "sobriety_date": "Sobriety Date",
     "drug_of_choice": "Drug of Choice",
-    "treatment_grad_date": "Treatment Graduation Date",
+    "treatment_graduation_date": "Treatment Graduation Date",
 }
 
 
@@ -514,7 +514,7 @@ def _get_current_employment_snapshot(resident_id: int) -> dict[str, str]:
     return snapshot
 
 
-def _get_current_sobriety_snapshot(enrollment_id: int) -> dict[str, str]:
+def _get_current_sobriety_snapshot(resident_id: int) -> dict[str, str]:
     ph = placeholder()
 
     row = db_fetchone(
@@ -522,13 +522,12 @@ def _get_current_sobriety_snapshot(enrollment_id: int) -> dict[str, str]:
         SELECT
             sobriety_date,
             drug_of_choice,
-            treatment_grad_date
-        FROM intake_assessments
-        WHERE enrollment_id = {ph}
-        ORDER BY id DESC
+            treatment_graduation_date
+        FROM residents
+        WHERE id = {ph}
         LIMIT 1
         """,
-        (enrollment_id,),
+        (resident_id,),
     )
 
     if not row:
@@ -728,7 +727,7 @@ def _build_note_summary(
     current_child_snapshot = _get_current_children_snapshot(resident_id)
     current_medication_snapshot = _get_current_medication_snapshot(resident_id)
     current_employment_snapshot = _get_current_employment_snapshot(resident_id)
-    current_sobriety_snapshot = _get_current_sobriety_snapshot(enrollment_id)
+    current_sobriety_snapshot = _get_current_sobriety_snapshot(resident_id)
     current_outstanding_needs = _current_open_needs(enrollment_id)
 
     sort_order = 0
@@ -853,6 +852,8 @@ def add_case_note_view(resident_id: int):
     notes = (request.form.get("notes") or "").strip()
     progress_notes = (request.form.get("progress_notes") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
+    next_appointment = (request.form.get("next_appointment") or "").strip()
+    overall_summary = (request.form.get("overall_summary") or "").strip()
 
     updated_grit_raw = (request.form.get("updated_grit") or "").strip()
     updated_grit = _parse_grit(updated_grit_raw)
@@ -880,8 +881,18 @@ def add_case_note_view(resident_id: int):
         or bool(need_updates)
     )
 
-    if not notes and not progress_notes and not action_items and not has_structured_progress:
-        flash("Enter notes, progress notes, action items, structured progress, need resolutions, or at least one service.", "error")
+    if (
+        not notes
+        and not progress_notes
+        and not action_items
+        and not next_appointment
+        and not overall_summary
+        and not has_structured_progress
+    ):
+        flash(
+            "Enter notes, progress notes, action items, next appointment, meeting summary, structured progress, need resolutions, or at least one service.",
+            "error",
+        )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -900,13 +911,15 @@ def add_case_note_view(resident_id: int):
                     notes,
                     progress_notes,
                     action_items,
+                    next_appointment,
+                    overall_summary,
                     updated_grit,
                     parenting_class_completed,
                     warrants_or_fines_paid,
                     created_at,
                     updated_at
                 )
-                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+                VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
                 RETURNING id
                 """,
                 (
@@ -916,6 +929,8 @@ def add_case_note_view(resident_id: int):
                     notes or None,
                     progress_notes or None,
                     action_items or None,
+                    next_appointment or None,
+                    overall_summary or None,
                     updated_grit,
                     parenting_class_completed,
                     warrants_or_fines_paid,
@@ -1062,6 +1077,8 @@ def edit_case_note_view(resident_id: int, update_id: int):
     notes = (request.form.get("notes") or "").strip()
     progress_notes = (request.form.get("progress_notes") or "").strip()
     action_items = (request.form.get("action_items") or "").strip()
+    next_appointment = (request.form.get("next_appointment") or "").strip()
+    overall_summary = (request.form.get("overall_summary") or "").strip()
 
     updated_grit_raw = (request.form.get("updated_grit") or "").strip()
     updated_grit = _parse_grit(updated_grit_raw)
@@ -1085,8 +1102,18 @@ def edit_case_note_view(resident_id: int, update_id: int):
         or bool(service_types)
     )
 
-    if not notes and not progress_notes and not action_items and not has_structured_progress:
-        flash("Enter notes, progress notes, action items, structured progress, or at least one service.", "error")
+    if (
+        not notes
+        and not progress_notes
+        and not action_items
+        and not next_appointment
+        and not overall_summary
+        and not has_structured_progress
+    ):
+        flash(
+            "Enter notes, progress notes, action items, next appointment, meeting summary, structured progress, or at least one service.",
+            "error",
+        )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     service_date = meeting_date
@@ -1101,6 +1128,8 @@ def edit_case_note_view(resident_id: int, update_id: int):
                     notes = {ph},
                     progress_notes = {ph},
                     action_items = {ph},
+                    next_appointment = {ph},
+                    overall_summary = {ph},
                     updated_grit = {ph},
                     parenting_class_completed = {ph},
                     warrants_or_fines_paid = {ph},
@@ -1112,6 +1141,8 @@ def edit_case_note_view(resident_id: int, update_id: int):
                     notes or None,
                     progress_notes or None,
                     action_items or None,
+                    next_appointment or None,
+                    overall_summary or None,
                     updated_grit,
                     parenting_class_completed,
                     warrants_or_fines_paid,
