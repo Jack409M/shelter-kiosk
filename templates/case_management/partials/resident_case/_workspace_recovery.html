@@ -1,13 +1,11 @@
 <div class="card no-print case-recovery-section">
   <h2>Sobriety and Recovery</h2>
   <p class="case-empty-muted" style="margin-top: -4px;">
-    This section is the resident's current recovery profile. It should stay editable without leaving the workspace.
+    This section is the resident current recovery profile and should stay editable from the workspace.
   </p>
 
   <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    {# keep current level support intact during the transition #}
     <input type="hidden" name="program_level" value="{{ rs_level or '' }}">
 
     <div class="case-snapshot-grid">
