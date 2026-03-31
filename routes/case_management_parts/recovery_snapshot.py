@@ -156,11 +156,10 @@ def _budget_items(rows):
     return items
 
 
-def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
+def _load_resident_profile(resident_id: int):
     ph = placeholder()
-    current_enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
 
-    resident = db_fetchone(
+    return db_fetchone(
         f"""
         SELECT
             program_level,
@@ -175,7 +174,10 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             monthly_income,
             employment_updated_at,
             step_current,
-            step_changed_at
+            step_changed_at,
+            sobriety_date,
+            drug_of_choice,
+            treatment_graduation_date
         FROM residents
         WHERE id = {ph}
         LIMIT 1
@@ -183,8 +185,12 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         (resident_id,),
     ) or {}
 
-    if current_enrollment_id is not None:
-        medications_raw = db_fetchall(
+
+def _load_medications(resident_id: int, enrollment_id: int | None):
+    ph = placeholder()
+
+    if enrollment_id is not None:
+        return db_fetchall(
             f"""
             SELECT
                 id,
@@ -207,10 +213,40 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
                 COALESCE(updated_at, created_at) DESC,
                 id DESC
             """,
-            (resident_id, current_enrollment_id),
+            (resident_id, enrollment_id),
         )
 
-        ua_rows_raw = db_fetchall(
+    return db_fetchall(
+        f"""
+        SELECT
+            id,
+            medication_name,
+            dosage,
+            frequency,
+            purpose,
+            prescribed_by,
+            started_on,
+            ended_on,
+            is_active,
+            notes,
+            updated_at,
+            created_at
+        FROM resident_medications
+        WHERE resident_id = {ph}
+          AND COALESCE(is_active, TRUE) = {('TRUE' if ph == '%s' else '1')}
+        ORDER BY
+            COALESCE(updated_at, created_at) DESC,
+            id DESC
+        """,
+        (resident_id,),
+    )
+
+
+def _load_ua_rows(resident_id: int, enrollment_id: int | None):
+    ph = placeholder()
+
+    if enrollment_id is not None:
+        return db_fetchall(
             f"""
             SELECT
                 id,
@@ -223,10 +259,30 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
               AND enrollment_id = {ph}
             ORDER BY ua_date DESC, id DESC
             """,
-            (resident_id, current_enrollment_id),
+            (resident_id, enrollment_id),
         )
 
-        inspection_rows_raw = db_fetchall(
+    return db_fetchall(
+        f"""
+        SELECT
+            id,
+            ua_date,
+            result,
+            substances_detected,
+            notes
+        FROM resident_ua_log
+        WHERE resident_id = {ph}
+        ORDER BY ua_date DESC, id DESC
+        """,
+        (resident_id,),
+    )
+
+
+def _load_inspection_rows(resident_id: int, enrollment_id: int | None):
+    ph = placeholder()
+
+    if enrollment_id is not None:
+        return db_fetchall(
             f"""
             SELECT
                 id,
@@ -238,10 +294,29 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
               AND enrollment_id = {ph}
             ORDER BY inspection_date DESC, id DESC
             """,
-            (resident_id, current_enrollment_id),
+            (resident_id, enrollment_id),
         )
 
-        budget_rows_raw = db_fetchall(
+    return db_fetchall(
+        f"""
+        SELECT
+            id,
+            inspection_date,
+            passed,
+            notes
+        FROM resident_living_area_inspections
+        WHERE resident_id = {ph}
+        ORDER BY inspection_date DESC, id DESC
+        """,
+        (resident_id,),
+    )
+
+
+def _load_budget_rows(resident_id: int, enrollment_id: int | None):
+    ph = placeholder()
+
+    if enrollment_id is not None:
+        return db_fetchall(
             f"""
             SELECT
                 id,
@@ -252,80 +327,41 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
               AND enrollment_id = {ph}
             ORDER BY session_date DESC, id DESC
             """,
-            (resident_id, current_enrollment_id),
-        )
-    else:
-        medications_raw = db_fetchall(
-            f"""
-            SELECT
-                id,
-                medication_name,
-                dosage,
-                frequency,
-                purpose,
-                prescribed_by,
-                started_on,
-                ended_on,
-                is_active,
-                notes,
-                updated_at,
-                created_at
-            FROM resident_medications
-            WHERE resident_id = {ph}
-              AND COALESCE(is_active, TRUE) = {('TRUE' if ph == '%s' else '1')}
-            ORDER BY
-                COALESCE(updated_at, created_at) DESC,
-                id DESC
-            """,
-            (resident_id,),
+            (resident_id, enrollment_id),
         )
 
-        ua_rows_raw = db_fetchall(
-            f"""
-            SELECT
-                id,
-                ua_date,
-                result,
-                substances_detected,
-                notes
-            FROM resident_ua_log
-            WHERE resident_id = {ph}
-            ORDER BY ua_date DESC, id DESC
-            """,
-            (resident_id,),
-        )
+    return db_fetchall(
+        f"""
+        SELECT
+            id,
+            session_date,
+            notes
+        FROM resident_budget_sessions
+        WHERE resident_id = {ph}
+        ORDER BY session_date DESC, id DESC
+        """,
+        (resident_id,),
+    )
 
-        inspection_rows_raw = db_fetchall(
-            f"""
-            SELECT
-                id,
-                inspection_date,
-                passed,
-                notes
-            FROM resident_living_area_inspections
-            WHERE resident_id = {ph}
-            ORDER BY inspection_date DESC, id DESC
-            """,
-            (resident_id,),
-        )
 
-        budget_rows_raw = db_fetchall(
-            f"""
-            SELECT
-                id,
-                session_date,
-                notes
-            FROM resident_budget_sessions
-            WHERE resident_id = {ph}
-            ORDER BY session_date DESC, id DESC
-            """,
-            (resident_id,),
-        )
+def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
+    current_enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
+
+    resident = _load_resident_profile(resident_id)
 
     step_changed_at = resident.get("step_changed_at")
     step_days = _days_since(step_changed_at)
+
     employment_updated_at = resident.get("employment_updated_at")
     employment_days = _days_since(employment_updated_at)
+
+    sobriety_date = resident.get("sobriety_date")
+    days_sober_today = _days_since(sobriety_date)
+
+    medications_raw = _load_medications(resident_id, current_enrollment_id)
+    ua_rows_raw = _load_ua_rows(resident_id, current_enrollment_id)
+    inspection_rows_raw = _load_inspection_rows(resident_id, current_enrollment_id)
+    budget_rows_raw = _load_budget_rows(resident_id, current_enrollment_id)
 
     medication_items = _medication_items(medications_raw)
     ua_items = _ua_items(ua_rows_raw)
@@ -351,6 +387,11 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "step_current": resident.get("step_current"),
         "step_changed_at": step_changed_at,
         "step_days": step_days,
+        "sobriety_date": sobriety_date,
+        "days_sober_today": days_sober_today,
+        "days_sober_at_entry": None,
+        "drug_of_choice": resident.get("drug_of_choice"),
+        "treatment_graduation_date": resident.get("treatment_graduation_date"),
         "medications": medication_items,
         "medication_count": len(medication_items),
         "ua_rows": ua_items,
