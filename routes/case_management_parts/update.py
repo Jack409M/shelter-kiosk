@@ -6,6 +6,7 @@ from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
@@ -817,17 +818,7 @@ def _get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
     if not resident:
         return None, None
 
-    enrollment = db_fetchone(
-        f"""
-        SELECT id
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
-
+    enrollment = fetch_current_enrollment_for_resident(resident_id, columns="id")
     return resident, enrollment
 
 
