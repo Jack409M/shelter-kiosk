@@ -1,0 +1,149 @@
+<div class="card no-print">
+  <h2>Children and Family</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    Live child records and child services stay here. The intake family snapshot stays separate below.
+  </p>
+
+  {% if children is defined and children %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Birth Year</th>
+          <th>Relationship</th>
+          <th>Living Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for child in children %}
+          {% set child_name = child["child_name"] %}
+          {% set child_birth_year = child["birth_year"] %}
+          {% set child_id = child["id"] %}
+
+          <tr>
+            <td>{{ child_name or "—" }}</td>
+            <td>{{ child_birth_year or "—" }}</td>
+            <td>{{ child.relationship_display or "—" }}</td>
+            <td>{{ child.living_status_display or "—" }}</td>
+            <td>Inline Below</td>
+          </tr>
+
+          <tr>
+            <td colspan="5">
+              <div class="case-child-services-block">
+                <h3 style="margin-bottom: 8px;">Child Services</h3>
+
+                {% if child.services %}
+                  <div class="case-child-services-list">
+                    {% for s in child.services %}
+                      <div>
+                        <strong>{{ s.service_date_display }}</strong> —
+                        {{ s.service_type_display }}
+                        {% if s.quantity_display and s.quantity_display != "—" %}
+                          ({{ s.quantity_display }})
+                        {% endif %}
+                        {% if s.outcome_display and s.outcome_display != "—" %}
+                          — {{ s.outcome_display }}
+                        {% endif %}
+                        {% if s.notes %}
+                          <div class="case-child-service-note">
+                            {{ s.notes }}
+                          </div>
+                        {% endif %}
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="case-empty-muted">
+                    No services recorded
+                  </div>
+                {% endif %}
+
+                <form method="post" action="{{ url_for('case_management.child_services', child_id=child_id) }}" style="margin-top:12px;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+                  <label><strong>Service Date</strong></label>
+                  <input type="date" name="service_date">
+
+                  <label><strong>Service Type</strong></label>
+                  <input type="text" name="service_type">
+
+                  <label><strong>Outcome</strong></label>
+                  <input type="text" name="outcome">
+
+                  <label><strong>Quantity</strong></label>
+                  <input type="number" name="quantity" min="0">
+
+                  <label><strong>Unit</strong></label>
+                  <input type="text" name="unit">
+
+                  <label><strong>Notes</strong></label>
+                  <textarea name="notes" rows="2"></textarea>
+
+                  <div style="margin-top:10px;">
+                    <button type="submit">Save Child Service</button>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No children recorded.</p>
+  {% endif %}
+</div>
+
+<div class="card no-print">
+  <h2>Family Snapshot at Intake</h2>
+  <p class="case-empty-muted" style="margin-top: -4px;">
+    This is the intake era family snapshot only. It is not the live current family record.
+  </p>
+
+  {% if family_snapshot %}
+    <table>
+      <tbody>
+        <tr>
+          <th style="width: 55%;">Children at DWC</th>
+          <td>{{ intake_kids_at_dwc if intake_kids_at_dwc is not none else "—" }}</td>
+        </tr>
+        <tr>
+          <th>Children Served Outside Under 18</th>
+          <td>{{ intake_kids_served_outside_under_18 if intake_kids_served_outside_under_18 is not none else "—" }}</td>
+        </tr>
+        <tr>
+          <th>Children Ages 0 to 5</th>
+          <td>{{ intake_kids_ages_0_5 if intake_kids_ages_0_5 is not none else "—" }}</td>
+        </tr>
+        <tr>
+          <th>Children Ages 6 to 11</th>
+          <td>{{ intake_kids_ages_6_11 if intake_kids_ages_6_11 is not none else "—" }}</td>
+        </tr>
+        <tr>
+          <th>Children Ages 12 to 17</th>
+          <td>{{ intake_kids_ages_12_17 if intake_kids_ages_12_17 is not none else "—" }}</td>
+        </tr>
+        <tr>
+          <th>Children Reunited While in Program</th>
+          <td>{{ intake_kids_reunited_while_in_program if intake_kids_reunited_while_in_program is not none else "—" }}</td>
+        </tr>
+        <tr>
+          <th>Healthy Babies Born at DWC</th>
+          <td>{{ intake_healthy_babies_born_at_dwc if intake_healthy_babies_born_at_dwc is not none else "—" }}</td>
+        </tr>
+        <tr>
+          <th>Snapshot Recorded</th>
+          <td>{{ intake_snapshot_created_at or "—" }}</td>
+        </tr>
+        <tr>
+          <th>Snapshot Last Updated</th>
+          <td>{{ intake_snapshot_updated_at or "—" }}</td>
+        </tr>
+      </tbody>
+    </table>
+  {% else %}
+    <p>No intake family snapshot recorded.</p>
+  {% endif %}
+</div>
