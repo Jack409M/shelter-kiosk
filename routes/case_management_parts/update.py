@@ -17,7 +17,6 @@ ALLOWED_SERVICE_TYPES = {
     "Counseling",
     "Dental",
     "Vision",
-    "Parenting Support",
     "Legal Assistance",
     "Transportation",
     "Daycare",
