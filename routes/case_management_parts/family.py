@@ -141,6 +141,19 @@ def _is_unique_constraint_error(exc: Exception) -> bool:
     return "unique" in message or "duplicate" in message
 
 
+def _resolve_child_service_type(form) -> str | None:
+    service_type = clean(form.get("service_type"))
+    service_type_other = clean(form.get("service_type_other"))
+
+    if service_type and service_type.lower() == "other":
+        return service_type_other or service_type
+
+    if service_type_other and not service_type:
+        return service_type_other
+
+    return service_type
+
+
 def family_intake_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -425,7 +438,7 @@ def edit_child_service_view(service_id: int):
     resident_id = service["resident_id"]
 
     if request.method == "POST":
-        service_type = clean(request.form.get("service_type"))
+        service_type = _resolve_child_service_type(request.form)
         outcome = clean(request.form.get("outcome"))
         quantity = parse_int(request.form.get("quantity"))
         unit = clean(request.form.get("unit"))
@@ -553,7 +566,7 @@ def child_services_view(child_id: int):
     ph = placeholder()
 
     if request.method == "POST":
-        service_type = clean(request.form.get("service_type"))
+        service_type = _resolve_child_service_type(request.form)
         outcome = clean(request.form.get("outcome"))
         quantity = parse_int(request.form.get("quantity"))
         unit = clean(request.form.get("unit"))
