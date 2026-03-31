@@ -10,6 +10,7 @@ from core.db import db_execute, db_fetchone, db_transaction
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
+from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import parse_int
 from routes.case_management_parts.helpers import placeholder
@@ -236,23 +237,7 @@ def _resident_enrollment_in_scope(resident_id: int, current_shelter: str):
     if not resident:
         return None, None
 
-    enrollment = db_fetchone(
-        f"""
-        SELECT *
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-        ORDER BY
-            CASE
-                WHEN COALESCE(program_status, '') = 'active' THEN 0
-                ELSE 1
-            END,
-            COALESCE(entry_date, '') DESC,
-            id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
-
+    enrollment = fetch_current_enrollment_for_resident(resident_id)
     return resident, enrollment
 
 
