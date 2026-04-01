@@ -1,1 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ report.report_title }} | {{ report.resident_name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --ink: #142033;
+      --muted: #5b6574;
+      --line: #cfd6df;
+      --panel: #f5f7fa;
+      --accent: #1f4f8a;
+    }
 
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: #eef2f6;
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    body {
+      padding: 24px;
+    }
+
+    .report-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .report-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+    }
+
+    .report-toolbar-left {
+      font-size: 0.92rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .report-toolbar-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .report-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #b9c5d2;
+      background: #ffffff;
+      color: var(--ink);
+      text-decoration: none;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .report-btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .report-page {
+      padding: 32px 36px 40px;
+    }
+
+    .report-header {
+      border-bottom: 2px solid #1f2d3d;
+      padding-bottom: 18px;
+      margin-bottom: 22px;
+    }
+
+    .report-kicker {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .report-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .report-title-block h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+    }
+
+    .report-title-block p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+      font-weight: 600;
+    }
+
+    .report-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 18px;
+      margin-top: 18px;
+    }
+
+    .report-meta-item {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      padding: 10px 12px;
+      min-height: 58px;
+    }
+
+    .report-meta-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .report-meta-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+      word-break: break-word;
+    }
+
+    .report-section {
+      margin-top: 22px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .report-section h2 {
+      margin: 0 0 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--line);
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #223655;
+    }
+
+    .report-narrative-block {
+      border: 1px solid var(--line);
+      background: #ffffff;
+      padding: 14px 16px;
+      margin-top: 10px;
+    }
+
+    .report-narrative-label {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .report-narrative-text {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      font-size: 0.98rem;
+    }
+
+    .report-grid-two {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 18px;
+    }
+
+    .report-card {
+      border: 1px solid var(--line);
+      background: #ffffff;
+      padding: 12px 14px;
+    }
+
+    .report-card-title {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .report-card-value {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--ink);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    table.report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.94rem;
+    }
+
+    .report-table th,
+    .report-table td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .report-table th {
+      background: var(--panel);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .report-empty {
+      border: 1px dashed var(--line);
+      padding: 14px 16px;
+      color: var(--muted);
+      background: #fbfcfd;
+    }
+
+    .report-signature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 14px;
+    }
+
+    .report-signature-line {
+      padding-top: 28px;
+      border-bottom: 1px solid #2a3441;
+      font-weight: 700;
+      min-height: 46px;
+    }
+
+    .report-signature-label {
+      margin-top: 6px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    @media print {
+      @page {
+        margin: 0.55in;
+      }
+
+      html,
+      body {
+        background: #ffffff !important;
+        padding: 0;
+      }
+
+      .report-shell {
+        max-width: none;
+        border: none;
+        box-shadow: none;
+      }
+
+      .report-toolbar {
+        display: none !important;
+      }
+
+      .report-page {
+        padding: 0;
+      }
+
+      .report-section,
+      .report-card,
+      .report-meta-item,
+      .report-narrative-block,
+      .report-signature-grid,
+      .report-table tr,
+      .report-empty {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 12px;
+      }
+
+      .report-page {
+        padding: 20px 18px 24px;
+      }
+
+      .report-title-row,
+      .report-grid-two,
+      .report-signature-grid,
+      .report-meta-grid {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="report-shell">
+    <div class="report-toolbar no-print">
+      <div class="report-toolbar-left">Formal case summary print view</div>
+      <div class="report-toolbar-actions">
+        <a class="report-btn" href="{{ url_for('case_management.resident_case', resident_id=report.resident.id) }}">Back to Resident</a>
+        <button type="button" class="report-btn report-btn-primary" onclick="window.print()">Print Report</button>
+      </div>
+    </div>
+
+    <div class="report-page">
+      <header class="report-header">
+        <div class="report-kicker">Downtown Women&#39;s Center</div>
+
+        <div class="report-title-row">
+          <div class="report-title-block">
+            <h1>{{ report.report_title }}</h1>
+            <p>Formal case summary for resident file review</p>
+          </div>
+        </div>
+
+        <div class="report-meta-grid">
+          <div class="report-meta-item">
+            <div class="report-meta-label">Resident</div>
+            <div class="report-meta-value">{{ report.resident_name }}</div>
+          </div>
+          <div class="report-meta-item">
+            <div class="report-meta-label">Resident ID</div>
+            <div class="report-meta-value">{{ report.resident_display_id }}</div>
+          </div>
+          <div class="report-meta-item">
+            <div class="report-meta-label">Shelter</div>
+            <div class="report-meta-value">{{ report.resident.shelter | shelter if report.resident.shelter else "—" }}</div>
+          </div>
+          <div class="report-meta-item">
+            <div class="report-meta-label">Case Manager</div>
+            <div class="report-meta-value">{{ report.case_manager_name }}</div>
+          </div>
+          <div class="report-meta-item">
+            <div class="report-meta-label">Meeting Date</div>
+            <div class="report-meta-value">{{ report.note.meeting_date or "—" }}</div>
+          </div>
+          <div class="report-meta-item">
+            <div class="report-meta-label">Generated</div>
+            <div class="report-meta-value">{{ report.generated_at_display }}</div>
+          </div>
+        </div>
+      </header>
+
+      <section class="report-section">
+        <h2>Case Manager Narrative Summary</h2>
+
+        {% if report.note.notes %}
+          <div class="report-narrative-block">
+            <div class="report-narrative-label">Meeting Notes</div>
+            <div class="report-narrative-text">{{ report.note.notes }}</div>
+          </div>
+        {% endif %}
+
+        {% if report.note.progress_notes %}
+          <div class="report-narrative-block">
+            <div class="report-narrative-label">Progress Since Last Meeting</div>
+            <div class="report-narrative-text">{{ report.note.progress_notes }}</div>
+          </div>
+        {% endif %}
+
+        {% if report.note.overall_summary %}
+          <div class="report-narrative-block">
+            <div class="report-narrative-label">Overall Summary</div>
+            <div class="report-narrative-text">{{ report.note.overall_summary }}</div>
+          </div>
+        {% endif %}
+
+        {% if not report.note.notes and not report.note.progress_notes and not report.note.overall_summary %}
+          <div class="report-empty">No case manager narrative was recorded for this meeting.</div>
+        {% endif %}
+      </section>
+
+      <section class="report-section">
+        <h2>Program Snapshot</h2>
+        <div class="report-grid-two">
+          {% for item in report.program_snapshot %}
+            <div class="report-card">
+              <div class="report-card-title">{{ item.label }}</div>
+              <div class="report-card-value">{{ item.value }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="report-section">
+        <h2>Goals And Progress</h2>
+
+        {% if report.goals %}
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Goal</th>
+                <th>Status</th>
+                <th>Target Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for goal in report.goals %}
+                <tr>
+                  <td>{{ goal.goal_text }}</td>
+                  <td>{{ goal.status or "—" }}</td>
+                  <td>{{ goal.target_date or "—" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="report-empty">No current goals are recorded for this enrollment.</div>
+        {% endif %}
+      </section>
+
+      <section class="report-section">
+        <h2>Services And Interventions</h2>
+
+        {% if report.service_rows %}
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Date</th>
+                <th>Quantity</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for service in report.service_rows %}
+                <tr>
+                  <td>{{ service.service_type }}</td>
+                  <td>{{ service.service_date or "—" }}</td>
+                  <td>{{ service.quantity_display or "—" }}</td>
+                  <td>{{ service.notes or "—" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="report-empty">No services were recorded for this meeting.</div>
+        {% endif %}
+      </section>
+
+      <section class="report-section">
+        <h2>Barriers Or Incidents</h2>
+
+        {% if report.note.setbacks_or_incidents %}
+          <div class="report-narrative-block">
+            <div class="report-narrative-text">{{ report.note.setbacks_or_incidents }}</div>
+          </div>
+        {% else %}
+          <div class="report-empty">No setbacks or incidents were recorded for this meeting.</div>
+        {% endif %}
+      </section>
+
+      <section class="report-section">
+        <h2>Next Steps And Recommendations</h2>
+        <div class="report-grid-two">
+          <div class="report-card">
+            <div class="report-card-title">Action Items</div>
+            <div class="report-card-value">{{ report.note.action_items or "—" }}</div>
+          </div>
+          <div class="report-card">
+            <div class="report-card-title">Next Appointment</div>
+            <div class="report-card-value">{{ report.note.next_appointment or "—" }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="report-section">
+        <h2>Advancement Review</h2>
+        <div class="report-grid-two">
+          {% for item in report.advancement_rows %}
+            <div class="report-card">
+              <div class="report-card-title">{{ item.label }}</div>
+              <div class="report-card-value">{{ item.value }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="report-section">
+        <h2>Signature</h2>
+        <div class="report-signature-grid">
+          <div>
+            <div class="report-signature-line"></div>
+            <div class="report-signature-label">Case Manager Signature</div>
+          </div>
+          <div>
+            <div class="report-signature-line"></div>
+            <div class="report-signature-label">Date</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener("load", function() {
+      window.setTimeout(function() {
+        window.print();
+      }, 150);
+    });
+  </script>
+</body>
+</html>
