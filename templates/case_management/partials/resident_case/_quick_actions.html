@@ -1,0 +1,147 @@
+<div class="cmx-quick-grid">
+  <div class="cmx-card cmx-quick-card">
+    <div>
+      <h3 class="cmx-quick-title">Quick Add UA</h3>
+      <div class="cmx-quick-subtitle">record without leaving meeting</div>
+    </div>
+
+    <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="redirect_to" value="resident_case">
+
+      <div class="cmx-field">
+        <label>UA Date</label>
+        <input type="date" name="ua_date" required>
+      </div>
+
+      <div class="cmx-field">
+        <label>Result</label>
+        <select name="result">
+          <option selected>Negative</option>
+          <option>Positive</option>
+          <option>Refused</option>
+          <option>Pending</option>
+        </select>
+      </div>
+
+      <div class="cmx-field">
+        <label>Substances</label>
+        <input type="text" name="substances_detected" placeholder="Optional">
+      </div>
+
+      <div class="cmx-field">
+        <label>Notes</label>
+        <textarea name="notes" rows="3" placeholder="Optional"></textarea>
+      </div>
+
+      <div class="cmx-button-row">
+        <button type="submit" class="cmx-btn">Add UA</button>
+        <a class="cmx-btn-muted" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">Full UA</a>
+      </div>
+    </form>
+  </div>
+
+  <div class="cmx-card cmx-quick-card">
+    <div>
+      <h3 class="cmx-quick-title">Quick Add Child Service</h3>
+      <div class="cmx-quick-subtitle">record child service inline</div>
+    </div>
+
+    {% if children %}
+      <form id="quick-child-service-form" method="post" action="{{ url_for('case_management.child_services', child_id=children[0]['id']) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="redirect_to" value="resident_case">
+
+        <div class="cmx-field">
+          <label>Child</label>
+          <select id="quick_child_id">
+            {% for child in children %}
+              <option value="{{ child['id'] }}">{{ child["child_name"] or "Unnamed Child" }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="cmx-field">
+          <label>Service</label>
+          <select id="quick_child_service_type" name="service_type">
+            <option value="Daycare Referral">Daycare Referral</option>
+            <option value="School Enrollment Help">School Enrollment Help</option>
+            <option value="Counseling Intake">Counseling Intake</option>
+            <option value="Transportation">Transportation</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Medical">Medical</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div id="quick_child_service_other_wrap" class="cmx-field" style="display:none;">
+          <label>Other Service</label>
+          <input type="text" id="quick_child_service_other" name="service_type_other" placeholder="Enter custom service">
+        </div>
+
+        <div class="cmx-field">
+          <label>Outcome</label>
+          <input type="text" name="outcome" placeholder="Optional">
+        </div>
+
+        <div class="cmx-field">
+          <label>Notes</label>
+          <textarea name="notes" rows="3" placeholder="Optional"></textarea>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Add Child Service</button>
+          <a class="cmx-btn-muted" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>
+        </div>
+      </form>
+    {% else %}
+      <p class="cmx-muted">No active child records found.</p>
+      <div class="cmx-button-row">
+        <a class="cmx-btn-muted" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="cmx-card cmx-quick-card">
+    <div>
+      <h3 class="cmx-quick-title">Quick Add Medication</h3>
+      <div class="cmx-quick-subtitle">record medication change inline</div>
+    </div>
+
+    <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="redirect_to" value="resident_case">
+
+      <div class="cmx-field">
+        <label>Medication</label>
+        <input type="text" name="medication_name" required>
+      </div>
+
+      <div class="cmx-field">
+        <label>Dose</label>
+        <input type="text" name="dosage" placeholder="Example 50mg">
+      </div>
+
+      <div class="cmx-field">
+        <label>Frequency</label>
+        <input type="text" name="frequency" placeholder="Daily, PRN">
+      </div>
+
+      <div class="cmx-field">
+        <label>Notes</label>
+        <textarea name="notes" rows="3" placeholder="Optional"></textarea>
+      </div>
+
+      <input type="hidden" name="purpose" value="">
+      <input type="hidden" name="prescribed_by" value="">
+      <input type="hidden" name="started_on" value="">
+      <input type="hidden" name="ended_on" value="">
+      <input type="hidden" name="is_active" value="yes">
+
+      <div class="cmx-button-row">
+        <button type="submit" class="cmx-btn">Add Medication</button>
+        <a class="cmx-btn-muted" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">Edit Profile</a>
+      </div>
+    </form>
+  </div>
+</div>
