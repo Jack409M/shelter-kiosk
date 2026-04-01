@@ -1085,7 +1085,7 @@ def add_case_note_view(resident_id: int):
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     flash("Case manager update saved.", "success")
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id, case_note_saved=1))
 
 
 def edit_case_note_view(resident_id: int, update_id: int):
