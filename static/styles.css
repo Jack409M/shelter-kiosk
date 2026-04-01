@@ -160,6 +160,7 @@ header.top,
   background: #ffffff;
   border: 1px solid rgba(15, 47, 87, 0.18);
   color: var(--text);
+  -webkit-text-fill-color: var(--text);
   cursor: pointer;
 }
 
@@ -192,6 +193,7 @@ header.top,
   border-radius: 10px;
   background: transparent;
   color: var(--text);
+  -webkit-text-fill-color: var(--text);
   cursor: pointer;
 }
 
@@ -313,6 +315,16 @@ input[type="submit"] {
   -webkit-text-fill-color: #111;
 }
 
+button:hover,
+button:focus,
+button:active,
+input[type="submit"]:hover,
+input[type="submit"]:focus,
+input[type="submit"]:active {
+  color: #111;
+  -webkit-text-fill-color: #111;
+}
+
 input[type="submit"] {
   padding: 10px 18px;
   font-size: 15px;
@@ -335,8 +347,111 @@ input[type="submit"] {
   text-decoration: none;
 }
 
+.btn:hover,
+.btn:focus,
+.btn:active,
+.btn:visited {
+  color: #111;
+  -webkit-text-fill-color: #111;
+}
+
 .btn-top {
   margin-top: 10px;
+}
+
+/* Explicit utility button color classes so dark buttons keep light text
+   and light buttons keep dark text across states and browser overrides. */
+.btn-dark,
+.btn-dark:visited,
+.btn-dark:hover,
+.btn-dark:focus,
+.btn-dark:active,
+button.btn-dark,
+button.btn-dark:hover,
+button.btn-dark:focus,
+button.btn-dark:active,
+input[type="submit"].btn-dark,
+input[type="submit"].btn-dark:hover,
+input[type="submit"].btn-dark:focus,
+input[type="submit"].btn-dark:active {
+  background: #1f2f3f;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.btn-light,
+.btn-light:visited,
+.btn-light:hover,
+.btn-light:focus,
+.btn-light:active,
+button.btn-light,
+button.btn-light:hover,
+button.btn-light:focus,
+button.btn-light:active,
+input[type="submit"].btn-light,
+input[type="submit"].btn-light:hover,
+input[type="submit"].btn-light:focus,
+input[type="submit"].btn-light:active {
+  background: #ffffff;
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
+}
+
+.btn-primary,
+.btn-primary:visited,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+button.btn-primary,
+button.btn-primary:hover,
+button.btn-primary:focus,
+button.btn-primary:active,
+input[type="submit"].btn-primary,
+input[type="submit"].btn-primary:hover,
+input[type="submit"].btn-primary:focus,
+input[type="submit"].btn-primary:active {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.btn-success,
+.btn-success:visited,
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:active,
+button.btn-success,
+button.btn-success:hover,
+button.btn-success:focus,
+button.btn-success:active,
+input[type="submit"].btn-success,
+input[type="submit"].btn-success:hover,
+input[type="submit"].btn-success:focus,
+input[type="submit"].btn-success:active {
+  background: #16a34a;
+  border-color: #15803d;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.btn-warning,
+.btn-warning:visited,
+.btn-warning:hover,
+.btn-warning:focus,
+.btn-warning:active,
+button.btn-warning,
+button.btn-warning:hover,
+button.btn-warning:focus,
+button.btn-warning:active,
+input[type="submit"].btn-warning,
+input[type="submit"].btn-warning:hover,
+input[type="submit"].btn-warning:focus,
+input[type="submit"].btn-warning:active {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #7c2d12 !important;
+  -webkit-text-fill-color: #7c2d12 !important;
 }
 
 /* =========================================================
@@ -807,5 +922,3 @@ input[name="needed_at"] {
     display: block;
   }
 }
-
-
