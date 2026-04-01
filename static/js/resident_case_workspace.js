@@ -180,7 +180,7 @@ function setupMeetingDraft() {
 }
 
 function setupWriterExpansion() {
-  var cards = document.querySelectorAll(".cmx-writing-card");
+  var cards = Array.prototype.slice.call(document.querySelectorAll(".cmx-writing-card"));
   if (!cards.length) {
     return;
   }
@@ -198,6 +198,11 @@ function setupWriterExpansion() {
     }
 
     textarea.addEventListener("focus", function() {
+      clearActive();
+      card.classList.add("is-active-writer");
+    });
+
+    textarea.addEventListener("click", function() {
       clearActive();
       card.classList.add("is-active-writer");
     });
@@ -243,6 +248,7 @@ function setupMeetingHistory() {
 
     if (panel) {
       panel.style.display = "block";
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     tile.classList.add("is-active");
