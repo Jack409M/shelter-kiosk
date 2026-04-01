@@ -44,24 +44,24 @@
     </div>
 
     <div class="cmx-grid cmx-grid-3" style="margin-top:18px;">
-      <div class="cmx-text-card">
+      <div class="cmx-text-card cmx-writing-card">
         <div class="cmx-text-card-title">Meeting Notes</div>
         <div class="cmx-field">
-          <textarea name="notes" rows="8" placeholder="Notes from today’s meeting">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
+          <textarea name="notes" rows="6" placeholder="Notes from today’s meeting">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
         </div>
       </div>
 
-      <div class="cmx-text-card">
+      <div class="cmx-text-card cmx-writing-card">
         <div class="cmx-text-card-title">Progress Since Last Meeting</div>
         <div class="cmx-field">
-          <textarea name="progress_notes" rows="8" placeholder="What progress has been made">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
+          <textarea name="progress_notes" rows="6" placeholder="What progress has been made">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
         </div>
       </div>
 
-      <div class="cmx-text-card">
+      <div class="cmx-text-card cmx-writing-card">
         <div class="cmx-text-card-title">Action Items</div>
         <div class="cmx-field">
-          <textarea name="action_items" rows="8" placeholder="What needs to happen before next time">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
+          <textarea name="action_items" rows="6" placeholder="What needs to happen before next time">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
         </div>
       </div>
     </div>
