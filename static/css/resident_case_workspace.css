@@ -24,8 +24,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 12px;
-  align-items: stretch;
+  align-items: start;
   margin-bottom: 0;
+}
+
+.cmx-header > .cmx-card {
+  align-self: start;
 }
 
 .cmx-header-main {
@@ -34,6 +38,8 @@
   color: #1f2937;
   overflow: visible;
   position: relative;
+  min-height: 0;
+  height: auto;
 }
 
 .cmx-header-main::after {
@@ -165,7 +171,8 @@
 .cmx-actions {
   display: grid;
   gap: 10px;
-  align-self: stretch;
+  align-self: start;
+  height: auto;
 }
 
 .cmx-btn,
