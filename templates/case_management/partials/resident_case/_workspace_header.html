@@ -1,0 +1,70 @@
+<header class="cmx-header">
+  <div class="cmx-card cmx-header-main">
+    <div class="cmx-header-row">
+      <div class="cmx-person">
+        <div class="cmx-avatar">{{ initials or "R" }}</div>
+        <div>
+          <h1 class="cmx-title">Resident Case Management</h1>
+          <p class="cmx-subtitle">Resident: {{ first_name }} {{ last_name }}</p>
+
+          <div class="cmx-meta">
+            <span class="cmx-pill">Shelter: {{ shelter | shelter if shelter else "—" }}</span>
+            <span class="cmx-pill cmx-pill-success">Status: {{ "Active" if resident_active else "Inactive" }}</span>
+            <span class="cmx-pill">Program Status: {{ header_program_status or "—" }}</span>
+            <span class="cmx-pill">Entry Date: {{ enrollment_entry_date or "—" }}</span>
+            <span class="cmx-pill">Level Start: {{ rs_level_start_date or "—" }}</span>
+            <span class="cmx-pill">Last Meeting: {{ last_meeting_date or "—" }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmx-stats">
+        <div class="cmx-stat">
+          <div class="cmx-stat-value">{{ rs_level or "—" }}</div>
+          <div class="cmx-stat-label">Level</div>
+          <div class="cmx-stat-hint">Editable</div>
+        </div>
+
+        <div class="cmx-stat">
+          <div class="cmx-stat-value">{{ header_days_on_level if header_days_on_level is not none else "—" }}</div>
+          <div class="cmx-stat-label">Days On Level</div>
+        </div>
+
+        <div class="cmx-stat">
+          <div class="cmx-stat-value">{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</div>
+          <div class="cmx-stat-label">Step</div>
+          <div class="cmx-stat-hint">Editable</div>
+        </div>
+
+        <div class="cmx-stat">
+          <div class="cmx-stat-value">{{ header_days_sober if header_days_sober is not none else "—" }}</div>
+          <div class="cmx-stat-label">Days Sober</div>
+        </div>
+
+        <div class="cmx-stat">
+          <div class="cmx-stat-value">{{ header_open_needs_count }}</div>
+          <div class="cmx-stat-label">Open Needs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cmx-card cmx-actions">
+    <button type="submit" class="cmx-btn cmx-btn-full" form="meeting-workspace-form">
+      Save Meeting
+    </button>
+
+    <button type="button" class="cmx-btn-secondary cmx-btn-full" onclick="window.print()">
+      Print Case Summary
+    </button>
+
+    <div class="cmx-draft">
+      Draft protected while working
+    </div>
+
+    <div class="cmx-appt">
+      <strong>Next Appointment:</strong><br>
+      {{ next_appt or "—" }}
+    </div>
+  </div>
+</header>
