@@ -51,14 +51,30 @@ function setupMeetingDraft() {
   var residentId = window.RESIDENT_CASE_RESIDENT_ID || "";
   var justSaved = Boolean(window.RESIDENT_CASE_NOTE_SAVED);
   var storageKey = "cm_meeting_draft_" + residentId;
-  var fields = form.querySelectorAll("input[name], textarea[name], select[name]");
+  var fields = Array.prototype.slice.call(
+    form.querySelectorAll("input[name], textarea[name], select[name]")
+  );
+  var saveButtons = Array.prototype.slice.call(
+    document.querySelectorAll('button[form="meeting-workspace-form"], input[form="meeting-workspace-form"]')
+  );
+  var saveMessageEl = document.querySelector(".cmx-draft");
+  var saveTimer = null;
+  var lastSavedAt = null;
 
   if (justSaved) {
     localStorage.removeItem(storageKey);
   }
 
-  function saveDraft() {
+  function setSaveMessage(text) {
+    if (!saveMessageEl) {
+      return;
+    }
+    saveMessageEl.textContent = text;
+  }
+
+  function buildPayload() {
     var payload = {};
+
     fields.forEach(function(field) {
       if (!field.name) {
         return;
@@ -77,7 +93,29 @@ function setupMeetingDraft() {
       payload[field.name] = field.value;
     });
 
-    localStorage.setItem(storageKey, JSON.stringify(payload));
+    return payload;
+  }
+
+  function saveDraft() {
+    try {
+      var payload = buildPayload();
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+      lastSavedAt = new Date();
+
+      setSaveMessage(
+        "Draft protected while working" +
+          (lastSavedAt ? " • Saved " + lastSavedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "")
+      );
+    } catch (err) {
+      console.warn("Could not save meeting draft", err);
+      setSaveMessage("Draft protection had a problem on this browser");
+    }
+  }
+
+  function queueSave() {
+    setSaveMessage("Saving draft...");
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(saveDraft, 300);
   }
 
   function loadDraft() {
@@ -108,18 +146,37 @@ function setupMeetingDraft() {
           field.value = payload[field.name];
         }
       });
+
+      setSaveMessage("Draft restored for this resident");
     } catch (err) {
       console.warn("Could not load meeting draft", err);
+      setSaveMessage("Draft found but could not be restored");
     }
   }
 
   fields.forEach(function(field) {
-    field.addEventListener("input", saveDraft);
-    field.addEventListener("change", saveDraft);
+    field.addEventListener("input", queueSave);
+    field.addEventListener("change", queueSave);
+    field.addEventListener("blur", saveDraft);
   });
 
-  form.addEventListener("submit", saveDraft);
+  saveButtons.forEach(function(button) {
+    button.addEventListener("click", saveDraft);
+  });
+
+  form.addEventListener("submit", function() {
+    saveDraft();
+  });
+
+  window.addEventListener("beforeunload", function() {
+    saveDraft();
+  });
+
   loadDraft();
+
+  if (!justSaved && !localStorage.getItem(storageKey)) {
+    setSaveMessage("Draft protection active");
+  }
 }
 
 function setupWriterExpansion() {
