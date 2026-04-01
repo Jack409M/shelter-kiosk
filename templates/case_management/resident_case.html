@@ -5,7 +5,71 @@
 {% endblock %}
 
 {% block content %}
-{% include "case_management/partials/resident_case/_context.html" %}
+{% set resident_id = resident["id"] %}
+{% set first_name = resident["first_name"] %}
+{% set last_name = resident["last_name"] %}
+{% set resident_code = resident["resident_code"] %}
+{% set shelter = resident["shelter"] %}
+{% set resident_active = resident["is_active"] %}
+{% set initials = ((first_name[:1] if first_name else "") ~ (last_name[:1] if last_name else ""))|upper %}
+
+{% if enrollment %}
+  {% set enrollment_entry_date = enrollment["entry_date"] %}
+{% else %}
+  {% set enrollment_entry_date = "" %}
+{% endif %}
+
+{% if exit_assessment %}
+  {% set exit_date_exit_dwc = exit_assessment["date_exit_dwc"] %}
+  {% set exit_category = exit_assessment["exit_category"] %}
+  {% set exit_reason = exit_assessment["exit_reason"] %}
+  {% set exit_leave_ama = exit_assessment["leave_ama"] %}
+  {% set exit_leave_ama_destination = exit_assessment["leave_ama_destination"] %}
+{% else %}
+  {% set exit_date_exit_dwc = none %}
+  {% set exit_category = none %}
+  {% set exit_reason = none %}
+  {% set exit_leave_ama = none %}
+  {% set exit_leave_ama_destination = none %}
+{% endif %}
+
+{% set rs = recovery_snapshot or {} %}
+{% set rs_level = rs.get("program_level") %}
+{% set rs_level_start_date = rs.get("level_start_date") %}
+{% set rs_days_on_level = rs.get("days_on_level") %}
+{% set rs_sponsor = rs.get("sponsor_name") %}
+{% set rs_sponsor_active_display = rs.get("sponsor_active_display") %}
+{% set rs_employment_status = rs.get("employment_status_current") %}
+{% set rs_employer = rs.get("employer_name") %}
+{% set rs_supervisor_name = rs.get("supervisor_name") %}
+{% set rs_supervisor_phone = rs.get("supervisor_phone") %}
+{% set rs_unemployment_reason = rs.get("unemployment_reason") %}
+{% set rs_employment_notes = rs.get("employment_notes") %}
+{% set rs_income = rs.get("monthly_income") %}
+{% set rs_step = rs.get("step_current") %}
+{% set rs_step_work_active_display = rs.get("step_work_active_display") %}
+{% set rs_medications = rs.get("medications", []) %}
+{% set rs_ua_rows = rs.get("ua_rows", []) %}
+{% set rs_latest_inspection = rs.get("latest_inspection") %}
+{% set rs_days_sober_today = rs.get("days_sober_today") %}
+{% set rs_sobriety_date = rs.get("sobriety_date") %}
+{% set rs_drug_of_choice = rs.get("drug_of_choice") %}
+{% set rs_treatment_graduation_date = rs.get("treatment_graduation_date") %}
+
+{% set meeting_defaults = meeting_defaults if meeting_defaults is defined else {} %}
+{% set workspace_header = workspace_header if workspace_header is defined else {} %}
+{% set header_days_sober = workspace_header.get("days_sober") %}
+{% set header_days_on_level = workspace_header.get("days_on_level") %}
+{% set header_open_needs_count = workspace_header.get("open_needs_count", 0) %}
+{% set header_program_status = workspace_header.get("program_status") %}
+{% set last_note = notes[-1] if notes else none %}
+{% set last_meeting_date = last_note["meeting_date"] if last_note else "—" %}
+{% set next_appt = last_note["next_appointment"] if last_note and last_note["next_appointment"] else "—" %}
+{% set last_ready_for_next_level_display = last_note["ready_for_next_level_display"] if last_note else "—" %}
+{% set last_recommended_next_level = last_note["recommended_next_level"] if last_note and last_note["recommended_next_level"] else "—" %}
+{% set last_blocker_reason = last_note["blocker_reason"] if last_note and last_note["blocker_reason"] else "—" %}
+{% set last_override_or_exception = last_note["override_or_exception"] if last_note and last_note["override_or_exception"] else "—" %}
+{% set case_note_saved = request.args.get("case_note_saved") == "1" %}
 
 <div class="cmx-page">
   <div class="cmx-shell">
