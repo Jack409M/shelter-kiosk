@@ -7,6 +7,13 @@
     <button type="submit" class="cmx-btn" form="profile-editor-form">Save Profile</button>
   </div>
 
+  {% set intake_sobriety_date = intake_assessment.get("sobriety_date") if intake_assessment else "" %}
+  {% set intake_treatment_grad_date = intake_assessment.get("treatment_grad_date") if intake_assessment else "" %}
+  {% set resolved_program_level = rs_level or "1" %}
+  {% set resolved_level_start_date = rs_level_start_date or enrollment_entry_date or "" %}
+  {% set resolved_sobriety_date = rs_sobriety_date or intake_sobriety_date or enrollment_entry_date or "" %}
+  {% set resolved_treatment_graduation_date = rs_treatment_graduation_date or intake_treatment_grad_date or "" %}
+
   <form id="profile-editor-form" method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
@@ -14,14 +21,21 @@
       <div class="cmx-field-card">
         <div class="cmx-field-card-label">Level</div>
         <div class="cmx-field">
-          <input type="text" name="program_level" value="{{ rs_level or '' }}" placeholder="Current level">
+          <input type="text" name="program_level" value="{{ resolved_program_level }}" placeholder="Current level">
+        </div>
+      </div>
+
+      <div class="cmx-field-card">
+        <div class="cmx-field-card-label">Entry Date</div>
+        <div class="cmx-field">
+          <input type="text" value="{{ enrollment_entry_date or '—' }}" readonly>
         </div>
       </div>
 
       <div class="cmx-field-card">
         <div class="cmx-field-card-label">Level Start Date</div>
         <div class="cmx-field">
-          <input type="date" name="level_start_date" value="{{ rs_level_start_date or '' }}">
+          <input type="date" name="level_start_date" value="{{ resolved_level_start_date }}">
         </div>
       </div>
 
@@ -112,7 +126,7 @@
       <div class="cmx-field-card">
         <div class="cmx-field-card-label">Sobriety Date</div>
         <div class="cmx-field">
-          <input type="date" name="sobriety_date" value="{{ rs_sobriety_date or '' }}">
+          <input type="date" name="sobriety_date" value="{{ resolved_sobriety_date }}">
         </div>
       </div>
 
@@ -126,7 +140,7 @@
       <div class="cmx-field-card">
         <div class="cmx-field-card-label">Treatment Graduation Date</div>
         <div class="cmx-field">
-          <input type="date" name="treatment_graduation_date" value="{{ rs_treatment_graduation_date or '' }}">
+          <input type="date" name="treatment_graduation_date" value="{{ resolved_treatment_graduation_date }}">
         </div>
       </div>
     </div>
@@ -156,7 +170,10 @@
         </div>
 
         <div class="cmx-grid cmx-grid-2">
+          <div class="cmx-row-block"><span>Entry Date</span><span>{{ enrollment_entry_date or "—" }}</span></div>
           <div class="cmx-row-block"><span>Intake Grit</span><span>{{ intake_assessment["grit_score"] if intake_assessment["grit_score"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Sobriety Date At Intake</span><span>{{ intake_assessment.get("sobriety_date") or "—" }}</span></div>
+          <div class="cmx-row-block"><span>Treatment Date At Intake</span><span>{{ intake_assessment.get("treatment_grad_date") or "—" }}</span></div>
           <div class="cmx-row-block"><span>Dental Need At Entry</span><span>{{ "Yes" if intake_assessment["dental_need_at_entry"] else "No" if intake_assessment["dental_need_at_entry"] is not none else "—" }}</span></div>
           <div class="cmx-row-block"><span>Vision Need At Entry</span><span>{{ "Yes" if intake_assessment["vision_need_at_entry"] else "No" if intake_assessment["vision_need_at_entry"] is not none else "—" }}</span></div>
           <div class="cmx-row-block"><span>Parenting Class Needed</span><span>{{ "Yes" if intake_assessment["parenting_class_needed"] else "No" if intake_assessment["parenting_class_needed"] is not none else "—" }}</span></div>
