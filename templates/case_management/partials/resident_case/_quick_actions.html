@@ -2,7 +2,11 @@
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Quick Add UA</h3>
-      <div class="cmx-quick-subtitle">record without leaving meeting</div>
+      <div class="cmx-quick-subtitle">Record a UA without leaving the workspace.</div>
+    </div>
+
+    <div class="cmx-inline-pill">
+      Resident: {{ first_name }} {{ last_name }}
     </div>
 
     <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident_id) }}">
@@ -44,10 +48,14 @@
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Quick Add Child Service</h3>
-      <div class="cmx-quick-subtitle">record child service inline</div>
+      <div class="cmx-quick-subtitle">Record child service work without leaving the workspace.</div>
     </div>
 
     {% if children %}
+      <div class="cmx-inline-pill">
+        Active child records: {{ children|length }}
+      </div>
+
       <form id="quick-child-service-form" method="post" action="{{ url_for('case_management.child_services', child_id=children[0]['id']) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="redirect_to" value="resident_case">
@@ -105,7 +113,11 @@
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Quick Add Medication</h3>
-      <div class="cmx-quick-subtitle">record medication change inline</div>
+      <div class="cmx-quick-subtitle">Record medication changes without leaving the workspace.</div>
+    </div>
+
+    <div class="cmx-inline-pill">
+      Active medications: {{ rs_medications|length }}
     </div>
 
     <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident_id) }}">
