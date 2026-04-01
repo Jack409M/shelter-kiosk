@@ -148,6 +148,27 @@
       <textarea name="employment_notes" rows="4">{{ rs_employment_notes or '' }}</textarea>
     </div>
 
+    {% if intake_assessment %}
+      <div class="cmx-panel-soft" style="margin-top:20px;">
+        <div class="cmx-panel-head">
+          <h3>Intake Reference</h3>
+          <span>read only baseline</span>
+        </div>
+
+        <div class="cmx-grid cmx-grid-2">
+          <div class="cmx-row-block"><span>Intake Grit</span><span>{{ intake_assessment["grit_score"] if intake_assessment["grit_score"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Dental Need At Entry</span><span>{{ "Yes" if intake_assessment["dental_need_at_entry"] else "No" if intake_assessment["dental_need_at_entry"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Vision Need At Entry</span><span>{{ "Yes" if intake_assessment["vision_need_at_entry"] else "No" if intake_assessment["vision_need_at_entry"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Parenting Class Needed</span><span>{{ "Yes" if intake_assessment["parenting_class_needed"] else "No" if intake_assessment["parenting_class_needed"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Warrants Unpaid</span><span>{{ "Yes" if intake_assessment["warrants_unpaid"] else "No" if intake_assessment["warrants_unpaid"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Mental Health Need At Entry</span><span>{{ "Yes" if intake_assessment["mental_health_need_at_entry"] else "No" if intake_assessment["mental_health_need_at_entry"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Medical Need At Entry</span><span>{{ "Yes" if intake_assessment["medical_need_at_entry"] else "No" if intake_assessment["medical_need_at_entry"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Driver’s License At Entry</span><span>{{ "Yes" if intake_assessment["has_drivers_license"] else "No" if intake_assessment["has_drivers_license"] is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Social Security Card At Entry</span><span>{{ "Yes" if intake_assessment["has_social_security_card"] else "No" if intake_assessment["has_social_security_card"] is not none else "—" }}</span></div>
+        </div>
+      </div>
+    {% endif %}
+
     <div class="cmx-button-row">
       <button type="button" class="cmx-btn-muted">Edit Sobriety Date</button>
       <button type="button" class="cmx-btn-warn">Record Relapse / Reset Date</button>
