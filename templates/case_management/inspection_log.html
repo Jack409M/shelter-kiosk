@@ -1,69 +1,97 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h1>Living Area Inspection Log</h1>
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Living Area Inspection</h1>
+          <div class="cmx-section-subtitle">
+            Standalone inspection record for {{ resident["first_name"] }} {{ resident["last_name"] }}.
+          </div>
+        </div>
 
-<div class="card">
-  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
-  <p>
-    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
-      Back to Case Management
-    </a>
-  </p>
-</div>
-
-<div class="card">
-  <h2>Add Inspection Entry</h2>
-
-  <form method="post" action="{{ url_for('case_management.add_inspection_log', resident_id=resident['id']) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    <label><strong>Inspection Date</strong></label>
-    <input type="date" name="inspection_date" required>
-
-    <label><strong>Passed</strong></label>
-    <select name="passed">
-      <option value="yes">Yes</option>
-      <option value="no">No</option>
-    </select>
-
-    <label><strong>Notes</strong></label>
-    <textarea name="notes" rows="3"></textarea>
-
-    <div style="margin-top:10px;">
-      <button type="submit">Save Inspection Entry</button>
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+            Back to Resident
+          </a>
+        </div>
+      </div>
     </div>
-  </form>
-</div>
 
-<div class="card">
-  <h2>Recorded Inspection Entries</h2>
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">New Inspection Entry</h2>
+          <div class="cmx-section-subtitle">Only inspection data belongs here. Case management should only consume pass or fail.</div>
+        </div>
+      </div>
 
-  {% if inspection_rows %}
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Passed</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in inspection_rows %}
-          <tr>
-            <td>{{ row["inspection_date"] or "—" }}</td>
-            <td>{{ "Yes" if row["passed"] else "No" }}</td>
-            <td>
-              <a class="btn btn-sm" href="{{ url_for('case_management.edit_inspection_log', resident_id=resident['id'], inspection_id=row['id']) }}">
-                Edit
-              </a>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No inspection entries recorded.</p>
-  {% endif %}
+      <form method="post" action="{{ url_for('case_management.add_inspection_log', resident_id=resident['id']) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Inspection Date</label>
+            <input type="date" name="inspection_date" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Status</label>
+            <select name="passed">
+              <option value="yes">Passed</option>
+              <option value="no">Failed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field" style="margin-top:16px;">
+          <label>Inspection Notes</label>
+          <textarea name="notes" rows="4" placeholder="Inspection details stay in the inspection module."></textarea>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Inspection Entry</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">Inspection History</h2>
+          <div class="cmx-section-subtitle">Inspection notes remain here. The resident case page should show status only.</div>
+        </div>
+      </div>
+
+      {% if inspection_rows %}
+        <div class="cmx-stack">
+          {% for row in inspection_rows %}
+            <div class="cmx-panel-soft">
+              <div class="cmx-panel-head">
+                <h3>{{ row["inspection_date"] or "—" }}</h3>
+                <span>{{ "Passed" if row["passed"] else "Failed" }}</span>
+              </div>
+
+              {% if row["notes"] %}
+                <div class="cmx-summary-text">{{ row["notes"] }}</div>
+              {% else %}
+                <div class="cmx-muted">No inspection notes recorded.</div>
+              {% endif %}
+
+              <div class="cmx-button-row">
+                <a class="cmx-btn-muted" href="{{ url_for('case_management.edit_inspection_log', resident_id=resident['id'], inspection_id=row['id']) }}">
+                  Edit Entry
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="cmx-muted">No inspection entries recorded.</div>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}
