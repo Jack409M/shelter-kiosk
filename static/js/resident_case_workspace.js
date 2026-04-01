@@ -210,9 +210,61 @@ function setupWriterExpansion() {
   });
 }
 
+function setupMeetingHistory() {
+  var tiles = Array.prototype.slice.call(document.querySelectorAll(".case-note-tile"));
+  var panels = Array.prototype.slice.call(document.querySelectorAll(".case-note-panel"));
+  var printContainer = document.getElementById("print-selected-note");
+
+  if (!tiles.length || !panels.length) {
+    return;
+  }
+
+  function hideAllPanels() {
+    panels.forEach(function(panel) {
+      panel.style.display = "none";
+    });
+
+    tiles.forEach(function(tile) {
+      tile.classList.remove("is-active");
+    });
+  }
+
+  function openTile(tile) {
+    if (!tile) {
+      return;
+    }
+
+    var targetId = tile.getAttribute("data-note-target");
+    var printId = tile.getAttribute("data-print-target");
+    var panel = targetId ? document.getElementById(targetId) : null;
+    var printTemplate = printId ? document.getElementById(printId) : null;
+
+    hideAllPanels();
+
+    if (panel) {
+      panel.style.display = "block";
+    }
+
+    tile.classList.add("is-active");
+
+    if (printContainer) {
+      printContainer.innerHTML = printTemplate ? printTemplate.innerHTML : "";
+    }
+  }
+
+  tiles.forEach(function(tile) {
+    tile.addEventListener("click", function() {
+      openTile(tile);
+    });
+  });
+
+  openTile(tiles[0]);
+}
+
 document.addEventListener("DOMContentLoaded", function() {
   toggleEmploymentProfileFields();
   bindQuickChildServiceAction();
   setupMeetingDraft();
   setupWriterExpansion();
+  setupMeetingHistory();
 });
