@@ -223,6 +223,8 @@ def resident_case_view(resident_id: int):
             f"""
             SELECT
                 grit_score,
+                sobriety_date,
+                treatment_grad_date,
                 dental_need_at_entry,
                 vision_need_at_entry,
                 parenting_class_needed,
