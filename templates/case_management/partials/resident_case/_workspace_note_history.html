@@ -35,7 +35,26 @@
       {% endfor %}
     </div>
 
-    <div class="print-note-panel">
+    <div id="case-note-modal" class="case-note-modal" aria-hidden="true">
+      <div class="case-note-modal-backdrop" data-case-note-close></div>
+
+      <div class="case-note-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="case-note-modal-title">
+        <div class="case-note-modal-header">
+          <div>
+            <h3 id="case-note-modal-title" class="case-note-panel-title">Past Case Note</h3>
+            <div id="case-note-modal-subtitle" class="case-note-created"></div>
+          </div>
+
+          <button type="button" class="cmx-btn-muted" data-case-note-close>
+            Close
+          </button>
+        </div>
+
+        <div id="case-note-modal-body" class="case-note-modal-body"></div>
+      </div>
+    </div>
+
+    <div class="case-note-panel-store" style="display:none;">
       {% for note in notes %}
         {% set note_id = note["id"] %}
         {% set note_meeting_date = note["meeting_date"] %}
