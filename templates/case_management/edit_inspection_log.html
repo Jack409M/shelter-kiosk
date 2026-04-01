@@ -1,38 +1,57 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h1>Edit Inspection Entry</h1>
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Edit Living Area Inspection</h1>
+          <div class="cmx-section-subtitle">
+            {{ resident["first_name"] }} {{ resident["last_name"] }}
+          </div>
+        </div>
 
-<div class="card">
-  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
-  <p>
-    <a class="btn" href="{{ url_for('case_management.inspection_log', resident_id=resident['id']) }}">
-      Back to Inspection Log
-    </a>
-    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
-      Back to Case Management
-    </a>
-  </p>
-</div>
-
-<div class="card">
-  <form method="post" action="{{ url_for('case_management.edit_inspection_log', resident_id=resident['id'], inspection_id=inspection_row['id']) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    <label><strong>Inspection Date</strong></label>
-    <input type="date" name="inspection_date" value="{{ inspection_row['inspection_date'] or '' }}" required>
-
-    <label><strong>Passed</strong></label>
-    <select name="passed">
-      <option value="yes" {% if inspection_row['passed'] %}selected{% endif %}>Yes</option>
-      <option value="no" {% if not inspection_row['passed'] %}selected{% endif %}>No</option>
-    </select>
-
-    <label><strong>Notes</strong></label>
-    <textarea name="notes" rows="4">{{ inspection_row['notes'] or '' }}</textarea>
-
-    <div style="margin-top:10px;">
-      <button type="submit">Save Changes</button>
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('case_management.inspection_log', resident_id=resident['id']) }}">
+            Back to Inspection History
+          </a>
+          <a class="cmx-btn-muted" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+            Back to Resident
+          </a>
+        </div>
+      </div>
     </div>
-  </form>
+
+    <div class="cmx-card">
+      <form method="post" action="{{ url_for('case_management.edit_inspection_log', resident_id=resident['id'], inspection_id=inspection_row['id']) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Inspection Date</label>
+            <input type="date" name="inspection_date" value="{{ inspection_row['inspection_date'] or '' }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Status</label>
+            <select name="passed">
+              <option value="yes" {% if inspection_row['passed'] %}selected{% endif %}>Passed</option>
+              <option value="no" {% if not inspection_row['passed'] %}selected{% endif %}>Failed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field" style="margin-top:16px;">
+          <label>Inspection Notes</label>
+          <textarea name="notes" rows="5">{{ inspection_row['notes'] or '' }}</textarea>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+{% endblock %}
