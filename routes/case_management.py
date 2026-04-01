@@ -307,7 +307,7 @@ def _build_progress_report_context(
     generated_at = utcnow_iso()
 
     return {
-        "report_title": "Progress Report",
+        "report_title": "Progress Note",
         "generated_at_display": fmt_pretty_dt(generated_at),
         "resident_name": resident_name,
         "resident_display_id": resident_display_id,
@@ -343,13 +343,6 @@ def _build_progress_report_context(
                 if recovery_snapshot.get("monthly_income") not in (None, "")
                 else "—",
             },
-        ],
-        "advancement_rows": [
-            {"label": "Ready For Next Level", "value": note.get("ready_for_next_level_display") or "—"},
-            {"label": "Recommended Next Level", "value": note.get("recommended_next_level") or "—"},
-            {"label": "Blocker Reason", "value": note.get("blocker_reason") or "—"},
-            {"label": "Override Or Exception", "value": note.get("override_or_exception") or "—"},
-            {"label": "Staff Review Note", "value": note.get("staff_review_note") or "—"},
         ],
     }
 
