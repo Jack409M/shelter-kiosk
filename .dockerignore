@@ -1,0 +1,65 @@
+# --- Git and local metadata ---
+.git
+.gitignore
+.github/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Secrets and environment files ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.cer
+*.der
+*.csr
+secrets/
+
+# --- Python cache and virtual environments ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Local databases and backups ---
+instance/
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+*.dump
+backups/
+exports/
+
+# --- Logs and temp files ---
+*.log
+logs/
+*.pid
+*.pid.lock
+*.tmp
+*.bak
+*.swp
+
+# --- Build and test artifacts ---
+htmlcov/
+.coverage
+coverage.xml
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Node artifacts if added later ---
+node_modules/
