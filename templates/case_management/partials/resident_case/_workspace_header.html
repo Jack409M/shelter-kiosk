@@ -3,19 +3,23 @@
     <div class="cmx-header-row">
       <div class="cmx-person">
         <div class="cmx-avatar">{{ initials or "R" }}</div>
-        <div>
-          <h1 class="cmx-title">Resident Case Management</h1>
-          <p class="cmx-subtitle">Resident: {{ first_name }} {{ last_name }}</p>
+
+        <div style="min-width:0; flex:1;">
+          <h1 class="cmx-title">{{ last_name }}, {{ first_name }}</h1>
+          <p class="cmx-subtitle">
+            Resident ID: {{ resident["resident_identifier"] or resident_code or "—" }}
+          </p>
 
           <div class="cmx-meta">
-            <span class="cmx-pill">Resident ID: {{ resident["resident_identifier"] or resident_code or "—" }}</span>
-            <span class="cmx-pill">Shelter: {{ shelter | shelter if shelter else "—" }}</span>
-            <span class="cmx-pill cmx-pill-success">Status: {{ "Active" if resident_active else "Inactive" }}</span>
-            <span class="cmx-pill">Program Status: {{ header_program_status or "—" }}</span>
-            <span class="cmx-pill">Entry Date: {{ enrollment_entry_date or "—" }}</span>
-            <span class="cmx-pill">Level Start: {{ rs_level_start_date or "—" }}</span>
-            <span class="cmx-pill">Last Meeting: {{ last_meeting_date or "—" }}</span>
-            <span class="cmx-pill">Next Appointment: {{ next_appt or "—" }}</span>
+            <span class="cmx-pill"><strong>Shelter:</strong>&nbsp;{{ shelter | shelter if shelter else "—" }}</span>
+            <span class="cmx-pill"><strong>Status:</strong>&nbsp;{{ "Active" if resident_active else "Inactive" }}</span>
+            <span class="cmx-pill"><strong>Level:</strong>&nbsp;{{ rs_level or "—" }}</span>
+            <span class="cmx-pill"><strong>Step:</strong>&nbsp;{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</span>
+            <span class="cmx-pill"><strong>Days Sober:</strong>&nbsp;{{ header_days_sober if header_days_sober is not none else "—" }}</span>
+            <span class="cmx-pill"><strong>Open Needs:</strong>&nbsp;{{ header_open_needs_count }}</span>
+            <span class="cmx-pill"><strong>Entry Date:</strong>&nbsp;{{ enrollment_entry_date or "—" }}</span>
+            <span class="cmx-pill"><strong>Last Meeting:</strong>&nbsp;{{ last_meeting_date or "—" }}</span>
+            <span class="cmx-pill"><strong>Next Appointment:</strong>&nbsp;{{ next_appt or "—" }}</span>
           </div>
         </div>
       </div>
@@ -24,18 +28,11 @@
         <div class="cmx-stat">
           <div class="cmx-stat-value">{{ rs_level or "—" }}</div>
           <div class="cmx-stat-label">Level</div>
-          <div class="cmx-stat-hint">Current</div>
-        </div>
-
-        <div class="cmx-stat">
-          <div class="cmx-stat-value">{{ header_days_on_level if header_days_on_level is not none else "—" }}</div>
-          <div class="cmx-stat-label">Days On Level</div>
         </div>
 
         <div class="cmx-stat">
           <div class="cmx-stat-value">{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</div>
           <div class="cmx-stat-label">Step</div>
-          <div class="cmx-stat-hint">Current</div>
         </div>
 
         <div class="cmx-stat">
@@ -56,20 +53,20 @@
       Save Meeting
     </button>
 
-    <button type="submit" class="cmx-btn-secondary cmx-btn-full" form="profile-editor-form">
-      Save Profile
-    </button>
-
-    <button type="button" class="cmx-btn-muted cmx-btn-full" onclick="window.print()">
+    <button type="button" class="cmx-btn-secondary cmx-btn-full" onclick="window.print()">
       Print Case Summary
     </button>
 
+    <button type="submit" class="cmx-btn-muted cmx-btn-full" form="profile-editor-form">
+      Save Profile
+    </button>
+
     <div class="cmx-draft">
-      Draft protected while working
+      Draft saved for this resident
     </div>
 
     <div class="cmx-appt">
-      <strong>Next Appointment:</strong><br>
+      <strong>Next Appointment</strong><br>
       {{ next_appt or "—" }}
     </div>
   </div>
