@@ -2,7 +2,7 @@
   <div class="cmx-section-head">
     <div>
       <h2 class="cmx-section-title">Profile Editor</h2>
-      <div class="cmx-section-subtitle">Edit recovery, employment, level timing, sponsor activity, and step work without losing meeting notes.</div>
+      <div class="cmx-section-subtitle">Edit recovery and employment separately without losing meeting notes.</div>
     </div>
     <button type="submit" class="cmx-btn" form="profile-editor-form">Save Profile</button>
   </div>
@@ -17,149 +17,167 @@
   <form id="profile-editor-form" method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <div class="cmx-grid cmx-grid-4">
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Level</div>
-        <div class="cmx-field">
-          <input type="text" name="program_level" value="{{ resolved_program_level }}" placeholder="Current level">
+    <div class="cmx-panel-soft">
+      <div class="cmx-panel-head">
+        <h3>Recovery Profile</h3>
+        <span>Program and sobriety</span>
+      </div>
+
+      <div class="cmx-grid cmx-grid-4">
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Level</div>
+          <div class="cmx-field">
+            <input type="text" name="program_level" value="{{ resolved_program_level }}" placeholder="Current level">
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Entry Date</div>
+          <div class="cmx-field">
+            <input type="text" value="{{ enrollment_entry_date or '—' }}" readonly>
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Level Start Date</div>
+          <div class="cmx-field">
+            <input type="date" name="level_start_date" value="{{ resolved_level_start_date }}">
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Days On Level</div>
+          <div class="cmx-field">
+            <input type="text" value="{{ rs_days_on_level if rs_days_on_level is not none else '—' }} (derived)" readonly>
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Step</div>
+          <div class="cmx-field">
+            <input type="number" min="1" max="12" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Sponsor Name</div>
+          <div class="cmx-field">
+            <input type="text" name="sponsor_name" value="{{ rs_sponsor or '' }}">
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Sponsor Active</div>
+          <div class="cmx-field">
+            <select name="sponsor_active">
+              <option value="" {% if rs.get('sponsor_active') is none %}selected{% endif %}>—</option>
+              <option value="yes" {% if rs.get('sponsor_active') is sameas true or rs.get('sponsor_active') == 1 %}selected{% endif %}>Yes</option>
+              <option value="no" {% if rs.get('sponsor_active') is sameas false or rs.get('sponsor_active') == 0 %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Step Work Active</div>
+          <div class="cmx-field">
+            <select name="step_work_active">
+              <option value="" {% if rs.get('step_work_active') is none %}selected{% endif %}>—</option>
+              <option value="yes" {% if rs.get('step_work_active') is sameas true or rs.get('step_work_active') == 1 %}selected{% endif %}>Yes</option>
+              <option value="no" {% if rs.get('step_work_active') is sameas false or rs.get('step_work_active') == 0 %}selected{% endif %}>No</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Entry Date</div>
-        <div class="cmx-field">
-          <input type="text" value="{{ enrollment_entry_date or '—' }}" readonly>
+      <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Sobriety Date</div>
+          <div class="cmx-field">
+            <input type="date" name="sobriety_date" value="{{ resolved_sobriety_date }}">
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Days Sober</div>
+          <div class="cmx-field">
+            <input type="text" value="{{ rs_days_sober_today if rs_days_sober_today is not none else '—' }} (derived)" readonly>
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Treatment Graduation Date</div>
+          <div class="cmx-field">
+            <input type="date" name="treatment_graduation_date" value="{{ resolved_treatment_graduation_date }}">
+          </div>
         </div>
       </div>
 
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Level Start Date</div>
+      <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
         <div class="cmx-field">
-          <input type="date" name="level_start_date" value="{{ resolved_level_start_date }}">
+          <label>Drug of Choice</label>
+          <input type="text" name="drug_of_choice" value="{{ rs_drug_of_choice or '' }}">
         </div>
-      </div>
 
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Days On Level</div>
         <div class="cmx-field">
-          <input type="text" value="{{ rs_days_on_level if rs_days_on_level is not none else '—' }} (derived)" readonly>
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Step</div>
-        <div class="cmx-field">
-          <input type="number" min="1" max="12" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Sponsor Name</div>
-        <div class="cmx-field">
-          <input type="text" name="sponsor_name" value="{{ rs_sponsor or '' }}">
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Sponsor Active</div>
-        <div class="cmx-field">
-          <select name="sponsor_active">
-            <option value="" {% if rs.get('sponsor_active') is none %}selected{% endif %}>—</option>
-            <option value="yes" {% if rs.get('sponsor_active') is sameas true or rs.get('sponsor_active') == 1 %}selected{% endif %}>Yes</option>
-            <option value="no" {% if rs.get('sponsor_active') is sameas false or rs.get('sponsor_active') == 0 %}selected{% endif %}>No</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Step Work Active</div>
-        <div class="cmx-field">
-          <select name="step_work_active">
-            <option value="" {% if rs.get('step_work_active') is none %}selected{% endif %}>—</option>
-            <option value="yes" {% if rs.get('step_work_active') is sameas true or rs.get('step_work_active') == 1 %}selected{% endif %}>Yes</option>
-            <option value="no" {% if rs.get('step_work_active') is sameas false or rs.get('step_work_active') == 0 %}selected{% endif %}>No</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Employment Status</div>
-        <div class="cmx-field">
-          <select name="employment_status_current" id="employment_status_current" onchange="toggleEmploymentProfileFields()">
-            <option value="" {% if not rs_employment_status %}selected{% endif %}>—</option>
-            <option value="employed" {% if rs_employment_status == "employed" %}selected{% endif %}>Employed</option>
-            <option value="unemployed" {% if rs_employment_status == "unemployed" %}selected{% endif %}>Unemployed</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Monthly Income</div>
-        <div class="cmx-field">
-          <input type="text" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Employer</div>
-        <div class="cmx-field">
-          <input type="text" name="employer_name" value="{{ rs_employer or '' }}">
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Supervisor</div>
-        <div class="cmx-field">
-          <input type="text" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Supervisor Phone</div>
-        <div class="cmx-field">
-          <input type="text" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
-        </div>
-      </div>
-    </div>
-
-    <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Sobriety Date</div>
-        <div class="cmx-field">
-          <input type="date" name="sobriety_date" value="{{ resolved_sobriety_date }}">
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Days Sober</div>
-        <div class="cmx-field">
-          <input type="text" value="{{ rs_days_sober_today if rs_days_sober_today is not none else '—' }} (derived)" readonly>
-        </div>
-      </div>
-
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Treatment Graduation Date</div>
-        <div class="cmx-field">
-          <input type="date" name="treatment_graduation_date" value="{{ resolved_treatment_graduation_date }}">
+          <label>Recovery Notes</label>
+          <textarea name="employment_notes" rows="4">{{ rs_employment_notes or '' }}</textarea>
         </div>
       </div>
     </div>
 
-    <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
-      <div class="cmx-field">
-        <label>Drug of Choice</label>
-        <input type="text" name="drug_of_choice" value="{{ rs_drug_of_choice or '' }}">
+    <div class="cmx-panel-soft" style="margin-top:20px;">
+      <div class="cmx-panel-head">
+        <h3>Employment Profile</h3>
+        <span>Work and income</span>
       </div>
 
-      <div class="cmx-field" id="employment_fields_unemployed">
-        <label>Unemployment Reason</label>
-        <input type="text" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
-      </div>
-    </div>
+      <div class="cmx-grid cmx-grid-4">
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Employment Status</div>
+          <div class="cmx-field">
+            <select name="employment_status_current" id="employment_status_current" onchange="toggleEmploymentProfileFields()">
+              <option value="" {% if not rs_employment_status %}selected{% endif %}>—</option>
+              <option value="employed" {% if rs_employment_status == "employed" %}selected{% endif %}>Employed</option>
+              <option value="unemployed" {% if rs_employment_status == "unemployed" %}selected{% endif %}>Unemployed</option>
+            </select>
+          </div>
+        </div>
 
-    <div class="cmx-field" style="margin-top:16px;">
-      <label>Recovery Notes</label>
-      <textarea name="employment_notes" rows="4">{{ rs_employment_notes or '' }}</textarea>
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Monthly Income</div>
+          <div class="cmx-field">
+            <input type="text" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Employer</div>
+          <div class="cmx-field">
+            <input type="text" name="employer_name" value="{{ rs_employer or '' }}">
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Supervisor</div>
+          <div class="cmx-field">
+            <input type="text" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Supervisor Phone</div>
+          <div class="cmx-field">
+            <input type="text" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
+          </div>
+        </div>
+      </div>
+
+      <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
+        <div class="cmx-field" id="employment_fields_unemployed">
+          <label>Unemployment Reason</label>
+          <input type="text" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
+        </div>
+      </div>
     </div>
 
     {% if intake_assessment %}
