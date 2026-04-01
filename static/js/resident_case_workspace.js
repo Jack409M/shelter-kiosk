@@ -217,17 +217,23 @@ function setupWriterExpansion() {
 
 function setupMeetingHistory() {
   var tiles = Array.prototype.slice.call(document.querySelectorAll(".case-note-tile"));
-  var panels = Array.prototype.slice.call(document.querySelectorAll(".case-note-panel"));
   var printContainer = document.getElementById("print-selected-note");
+  var modal = document.getElementById("case-note-modal");
+  var modalBody = document.getElementById("case-note-modal-body");
+  var modalSubtitle = document.getElementById("case-note-modal-subtitle");
+  var closeButtons = Array.prototype.slice.call(document.querySelectorAll("[data-case-note-close]"));
 
-  if (!tiles.length || !panels.length) {
+  if (!tiles.length || !modal || !modalBody) {
     return;
   }
 
-  function hideAllPanels() {
-    panels.forEach(function(panel) {
-      panel.style.display = "none";
-    });
+  function closeModal() {
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    modalBody.innerHTML = "";
+    if (modalSubtitle) {
+      modalSubtitle.textContent = "";
+    }
 
     tiles.forEach(function(tile) {
       tile.classList.remove("is-active");
@@ -244,14 +250,26 @@ function setupMeetingHistory() {
     var panel = targetId ? document.getElementById(targetId) : null;
     var printTemplate = printId ? document.getElementById(printId) : null;
 
-    hideAllPanels();
-
-    if (panel) {
-      panel.style.display = "block";
-      panel.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    tiles.forEach(function(item) {
+      item.classList.remove("is-active");
+    });
 
     tile.classList.add("is-active");
+
+    if (panel) {
+      modalBody.innerHTML = panel.innerHTML;
+
+      var createdEl = modalBody.querySelector(".case-note-created");
+      if (modalSubtitle && createdEl) {
+        modalSubtitle.textContent = createdEl.textContent;
+        createdEl.remove();
+      } else if (modalSubtitle) {
+        modalSubtitle.textContent = "";
+      }
+
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+    }
 
     if (printContainer) {
       printContainer.innerHTML = printTemplate ? printTemplate.innerHTML : "";
@@ -264,7 +282,15 @@ function setupMeetingHistory() {
     });
   });
 
-  openTile(tiles[0]);
+  closeButtons.forEach(function(button) {
+    button.addEventListener("click", closeModal);
+  });
+
+  document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape" && modal.classList.contains("is-open")) {
+      closeModal();
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", function() {
