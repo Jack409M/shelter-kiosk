@@ -29,6 +29,10 @@ from routes.case_management_parts.update_utils import parse_quantity
 from routes.case_management_parts.update_utils import yes_no_to_int
 
 
+def _clean_text(value):
+    return (value or "").strip()
+
+
 def _get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
     ph = placeholder()
 
@@ -47,6 +51,65 @@ def _get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
 
     enrollment = fetch_current_enrollment_for_resident(resident_id, columns="id")
     return resident, enrollment
+
+
+def _collect_note_form_values():
+    meeting_date = _clean_text(request.form.get("meeting_date"))
+    notes = _clean_text(request.form.get("notes"))
+    progress_notes = _clean_text(request.form.get("progress_notes"))
+    setbacks_or_incidents = _clean_text(request.form.get("setbacks_or_incidents"))
+    action_items = _clean_text(request.form.get("action_items"))
+    next_appointment = _clean_text(request.form.get("next_appointment"))
+    overall_summary = _clean_text(request.form.get("overall_summary"))
+    ready_for_next_level = yes_no_to_int(request.form.get("ready_for_next_level"))
+    recommended_next_level = _clean_text(request.form.get("recommended_next_level"))
+    blocker_reason = _clean_text(request.form.get("blocker_reason"))
+    override_or_exception = _clean_text(request.form.get("override_or_exception"))
+    staff_review_note = _clean_text(request.form.get("staff_review_note"))
+
+    updated_grit_raw = _clean_text(request.form.get("updated_grit"))
+    updated_grit = parse_grit(updated_grit_raw)
+    parenting_class_completed = yes_no_to_int(request.form.get("parenting_class_completed"))
+    warrants_or_fines_paid = yes_no_to_int(request.form.get("warrants_or_fines_paid"))
+
+    service_types = clean_service_types(request.form.getlist("service_type"))
+    need_updates = collect_need_updates(request.form)
+
+    return {
+        "meeting_date": meeting_date,
+        "notes": notes,
+        "progress_notes": progress_notes,
+        "setbacks_or_incidents": setbacks_or_incidents,
+        "action_items": action_items,
+        "next_appointment": next_appointment,
+        "overall_summary": overall_summary,
+        "ready_for_next_level": ready_for_next_level,
+        "recommended_next_level": recommended_next_level,
+        "blocker_reason": blocker_reason,
+        "override_or_exception": override_or_exception,
+        "staff_review_note": staff_review_note,
+        "updated_grit_raw": updated_grit_raw,
+        "updated_grit": updated_grit,
+        "parenting_class_completed": parenting_class_completed,
+        "warrants_or_fines_paid": warrants_or_fines_paid,
+        "service_types": service_types,
+        "need_updates": need_updates,
+    }
+
+
+def _has_structured_progress(values, *, include_needs: bool):
+    return (
+        values["updated_grit"] is not None
+        or values["parenting_class_completed"] is not None
+        or values["warrants_or_fines_paid"] is not None
+        or values["ready_for_next_level"] is not None
+        or bool(values["recommended_next_level"])
+        or bool(values["blocker_reason"])
+        or bool(values["override_or_exception"])
+        or bool(values["staff_review_note"])
+        or bool(values["service_types"])
+        or (include_needs and bool(values["need_updates"]))
+    )
 
 
 def add_case_note_view(resident_id: int):
@@ -76,57 +139,25 @@ def add_case_note_view(resident_id: int):
         flash("Your session is missing a staff user id. Please log in again.", "error")
         return redirect(url_for("auth.staff_login"))
 
-    meeting_date = (request.form.get("meeting_date") or "").strip()
-    notes = (request.form.get("notes") or "").strip()
-    progress_notes = (request.form.get("progress_notes") or "").strip()
-    setbacks_or_incidents = (request.form.get("setbacks_or_incidents") or "").strip()
-    action_items = (request.form.get("action_items") or "").strip()
-    next_appointment = (request.form.get("next_appointment") or "").strip()
-    overall_summary = (request.form.get("overall_summary") or "").strip()
-    ready_for_next_level = yes_no_to_int(request.form.get("ready_for_next_level"))
-    recommended_next_level = (request.form.get("recommended_next_level") or "").strip()
-    blocker_reason = (request.form.get("blocker_reason") or "").strip()
-    override_or_exception = (request.form.get("override_or_exception") or "").strip()
-    staff_review_note = (request.form.get("staff_review_note") or "").strip()
+    values = _collect_note_form_values()
 
-    updated_grit_raw = (request.form.get("updated_grit") or "").strip()
-    updated_grit = parse_grit(updated_grit_raw)
-    parenting_class_completed = yes_no_to_int(request.form.get("parenting_class_completed"))
-    warrants_or_fines_paid = yes_no_to_int(request.form.get("warrants_or_fines_paid"))
-
-    service_types = clean_service_types(request.form.getlist("service_type"))
-    need_updates = collect_need_updates(request.form)
-
-    if updated_grit_raw and updated_grit is None:
+    if values["updated_grit_raw"] and values["updated_grit"] is None:
         flash("Updated grit must be a whole number between 0 and 100.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    if not meeting_date:
+    if not values["meeting_date"]:
         flash("Meeting date is required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    service_date = meeting_date
-
-    has_structured_progress = (
-        updated_grit is not None
-        or parenting_class_completed is not None
-        or warrants_or_fines_paid is not None
-        or ready_for_next_level is not None
-        or bool(recommended_next_level)
-        or bool(blocker_reason)
-        or bool(override_or_exception)
-        or bool(staff_review_note)
-        or bool(service_types)
-        or bool(need_updates)
-    )
+    has_structured_progress = _has_structured_progress(values, include_needs=True)
 
     if (
-        not notes
-        and not progress_notes
-        and not setbacks_or_incidents
-        and not action_items
-        and not next_appointment
-        and not overall_summary
+        not values["notes"]
+        and not values["progress_notes"]
+        and not values["setbacks_or_incidents"]
+        and not values["action_items"]
+        and not values["next_appointment"]
+        and not values["overall_summary"]
         and not has_structured_progress
     ):
         flash(
@@ -135,11 +166,12 @@ def add_case_note_view(resident_id: int):
         )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
+    service_date = values["meeting_date"]
     now = utcnow_iso()
 
     try:
         with db_transaction():
-            changed_needs = apply_need_updates(enrollment_id, int(staff_user_id), need_updates)
+            changed_needs = apply_need_updates(enrollment_id, int(staff_user_id), values["need_updates"])
 
             note = db_fetchone(
                 f"""
@@ -171,21 +203,21 @@ def add_case_note_view(resident_id: int):
                 (
                     enrollment_id,
                     staff_user_id,
-                    meeting_date,
-                    notes or None,
-                    progress_notes or None,
-                    setbacks_or_incidents or None,
-                    action_items or None,
-                    next_appointment or None,
-                    overall_summary or None,
-                    updated_grit,
-                    parenting_class_completed,
-                    warrants_or_fines_paid,
-                    ready_for_next_level,
-                    recommended_next_level or None,
-                    blocker_reason or None,
-                    override_or_exception or None,
-                    staff_review_note or None,
+                    values["meeting_date"],
+                    values["notes"] or None,
+                    values["progress_notes"] or None,
+                    values["setbacks_or_incidents"] or None,
+                    values["action_items"] or None,
+                    values["next_appointment"] or None,
+                    values["overall_summary"] or None,
+                    values["updated_grit"],
+                    values["parenting_class_completed"],
+                    values["warrants_or_fines_paid"],
+                    values["ready_for_next_level"],
+                    values["recommended_next_level"] or None,
+                    values["blocker_reason"] or None,
+                    values["override_or_exception"] or None,
+                    values["staff_review_note"] or None,
                     now,
                     now,
                 ),
@@ -193,10 +225,10 @@ def add_case_note_view(resident_id: int):
 
             note_id = note["id"]
 
-            for service_type in service_types:
-                service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
+            for service_type in values["service_types"]:
+                service_note = _clean_text(request.form.get(f"service_notes_{service_type}"))
                 quantity = parse_quantity(request.form.get(f"quantity_{service_type}"))
-                unit = (request.form.get(f"unit_{service_type}") or "").strip()
+                unit = _clean_text(request.form.get(f"unit_{service_type}"))
 
                 db_execute(
                     f"""
@@ -231,9 +263,9 @@ def add_case_note_view(resident_id: int):
                 case_manager_update_id=note_id,
                 enrollment_id=enrollment_id,
                 resident_id=resident_id,
-                meeting_date=meeting_date,
+                meeting_date=values["meeting_date"],
                 form=request.form,
-                service_types=service_types,
+                service_types=values["service_types"],
                 changed_needs=changed_needs,
                 created_at=now,
             )
@@ -305,15 +337,16 @@ def edit_case_note_view(resident_id: int, update_id: int):
         service_quantity_map = {}
         service_unit_map = {}
 
-        for s in services:
-            st = s["service_type"]
-            qty = s["quantity"]
-            unit = s["unit"]
-            sn = s["notes"]
-            selected_services.append(st)
-            service_notes_map[st] = sn or ""
-            service_quantity_map[st] = qty if qty is not None else ""
-            service_unit_map[st] = unit or ""
+        for service in services:
+            service_type = service["service_type"]
+            quantity = service["quantity"]
+            unit = service["unit"]
+            service_note = service["notes"]
+
+            selected_services.append(service_type)
+            service_notes_map[service_type] = service_note or ""
+            service_quantity_map[service_type] = quantity if quantity is not None else ""
+            service_unit_map[service_type] = unit or ""
 
         return render_template(
             "case_management/edit_case_note.html",
@@ -325,53 +358,25 @@ def edit_case_note_view(resident_id: int, update_id: int):
             service_unit_map=service_unit_map,
         )
 
-    meeting_date = (request.form.get("meeting_date") or "").strip()
-    notes = (request.form.get("notes") or "").strip()
-    progress_notes = (request.form.get("progress_notes") or "").strip()
-    setbacks_or_incidents = (request.form.get("setbacks_or_incidents") or "").strip()
-    action_items = (request.form.get("action_items") or "").strip()
-    next_appointment = (request.form.get("next_appointment") or "").strip()
-    overall_summary = (request.form.get("overall_summary") or "").strip()
-    ready_for_next_level = yes_no_to_int(request.form.get("ready_for_next_level"))
-    recommended_next_level = (request.form.get("recommended_next_level") or "").strip()
-    blocker_reason = (request.form.get("blocker_reason") or "").strip()
-    override_or_exception = (request.form.get("override_or_exception") or "").strip()
-    staff_review_note = (request.form.get("staff_review_note") or "").strip()
+    values = _collect_note_form_values()
 
-    updated_grit_raw = (request.form.get("updated_grit") or "").strip()
-    updated_grit = parse_grit(updated_grit_raw)
-    parenting_class_completed = yes_no_to_int(request.form.get("parenting_class_completed"))
-    warrants_or_fines_paid = yes_no_to_int(request.form.get("warrants_or_fines_paid"))
-
-    service_types = clean_service_types(request.form.getlist("service_type"))
-
-    if updated_grit_raw and updated_grit is None:
+    if values["updated_grit_raw"] and values["updated_grit"] is None:
         flash("Updated grit must be a whole number between 0 and 100.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    if not meeting_date:
+    if not values["meeting_date"]:
         flash("Meeting date is required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    has_structured_progress = (
-        updated_grit is not None
-        or parenting_class_completed is not None
-        or warrants_or_fines_paid is not None
-        or ready_for_next_level is not None
-        or bool(recommended_next_level)
-        or bool(blocker_reason)
-        or bool(override_or_exception)
-        or bool(staff_review_note)
-        or bool(service_types)
-    )
+    has_structured_progress = _has_structured_progress(values, include_needs=False)
 
     if (
-        not notes
-        and not progress_notes
-        and not setbacks_or_incidents
-        and not action_items
-        and not next_appointment
-        and not overall_summary
+        not values["notes"]
+        and not values["progress_notes"]
+        and not values["setbacks_or_incidents"]
+        and not values["action_items"]
+        and not values["next_appointment"]
+        and not values["overall_summary"]
         and not has_structured_progress
     ):
         flash(
@@ -380,7 +385,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
         )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    service_date = meeting_date
+    service_date = values["meeting_date"]
     now = utcnow_iso()
 
     try:
@@ -407,21 +412,21 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 WHERE id = {ph}
                 """,
                 (
-                    meeting_date,
-                    notes or None,
-                    progress_notes or None,
-                    setbacks_or_incidents or None,
-                    action_items or None,
-                    next_appointment or None,
-                    overall_summary or None,
-                    updated_grit,
-                    parenting_class_completed,
-                    warrants_or_fines_paid,
-                    ready_for_next_level,
-                    recommended_next_level or None,
-                    blocker_reason or None,
-                    override_or_exception or None,
-                    staff_review_note or None,
+                    values["meeting_date"],
+                    values["notes"] or None,
+                    values["progress_notes"] or None,
+                    values["setbacks_or_incidents"] or None,
+                    values["action_items"] or None,
+                    values["next_appointment"] or None,
+                    values["overall_summary"] or None,
+                    values["updated_grit"],
+                    values["parenting_class_completed"],
+                    values["warrants_or_fines_paid"],
+                    values["ready_for_next_level"],
+                    values["recommended_next_level"] or None,
+                    values["blocker_reason"] or None,
+                    values["override_or_exception"] or None,
+                    values["staff_review_note"] or None,
                     now,
                     update_id,
                 ),
@@ -435,10 +440,10 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 (update_id,),
             )
 
-            for service_type in service_types:
-                service_note = (request.form.get(f"service_notes_{service_type}") or "").strip()
+            for service_type in values["service_types"]:
+                service_note = _clean_text(request.form.get(f"service_notes_{service_type}"))
                 quantity = parse_quantity(request.form.get(f"quantity_{service_type}"))
-                unit = (request.form.get(f"unit_{service_type}") or "").strip()
+                unit = _clean_text(request.form.get(f"unit_{service_type}"))
 
                 db_execute(
                     f"""
@@ -474,7 +479,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
             next_sort_order = get_next_summary_sort_order(update_id)
             next_sort_order = record_service_summary(
                 case_manager_update_id=update_id,
-                service_types=service_types,
+                service_types=values["service_types"],
                 form=request.form,
                 created_at=now,
                 starting_sort_order=next_sort_order,
@@ -484,16 +489,16 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 case_manager_update_id=update_id,
                 change_group="advancement",
                 previous_snapshot=load_previous_snapshot_map(
-                    get_previous_note_id(note["enrollment_id"], update_id, meeting_date),
+                    get_previous_note_id(note["enrollment_id"], update_id, values["meeting_date"]),
                     "advancement",
                 ),
                 current_snapshot={
-                    "setbacks_or_incidents": setbacks_or_incidents,
-                    "ready_for_next_level": display_label("yes" if ready_for_next_level == 1 else "no") if ready_for_next_level is not None else "",
-                    "recommended_next_level": recommended_next_level,
-                    "blocker_reason": blocker_reason,
-                    "override_or_exception": override_or_exception,
-                    "staff_review_note": staff_review_note,
+                    "setbacks_or_incidents": values["setbacks_or_incidents"],
+                    "ready_for_next_level": display_label("yes" if values["ready_for_next_level"] == 1 else "no") if values["ready_for_next_level"] is not None else "",
+                    "recommended_next_level": values["recommended_next_level"],
+                    "blocker_reason": values["blocker_reason"],
+                    "override_or_exception": values["override_or_exception"],
+                    "staff_review_note": values["staff_review_note"],
                 },
                 label_map={
                     **MEETING_TEXT_FIELD_LABELS,
