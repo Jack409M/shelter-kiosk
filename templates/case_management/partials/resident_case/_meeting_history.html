@@ -2,10 +2,21 @@
   <div class="cmx-section-head">
     <div>
       <h2 class="cmx-section-title">Meeting History</h2>
-      <div class="cmx-section-subtitle">Prior notes and change summaries.</div>
+      <div class="cmx-section-subtitle">Prior notes, services, advancement decisions, and change summaries.</div>
     </div>
-    <span class="cmx-inline-pill">View Full History</span>
+    <span class="cmx-inline-pill">
+      Total Meetings: {{ notes|length }}
+    </span>
   </div>
 
-  {% include "case_management/partials/resident_case/_workspace_note_history.html" %}
+  {% if notes %}
+    {% include "case_management/partials/resident_case/_workspace_note_history.html" %}
+  {% else %}
+    <div class="cmx-panel-soft">
+      <div class="cmx-text-card-title">No meeting history yet</div>
+      <div class="cmx-summary-text">
+        This resident does not have any saved case manager meetings yet. The first saved meeting will appear here with services, needs worked, and advancement review details.
+      </div>
+    </div>
+  {% endif %}
 </div>
