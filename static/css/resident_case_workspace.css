@@ -326,8 +326,8 @@ input.cmx-btn-warn:active {
 
 .cmx-layout {
   display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(0, 1.45fr) 300px;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   align-items: start;
 }
 
@@ -339,8 +339,9 @@ input.cmx-btn-warn:active {
 
 .cmx-side {
   position: sticky;
-  top: 16px;
+  top: 12px;
   align-self: start;
+  gap: 14px;
 }
 
 .cmx-section-head {
@@ -672,10 +673,12 @@ input.cmx-btn-warn:active {
 
 .cmx-side-card-head h3 {
   margin: 0;
-  font-size: 0.96rem;
-  line-height: 1.2;
+  font-size: 0.88rem;
+  line-height: 1.15;
   font-weight: 800;
   color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .cmx-side-action {
@@ -698,13 +701,13 @@ input.cmx-btn-warn:active {
 
 .cmx-chip-block,
 .cmx-row-block {
-  border-radius: 16px;
+  border-radius: 14px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border: 1px solid #dbe5f0;
-  padding: 10px 11px;
+  padding: 8px 10px;
   color: #334155;
-  font-size: 0.84rem;
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
+  font-size: 0.78rem;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
 }
 
 .cmx-row-block {
@@ -870,7 +873,7 @@ input.cmx-btn-warn:active {
   margin-bottom: 3px;
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1180px) {
   .cmx-layout {
     grid-template-columns: 1fr;
   }
