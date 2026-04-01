@@ -189,6 +189,41 @@ def _load_resident_profile(resident_id: int):
     ) or {}
 
 
+def _load_enrollment_baseline(enrollment_id: int | None):
+    if not enrollment_id:
+        return {}
+
+    ph = placeholder()
+
+    row = db_fetchone(
+        f"""
+        SELECT
+            entry_date
+        FROM program_enrollments
+        WHERE id = {ph}
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    ) or {}
+
+    intake_row = db_fetchone(
+        f"""
+        SELECT
+            sobriety_date,
+            treatment_grad_date
+        FROM intake_assessments
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    ) or {}
+
+    row["intake_sobriety_date"] = intake_row.get("sobriety_date")
+    row["intake_treatment_grad_date"] = intake_row.get("treatment_grad_date")
+    return row
+
+
 def _load_medications(resident_id: int, enrollment_id: int | None):
     ph = placeholder()
 
@@ -351,8 +386,14 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     current_enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
 
     resident = _load_resident_profile(resident_id)
+    enrollment_baseline = _load_enrollment_baseline(current_enrollment_id)
 
-    level_start_date = resident.get("level_start_date")
+    entry_date = enrollment_baseline.get("entry_date")
+    intake_sobriety_date = enrollment_baseline.get("intake_sobriety_date")
+    intake_treatment_grad_date = enrollment_baseline.get("intake_treatment_grad_date")
+
+    program_level = resident.get("program_level") or "1"
+    level_start_date = resident.get("level_start_date") or entry_date
     days_on_level = _days_since(level_start_date)
 
     step_changed_at = resident.get("step_changed_at")
@@ -361,8 +402,10 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     employment_updated_at = resident.get("employment_updated_at")
     employment_days = _days_since(employment_updated_at)
 
-    sobriety_date = resident.get("sobriety_date")
+    sobriety_date = resident.get("sobriety_date") or intake_sobriety_date or entry_date
     days_sober_today = _days_since(sobriety_date)
+
+    treatment_graduation_date = resident.get("treatment_graduation_date") or intake_treatment_grad_date
 
     medications_raw = _load_medications(resident_id, current_enrollment_id)
     ua_rows_raw = _load_ua_rows(resident_id, current_enrollment_id)
@@ -375,7 +418,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     budget_items = _budget_items(budget_rows_raw)
 
     snapshot = {
-        "program_level": resident.get("program_level"),
+        "program_level": program_level,
         "level_start_date": level_start_date,
         "days_on_level": days_on_level,
         "sponsor_name": resident.get("sponsor_name"),
@@ -403,7 +446,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "days_sober_today": days_sober_today,
         "days_sober_at_entry": None,
         "drug_of_choice": resident.get("drug_of_choice"),
-        "treatment_graduation_date": resident.get("treatment_graduation_date"),
+        "treatment_graduation_date": treatment_graduation_date,
         "medications": medication_items,
         "medication_count": len(medication_items),
         "ua_rows": ua_items,
