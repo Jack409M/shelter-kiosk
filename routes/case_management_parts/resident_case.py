@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from datetime import date
-
-from flask import current_app, flash, redirect, render_template, session, url_for
+from flask import flash, redirect, render_template, session, url_for
 
 from core.db import db_fetchall, db_fetchone
-from core.helpers import fmt_dt
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
@@ -14,29 +11,11 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.needs import get_open_enrollment_needs
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
-
-
-SUMMARY_GROUP_ORDER = [
-    "child",
-    "medication",
-    "service",
-    "need_addressed",
-    "need_outstanding",
-    "employment",
-    "sobriety",
-    "advancement",
-]
-
-SUMMARY_GROUP_LABELS = {
-    "child": "Children Changes",
-    "medication": "Medication Changes",
-    "service": "Services Provided",
-    "need_addressed": "Needs Taken Care Of",
-    "need_outstanding": "Needs Still Outstanding",
-    "employment": "Employment Changes",
-    "sobriety": "Sobriety Changes",
-    "advancement": "Advancement Review",
-}
+from routes.case_management_parts.resident_case_children import load_children_with_services
+from routes.case_management_parts.resident_case_notes import build_note_objects
+from routes.case_management_parts.resident_case_viewmodel import build_meeting_defaults
+from routes.case_management_parts.resident_case_viewmodel import build_operations_snapshot
+from routes.case_management_parts.resident_case_viewmodel import build_workspace_header
 
 
 def _normalize_exit_assessment(row):
@@ -96,172 +75,77 @@ def _get_latest_followup(enrollment_id: int, followup_type: str):
     return row if row else None
 
 
-def _display_label(value: str | None) -> str:
-    if not value:
-        return "—"
-    return value.replace("_", " ").strip().title()
+def _load_case_history(enrollment_id: int):
+    ph = placeholder()
 
+    notes_raw = db_fetchall(
+        f"""
+        SELECT
+            id,
+            meeting_date,
+            notes,
+            progress_notes,
+            setbacks_or_incidents,
+            action_items,
+            next_appointment,
+            overall_summary,
+            ready_for_next_level,
+            recommended_next_level,
+            blocker_reason,
+            override_or_exception,
+            staff_review_note,
+            updated_grit,
+            parenting_class_completed,
+            warrants_or_fines_paid,
+            created_at
+        FROM case_manager_updates
+        WHERE enrollment_id = {ph}
+        ORDER BY meeting_date ASC, id ASC
+        """,
+        (enrollment_id,),
+    )
 
-def _display_quantity_unit(quantity, unit: str | None) -> str:
-    if quantity is None and not unit:
-        return "—"
-    if quantity is None:
-        return _display_label(unit)
-    unit_clean = (unit or "").strip()
-    if not unit_clean:
-        return str(quantity)
-    return f"{quantity} {unit_clean}"
+    services_raw = db_fetchall(
+        f"""
+        SELECT
+            case_manager_update_id,
+            service_type,
+            service_date,
+            quantity,
+            unit,
+            notes
+        FROM client_services
+        WHERE enrollment_id = {ph}
+        ORDER BY service_date DESC, id DESC
+        """,
+        (enrollment_id,),
+    )
 
+    note_ids = [note["id"] for note in notes_raw]
+    summary_rows_raw = []
 
-def _normalize_child_service_row(service):
-    return {
-        "resident_child_id": service.get("resident_child_id"),
-        "service_type": service.get("service_type"),
-        "service_type_display": _display_label(service.get("service_type")),
-        "outcome": service.get("outcome"),
-        "outcome_display": _display_label(service.get("outcome")),
-        "quantity": service.get("quantity"),
-        "unit": service.get("unit"),
-        "quantity_display": _display_quantity_unit(service.get("quantity"), service.get("unit")),
-        "notes": service.get("notes"),
-        "service_date": service.get("service_date"),
-        "service_date_display": fmt_dt(service.get("service_date")),
-    }
-
-
-def _normalize_summary_row(row):
-    return {
-        "change_group": row.get("change_group"),
-        "change_group_label": SUMMARY_GROUP_LABELS.get(
-            row.get("change_group"),
-            _display_label(row.get("change_group")),
-        ),
-        "change_type": row.get("change_type"),
-        "change_type_display": _display_label(row.get("change_type")),
-        "item_key": row.get("item_key"),
-        "item_label": row.get("item_label") or "—",
-        "old_value": row.get("old_value"),
-        "new_value": row.get("new_value"),
-        "detail": row.get("detail"),
-        "sort_order": row.get("sort_order") or 0,
-    }
-
-
-def _group_summary_rows(rows: list[dict]) -> list[dict]:
-    grouped = {group_key: [] for group_key in SUMMARY_GROUP_ORDER}
-    extra_groups: dict[str, list[dict]] = {}
-
-    for row in rows:
-        group_key = row.get("change_group") or ""
-        if group_key in grouped:
-            grouped[group_key].append(row)
-        else:
-            extra_groups.setdefault(group_key, []).append(row)
-
-    result = []
-
-    for group_key in SUMMARY_GROUP_ORDER:
-        items = grouped.get(group_key, [])
-        display_items = [item for item in items if item.get("change_type") != "snapshot"]
-        if not display_items:
-            continue
-        result.append(
-            {
-                "group_key": group_key,
-                "group_label": SUMMARY_GROUP_LABELS.get(group_key, _display_label(group_key)),
-                "items": display_items,
-            }
+    if note_ids:
+        note_placeholders = ",".join([ph] * len(note_ids))
+        summary_rows_raw = db_fetchall(
+            f"""
+            SELECT
+                case_manager_update_id,
+                change_group,
+                change_type,
+                item_key,
+                item_label,
+                old_value,
+                new_value,
+                detail,
+                sort_order
+            FROM case_manager_update_summary
+            WHERE case_manager_update_id IN ({note_placeholders})
+            ORDER BY case_manager_update_id ASC, sort_order ASC, id ASC
+            """,
+            tuple(note_ids),
         )
 
-    for group_key in sorted(extra_groups.keys()):
-        items = [item for item in extra_groups[group_key] if item.get("change_type") != "snapshot"]
-        if not items:
-            continue
-        result.append(
-            {
-                "group_key": group_key,
-                "group_label": SUMMARY_GROUP_LABELS.get(group_key, _display_label(group_key)),
-                "items": items,
-            }
-        )
-
-    return result
-
-
-def _safe_days_since(date_text: str | None):
-    if not date_text:
-        return None
-
-    try:
-        parsed = date.fromisoformat(str(date_text)[:10])
-    except Exception:
-        return None
-
-    days = (date.today() - parsed).days
-    if days < 0:
-        return 0
-    return days
-
-
-def _build_meeting_defaults():
-    return {
-        "meeting_date": "",
-        "notes": "",
-        "progress_notes": "",
-        "setbacks_or_incidents": "",
-        "action_items": "",
-        "next_appointment": "",
-        "overall_summary": "",
-        "ready_for_next_level": "",
-        "recommended_next_level": "",
-        "blocker_reason": "",
-        "override_or_exception": "",
-        "staff_review_note": "",
-        "updated_grit": None,
-        "parenting_class_completed": "",
-        "warrants_or_fines_paid": "",
-    }
-
-
-def _build_workspace_header(*, resident, enrollment, recovery_snapshot, open_needs):
-    rs = recovery_snapshot or {}
-
-    sobriety_date = rs.get("sobriety_date")
-    days_sober = rs.get("days_sober_today")
-    if days_sober is None:
-        days_sober = _safe_days_since(sobriety_date)
-
-    level_start_date = rs.get("level_start_date")
-    days_on_level = rs.get("days_on_level")
-    if days_on_level is None:
-        days_on_level = _safe_days_since(level_start_date)
-
-    return {
-        "resident_name": f"{resident.get('first_name', '')} {resident.get('last_name', '')}".strip(),
-        "shelter": resident.get("shelter"),
-        "resident_status": "Active" if resident.get("is_active") else "Inactive",
-        "program_status": enrollment.get("program_status") if enrollment else None,
-        "entry_date": enrollment.get("entry_date") if enrollment else None,
-        "level": rs.get("program_level"),
-        "level_start_date": level_start_date,
-        "days_on_level": days_on_level,
-        "step": rs.get("step_current"),
-        "days_sober": days_sober,
-        "open_needs_count": len(open_needs or []),
-    }
-
-
-def _build_operations_snapshot(recovery_snapshot):
-    rs = recovery_snapshot or {}
-    latest = rs.get("latest_inspection")
-    if not latest:
-        return None
-
-    return {
-        "inspection_date": latest.get("inspection_date"),
-        "result_display": latest.get("passed_display"),
-        "notes": latest.get("notes"),
-    }
+    return build_note_objects(notes_raw, services_raw, summary_rows_raw)
 
 
 def resident_case_view(resident_id: int):
@@ -302,7 +186,7 @@ def resident_case_view(resident_id: int):
     appointments = []
     notes = []
     services = []
-    children = []
+    children = load_children_with_services(resident_id)
     family_snapshot = None
     intake_assessment = None
     exit_assessment = None
@@ -311,72 +195,7 @@ def resident_case_view(resident_id: int):
     followup_1_year = None
     open_needs = []
     recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
-    meeting_defaults = _build_meeting_defaults()
-
-    try:
-        children = db_fetchall(
-            f"""
-            SELECT
-                id,
-                resident_id,
-                child_name,
-                birth_year,
-                relationship,
-                living_status,
-                is_active
-            FROM resident_children
-            WHERE resident_id = {ph}
-              AND is_active = TRUE
-            ORDER BY id ASC
-            """,
-            (resident_id,),
-        )
-
-        child_ids = [child["id"] for child in children]
-        child_services = []
-
-        if child_ids:
-            child_placeholders = ",".join([ph] * len(child_ids))
-            child_services_raw = db_fetchall(
-                f"""
-                SELECT
-                    resident_child_id,
-                    service_type,
-                    outcome,
-                    quantity,
-                    unit,
-                    notes,
-                    service_date
-                FROM child_services
-                WHERE resident_child_id IN ({child_placeholders})
-                  AND COALESCE(is_deleted, FALSE) = FALSE
-                ORDER BY service_date DESC, id DESC
-                """,
-                tuple(child_ids),
-            )
-            child_services = [_normalize_child_service_row(service) for service in child_services_raw]
-
-        services_by_child = {}
-        for service in child_services:
-            child_id = service["resident_child_id"]
-            services_by_child.setdefault(child_id, []).append(service)
-
-        enriched_children = []
-        for child in children:
-            child_id = child["id"]
-            child_obj = dict(child)
-            child_obj["relationship_display"] = _display_label(child.get("relationship"))
-            child_obj["living_status_display"] = _display_label(child.get("living_status"))
-            child_obj["services"] = services_by_child.get(child_id, [])
-            enriched_children.append(child_obj)
-
-        children = enriched_children
-    except Exception:
-        current_app.logger.exception(
-            "Failed to load child or child service data for resident_id=%s",
-            resident_id,
-        )
-        children = []
+    meeting_defaults = build_meeting_defaults()
 
     if enrollment_id:
         family_snapshot = db_fetchone(
@@ -486,114 +305,17 @@ def resident_case_view(resident_id: int):
             (enrollment_id,),
         )
 
-        notes_raw = db_fetchall(
-            f"""
-            SELECT
-                id,
-                meeting_date,
-                notes,
-                progress_notes,
-                setbacks_or_incidents,
-                action_items,
-                next_appointment,
-                overall_summary,
-                ready_for_next_level,
-                recommended_next_level,
-                blocker_reason,
-                override_or_exception,
-                staff_review_note,
-                updated_grit,
-                parenting_class_completed,
-                warrants_or_fines_paid,
-                created_at
-            FROM case_manager_updates
-            WHERE enrollment_id = {ph}
-            ORDER BY meeting_date ASC, id ASC
-            """,
-            (enrollment_id,),
-        )
-
-        services_raw = db_fetchall(
-            f"""
-            SELECT
-                case_manager_update_id,
-                service_type,
-                service_date,
-                quantity,
-                unit,
-                notes
-            FROM client_services
-            WHERE enrollment_id = {ph}
-            ORDER BY service_date DESC, id DESC
-            """,
-            (enrollment_id,),
-        )
-
-        services_by_note = {}
-        for s in services_raw:
-            note_id = s["case_manager_update_id"]
-            service = {
-                "service_type": s["service_type"],
-                "service_date": s["service_date"],
-                "quantity": s["quantity"],
-                "unit": s["unit"],
-                "quantity_display": _display_quantity_unit(s["quantity"], s["unit"]),
-                "notes": s["notes"],
-            }
-            services_by_note.setdefault(note_id, []).append(service)
-
-        note_ids = [note["id"] for note in notes_raw]
-        summary_rows_raw = []
-
-        if note_ids:
-            note_placeholders = ",".join([ph] * len(note_ids))
-            summary_rows_raw = db_fetchall(
-                f"""
-                SELECT
-                    case_manager_update_id,
-                    change_group,
-                    change_type,
-                    item_key,
-                    item_label,
-                    old_value,
-                    new_value,
-                    detail,
-                    sort_order
-                FROM case_manager_update_summary
-                WHERE case_manager_update_id IN ({note_placeholders})
-                ORDER BY case_manager_update_id ASC, sort_order ASC, id ASC
-                """,
-                tuple(note_ids),
-            )
-
-        summary_by_note = {}
-        for row in summary_rows_raw:
-            note_id = row["case_manager_update_id"]
-            summary_by_note.setdefault(note_id, []).append(_normalize_summary_row(row))
-
-        notes = []
-        for n in notes_raw:
-            note_id = n["id"]
-            note_obj = dict(n)
-            note_obj["ready_for_next_level_display"] = (
-                _display_label("yes") if n.get("ready_for_next_level") else (_display_label("no") if n.get("ready_for_next_level") is not None else "—")
-            )
-            note_obj["services"] = services_by_note.get(note_id, [])
-            note_obj["summary_rows"] = summary_by_note.get(note_id, [])
-            note_obj["summary_groups"] = _group_summary_rows(note_obj["summary_rows"])
-            notes.append(note_obj)
-
-        services = services_raw
+        notes, services = _load_case_history(enrollment_id)
         followup_6_month = _get_latest_followup(enrollment_id, "6_month")
         followup_1_year = _get_latest_followup(enrollment_id, "1_year")
 
-    workspace_header = _build_workspace_header(
+    workspace_header = build_workspace_header(
         resident=resident,
         enrollment=enrollment,
         recovery_snapshot=recovery_snapshot,
         open_needs=open_needs,
     )
-    operations_snapshot = _build_operations_snapshot(recovery_snapshot)
+    operations_snapshot = build_operations_snapshot(recovery_snapshot)
 
     return render_template(
         "case_management/resident_case.html",
