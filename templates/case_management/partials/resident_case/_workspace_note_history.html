@@ -1,4 +1,4 @@
-{% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note, render_progress_note_print_summary %}
+{% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note %}
 
 <div class="cmx-history-list-wrap">
   <p class="cmx-muted" style="margin-top:-4px; margin-bottom:14px;">
@@ -18,7 +18,6 @@
           type="button"
           class="case-note-tile"
           data-note-target="case-note-panel-{{ note_id }}"
-          data-print-target="print-case-note-{{ note_id }}"
         >
           <div><strong>{{ note_meeting_date or "—" }}</strong></div>
           <div class="case-note-tile-meta">Ready: {{ note_ready_display }}</div>
@@ -71,9 +70,14 @@
 
             {% if note_id %}
               <div class="print-hide case-note-actions">
-                <button type="button" class="cmx-btn-muted" onclick="window.print()">
-                  Print
-                </button>
+                <a
+                  class="cmx-btn-muted"
+                  href="{{ url_for('case_management.progress_report_print', resident_id=resident_id, update_id=note_id) }}"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Print Report
+                </a>
                 <a class="cmx-btn-muted" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
                   Edit Note
                 </a>
@@ -83,25 +87,8 @@
 
           {{ render_progress_note(note) }}
         </div>
-
-        <template id="print-case-note-{{ note_id }}">
-          <div class="case-print-report">
-            <div class="case-print-note">
-              <div>
-                <h3 class="case-note-panel-title">Meeting {{ note_meeting_date or "—" }}</h3>
-                <div class="case-note-created">
-                  Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
-                </div>
-              </div>
-
-              {{ render_progress_note_print_summary(note) }}
-            </div>
-          </div>
-        </template>
       {% endfor %}
     </div>
-
-    <div id="print-selected-note" class="print-only-note"></div>
   {% else %}
     <p class="cmx-muted">No meetings recorded.</p>
   {% endif %}
