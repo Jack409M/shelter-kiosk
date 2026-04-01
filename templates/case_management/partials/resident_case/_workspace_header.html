@@ -8,12 +8,14 @@
           <p class="cmx-subtitle">Resident: {{ first_name }} {{ last_name }}</p>
 
           <div class="cmx-meta">
+            <span class="cmx-pill">Resident ID: {{ resident["resident_identifier"] or resident_code or "—" }}</span>
             <span class="cmx-pill">Shelter: {{ shelter | shelter if shelter else "—" }}</span>
             <span class="cmx-pill cmx-pill-success">Status: {{ "Active" if resident_active else "Inactive" }}</span>
             <span class="cmx-pill">Program Status: {{ header_program_status or "—" }}</span>
             <span class="cmx-pill">Entry Date: {{ enrollment_entry_date or "—" }}</span>
             <span class="cmx-pill">Level Start: {{ rs_level_start_date or "—" }}</span>
             <span class="cmx-pill">Last Meeting: {{ last_meeting_date or "—" }}</span>
+            <span class="cmx-pill">Next Appointment: {{ next_appt or "—" }}</span>
           </div>
         </div>
       </div>
@@ -22,7 +24,7 @@
         <div class="cmx-stat">
           <div class="cmx-stat-value">{{ rs_level or "—" }}</div>
           <div class="cmx-stat-label">Level</div>
-          <div class="cmx-stat-hint">Editable</div>
+          <div class="cmx-stat-hint">Current</div>
         </div>
 
         <div class="cmx-stat">
@@ -33,7 +35,7 @@
         <div class="cmx-stat">
           <div class="cmx-stat-value">{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</div>
           <div class="cmx-stat-label">Step</div>
-          <div class="cmx-stat-hint">Editable</div>
+          <div class="cmx-stat-hint">Current</div>
         </div>
 
         <div class="cmx-stat">
@@ -54,7 +56,11 @@
       Save Meeting
     </button>
 
-    <button type="button" class="cmx-btn-secondary cmx-btn-full" onclick="window.print()">
+    <button type="submit" class="cmx-btn-secondary cmx-btn-full" form="profile-editor-form">
+      Save Profile
+    </button>
+
+    <button type="button" class="cmx-btn-muted cmx-btn-full" onclick="window.print()">
       Print Case Summary
     </button>
 
