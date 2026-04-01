@@ -169,7 +169,7 @@
       <div class="cmx-panel-soft">
         <div class="cmx-panel-head">
           <h3>Program And Compliance Snapshot</h3>
-          <span>compact current status</span>
+          <span>current status from intake and recovery</span>
         </div>
 
         <div class="cmx-stack">
@@ -177,9 +177,39 @@
           <div class="cmx-row-block"><span>Level</span><span>{{ rs_level or "—" }}</span></div>
           <div class="cmx-row-block"><span>Level Start Date</span><span>{{ rs_level_start_date or "—" }}</span></div>
           <div class="cmx-row-block"><span>Days On Level</span><span>{{ rs_days_on_level if rs_days_on_level is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Days Sober</span><span>{{ rs_days_sober_today if rs_days_sober_today is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
+          <div class="cmx-row-block"><span>Drug Of Choice</span><span>{{ rs_drug_of_choice or "—" }}</span></div>
+          <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
           <div class="cmx-row-block"><span>Sponsor Active</span><span>{{ rs_sponsor_active_display or "—" }}</span></div>
+          <div class="cmx-row-block"><span>Step</span><span>{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</span></div>
           <div class="cmx-row-block"><span>Step Work Active</span><span>{{ rs_step_work_active_display or "—" }}</span></div>
+          <div class="cmx-row-block"><span>Employment Status</span><span>{{ rs_employment_status or "—" }}</span></div>
+          <div class="cmx-row-block"><span>Employer</span><span>{{ rs_employer or "—" }}</span></div>
+          <div class="cmx-row-block"><span>Monthly Income</span><span>{{ rs_income if rs_income is not none else "—" }}</span></div>
           <div class="cmx-row-block"><span>Open Needs</span><span>{{ header_open_needs_count }}</span></div>
+
+          {% if intake_assessment %}
+            <div class="cmx-row-block"><span>Intake Grit</span><span>{{ intake_assessment["grit_score"] if intake_assessment["grit_score"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Dental Need At Entry</span><span>{{ "Yes" if intake_assessment["dental_need_at_entry"] else "No" if intake_assessment["dental_need_at_entry"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Vision Need At Entry</span><span>{{ "Yes" if intake_assessment["vision_need_at_entry"] else "No" if intake_assessment["vision_need_at_entry"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Parenting Class Needed</span><span>{{ "Yes" if intake_assessment["parenting_class_needed"] else "No" if intake_assessment["parenting_class_needed"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Warrants Unpaid</span><span>{{ "Yes" if intake_assessment["warrants_unpaid"] else "No" if intake_assessment["warrants_unpaid"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Mental Health Need At Entry</span><span>{{ "Yes" if intake_assessment["mental_health_need_at_entry"] else "No" if intake_assessment["mental_health_need_at_entry"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Medical Need At Entry</span><span>{{ "Yes" if intake_assessment["medical_need_at_entry"] else "No" if intake_assessment["medical_need_at_entry"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Driver’s License At Entry</span><span>{{ "Yes" if intake_assessment["has_drivers_license"] else "No" if intake_assessment["has_drivers_license"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Social Security Card At Entry</span><span>{{ "Yes" if intake_assessment["has_social_security_card"] else "No" if intake_assessment["has_social_security_card"] is not none else "—" }}</span></div>
+          {% endif %}
+
+          {% if family_snapshot %}
+            <div class="cmx-row-block"><span>Children At DWC</span><span>{{ family_snapshot["kids_at_dwc"] if family_snapshot["kids_at_dwc"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Children Served Outside Under 18</span><span>{{ family_snapshot["kids_served_outside_under_18"] if family_snapshot["kids_served_outside_under_18"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Children Ages 0 To 5</span><span>{{ family_snapshot["kids_ages_0_5"] if family_snapshot["kids_ages_0_5"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Children Ages 6 To 11</span><span>{{ family_snapshot["kids_ages_6_11"] if family_snapshot["kids_ages_6_11"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Children Ages 12 To 17</span><span>{{ family_snapshot["kids_ages_12_17"] if family_snapshot["kids_ages_12_17"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Children Reunited While In Program</span><span>{{ family_snapshot["kids_reunited_while_in_program"] if family_snapshot["kids_reunited_while_in_program"] is not none else "—" }}</span></div>
+            <div class="cmx-row-block"><span>Healthy Babies Born At DWC</span><span>{{ family_snapshot["healthy_babies_born_at_dwc"] if family_snapshot["healthy_babies_born_at_dwc"] is not none else "—" }}</span></div>
+          {% endif %}
         </div>
       </div>
 
@@ -219,6 +249,19 @@
           <label>Staff Review Note</label>
           <textarea name="staff_review_note" rows="3" placeholder="Professional recommendation or rationale">{{ meeting_defaults.staff_review_note if meeting_defaults.staff_review_note else '' }}</textarea>
         </div>
+
+        {% if last_note %}
+          <div class="cmx-panel-soft" style="margin-top:16px;">
+            <div class="cmx-text-card-title">Latest Prior Advancement Snapshot</div>
+            <div class="cmx-stack" style="margin-top:10px;">
+              <div class="cmx-row-block"><span>Last Meeting</span><span>{{ last_meeting_date or "—" }}</span></div>
+              <div class="cmx-row-block"><span>Ready For Next Level</span><span>{{ last_ready_for_next_level_display or "—" }}</span></div>
+              <div class="cmx-row-block"><span>Recommended Level</span><span>{{ last_recommended_next_level or "—" }}</span></div>
+              <div class="cmx-chip-block"><strong>Blocker</strong><br>{{ last_blocker_reason or "—" }}</div>
+              <div class="cmx-chip-block"><strong>Override Or Exception</strong><br>{{ last_override_or_exception or "—" }}</div>
+            </div>
+          </div>
+        {% endif %}
       </div>
     </div>
   </form>
