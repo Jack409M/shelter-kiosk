@@ -1,0 +1,134 @@
+<aside class="cmx-side">
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Open Needs Snapshot</h3>
+      <a class="cmx-side-action" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Open Needs</a>
+    </div>
+
+    {% if open_needs %}
+      <div class="cmx-stack">
+        {% for need in open_needs %}
+          <div class="cmx-chip-block">{{ need["need_label"] }}</div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="cmx-muted">No open needs recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Recent UA Snapshot</h3>
+      <a class="cmx-side-action" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">Full UA</a>
+    </div>
+
+    {% if rs_ua_rows %}
+      <div class="cmx-stack">
+        {% for row in rs_ua_rows[:3] %}
+          <div class="cmx-chip-block">
+            <strong>{{ row["ua_date"] or "—" }}</strong><br>
+            {{ row["result_display"] or "—" }}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="cmx-muted">No UA entries recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Active Medications</h3>
+      <a class="cmx-side-action" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">Edit Profile</a>
+    </div>
+
+    {% if rs_medications %}
+      <div class="cmx-stack">
+        {% for med in rs_medications[:4] %}
+          <div class="cmx-chip-block">{{ med["medication_name"] or "Medication" }}</div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="cmx-muted">No active medications recorded.</p>
+    {% endif %}
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Child Services Snapshot</h3>
+      <a class="cmx-side-action" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>
+    </div>
+
+    {% if children %}
+      <div class="cmx-stack">
+        {% for child in children[:3] %}
+          <div class="cmx-chip-block">
+            {% if child.services and child.services[0]["service_type_display"] %}
+              {{ child.services[0]["service_type_display"] }}
+            {% else %}
+              {{ child["child_name"] or "Unnamed Child" }}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="cmx-muted">No child records found.</p>
+    {% endif %}
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Recovery And Compliance Snapshot</h3>
+      <a class="cmx-side-action" href="#profile-editor-form">Open Profile Editor</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Level</span><span>{{ rs_level or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Level Start</span><span>{{ rs_level_start_date or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Days On Level</span><span>{{ rs_days_on_level if rs_days_on_level is not none else "—" }}</span></div>
+      <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Drug of Choice</span><span>{{ rs_drug_of_choice or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Sponsor Active</span><span>{{ rs_sponsor_active_display or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Step Work Active</span><span>{{ rs_step_work_active_display or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Employment Status</span><span>{{ rs_employment_status or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Employer</span><span>{{ rs_employer or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Monthly Income</span><span>{{ rs_income if rs_income is not none else "—" }}</span></div>
+      <div class="cmx-row-block"><span>Supervisor</span><span>{{ rs_supervisor_name or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Supervisor Phone</span><span>{{ rs_supervisor_phone or "—" }}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Latest Advancement Snapshot</h3>
+      <a class="cmx-side-action" href="#meeting-workspace-form">Meeting Review</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Ready For Next Level</span><span>{{ last_ready_for_next_level_display or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Recommended Level</span><span>{{ last_recommended_next_level or "—" }}</span></div>
+      <div class="cmx-chip-block"><strong>Blocker</strong><br>{{ last_blocker_reason or "—" }}</div>
+      <div class="cmx-chip-block"><strong>Override Or Exception</strong><br>{{ last_override_or_exception or "—" }}</div>
+    </div>
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Shelter Operations Snapshot</h3>
+      <a class="cmx-side-action" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">Inspection Record</a>
+    </div>
+
+    {% if rs_latest_inspection %}
+      <div class="cmx-chip-block">
+        <strong>Latest Inspection</strong><br>
+        {{ rs_latest_inspection["inspection_date"] or "—" }}<br>
+        {{ rs_latest_inspection["passed_display"] or "—" }}<br>
+        <span class="cmx-muted">Read only in case management</span>
+      </div>
+    {% else %}
+      <p class="cmx-muted">No inspection record found.</p>
+    {% endif %}
+  </div>
+</aside>
