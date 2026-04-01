@@ -2,7 +2,7 @@
   <div class="cmx-section-head">
     <div>
       <h2 class="cmx-section-title">Meeting Workspace</h2>
-      <div class="cmx-section-subtitle">One working area for notes, services, needs worked today, and advancement review.</div>
+      <div class="cmx-section-subtitle">Draft in progress. Your notes are protected while you work.</div>
     </div>
 
     <div class="cmx-inline-pill">
@@ -17,85 +17,70 @@
     <input type="hidden" name="warrants_or_fines_paid" value="{{ meeting_defaults.warrants_or_fines_paid if meeting_defaults.warrants_or_fines_paid else '' }}">
 
     <div class="cmx-grid cmx-grid-4">
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Meeting Date</div>
-        <div class="cmx-field">
-          <input type="date" name="meeting_date" value="{{ meeting_defaults.meeting_date if meeting_defaults.meeting_date else '' }}" required>
-        </div>
+      <div class="cmx-field">
+        <label>Meeting Date</label>
+        <input type="date" name="meeting_date" value="{{ meeting_defaults.meeting_date if meeting_defaults.meeting_date else '' }}" required>
       </div>
 
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Meeting Type</div>
-        <div class="cmx-field">
-          <select>
-            <option selected>Weekly</option>
-            <option>Check In</option>
-            <option>Case Review</option>
-            <option>Crisis</option>
-          </select>
-        </div>
+      <div class="cmx-field">
+        <label>Next Appointment</label>
+        <input type="text" name="next_appointment" value="{{ meeting_defaults.next_appointment if meeting_defaults.next_appointment else '' }}" placeholder="04/25/2026 10:00 AM">
       </div>
 
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Next Appointment</div>
-        <div class="cmx-field">
-          <input type="text" name="next_appointment" value="{{ meeting_defaults.next_appointment if meeting_defaults.next_appointment else '' }}" placeholder="04/25/2026 10:00 AM">
-        </div>
+      <div class="cmx-field">
+        <label>Location</label>
+        <input type="text" value="{{ shelter | shelter if shelter else 'Office' }}" readonly>
       </div>
 
-      <div class="cmx-field-card">
-        <div class="cmx-field-card-label">Focus</div>
-        <div class="cmx-field">
-          <input type="text" value="Recovery and advancement review" readonly>
-        </div>
+      <div class="cmx-field">
+        <label>Meeting Type</label>
+        <select>
+          <option selected>Weekly</option>
+          <option>Check In</option>
+          <option>Case Review</option>
+          <option>Crisis</option>
+        </select>
       </div>
     </div>
 
-    <div class="cmx-grid cmx-grid-4 cmx-writing-grid" style="margin-top:20px;">
-      <div class="cmx-text-card cmx-writing-card">
+    <div class="cmx-grid cmx-grid-3" style="margin-top:18px;">
+      <div class="cmx-text-card">
         <div class="cmx-text-card-title">Meeting Notes</div>
         <div class="cmx-field">
-          <textarea name="notes" rows="7" placeholder="Notes from today’s meeting">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
+          <textarea name="notes" rows="8" placeholder="Notes from today’s meeting">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
         </div>
       </div>
 
-      <div class="cmx-text-card cmx-writing-card">
+      <div class="cmx-text-card">
         <div class="cmx-text-card-title">Progress Since Last Meeting</div>
         <div class="cmx-field">
-          <textarea name="progress_notes" rows="7" placeholder="What progress has been made">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
+          <textarea name="progress_notes" rows="8" placeholder="What progress has been made">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
         </div>
       </div>
 
-      <div class="cmx-text-card cmx-writing-card">
-        <div class="cmx-text-card-title">Setbacks Or Incidents</div>
-        <div class="cmx-field">
-          <textarea name="setbacks_or_incidents" rows="7" placeholder="Record setbacks, incidents, or concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
-        </div>
-      </div>
-
-      <div class="cmx-text-card cmx-writing-card">
+      <div class="cmx-text-card">
         <div class="cmx-text-card-title">Action Items</div>
         <div class="cmx-field">
-          <textarea name="action_items" rows="7" placeholder="What needs to happen before next time">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
+          <textarea name="action_items" rows="8" placeholder="What needs to happen before next time">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
         </div>
       </div>
     </div>
 
-    <div class="cmx-panel-soft" style="margin-top:16px;">
+    <div class="cmx-text-card" style="margin-top:16px;">
       <div class="cmx-text-card-title">Overall Summary</div>
       <div class="cmx-field">
         <textarea name="overall_summary" rows="4" placeholder="Summary and plan">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea>
       </div>
     </div>
 
-    <div class="cmx-grid cmx-grid-2" style="margin-top:24px;">
+    <div class="cmx-grid cmx-grid-2" style="margin-top:22px;">
       <div class="cmx-panel-soft">
         <div class="cmx-panel-head">
           <h3>Services Provided Today</h3>
-          <span>saved with meeting</span>
+          <button type="button" class="cmx-btn-muted">+ Add Service</button>
         </div>
 
-        <div class="cmx-service-grid">
+        <div class="cmx-service-grid" style="grid-template-columns: 1fr;">
           {% set meeting_services = [
             ("Counseling", "sessions", "Counseling notes"),
             ("Dental", "visits", "Dental notes"),
@@ -111,12 +96,10 @@
               <input type="checkbox" name="service_type" value="{{ service_name }}">
               <div style="flex:1;">
                 <div class="cmx-service-name">{{ service_name }}</div>
-                <div class="cmx-service-meta">Qty, unit, and note inline</div>
-
-                <div class="cmx-service-fields">
+                <div class="cmx-service-fields" style="grid-template-columns: 90px 140px 1fr;">
                   <input type="number" name="quantity_{{ service_name }}" min="0" placeholder="Qty">
                   <input type="text" name="unit_{{ service_name }}" placeholder="{{ unit_hint }}">
-                  <textarea name="service_notes_{{ service_name }}" rows="2" placeholder="{{ note_hint }}"></textarea>
+                  <input type="text" name="service_notes_{{ service_name }}" placeholder="{{ note_hint }}">
                 </div>
               </div>
             </div>
@@ -126,8 +109,8 @@
 
       <div class="cmx-panel-soft">
         <div class="cmx-panel-head">
-          <h3>Needs Worked Today</h3>
-          <span>resolve only what changed</span>
+          <h3>Needs Addressed Today</h3>
+          <button type="button" class="cmx-btn-muted">+ Add Need Resolved</button>
         </div>
 
         {% if open_needs %}
@@ -139,21 +122,24 @@
               <div class="cmx-need-item">
                 <div class="cmx-need-title">{{ need_label }}</div>
 
-                {% if source_value %}
-                  <div class="cmx-need-trigger">Trigger: {{ source_value }}</div>
-                {% endif %}
+                <div class="cmx-grid cmx-grid-2">
+                  <div class="cmx-field">
+                    <label>Status</label>
+                    <select name="need_status_{{ need_key }}">
+                      <option value="" selected>Leave Open</option>
+                      <option value="addressed">Addressed</option>
+                      <option value="not_applicable">Not Applicable</option>
+                    </select>
+                  </div>
 
-                <div class="cmx-field">
-                  <label>Status</label>
-                  <select name="need_status_{{ need_key }}">
-                    <option value="" selected>Leave Open</option>
-                    <option value="addressed">Addressed</option>
-                    <option value="not_applicable">Not Applicable</option>
-                  </select>
+                  <div class="cmx-field">
+                    <label>Trigger</label>
+                    <input type="text" value="{{ source_value or '' }}" readonly>
+                  </div>
                 </div>
 
                 <div class="cmx-field">
-                  <label>Resolution Note</label>
+                  <label>Notes</label>
                   <textarea name="need_note_{{ need_key }}" rows="2" placeholder="What happened today"></textarea>
                 </div>
               </div>
@@ -165,11 +151,11 @@
       </div>
     </div>
 
-    <div class="cmx-grid cmx-grid-2" style="margin-top:24px;">
+    <div class="cmx-grid cmx-grid-2" style="margin-top:22px;">
       <div class="cmx-panel-soft">
         <div class="cmx-panel-head">
           <h3>Program And Compliance Snapshot</h3>
-          <span>current status</span>
+          <span>Current Status</span>
         </div>
 
         <div class="cmx-stack">
@@ -181,20 +167,15 @@
           <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
           <div class="cmx-row-block"><span>Drug Of Choice</span><span>{{ rs_drug_of_choice or "—" }}</span></div>
           <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Sponsor Active</span><span>{{ rs_sponsor_active_display or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Step</span><span>{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Step Work Active</span><span>{{ rs_step_work_active_display or "—" }}</span></div>
           <div class="cmx-row-block"><span>Employment Status</span><span>{{ rs_employment_status or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Employer</span><span>{{ rs_employer or "—" }}</span></div>
           <div class="cmx-row-block"><span>Monthly Income</span><span>{{ rs_income if rs_income is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Open Needs</span><span>{{ header_open_needs_count }}</span></div>
         </div>
       </div>
 
       <div class="cmx-panel-soft">
         <div class="cmx-panel-head">
           <h3>Advancement Review</h3>
-          <span>meeting decision fields</span>
+          <span>Meeting Decision</span>
         </div>
 
         <div class="cmx-grid cmx-grid-2">
@@ -226,6 +207,11 @@
         <div class="cmx-field" style="margin-top:12px;">
           <label>Staff Review Note</label>
           <textarea name="staff_review_note" rows="3" placeholder="Professional recommendation or rationale">{{ meeting_defaults.staff_review_note if meeting_defaults.staff_review_note else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top:12px;">
+          <label>Setbacks Or Incidents</label>
+          <textarea name="setbacks_or_incidents" rows="3" placeholder="Record setbacks, incidents, or concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
         </div>
       </div>
     </div>
