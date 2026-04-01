@@ -1,7 +1,7 @@
 .cmx-page {
   min-height: 100vh;
   background: #eef2f6;
-  padding: 24px;
+  padding: 18px;
   color: #1f2937;
 }
 
@@ -9,22 +9,23 @@
   max-width: 1680px;
   margin: 0 auto;
   display: grid;
-  gap: 18px;
+  gap: 12px;
 }
 
 .cmx-card {
   background: #ffffff;
   border: 1px solid #d8e0ea;
   border-radius: 14px;
-  padding: 18px;
+  padding: 14px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 
 .cmx-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 18px;
+  gap: 12px;
   align-items: stretch;
+  margin-bottom: 0;
 }
 
 .cmx-header-main {
@@ -42,14 +43,14 @@
 .cmx-header-row {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
   align-items: flex-start;
   flex-wrap: nowrap;
 }
 
 .cmx-person {
   display: flex;
-  gap: 18px;
+  gap: 16px;
   align-items: flex-start;
   min-width: 0;
   flex: 1 1 auto;
@@ -96,10 +97,10 @@
 }
 
 .cmx-meta {
-  margin-top: 12px;
+  margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 14px;
+  gap: 8px 14px;
 }
 
 .cmx-pill {
@@ -123,7 +124,7 @@
 
 .cmx-stats {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   min-width: 420px;
   flex: 0 0 auto;
   align-self: flex-start;
@@ -134,7 +135,7 @@
   background: #f7fafc;
   border: 1px solid #d8e0ea;
   border-radius: 12px;
-  padding: 12px 10px;
+  padding: 10px 8px;
   text-align: center;
 }
 
@@ -163,7 +164,7 @@
 
 .cmx-actions {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-self: stretch;
 }
 
@@ -298,8 +299,8 @@ input.cmx-btn-warn:active {
   border-radius: 10px;
   background: #eefbf1;
   border: 1px solid #b8e3c0;
-  padding: 11px 13px;
-  font-size: 0.9rem;
+  padding: 10px 12px;
+  font-size: 0.88rem;
   color: #23653a;
   font-weight: 700;
 }
@@ -308,14 +309,14 @@ input.cmx-btn-warn:active {
   border-radius: 10px;
   background: #f8fafc;
   border: 1px solid #d8e0ea;
-  padding: 11px 13px;
-  font-size: 0.9rem;
+  padding: 10px 12px;
+  font-size: 0.88rem;
   color: #334155;
 }
 
 .cmx-layout {
   display: grid;
-  gap: 18px;
+  gap: 12px;
   grid-template-columns: minmax(0, 1fr) 310px;
   align-items: start;
 }
@@ -323,28 +324,32 @@ input.cmx-btn-warn:active {
 .cmx-main,
 .cmx-side {
   display: grid;
-  gap: 18px;
+  gap: 12px;
+}
+
+.cmx-main > .cmx-card:first-child {
+  margin-top: 0;
 }
 
 .cmx-side {
   position: sticky;
   top: 12px;
   align-self: start;
-  gap: 14px;
+  gap: 12px;
 }
 
 .cmx-section-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
 .cmx-section-title {
   margin: 0;
-  font-size: 1.65rem;
+  font-size: 1.5rem;
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -353,8 +358,8 @@ input.cmx-btn-warn:active {
 }
 
 .cmx-section-subtitle {
-  margin-top: 4px;
-  font-size: 0.95rem;
+  margin-top: 2px;
+  font-size: 0.9rem;
   color: #64748b;
   font-weight: 500;
 }
@@ -363,15 +368,15 @@ input.cmx-btn-warn:active {
   border-radius: 999px;
   background: #eef8f1;
   border: 1px solid #b8e3c0;
-  padding: 8px 12px;
-  font-size: 0.85rem;
+  padding: 7px 11px;
+  font-size: 0.82rem;
   color: #23653a;
   font-weight: 700;
 }
 
 .cmx-grid {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .cmx-grid-4 {
@@ -396,7 +401,7 @@ input.cmx-btn-warn:active {
   border-radius: 10px;
   background: #ffffff;
   border: 1px solid #d8e0ea;
-  padding: 14px;
+  padding: 12px;
   box-shadow: none;
 }
 
@@ -409,8 +414,8 @@ input.cmx-btn-warn:active {
 }
 
 .cmx-field-card-label {
-  margin-bottom: 6px;
-  font-size: 0.73rem;
+  margin-bottom: 5px;
+  font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #64748b;
@@ -429,7 +434,7 @@ input.cmx-btn-warn:active {
 .cmx-field label {
   font-weight: 700;
   color: #334155;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
 
 .cmx-field input,
@@ -439,9 +444,9 @@ input.cmx-btn-warn:active {
   border: 1px solid #cfd8e3;
   border-radius: 8px;
   background: #ffffff;
-  padding: 10px 11px;
+  padding: 9px 10px;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 0.91rem;
   color: #1f2937;
   box-shadow: none;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
@@ -464,18 +469,18 @@ input.cmx-btn-warn:active {
 
 .cmx-field textarea {
   resize: vertical;
-  min-height: 110px;
+  min-height: 96px;
 }
 
 .cmx-text-card-title {
   font-weight: 800;
   margin-bottom: 2px;
   color: #1f3654;
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
 .cmx-text-card textarea {
-  min-height: 170px;
+  min-height: 145px;
 }
 
 .cmx-text-card.is-active-writer {
@@ -486,12 +491,12 @@ input.cmx-btn-warn:active {
 }
 
 .cmx-text-card.is-active-writer textarea {
-  min-height: 170px;
+  min-height: 145px;
 }
 
 .cmx-summary-text {
-  font-size: 0.94rem;
-  line-height: 1.7;
+  font-size: 0.92rem;
+  line-height: 1.6;
   color: #334155;
 }
 
@@ -500,7 +505,7 @@ input.cmx-btn-warn:active {
   justify-content: space-between;
   gap: 10px;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
   position: relative;
   z-index: 1;
@@ -508,7 +513,7 @@ input.cmx-btn-warn:active {
 
 .cmx-panel-head h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   line-height: 1.2;
   font-weight: 800;
   color: #1f3654;
@@ -516,7 +521,7 @@ input.cmx-btn-warn:active {
 }
 
 .cmx-panel-head span {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -526,7 +531,7 @@ input.cmx-btn-warn:active {
 .cmx-service-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
   position: relative;
   z-index: 1;
 }
@@ -538,7 +543,7 @@ input.cmx-btn-warn:active {
   border-radius: 8px;
   background: #f8fafc;
   border: 1px solid #dde5ee;
-  padding: 12px;
+  padding: 10px;
   box-shadow: none;
   transition: border-color 0.16s ease, background 0.16s ease;
 }
@@ -563,11 +568,11 @@ input.cmx-btn-warn:active {
 .cmx-service-name {
   font-weight: 800;
   color: #1f3654;
-  font-size: 0.94rem;
+  font-size: 0.92rem;
 }
 
 .cmx-service-meta {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: #64748b;
   margin-top: 2px;
   font-weight: 500;
@@ -581,7 +586,7 @@ input.cmx-btn-warn:active {
 
 .cmx-needs-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   position: relative;
   z-index: 1;
 }
@@ -590,33 +595,33 @@ input.cmx-btn-warn:active {
   border-radius: 8px;
   background: #f8fafc;
   border: 1px solid #dde5ee;
-  padding: 12px;
+  padding: 10px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   box-shadow: none;
 }
 
 .cmx-need-title {
   font-weight: 800;
   color: #1f3654;
-  font-size: 0.94rem;
+  font-size: 0.92rem;
 }
 
 .cmx-need-trigger {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #64748b;
   font-weight: 500;
 }
 
 .cmx-quick-grid {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .cmx-quick-card {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   background: #ffffff;
   position: relative;
   overflow: hidden;
@@ -634,15 +639,15 @@ input.cmx-btn-warn:active {
 
 .cmx-quick-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 800;
   color: #1f3654;
   text-transform: uppercase;
 }
 
 .cmx-quick-subtitle {
-  margin-top: 4px;
-  font-size: 0.86rem;
+  margin-top: 3px;
+  font-size: 0.84rem;
   color: #64748b;
   font-weight: 500;
 }
@@ -652,12 +657,12 @@ input.cmx-btn-warn:active {
   justify-content: space-between;
   gap: 10px;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .cmx-side-card-head h3 {
   margin: 0;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   line-height: 1.15;
   font-weight: 800;
   color: #1f3654;
@@ -688,7 +693,7 @@ input.cmx-btn-warn:active {
   border-radius: 8px;
   background: #f8fafc;
   border: 1px solid #dde5ee;
-  padding: 9px 10px;
+  padding: 8px 10px;
   color: #334155;
   font-size: 0.8rem;
   box-shadow: none;
@@ -703,14 +708,14 @@ input.cmx-btn-warn:active {
 
 .cmx-muted {
   color: #64748b;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
 }
 
 .cmx-button-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .case-note-tile.is-active {
@@ -721,9 +726,9 @@ input.cmx-btn-warn:active {
 
 .case-note-scroll-lane {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
-  padding: 4px 2px 10px 2px;
+  padding: 2px 2px 8px 2px;
   scroll-behavior: smooth;
 }
 
@@ -734,7 +739,7 @@ input.cmx-btn-warn:active {
   border: 1px solid #dbe3ee;
   border-radius: 10px;
   background: #ffffff;
-  padding: 12px;
+  padding: 10px;
   cursor: pointer;
   text-align: center;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -743,14 +748,14 @@ input.cmx-btn-warn:active {
 
 .case-note-tile-meta {
   margin-top: 4px;
-  font-size: 0.84em;
+  font-size: 0.82em;
   color: #64748b;
   font-weight: 500;
 }
 
 .case-note-panel {
   display: none;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .case-note-panel-header {
@@ -766,7 +771,7 @@ input.cmx-btn-warn:active {
 }
 
 .case-note-created {
-  font-size: 0.92em;
+  font-size: 0.9em;
   color: #64748b;
   font-weight: 500;
 }
@@ -779,7 +784,7 @@ input.cmx-btn-warn:active {
 }
 
 .case-note-section {
-  margin-top: 14px;
+  margin-top: 12px;
   color: #1f2937;
 }
 
@@ -791,12 +796,12 @@ input.cmx-btn-warn:active {
 .case-note-service-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .case-note-service-card {
-  padding: 12px;
+  padding: 10px;
   border: 1px solid #dbe3ee;
   border-radius: 10px;
   background: #ffffff;
@@ -806,7 +811,7 @@ input.cmx-btn-warn:active {
 
 .case-note-service-meta {
   margin-top: 4px;
-  font-size: 0.88em;
+  font-size: 0.86em;
   color: #64748b;
   font-weight: 500;
 }
@@ -830,8 +835,8 @@ input.cmx-btn-warn:active {
 .case-print-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 18px;
-  margin-top: 10px;
+  gap: 12px 16px;
+  margin-top: 8px;
 }
 
 .case-print-summary-section {
