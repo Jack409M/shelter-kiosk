@@ -195,7 +195,6 @@ def resident_case_view(resident_id: int):
     followup_1_year = None
     open_needs = []
     recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
-    meeting_defaults = build_meeting_defaults()
 
     if enrollment_id:
         family_snapshot = db_fetchone(
@@ -308,6 +307,15 @@ def resident_case_view(resident_id: int):
         notes, services = _load_case_history(enrollment_id)
         followup_6_month = _get_latest_followup(enrollment_id, "6_month")
         followup_1_year = _get_latest_followup(enrollment_id, "1_year")
+
+    meeting_defaults = build_meeting_defaults(
+        intake_assessment=intake_assessment,
+        family_snapshot=family_snapshot,
+        recovery_snapshot=recovery_snapshot,
+        open_needs=open_needs,
+        notes=notes,
+        appointments=appointments,
+    )
 
     workspace_header = build_workspace_header(
         resident=resident,
