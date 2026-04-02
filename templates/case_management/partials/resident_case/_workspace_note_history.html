@@ -2,7 +2,7 @@
 
 <div class="cmx-history-list-wrap">
   <p class="cmx-muted" style="margin-top:-4px; margin-bottom:14px;">
-    Review prior meetings, services, barriers, and advancement decisions here.
+    Review prior meetings in the same narrative format used by the formal progress note printout.
   </p>
 
   {% if notes %}
@@ -10,17 +10,24 @@
       {% for note in notes %}
         {% set note_id = note["id"] %}
         {% set note_meeting_date = note["meeting_date"] %}
-        {% set note_services = note["services"] %}
+        {% set note_services = note["services"] or [] %}
         {% set note_ready_display = note["ready_for_next_level_display"] if note["ready_for_next_level_display"] else "—" %}
+        {% set note_next_appointment = note["next_appointment"] %}
 
-        <div style="display:flex; flex-direction:column; gap:8px; min-width:190px;">
+        <div style="display:flex; flex-direction:column; gap:8px; min-width:220px;">
           <button
             type="button"
             class="case-note-tile"
             data-note-target="case-note-panel-{{ note_id }}"
           >
             <div><strong>{{ note_meeting_date or "—" }}</strong></div>
+
+            {% if note_next_appointment %}
+              <div class="case-note-tile-meta">Follow up: {{ note_next_appointment }}</div>
+            {% endif %}
+
             <div class="case-note-tile-meta">Ready: {{ note_ready_display }}</div>
+
             {% if note_services %}
               <div class="case-note-tile-meta">
                 {{ note_services|length }} services
@@ -56,7 +63,7 @@
       <div class="case-note-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="case-note-modal-title">
         <div class="case-note-modal-header">
           <div>
-            <h3 id="case-note-modal-title" class="case-note-panel-title">Past Case Note</h3>
+            <h3 id="case-note-modal-title" class="case-note-panel-title">Saved Meeting Report</h3>
             <div id="case-note-modal-subtitle" class="case-note-created"></div>
           </div>
 
@@ -85,13 +92,20 @@
         {% set note_id = note["id"] %}
         {% set note_meeting_date = note["meeting_date"] %}
         {% set note_created_at = note["created_at"] %}
+        {% set note_next_appointment = note["next_appointment"] %}
 
         <div id="case-note-panel-{{ note_id }}" class="cmx-card case-note-panel">
           <div class="case-note-panel-header">
             <div>
-              <h3 class="case-note-panel-title">Meeting {{ note_meeting_date or "—" }}</h3>
+              <h3 class="case-note-panel-title">Saved Meeting Report</h3>
               <div class="case-note-created">
-                Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
+                Meeting {{ note_meeting_date or "—" }}
+                {% if note_next_appointment %}
+                  &nbsp; | &nbsp; Follow up Appt: {{ note_next_appointment }}
+                {% endif %}
+                {% if note_created_at %}
+                  &nbsp; | &nbsp; Saved {{ note_created_at | app_pretty_dt }}
+                {% endif %}
               </div>
             </div>
 
