@@ -1,14 +1,23 @@
-<div class="card no-print">
-  <h2>Start Program Enrollment</h2>
+<div class="cmx-panel-soft no-print" style="max-width:560px; margin-top:16px;">
+  <div class="cmx-panel-head">
+    <h3>Start Program Enrollment</h3>
+    <span>Required before case work begins</span>
+  </div>
+
+  <div class="cmx-summary-text" style="margin-bottom:14px;">
+    This resident does not have an active program enrollment yet. Start the enrollment here to unlock the meeting workspace, profile editor, and case note history.
+  </div>
 
   <form method="post" action="{{ url_for('case_management.create_enrollment', resident_id=resident_id) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <label><strong>Program Entry Date</strong></label>
-    <input type="date" name="entry_date" required>
+    <div class="cmx-field">
+      <label><strong>Program Entry Date</strong></label>
+      <input type="date" name="entry_date" required>
+    </div>
 
-    <div class="case-section-top">
-      <button type="submit">Start Enrollment</button>
+    <div class="cmx-button-row" style="margin-top:14px;">
+      <button type="submit" class="cmx-btn">Start Enrollment</button>
     </div>
   </form>
 </div>
