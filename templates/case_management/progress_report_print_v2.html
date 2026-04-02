@@ -24,7 +24,7 @@
       background: #edf1f5;
       color: var(--ink);
       font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.5;
+      line-height: 1.45;
     }
 
     body {
@@ -32,7 +32,7 @@
     }
 
     .report-shell {
-      max-width: 980px;
+      max-width: 960px;
       margin: 0 auto;
       background: #ffffff;
       border: 1px solid var(--line);
@@ -87,7 +87,7 @@
     }
 
     .report-header {
-      border-bottom: 2px solid #223a5e;
+      border-bottom: 2px solid var(--accent);
       padding-bottom: 18px;
       margin-bottom: 24px;
     }
@@ -104,7 +104,6 @@
     .report-title-row {
       display: flex;
       justify-content: center;
-      align-items: flex-start;
       text-align: center;
       margin-bottom: 18px;
     }
@@ -123,7 +122,6 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px 18px;
-      margin-top: 8px;
     }
 
     .report-meta-item {
@@ -143,14 +141,14 @@
     }
 
     .report-meta-value {
-      font-size: 1rem;
+      font-size: 0.98rem;
       font-weight: 700;
       color: var(--ink);
       word-break: break-word;
     }
 
     .report-section {
-      margin-top: 24px;
+      margin-top: 22px;
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -165,46 +163,18 @@
       color: var(--accent);
     }
 
-    .report-narrative-block {
+    .report-block {
       border: 1px solid var(--line);
       background: #ffffff;
       padding: 14px 16px;
-      margin-top: 10px;
     }
 
-    .report-narrative-text {
+    .report-text {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
       word-break: break-word;
-      font-size: 0.99rem;
-    }
-
-    .report-snapshot-table,
-    .report-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      font-size: 0.94rem;
-    }
-
-    .report-snapshot-table th,
-    .report-snapshot-table td,
-    .report-table th,
-    .report-table td {
-      border: 1px solid var(--line);
-      padding: 9px 10px;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    .report-snapshot-table th,
-    .report-table th {
-      background: var(--soft);
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      font-weight: 700;
+      font-size: 0.98rem;
+      color: var(--ink);
     }
 
     .report-empty {
@@ -214,7 +184,56 @@
       background: #fbfcfd;
     }
 
-    .report-inline-line {
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.94rem;
+    }
+
+    .report-table th,
+    .report-table td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .report-table th {
+      background: var(--soft);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .report-snapshot-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.94rem;
+    }
+
+    .report-snapshot-table th,
+    .report-snapshot-table td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .report-snapshot-table th {
+      width: 34%;
+      background: var(--soft);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .report-inline {
       border: 1px solid var(--line);
       background: #ffffff;
       padding: 14px 16px;
@@ -222,8 +241,7 @@
       line-height: 1.6;
     }
 
-    .report-inline-label {
-      font-weight: 700;
+    .report-inline strong {
       color: var(--accent);
     }
 
@@ -272,13 +290,12 @@
       }
 
       .report-section,
-      .report-meta-item,
-      .report-narrative-block,
-      .report-signature-grid,
+      .report-block,
+      .report-inline,
+      .report-empty,
       .report-table tr,
       .report-snapshot-table tr,
-      .report-empty,
-      .report-inline-line {
+      .report-signature-grid {
         page-break-inside: avoid;
         break-inside: avoid;
       }
@@ -350,14 +367,13 @@
 
       <section class="report-section">
         <h2>Case Summary</h2>
-
         {% if report.note.notes %}
-          <div class="report-narrative-block">
-            <div class="report-narrative-text">{{ report.note.notes }}</div>
+          <div class="report-block">
+            <div class="report-text">{{ report.note.notes }}</div>
           </div>
         {% elif report.note.overall_summary %}
-          <div class="report-narrative-block">
-            <div class="report-narrative-text">{{ report.note.overall_summary }}</div>
+          <div class="report-block">
+            <div class="report-text">{{ report.note.overall_summary }}</div>
           </div>
         {% else %}
           <div class="report-empty">No case summary was recorded for this meeting.</div>
@@ -366,10 +382,9 @@
 
       <section class="report-section">
         <h2>Progress Since Last Meeting</h2>
-
         {% if report.note.progress_notes %}
-          <div class="report-narrative-block">
-            <div class="report-narrative-text">{{ report.note.progress_notes }}</div>
+          <div class="report-block">
+            <div class="report-text">{{ report.note.progress_notes }}</div>
           </div>
         {% else %}
           <div class="report-empty">No progress update was recorded for this meeting.</div>
@@ -378,14 +393,13 @@
 
       <section class="report-section">
         <h2>Program Snapshot</h2>
-
         {% if report.program_snapshot %}
           <table class="report-snapshot-table">
             <tbody>
               {% for item in report.program_snapshot %}
                 <tr>
-                  <th style="width:34%;">{{ item.label }}</th>
-                  <td>{{ item.value }}</td>
+                  <th>{{ item.label }}</th>
+                  <td>{{ item.value if item.value not in ("", none) else "—" }}</td>
                 </tr>
               {% endfor %}
             </tbody>
@@ -397,7 +411,6 @@
 
       <section class="report-section">
         <h2>Goals And Progress</h2>
-
         {% if report.goals %}
           <table class="report-table">
             <thead>
@@ -424,7 +437,6 @@
 
       <section class="report-section">
         <h2>Services Provided</h2>
-
         {% if report.service_rows %}
           <table class="report-table">
             <thead>
@@ -453,10 +465,13 @@
 
       <section class="report-section">
         <h2>Barriers And Concerns</h2>
-
         {% if report.note.setbacks_or_incidents %}
-          <div class="report-narrative-block">
-            <div class="report-narrative-text">{{ report.note.setbacks_or_incidents }}</div>
+          <div class="report-block">
+            <div class="report-text">{{ report.note.setbacks_or_incidents }}</div>
+          </div>
+        {% elif report.note.blocker_reason %}
+          <div class="report-block">
+            <div class="report-text">{{ report.note.blocker_reason }}</div>
           </div>
         {% else %}
           <div class="report-empty">No barriers or concerns were recorded for this meeting.</div>
@@ -465,16 +480,13 @@
 
       <section class="report-section">
         <h2>Plan And Next Steps</h2>
-
         {% if report.note.action_items or report.note.next_appointment %}
-          <div class="report-narrative-block">
+          <div class="report-block">
             {% if report.note.action_items %}
-              <div class="report-narrative-text">{{ report.note.action_items }}</div>
+              <div class="report-text">{{ report.note.action_items }}</div>
             {% endif %}
             {% if report.note.next_appointment %}
-              <div class="report-narrative-text" style="margin-top:12px;">
-                <span class="report-inline-label">Next appointment:</span> {{ report.note.next_appointment }}
-              </div>
+              <div class="report-text" style="margin-top:12px;"><strong>Next appointment:</strong> {{ report.note.next_appointment }}</div>
             {% endif %}
           </div>
         {% else %}
@@ -484,9 +496,8 @@
 
       <section class="report-section">
         <h2>Advancement Decision</h2>
-
-        <div class="report-inline-line">
-          <span class="report-inline-label">Decision:</span>
+        <div class="report-inline">
+          <strong>Decision:</strong>
           {% if report.note.ready_for_next_level_display and report.note.ready_for_next_level_display != "—" %}
             {{ report.note.ready_for_next_level_display }}
           {% else %}
@@ -495,8 +506,8 @@
           {% if report.note.recommended_next_level %}
             | Recommended level {{ report.note.recommended_next_level }}
           {% endif %}
-          {% if report.note.blocker_reason %}
-            | Barrier {{ report.note.blocker_reason }}
+          {% if report.note.override_or_exception %}
+            | Exception {{ report.note.override_or_exception }}
           {% endif %}
           {% if report.note.staff_review_note %}
             | Staff note {{ report.note.staff_review_note }}
