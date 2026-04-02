@@ -11,6 +11,11 @@ from routes.case_management_parts.update_utils import clean_value
 from routes.case_management_parts.update_utils import display_label
 
 
+def _join_snapshot_parts(parts: list[str]) -> str:
+    cleaned = [part.strip() for part in parts if part and str(part).strip()]
+    return " | ".join(cleaned)
+
+
 def load_previous_snapshot_map(previous_note_id: int | None, change_group: str) -> dict[str, str]:
     if not previous_note_id:
         return {}
@@ -74,7 +79,7 @@ def get_current_children_snapshot(resident_id: int) -> dict[str, str]:
         if living_status != "—":
             parts.append(living_status)
 
-        snapshot[child_id] = " | ".join(parts)
+        snapshot[child_id] = _join_snapshot_parts(parts)
 
     return snapshot
 
@@ -104,13 +109,12 @@ def get_current_medication_snapshot(resident_id: int) -> dict[str, str]:
     for row in rows:
         med_id = str(row["id"])
         medication_name = clean_value(row["medication_name"]) or "Medication"
-        parts = [medication_name]
-
         dosage = clean_value(row.get("dosage"))
         frequency = clean_value(row.get("frequency"))
         purpose = clean_value(row.get("purpose"))
         prescribed_by = clean_value(row.get("prescribed_by"))
 
+        parts = [medication_name]
         if dosage:
             parts.append(dosage)
         if frequency:
@@ -120,7 +124,7 @@ def get_current_medication_snapshot(resident_id: int) -> dict[str, str]:
         if prescribed_by:
             parts.append(f"Prescribed by: {prescribed_by}")
 
-        snapshot[med_id] = " | ".join(parts)
+        snapshot[med_id] = _join_snapshot_parts(parts)
 
     return snapshot
 
@@ -186,11 +190,7 @@ def get_current_sobriety_snapshot(resident_id: int) -> dict[str, str]:
     snapshot: dict[str, str] = {}
 
     for field_name in SOBRIETY_FIELD_LABELS:
-        value = row.get(field_name)
-        if field_name == "drug_of_choice":
-            snapshot[field_name] = clean_value(value)
-        else:
-            snapshot[field_name] = clean_value(value)
+        snapshot[field_name] = clean_value(row.get(field_name))
 
     return snapshot
 
