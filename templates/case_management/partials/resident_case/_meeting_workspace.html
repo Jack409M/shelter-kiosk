@@ -35,7 +35,14 @@
 
       <div class="cmx-field">
         <label>Next Appointment</label>
-        <input type="text" name="next_appointment" value="{{ meeting_defaults.next_appointment if meeting_defaults.next_appointment else '' }}" placeholder="04/25/2026 10:00 AM">
+        <input
+          type="text"
+          name="next_appointment"
+          value="{{ meeting_defaults.next_appointment if meeting_defaults.next_appointment else '' }}"
+          placeholder="04/25/2026 10:00 AM"
+          inputmode="text"
+        >
+        <div class="cmx-muted">Use month/day/year and time, for example 04/25/2026 10:00 AM.</div>
       </div>
 
       <div class="cmx-field">
@@ -105,7 +112,7 @@
           {% for service_name, unit_hint, note_hint in meeting_services %}
             <div class="cmx-service-item">
               <input type="checkbox" name="service_type" value="{{ service_name }}">
-              <div style="flex:1;">
+              <div style="flex:1; min-width:0;">
                 <div class="cmx-service-name">{{ service_name }}</div>
                 <div class="cmx-service-fields" style="grid-template-columns: 90px 140px 1fr;">
                   <input type="number" name="quantity_{{ service_name }}" min="0" placeholder="Qty">
