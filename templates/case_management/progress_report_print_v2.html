@@ -267,6 +267,10 @@
           <span>{{ report.resident.shelter | shelter if report.resident.shelter else "—" }}</span>
           <span class="report-header-sep">|</span>
           <span>Meeting {{ report.note.meeting_date or "—" }}</span>
+          {% if report.note.next_appointment %}
+            <span class="report-header-sep">|</span>
+            <span>Follow up Appt: {{ report.note.next_appointment }}</span>
+          {% endif %}
         </div>
       </header>
 
@@ -332,18 +336,8 @@
 
       <section class="report-section">
         <h2>Plan And Next Steps</h2>
-        {% if report.note.action_items or report.note.next_appointment %}
-          <div class="report-text">
-            {% if report.note.action_items %}
-              {{ report.note.action_items }}
-            {% endif %}
-            {% if report.note.next_appointment %}
-              {% if report.note.action_items %}
-
-              {% endif %}
-              Follow up is scheduled for {{ report.note.next_appointment }}.
-            {% endif %}
-          </div>
+        {% if report.note.action_items %}
+          <div class="report-text">{{ report.note.action_items }}</div>
         {% else %}
           <div class="report-empty">No plan or next steps were recorded for this meeting.</div>
         {% endif %}
