@@ -48,6 +48,59 @@ def _normalize_tristate_bool(value: str | None):
     return None
 
 
+def _build_profile_update_payload(resident: dict) -> tuple[dict, str | None]:
+    current_step = resident.get("step_current")
+    parsed_step = parse_int(request.form.get("step_current"))
+    new_step = current_step if parsed_step is None else parsed_step
+
+    if new_step is not None and (new_step < 1 or new_step > 12):
+        return {}, "Step must be between 1 and 12."
+
+    payload = {
+        "program_level": _clean_text(request.form.get("program_level")),
+        "level_start_date": _clean_date_text(request.form.get("level_start_date")),
+        "sponsor_name": _clean_text(request.form.get("sponsor_name")),
+        "sponsor_active": _normalize_tristate_bool(request.form.get("sponsor_active")),
+        "sobriety_date": _clean_date_text(request.form.get("sobriety_date")),
+        "drug_of_choice": _clean_text(request.form.get("drug_of_choice")),
+        "treatment_graduation_date": _clean_date_text(request.form.get("treatment_graduation_date")),
+        "employer_name": _clean_text(request.form.get("employer_name")),
+        "employment_status_current": _normalize_employment_status(request.form.get("employment_status_current")),
+        "employment_type_current": _normalize_employment_type(request.form.get("employment_type_current")),
+        "supervisor_name": _clean_text(request.form.get("supervisor_name")),
+        "supervisor_phone": _clean_text(request.form.get("supervisor_phone")),
+        "unemployment_reason": _clean_text(request.form.get("unemployment_reason")),
+        "employment_notes": _clean_text(request.form.get("employment_notes")),
+        "monthly_income": parse_money(request.form.get("monthly_income")),
+        "step_current": new_step,
+        "step_work_active": _normalize_tristate_bool(request.form.get("step_work_active")),
+    }
+
+    if payload["employment_status_current"] == "unemployed":
+        payload["employer_name"] = None
+        payload["supervisor_name"] = None
+        payload["supervisor_phone"] = None
+        payload["employment_type_current"] = None
+    else:
+        payload["unemployment_reason"] = None
+
+    return payload, None
+
+
+def _employment_fields_changed(resident: dict, payload: dict) -> bool:
+    employment_fields = [
+        "employment_status_current",
+        "employment_type_current",
+        "employer_name",
+        "supervisor_name",
+        "supervisor_phone",
+        "unemployment_reason",
+        "employment_notes",
+        "monthly_income",
+    ]
+    return any(payload[field] != resident.get(field) for field in employment_fields)
+
+
 def update_recovery_profile_view(resident_id: int):
     init_db()
 
@@ -90,246 +143,62 @@ def update_recovery_profile_view(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    current_step = resident.get("step_current")
-    parsed_step = parse_int(request.form.get("step_current"))
-    new_step = current_step if parsed_step is None else parsed_step
-
-    if new_step is not None and (new_step < 1 or new_step > 12):
-        flash("Step must be between 1 and 12.", "error")
+    payload, validation_error = _build_profile_update_payload(resident)
+    if validation_error:
+        flash(validation_error, "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    program_level = _clean_text(request.form.get("program_level"))
-    level_start_date = _clean_date_text(request.form.get("level_start_date"))
-    sponsor_name = _clean_text(request.form.get("sponsor_name"))
-    sponsor_active = _normalize_tristate_bool(request.form.get("sponsor_active"))
-    step_work_active = _normalize_tristate_bool(request.form.get("step_work_active"))
+    step_changed = payload["step_current"] != resident.get("step_current")
+    employment_changed = _employment_fields_changed(resident, payload)
 
-    sobriety_date = _clean_date_text(request.form.get("sobriety_date"))
-    drug_of_choice = _clean_text(request.form.get("drug_of_choice"))
-    treatment_graduation_date = _clean_date_text(request.form.get("treatment_graduation_date"))
+    if step_changed:
+        payload["step_changed_at"] = utcnow_iso()
 
-    employer_name = _clean_text(request.form.get("employer_name"))
-    employment_status_current = _normalize_employment_status(request.form.get("employment_status_current"))
-    employment_type_current = _normalize_employment_type(request.form.get("employment_type_current"))
-    supervisor_name = _clean_text(request.form.get("supervisor_name"))
-    supervisor_phone = _clean_text(request.form.get("supervisor_phone"))
-    unemployment_reason = _clean_text(request.form.get("unemployment_reason"))
-    employment_notes = _clean_text(request.form.get("employment_notes"))
-    monthly_income = parse_money(request.form.get("monthly_income"))
+    if employment_changed:
+        payload["employment_updated_at"] = utcnow_iso()
 
-    if employment_status_current == "unemployed":
-        employer_name = None
-        supervisor_name = None
-        supervisor_phone = None
-        employment_type_current = None
-    else:
-        unemployment_reason = None
+    ordered_fields = [
+        "program_level",
+        "level_start_date",
+        "sponsor_name",
+        "sponsor_active",
+        "sobriety_date",
+        "drug_of_choice",
+        "treatment_graduation_date",
+        "employer_name",
+        "employment_status_current",
+        "employment_type_current",
+        "supervisor_name",
+        "supervisor_phone",
+        "unemployment_reason",
+        "employment_notes",
+        "monthly_income",
+        "step_current",
+        "step_work_active",
+        "employment_updated_at",
+        "step_changed_at",
+    ]
 
-    step_changed_at = None
-    if new_step != current_step:
-        step_changed_at = utcnow_iso()
+    set_clauses = []
+    values = []
 
-    employment_changed = (
-        employment_status_current != resident.get("employment_status_current")
-        or employment_type_current != resident.get("employment_type_current")
-        or employer_name != resident.get("employer_name")
-        or supervisor_name != resident.get("supervisor_name")
-        or supervisor_phone != resident.get("supervisor_phone")
-        or unemployment_reason != resident.get("unemployment_reason")
-        or employment_notes != resident.get("employment_notes")
-        or monthly_income != resident.get("monthly_income")
+    for field_name in ordered_fields:
+        if field_name not in payload:
+            continue
+        set_clauses.append(f"{field_name} = {ph}")
+        values.append(payload[field_name])
+
+    values.append(resident_id)
+
+    db_execute(
+        f"""
+        UPDATE residents
+        SET
+            {", ".join(set_clauses)}
+        WHERE id = {ph}
+        """,
+        tuple(values),
     )
-
-    employment_updated_at = utcnow_iso() if employment_changed else None
-
-    if step_changed_at is not None and employment_updated_at is not None:
-        db_execute(
-            f"""
-            UPDATE residents
-            SET
-                program_level = {ph},
-                level_start_date = {ph},
-                sponsor_name = {ph},
-                sponsor_active = {ph},
-                sobriety_date = {ph},
-                drug_of_choice = {ph},
-                treatment_graduation_date = {ph},
-                employer_name = {ph},
-                employment_status_current = {ph},
-                employment_type_current = {ph},
-                supervisor_name = {ph},
-                supervisor_phone = {ph},
-                unemployment_reason = {ph},
-                employment_notes = {ph},
-                monthly_income = {ph},
-                employment_updated_at = {ph},
-                step_current = {ph},
-                step_work_active = {ph},
-                step_changed_at = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                program_level,
-                level_start_date,
-                sponsor_name,
-                sponsor_active,
-                sobriety_date,
-                drug_of_choice,
-                treatment_graduation_date,
-                employer_name,
-                employment_status_current,
-                employment_type_current,
-                supervisor_name,
-                supervisor_phone,
-                unemployment_reason,
-                employment_notes,
-                monthly_income,
-                employment_updated_at,
-                new_step,
-                step_work_active,
-                step_changed_at,
-                resident_id,
-            ),
-        )
-    elif step_changed_at is not None:
-        db_execute(
-            f"""
-            UPDATE residents
-            SET
-                program_level = {ph},
-                level_start_date = {ph},
-                sponsor_name = {ph},
-                sponsor_active = {ph},
-                sobriety_date = {ph},
-                drug_of_choice = {ph},
-                treatment_graduation_date = {ph},
-                employer_name = {ph},
-                employment_status_current = {ph},
-                employment_type_current = {ph},
-                supervisor_name = {ph},
-                supervisor_phone = {ph},
-                unemployment_reason = {ph},
-                employment_notes = {ph},
-                monthly_income = {ph},
-                step_current = {ph},
-                step_work_active = {ph},
-                step_changed_at = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                program_level,
-                level_start_date,
-                sponsor_name,
-                sponsor_active,
-                sobriety_date,
-                drug_of_choice,
-                treatment_graduation_date,
-                employer_name,
-                employment_status_current,
-                employment_type_current,
-                supervisor_name,
-                supervisor_phone,
-                unemployment_reason,
-                employment_notes,
-                monthly_income,
-                new_step,
-                step_work_active,
-                step_changed_at,
-                resident_id,
-            ),
-        )
-    elif employment_updated_at is not None:
-        db_execute(
-            f"""
-            UPDATE residents
-            SET
-                program_level = {ph},
-                level_start_date = {ph},
-                sponsor_name = {ph},
-                sponsor_active = {ph},
-                sobriety_date = {ph},
-                drug_of_choice = {ph},
-                treatment_graduation_date = {ph},
-                employer_name = {ph},
-                employment_status_current = {ph},
-                employment_type_current = {ph},
-                supervisor_name = {ph},
-                supervisor_phone = {ph},
-                unemployment_reason = {ph},
-                employment_notes = {ph},
-                monthly_income = {ph},
-                employment_updated_at = {ph},
-                step_current = {ph},
-                step_work_active = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                program_level,
-                level_start_date,
-                sponsor_name,
-                sponsor_active,
-                sobriety_date,
-                drug_of_choice,
-                treatment_graduation_date,
-                employer_name,
-                employment_status_current,
-                employment_type_current,
-                supervisor_name,
-                supervisor_phone,
-                unemployment_reason,
-                employment_notes,
-                monthly_income,
-                employment_updated_at,
-                new_step,
-                step_work_active,
-                resident_id,
-            ),
-        )
-    else:
-        db_execute(
-            f"""
-            UPDATE residents
-            SET
-                program_level = {ph},
-                level_start_date = {ph},
-                sponsor_name = {ph},
-                sponsor_active = {ph},
-                sobriety_date = {ph},
-                drug_of_choice = {ph},
-                treatment_graduation_date = {ph},
-                employer_name = {ph},
-                employment_status_current = {ph},
-                employment_type_current = {ph},
-                supervisor_name = {ph},
-                supervisor_phone = {ph},
-                unemployment_reason = {ph},
-                employment_notes = {ph},
-                monthly_income = {ph},
-                step_current = {ph},
-                step_work_active = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                program_level,
-                level_start_date,
-                sponsor_name,
-                sponsor_active,
-                sobriety_date,
-                drug_of_choice,
-                treatment_graduation_date,
-                employer_name,
-                employment_status_current,
-                employment_type_current,
-                supervisor_name,
-                supervisor_phone,
-                unemployment_reason,
-                employment_notes,
-                monthly_income,
-                new_step,
-                step_work_active,
-                resident_id,
-            ),
-        )
 
     flash("Recovery profile updated.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
