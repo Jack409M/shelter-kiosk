@@ -1,106 +1,152 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h1>Medications</h1>
+<div style="max-width:1100px; margin:0 auto; display:grid; gap:20px;">
+  <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+    <div style="display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0; font-size:1.9rem; font-weight:800; color:#0f172a;">Medications</h1>
+        <div style="margin-top:6px; color:#475569; font-size:0.96rem;">
+          {{ resident["first_name"] }} {{ resident["last_name"] }} · review, add, and edit medication records for this resident.
+        </div>
+      </div>
 
-<div class="card">
-  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
-  <p>
-    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
-      Back to Case Management
-    </a>
-  </p>
-</div>
-
-<div class="card">
-  <h2>Add Medication</h2>
-
-  <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident['id']) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    <label><strong>Medication Name</strong></label>
-    <input type="text" name="medication_name" required>
-
-    <label><strong>Dosage</strong></label>
-    <input type="text" name="dosage">
-
-    <label><strong>Frequency</strong></label>
-    <input type="text" name="frequency">
-
-    <label><strong>Purpose</strong></label>
-    <input type="text" name="purpose">
-
-    <label><strong>Prescribed By</strong></label>
-    <input type="text" name="prescribed_by">
-
-    <label><strong>Started On</strong></label>
-    <input type="date" name="started_on">
-
-    <label><strong>Ended On</strong></label>
-    <input type="date" name="ended_on">
-
-    <label><strong>Active</strong></label>
-    <select name="is_active">
-      <option value="yes" selected>Yes</option>
-      <option value="no">No</option>
-    </select>
-
-    <label><strong>Notes</strong></label>
-    <textarea name="notes" rows="3"></textarea>
-
-    <div style="margin-top:10px;">
-      <button type="submit">Save Medication</button>
+      <a
+        class="btn"
+        href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+        style="border-radius:14px; padding:11px 16px;"
+      >
+        Back to Case Management
+      </a>
     </div>
-  </form>
-</div>
+  </div>
 
-<div class="card">
-  <h2>Recorded Medications</h2>
+  <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+    <div style="margin-bottom:14px;">
+      <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Add Medication</h2>
+      <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
+        Record a medication, dosage, schedule, and prescribing details.
+      </div>
+    </div>
 
-  {% if medications %}
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Dosage</th>
-          <th>Frequency</th>
-          <th>Started</th>
-          <th>Ended</th>
-          <th>Active</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for med in medications %}
-          <tr>
-            <td>{{ med["medication_name"] or "—" }}</td>
-            <td>{{ med["dosage"] or "—" }}</td>
-            <td>{{ med["frequency"] or "—" }}</td>
-            <td>{{ med["started_on"] or "—" }}</td>
-            <td>{{ med["ended_on"] or "—" }}</td>
-            <td>{{ "Yes" if med["is_active"] else "No" }}</td>
-            <td>
-              <a class="btn btn-sm" href="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=med['id']) }}">
-                Edit
-              </a>
-            </td>
-          </tr>
-          {% if med["purpose"] or med["prescribed_by"] or med["notes"] %}
+    <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident['id']) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px;">
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Medication Name</strong></label>
+          <input type="text" name="medication_name" required style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Dosage</strong></label>
+          <input type="text" name="dosage" placeholder="Example 50 mg" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Frequency</strong></label>
+          <input type="text" name="frequency" placeholder="Daily or PRN" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Purpose</strong></label>
+          <input type="text" name="purpose" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Prescribed By</strong></label>
+          <input type="text" name="prescribed_by" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Active</strong></label>
+          <select name="is_active" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+            <option value="yes" selected>Yes</option>
+            <option value="no">No</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Started On</strong></label>
+          <input type="date" name="started_on" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Ended On</strong></label>
+          <input type="date" name="ended_on" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Notes</strong></label>
+        <textarea name="notes" rows="4" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px; resize:vertical;"></textarea>
+      </div>
+
+      <div style="margin-top:16px;">
+        <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Medication</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+    <div style="margin-bottom:14px;">
+      <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Recorded Medications</h2>
+      <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
+        Current and historical medication entries on file for this resident.
+      </div>
+    </div>
+
+    {% if medications %}
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
             <tr>
-              <td colspan="7" style="color:#555; font-size:0.95em;">
-                {% if med["purpose"] %}<strong>Purpose:</strong> {{ med["purpose"] }}{% endif %}
-                {% if med["purpose"] and med["prescribed_by"] %} | {% endif %}
-                {% if med["prescribed_by"] %}<strong>Prescribed By:</strong> {{ med["prescribed_by"] }}{% endif %}
-                {% if (med["purpose"] or med["prescribed_by"]) and med["notes"] %} | {% endif %}
-                {% if med["notes"] %}{{ med["notes"] }}{% endif %}
-              </td>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Medication</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Dosage</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Frequency</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Started</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Ended</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Active</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Actions</th>
             </tr>
-          {% endif %}
-        {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>No medications recorded.</p>
-  {% endif %}
+          </thead>
+          <tbody>
+            {% for med in medications %}
+              <tr>
+                <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ med["medication_name"] or "—" }}</td>
+                <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ med["dosage"] or "—" }}</td>
+                <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ med["frequency"] or "—" }}</td>
+                <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ med["started_on"] or "—" }}</td>
+                <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ med["ended_on"] or "—" }}</td>
+                <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ "Yes" if med["is_active"] else "No" }}</td>
+                <td style="padding:10px; border-bottom:1px solid #eef2f7;">
+                  <a
+                    class="btn btn-sm"
+                    href="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=med['id']) }}"
+                    style="border-radius:12px;"
+                  >
+                    Edit
+                  </a>
+                </td>
+              </tr>
+              {% if med["purpose"] or med["prescribed_by"] or med["notes"] %}
+                <tr>
+                  <td colspan="7" style="padding:10px 10px 14px 10px; color:#475569; font-size:0.95rem; border-bottom:1px solid #eef2f7;">
+                    {% if med["purpose"] %}<strong>Purpose:</strong> {{ med["purpose"] }}{% endif %}
+                    {% if med["purpose"] and med["prescribed_by"] %} | {% endif %}
+                    {% if med["prescribed_by"] %}<strong>Prescribed By:</strong> {{ med["prescribed_by"] }}{% endif %}
+                    {% if (med["purpose"] or med["prescribed_by"]) and med["notes"] %} | {% endif %}
+                    {% if med["notes"] %}{{ med["notes"] }}{% endif %}
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="margin:0; color:#475569;">No medications are recorded for this resident.</p>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
