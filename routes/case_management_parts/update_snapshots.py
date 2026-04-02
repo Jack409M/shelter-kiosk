@@ -61,14 +61,14 @@ def get_current_children_snapshot(resident_id: int) -> dict[str, str]:
 
     for row in rows:
         child_id = str(row["id"])
-        child_name = clean_value(row["child_name"]) or "Unnamed Child"
+        child_name = clean_value(row["child_name"]) or "Unnamed child"
         birth_year = clean_value(row["birth_year"])
         relationship = display_label(row.get("relationship"))
         living_status = display_label(row.get("living_status"))
 
         parts = [child_name]
         if birth_year:
-            parts.append(f"Birth Year {birth_year}")
+            parts.append(f"Birth year {birth_year}")
         if relationship != "—":
             parts.append(relationship)
         if living_status != "—":
@@ -125,6 +125,10 @@ def get_current_medication_snapshot(resident_id: int) -> dict[str, str]:
     return snapshot
 
 
+def _empty_snapshot(field_labels: dict[str, str]) -> dict[str, str]:
+    return {key: "" for key in field_labels}
+
+
 def get_current_employment_snapshot(resident_id: int) -> dict[str, str]:
     ph = placeholder()
 
@@ -137,7 +141,8 @@ def get_current_employment_snapshot(resident_id: int) -> dict[str, str]:
             supervisor_name,
             supervisor_phone,
             monthly_income,
-            unemployment_reason
+            unemployment_reason,
+            employment_notes
         FROM residents
         WHERE id = {ph}
         """,
@@ -145,7 +150,7 @@ def get_current_employment_snapshot(resident_id: int) -> dict[str, str]:
     )
 
     if not row:
-        return {key: "" for key in EMPLOYMENT_FIELD_LABELS}
+        return _empty_snapshot(EMPLOYMENT_FIELD_LABELS)
 
     snapshot: dict[str, str] = {}
 
@@ -176,14 +181,14 @@ def get_current_sobriety_snapshot(resident_id: int) -> dict[str, str]:
     )
 
     if not row:
-        return {key: "" for key in SOBRIETY_FIELD_LABELS}
+        return _empty_snapshot(SOBRIETY_FIELD_LABELS)
 
     snapshot: dict[str, str] = {}
 
     for field_name in SOBRIETY_FIELD_LABELS:
         value = row.get(field_name)
         if field_name == "drug_of_choice":
-            snapshot[field_name] = display_label(value) if value else ""
+            snapshot[field_name] = clean_value(value)
         else:
             snapshot[field_name] = clean_value(value)
 
@@ -211,9 +216,9 @@ def get_current_advancement_snapshot(enrollment_id: int) -> dict[str, str]:
     )
 
     if not row:
-        snapshot = {key: "" for key in MEETING_TEXT_FIELD_LABELS}
-        snapshot.update({key: "" for key in ADVANCEMENT_TEXT_FIELD_LABELS})
-        snapshot.update({key: "" for key in ADVANCEMENT_BOOL_FIELD_LABELS})
+        snapshot = _empty_snapshot(MEETING_TEXT_FIELD_LABELS)
+        snapshot.update(_empty_snapshot(ADVANCEMENT_TEXT_FIELD_LABELS))
+        snapshot.update(_empty_snapshot(ADVANCEMENT_BOOL_FIELD_LABELS))
         return snapshot
 
     snapshot: dict[str, str] = {}
