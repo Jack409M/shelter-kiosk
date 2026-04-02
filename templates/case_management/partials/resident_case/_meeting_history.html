@@ -1,9 +1,9 @@
 <div class="cmx-card">
   <div class="cmx-section-head">
     <div>
-      <h2 class="cmx-section-title">Meeting History</h2>
+      <h2 class="cmx-section-title">Saved Meeting Reports</h2>
       <div class="cmx-section-subtitle">
-        Open prior progress notes, review the saved record, and print a formal report for any completed meeting.
+        Review prior case manager meetings, reopen a saved record, or print the formal report for any completed meeting.
       </div>
     </div>
     <span class="cmx-inline-pill">
@@ -15,9 +15,9 @@
     {% include "case_management/partials/resident_case/_workspace_note_history.html" %}
   {% else %}
     <div class="cmx-panel-soft">
-      <div class="cmx-text-card-title">No meeting history yet</div>
+      <div class="cmx-text-card-title">No saved meeting reports yet</div>
       <div class="cmx-summary-text">
-        No saved case manager meetings are on file for this resident yet. Once a meeting is saved, it will appear here and can be reopened, edited, or printed as a progress note.
+        No completed case manager meetings are on file for this resident yet. Once a meeting is saved, it will appear here and can be reopened, edited, or printed as a formal progress report.
       </div>
     </div>
   {% endif %}
