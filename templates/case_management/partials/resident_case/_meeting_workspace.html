@@ -24,7 +24,7 @@
     <input type="hidden" name="warrants_or_fines_paid" value="{{ meeting_defaults.warrants_or_fines_paid if meeting_defaults.warrants_or_fines_paid else '' }}">
 
     <div style="margin:0 0 16px 0; padding:10px 12px; background:#ffffff; border:1px solid #d8e3f4; border-radius:12px; color:#48617d; font-size:0.9rem; font-weight:600;">
-      Save Meeting records today’s narrative note, services provided, needs worked on today, and advancement review. Formal note printing becomes available from <strong>Meeting History</strong> after this meeting is saved.
+      Save Meeting records today’s narrative note, services provided, needs worked on today, and advancement review.
     </div>
 
     <div class="cmx-grid cmx-grid-3">
@@ -34,7 +34,7 @@
       </div>
 
       <div class="cmx-field">
-        <label>Next Appointment For This Note</label>
+        <label>Next Appointment</label>
         <input
           type="text"
           name="next_appointment"
@@ -43,7 +43,7 @@
           inputmode="text"
         >
         <div class="cmx-muted">
-          Use month/day/year and time. This line prints inside the meeting report. Use <strong>Schedule Appointment</strong> in Quick Actions to create the official appointment record.
+          Use month/day/year and time. This note field is separate from the official appointment record.
         </div>
       </div>
 
@@ -57,7 +57,7 @@
       <div class="cmx-text-card cmx-writing-card" style="background:#ffffff;">
         <div class="cmx-text-card-title">Case Summary</div>
         <div class="cmx-field">
-          <textarea name="notes" rows="6" placeholder="Summarize the resident contact, current situation, and key case management discussion from today">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
+          <textarea name="notes" rows="6" placeholder="Summarize the resident contact, current situation, and key discussion from today">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
         </div>
       </div>
 
@@ -71,7 +71,7 @@
       <div class="cmx-text-card cmx-writing-card" style="background:#ffffff;">
         <div class="cmx-text-card-title">Plan And Next Steps</div>
         <div class="cmx-field">
-          <textarea name="action_items" rows="6" placeholder="Record assignments, follow up tasks, referrals, or next steps before the next contact">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
+          <textarea name="action_items" rows="6" placeholder="Record assignments, referrals, follow up tasks, and next steps">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
         </div>
       </div>
     </div>
@@ -79,7 +79,7 @@
     <div class="cmx-text-card" style="margin-top:16px; background:#ffffff;">
       <div class="cmx-text-card-title">Meeting Overview</div>
       <div class="cmx-field">
-        <textarea name="overall_summary" rows="4" placeholder="Short overall meeting overview for quick reference and print summary">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea>
+        <textarea name="overall_summary" rows="4" placeholder="Short overall meeting overview for quick reference">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea>
       </div>
     </div>
 
