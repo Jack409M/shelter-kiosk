@@ -1,6 +1,38 @@
 <div class="cmx-quick-grid">
   <div class="cmx-card cmx-quick-card">
     <div>
+      <h3 class="cmx-quick-title">Schedule Appointment</h3>
+      <div class="cmx-quick-subtitle">Create the official appointment record from the resident workspace.</div>
+    </div>
+
+    <form method="post" action="{{ url_for('case_management.add_appointment', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div class="cmx-grid cmx-grid-2">
+        <div class="cmx-field">
+          <label>Appointment Date</label>
+          <input type="date" name="appointment_date" required>
+        </div>
+
+        <div class="cmx-field">
+          <label>Appointment Type</label>
+          <input type="text" name="appointment_type" placeholder="Case management, dental, legal, court, or other">
+        </div>
+      </div>
+
+      <div class="cmx-field" style="margin-top:12px;">
+        <label>Notes</label>
+        <textarea name="notes" rows="3" placeholder="Optional"></textarea>
+      </div>
+
+      <div class="cmx-button-row">
+        <button type="submit" class="cmx-btn">Save Appointment</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="cmx-card cmx-quick-card">
+    <div>
       <h3 class="cmx-quick-title">Quick Add UA</h3>
       <div class="cmx-quick-subtitle">Record a UA from this page without leaving the resident workspace.</div>
     </div>
