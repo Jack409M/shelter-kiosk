@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from flask import flash, redirect, request, session, url_for
 
 from core.db import db_execute, db_fetchone
@@ -25,6 +27,16 @@ def _clean_date_text(value: str | None) -> str | None:
     return cleaned[:10]
 
 
+def _parse_iso_date(value: str | None) -> date | None:
+    cleaned = _clean_date_text(value)
+    if not cleaned:
+        return None
+    try:
+        return date.fromisoformat(cleaned)
+    except ValueError:
+        return None
+
+
 def _normalize_employment_status(value: str | None) -> str | None:
     normalized = (value or "").strip().lower()
     if normalized in {"employed", "unemployed"}:
@@ -45,6 +57,26 @@ def _normalize_tristate_bool(value: str | None):
         return True
     if normalized in {"no", "false", "0", "off"}:
         return False
+    return None
+
+
+def _validate_profile_dates(payload: dict) -> str | None:
+    level_start_date = _parse_iso_date(payload.get("level_start_date"))
+    sobriety_date = _parse_iso_date(payload.get("sobriety_date"))
+    treatment_graduation_date = _parse_iso_date(payload.get("treatment_graduation_date"))
+
+    if payload.get("level_start_date") and not level_start_date:
+        return "Level start date must be a valid date."
+
+    if payload.get("sobriety_date") and not sobriety_date:
+        return "Sobriety date must be a valid date."
+
+    if payload.get("treatment_graduation_date") and not treatment_graduation_date:
+        return "Treatment graduation date must be a valid date."
+
+    if level_start_date and treatment_graduation_date and treatment_graduation_date < level_start_date:
+        return "Treatment graduation date cannot be earlier than level start date."
+
     return None
 
 
@@ -83,6 +115,10 @@ def _build_profile_update_payload(resident: dict) -> tuple[dict, str | None]:
         payload["employment_type_current"] = None
     else:
         payload["unemployment_reason"] = None
+
+    date_error = _validate_profile_dates(payload)
+    if date_error:
+        return {}, date_error
 
     return payload, None
 
@@ -183,10 +219,10 @@ def update_recovery_profile_view(resident_id: int):
     values = []
 
     for field_name in ordered_fields:
-        if field_name not in payload:
-            continue
-        set_clauses.append(f"{field_name} = {ph}")
-        values.append(payload[field_name])
+      if field_name not in payload:
+          continue
+      set_clauses.append(f"{field_name} = {ph}")
+      values.append(payload[field_name])
 
     values.append(resident_id)
 
