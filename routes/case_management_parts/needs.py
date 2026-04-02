@@ -350,3 +350,31 @@ def get_open_enrollment_needs(enrollment_id: int) -> list[dict[str, Any]]:
         """,
         (enrollment_id,),
     )
+
+
+def get_all_enrollment_needs(enrollment_id: int) -> list[dict[str, Any]]:
+    if not enrollment_id:
+        return []
+
+    ph = placeholder()
+
+    return db_fetchall(
+        f"""
+        SELECT
+            id,
+            need_key,
+            need_label,
+            source_field,
+            source_value,
+            status,
+            resolution_note,
+            resolved_at,
+            resolved_by_staff_user_id,
+            created_at,
+            updated_at
+        FROM resident_needs
+        WHERE enrollment_id = {ph}
+        ORDER BY need_label ASC, id ASC
+        """,
+        (enrollment_id,),
+    )
