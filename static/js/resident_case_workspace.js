@@ -293,6 +293,13 @@ function setupMeetingHistory() {
     tile.addEventListener("click", function() {
       openTile(tile);
     });
+
+    tile.addEventListener("keydown", function(event) {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openTile(tile);
+      }
+    });
   });
 
   closeButtons.forEach(function(button) {
