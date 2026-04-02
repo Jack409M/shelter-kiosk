@@ -1,12 +1,19 @@
-<div class="cmx-card">
+<div class="cmx-card" style="background:#f4f8ff; border:1px solid #c9d8f0;">
   <div class="cmx-section-head">
     <div>
       <h2 class="cmx-section-title">Meeting Workspace</h2>
-      <div class="cmx-section-subtitle">Draft in progress. Your notes are protected while you work.</div>
+      <div class="cmx-section-subtitle">
+        Use this section for today’s meeting only. Changes here are saved only when you click <strong>Save Meeting</strong>.
+      </div>
     </div>
 
-    <div class="cmx-inline-pill">
-      Case Manager: {{ session.get("staff_name") or session.get("username") or "Current Staff" }}
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div class="cmx-inline-pill" style="background:#e8f0fb; border-color:#c9d8f0;">
+        Case Manager: {{ session.get("staff_name") or session.get("username") or "Current Staff" }}
+      </div>
+      <button type="submit" class="cmx-btn" form="meeting-workspace-form">
+        Save Meeting
+      </button>
     </div>
   </div>
 
@@ -15,6 +22,10 @@
     <input type="hidden" name="updated_grit" value="{{ meeting_defaults.updated_grit if meeting_defaults.updated_grit is not none else '' }}">
     <input type="hidden" name="parenting_class_completed" value="{{ meeting_defaults.parenting_class_completed if meeting_defaults.parenting_class_completed else '' }}">
     <input type="hidden" name="warrants_or_fines_paid" value="{{ meeting_defaults.warrants_or_fines_paid if meeting_defaults.warrants_or_fines_paid else '' }}">
+
+    <div style="margin:0 0 16px 0; padding:10px 12px; background:#ffffff; border:1px solid #d8e3f4; border-radius:12px; color:#48617d; font-size:0.9rem; font-weight:600;">
+      Save Meeting records today’s meeting note, services provided, needs worked on today, and advancement review.
+    </div>
 
     <div class="cmx-grid cmx-grid-4">
       <div class="cmx-field">
@@ -44,21 +55,21 @@
     </div>
 
     <div class="cmx-grid cmx-grid-3" style="margin-top:18px;">
-      <div class="cmx-text-card cmx-writing-card">
+      <div class="cmx-text-card cmx-writing-card" style="background:#ffffff;">
         <div class="cmx-text-card-title">Meeting Notes</div>
         <div class="cmx-field">
           <textarea name="notes" rows="6" placeholder="Notes from today’s meeting">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
         </div>
       </div>
 
-      <div class="cmx-text-card cmx-writing-card">
+      <div class="cmx-text-card cmx-writing-card" style="background:#ffffff;">
         <div class="cmx-text-card-title">Progress Since Last Meeting</div>
         <div class="cmx-field">
           <textarea name="progress_notes" rows="6" placeholder="What progress has been made">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
         </div>
       </div>
 
-      <div class="cmx-text-card cmx-writing-card">
+      <div class="cmx-text-card cmx-writing-card" style="background:#ffffff;">
         <div class="cmx-text-card-title">Action Items</div>
         <div class="cmx-field">
           <textarea name="action_items" rows="6" placeholder="What needs to happen before next time">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
@@ -66,7 +77,7 @@
       </div>
     </div>
 
-    <div class="cmx-text-card" style="margin-top:16px;">
+    <div class="cmx-text-card" style="margin-top:16px; background:#ffffff;">
       <div class="cmx-text-card-title">Overall Summary</div>
       <div class="cmx-field">
         <textarea name="overall_summary" rows="4" placeholder="Summary and plan">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea>
@@ -74,7 +85,7 @@
     </div>
 
     <div class="cmx-grid cmx-grid-2" style="margin-top:22px;">
-      <div class="cmx-panel-soft">
+      <div class="cmx-panel-soft" style="background:#ffffff;">
         <div class="cmx-panel-head">
           <h3>Services Provided Today</h3>
           <button type="button" class="cmx-btn-muted">+ Add Service</button>
@@ -107,10 +118,10 @@
         </div>
       </div>
 
-      <div class="cmx-panel-soft">
+      <div class="cmx-panel-soft" style="background:#ffffff;">
         <div class="cmx-panel-head">
-          <h3>Needs Addressed Today</h3>
-          <button type="button" class="cmx-btn-muted">+ Add Need Resolved</button>
+          <h3>Open Needs Worked On Today</h3>
+          <span>Saved with meeting</span>
         </div>
 
         {% if open_needs %}
@@ -152,10 +163,10 @@
     </div>
 
     <div class="cmx-grid cmx-grid-2" style="margin-top:22px;">
-      <div class="cmx-panel-soft">
+      <div class="cmx-panel-soft" style="background:#ffffff;">
         <div class="cmx-panel-head">
           <h3>Program And Compliance Snapshot</h3>
-          <span>Current Status</span>
+          <span>Current status</span>
         </div>
 
         <div class="cmx-stack">
@@ -172,10 +183,10 @@
         </div>
       </div>
 
-      <div class="cmx-panel-soft">
+      <div class="cmx-panel-soft" style="background:#ffffff;">
         <div class="cmx-panel-head">
           <h3>Advancement Review</h3>
-          <span>Meeting Decision</span>
+          <span>Saved with meeting</span>
         </div>
 
         <div class="cmx-grid cmx-grid-2">
@@ -214,6 +225,10 @@
           <textarea name="setbacks_or_incidents" rows="3" placeholder="Record setbacks, incidents, or concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
         </div>
       </div>
+    </div>
+
+    <div class="cmx-button-row" style="margin-top:18px;">
+      <button type="submit" class="cmx-btn">Save Meeting</button>
     </div>
   </form>
 </div>
