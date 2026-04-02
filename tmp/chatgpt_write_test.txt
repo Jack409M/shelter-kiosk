@@ -1,0 +1,2 @@
+GitHub write test from ChatGPT on 2026-04-01.
+If this file exists on branch chatgpt-write-test-20260401, write access is working.
