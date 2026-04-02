@@ -382,30 +382,34 @@ def _load_budget_rows(resident_id: int, enrollment_id: int | None):
     )
 
 
+def _normalize_level_start_date(resident: dict, enrollment_baseline: dict) -> Any:
+    return resident.get("level_start_date") or enrollment_baseline.get("entry_date")
+
+
+def _normalize_sobriety_date(resident: dict, enrollment_baseline: dict) -> Any:
+    return (
+        resident.get("sobriety_date")
+        or enrollment_baseline.get("intake_sobriety_date")
+        or enrollment_baseline.get("entry_date")
+    )
+
+
+def _normalize_treatment_graduation_date(resident: dict, enrollment_baseline: dict) -> Any:
+    return resident.get("treatment_graduation_date") or enrollment_baseline.get("intake_treatment_grad_date")
+
+
 def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     current_enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
 
     resident = _load_resident_profile(resident_id)
     enrollment_baseline = _load_enrollment_baseline(current_enrollment_id)
 
-    entry_date = enrollment_baseline.get("entry_date")
-    intake_sobriety_date = enrollment_baseline.get("intake_sobriety_date")
-    intake_treatment_grad_date = enrollment_baseline.get("intake_treatment_grad_date")
-
-    program_level = resident.get("program_level") or "1"
-    level_start_date = resident.get("level_start_date") or entry_date
-    days_on_level = _days_since(level_start_date)
+    level_start_date = _normalize_level_start_date(resident, enrollment_baseline)
+    sobriety_date = _normalize_sobriety_date(resident, enrollment_baseline)
+    treatment_graduation_date = _normalize_treatment_graduation_date(resident, enrollment_baseline)
 
     step_changed_at = resident.get("step_changed_at")
-    step_days = _days_since(step_changed_at)
-
     employment_updated_at = resident.get("employment_updated_at")
-    employment_days = _days_since(employment_updated_at)
-
-    sobriety_date = resident.get("sobriety_date") or intake_sobriety_date or entry_date
-    days_sober_today = _days_since(sobriety_date)
-
-    treatment_graduation_date = resident.get("treatment_graduation_date") or intake_treatment_grad_date
 
     medications_raw = _load_medications(resident_id, current_enrollment_id)
     ua_rows_raw = _load_ua_rows(resident_id, current_enrollment_id)
@@ -417,10 +421,10 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     inspection_items = _inspection_items(inspection_rows_raw)
     budget_items = _budget_items(budget_rows_raw)
 
-    snapshot = {
-        "program_level": program_level,
+    return {
+        "program_level": resident.get("program_level") or "1",
         "level_start_date": level_start_date,
-        "days_on_level": days_on_level,
+        "days_on_level": _days_since(level_start_date),
         "sponsor_name": resident.get("sponsor_name"),
         "sponsor_active": resident.get("sponsor_active"),
         "sponsor_active_display": _bool_display(resident.get("sponsor_active")),
@@ -436,14 +440,14 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "monthly_income": resident.get("monthly_income"),
         "monthly_income_display": _money_display(resident.get("monthly_income")),
         "employment_updated_at": employment_updated_at,
-        "employment_days": employment_days,
+        "employment_days": _days_since(employment_updated_at),
         "step_current": resident.get("step_current"),
         "step_work_active": resident.get("step_work_active"),
         "step_work_active_display": _bool_display(resident.get("step_work_active")),
         "step_changed_at": step_changed_at,
-        "step_days": step_days,
+        "step_days": _days_since(step_changed_at),
         "sobriety_date": sobriety_date,
-        "days_sober_today": days_sober_today,
+        "days_sober_today": _days_since(sobriety_date),
         "days_sober_at_entry": None,
         "drug_of_choice": resident.get("drug_of_choice"),
         "treatment_graduation_date": treatment_graduation_date,
@@ -456,5 +460,3 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "latest_inspection": inspection_items[0] if inspection_items else None,
         "latest_budget_session": budget_items[0] if budget_items else None,
     }
-
-    return snapshot
