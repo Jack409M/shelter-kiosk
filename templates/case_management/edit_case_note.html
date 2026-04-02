@@ -142,7 +142,7 @@
   <div class="edit-note-card">
     <div class="edit-note-head">
       <div>
-        <h1 class="edit-note-title">Edit Case Note</h1>
+        <h1 class="edit-note-title">Edit Saved Meeting Report</h1>
         <div class="edit-note-subtitle">
           {{ resident_name or "Resident" }} · update the saved meeting record, services, and advancement review.
         </div>
@@ -152,7 +152,7 @@
 
     <div class="cmx-appt" style="margin-bottom:16px;">
       <strong>Appointment note</strong><br>
-      The <strong>Next Appointment For This Note</strong> field prints inside this meeting report. The official appointment record should be created from the resident case workspace.
+      The <strong>Next Appointment</strong> field belongs to this saved meeting note. The official appointment record should still be created from the resident case workspace.
     </div>
 
     <form method="post" action="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
@@ -165,7 +165,7 @@
         </div>
 
         <div class="cmx-field">
-          <label>Next Appointment For This Note</label>
+          <label>Next Appointment</label>
           <input
             type="text"
             name="next_appointment"
