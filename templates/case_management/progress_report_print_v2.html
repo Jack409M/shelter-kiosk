@@ -9,8 +9,8 @@
       --ink: #1b2430;
       --muted: #5d6776;
       --line: #d5dbe3;
-      --soft: #f6f8fb;
       --accent: #223a5e;
+      --soft: #f8fafc;
     }
 
     * {
@@ -21,7 +21,7 @@
     body {
       margin: 0;
       padding: 0;
-      background: #edf1f5;
+      background: #eef2f6;
       color: var(--ink);
       font-family: Arial, Helvetica, sans-serif;
       line-height: 1.45;
@@ -32,7 +32,7 @@
     }
 
     .report-shell {
-      max-width: 960px;
+      max-width: 900px;
       margin: 0 auto;
       background: #ffffff;
       border: 1px solid var(--line);
@@ -46,7 +46,7 @@
       gap: 12px;
       padding: 14px 18px;
       border-bottom: 1px solid var(--line);
-      background: #f8fafc;
+      background: var(--soft);
     }
 
     .report-toolbar-left {
@@ -88,11 +88,11 @@
 
     .report-header {
       border-bottom: 2px solid var(--accent);
-      padding-bottom: 18px;
+      padding-bottom: 16px;
       margin-bottom: 24px;
     }
 
-    .report-kicker {
+    .report-org {
       font-size: 0.84rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -101,48 +101,41 @@
       margin-bottom: 8px;
     }
 
-    .report-title-row {
-      display: flex;
-      justify-content: center;
-      text-align: center;
-      margin-bottom: 18px;
-    }
-
-    .report-title-block h1 {
-      margin: 0;
-      font-size: 2rem;
+    .report-title {
+      margin: 0 0 14px 0;
+      font-size: 1.95rem;
       line-height: 1.05;
       letter-spacing: 0.03em;
       color: var(--accent);
       text-transform: uppercase;
+      text-align: center;
       font-weight: 700;
     }
 
-    .report-meta-grid {
+    .report-header-lines {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px 18px;
+      gap: 6px;
+      font-size: 0.96rem;
     }
 
-    .report-meta-item {
-      border: 1px solid var(--line);
-      background: var(--soft);
-      padding: 10px 12px;
-      min-height: 58px;
+    .report-header-line {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #eef2f6;
     }
 
-    .report-meta-label {
-      font-size: 0.72rem;
+    .report-header-label {
+      font-weight: 700;
+      color: var(--accent);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      font-weight: 700;
-      margin-bottom: 4px;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
     }
 
-    .report-meta-value {
-      font-size: 0.98rem;
-      font-weight: 700;
+    .report-header-value {
       color: var(--ink);
       word-break: break-word;
     }
@@ -157,7 +150,7 @@
       margin: 0 0 10px;
       padding-bottom: 6px;
       border-bottom: 1px solid var(--line);
-      font-size: 1rem;
+      font-size: 0.98rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--accent);
@@ -174,27 +167,26 @@
       overflow-wrap: anywhere;
       word-break: break-word;
       font-size: 0.98rem;
-      color: var(--ink);
     }
 
     .report-empty {
       border: 1px dashed var(--line);
-      padding: 14px 16px;
-      color: var(--muted);
       background: #fbfcfd;
+      color: var(--muted);
+      padding: 14px 16px;
     }
 
     .report-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 8px;
-      font-size: 0.94rem;
+      font-size: 0.93rem;
+      margin-top: 4px;
     }
 
     .report-table th,
     .report-table td {
       border: 1px solid var(--line);
-      padding: 9px 10px;
+      padding: 8px 10px;
       text-align: left;
       vertical-align: top;
     }
@@ -208,36 +200,11 @@
       font-weight: 700;
     }
 
-    .report-snapshot-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 8px;
-      font-size: 0.94rem;
-    }
-
-    .report-snapshot-table th,
-    .report-snapshot-table td {
-      border: 1px solid var(--line);
-      padding: 9px 10px;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    .report-snapshot-table th {
-      width: 34%;
-      background: var(--soft);
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      font-weight: 700;
-    }
-
     .report-inline {
       border: 1px solid var(--line);
       background: #ffffff;
       padding: 14px 16px;
-      font-size: 0.98rem;
+      font-size: 0.97rem;
       line-height: 1.6;
     }
 
@@ -294,7 +261,6 @@
       .report-inline,
       .report-empty,
       .report-table tr,
-      .report-snapshot-table tr,
       .report-signature-grid {
         page-break-inside: avoid;
         break-inside: avoid;
@@ -310,7 +276,7 @@
         padding: 20px 18px 24px;
       }
 
-      .report-meta-grid,
+      .report-header-line,
       .report-signature-grid {
         grid-template-columns: 1fr;
       }
@@ -318,6 +284,26 @@
   </style>
 </head>
 <body>
+  {% set services = report.service_rows or [] %}
+  {% set service_names = [] %}
+  {% for service in services %}
+    {% if service.service_type and service.service_type != "—" %}
+      {% if service_names.append(service.service_type) %}{% endif %}
+    {% endif %}
+  {% endfor %}
+
+  {% set service_sentence = "" %}
+  {% if service_names %}
+    {% set service_sentence = service_names | join(", ") %}
+  {% endif %}
+
+  {% set profile_labels = [] %}
+  {% for item in report.program_snapshot or [] %}
+    {% if item.value not in ("", none, "—") %}
+      {% if profile_labels.append(item.label) %}{% endif %}
+    {% endif %}
+  {% endfor %}
+
   <div class="report-shell">
     <div class="report-toolbar no-print">
       <div class="report-toolbar-left">Formal case summary print view</div>
@@ -329,38 +315,33 @@
 
     <div class="report-page">
       <header class="report-header">
-        <div class="report-kicker">Downtown Women&#39;s Center</div>
+        <div class="report-org">Downtown Women&#39;s Center</div>
+        <h1 class="report-title">{{ report.report_title }}</h1>
 
-        <div class="report-title-row">
-          <div class="report-title-block">
-            <h1>{{ report.report_title }}</h1>
+        <div class="report-header-lines">
+          <div class="report-header-line">
+            <div class="report-header-label">Resident</div>
+            <div class="report-header-value">{{ report.resident_name }}</div>
           </div>
-        </div>
-
-        <div class="report-meta-grid">
-          <div class="report-meta-item">
-            <div class="report-meta-label">Resident</div>
-            <div class="report-meta-value">{{ report.resident_name }}</div>
+          <div class="report-header-line">
+            <div class="report-header-label">Resident ID</div>
+            <div class="report-header-value">{{ report.resident_display_id }}</div>
           </div>
-          <div class="report-meta-item">
-            <div class="report-meta-label">Resident ID</div>
-            <div class="report-meta-value">{{ report.resident_display_id }}</div>
+          <div class="report-header-line">
+            <div class="report-header-label">Case Manager</div>
+            <div class="report-header-value">{{ report.case_manager_name }}</div>
           </div>
-          <div class="report-meta-item">
-            <div class="report-meta-label">Case Manager</div>
-            <div class="report-meta-value">{{ report.case_manager_name }}</div>
+          <div class="report-header-line">
+            <div class="report-header-label">Shelter</div>
+            <div class="report-header-value">{{ report.resident.shelter | shelter if report.resident.shelter else "—" }}</div>
           </div>
-          <div class="report-meta-item">
-            <div class="report-meta-label">Shelter</div>
-            <div class="report-meta-value">{{ report.resident.shelter | shelter if report.resident.shelter else "—" }}</div>
+          <div class="report-header-line">
+            <div class="report-header-label">Meeting Date</div>
+            <div class="report-header-value">{{ report.note.meeting_date or "—" }}</div>
           </div>
-          <div class="report-meta-item">
-            <div class="report-meta-label">Meeting Date</div>
-            <div class="report-meta-value">{{ report.note.meeting_date or "—" }}</div>
-          </div>
-          <div class="report-meta-item">
-            <div class="report-meta-label">Generated</div>
-            <div class="report-meta-value">{{ report.generated_at_display }}</div>
+          <div class="report-header-line">
+            <div class="report-header-label">Generated</div>
+            <div class="report-header-value">{{ report.generated_at_display }}</div>
           </div>
         </div>
       </header>
@@ -381,6 +362,29 @@
       </section>
 
       <section class="report-section">
+        <h2>Contact Summary</h2>
+        <div class="report-inline">
+          {% if service_sentence %}
+            <strong>Services provided today were:</strong> {{ service_sentence }}.
+          {% else %}
+            <strong>Services provided today were:</strong> none recorded.
+          {% endif %}
+
+          {% if report.note.blocker_reason %}
+            <br><strong>Tracked client needs discussed during this contact:</strong> {{ report.note.blocker_reason }}.
+          {% endif %}
+
+          {% if profile_labels %}
+            <br><strong>Profile information reflected in this report includes:</strong> {{ profile_labels | join(", ") }}.
+          {% endif %}
+
+          {% if report.note.ready_for_next_level_display and report.note.ready_for_next_level_display != "—" %}
+            <br><strong>Advancement decision:</strong> {{ report.note.ready_for_next_level_display }}{% if report.note.recommended_next_level %}, recommended level {{ report.note.recommended_next_level }}{% endif %}.
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="report-section">
         <h2>Progress Since Last Meeting</h2>
         {% if report.note.progress_notes %}
           <div class="report-block">
@@ -394,11 +398,11 @@
       <section class="report-section">
         <h2>Program Snapshot</h2>
         {% if report.program_snapshot %}
-          <table class="report-snapshot-table">
+          <table class="report-table">
             <tbody>
               {% for item in report.program_snapshot %}
                 <tr>
-                  <th>{{ item.label }}</th>
+                  <th style="width:34%;">{{ item.label }}</th>
                   <td>{{ item.value if item.value not in ("", none) else "—" }}</td>
                 </tr>
               {% endfor %}
@@ -410,33 +414,7 @@
       </section>
 
       <section class="report-section">
-        <h2>Goals And Progress</h2>
-        {% if report.goals %}
-          <table class="report-table">
-            <thead>
-              <tr>
-                <th>Goal</th>
-                <th>Status</th>
-                <th>Target Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for goal in report.goals %}
-                <tr>
-                  <td>{{ goal.goal_text }}</td>
-                  <td>{{ goal.status or "—" }}</td>
-                  <td>{{ goal.target_date or "—" }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% else %}
-          <div class="report-empty">No current goals are recorded for this enrollment.</div>
-        {% endif %}
-      </section>
-
-      <section class="report-section">
-        <h2>Services Provided</h2>
+        <h2>Services Detail</h2>
         {% if report.service_rows %}
           <table class="report-table">
             <thead>
@@ -469,10 +447,6 @@
           <div class="report-block">
             <div class="report-text">{{ report.note.setbacks_or_incidents }}</div>
           </div>
-        {% elif report.note.blocker_reason %}
-          <div class="report-block">
-            <div class="report-text">{{ report.note.blocker_reason }}</div>
-          </div>
         {% else %}
           <div class="report-empty">No barriers or concerns were recorded for this meeting.</div>
         {% endif %}
@@ -492,27 +466,6 @@
         {% else %}
           <div class="report-empty">No plan or next steps were recorded for this meeting.</div>
         {% endif %}
-      </section>
-
-      <section class="report-section">
-        <h2>Advancement Decision</h2>
-        <div class="report-inline">
-          <strong>Decision:</strong>
-          {% if report.note.ready_for_next_level_display and report.note.ready_for_next_level_display != "—" %}
-            {{ report.note.ready_for_next_level_display }}
-          {% else %}
-            No decision recorded
-          {% endif %}
-          {% if report.note.recommended_next_level %}
-            | Recommended level {{ report.note.recommended_next_level }}
-          {% endif %}
-          {% if report.note.override_or_exception %}
-            | Exception {{ report.note.override_or_exception }}
-          {% endif %}
-          {% if report.note.staff_review_note %}
-            | Staff note {{ report.note.staff_review_note }}
-          {% endif %}
-        </div>
       </section>
 
       <section class="report-section">
