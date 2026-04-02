@@ -1,57 +1,152 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h1>Edit Medication</h1>
+<div style="max-width:960px; margin:0 auto; display:grid; gap:20px;">
+  <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+    <div style="display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0; font-size:1.9rem; font-weight:800; color:#0f172a;">Edit Medication</h1>
+        <div style="margin-top:6px; color:#475569; font-size:0.96rem;">
+          {{ resident["first_name"] }} {{ resident["last_name"] }} · update this medication record and save the revised details.
+        </div>
+      </div>
 
-<div class="card">
-  <h2>{{ resident["first_name"] }} {{ resident["last_name"] }}</h2>
-  <p>
-    <a class="btn" href="{{ url_for('case_management.medications', resident_id=resident['id']) }}">
-      Back to Medications
-    </a>
-    <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
-      Back to Case Management
-    </a>
-  </p>
-</div>
-
-<div class="card">
-  <form method="post" action="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=medication['id']) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    <label><strong>Medication Name</strong></label>
-    <input type="text" name="medication_name" value="{{ medication['medication_name'] or '' }}" required>
-
-    <label><strong>Dosage</strong></label>
-    <input type="text" name="dosage" value="{{ medication['dosage'] or '' }}">
-
-    <label><strong>Frequency</strong></label>
-    <input type="text" name="frequency" value="{{ medication['frequency'] or '' }}">
-
-    <label><strong>Purpose</strong></label>
-    <input type="text" name="purpose" value="{{ medication['purpose'] or '' }}">
-
-    <label><strong>Prescribed By</strong></label>
-    <input type="text" name="prescribed_by" value="{{ medication['prescribed_by'] or '' }}">
-
-    <label><strong>Started On</strong></label>
-    <input type="date" name="started_on" value="{{ medication['started_on'] or '' }}">
-
-    <label><strong>Ended On</strong></label>
-    <input type="date" name="ended_on" value="{{ medication['ended_on'] or '' }}">
-
-    <label><strong>Active</strong></label>
-    <select name="is_active">
-      <option value="yes" {% if medication['is_active'] %}selected{% endif %}>Yes</option>
-      <option value="no" {% if not medication['is_active'] %}selected{% endif %}>No</option>
-    </select>
-
-    <label><strong>Notes</strong></label>
-    <textarea name="notes" rows="4">{{ medication['notes'] or '' }}</textarea>
-
-    <div style="margin-top:10px;">
-      <button type="submit">Save Changes</button>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <a
+          class="btn"
+          href="{{ url_for('case_management.medications', resident_id=resident['id']) }}"
+          style="border-radius:14px; padding:11px 16px;"
+        >
+          Back to Medications
+        </a>
+        <a
+          class="btn"
+          href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+          style="border-radius:14px; padding:11px 16px;"
+        >
+          Back to Case Management
+        </a>
+      </div>
     </div>
-  </form>
+  </div>
+
+  <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+    <div style="margin-bottom:14px;">
+      <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Medication Details</h2>
+      <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
+        Review and update the medication name, schedule, dates, and notes below.
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=medication['id']) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px;">
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Medication Name</strong></label>
+          <input
+            type="text"
+            name="medication_name"
+            value="{{ medication['medication_name'] or '' }}"
+            required
+            style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"
+          >
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Dosage</strong></label>
+          <input
+            type="text"
+            name="dosage"
+            value="{{ medication['dosage'] or '' }}"
+            placeholder="Example 50 mg"
+            style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"
+          >
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Frequency</strong></label>
+          <input
+            type="text"
+            name="frequency"
+            value="{{ medication['frequency'] or '' }}"
+            placeholder="Daily or PRN"
+            style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"
+          >
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Purpose</strong></label>
+          <input
+            type="text"
+            name="purpose"
+            value="{{ medication['purpose'] or '' }}"
+            style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"
+          >
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Prescribed By</strong></label>
+          <input
+            type="text"
+            name="prescribed_by"
+            value="{{ medication['prescribed_by'] or '' }}"
+            style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"
+          >
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Active</strong></label>
+          <select
+            name="is_active"
+            style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"
+          >
+            <option value="yes" {% if medication['is_active'] %}selected{% endif %}>Yes</option>
+            <option value="no" {% if not medication['is_active'] %}selected{% endif %}>No</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Started On</strong></label>
+          <input
+            type="date"
+            name="started_on"
+            value="{{ medication['started_on'] or '' }}"
+            style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"
+          >
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Ended On</strong></label>
+          <input
+            type="date"
+            name="ended_on"
+            value="{{ medication['ended_on'] or '' }}"
+            style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"
+          >
+        </div>
+      </div>
+
+      <div style="margin-top:16px;">
+        <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Notes</strong></label>
+        <textarea
+          name="notes"
+          rows="4"
+          style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px; resize:vertical;"
+        >{{ medication['notes'] or '' }}</textarea>
+      </div>
+
+      <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Changes</button>
+        <a
+          class="btn"
+          href="{{ url_for('case_management.medications', resident_id=resident['id']) }}"
+          style="border-radius:14px; padding:11px 16px;"
+        >
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
 </div>
 {% endblock %}
