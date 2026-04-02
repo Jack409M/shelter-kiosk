@@ -23,21 +23,21 @@ def _medications_redirect(resident_id: int):
 
 
 def _clean(value: str | None) -> str | None:
-    value = (value or "").strip()
-    return value or None
+    cleaned = (value or "").strip()
+    return cleaned or None
 
 
 def _parse_iso_date(value: str | None) -> str | None:
-    value = _clean(value)
-    if not value:
+    cleaned = _clean(value)
+    if not cleaned:
         return None
 
     try:
-        date.fromisoformat(value)
+        date.fromisoformat(cleaned)
     except ValueError:
         return None
 
-    return value
+    return cleaned
 
 
 def _quick_add_requested() -> bool:
@@ -95,13 +95,13 @@ def _validate_medication_form():
         return None, "Medication name is required."
 
     if started_on_raw and not started_on:
-        return None, "Started On must be a valid date."
+        return None, "Started on must be a valid date."
 
     if ended_on_raw and not ended_on:
-        return None, "Ended On must be a valid date."
+        return None, "Ended on must be a valid date."
 
     if started_on and ended_on and ended_on < started_on:
-        return None, "Ended On cannot be earlier than Started On."
+        return None, "Ended on cannot be earlier than started on."
 
     data = {
         "medication_name": medication_name,
