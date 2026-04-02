@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
@@ -33,6 +35,59 @@ def _clean_text(value):
     return (value or "").strip()
 
 
+def _parse_meeting_date_iso(value: str) -> datetime | None:
+    text = (value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.strptime(text, "%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def _normalize_next_appointment(raw_value: str, meeting_date: str) -> tuple[str, str | None]:
+    text = (raw_value or "").strip()
+    if not text:
+        return "", None
+
+    meeting_dt = _parse_meeting_date_iso(meeting_date)
+    if not meeting_dt:
+        return text, None
+
+    normalized = " ".join(text.split())
+
+    mmddyyyy_formats = [
+        "%m/%d/%Y",
+        "%m/%d/%Y %I:%M %p",
+        "%m/%d/%Y %H:%M",
+    ]
+    mmddyy_formats = [
+        "%m/%d/%y",
+        "%m/%d/%y %I:%M %p",
+        "%m/%d/%y %H:%M",
+    ]
+
+    for fmt in mmddyyyy_formats:
+        try:
+            parsed = datetime.strptime(normalized, fmt)
+            if parsed.year < meeting_dt.year:
+                return normalized, "Next appointment year cannot be earlier than the meeting date year."
+            return normalized, None
+        except ValueError:
+            continue
+
+    for fmt in mmddyy_formats:
+        try:
+            parsed = datetime.strptime(normalized, fmt)
+            if parsed.year < meeting_dt.year:
+                return normalized, "Next appointment year cannot be earlier than the meeting date year."
+            return parsed.strftime("%m/%d/%Y %I:%M %p").replace(" 0", " "), None
+        except ValueError:
+            continue
+
+    return normalized, None
+
+
 def _get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
     ph = placeholder()
 
@@ -59,7 +114,8 @@ def _collect_note_form_values():
     progress_notes = _clean_text(request.form.get("progress_notes"))
     setbacks_or_incidents = _clean_text(request.form.get("setbacks_or_incidents"))
     action_items = _clean_text(request.form.get("action_items"))
-    next_appointment = _clean_text(request.form.get("next_appointment"))
+    next_appointment_raw = _clean_text(request.form.get("next_appointment"))
+    next_appointment, next_appointment_error = _normalize_next_appointment(next_appointment_raw, meeting_date)
     overall_summary = _clean_text(request.form.get("overall_summary"))
     ready_for_next_level = yes_no_to_int(request.form.get("ready_for_next_level"))
     recommended_next_level = _clean_text(request.form.get("recommended_next_level"))
@@ -82,6 +138,7 @@ def _collect_note_form_values():
         "setbacks_or_incidents": setbacks_or_incidents,
         "action_items": action_items,
         "next_appointment": next_appointment,
+        "next_appointment_error": next_appointment_error,
         "overall_summary": overall_summary,
         "ready_for_next_level": ready_for_next_level,
         "recommended_next_level": recommended_next_level,
@@ -147,6 +204,10 @@ def add_case_note_view(resident_id: int):
 
     if not values["meeting_date"]:
         flash("Meeting date is required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    if values["next_appointment_error"]:
+        flash(values["next_appointment_error"], "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     has_structured_progress = _has_structured_progress(values, include_needs=True)
@@ -366,6 +427,10 @@ def edit_case_note_view(resident_id: int, update_id: int):
 
     if not values["meeting_date"]:
         flash("Meeting date is required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    if values["next_appointment_error"]:
+        flash(values["next_appointment_error"], "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     has_structured_progress = _has_structured_progress(values, include_needs=False)
