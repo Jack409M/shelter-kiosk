@@ -1,0 +1,90 @@
+{% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note %}
+
+<div class="cmx-history-list-wrap">
+  <p class="cmx-muted" style="margin-top:-4px; margin-bottom:14px;">
+    Review prior meetings, services, barriers, and advancement decisions here.
+  </p>
+
+  {% if notes %}
+    <div id="case-note-scroll-lane" class="no-print case-note-scroll-lane">
+      {% for note in notes %}
+        {% set note_id = note["id"] %}
+        {% set note_meeting_date = note["meeting_date"] %}
+        {% set note_services = note["services"] %}
+        {% set note_ready_display = note["ready_for_next_level_display"] if note["ready_for_next_level_display"] else "—" %}
+
+        <button
+          type="button"
+          class="case-note-tile"
+          data-note-target="case-note-panel-{{ note_id }}"
+        >
+          <div><strong>{{ note_meeting_date or "—" }}</strong></div>
+          <div class="case-note-tile-meta">Ready: {{ note_ready_display }}</div>
+          {% if note_services %}
+            <div class="case-note-tile-meta">
+              {{ note_services|length }} services
+            </div>
+          {% endif %}
+        </button>
+      {% endfor %}
+    </div>
+
+    <div id="case-note-modal" class="case-note-modal" aria-hidden="true">
+      <div class="case-note-modal-backdrop" data-case-note-close></div>
+
+      <div class="case-note-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="case-note-modal-title">
+        <div class="case-note-modal-header">
+          <div>
+            <h3 id="case-note-modal-title" class="case-note-panel-title">Past Case Note</h3>
+            <div id="case-note-modal-subtitle" class="case-note-created"></div>
+          </div>
+
+          <button type="button" class="cmx-btn-muted" data-case-note-close>
+            Close
+          </button>
+        </div>
+
+        <div id="case-note-modal-body" class="case-note-modal-body"></div>
+      </div>
+    </div>
+
+    <div class="case-note-panel-store" style="display:none;">
+      {% for note in notes %}
+        {% set note_id = note["id"] %}
+        {% set note_meeting_date = note["meeting_date"] %}
+        {% set note_created_at = note["created_at"] %}
+
+        <div id="case-note-panel-{{ note_id }}" class="cmx-card case-note-panel">
+          <div class="case-note-panel-header">
+            <div>
+              <h3 class="case-note-panel-title">Meeting {{ note_meeting_date or "—" }}</h3>
+              <div class="case-note-created">
+                Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
+              </div>
+            </div>
+
+            {% if note_id %}
+              <div class="print-hide case-note-actions">
+                <a
+                  class="cmx-btn-muted"
+                  href="{{ url_for('case_management.progress_report_print', resident_id=resident_id, update_id=note_id) }}"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Print Report
+                </a>
+                <a class="cmx-btn-muted" href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
+                  Edit Note
+                </a>
+              </div>
+            {% endif %}
+          </div>
+
+          {{ render_progress_note(note) }}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="cmx-muted">No meetings recorded.</p>
+  {% endif %}
+</div>
