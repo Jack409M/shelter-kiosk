@@ -150,7 +150,7 @@
     }
 
     .report-section {
-      margin-top: 22px;
+      margin-top: 24px;
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -172,15 +172,6 @@
       margin-top: 10px;
     }
 
-    .report-narrative-label {
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
     .report-narrative-text {
       white-space: pre-wrap;
       overflow-wrap: anywhere;
@@ -188,43 +179,16 @@
       font-size: 0.99rem;
     }
 
-    .report-grid-two {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px 18px;
-    }
-
-    .report-card {
-      border: 1px solid var(--line);
-      background: #ffffff;
-      padding: 12px 14px;
-    }
-
-    .report-card-title {
-      font-size: 0.76rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .report-card-value {
-      font-size: 0.98rem;
-      font-weight: 700;
-      color: var(--ink);
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-    }
-
-    table.report-table {
+    .report-snapshot-table,
+    .report-table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 8px;
       font-size: 0.94rem;
     }
 
+    .report-snapshot-table th,
+    .report-snapshot-table td,
     .report-table th,
     .report-table td {
       border: 1px solid var(--line);
@@ -233,6 +197,7 @@
       vertical-align: top;
     }
 
+    .report-snapshot-table th,
     .report-table th {
       background: var(--soft);
       font-size: 0.76rem;
@@ -249,15 +214,15 @@
       background: #fbfcfd;
     }
 
-    .report-advancement-line {
+    .report-inline-line {
       border: 1px solid var(--line);
       background: #ffffff;
       padding: 14px 16px;
-      font-size: 1rem;
+      font-size: 0.98rem;
       line-height: 1.6;
     }
 
-    .report-advancement-label {
+    .report-inline-label {
       font-weight: 700;
       color: var(--accent);
     }
@@ -307,13 +272,13 @@
       }
 
       .report-section,
-      .report-card,
       .report-meta-item,
       .report-narrative-block,
       .report-signature-grid,
       .report-table tr,
+      .report-snapshot-table tr,
       .report-empty,
-      .report-advancement-line {
+      .report-inline-line {
         page-break-inside: avoid;
         break-inside: avoid;
       }
@@ -329,7 +294,6 @@
       }
 
       .report-meta-grid,
-      .report-grid-two,
       .report-signature-grid {
         grid-template-columns: 1fr;
       }
@@ -414,14 +378,21 @@
 
       <section class="report-section">
         <h2>Program Snapshot</h2>
-        <div class="report-grid-two">
-          {% for item in report.program_snapshot %}
-            <div class="report-card">
-              <div class="report-card-title">{{ item.label }}</div>
-              <div class="report-card-value">{{ item.value }}</div>
-            </div>
-          {% endfor %}
-        </div>
+
+        {% if report.program_snapshot %}
+          <table class="report-snapshot-table">
+            <tbody>
+              {% for item in report.program_snapshot %}
+                <tr>
+                  <th style="width:34%;">{{ item.label }}</th>
+                  <td>{{ item.value }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="report-empty">No program snapshot is available.</div>
+        {% endif %}
       </section>
 
       <section class="report-section">
@@ -494,22 +465,28 @@
 
       <section class="report-section">
         <h2>Plan And Next Steps</h2>
-        <div class="report-grid-two">
-          <div class="report-card">
-            <div class="report-card-title">Plan</div>
-            <div class="report-card-value">{{ report.note.action_items or "—" }}</div>
+
+        {% if report.note.action_items or report.note.next_appointment %}
+          <div class="report-narrative-block">
+            {% if report.note.action_items %}
+              <div class="report-narrative-text">{{ report.note.action_items }}</div>
+            {% endif %}
+            {% if report.note.next_appointment %}
+              <div class="report-narrative-text" style="margin-top:12px;">
+                <span class="report-inline-label">Next appointment:</span> {{ report.note.next_appointment }}
+              </div>
+            {% endif %}
           </div>
-          <div class="report-card">
-            <div class="report-card-title">Next Appointment</div>
-            <div class="report-card-value">{{ report.note.next_appointment or "—" }}</div>
-          </div>
-        </div>
+        {% else %}
+          <div class="report-empty">No plan or next steps were recorded for this meeting.</div>
+        {% endif %}
       </section>
 
       <section class="report-section">
         <h2>Advancement Decision</h2>
-        <div class="report-advancement-line">
-          <span class="report-advancement-label">Decision:</span>
+
+        <div class="report-inline-line">
+          <span class="report-inline-label">Decision:</span>
           {% if report.note.ready_for_next_level_display and report.note.ready_for_next_level_display != "—" %}
             {{ report.note.ready_for_next_level_display }}
           {% else %}
