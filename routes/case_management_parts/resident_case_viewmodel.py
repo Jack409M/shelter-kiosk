@@ -77,9 +77,9 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     if days_sober is not None and str(days_sober).strip() != "":
         parts.append(f"{days_sober} days sober")
 
-    employment_status = _clean_text(rs.get("employment_status_current"))
-    if employment_status:
-        parts.append(f"employment status {employment_status.replace('_', ' ')}")
+    employment_status = _clean_text(rs.get("employment_status_display") or rs.get("employment_status_current"))
+    if employment_status and employment_status != "—":
+        parts.append(f"employment status {employment_status.lower()}")
 
     sponsor_active = rs.get("sponsor_active")
     if sponsor_active is not None:
@@ -92,6 +92,8 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     open_need_count = len(open_needs or [])
     if open_need_count:
         parts.append(f"{open_need_count} open needs")
+    else:
+        parts.append("no open intake needs")
 
     return " | ".join(parts)
 
