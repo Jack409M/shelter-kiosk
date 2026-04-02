@@ -10,7 +10,28 @@ from routes.case_management_parts.helpers import placeholder
 def display_label(value: str | None) -> str:
     if not value:
         return "—"
-    return value.replace("_", " ").strip().title()
+
+    normalized = value.replace("_", " ").strip().lower()
+
+    special_map = {
+        "full_time": "Full time",
+        "part_time": "Part time",
+        "drug_of_choice": "Drug of choice",
+        "vision_glasses": "Vision/Glasses",
+        "state_id_drivers_license": "State ID/Driver’s License",
+        "food_stamps_snap": "Food Stamps/SNAP",
+        "jo_wyatt": "JO Wyatt",
+        "rhn_physical": "RHN Physical",
+        "pap_smear": "Pap Smear",
+        "legal_assistance": "Legal assistance",
+    }
+
+    if value in special_map:
+        return special_map[value]
+    if normalized in special_map:
+        return special_map[normalized]
+
+    return normalized[:1].upper() + normalized[1:]
 
 
 def display_quantity_unit(quantity, unit: str | None) -> str:
