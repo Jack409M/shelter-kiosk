@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+
+CHI = ZoneInfo("America/Chicago")
+
+
+def chicago_today() -> date:
+    return datetime.now(CHI).date()
 
 
 def safe_days_since(date_text: str | None):
@@ -12,7 +20,7 @@ def safe_days_since(date_text: str | None):
     except Exception:
         return None
 
-    days = (date.today() - parsed).days
+    days = (chicago_today() - parsed).days
     if days < 0:
         return 0
     return days
@@ -83,7 +91,7 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
 
     sponsor_active = rs.get("sponsor_active")
     if sponsor_active is not None:
-        parts.append("sponsor active yes" if sponsor_active else "sponsor active no")
+        parts.append("sponsor active" if sponsor_active else "no active sponsor")
 
     kids_at_dwc = fs.get("kids_at_dwc")
     if kids_at_dwc not in (None, ""):
@@ -95,7 +103,63 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     else:
         parts.append("no open intake needs")
 
-    return " | ".join(parts)
+    return ". ".join(parts)
+
+
+def _parse_future_date_from_text(value: str | None) -> date | None:
+    text = _clean_text(value)
+    if not text:
+        return None
+
+    candidates = [
+        "%Y-%m-%d",
+        "%m/%d/%Y",
+        "%m/%d/%y",
+        "%m/%d/%Y %I:%M %p",
+        "%m/%d/%y %I:%M %p",
+        "%m/%d/%Y %H:%M",
+        "%m/%d/%y %H:%M",
+    ]
+
+    for fmt in candidates:
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+
+    return None
+
+
+def _normalize_appointment_display(value: str | None) -> str:
+    text = _clean_text(value)
+    if not text:
+        return ""
+
+    parsed_date = _parse_future_date_from_text(text)
+    if parsed_date and len(text) <= 10:
+        return parsed_date.strftime("%m/%d/%Y")
+
+    return text
+
+
+def _is_current_or_future_appointment(value: str | None) -> bool:
+    parsed_date = _parse_future_date_from_text(value)
+    if not parsed_date:
+        return False
+    return parsed_date >= chicago_today()
+
+
+def _resolve_meeting_default_next_appointment(last_note, latest_appointment) -> str:
+    latest_appointment_date = _clean_text(latest_appointment.get("appointment_date")) if latest_appointment else ""
+    last_note_next_appointment = _clean_text(last_note.get("next_appointment")) if last_note else ""
+
+    if latest_appointment_date and _is_current_or_future_appointment(latest_appointment_date):
+        return _normalize_appointment_display(latest_appointment_date)
+
+    if last_note_next_appointment and _is_current_or_future_appointment(last_note_next_appointment):
+        return _normalize_appointment_display(last_note_next_appointment)
+
+    return ""
 
 
 def build_meeting_defaults(
@@ -117,11 +181,7 @@ def build_meeting_defaults(
     last_note = notes[-1] if notes else {}
     latest_appointment = appointments[0] if appointments else {}
 
-    next_appointment = _first_non_empty(
-        latest_appointment.get("appointment_date"),
-        last_note.get("next_appointment"),
-        "",
-    )
+    next_appointment = _resolve_meeting_default_next_appointment(last_note, latest_appointment)
 
     blocker_reason = _first_non_empty(
         last_note.get("blocker_reason"),
@@ -136,7 +196,7 @@ def build_meeting_defaults(
     )
 
     return {
-        "meeting_date": date.today().isoformat(),
+        "meeting_date": chicago_today().isoformat(),
         "notes": "",
         "progress_notes": "",
         "setbacks_or_incidents": "",
