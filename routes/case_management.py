@@ -260,6 +260,91 @@ def _load_case_manager_name(staff_user_id: int | None) -> str:
     return full_name or username or "Current Staff"
 
 
+def _append_unique_text(target: list[str], value: str | None):
+    text = (value or "").strip()
+    if not text:
+        return
+    if text not in target:
+        target.append(text)
+
+
+def _collect_summary_group_labels(note: dict, group_key: str) -> list[str]:
+    labels: list[str] = []
+
+    for group in note.get("summary_groups") or []:
+        if group.get("group_key") != group_key:
+            continue
+
+        for item in group.get("items") or []:
+            item_label = (item.get("item_label") or "").strip()
+            detail = (item.get("detail") or "").strip()
+            new_value = (item.get("new_value") or "").strip()
+
+            if item_label and item_label != "—":
+                labels.append(item_label)
+                continue
+
+            if detail:
+                labels.append(detail)
+                continue
+
+            if new_value:
+                labels.append(new_value)
+
+    deduped: list[str] = []
+    for label in labels:
+        _append_unique_text(deduped, label)
+    return deduped
+
+
+def _build_merge_profile_updates(
+    note: dict,
+    recovery_snapshot: dict | None,
+    enrollment: dict | None,
+) -> list[str]:
+    updates: list[str] = []
+
+    for group_key in ["employment", "sobriety", "advancement"]:
+        for label in _collect_summary_group_labels(note, group_key):
+            _append_unique_text(updates, label)
+
+    if recovery_snapshot:
+        if recovery_snapshot.get("program_level") not in (None, ""):
+            _append_unique_text(updates, "program level")
+        if recovery_snapshot.get("sobriety_date"):
+            _append_unique_text(updates, "sobriety date")
+        if recovery_snapshot.get("sponsor_name"):
+            _append_unique_text(updates, "sponsor")
+        if recovery_snapshot.get("employment_status_current"):
+            _append_unique_text(updates, "employment status")
+        if recovery_snapshot.get("monthly_income") not in (None, ""):
+            _append_unique_text(updates, "monthly income")
+
+    if enrollment and enrollment.get("program_status"):
+        _append_unique_text(updates, "program status")
+
+    return updates
+
+
+def _build_services_merge(note_services: list[dict]) -> list[str]:
+    service_names: list[str] = []
+    for service in note_services:
+        _append_unique_text(service_names, service.get("service_type"))
+    return service_names
+
+
+def _build_needs_merge(note: dict) -> tuple[list[str], list[str], bool]:
+    needs_addressed = _collect_summary_group_labels(note, "need_addressed")
+    needs_outstanding = _collect_summary_group_labels(note, "need_outstanding")
+
+    blocker_reason = (note.get("blocker_reason") or "").strip()
+    if blocker_reason and not needs_outstanding:
+        _append_unique_text(needs_outstanding, blocker_reason)
+
+    all_identified_needs_resolved = not needs_outstanding
+    return needs_addressed, needs_outstanding, all_identified_needs_resolved
+
+
 def _build_progress_report_context(
     *,
     resident: dict,
@@ -304,6 +389,10 @@ def _build_progress_report_context(
             }
         )
 
+    services_merge = _build_services_merge(note_services)
+    needs_addressed, needs_outstanding, all_identified_needs_resolved = _build_needs_merge(note)
+    profile_updates = _build_merge_profile_updates(note, recovery_snapshot, enrollment)
+
     generated_at = utcnow_iso()
 
     return {
@@ -317,6 +406,11 @@ def _build_progress_report_context(
         "goals": goal_rows,
         "case_manager_name": case_manager_name,
         "service_rows": service_rows,
+        "services_merge": services_merge,
+        "needs_addressed_merge": needs_addressed,
+        "needs_outstanding_merge": needs_outstanding,
+        "all_identified_needs_resolved": all_identified_needs_resolved,
+        "profile_updates_merge": profile_updates,
         "program_snapshot": [
             {"label": "Program Status", "value": enrollment.get("program_status") if enrollment else "—"},
             {"label": "Level", "value": recovery_snapshot.get("program_level") or "—"},
