@@ -161,40 +161,40 @@ def record_snapshot_change_group(
     all_keys = sorted(set(previous_snapshot.keys()) | set(current_snapshot.keys()), key=lambda x: str(x))
 
     for item_key in all_keys:
-        old_value = previous_snapshot.get(item_key, "")
-        new_value = current_snapshot.get(item_key, "")
+      old_value = previous_snapshot.get(item_key, "")
+      new_value = current_snapshot.get(item_key, "")
 
-        if old_value == new_value:
-            continue
+      if old_value == new_value:
+          continue
 
-        item_label = label_map[item_key] if label_map and item_key in label_map else item_key
+      item_label = label_map[item_key] if label_map and item_key in label_map else item_key
 
-        if old_value and not new_value:
-            change_type = "removed"
-            display_name = removed_label if not label_map else item_label
-            detail = old_value
-        elif not old_value and new_value:
-            change_type = "added"
-            display_name = added_label if not label_map else item_label
-            detail = new_value
-        else:
-            change_type = "updated"
-            display_name = updated_label if not label_map else item_label
-            detail = new_value
+      if old_value and not new_value:
+          change_type = "removed"
+          display_name = removed_label if not label_map else item_label
+          detail = old_value
+      elif not old_value and new_value:
+          change_type = "added"
+          display_name = added_label if not label_map else item_label
+          detail = new_value
+      else:
+          change_type = "updated"
+          display_name = updated_label if not label_map else item_label
+          detail = new_value
 
-        insert_summary_row(
-            case_manager_update_id=case_manager_update_id,
-            change_group=change_group,
-            change_type=change_type,
-            item_key=item_key,
-            item_label=display_name,
-            old_value=old_value or None,
-            new_value=new_value or None,
-            detail=detail or None,
-            sort_order=sort_order,
-            created_at=created_at,
-        )
-        sort_order += 1
+      insert_summary_row(
+          case_manager_update_id=case_manager_update_id,
+          change_group=change_group,
+          change_type=change_type,
+          item_key=item_key,
+          item_label=display_name,
+          old_value=old_value or None,
+          new_value=new_value or None,
+          detail=detail or None,
+          sort_order=sort_order,
+          created_at=created_at,
+      )
+      sort_order += 1
 
     for item_key in sorted(current_snapshot.keys(), key=lambda x: str(x)):
         insert_summary_row(
@@ -284,16 +284,31 @@ def record_need_summary(
         )
         sort_order += 1
 
-    for need in outstanding_needs:
+    if outstanding_needs:
+        for need in outstanding_needs:
+            insert_summary_row(
+                case_manager_update_id=case_manager_update_id,
+                change_group="need_outstanding",
+                change_type="open",
+                item_key=need.get("need_key"),
+                item_label=need.get("need_label"),
+                old_value=None,
+                new_value="Open",
+                detail=need.get("need_label"),
+                sort_order=sort_order,
+                created_at=created_at,
+            )
+            sort_order += 1
+    else:
         insert_summary_row(
             case_manager_update_id=case_manager_update_id,
-            change_group="need_outstanding",
-            change_type="open",
-            item_key=need.get("need_key"),
-            item_label=need.get("need_label"),
+            change_group="need_addressed",
+            change_type="all_resolved",
+            item_key="all_identified_needs_resolved",
+            item_label="Needs Review",
             old_value=None,
-            new_value="Open",
-            detail=need.get("need_label"),
+            new_value="Resolved",
+            detail="All identified needs at intake have been resolved.",
             sort_order=sort_order,
             created_at=created_at,
         )
