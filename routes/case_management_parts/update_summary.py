@@ -20,6 +20,17 @@ from routes.case_management_parts.update_utils import display_quantity_unit
 from routes.case_management_parts.update_utils import parse_quantity
 
 
+def _clean_text(value) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _join_non_empty(parts: list[str]) -> str:
+    cleaned = [part.strip() for part in parts if part and str(part).strip()]
+    return " | ".join(cleaned)
+
+
 def insert_summary_row(
     case_manager_update_id: int,
     change_group: str,
@@ -161,40 +172,40 @@ def record_snapshot_change_group(
     all_keys = sorted(set(previous_snapshot.keys()) | set(current_snapshot.keys()), key=lambda x: str(x))
 
     for item_key in all_keys:
-      old_value = previous_snapshot.get(item_key, "")
-      new_value = current_snapshot.get(item_key, "")
+        old_value = previous_snapshot.get(item_key, "")
+        new_value = current_snapshot.get(item_key, "")
 
-      if old_value == new_value:
-          continue
+        if old_value == new_value:
+            continue
 
-      item_label = label_map[item_key] if label_map and item_key in label_map else item_key
+        item_label = label_map[item_key] if label_map and item_key in label_map else item_key
 
-      if old_value and not new_value:
-          change_type = "removed"
-          display_name = removed_label if not label_map else item_label
-          detail = old_value
-      elif not old_value and new_value:
-          change_type = "added"
-          display_name = added_label if not label_map else item_label
-          detail = new_value
-      else:
-          change_type = "updated"
-          display_name = updated_label if not label_map else item_label
-          detail = new_value
+        if old_value and not new_value:
+            change_type = "removed"
+            display_name = removed_label if not label_map else item_label
+            detail = old_value
+        elif not old_value and new_value:
+            change_type = "added"
+            display_name = added_label if not label_map else item_label
+            detail = new_value
+        else:
+            change_type = "updated"
+            display_name = updated_label if not label_map else item_label
+            detail = new_value
 
-      insert_summary_row(
-          case_manager_update_id=case_manager_update_id,
-          change_group=change_group,
-          change_type=change_type,
-          item_key=item_key,
-          item_label=display_name,
-          old_value=old_value or None,
-          new_value=new_value or None,
-          detail=detail or None,
-          sort_order=sort_order,
-          created_at=created_at,
-      )
-      sort_order += 1
+        insert_summary_row(
+            case_manager_update_id=case_manager_update_id,
+            change_group=change_group,
+            change_type=change_type,
+            item_key=item_key,
+            item_label=display_name,
+            old_value=old_value or None,
+            new_value=new_value or None,
+            detail=detail or None,
+            sort_order=sort_order,
+            created_at=created_at,
+        )
+        sort_order += 1
 
     for item_key in sorted(current_snapshot.keys(), key=lambda x: str(x)):
         insert_summary_row(
@@ -224,18 +235,14 @@ def record_service_summary(
     sort_order = starting_sort_order
 
     for service_type in service_types:
-        service_note = (form.get(f"service_notes_{service_type}") or "").strip()
+        service_note = _clean_text(form.get(f"service_notes_{service_type}"))
         quantity = parse_quantity(form.get(f"quantity_{service_type}"))
-        unit = (form.get(f"unit_{service_type}") or "").strip()
+        unit = _clean_text(form.get(f"unit_{service_type}"))
         quantity_display = display_quantity_unit(quantity, unit or None)
 
-        detail_parts = []
-        if quantity_display != "—":
-            detail_parts.append(quantity_display)
-        if service_note:
-            detail_parts.append(service_note)
-
-        detail = " | ".join(detail_parts) if detail_parts else service_type
+        detail = _join_non_empty([quantity_display if quantity_display != "—" else "", service_note])
+        if not detail:
+            detail = service_type
 
         insert_summary_row(
             case_manager_update_id=case_manager_update_id,
@@ -266,9 +273,8 @@ def record_need_summary(
     for need in changed_needs:
         status = display_label(need.get("status"))
         resolution_note = clean_value(need.get("resolution_note"))
-        detail = status
-        if resolution_note:
-            detail = f"{status} | {resolution_note}"
+
+        detail = _join_non_empty([status, resolution_note])
 
         insert_summary_row(
             case_manager_update_id=case_manager_update_id,
@@ -278,7 +284,7 @@ def record_need_summary(
             item_label=need.get("need_label"),
             old_value="Open",
             new_value=status,
-            detail=detail,
+            detail=detail or status,
             sort_order=sort_order,
             created_at=created_at,
         )
@@ -286,15 +292,16 @@ def record_need_summary(
 
     if outstanding_needs:
         for need in outstanding_needs:
+            need_label = need.get("need_label")
             insert_summary_row(
                 case_manager_update_id=case_manager_update_id,
                 change_group="need_outstanding",
                 change_type="open",
                 item_key=need.get("need_key"),
-                item_label=need.get("need_label"),
+                item_label=need_label,
                 old_value=None,
                 new_value="Open",
-                detail=need.get("need_label"),
+                detail=need_label,
                 sort_order=sort_order,
                 created_at=created_at,
             )
