@@ -2,10 +2,12 @@
   <div class="cmx-section-head">
     <div>
       <h2 class="cmx-section-title">Meeting History</h2>
-      <div class="cmx-section-subtitle">Prior notes, services, advancement decisions, and change summaries.</div>
+      <div class="cmx-section-subtitle">
+        Open prior progress notes, review the saved record, and print a formal report for any completed meeting.
+      </div>
     </div>
     <span class="cmx-inline-pill">
-      Total Meetings: {{ notes|length }}
+      {{ notes|length }} meetings
     </span>
   </div>
 
@@ -15,7 +17,7 @@
     <div class="cmx-panel-soft">
       <div class="cmx-text-card-title">No meeting history yet</div>
       <div class="cmx-summary-text">
-        This resident does not have any saved case manager meetings yet. The first saved meeting will appear here with services, needs worked, and advancement review details.
+        No saved case manager meetings are on file for this resident yet. Once a meeting is saved, it will appear here and can be reopened, edited, or printed as a progress note.
       </div>
     </div>
   {% endif %}
