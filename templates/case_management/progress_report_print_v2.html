@@ -23,7 +23,7 @@
       background: #eef2f6;
       color: var(--ink);
       font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.45;
+      line-height: 1.42;
     }
 
     body {
@@ -31,7 +31,7 @@
     }
 
     .report-shell {
-      max-width: 840px;
+      max-width: 820px;
       margin: 0 auto;
       background: #ffffff;
       border: 1px solid var(--line);
@@ -102,7 +102,7 @@
 
     .report-title {
       margin: 0 0 6px 0;
-      font-size: 1.55rem;
+      font-size: 1.5rem;
       line-height: 1.05;
       letter-spacing: 0.03em;
       color: var(--accent);
@@ -220,29 +220,11 @@
   </style>
 </head>
 <body>
-  {% set services = report.service_rows or [] %}
-  {% set service_names = [] %}
-  {% for service in services %}
-    {% if service.service_type and service.service_type != "—" and service.service_type not in service_names %}
-      {% if service_names.append(service.service_type) %}{% endif %}
-    {% endif %}
-  {% endfor %}
-
-  {% set profile_items = [] %}
-  {% for item in report.program_snapshot or [] %}
-    {% if item.value not in ("", none, "—") and item.label not in profile_items %}
-      {% if profile_items.append(item.label) %}{% endif %}
-    {% endif %}
-  {% endfor %}
-
-  {% set blocker_text = report.note.blocker_reason if report.note.blocker_reason else "" %}
-  {% set all_needs_resolved = false %}
-  {% if blocker_text %}
-    {% set blocker_lower = blocker_text | lower %}
-    {% if "all identified needs at intake have been resolved" in blocker_lower %}
-      {% set all_needs_resolved = true %}
-    {% endif %}
-  {% endif %}
+  {% set services_merge = report.services_merge or [] %}
+  {% set needs_addressed_merge = report.needs_addressed_merge or [] %}
+  {% set needs_outstanding_merge = report.needs_outstanding_merge or [] %}
+  {% set profile_updates_merge = report.profile_updates_merge or [] %}
+  {% set all_identified_needs_resolved = report.all_identified_needs_resolved %}
 
   <div class="report-shell">
     <div class="report-toolbar no-print">
@@ -284,28 +266,32 @@
       <section class="report-section">
         <h2>Contact Summary</h2>
         <div class="report-text">
-          {% if service_names %}
-            During this contact, services provided included {{ service_names | join(", ") }}.
+          {% if services_merge %}
+            During this contact, services provided included {{ services_merge | join(", ") }}.
           {% else %}
             No direct services were recorded during this contact.
           {% endif %}
 
-          {% if all_needs_resolved %}
-            All identified needs at intake have been resolved at this time.
-          {% elif blocker_text %}
-            Current identified needs discussed during this contact included {{ blocker_text }}.
-          {% else %}
-            No unresolved special needs were identified for follow up at this meeting.
+          {% if needs_addressed_merge %}
+            Needs addressed during this reporting period included {{ needs_addressed_merge | join(", ") }}.
           {% endif %}
 
-          {% if profile_items %}
-            Resident profile information reviewed or updated for this report included {{ profile_items | join(", ") }}.
+          {% if all_identified_needs_resolved %}
+            At this time, all identified needs at intake have been resolved.
+          {% elif needs_outstanding_merge %}
+            The following needs remain open or require continued follow up: {{ needs_outstanding_merge | join(", ") }}.
+          {% else %}
+            No unresolved special needs were identified at this meeting.
+          {% endif %}
+
+          {% if profile_updates_merge %}
+            Resident profile information reviewed or updated in connection with this note included {{ profile_updates_merge | join(", ") }}.
           {% endif %}
 
           {% if report.note.ready_for_next_level_display and report.note.ready_for_next_level_display != "—" %}
-            Advancement review at this meeting recorded a determination of {{ report.note.ready_for_next_level_display }}{% if report.note.recommended_next_level %}, with recommendation for level {{ report.note.recommended_next_level }}{% endif %}.
+            Advancement review recorded a determination of {{ report.note.ready_for_next_level_display }}{% if report.note.recommended_next_level %}, with recommendation for level {{ report.note.recommended_next_level }}{% endif %}.
           {% elif report.note.staff_review_note %}
-            Staff review noted {{ report.note.staff_review_note }}.
+            Staff review reflected {{ report.note.staff_review_note }}.
           {% endif %}
         </div>
       </section>
