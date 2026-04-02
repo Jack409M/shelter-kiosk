@@ -10,12 +10,12 @@
         {% for need in open_needs[:4] %}
           <div class="cmx-row-block">
             <span>{{ need["need_label"] }}</span>
-            <span>{% if loop.first %}Open{% else %}Pending{% endif %}</span>
+            <span>Open</span>
           </div>
         {% endfor %}
       </div>
     {% else %}
-      <p class="cmx-muted">No open needs recorded.</p>
+      <p class="cmx-muted">All identified intake needs have been resolved or no open needs are currently on file.</p>
     {% endif %}
   </div>
 
@@ -35,7 +35,7 @@
         {% endfor %}
       </div>
     {% else %}
-      <p class="cmx-muted">No UA entries recorded.</p>
+      <p class="cmx-muted">No UA entries are recorded for this resident.</p>
     {% endif %}
   </div>
 
@@ -55,7 +55,7 @@
         {% endfor %}
       </div>
     {% else %}
-      <p class="cmx-muted">No active medications recorded.</p>
+      <p class="cmx-muted">No active medications are recorded.</p>
     {% endif %}
   </div>
 
@@ -74,15 +74,15 @@
 
         {% set latest_child = children[0] %}
         <div class="cmx-chip-block">
-          <strong>Latest Child Record</strong><br>
-          {{ latest_child["child_name"] or "Unnamed Child" }}
+          <strong>Latest child record</strong><br>
+          {{ latest_child["child_name"] or "Unnamed child" }}
           {% if latest_child.services and latest_child.services[0]["service_type_display"] %}
             <br>{{ latest_child.services[0]["service_type_display"] }}
           {% endif %}
         </div>
       </div>
     {% else %}
-      <p class="cmx-muted">No child records found.</p>
+      <p class="cmx-muted">No child records are on file.</p>
     {% endif %}
   </div>
 
