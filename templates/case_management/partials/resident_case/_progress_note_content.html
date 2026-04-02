@@ -1,458 +1,148 @@
 {% macro render_progress_note(note) %}
+  {% set note_meeting_date = note["meeting_date"] %}
   {% set note_notes = note["notes"] %}
   {% set note_progress_notes = note["progress_notes"] %}
   {% set note_setbacks_or_incidents = note["setbacks_or_incidents"] %}
   {% set note_action_items = note["action_items"] %}
   {% set note_next_appointment = note["next_appointment"] %}
-  {% set note_overall_summary = note["overall_summary"] %}
-  {% set note_ready_for_next_level = note["ready_for_next_level"] %}
   {% set note_ready_for_next_level_display = note["ready_for_next_level_display"] %}
   {% set note_recommended_next_level = note["recommended_next_level"] %}
-  {% set note_blocker_reason = note["blocker_reason"] %}
-  {% set note_override_or_exception = note["override_or_exception"] %}
   {% set note_staff_review_note = note["staff_review_note"] %}
-  {% set note_updated_grit = note["updated_grit"] %}
-  {% set note_parenting_class_completed = note["parenting_class_completed"] %}
-  {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
-  {% set note_services = note["services"] %}
-  {% set note_summary_groups = note["summary_groups"] or [] %}
-
-  {% if note_notes %}
-    <div class="case-note-section">
-      <strong>Case summary:</strong><br>
-      <div class="case-note-text-block">{{ note_notes }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_progress_notes %}
-    <div class="case-note-section">
-      <strong>Progress since last meeting:</strong><br>
-      <div class="case-note-text-block">{{ note_progress_notes }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_setbacks_or_incidents %}
-    <div class="case-note-section">
-      <strong>Barriers and concerns:</strong><br>
-      <div class="case-note-text-block">{{ note_setbacks_or_incidents }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_action_items %}
-    <div class="case-note-section">
-      <strong>Plan and next steps:</strong><br>
-      <div class="case-note-text-block">{{ note_action_items }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_next_appointment %}
-    <div class="case-note-section">
-      <strong>Next appointment:</strong><br>
-      <div class="case-note-text-block">{{ note_next_appointment }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_overall_summary %}
-    <div class="case-note-section">
-      <strong>Meeting overview:</strong><br>
-      <div class="case-note-text-block">{{ note_overall_summary }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_ready_for_next_level is not none or note_recommended_next_level or note_blocker_reason or note_override_or_exception or note_staff_review_note %}
-    <div class="case-note-section">
-      <strong>Advancement review:</strong>
-
-      <div class="case-note-service-card-grid">
-        {% if note_ready_for_next_level is not none %}
-          <div class="case-note-service-card">
-            <div><strong>Readiness for next level</strong></div>
-            <div class="case-note-service-meta">{{ note_ready_for_next_level_display or "—" }}</div>
-          </div>
-        {% endif %}
-
-        {% if note_recommended_next_level %}
-          <div class="case-note-service-card">
-            <div><strong>Recommended next level</strong></div>
-            <div class="case-note-service-meta">{{ note_recommended_next_level }}</div>
-          </div>
-        {% endif %}
-
-        {% if note_blocker_reason %}
-          <div class="case-note-service-card">
-            <div><strong>Barrier to advancement</strong></div>
-            <div class="case-note-service-text case-note-text-block">{{ note_blocker_reason }}</div>
-          </div>
-        {% endif %}
-
-        {% if note_override_or_exception %}
-          <div class="case-note-service-card">
-            <div><strong>Override or exception</strong></div>
-            <div class="case-note-service-text case-note-text-block">{{ note_override_or_exception }}</div>
-          </div>
-        {% endif %}
-
-        {% if note_staff_review_note %}
-          <div class="case-note-service-card">
-            <div><strong>Staff review note</strong></div>
-            <div class="case-note-service-text case-note-text-block">{{ note_staff_review_note }}</div>
-          </div>
-        {% endif %}
-      </div>
-    </div>
-  {% endif %}
-
-  {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
-    <div class="case-note-section">
-      <strong>Structured progress:</strong>
-      <span class="case-note-structured">
-        {% if note_updated_grit is not none %}
-          Grit: {{ note_updated_grit }}
-        {% endif %}
-
-        {% if note_parenting_class_completed is not none %}
-          {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
-          Parenting class completed: {{ "Yes" if note_parenting_class_completed else "No" }}
-        {% endif %}
-
-        {% if note_warrants_or_fines_paid is not none %}
-          {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
-          Warrants or fines paid: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
-        {% endif %}
-      </span>
-    </div>
-  {% endif %}
-
-  {% if note_summary_groups %}
-    <div class="case-note-section">
-      <strong>Meeting changes summary:</strong>
-
-      {% for summary_group in note_summary_groups %}
-        <div class="case-note-section">
-          <strong>{{ summary_group["group_label"] }}:</strong>
-
-          {% for item in summary_group["items"] %}
-            {% set item_label = item["item_label"] or "—" %}
-            {% set old_value = item["old_value"] %}
-            {% set new_value = item["new_value"] %}
-            {% set detail = item["detail"] %}
-            {% set change_type_display = item["change_type_display"] %}
-            {% set normalized_new = (new_value|string|trim) if new_value is not none else "" %}
-            {% set normalized_detail = (detail|string|trim) if detail is not none else "" %}
-            {% set show_detail = false %}
-
-            {% if old_value and new_value and old_value != new_value %}
-              {% set show_detail = normalized_detail != "" and normalized_detail != normalized_new %}
-            {% elif new_value %}
-              {% set show_detail = normalized_detail != "" and normalized_detail != normalized_new %}
-            {% elif change_type_display and change_type_display != "Snapshot" %}
-              {% set show_detail = normalized_detail != "" %}
-            {% else %}
-              {% set show_detail = normalized_detail != "" %}
-            {% endif %}
-
-            <div class="case-note-service-card">
-              <div><strong>{{ item_label }}</strong></div>
-
-              {% if old_value and new_value and old_value != new_value %}
-                <div class="case-note-service-meta">
-                  {{ old_value }} → {{ new_value }}
-                </div>
-              {% elif new_value %}
-                <div class="case-note-service-meta">
-                  {{ new_value }}
-                </div>
-              {% elif change_type_display and change_type_display != "Snapshot" %}
-                <div class="case-note-service-meta">
-                  {{ change_type_display }}
-                </div>
-              {% endif %}
-
-              {% if show_detail %}
-                <div class="case-note-service-text case-note-text-block">
-                  {{ detail }}
-                </div>
-              {% endif %}
-            </div>
-          {% endfor %}
-        </div>
-      {% endfor %}
-    </div>
-  {% elif note_services %}
-    <div class="case-note-section">
-      <strong>Services provided:</strong>
-
-      <div class="case-note-service-card-grid">
-        {% for service in note_services %}
-          {% set service_type = service["service_type"] %}
-          {% set service_date = service["service_date"] %}
-          {% set service_quantity_display = service["quantity_display"] %}
-          {% set service_notes_value = service["notes"] %}
-
-          <div class="case-note-service-card">
-            <div><strong>{{ service_type or "—" }}</strong></div>
-            <div class="case-note-service-meta">
-              {{ service_date or "—" }}
-              {% if service_quantity_display and service_quantity_display != "—" %}
-                — {{ service_quantity_display }}
-              {% endif %}
-            </div>
-
-            {% if service_notes_value %}
-              <div class="case-note-service-text case-note-text-block">
-                {{ service_notes_value }}
-              </div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
-{% endmacro %}
-
-
-{% macro render_progress_note_print_summary(note) %}
-  {% set note_notes = note["notes"] %}
-  {% set note_progress_notes = note["progress_notes"] %}
-  {% set note_setbacks_or_incidents = note["setbacks_or_incidents"] %}
-  {% set note_action_items = note["action_items"] %}
-  {% set note_next_appointment = note["next_appointment"] %}
-  {% set note_overall_summary = note["overall_summary"] %}
-  {% set note_ready_for_next_level_display = note["ready_for_next_level_display"] %}
-  {% set note_recommended_next_level = note["recommended_next_level"] %}
-  {% set note_blocker_reason = note["blocker_reason"] %}
-  {% set note_override_or_exception = note["override_or_exception"] %}
-  {% set note_staff_review_note = note["staff_review_note"] %}
-  {% set note_updated_grit = note["updated_grit"] %}
-  {% set note_parenting_class_completed = note["parenting_class_completed"] %}
-  {% set note_warrants_or_fines_paid = note["warrants_or_fines_paid"] %}
   {% set note_services = note["services"] or [] %}
   {% set note_summary_groups = note["summary_groups"] or [] %}
 
   {% set ns = namespace(
-    resident_services=[],
-    child_services=[],
-    file_changes=[],
-    outstanding_needs=[],
-    resolved_needs=[],
-    advancement_items=[],
-    all_needs_resolved=false
+    services_merge=[],
+    needs_addressed_merge=[],
+    needs_outstanding_merge=[],
+    profile_updates_merge=[],
+    all_identified_needs_resolved=false
   ) %}
 
   {% for service in note_services %}
-    {% set service_type = service["service_type"] or "" %}
-    {% if service_type and service_type not in ns.resident_services %}
-      {% set _ = ns.resident_services.append(service_type) %}
+    {% set service_type = (service["service_type"] or "")|trim %}
+    {% if service_type and service_type not in ns.services_merge %}
+      {% set _ = ns.services_merge.append(service_type) %}
     {% endif %}
   {% endfor %}
-
-  {% if note_ready_for_next_level_display and note_ready_for_next_level_display != "—" %}
-    {% set _ = ns.advancement_items.append("Readiness for next level: " ~ note_ready_for_next_level_display) %}
-  {% endif %}
-  {% if note_recommended_next_level %}
-    {% set _ = ns.advancement_items.append("Recommended next level: " ~ note_recommended_next_level) %}
-  {% endif %}
-  {% if note_blocker_reason %}
-    {% set _ = ns.advancement_items.append("Barrier to advancement: " ~ note_blocker_reason) %}
-  {% endif %}
-  {% if note_override_or_exception %}
-    {% set _ = ns.advancement_items.append("Override or exception: " ~ note_override_or_exception) %}
-  {% endif %}
-  {% if note_staff_review_note %}
-    {% set _ = ns.advancement_items.append("Staff review note: " ~ note_staff_review_note) %}
-  {% endif %}
 
   {% for summary_group in note_summary_groups %}
-    {% set group_key = summary_group.get("group_key", "") %}
+    {% set group_key = summary_group["group_key"] %}
+    {% for item in summary_group["items"] %}
+      {% set item_label = (item["item_label"] or "")|trim %}
+      {% set detail = (item["detail"] or "")|trim %}
+      {% set new_value = (item["new_value"] or "")|trim %}
 
-    {% if group_key == "service" %}
-      {% for item in summary_group["items"] %}
-        {% set label = item["item_label"] or item["detail"] or item["new_value"] or "" %}
-        {% if label and label not in ns.resident_services %}
-          {% set _ = ns.resident_services.append(label) %}
-        {% endif %}
-      {% endfor %}
-    {% elif group_key == "child" %}
-      {% for item in summary_group["items"] %}
-        {% set detail = item["detail"] or item["new_value"] or item["change_type_display"] or item["item_label"] or "" %}
-        {% if detail and detail not in ns.file_changes %}
-          {% set _ = ns.file_changes.append("Child update: " ~ detail) %}
-        {% endif %}
-      {% endfor %}
-    {% elif group_key == "medication" %}
-      {% for item in summary_group["items"] %}
-        {% set detail = item["detail"] or item["new_value"] or item["item_label"] or "" %}
-        {% if detail and detail not in ns.file_changes %}
-          {% set _ = ns.file_changes.append("Medication update: " ~ detail) %}
-        {% endif %}
-      {% endfor %}
-    {% elif group_key == "employment" or group_key == "sobriety" %}
-      {% for item in summary_group["items"] %}
-        {% set label = item["item_label"] or "" %}
-        {% set value = item["new_value"] or item["detail"] or item["change_type_display"] or "" %}
-        {% set entry = label ~ ": " ~ value if value else label %}
-        {% if entry and entry not in ns.file_changes %}
-          {% set _ = ns.file_changes.append(entry) %}
-        {% endif %}
-      {% endfor %}
-    {% elif group_key == "advancement" %}
-      {% for item in summary_group["items"] %}
-        {% set label = item["item_label"] or "Advancement" %}
-        {% set value = item["new_value"] or item["detail"] or item["change_type_display"] or "" %}
-        {% set entry = label ~ ": " ~ value if value else label %}
-        {% if entry and entry not in ns.advancement_items %}
-          {% set _ = ns.advancement_items.append(entry) %}
-        {% endif %}
-      {% endfor %}
-    {% elif group_key == "need_outstanding" %}
-      {% for item in summary_group["items"] %}
-        {% set label = item["item_label"] or item["detail"] or item["new_value"] or "" %}
-        {% if label and label not in ns.outstanding_needs %}
-          {% set _ = ns.outstanding_needs.append(label) %}
-        {% endif %}
-      {% endfor %}
-    {% elif group_key == "need_addressed" %}
-      {% for item in summary_group["items"] %}
+      {% if group_key == "need_addressed" %}
         {% if item["change_type"] == "all_resolved" %}
-          {% set ns.all_needs_resolved = true %}
+          {% set ns.all_identified_needs_resolved = true %}
         {% else %}
-          {% set label = item["item_label"] or item["detail"] or item["new_value"] or "" %}
-          {% if label and label not in ns.resolved_needs %}
-            {% set _ = ns.resolved_needs.append(label) %}
+          {% set label_value = item_label if item_label and item_label != "—" else detail if detail else new_value %}
+          {% if label_value and label_value not in ns.needs_addressed_merge %}
+            {% set _ = ns.needs_addressed_merge.append(label_value) %}
           {% endif %}
         {% endif %}
-      {% endfor %}
-    {% endif %}
+      {% elif group_key == "need_outstanding" %}
+        {% set label_value = item_label if item_label and item_label != "—" else detail if detail else new_value %}
+        {% if label_value and label_value not in ns.needs_outstanding_merge %}
+          {% set _ = ns.needs_outstanding_merge.append(label_value) %}
+        {% endif %}
+      {% elif group_key == "employment" or group_key == "sobriety" %}
+        {% set label_value = item_label if item_label and item_label != "—" else detail if detail else new_value %}
+        {% if label_value and label_value not in ns.profile_updates_merge %}
+          {% set _ = ns.profile_updates_merge.append(label_value) %}
+        {% endif %}
+      {% elif group_key == "advancement" %}
+        {% if item_label in ["Readiness for next level", "Recommended next level", "Barrier to advancement", "Override or exception", "Staff review note", "Setbacks or incidents"] %}
+          {% if item_label and item_label not in ns.profile_updates_merge %}
+            {% set _ = ns.profile_updates_merge.append(item_label) %}
+          {% endif %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
   {% endfor %}
 
-  {% if note_notes %}
-    <div class="case-note-section">
-      <strong>Case summary:</strong><br>
-      <div class="case-note-text-block">{{ note_notes }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_progress_notes %}
-    <div class="case-note-section">
-      <strong>Progress since last meeting:</strong><br>
-      <div class="case-note-text-block">{{ note_progress_notes }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_setbacks_or_incidents %}
-    <div class="case-note-section">
-      <strong>Barriers and concerns:</strong><br>
-      <div class="case-note-text-block">{{ note_setbacks_or_incidents }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_action_items %}
-    <div class="case-note-section">
-      <strong>Plan and next steps:</strong><br>
-      <div class="case-note-text-block">{{ note_action_items }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_next_appointment %}
-    <div class="case-note-section">
-      <strong>Next appointment:</strong><br>
-      <div class="case-note-text-block">{{ note_next_appointment }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_overall_summary %}
-    <div class="case-note-section">
-      <strong>Meeting overview:</strong><br>
-      <div class="case-note-text-block">{{ note_overall_summary }}</div>
-    </div>
-  {% endif %}
-
-  {% if note_updated_grit is not none or note_parenting_class_completed is not none or note_warrants_or_fines_paid is not none %}
-    <div class="case-note-section">
-      <strong>Structured progress:</strong>
-      <span class="case-note-structured">
-        {% if note_updated_grit is not none %}
-          Grit: {{ note_updated_grit }}
+  <div class="case-note-report">
+    <div class="case-note-report-header">
+      <div class="case-note-report-meta">
+        <strong>Meeting {{ note_meeting_date or "—" }}</strong>
+        {% if note_next_appointment %}
+          <span class="case-note-report-sep">|</span>
+          <span>Follow up Appt: {{ note_next_appointment }}</span>
         {% endif %}
-        {% if note_parenting_class_completed is not none %}
-          {% if note_updated_grit is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
-          Parenting class completed: {{ "Yes" if note_parenting_class_completed else "No" }}
-        {% endif %}
-        {% if note_warrants_or_fines_paid is not none %}
-          {% if note_updated_grit is not none or note_parenting_class_completed is not none %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
-          Warrants or fines paid: {{ "Yes" if note_warrants_or_fines_paid else "No" }}
-        {% endif %}
-      </span>
+      </div>
     </div>
-  {% endif %}
 
-  <div class="case-note-section">
-    <strong>Summary:</strong>
-
-    <div class="case-print-summary-grid">
-      {% if ns.resident_services %}
-        <div class="case-print-summary-section">
-          <div class="case-print-summary-title">Services provided</div>
-          <ul class="case-print-summary-list">
-            {% for item in ns.resident_services %}
-              <li>{{ item }}</li>
-            {% endfor %}
-          </ul>
-        </div>
+    <div class="case-note-report-section">
+      <div class="case-note-report-title">Case Summary</div>
+      {% if note_notes %}
+        <div class="case-note-text-block">{{ note_notes }}</div>
+      {% else %}
+        <div class="case-note-report-empty">No case summary was recorded for this meeting.</div>
       {% endif %}
+    </div>
 
-      {% if ns.resolved_needs %}
-        <div class="case-print-summary-section">
-          <div class="case-print-summary-title">Needs resolved</div>
-          <ul class="case-print-summary-list">
-            {% for item in ns.resolved_needs %}
-              <li>{{ item }}</li>
-            {% endfor %}
-          </ul>
-        </div>
+    <div class="case-note-report-section">
+      <div class="case-note-report-title">Contact Summary</div>
+      <div class="case-note-text-block">
+        {% if ns.services_merge %}
+          During this contact, services provided included {{ ns.services_merge | join(", ") }}.
+        {% else %}
+          No direct services were recorded during this contact.
+        {% endif %}
+
+        {% if ns.needs_addressed_merge %}
+          Needs addressed during this reporting period included {{ ns.needs_addressed_merge | join(", ") }}.
+        {% endif %}
+
+        {% if ns.all_identified_needs_resolved %}
+          At this time, all identified needs at intake have been resolved.
+        {% elif ns.needs_outstanding_merge %}
+          The following needs remain open or require continued follow up: {{ ns.needs_outstanding_merge | join(", ") }}.
+        {% else %}
+          No unresolved special needs were identified at this meeting.
+        {% endif %}
+
+        {% if ns.profile_updates_merge %}
+          Resident profile information reviewed or updated in connection with this note included {{ ns.profile_updates_merge | join(", ") }}.
+        {% endif %}
+
+        {% if note_ready_for_next_level_display and note_ready_for_next_level_display != "—" %}
+          Advancement review recorded a determination of {{ note_ready_for_next_level_display }}{% if note_recommended_next_level %}, with recommendation for level {{ note_recommended_next_level }}{% endif %}.
+        {% elif note_staff_review_note %}
+          Staff review reflected {{ note_staff_review_note }}.
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="case-note-report-section">
+      <div class="case-note-report-title">Progress Since Last Meeting</div>
+      {% if note_progress_notes %}
+        <div class="case-note-text-block">{{ note_progress_notes }}</div>
+      {% else %}
+        <div class="case-note-report-empty">No progress update was recorded for this meeting.</div>
       {% endif %}
+    </div>
 
-      {% if ns.all_needs_resolved %}
-        <div class="case-print-summary-section">
-          <div class="case-print-summary-title">Needs status</div>
-          <ul class="case-print-summary-list">
-            <li>All identified needs at intake have been resolved.</li>
-          </ul>
-        </div>
-      {% endif %}
+    {% if note_setbacks_or_incidents %}
+      <div class="case-note-report-section">
+        <div class="case-note-report-title">Barriers And Concerns</div>
+        <div class="case-note-text-block">{{ note_setbacks_or_incidents }}</div>
+      </div>
+    {% endif %}
 
-      {% if ns.file_changes %}
-        <div class="case-print-summary-section">
-          <div class="case-print-summary-title">Profile and file changes</div>
-          <ul class="case-print-summary-list">
-            {% for item in ns.file_changes %}
-              <li>{{ item }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% endif %}
-
-      {% if ns.advancement_items %}
-        <div class="case-print-summary-section">
-          <div class="case-print-summary-title">Advancement review</div>
-          <ul class="case-print-summary-list">
-            {% for item in ns.advancement_items %}
-              <li>{{ item }}</li>
-            {% endfor %}
-          </ul>
-        </div>
-      {% endif %}
-
-      {% if ns.outstanding_needs %}
-        <div class="case-print-summary-section">
-          <div class="case-print-summary-title">Outstanding needs</div>
-          <ul class="case-print-summary-list">
-            {% for item in ns.outstanding_needs %}
-              <li>{{ item }}</li>
-            {% endfor %}
-          </ul>
-        </div>
+    <div class="case-note-report-section">
+      <div class="case-note-report-title">Plan And Next Steps</div>
+      {% if note_action_items %}
+        <div class="case-note-text-block">{{ note_action_items }}</div>
+      {% else %}
+        <div class="case-note-report-empty">No plan or next steps were recorded for this meeting.</div>
       {% endif %}
     </div>
   </div>
+{% endmacro %}
+
+
+{% macro render_progress_note_print_summary(note) %}
+  {{ render_progress_note(note) }}
 {% endmacro %}
