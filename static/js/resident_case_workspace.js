@@ -103,17 +103,20 @@ function setupMeetingDraft() {
       lastSavedAt = new Date();
 
       setSaveMessage(
-        "Draft protected while working" +
-          (lastSavedAt ? " • Saved " + lastSavedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "")
+        "Meeting draft protected" +
+          (lastSavedAt
+            ? " • Saved " +
+              lastSavedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+            : "")
       );
     } catch (err) {
       console.warn("Could not save meeting draft", err);
-      setSaveMessage("Draft protection had a problem on this browser");
+      setSaveMessage("Draft protection could not save on this browser");
     }
   }
 
   function queueSave() {
-    setSaveMessage("Saving draft...");
+    setSaveMessage("Saving meeting draft...");
     window.clearTimeout(saveTimer);
     saveTimer = window.setTimeout(saveDraft, 300);
   }
@@ -147,10 +150,10 @@ function setupMeetingDraft() {
         }
       });
 
-      setSaveMessage("Draft restored for this resident");
+      setSaveMessage("Meeting draft restored for this resident");
     } catch (err) {
       console.warn("Could not load meeting draft", err);
-      setSaveMessage("Draft found but could not be restored");
+      setSaveMessage("A saved draft was found but could not be restored");
     }
   }
 
@@ -175,7 +178,7 @@ function setupMeetingDraft() {
   loadDraft();
 
   if (!justSaved && !localStorage.getItem(storageKey)) {
-    setSaveMessage("Draft protection active");
+    setSaveMessage("Meeting draft protection active");
   }
 }
 
@@ -231,9 +234,11 @@ function setupMeetingHistory() {
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
     modalBody.innerHTML = "";
+
     if (modalSubtitle) {
       modalSubtitle.textContent = "";
     }
+
     if (modalPrintLink) {
       modalPrintLink.setAttribute("href", "#");
     }
@@ -257,25 +262,31 @@ function setupMeetingHistory() {
 
     tile.classList.add("is-active");
 
-    if (panel) {
-      modalBody.innerHTML = panel.innerHTML;
-
-      var createdEl = modalBody.querySelector(".case-note-created");
-      if (modalSubtitle && createdEl) {
-        modalSubtitle.textContent = createdEl.textContent;
-        createdEl.remove();
-      } else if (modalSubtitle) {
-        modalSubtitle.textContent = "";
-      }
-
-      var printLinkInPanel = panel.querySelector('.case-note-actions a[href*="/print"]');
-      if (modalPrintLink && printLinkInPanel) {
-        modalPrintLink.setAttribute("href", printLinkInPanel.getAttribute("href"));
-      }
-
-      modal.classList.add("is-open");
-      modal.setAttribute("aria-hidden", "false");
+    if (!panel) {
+      return;
     }
+
+    modalBody.innerHTML = panel.innerHTML;
+
+    var createdEl = modalBody.querySelector(".case-note-created");
+    if (modalSubtitle && createdEl) {
+      modalSubtitle.textContent = createdEl.textContent;
+      createdEl.remove();
+    } else if (modalSubtitle) {
+      modalSubtitle.textContent = "";
+    }
+
+    var printLinkInPanel = panel.querySelector('.case-note-actions a[href*="/print"]');
+    if (modalPrintLink) {
+      if (printLinkInPanel) {
+        modalPrintLink.setAttribute("href", printLinkInPanel.getAttribute("href"));
+      } else {
+        modalPrintLink.setAttribute("href", "#");
+      }
+    }
+
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
   }
 
   tiles.forEach(function(tile) {
