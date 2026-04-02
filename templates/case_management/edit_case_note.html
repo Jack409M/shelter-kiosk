@@ -1,10 +1,10 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='case_management_resident_case.css', v='20260330b') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
   <style>
     .edit-note-shell {
-      max-width: 1120px;
+      max-width: 1240px;
       margin: 0 auto;
       display: grid;
       gap: 20px;
@@ -13,8 +13,8 @@
     .edit-note-card {
       background: #ffffff;
       border: 1px solid #dbe5f0;
-      border-radius: 22px;
-      padding: 22px;
+      border-radius: 18px;
+      padding: 24px;
       box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
     }
 
@@ -24,7 +24,7 @@
       gap: 16px;
       align-items: center;
       flex-wrap: wrap;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
 
     .edit-note-title {
@@ -37,7 +37,7 @@
     .edit-note-subtitle {
       margin-top: 4px;
       color: #475569;
-      font-size: 0.95rem;
+      font-size: 0.96rem;
     }
 
     .edit-note-pill {
@@ -53,164 +53,40 @@
       font-weight: 700;
     }
 
-    .edit-note-grid {
-      display: grid;
-      gap: 16px;
-    }
-
-    .edit-note-grid-4 {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
-    .edit-note-grid-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .edit-note-panel {
-      border-radius: 18px;
-      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-      border: 1px solid #dbe5f0;
-      padding: 16px;
-    }
-
-    .edit-note-panel h3 {
-      margin: 0 0 10px 0;
-      font-size: 1.05rem;
-      font-weight: 800;
-      color: #0f172a;
-    }
-
-    .edit-note-field {
-      display: grid;
-      gap: 8px;
-      min-width: 0;
-    }
-
-    .edit-note-field label,
-    .edit-note-panel > label,
-    .edit-note-card > label {
-      font-weight: 800;
-      color: #0f172a;
-      font-size: 0.92rem;
-    }
-
-    .edit-note-card input,
-    .edit-note-card select,
-    .edit-note-card textarea {
-      width: 100%;
-      border: 1px solid #cfd9e5;
-      border-radius: 14px;
-      background: #ffffff;
-      color: #0f172a;
-      padding: 11px 12px;
-      font: inherit;
-    }
-
-    .edit-note-card textarea {
-      min-height: 130px;
-      resize: vertical;
-    }
-
-    .edit-note-card input:focus,
-    .edit-note-card select:focus,
-    .edit-note-card textarea:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.16);
-    }
-
     .edit-note-help {
       color: #475569;
       font-size: 0.9rem;
-      margin: 0 0 10px 0;
-    }
-
-    .edit-note-radio-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      color: #334155;
-      font-weight: 600;
-    }
-
-    .edit-note-radio-row input[type="radio"] {
-      width: auto;
       margin: 0;
     }
 
-    .edit-note-service-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    .edit-note-service-card {
-      border-radius: 18px;
-      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-      border: 1px solid #dbe5f0;
-      padding: 14px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .edit-note-checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-weight: 800;
-      color: #0f172a;
-    }
-
-    .edit-note-checkbox-label input[type="checkbox"] {
-      width: auto;
-      margin: 0;
-      accent-color: #2563eb;
-    }
-
-    .edit-note-qty,
-    .edit-note-unit,
-    .edit-note-notes {
-      margin: 0;
+    .edit-note-section {
+      margin-top: 18px;
     }
 
     .edit-note-actions {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      margin-top: 18px;
+      margin-top: 20px;
     }
 
-    .edit-note-actions button,
     .edit-note-actions .btn {
       display: inline-flex;
       justify-content: center;
       align-items: center;
       gap: 8px;
-      border-radius: 14px;
-      padding: 11px 16px;
+      border-radius: 10px;
+      padding: 12px 16px;
       font-weight: 700;
       text-decoration: none;
-      border: 1px solid transparent;
-      cursor: pointer;
-    }
-
-    .edit-note-actions button {
-      background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
-      color: #ffffff;
-    }
-
-    .edit-note-actions .btn {
+      border: 1px solid #cfd9e5;
       background: #ffffff;
       color: #0f172a;
-      border-color: #cfd9e5;
     }
 
     @media (max-width: 900px) {
-      .edit-note-grid-4,
-      .edit-note-grid-2,
-      .edit-note-service-grid {
-        grid-template-columns: 1fr;
+      .edit-note-actions {
+        flex-direction: column;
       }
     }
   </style>
@@ -267,22 +143,29 @@
     <div class="edit-note-head">
       <div>
         <h1 class="edit-note-title">Edit Case Note</h1>
-        <div class="edit-note-subtitle">{{ resident_name or "Resident" }} · update the meeting record, services, and advancement review.</div>
+        <div class="edit-note-subtitle">
+          {{ resident_name or "Resident" }} · update the saved meeting record, services, and advancement review.
+        </div>
       </div>
       <div class="edit-note-pill">Meeting {{ meeting_date or "—" }}</div>
+    </div>
+
+    <div class="cmx-appt" style="margin-bottom:16px;">
+      <strong>Appointment note</strong><br>
+      The <strong>Next Appointment For This Note</strong> field prints inside this meeting report. The official appointment record should be created from the resident case workspace.
     </div>
 
     <form method="post" action="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-      <div class="edit-note-grid edit-note-grid-4">
-        <div class="edit-note-field">
-          <label><strong>Meeting Date</strong></label>
+      <div class="cmx-grid cmx-grid-4">
+        <div class="cmx-field">
+          <label>Meeting Date</label>
           <input type="date" name="meeting_date" value="{{ meeting_date or '' }}" required>
         </div>
 
-        <div class="edit-note-field">
-          <label><strong>Next Appointment</strong></label>
+        <div class="cmx-field">
+          <label>Next Appointment For This Note</label>
           <input
             type="text"
             name="next_appointment"
@@ -290,24 +173,23 @@
             placeholder="04/15/2026 10:00 AM"
             inputmode="text"
           >
-          <div class="edit-note-help">Use month/day/year and time, for example 04/15/2026 10:00 AM.</div>
+          <div class="cmx-muted">Use month/day/year and time, for example 04/15/2026 10:00 AM.</div>
         </div>
 
-        <div class="edit-note-field">
-          <label><strong>Updated Grit</strong></label>
+        <div class="cmx-field">
+          <label>Updated Grit</label>
           <input
             type="number"
             name="updated_grit"
             min="0"
             max="100"
-            class="edit-note-qty"
             inputmode="numeric"
             value="{{ updated_grit_value if updated_grit_value is not none else '' }}"
           >
         </div>
 
-        <div class="edit-note-field">
-          <label><strong>Ready For Next Level</strong></label>
+        <div class="cmx-field">
+          <label>Ready For Next Level</label>
           <select name="ready_for_next_level">
             <option value="" {% if ready_for_next_level_value is none %}selected{% endif %}>—</option>
             <option value="yes" {% if ready_for_next_level_value == 1 or ready_for_next_level_value is sameas true %}selected{% endif %}>Yes</option>
@@ -316,160 +198,149 @@
         </div>
       </div>
 
-      <div class="edit-note-grid edit-note-grid-2" style="margin-top:16px;">
-        <div class="edit-note-panel">
-          <h3>Meeting Narrative</h3>
-
-          <div class="edit-note-field">
-            <label><strong>Notes</strong></label>
-            <textarea name="notes" rows="4">{{ notes_value or "" }}</textarea>
-          </div>
-
-          <div class="edit-note-field" style="margin-top:12px;">
-            <label><strong>Progress Notes</strong></label>
-            <textarea name="progress_notes" rows="4">{{ progress_notes_value or "" }}</textarea>
-          </div>
-
-          <div class="edit-note-field" style="margin-top:12px;">
-            <label><strong>Setbacks Or Incidents</strong></label>
-            <textarea name="setbacks_or_incidents" rows="4">{{ setbacks_or_incidents_value or "" }}</textarea>
-          </div>
-
-          <div class="edit-note-field" style="margin-top:12px;">
-            <label><strong>Action Items</strong></label>
-            <textarea name="action_items" rows="4">{{ action_items_value or "" }}</textarea>
-          </div>
-
-          <div class="edit-note-field" style="margin-top:12px;">
-            <label><strong>Overall Summary of Meeting</strong></label>
-            <textarea name="overall_summary" rows="4">{{ overall_summary_value or "" }}</textarea>
-          </div>
-        </div>
-
-        <div class="edit-note-panel">
-          <h3>Advancement Review</h3>
-
-          <div class="edit-note-field">
-            <label><strong>Recommended Next Level</strong></label>
-            <input type="text" name="recommended_next_level" value="{{ recommended_next_level_value or '' }}">
-          </div>
-
-          <div class="edit-note-field" style="margin-top:12px;">
-            <label><strong>Blocker Reason</strong></label>
-            <textarea name="blocker_reason" rows="4">{{ blocker_reason_value or "" }}</textarea>
-          </div>
-
-          <div class="edit-note-field" style="margin-top:12px;">
-            <label><strong>Override Or Exception</strong></label>
-            <textarea name="override_or_exception" rows="4">{{ override_or_exception_value or "" }}</textarea>
-          </div>
-
-          <div class="edit-note-field" style="margin-top:12px;">
-            <label><strong>Staff Review Note</strong></label>
-            <textarea name="staff_review_note" rows="4">{{ staff_review_note_value or "" }}</textarea>
-          </div>
-
-          <div class="edit-note-grid edit-note-grid-2" style="margin-top:12px;">
-            <div class="edit-note-field">
-              <label><strong>Parenting Class Completed</strong></label>
-              <label class="edit-note-radio-row">
-                <input
-                  type="radio"
-                  name="parenting_class_completed"
-                  value="yes"
-                  {% if parenting_class_completed_value == 1 %}checked{% endif %}
-                >
-                Yes
-                <input
-                  type="radio"
-                  name="parenting_class_completed"
-                  value="no"
-                  {% if parenting_class_completed_value == 0 %}checked{% endif %}
-                >
-                No
-              </label>
+      <div class="edit-note-section">
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-text-card cmx-writing-card">
+            <div class="cmx-text-card-title">Case Summary</div>
+            <div class="cmx-field">
+              <textarea name="notes" rows="6" placeholder="Summarize the resident contact, current situation, and key case management discussion from today">{{ notes_value or "" }}</textarea>
             </div>
+          </div>
 
-            <div class="edit-note-field">
-              <label><strong>Warrants or Fines Paid</strong></label>
-              <label class="edit-note-radio-row">
-                <input
-                  type="radio"
-                  name="warrants_or_fines_paid"
-                  value="yes"
-                  {% if warrants_or_fines_paid_value == 1 %}checked{% endif %}
-                >
-                Yes
-                <input
-                  type="radio"
-                  name="warrants_or_fines_paid"
-                  value="no"
-                  {% if warrants_or_fines_paid_value == 0 %}checked{% endif %}
-                >
-                No
-              </label>
+          <div class="cmx-text-card cmx-writing-card">
+            <div class="cmx-text-card-title">Progress Since Last Meeting</div>
+            <div class="cmx-field">
+              <textarea name="progress_notes" rows="6" placeholder="Record progress, follow through, or movement since the prior meeting">{{ progress_notes_value or "" }}</textarea>
+            </div>
+          </div>
+
+          <div class="cmx-text-card cmx-writing-card">
+            <div class="cmx-text-card-title">Plan And Next Steps</div>
+            <div class="cmx-field">
+              <textarea name="action_items" rows="6" placeholder="Record assignments, follow up tasks, referrals, or next steps before the next contact">{{ action_items_value or "" }}</textarea>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="edit-note-panel" style="margin-top:18px;">
-        <h3>Services Provided</h3>
-        <p class="edit-note-help">Uncheck a service to remove it from this record.</p>
+      <div class="edit-note-section">
+        <div class="cmx-text-card">
+          <div class="cmx-text-card-title">Meeting Overview</div>
+          <div class="cmx-field">
+            <textarea name="overall_summary" rows="4" placeholder="Short overall meeting overview for quick reference and print summary">{{ overall_summary_value or "" }}</textarea>
+          </div>
+        </div>
+      </div>
 
-        <div class="edit-note-service-grid">
-          {% set meeting_services = [
-            ("Counseling", "sessions", "Counseling notes"),
-            ("Dental", "visits", "Dental notes"),
-            ("Vision", "visits", "Vision notes"),
-            ("Daycare", "days", "Daycare notes"),
-            ("Legal Assistance", "visits", "Legal assistance notes"),
-            ("Transportation", "rides", "Transportation notes"),
-            ("Other", "units", "Other service notes")
-          ] %}
-
-          {% for service_name, unit_hint, note_hint in meeting_services %}
-            <div class="edit-note-service-card">
-              <label class="edit-note-checkbox-label">
-                <input type="checkbox" name="service_type" value="{{ service_name }}" {% if service_name in selected_services %}checked{% endif %}>
-                <span>
-                  {{ service_name }}
-                  {% if service_name in selected_services %}
-                    <span style="color:#16a34a; font-size:0.8em;">(selected)</span>
-                  {% endif %}
-                </span>
-              </label>
-
-              <input
-                type="number"
-                name="quantity_{{ service_name }}"
-                min="0"
-                class="edit-note-qty"
-                placeholder="Qty"
-                value="{{ service_quantity_map.get(service_name, '') }}"
-              >
-
-              <input
-                type="text"
-                name="unit_{{ service_name }}"
-                class="edit-note-unit"
-                placeholder="{{ unit_hint }}"
-                value="{{ service_unit_map.get(service_name, '') }}"
-              >
-
-              <textarea
-                name="service_notes_{{ service_name }}"
-                rows="2"
-                class="edit-note-notes"
-                placeholder="{{ note_hint }}"
-              >{{ service_notes_map.get(service_name, "") }}</textarea>
+      <div class="edit-note-section">
+        <div class="cmx-grid cmx-grid-2">
+          <div class="cmx-panel-soft">
+            <div class="cmx-panel-head">
+              <h3>Advancement Review</h3>
+              <span>Saved with meeting</span>
             </div>
-          {% endfor %}
+
+            <div class="cmx-field">
+              <label>Recommended Next Level</label>
+              <input type="text" name="recommended_next_level" value="{{ recommended_next_level_value or '' }}" placeholder="Optional">
+            </div>
+
+            <div class="cmx-field" style="margin-top:12px;">
+              <label>Barrier To Advancement</label>
+              <textarea name="blocker_reason" rows="4">{{ blocker_reason_value or "" }}</textarea>
+            </div>
+
+            <div class="cmx-field" style="margin-top:12px;">
+              <label>Override Or Exception</label>
+              <textarea name="override_or_exception" rows="4">{{ override_or_exception_value or "" }}</textarea>
+            </div>
+
+            <div class="cmx-field" style="margin-top:12px;">
+              <label>Staff Review Note</label>
+              <textarea name="staff_review_note" rows="4">{{ staff_review_note_value or "" }}</textarea>
+            </div>
+
+            <div class="cmx-field" style="margin-top:12px;">
+              <label>Barriers And Concerns</label>
+              <textarea name="setbacks_or_incidents" rows="4">{{ setbacks_or_incidents_value or "" }}</textarea>
+            </div>
+
+            <div class="cmx-grid cmx-grid-2" style="margin-top:12px;">
+              <div class="cmx-field">
+                <label>Parenting Class Completed</label>
+                <select name="parenting_class_completed">
+                  <option value="" {% if parenting_class_completed_value is none %}selected{% endif %}>—</option>
+                  <option value="yes" {% if parenting_class_completed_value == 1 %}selected{% endif %}>Yes</option>
+                  <option value="no" {% if parenting_class_completed_value == 0 %}selected{% endif %}>No</option>
+                </select>
+              </div>
+
+              <div class="cmx-field">
+                <label>Warrants Or Fines Paid</label>
+                <select name="warrants_or_fines_paid">
+                  <option value="" {% if warrants_or_fines_paid_value is none %}selected{% endif %}>—</option>
+                  <option value="yes" {% if warrants_or_fines_paid_value == 1 %}selected{% endif %}>Yes</option>
+                  <option value="no" {% if warrants_or_fines_paid_value == 0 %}selected{% endif %}>No</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="cmx-panel-soft">
+            <div class="cmx-panel-head">
+              <h3>Services Provided</h3>
+              <span>Saved with meeting</span>
+            </div>
+
+            <p class="edit-note-help">Uncheck a service to remove it from this note.</p>
+
+            <div class="cmx-service-grid" style="grid-template-columns: 1fr; margin-top:10px;">
+              {% set meeting_services = [
+                ("Counseling", "sessions", "Counseling notes"),
+                ("Dental", "visits", "Dental notes"),
+                ("Vision", "visits", "Vision notes"),
+                ("Transportation", "rides", "Transportation notes"),
+                ("Daycare", "days", "Daycare notes"),
+                ("Legal Assistance", "visits", "Legal assistance notes"),
+                ("Other", "units", "Other service notes")
+              ] %}
+
+              {% for service_name, unit_hint, note_hint in meeting_services %}
+                <div class="cmx-service-item">
+                  <input type="checkbox" name="service_type" value="{{ service_name }}" {% if service_name in selected_services %}checked{% endif %}>
+                  <div style="flex:1; min-width:0;">
+                    <div class="cmx-service-name">{{ service_name }}</div>
+                    <div class="cmx-service-fields" style="grid-template-columns: 90px 140px 1fr;">
+                      <input
+                        type="number"
+                        name="quantity_{{ service_name }}"
+                        min="0"
+                        placeholder="Qty"
+                        value="{{ service_quantity_map.get(service_name, '') }}"
+                      >
+                      <input
+                        type="text"
+                        name="unit_{{ service_name }}"
+                        placeholder="{{ unit_hint }}"
+                        value="{{ service_unit_map.get(service_name, '') }}"
+                      >
+                      <input
+                        type="text"
+                        name="service_notes_{{ service_name }}"
+                        placeholder="{{ note_hint }}"
+                        value="{{ service_notes_map.get(service_name, '') }}"
+                      >
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="edit-note-actions">
-        <button type="submit">Save Changes</button>
+        <button type="submit" class="cmx-btn">Save Changes</button>
         <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
       </div>
     </form>
