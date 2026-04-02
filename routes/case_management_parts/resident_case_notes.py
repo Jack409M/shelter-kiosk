@@ -16,13 +16,13 @@ SUMMARY_GROUP_ORDER = [
 ]
 
 SUMMARY_GROUP_LABELS = {
-    "child": "Children Changes",
-    "medication": "Medication Changes",
+    "child": "Children Updates",
+    "medication": "Medication Updates",
     "service": "Services Provided",
-    "need_addressed": "Needs Taken Care Of",
-    "need_outstanding": "Needs Still Outstanding",
-    "employment": "Employment Changes",
-    "sobriety": "Sobriety Changes",
+    "need_addressed": "Needs Resolved",
+    "need_outstanding": "Outstanding Needs",
+    "employment": "Employment Updates",
+    "sobriety": "Recovery Updates",
     "advancement": "Advancement Review",
 }
 
@@ -63,6 +63,19 @@ def group_summary_rows(rows: list[dict]) -> list[dict]:
         display_items = [item for item in items if item.get("change_type") != "snapshot"]
         if not display_items:
             continue
+
+        if group_key == "need_addressed":
+            all_resolved_items = [item for item in display_items if item.get("change_type") == "all_resolved"]
+            if all_resolved_items:
+                result.append(
+                    {
+                        "group_key": group_key,
+                        "group_label": SUMMARY_GROUP_LABELS.get(group_key, display_label(group_key)),
+                        "items": all_resolved_items,
+                    }
+                )
+                continue
+
         result.append(
             {
                 "group_key": group_key,
