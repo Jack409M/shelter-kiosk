@@ -45,6 +45,32 @@ def _parse_meeting_date_iso(value: str) -> datetime | None:
         return None
 
 
+def _parse_next_appointment_datetime(value: str) -> tuple[datetime | None, str | None]:
+    normalized = " ".join((value or "").strip().split())
+    if not normalized:
+        return None, None
+
+    accepted_formats = [
+        ("%m/%d/%Y", "%m/%d/%Y"),
+        ("%m/%d/%Y %I:%M %p", "%m/%d/%Y %I:%M %p"),
+        ("%m/%d/%Y %H:%M", "%m/%d/%Y %I:%M %p"),
+        ("%m/%d/%y", "%m/%d/%Y"),
+        ("%m/%d/%y %I:%M %p", "%m/%d/%Y %I:%M %p"),
+        ("%m/%d/%y %H:%M", "%m/%d/%Y %I:%M %p"),
+        ("%Y-%m-%d", "%m/%d/%Y"),
+    ]
+
+    for input_format, output_format in accepted_formats:
+        try:
+            parsed = datetime.strptime(normalized, input_format)
+            rendered = parsed.strftime(output_format).replace(" 0", " ")
+            return parsed, rendered
+        except ValueError:
+            continue
+
+    return None, None
+
+
 def _normalize_next_appointment(raw_value: str, meeting_date: str) -> tuple[str, str | None]:
     text = (raw_value or "").strip()
     if not text:
@@ -54,38 +80,21 @@ def _normalize_next_appointment(raw_value: str, meeting_date: str) -> tuple[str,
     if not meeting_dt:
         return text, None
 
-    normalized = " ".join(text.split())
+    parsed_next_appointment, rendered_next_appointment = _parse_next_appointment_datetime(text)
 
-    mmddyyyy_formats = [
-        "%m/%d/%Y",
-        "%m/%d/%Y %I:%M %p",
-        "%m/%d/%Y %H:%M",
-    ]
-    mmddyy_formats = [
-        "%m/%d/%y",
-        "%m/%d/%y %I:%M %p",
-        "%m/%d/%y %H:%M",
-    ]
+    if not parsed_next_appointment or not rendered_next_appointment:
+        return (
+            text,
+            "Next appointment must use a valid date in month/day/year format, with optional time.",
+        )
 
-    for fmt in mmddyyyy_formats:
-        try:
-            parsed = datetime.strptime(normalized, fmt)
-            if parsed.year < meeting_dt.year:
-                return normalized, "Next appointment year cannot be earlier than the meeting date year."
-            return normalized, None
-        except ValueError:
-            continue
+    if parsed_next_appointment.date() < meeting_dt.date():
+        return (
+            rendered_next_appointment,
+            "Next appointment cannot be earlier than the meeting date.",
+        )
 
-    for fmt in mmddyy_formats:
-        try:
-            parsed = datetime.strptime(normalized, fmt)
-            if parsed.year < meeting_dt.year:
-                return normalized, "Next appointment year cannot be earlier than the meeting date year."
-            return parsed.strftime("%m/%d/%Y %I:%M %p").replace(" 0", " "), None
-        except ValueError:
-            continue
-
-    return normalized, None
+    return rendered_next_appointment, None
 
 
 def _get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
