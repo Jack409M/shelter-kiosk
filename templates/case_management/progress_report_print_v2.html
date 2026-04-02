@@ -23,7 +23,7 @@
       background: #eef2f6;
       color: var(--ink);
       font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.42;
+      line-height: 1.45;
     }
 
     body {
@@ -31,7 +31,7 @@
     }
 
     .report-shell {
-      max-width: 860px;
+      max-width: 840px;
       margin: 0 auto;
       background: #ffffff;
       border: 1px solid var(--line);
@@ -87,12 +87,12 @@
 
     .report-header {
       border-bottom: 2px solid var(--accent);
-      padding-bottom: 10px;
-      margin-bottom: 18px;
+      padding-bottom: 8px;
+      margin-bottom: 16px;
     }
 
     .report-org {
-      font-size: 0.76rem;
+      font-size: 0.74rem;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--muted);
@@ -101,8 +101,8 @@
     }
 
     .report-title {
-      margin: 0 0 8px 0;
-      font-size: 1.7rem;
+      margin: 0 0 6px 0;
+      font-size: 1.55rem;
       line-height: 1.05;
       letter-spacing: 0.03em;
       color: var(--accent);
@@ -114,7 +114,8 @@
     .report-header-inline {
       font-size: 0.9rem;
       color: var(--ink);
-      line-height: 1.5;
+      line-height: 1.45;
+      text-align: center;
     }
 
     .report-header-inline strong {
@@ -122,14 +123,14 @@
     }
 
     .report-section {
-      margin-top: 18px;
+      margin-top: 16px;
       page-break-inside: avoid;
       break-inside: avoid;
     }
 
     .report-section h2 {
-      margin: 0 0 8px;
-      font-size: 0.92rem;
+      margin: 0 0 6px;
+      font-size: 0.9rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--accent);
@@ -211,6 +212,10 @@
       .report-signature-grid {
         grid-template-columns: 1fr;
       }
+
+      .report-header-inline {
+        text-align: left;
+      }
     }
   </style>
 </head>
@@ -223,14 +228,21 @@
     {% endif %}
   {% endfor %}
 
-  {% set services_sentence = service_names | join(", ") if service_names else "" %}
-
   {% set profile_items = [] %}
   {% for item in report.program_snapshot or [] %}
-    {% if item.value not in ("", none, "—") %}
+    {% if item.value not in ("", none, "—") and item.label not in profile_items %}
       {% if profile_items.append(item.label) %}{% endif %}
     {% endif %}
   {% endfor %}
+
+  {% set blocker_text = report.note.blocker_reason if report.note.blocker_reason else "" %}
+  {% set all_needs_resolved = false %}
+  {% if blocker_text %}
+    {% set blocker_lower = blocker_text | lower %}
+    {% if "all identified needs at intake have been resolved" in blocker_lower %}
+      {% set all_needs_resolved = true %}
+    {% endif %}
+  {% endif %}
 
   <div class="report-shell">
     <div class="report-toolbar no-print">
@@ -246,17 +258,15 @@
         <div class="report-org">Downtown Women&#39;s Center</div>
         <h1 class="report-title">{{ report.report_title }}</h1>
         <div class="report-header-inline">
-          <strong>Resident:</strong> {{ report.resident_name }}
+          <strong>{{ report.resident_name }}</strong>
           &nbsp; | &nbsp;
-          <strong>ID:</strong> {{ report.resident_display_id }}
+          ID {{ report.resident_display_id }}
           &nbsp; | &nbsp;
-          <strong>Case Manager:</strong> {{ report.case_manager_name }}
+          {{ report.case_manager_name }}
           &nbsp; | &nbsp;
-          <strong>Shelter:</strong> {{ report.resident.shelter | shelter if report.resident.shelter else "—" }}
-          <br>
-          <strong>Meeting Date:</strong> {{ report.note.meeting_date or "—" }}
+          {{ report.resident.shelter | shelter if report.resident.shelter else "—" }}
           &nbsp; | &nbsp;
-          <strong>Generated:</strong> {{ report.generated_at_display }}
+          Meeting {{ report.note.meeting_date or "—" }}
         </div>
       </header>
 
@@ -274,22 +284,28 @@
       <section class="report-section">
         <h2>Contact Summary</h2>
         <div class="report-text">
-          {% if services_sentence %}
-            Services provided today were {{ services_sentence }}.
+          {% if service_names %}
+            During this contact, services provided included {{ service_names | join(", ") }}.
           {% else %}
-            No services were recorded for today’s meeting.
+            No direct services were recorded during this contact.
           {% endif %}
 
-          {% if report.note.blocker_reason %}
-            Client needs discussed during this contact included {{ report.note.blocker_reason }}.
+          {% if all_needs_resolved %}
+            All identified needs at intake have been resolved at this time.
+          {% elif blocker_text %}
+            Current identified needs discussed during this contact included {{ blocker_text }}.
+          {% else %}
+            No unresolved special needs were identified for follow up at this meeting.
           {% endif %}
 
           {% if profile_items %}
-            Profile information reflected in this report includes {{ profile_items | join(", ") }}.
+            Resident profile information reviewed or updated for this report included {{ profile_items | join(", ") }}.
           {% endif %}
 
           {% if report.note.ready_for_next_level_display and report.note.ready_for_next_level_display != "—" %}
-            Advancement decision recorded: {{ report.note.ready_for_next_level_display }}{% if report.note.recommended_next_level %}, with recommended level {{ report.note.recommended_next_level }}{% endif %}.
+            Advancement review at this meeting recorded a determination of {{ report.note.ready_for_next_level_display }}{% if report.note.recommended_next_level %}, with recommendation for level {{ report.note.recommended_next_level }}{% endif %}.
+          {% elif report.note.staff_review_note %}
+            Staff review noted {{ report.note.staff_review_note }}.
           {% endif %}
         </div>
       </section>
@@ -303,26 +319,29 @@
         {% endif %}
       </section>
 
-      <section class="report-section">
-        <h2>Barriers And Concerns</h2>
-        {% if report.note.setbacks_or_incidents %}
+      {% if report.note.setbacks_or_incidents %}
+        <section class="report-section">
+          <h2>Barriers And Concerns</h2>
           <div class="report-text">{{ report.note.setbacks_or_incidents }}</div>
-        {% else %}
-          <div class="report-empty">No barriers or concerns were recorded for this meeting.</div>
-        {% endif %}
-      </section>
+        </section>
+      {% endif %}
 
       <section class="report-section">
         <h2>Plan And Next Steps</h2>
-        {% if report.note.action_items %}
-          <div class="report-text">{{ report.note.action_items }}</div>
+        {% if report.note.action_items or report.note.next_appointment %}
+          <div class="report-text">
+            {% if report.note.action_items %}
+              {{ report.note.action_items }}
+            {% endif %}
+            {% if report.note.next_appointment %}
+              {% if report.note.action_items %}
+
+              {% endif %}
+              Follow up is scheduled for {{ report.note.next_appointment }}.
+            {% endif %}
+          </div>
         {% else %}
           <div class="report-empty">No plan or next steps were recorded for this meeting.</div>
-        {% endif %}
-        {% if report.note.next_appointment %}
-          <div class="report-text" style="margin-top:10px;">
-            Next appointment: {{ report.note.next_appointment }}
-          </div>
         {% endif %}
       </section>
 
