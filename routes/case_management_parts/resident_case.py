@@ -51,6 +51,27 @@ def _load_current_enrollment(resident_id: int):
     )
 
 
+def _load_resident_in_scope(resident_id: int, shelter: str):
+    ph = placeholder()
+
+    return db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_identifier,
+            first_name,
+            last_name,
+            resident_code,
+            shelter,
+            is_active
+        FROM residents
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
+        """,
+        (resident_id, shelter),
+    )
+
+
 def _get_latest_followup(enrollment_id: int, followup_type: str):
     ph = placeholder()
 
@@ -148,6 +169,134 @@ def _load_case_history(enrollment_id: int):
     return build_note_objects(notes_raw, services_raw, summary_rows_raw)
 
 
+def _load_enrollment_context(enrollment_id: int):
+    ph = placeholder()
+
+    family_snapshot = db_fetchone(
+        f"""
+        SELECT
+            id,
+            enrollment_id,
+            kids_at_dwc,
+            kids_served_outside_under_18,
+            kids_ages_0_5,
+            kids_ages_6_11,
+            kids_ages_12_17,
+            kids_reunited_while_in_program,
+            healthy_babies_born_at_dwc,
+            created_at,
+            updated_at
+        FROM family_snapshots
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    intake_assessment = db_fetchone(
+        f"""
+        SELECT
+            grit_score,
+            sobriety_date,
+            treatment_grad_date,
+            dental_need_at_entry,
+            vision_need_at_entry,
+            parenting_class_needed,
+            warrants_unpaid,
+            mental_health_need_at_entry,
+            medical_need_at_entry,
+            has_drivers_license,
+            has_social_security_card
+        FROM intake_assessments
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    raw_exit_assessment = db_fetchone(
+        f"""
+        SELECT
+            date_graduated,
+            date_exit_dwc,
+            exit_category,
+            exit_reason,
+            graduate_dwc,
+            leave_ama,
+            leave_amarillo_city,
+            leave_amarillo_unknown,
+            income_at_exit,
+            education_at_exit,
+            grit_at_exit,
+            received_car,
+            car_insurance,
+            dental_needs_met,
+            vision_needs_met,
+            obtained_public_insurance,
+            private_insurance
+        FROM exit_assessments
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    goals = db_fetchall(
+        f"""
+        SELECT
+            goal_text,
+            status,
+            target_date,
+            created_at
+        FROM goals
+        WHERE enrollment_id = {ph}
+        ORDER BY created_at DESC, id DESC
+        """,
+        (enrollment_id,),
+    )
+
+    appointments = db_fetchall(
+        f"""
+        SELECT
+            appointment_date,
+            appointment_type,
+            notes
+        FROM appointments
+        WHERE enrollment_id = {ph}
+        ORDER BY appointment_date DESC, id DESC
+        """,
+        (enrollment_id,),
+    )
+
+    notes, services = _load_case_history(enrollment_id)
+
+    return {
+        "family_snapshot": family_snapshot,
+        "intake_assessment": intake_assessment,
+        "exit_assessment": _normalize_exit_assessment(raw_exit_assessment),
+        "goals": goals,
+        "appointments": appointments,
+        "notes": notes,
+        "services": services,
+        "open_needs": get_open_enrollment_needs(enrollment_id),
+        "followup_6_month": _get_latest_followup(enrollment_id, "6_month"),
+        "followup_1_year": _get_latest_followup(enrollment_id, "1_year"),
+    }
+
+
+def _calculate_grit_difference(intake_assessment, exit_assessment):
+    intake_grit = intake_assessment.get("grit_score") if intake_assessment else None
+    exit_grit = exit_assessment.get("grit_at_exit") if exit_assessment else None
+
+    if intake_grit is None or exit_grit is None:
+        return None
+
+    return exit_grit - intake_grit
+
+
 def resident_case_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -156,24 +305,7 @@ def resident_case_view(resident_id: int):
     init_db()
 
     shelter = normalize_shelter_name(session.get("shelter"))
-    ph = placeholder()
-
-    resident = db_fetchone(
-        f"""
-        SELECT
-            id,
-            resident_identifier,
-            first_name,
-            last_name,
-            resident_code,
-            shelter,
-            is_active
-        FROM residents
-        WHERE id = {ph}
-          AND {shelter_equals_sql("shelter")}
-        """,
-        (resident_id, shelter),
-    )
+    resident = _load_resident_in_scope(resident_id, shelter)
 
     if not resident:
         flash("Resident not found.", "error")
@@ -182,149 +314,46 @@ def resident_case_view(resident_id: int):
     enrollment = _load_current_enrollment(resident_id)
     enrollment_id = enrollment["id"] if enrollment else None
 
-    goals = []
-    appointments = []
-    notes = []
-    services = []
     children = load_children_with_services(resident_id)
-    family_snapshot = None
-    intake_assessment = None
-    exit_assessment = None
-    grit_difference = None
-    followup_6_month = None
-    followup_1_year = None
-    open_needs = []
     recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
 
+    enrollment_context = {
+        "family_snapshot": None,
+        "intake_assessment": None,
+        "exit_assessment": None,
+        "goals": [],
+        "appointments": [],
+        "notes": [],
+        "services": [],
+        "open_needs": [],
+        "followup_6_month": None,
+        "followup_1_year": None,
+    }
+
     if enrollment_id:
-        family_snapshot = db_fetchone(
-            f"""
-            SELECT
-                id,
-                enrollment_id,
-                kids_at_dwc,
-                kids_served_outside_under_18,
-                kids_ages_0_5,
-                kids_ages_6_11,
-                kids_ages_12_17,
-                kids_reunited_while_in_program,
-                healthy_babies_born_at_dwc,
-                created_at,
-                updated_at
-            FROM family_snapshots
-            WHERE enrollment_id = {ph}
-            ORDER BY id DESC
-            LIMIT 1
-            """,
-            (enrollment_id,),
-        )
+        enrollment_context = _load_enrollment_context(enrollment_id)
 
-        intake_assessment = db_fetchone(
-            f"""
-            SELECT
-                grit_score,
-                sobriety_date,
-                treatment_grad_date,
-                dental_need_at_entry,
-                vision_need_at_entry,
-                parenting_class_needed,
-                warrants_unpaid,
-                mental_health_need_at_entry,
-                medical_need_at_entry,
-                has_drivers_license,
-                has_social_security_card
-            FROM intake_assessments
-            WHERE enrollment_id = {ph}
-            ORDER BY id DESC
-            LIMIT 1
-            """,
-            (enrollment_id,),
-        )
-
-        open_needs = get_open_enrollment_needs(enrollment_id)
-
-        raw_exit_assessment = db_fetchone(
-            f"""
-            SELECT
-                date_graduated,
-                date_exit_dwc,
-                exit_category,
-                exit_reason,
-                graduate_dwc,
-                leave_ama,
-                leave_amarillo_city,
-                leave_amarillo_unknown,
-                income_at_exit,
-                education_at_exit,
-                grit_at_exit,
-                received_car,
-                car_insurance,
-                dental_needs_met,
-                vision_needs_met,
-                obtained_public_insurance,
-                private_insurance
-            FROM exit_assessments
-            WHERE enrollment_id = {ph}
-            ORDER BY id DESC
-            LIMIT 1
-            """,
-            (enrollment_id,),
-        )
-
-        exit_assessment = _normalize_exit_assessment(raw_exit_assessment)
-
-        intake_grit = intake_assessment.get("grit_score") if intake_assessment else None
-        exit_grit = exit_assessment.get("grit_at_exit") if exit_assessment else None
-
-        if intake_grit is not None and exit_grit is not None:
-            grit_difference = exit_grit - intake_grit
-
-        goals = db_fetchall(
-            f"""
-            SELECT
-                goal_text,
-                status,
-                target_date,
-                created_at
-            FROM goals
-            WHERE enrollment_id = {ph}
-            ORDER BY created_at DESC, id DESC
-            """,
-            (enrollment_id,),
-        )
-
-        appointments = db_fetchall(
-            f"""
-            SELECT
-                appointment_date,
-                appointment_type,
-                notes
-            FROM appointments
-            WHERE enrollment_id = {ph}
-            ORDER BY appointment_date DESC, id DESC
-            """,
-            (enrollment_id,),
-        )
-
-        notes, services = _load_case_history(enrollment_id)
-        followup_6_month = _get_latest_followup(enrollment_id, "6_month")
-        followup_1_year = _get_latest_followup(enrollment_id, "1_year")
+    grit_difference = _calculate_grit_difference(
+        enrollment_context["intake_assessment"],
+        enrollment_context["exit_assessment"],
+    )
 
     meeting_defaults = build_meeting_defaults(
-        intake_assessment=intake_assessment,
-        family_snapshot=family_snapshot,
+        intake_assessment=enrollment_context["intake_assessment"],
+        family_snapshot=enrollment_context["family_snapshot"],
         recovery_snapshot=recovery_snapshot,
-        open_needs=open_needs,
-        notes=notes,
-        appointments=appointments,
+        open_needs=enrollment_context["open_needs"],
+        notes=enrollment_context["notes"],
+        appointments=enrollment_context["appointments"],
     )
 
     workspace_header = build_workspace_header(
         resident=resident,
         enrollment=enrollment,
         recovery_snapshot=recovery_snapshot,
-        open_needs=open_needs,
+        open_needs=enrollment_context["open_needs"],
     )
+
     operations_snapshot = build_operations_snapshot(recovery_snapshot)
 
     return render_template(
@@ -332,19 +361,19 @@ def resident_case_view(resident_id: int):
         resident=resident,
         enrollment=enrollment,
         enrollment_id=enrollment_id,
-        family_snapshot=family_snapshot,
-        intake_assessment=intake_assessment,
-        exit_assessment=exit_assessment,
+        family_snapshot=enrollment_context["family_snapshot"],
+        intake_assessment=enrollment_context["intake_assessment"],
+        exit_assessment=enrollment_context["exit_assessment"],
         grit_difference=grit_difference,
-        goals=goals,
-        appointments=appointments,
-        notes=notes,
-        services=services,
+        goals=enrollment_context["goals"],
+        appointments=enrollment_context["appointments"],
+        notes=enrollment_context["notes"],
+        services=enrollment_context["services"],
         children=children,
-        open_needs=open_needs,
+        open_needs=enrollment_context["open_needs"],
         recovery_snapshot=recovery_snapshot,
-        followup_6_month=followup_6_month,
-        followup_1_year=followup_1_year,
+        followup_6_month=enrollment_context["followup_6_month"],
+        followup_1_year=enrollment_context["followup_1_year"],
         meeting_defaults=meeting_defaults,
         workspace_header=workspace_header,
         operations_snapshot=operations_snapshot,
