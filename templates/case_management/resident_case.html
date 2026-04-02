@@ -81,18 +81,28 @@
       <main class="cmx-layout">
         <section class="cmx-main">
 
-          <div style="border-radius:18px; background:#eef5ff; padding:14px; border:1px solid #c9d8f0; margin-bottom:18px;">
-            <div style="font-size:0.88rem; color:#48617d; font-weight:700; margin:0 0 10px 4px;">
-              Meeting section. Changes here belong to today’s meeting and are saved only with <strong>Save Meeting</strong>.
+          <div class="cmx-card">
+            <div class="cmx-section-head">
+              <div>
+                <h2 class="cmx-section-title">Today’s Meeting</h2>
+                <div class="cmx-section-subtitle">
+                  Save today’s meeting narrative, services, need work, and advancement review here.
+                </div>
+              </div>
             </div>
             {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
           </div>
 
           {% include "case_management/partials/resident_case/_quick_actions.html" %}
 
-          <div style="border-radius:18px; background:#f6f0fb; padding:14px; border:1px solid #d8cbea; margin-top:18px; margin-bottom:18px;">
-            <div style="font-size:0.88rem; color:#6f4ea1; font-weight:700; margin:0 0 10px 4px;">
-              Profile section. Changes here belong to the resident profile and are saved only with <strong>Save Profile</strong>.
+          <div class="cmx-card">
+            <div class="cmx-section-head">
+              <div>
+                <h2 class="cmx-section-title">Resident Profile</h2>
+                <div class="cmx-section-subtitle">
+                  Update recovery, sobriety, sponsor, employment, and income here. These changes save only with <strong>Save Profile</strong>.
+                </div>
+              </div>
             </div>
             {% include "case_management/partials/resident_case/_profile_editor.html" %}
           </div>
