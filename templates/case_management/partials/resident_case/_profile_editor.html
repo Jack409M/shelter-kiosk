@@ -2,7 +2,9 @@
   <div class="cmx-section-head">
     <div>
       <h2 class="cmx-section-title">Profile Editor</h2>
-      <div class="cmx-section-subtitle">Edit recovery and employment separately without losing meeting notes.</div>
+      <div class="cmx-section-subtitle">
+        Update recovery, sobriety, sponsor, employment, and income here. These changes are saved only when you click <strong>Save Profile</strong>.
+      </div>
     </div>
     <button type="submit" class="cmx-btn" form="profile-editor-form">Save Profile</button>
   </div>
@@ -25,7 +27,7 @@
 
       <div class="cmx-grid cmx-grid-4">
         <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Level</div>
+          <div class="cmx-field-card-label">Program Level</div>
           <div class="cmx-field">
             <input type="text" name="program_level" value="{{ resolved_program_level }}" placeholder="Current level">
           </div>
@@ -146,7 +148,7 @@
         <div class="cmx-field-card">
           <div class="cmx-field-card-label">Monthly Income</div>
           <div class="cmx-field">
-            <input type="text" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
+            <input type="text" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}" placeholder="$0.00">
           </div>
         </div>
 
@@ -184,7 +186,7 @@
       <div class="cmx-panel-soft" style="margin-top:20px;">
         <div class="cmx-panel-head">
           <h3>Intake Reference</h3>
-          <span>read only baseline</span>
+          <span>Read only baseline</span>
         </div>
 
         <div class="cmx-grid cmx-grid-2">
