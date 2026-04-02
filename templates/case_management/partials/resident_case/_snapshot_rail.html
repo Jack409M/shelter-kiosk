@@ -1,13 +1,31 @@
 <aside class="cmx-side">
   <div class="cmx-card">
     <div class="cmx-side-card-head">
+      <h3>Case Snapshot</h3>
+      <a class="cmx-side-action" href="#meeting-workspace-form">Today’s Meeting</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Level</span><span>{{ rs_level or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Step</span><span>{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</span></div>
+      <div class="cmx-row-block"><span>Open Needs</span><span>{{ header_open_needs_count }}</span></div>
+      <div class="cmx-row-block"><span>Days Sober</span><span>{{ rs_days_sober_today if rs_days_sober_today is not none else "—" }}</span></div>
+      <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Employment</span><span>{{ rs_employment_status or "—" }}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
       <h3>Open Needs</h3>
-      <a class="cmx-side-action" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">View All</a>
+      <a class="cmx-side-action" href="#meeting-workspace-form">Work In Meeting</a>
     </div>
 
     {% if open_needs %}
       <div class="cmx-stack">
-        {% for need in open_needs[:4] %}
+        {% for need in open_needs[:6] %}
           <div class="cmx-row-block">
             <span>{{ need["need_label"] }}</span>
             <span>Open</span>
@@ -21,13 +39,25 @@
 
   <div class="cmx-card">
     <div class="cmx-side-card-head">
-      <h3>Recent UA Snapshot</h3>
+      <h3>Appointments And Meetings</h3>
+      <a class="cmx-side-action" href="#case-note-scroll-lane">Meeting History</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Last Meeting</span><span>{{ last_meeting_date or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Next Appointment</span><span>{{ next_appt or "—" }}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Recent UA</h3>
       <a class="cmx-side-action" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">View History</a>
     </div>
 
     {% if rs_ua_rows %}
       <div class="cmx-stack">
-        {% for row in rs_ua_rows[:2] %}
+        {% for row in rs_ua_rows[:3] %}
           <div class="cmx-row-block">
             <span>{{ row["ua_date"] or "—" }}</span>
             <span>{{ row["result_display"] or "—" }}</span>
@@ -47,7 +77,7 @@
 
     {% if rs_medications %}
       <div class="cmx-stack">
-        {% for med in rs_medications[:3] %}
+        {% for med in rs_medications[:4] %}
           <div class="cmx-row-block">
             <span>{{ med["medication_name"] or "Medication" }}</span>
             <span>{{ med["dosage"] or "—" }}</span>
@@ -61,7 +91,7 @@
 
   <div class="cmx-card">
     <div class="cmx-side-card-head">
-      <h3>Child Services Snapshot</h3>
+      <h3>Children</h3>
       <a class="cmx-side-action" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>
     </div>
 
@@ -84,20 +114,6 @@
     {% else %}
       <p class="cmx-muted">No child records are on file.</p>
     {% endif %}
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Recovery Snapshot</h3>
-      <a class="cmx-side-action" href="#profile-editor-form">Edit Profile</a>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Days Sober</span><span>{{ rs_days_sober_today if rs_days_sober_today is not none else "—" }}</span></div>
-      <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Step</span><span>{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</span></div>
-    </div>
   </div>
 
   <div class="cmx-card">
