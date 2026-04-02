@@ -112,14 +112,26 @@
     }
 
     .report-header-inline {
-      font-size: 0.86rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      font-size: 0.82rem;
       color: var(--ink);
-      line-height: 1.3;
+      line-height: 1.2;
       text-align: center;
     }
 
     .report-header-inline strong {
       color: var(--accent);
+    }
+
+    .report-header-sep {
+      color: var(--muted);
+      font-weight: 700;
+      flex: 0 0 auto;
     }
 
     .report-section {
@@ -219,6 +231,9 @@
       }
 
       .report-header-inline {
+        flex-wrap: wrap;
+        white-space: normal;
+        justify-content: flex-start;
         text-align: left;
       }
     }
@@ -246,14 +261,12 @@
         <h1 class="report-title">{{ report.report_title }}</h1>
         <div class="report-header-inline">
           <strong>{{ report.resident_name }}</strong>
-          &nbsp; | &nbsp;
-          ID {{ report.resident_display_id }}
-          &nbsp; | &nbsp;
-          {{ report.case_manager_name }}
-          &nbsp; | &nbsp;
-          {{ report.resident.shelter | shelter if report.resident.shelter else "—" }}
-          &nbsp; | &nbsp;
-          Meeting {{ report.note.meeting_date or "—" }}
+          <span class="report-header-sep">|</span>
+          <span>{{ report.case_manager_name }}</span>
+          <span class="report-header-sep">|</span>
+          <span>{{ report.resident.shelter | shelter if report.resident.shelter else "—" }}</span>
+          <span class="report-header-sep">|</span>
+          <span>Meeting {{ report.note.meeting_date or "—" }}</span>
         </div>
       </header>
 
