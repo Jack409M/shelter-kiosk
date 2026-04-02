@@ -24,17 +24,17 @@
     <input type="hidden" name="warrants_or_fines_paid" value="{{ meeting_defaults.warrants_or_fines_paid if meeting_defaults.warrants_or_fines_paid else '' }}">
 
     <div style="margin:0 0 16px 0; padding:10px 12px; background:#ffffff; border:1px solid #d8e3f4; border-radius:12px; color:#48617d; font-size:0.9rem; font-weight:600;">
-      Save Meeting records today’s meeting note, services provided, needs worked on today, and advancement review.
+      Save Meeting records today’s narrative note, services provided, needs worked on today, and advancement review. Formal note printing becomes available from <strong>Meeting History</strong> after this meeting is saved.
     </div>
 
-    <div class="cmx-grid cmx-grid-4">
+    <div class="cmx-grid cmx-grid-3">
       <div class="cmx-field">
         <label>Meeting Date</label>
         <input type="date" name="meeting_date" value="{{ meeting_defaults.meeting_date if meeting_defaults.meeting_date else '' }}" required>
       </div>
 
       <div class="cmx-field">
-        <label>Next Appointment</label>
+        <label>Next Appointment For This Note</label>
         <input
           type="text"
           name="next_appointment"
@@ -42,52 +42,44 @@
           placeholder="04/25/2026 10:00 AM"
           inputmode="text"
         >
-        <div class="cmx-muted">Use month/day/year and time, for example 04/25/2026 10:00 AM.</div>
+        <div class="cmx-muted">
+          Use month/day/year and time. This line prints inside the meeting report. Use <strong>Schedule Appointment</strong> in Quick Actions to create the official appointment record.
+        </div>
       </div>
 
       <div class="cmx-field">
         <label>Location</label>
         <input type="text" value="{{ shelter | shelter if shelter else 'Office' }}" readonly>
       </div>
-
-      <div class="cmx-field">
-        <label>Meeting Type</label>
-        <select>
-          <option selected>Weekly</option>
-          <option>Check In</option>
-          <option>Case Review</option>
-          <option>Crisis</option>
-        </select>
-      </div>
     </div>
 
     <div class="cmx-grid cmx-grid-3" style="margin-top:18px;">
       <div class="cmx-text-card cmx-writing-card" style="background:#ffffff;">
-        <div class="cmx-text-card-title">Meeting Notes</div>
+        <div class="cmx-text-card-title">Case Summary</div>
         <div class="cmx-field">
-          <textarea name="notes" rows="6" placeholder="Notes from today’s meeting">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
+          <textarea name="notes" rows="6" placeholder="Summarize the resident contact, current situation, and key case management discussion from today">{{ meeting_defaults.notes if meeting_defaults.notes else '' }}</textarea>
         </div>
       </div>
 
       <div class="cmx-text-card cmx-writing-card" style="background:#ffffff;">
         <div class="cmx-text-card-title">Progress Since Last Meeting</div>
         <div class="cmx-field">
-          <textarea name="progress_notes" rows="6" placeholder="What progress has been made">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
+          <textarea name="progress_notes" rows="6" placeholder="Record progress, follow through, or movement since the prior meeting">{{ meeting_defaults.progress_notes if meeting_defaults.progress_notes else '' }}</textarea>
         </div>
       </div>
 
       <div class="cmx-text-card cmx-writing-card" style="background:#ffffff;">
-        <div class="cmx-text-card-title">Action Items</div>
+        <div class="cmx-text-card-title">Plan And Next Steps</div>
         <div class="cmx-field">
-          <textarea name="action_items" rows="6" placeholder="What needs to happen before next time">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
+          <textarea name="action_items" rows="6" placeholder="Record assignments, follow up tasks, referrals, or next steps before the next contact">{{ meeting_defaults.action_items if meeting_defaults.action_items else '' }}</textarea>
         </div>
       </div>
     </div>
 
     <div class="cmx-text-card" style="margin-top:16px; background:#ffffff;">
-      <div class="cmx-text-card-title">Overall Summary</div>
+      <div class="cmx-text-card-title">Meeting Overview</div>
       <div class="cmx-field">
-        <textarea name="overall_summary" rows="4" placeholder="Summary and plan">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea>
+        <textarea name="overall_summary" rows="4" placeholder="Short overall meeting overview for quick reference and print summary">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea>
       </div>
     </div>
 
@@ -95,7 +87,7 @@
       <div class="cmx-panel-soft" style="background:#ffffff;">
         <div class="cmx-panel-head">
           <h3>Services Provided Today</h3>
-          <button type="button" class="cmx-btn-muted">+ Add Service</button>
+          <span>Saved with meeting</span>
         </div>
 
         <div class="cmx-service-grid" style="grid-template-columns: 1fr;">
@@ -172,7 +164,7 @@
     <div class="cmx-grid cmx-grid-2" style="margin-top:22px;">
       <div class="cmx-panel-soft" style="background:#ffffff;">
         <div class="cmx-panel-head">
-          <h3>Program And Compliance Snapshot</h3>
+          <h3>Program Snapshot</h3>
           <span>Current status</span>
         </div>
 
@@ -213,23 +205,23 @@
         </div>
 
         <div class="cmx-field" style="margin-top:12px;">
-          <label>Blocker Reason</label>
-          <textarea name="blocker_reason" rows="3" placeholder="What is preventing advancement">{{ meeting_defaults.blocker_reason if meeting_defaults.blocker_reason else '' }}</textarea>
+          <label>Barrier To Advancement</label>
+          <textarea name="blocker_reason" rows="3" placeholder="Record what is currently preventing advancement">{{ meeting_defaults.blocker_reason if meeting_defaults.blocker_reason else '' }}</textarea>
         </div>
 
         <div class="cmx-field" style="margin-top:12px;">
           <label>Override Or Exception</label>
-          <textarea name="override_or_exception" rows="3" placeholder="Record any exception or override">{{ meeting_defaults.override_or_exception if meeting_defaults.override_or_exception else '' }}</textarea>
+          <textarea name="override_or_exception" rows="3" placeholder="Record any approved exception or override">{{ meeting_defaults.override_or_exception if meeting_defaults.override_or_exception else '' }}</textarea>
         </div>
 
         <div class="cmx-field" style="margin-top:12px;">
           <label>Staff Review Note</label>
-          <textarea name="staff_review_note" rows="3" placeholder="Professional recommendation or rationale">{{ meeting_defaults.staff_review_note if meeting_defaults.staff_review_note else '' }}</textarea>
+          <textarea name="staff_review_note" rows="3" placeholder="Record professional recommendation or rationale">{{ meeting_defaults.staff_review_note if meeting_defaults.staff_review_note else '' }}</textarea>
         </div>
 
         <div class="cmx-field" style="margin-top:12px;">
-          <label>Setbacks Or Incidents</label>
-          <textarea name="setbacks_or_incidents" rows="3" placeholder="Record setbacks, incidents, or concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
+          <label>Barriers And Concerns</label>
+          <textarea name="setbacks_or_incidents" rows="3" placeholder="Record setbacks, incidents, or current concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
         </div>
       </div>
     </div>
