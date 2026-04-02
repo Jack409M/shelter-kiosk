@@ -8,10 +8,15 @@ from routes.case_management_parts.helpers import (
     case_manager_allowed,
     fetch_current_enrollment_id_for_resident,
     normalize_shelter_name,
+    parse_iso_date,
     placeholder,
     resident_has_active_enrollment,
     shelter_equals_sql,
 )
+
+
+def _clean_text(value: str | None) -> str:
+    return (value or "").strip()
 
 
 def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict[str, object]:
@@ -68,10 +73,14 @@ def create_enrollment_view(resident_id: int):
         flash("Resident already has an active enrollment.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    entry_date = (request.form.get("entry_date") or "").strip()
+    entry_date = _clean_text(request.form.get("entry_date"))
 
     if not entry_date:
         flash("Entry date required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    if not parse_iso_date(entry_date):
+        flash("Entry date must be a valid date.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -130,11 +139,15 @@ def add_goal_view(resident_id: int):
         flash("No active enrollment.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    goal_text = (request.form.get("goal_text") or "").strip()
-    target_date = (request.form.get("target_date") or "").strip()
+    goal_text = _clean_text(request.form.get("goal_text"))
+    target_date = _clean_text(request.form.get("target_date"))
 
     if not goal_text:
         flash("Goal text required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    if target_date and not parse_iso_date(target_date):
+        flash("Target date must be a valid date.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
@@ -191,12 +204,16 @@ def add_appointment_view(resident_id: int):
         flash("No active enrollment.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    appointment_date = (request.form.get("appointment_date") or "").strip()
-    appointment_type = (request.form.get("appointment_type") or "").strip()
-    notes = (request.form.get("notes") or "").strip()
+    appointment_date = _clean_text(request.form.get("appointment_date"))
+    appointment_type = _clean_text(request.form.get("appointment_type"))
+    notes = _clean_text(request.form.get("notes"))
 
     if not appointment_date:
         flash("Appointment date required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    if not parse_iso_date(appointment_date):
+        flash("Appointment date must be a valid date.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
