@@ -45,7 +45,7 @@ ADVANCEMENT_TEXT_FIELD_LABELS = {
 
 
 MEETING_TEXT_FIELD_LABELS = {
-    "setbacks_or_incidents": "setbacks or incidents",
+    "setbacks_or_incidents": "barriers and concerns",
 }
 
 
@@ -118,8 +118,10 @@ def display_label(value: str | None) -> str:
         "override or exception": "Override or exception",
         "blocker reason": "Barrier to advancement",
         "ready for next level": "Ready for next level",
+        "readiness for next level": "Ready for next level",
         "recommended next level": "Recommended next level",
-        "setbacks or incidents": "Setbacks or incidents",
+        "setbacks or incidents": "Barriers and concerns",
+        "barriers and concerns": "Barriers and concerns",
         "sobriety date": "Sobriety date",
         "treatment graduation date": "Treatment graduation date",
         "monthly income": "Monthly income",
