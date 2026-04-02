@@ -2,7 +2,7 @@
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Quick Add UA</h3>
-      <div class="cmx-quick-subtitle">Record a UA without leaving this page.</div>
+      <div class="cmx-quick-subtitle">Record a UA from this page without leaving the resident workspace.</div>
     </div>
 
     <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident_id) }}">
@@ -27,7 +27,7 @@
       </div>
 
       <div class="cmx-field" style="margin-top:12px;">
-        <label>Substances</label>
+        <label>Substances Detected</label>
         <input type="text" name="substances_detected" placeholder="Optional">
       </div>
 
@@ -46,7 +46,7 @@
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Quick Add Child Service</h3>
-      <div class="cmx-quick-subtitle">Record child service work from the meeting desk.</div>
+      <div class="cmx-quick-subtitle">Record child service activity from the same resident workspace.</div>
     </div>
 
     {% if children %}
@@ -58,7 +58,7 @@
           <label>Child</label>
           <select id="quick_child_id">
             {% for child in children %}
-              <option value="{{ child['id'] }}">{{ child["child_name"] or "Unnamed Child" }}</option>
+              <option value="{{ child['id'] }}">{{ child["child_name"] or "Unnamed child" }}</option>
             {% endfor %}
           </select>
         </div>
@@ -97,7 +97,7 @@
         </div>
       </form>
     {% else %}
-      <p class="cmx-muted">No active child records found.</p>
+      <p class="cmx-muted">No active child records are on file for this resident.</p>
       <div class="cmx-button-row">
         <a class="cmx-btn-muted" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>
       </div>
@@ -107,7 +107,7 @@
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Quick Add Medication</h3>
-      <div class="cmx-quick-subtitle">Record medication changes from the same workspace.</div>
+      <div class="cmx-quick-subtitle">Record medication changes from the current resident workspace.</div>
     </div>
 
     <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident_id) }}">
@@ -122,12 +122,12 @@
       <div class="cmx-grid cmx-grid-2" style="margin-top:12px;">
         <div class="cmx-field">
           <label>Dose</label>
-          <input type="text" name="dosage" placeholder="Example 50mg">
+          <input type="text" name="dosage" placeholder="Example 50 mg">
         </div>
 
         <div class="cmx-field">
           <label>Frequency</label>
-          <input type="text" name="frequency" placeholder="Daily, PRN">
+          <input type="text" name="frequency" placeholder="Daily or PRN">
         </div>
       </div>
 
