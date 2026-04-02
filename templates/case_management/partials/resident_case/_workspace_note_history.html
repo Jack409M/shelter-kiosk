@@ -1,121 +1,125 @@
-{% extends "layout.html" %}
+{% from "case_management/partials/resident_case/_progress_note_content.html" import render_progress_note %}
 
-{% block extra_head %}
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
-{% endblock %}
+<div class="cmx-history-list-wrap">
+  <p class="cmx-muted" style="margin-top:-4px; margin-bottom:14px;">
+    Review prior meetings, services, barriers, and advancement decisions here.
+  </p>
 
-{% block content %}
-{% set resident_id = resident["id"] %}
-{% set first_name = resident["first_name"] %}
-{% set last_name = resident["last_name"] %}
-{% set resident_code = resident["resident_code"] %}
-{% set shelter = resident["shelter"] %}
-{% set resident_active = resident["is_active"] %}
-{% set initials = ((first_name[:1] if first_name else "") ~ (last_name[:1] if last_name else ""))|upper %}
+  {% if notes %}
+    <div id="case-note-scroll-lane" class="no-print case-note-scroll-lane">
+      {% for note in notes %}
+        {% set note_id = note["id"] %}
+        {% set note_meeting_date = note["meeting_date"] %}
+        {% set note_services = note["services"] %}
+        {% set note_ready_display = note["ready_for_next_level_display"] if note["ready_for_next_level_display"] else "—" %}
 
-{% if enrollment %}
-  {% set enrollment_entry_date = enrollment["entry_date"] %}
-{% else %}
-  {% set enrollment_entry_date = "" %}
-{% endif %}
+        <div style="display:flex; flex-direction:column; gap:8px; min-width:190px;">
+          <button
+            type="button"
+            class="case-note-tile"
+            data-note-target="case-note-panel-{{ note_id }}"
+          >
+            <div><strong>{{ note_meeting_date or "—" }}</strong></div>
+            <div class="case-note-tile-meta">Ready: {{ note_ready_display }}</div>
+            {% if note_services %}
+              <div class="case-note-tile-meta">
+                {{ note_services|length }} services
+              </div>
+            {% endif %}
+          </button>
 
-{% if exit_assessment %}
-  {% set exit_date_exit_dwc = exit_assessment["date_exit_dwc"] %}
-  {% set exit_category = exit_assessment["exit_category"] %}
-  {% set exit_reason = exit_assessment["exit_reason"] %}
-  {% set exit_leave_ama = exit_assessment["leave_ama"] %}
-  {% set exit_leave_ama_destination = exit_assessment["leave_ama_destination"] %}
-{% else %}
-  {% set exit_date_exit_dwc = none %}
-  {% set exit_category = none %}
-  {% set exit_reason = none %}
-  {% set exit_leave_ama = none %}
-  {% set exit_leave_ama_destination = none %}
-{% endif %}
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <a
+              class="cmx-btn-muted"
+              href="{{ url_for('case_management.progress_report_print', resident_id=resident_id, update_id=note_id) }}"
+              target="_blank"
+              rel="noopener"
+              style="font-size:0.78rem; padding:6px 10px;"
+            >
+              Print Report
+            </a>
+            <a
+              class="cmx-btn-muted"
+              href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}"
+              style="font-size:0.78rem; padding:6px 10px;"
+            >
+              Edit
+            </a>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
 
-{% set rs = recovery_snapshot or {} %}
-{% set rs_level = rs.get("program_level") %}
-{% set rs_level_start_date = rs.get("level_start_date") %}
-{% set rs_days_on_level = rs.get("days_on_level") %}
-{% set rs_sponsor = rs.get("sponsor_name") %}
-{% set rs_sponsor_active_display = rs.get("sponsor_active_display") %}
-{% set rs_employment_status = rs.get("employment_status_current") %}
-{% set rs_employer = rs.get("employer_name") %}
-{% set rs_supervisor_name = rs.get("supervisor_name") %}
-{% set rs_supervisor_phone = rs.get("supervisor_phone") %}
-{% set rs_unemployment_reason = rs.get("unemployment_reason") %}
-{% set rs_employment_notes = rs.get("employment_notes") %}
-{% set rs_income = rs.get("monthly_income") %}
-{% set rs_step = rs.get("step_current") %}
-{% set rs_step_work_active_display = rs.get("step_work_active_display") %}
-{% set rs_medications = rs.get("medications", []) %}
-{% set rs_ua_rows = rs.get("ua_rows", []) %}
-{% set rs_latest_inspection = rs.get("latest_inspection") %}
-{% set rs_days_sober_today = rs.get("days_sober_today") %}
-{% set rs_sobriety_date = rs.get("sobriety_date") %}
-{% set rs_drug_of_choice = rs.get("drug_of_choice") %}
-{% set rs_treatment_graduation_date = rs.get("treatment_graduation_date") %}
+    <div id="case-note-modal" class="case-note-modal" aria-hidden="true">
+      <div class="case-note-modal-backdrop" data-case-note-close></div>
 
-{% set meeting_defaults = meeting_defaults if meeting_defaults is defined else {} %}
-{% set workspace_header = workspace_header if workspace_header is defined else {} %}
-{% set header_days_sober = workspace_header.get("days_sober") %}
-{% set header_days_on_level = workspace_header.get("days_on_level") %}
-{% set header_open_needs_count = workspace_header.get("open_needs_count", 0) %}
-{% set header_program_status = workspace_header.get("program_status") %}
-{% set last_note = notes[-1] if notes else none %}
-{% set last_meeting_date = last_note["meeting_date"] if last_note else "—" %}
-{% set next_appt = last_note["next_appointment"] if last_note and last_note["next_appointment"] else meeting_defaults.get("next_appointment", "—") %}
-{% set last_ready_for_next_level_display = last_note["ready_for_next_level_display"] if last_note else "—" %}
-{% set last_recommended_next_level = last_note["recommended_next_level"] if last_note and last_note["recommended_next_level"] else "—" %}
-{% set last_blocker_reason = last_note["blocker_reason"] if last_note and last_note["blocker_reason"] else "—" %}
-{% set last_override_or_exception = last_note["override_or_exception"] if last_note and last_note["override_or_exception"] else "—" %}
-{% set case_note_saved = request.args.get("case_note_saved") == "1" %}
+      <div class="case-note-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="case-note-modal-title">
+        <div class="case-note-modal-header">
+          <div>
+            <h3 id="case-note-modal-title" class="case-note-panel-title">Past Case Note</h3>
+            <div id="case-note-modal-subtitle" class="case-note-created"></div>
+          </div>
 
-<div class="cmx-page">
-  <div class="cmx-shell">
-    {% if not enrollment_id %}
-      <div class="cmx-card">
-        <h1 class="cmx-title">Case Management</h1>
-        {% include "case_management/partials/resident_case/_start_enrollment.html" %}
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <a
+              id="case-note-modal-print-link"
+              class="cmx-btn-muted"
+              href="#"
+              target="_blank"
+              rel="noopener"
+            >
+              Print Report
+            </a>
+            <button type="button" class="cmx-btn-muted" data-case-note-close>
+              Close
+            </button>
+          </div>
+        </div>
+
+        <div id="case-note-modal-body" class="case-note-modal-body"></div>
       </div>
-    {% else %}
+    </div>
 
-      {% include "case_management/partials/resident_case/_workspace_header.html" %}
+    <div class="case-note-panel-store" style="display:none;">
+      {% for note in notes %}
+        {% set note_id = note["id"] %}
+        {% set note_meeting_date = note["meeting_date"] %}
+        {% set note_created_at = note["created_at"] %}
 
-      <main class="cmx-layout">
-        <section class="cmx-main">
-
-          <div style="border-radius:18px; background:#eef5ff; padding:14px; border:1px solid #c9d8f0; margin-bottom:18px;">
-            <div style="font-size:0.88rem; color:#48617d; font-weight:700; margin:0 0 10px 4px;">
-              Blue section. Changes here belong to today’s meeting and are saved with <strong>Save Meeting</strong>.
+        <div id="case-note-panel-{{ note_id }}" class="cmx-card case-note-panel">
+          <div class="case-note-panel-header">
+            <div>
+              <h3 class="case-note-panel-title">Meeting {{ note_meeting_date or "—" }}</h3>
+              <div class="case-note-created">
+                Created: {{ note_created_at | app_pretty_dt if note_created_at else "—" }}
+              </div>
             </div>
-            {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
+
+            {% if note_id %}
+              <div class="print-hide case-note-actions">
+                <a
+                  class="cmx-btn-muted"
+                  href="{{ url_for('case_management.progress_report_print', resident_id=resident_id, update_id=note_id) }}"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  Print Report
+                </a>
+                <a
+                  class="cmx-btn-muted"
+                  href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}"
+                >
+                  Edit Note
+                </a>
+              </div>
+            {% endif %}
           </div>
 
-          {% include "case_management/partials/resident_case/_quick_actions.html" %}
-
-          <div style="border-radius:18px; background:#f6f0fb; padding:14px; border:1px solid #d8cbea; margin-top:18px; margin-bottom:18px;">
-            <div style="font-size:0.88rem; color:#6f4ea1; font-weight:700; margin:0 0 10px 4px;">
-              Purple section. Changes here belong to the resident profile and are saved with <strong>Save Profile</strong>.
-            </div>
-            {% include "case_management/partials/resident_case/_profile_editor.html" %}
-          </div>
-
-          {% include "case_management/partials/resident_case/_meeting_history.html" %}
-          {% include "case_management/partials/resident_case/_exit_panels.html" %}
-        </section>
-
-        {% include "case_management/partials/resident_case/_snapshot_rail.html" %}
-      </main>
-
-    {% endif %}
-  </div>
+          {{ render_progress_note(note) }}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="cmx-muted">No meetings recorded.</p>
+  {% endif %}
 </div>
-
-<script>
-  window.RESIDENT_CASE_RESIDENT_ID = "{{ resident_id }}";
-  window.RESIDENT_CASE_CHILD_SERVICE_BASE_ACTION = "{{ url_for('case_management.child_services', child_id=0) }}";
-  window.RESIDENT_CASE_NOTE_SAVED = {{ 'true' if case_note_saved else 'false' }};
-</script>
-<script src="{{ url_for('static', filename='js/resident_case_workspace.js') }}"></script>
-{% endblock %}
