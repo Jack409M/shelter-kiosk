@@ -217,10 +217,10 @@ function setupWriterExpansion() {
 
 function setupMeetingHistory() {
   var tiles = Array.prototype.slice.call(document.querySelectorAll(".case-note-tile"));
-  var printContainer = document.getElementById("print-selected-note");
   var modal = document.getElementById("case-note-modal");
   var modalBody = document.getElementById("case-note-modal-body");
   var modalSubtitle = document.getElementById("case-note-modal-subtitle");
+  var modalPrintLink = document.getElementById("case-note-modal-print-link");
   var closeButtons = Array.prototype.slice.call(document.querySelectorAll("[data-case-note-close]"));
 
   if (!tiles.length || !modal || !modalBody) {
@@ -234,6 +234,9 @@ function setupMeetingHistory() {
     if (modalSubtitle) {
       modalSubtitle.textContent = "";
     }
+    if (modalPrintLink) {
+      modalPrintLink.setAttribute("href", "#");
+    }
 
     tiles.forEach(function(tile) {
       tile.classList.remove("is-active");
@@ -246,9 +249,7 @@ function setupMeetingHistory() {
     }
 
     var targetId = tile.getAttribute("data-note-target");
-    var printId = tile.getAttribute("data-print-target");
     var panel = targetId ? document.getElementById(targetId) : null;
-    var printTemplate = printId ? document.getElementById(printId) : null;
 
     tiles.forEach(function(item) {
       item.classList.remove("is-active");
@@ -267,12 +268,13 @@ function setupMeetingHistory() {
         modalSubtitle.textContent = "";
       }
 
+      var printLinkInPanel = panel.querySelector('.case-note-actions a[href*="/print"]');
+      if (modalPrintLink && printLinkInPanel) {
+        modalPrintLink.setAttribute("href", printLinkInPanel.getAttribute("href"));
+      }
+
       modal.classList.add("is-open");
       modal.setAttribute("aria-hidden", "false");
-    }
-
-    if (printContainer) {
-      printContainer.innerHTML = printTemplate ? printTemplate.innerHTML : "";
     }
   }
 
