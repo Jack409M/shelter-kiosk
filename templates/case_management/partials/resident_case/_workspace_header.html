@@ -13,10 +13,6 @@
           <div class="cmx-meta">
             <span class="cmx-pill"><strong>Shelter:</strong>&nbsp;{{ shelter | shelter if shelter else "—" }}</span>
             <span class="cmx-pill"><strong>Status:</strong>&nbsp;{{ "Active" if resident_active else "Inactive" }}</span>
-            <span class="cmx-pill"><strong>Level:</strong>&nbsp;{{ rs_level or "—" }}</span>
-            <span class="cmx-pill"><strong>Step:</strong>&nbsp;{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</span>
-            <span class="cmx-pill"><strong>Days Sober:</strong>&nbsp;{{ header_days_sober if header_days_sober is not none else "—" }}</span>
-            <span class="cmx-pill"><strong>Open Needs:</strong>&nbsp;{{ header_open_needs_count }}</span>
             <span class="cmx-pill"><strong>Entry Date:</strong>&nbsp;{{ enrollment_entry_date or "—" }}</span>
             <span class="cmx-pill"><strong>Last Meeting:</strong>&nbsp;{{ last_meeting_date or "—" }}</span>
             <span class="cmx-pill"><strong>Next Appointment:</strong>&nbsp;{{ next_appt or "—" }}</span>
@@ -62,7 +58,7 @@
     </button>
 
     <div class="cmx-draft">
-      Draft saved for this resident
+      Draft protection active for this resident
     </div>
 
     <div class="cmx-appt">
