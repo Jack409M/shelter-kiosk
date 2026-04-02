@@ -75,8 +75,8 @@ def resident_has_active_enrollment(resident_id: int) -> bool:
 
 
 def clean(value: str | None) -> str | None:
-    value = (value or "").strip()
-    return value or None
+    cleaned = (value or "").strip()
+    return cleaned or None
 
 
 def digits_only(value: str | None) -> str:
@@ -84,31 +84,33 @@ def digits_only(value: str | None) -> str:
 
 
 def parse_iso_date(value: str | None) -> date | None:
-    value = clean(value)
-    if not value:
+    cleaned = clean(value)
+    if not cleaned:
         return None
     try:
-        return date.fromisoformat(value)
+        return date.fromisoformat(cleaned)
     except ValueError:
         return None
 
 
 def parse_int(value: str | None) -> int | None:
-    value = clean(value)
-    if value is None:
+    cleaned = clean(value)
+    if cleaned is None:
         return None
     try:
-        return int(value)
+        return int(cleaned)
     except ValueError:
         return None
 
 
 def parse_money(value: str | None) -> float | None:
-    value = clean(value)
-    if value is None:
+    cleaned = clean(value)
+    if cleaned is None:
         return None
+
+    normalized = cleaned.replace("$", "").replace(",", "")
     try:
-        return float(value)
+        return float(normalized)
     except ValueError:
         return None
 
