@@ -194,7 +194,8 @@
 
   .action-button {
     width: 100%;
-    min-height: 44px;
+    min-height: 58px;
+    text-align: center;
   }
 
   .subnote {
@@ -266,7 +267,7 @@
     <div class="duplicate-review-header-copy">
       <h1>Possible Duplicate Review</h1>
       <p>
-        Review the existing resident and the pending intake side by side before deciding whether to continue on the existing record or create a new resident.
+        Review the existing resident and the pending intake side by side before deciding whether this is a returning resident who should use the existing resident record, or a different person who needs a new resident record.
       </p>
     </div>
 
@@ -278,7 +279,7 @@
   <div class="warning-card">
     <h2>Resident match needs review</h2>
     <p>
-      No new resident has been created yet. This intake is being held in duplicate review until staff decides what to do next.
+      No new resident has been created yet. This intake is being held in duplicate review until staff makes a clear duplicate decision.
     </p>
   </div>
 
@@ -286,7 +287,7 @@
     <div class="review-card">
       <div class="review-card-head">
         <h2>Existing Resident</h2>
-        <p>Current resident already in the system.</p>
+        <p>Resident record already in the system.</p>
       </div>
 
       <div class="review-card-body">
@@ -327,7 +328,7 @@
               <div class="kv-value">{{ existing_enrollment_shelter | shelter if existing_enrollment_shelter else "—" }}</div>
 
               <div class="kv-key">Program Status</div>
-              <div class="kv-value">{{ existing_program_status|replace("_", " ")|title if existing_program_status else "—" }}</div>
+              <div class="kv-value">{{ existing_program_status|replace("_", " ")|title if existing_program_status else "No active enrollment" }}</div>
 
               <div class="kv-key">Entry Date</div>
               <div class="kv-value">{{ existing_entry_date or "—" }}</div>
@@ -463,37 +464,37 @@
       <form class="action-form" method="post" action="{{ url_for('case_management.intake_duplicate_use_existing', draft_id=draft_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button class="btn-primary action-button" type="submit">
-          Continue Record on Existing Resident
+          Returning Resident — Use Existing Resident Record And Start New Enrollment
         </button>
       </form>
 
       <form class="action-form" method="post" action="{{ url_for('case_management.intake_duplicate_create_new', draft_id=draft_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button class="btn-soft action-button" type="submit">
-          Continue Entering Information as New Resident
+          Different Person — Create New Resident Record Anyway
         </button>
       </form>
 
       <form class="action-form" method="post" action="{{ url_for('case_management.intake_duplicate_return_to_edit', draft_id=draft_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button class="btn-soft action-button" type="submit">
-          Return to Edit Intake
+          Go Back And Edit Intake
         </button>
       </form>
 
       <form class="action-form" method="post" action="{{ url_for('case_management.intake_duplicate_dismiss', draft_id=draft_id) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button class="btn-danger action-button" type="submit">
-          Delete Current Pending Entry
+          Dismiss Duplicate Review
         </button>
       </form>
     </div>
 
     <div class="subnote">
-      Continue Record on Existing Resident does not create a new resident.
-      Continue Entering Information as New Resident creates a new resident from the pending intake.
-      Return to Edit Intake keeps the pending intake open for changes.
-      Delete Current Pending Entry dismisses the pending intake with no resident created.
+      Returning Resident keeps the existing resident identity and starts a new enrollment with a new intake assessment and family snapshot.
+      Different Person creates a brand new resident record.
+      Go Back And Edit Intake keeps the pending intake open for changes.
+      Dismiss Duplicate Review closes the pending intake with no resident created.
     </div>
   </div>
 </div>
