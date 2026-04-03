@@ -59,6 +59,9 @@
       {% set calendar_url = safe_url_for('calendar.calendar_view') %}
       {% set reports_url = safe_url_for('reports.reports_index') %}
       {% set operations_settings_url = safe_url_for('operations_settings.settings_page') %}
+      {% set rent_roll_url = safe_url_for('rent_tracking.rent_roll') %}
+      {% set rent_entry_url = safe_url_for('rent_tracking.payment_entry_sheet') %}
+      {% set inspection_sheet_url = safe_url_for('inspection_v2.inspection_sheet') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
       {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
 
@@ -165,6 +168,15 @@
                   <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
                   {% if operations_settings_url %}
                     <a href="{{ operations_settings_url }}">Operations Settings</a>
+                  {% endif %}
+                  {% if rent_roll_url %}
+                    <a href="{{ rent_roll_url }}">Rent Roll</a>
+                  {% endif %}
+                  {% if rent_entry_url %}
+                    <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
+                  {% endif %}
+                  {% if inspection_sheet_url %}
+                    <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
                   {% endif %}
                   <a href="{{ url_for('admin.admin_users') }}">Users</a>
                   <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
