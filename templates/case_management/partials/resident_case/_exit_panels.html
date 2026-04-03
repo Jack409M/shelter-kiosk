@@ -53,3 +53,95 @@
     </div>
   {% endif %}
 </div>
+
+<div class="cmx-grid cmx-grid-2 no-print" style="margin-top:16px;">
+  <div class="cmx-card">
+    <div class="cmx-section-head" style="margin-bottom:0;">
+      <div>
+        <h2 class="cmx-section-title" style="font-size:1.2rem;">6 Month Follow Up</h2>
+        <div class="cmx-section-subtitle">
+          Record or review the resident’s 6 month follow up here.
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-stack" style="margin-top:12px;">
+      {% if followup_6_month %}
+        <div class="cmx-row-block"><span>Follow Up Date</span><span>{{ followup_6_month["followup_date"] or "—" }}</span></div>
+        <div class="cmx-row-block">
+          <span>Monthly Income</span>
+          <span>{{ followup_6_month["income_at_followup"] if followup_6_month["income_at_followup"] is not none else "—" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Sober</span>
+          <span>
+            {% if followup_6_month["sober_at_followup"] is none %}
+              —
+            {% else %}
+              {{ "Yes" if followup_6_month["sober_at_followup"] else "No" }}
+            {% endif %}
+          </span>
+        </div>
+      {% else %}
+        <p class="cmx-muted" style="margin:0;">
+          No 6 month follow up is recorded yet.
+        </p>
+      {% endif %}
+    </div>
+
+    <div style="margin-top:12px;">
+      <a class="cmx-btn-muted" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='6_month') }}">
+        {% if followup_6_month %}
+          View Or Edit 6 Month Follow Up
+        {% else %}
+          Complete 6 Month Follow Up
+        {% endif %}
+      </a>
+    </div>
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-section-head" style="margin-bottom:0;">
+      <div>
+        <h2 class="cmx-section-title" style="font-size:1.2rem;">1 Year Follow Up</h2>
+        <div class="cmx-section-subtitle">
+          Record or review the resident’s 1 year follow up here.
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-stack" style="margin-top:12px;">
+      {% if followup_1_year %}
+        <div class="cmx-row-block"><span>Follow Up Date</span><span>{{ followup_1_year["followup_date"] or "—" }}</span></div>
+        <div class="cmx-row-block">
+          <span>Monthly Income</span>
+          <span>{{ followup_1_year["income_at_followup"] if followup_1_year["income_at_followup"] is not none else "—" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Sober</span>
+          <span>
+            {% if followup_1_year["sober_at_followup"] is none %}
+              —
+            {% else %}
+              {{ "Yes" if followup_1_year["sober_at_followup"] else "No" }}
+            {% endif %}
+          </span>
+        </div>
+      {% else %}
+        <p class="cmx-muted" style="margin:0;">
+          No 1 year follow up is recorded yet.
+        </p>
+      {% endif %}
+    </div>
+
+    <div style="margin-top:12px;">
+      <a class="cmx-btn-muted" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='1_year') }}">
+        {% if followup_1_year %}
+          View Or Edit 1 Year Follow Up
+        {% else %}
+          Complete 1 Year Follow Up
+        {% endif %}
+      </a>
+    </div>
+  </div>
+</div>
