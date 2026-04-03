@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, g, redirect, render_template, request, session, url_for
 
 from core.db import db_fetchall
 from core.runtime import init_db
@@ -37,6 +37,7 @@ def index_view():
             (shelter,),
         )
     else:
+        active_sql = "TRUE" if g.get("db_kind") == "pg" else "1"
         residents = db_fetchall(
             f"""
             SELECT
@@ -47,7 +48,7 @@ def index_view():
                 is_active
             FROM residents
             WHERE {shelter_equals_sql("shelter")}
-              AND is_active = 1
+              AND is_active = {active_sql}
             ORDER BY last_name ASC, first_name ASC
             """,
             (shelter,),
@@ -69,21 +70,9 @@ def intake_index_view():
     init_db()
 
     shelter = normalize_shelter_name(session.get("shelter"))
-    ph = "?" if "sqlite" else None  # placeholder variable not needed, kept out intentionally
+    shelter_param = "%s" if g.get("db_kind") == "pg" else "?"
 
     drafts = db_fetchall(
-        """
-        SELECT
-            id,
-            resident_name,
-            entry_date,
-            updated_at
-        FROM intake_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = ?
-          AND status = 'draft'
-        ORDER BY updated_at DESC, id DESC
-        """
-        if False else
         f"""
         SELECT
             id,
@@ -91,7 +80,7 @@ def intake_index_view():
             entry_date,
             updated_at
         FROM intake_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = {('?' if shelter is not None else '?')}
+        WHERE LOWER(COALESCE(shelter, '')) = {shelter_param}
           AND status = 'draft'
         ORDER BY updated_at DESC, id DESC
         """,
@@ -106,7 +95,7 @@ def intake_index_view():
             entry_date,
             updated_at
         FROM intake_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = {('?' if shelter is not None else '?')}
+        WHERE LOWER(COALESCE(shelter, '')) = {shelter_param}
           AND status = 'pending_duplicate_review'
         ORDER BY updated_at DESC, id DESC
         """,
@@ -120,7 +109,7 @@ def intake_index_view():
             resident_id,
             updated_at
         FROM assessment_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = {('?' if shelter is not None else '?')}
+        WHERE LOWER(COALESCE(shelter, '')) = {shelter_param}
           AND status = 'draft'
         ORDER BY updated_at DESC, id DESC
         """,
