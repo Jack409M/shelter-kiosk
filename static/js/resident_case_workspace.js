@@ -51,9 +51,16 @@ function setupMeetingDraft() {
   var residentId = window.RESIDENT_CASE_RESIDENT_ID || "";
   var justSaved = Boolean(window.RESIDENT_CASE_NOTE_SAVED);
   var storageKey = "cm_meeting_draft_" + residentId;
+  var excludedDraftFieldNames = {
+    overall_summary: true,
+    blocker_reason: true
+  };
   var fields = Array.prototype.slice.call(
     form.querySelectorAll("input[name], textarea[name], select[name]")
   );
+  var draftFields = fields.filter(function(field) {
+    return field.name && !excludedDraftFieldNames[field.name];
+  });
   var saveButtons = Array.prototype.slice.call(
     document.querySelectorAll('button[form="meeting-workspace-form"], input[form="meeting-workspace-form"]')
   );
@@ -75,7 +82,7 @@ function setupMeetingDraft() {
   function buildPayload() {
     var payload = {};
 
-    fields.forEach(function(field) {
+    draftFields.forEach(function(field) {
       if (!field.name) {
         return;
       }
@@ -134,7 +141,7 @@ function setupMeetingDraft() {
     try {
       var payload = JSON.parse(raw);
 
-      fields.forEach(function(field) {
+      draftFields.forEach(function(field) {
         if (!field.name || !(field.name in payload)) {
           return;
         }
@@ -157,7 +164,7 @@ function setupMeetingDraft() {
     }
   }
 
-  fields.forEach(function(field) {
+  draftFields.forEach(function(field) {
     field.addEventListener("input", queueSave);
     field.addEventListener("change", queueSave);
     field.addEventListener("blur", saveDraft);
