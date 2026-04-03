@@ -9,6 +9,7 @@ from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 
+
 rent_tracking = Blueprint(
     "rent_tracking",
     __name__,
@@ -17,13 +18,6 @@ rent_tracking = Blueprint(
 
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
-VALID_RENT_STATUSES = [
-    "Paid",
-    "Partially Paid",
-    "Paid Late",
-    "Not Paid",
-    "Exempt",
-]
 
 
 def _placeholder() -> str:
@@ -45,6 +39,19 @@ def _today_chicago() -> datetime:
 def _current_year_month() -> tuple[int, int]:
     now = _today_chicago()
     return now.year, now.month
+
+
+def _month_label(year: int, month: int) -> str:
+    return datetime(year, month, 1).strftime("%B %Y")
+
+
+def _float_value(value) -> float:
+    try:
+        if value in (None, ""):
+            return 0.0
+        return round(float(value), 2)
+    except Exception:
+        return 0.0
 
 
 def _ensure_operations_settings_table() -> None:
@@ -221,6 +228,7 @@ def _ensure_tables() -> None:
 def _load_settings(shelter: str) -> dict:
     _ensure_operations_settings_table()
     ph = _placeholder()
+
     row = db_fetchone(
         f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
         (shelter,),
@@ -231,27 +239,64 @@ def _load_settings(shelter: str) -> dict:
     now = utcnow_iso()
     db_execute(
         (
-            "INSERT INTO shelter_operation_settings (shelter, rent_late_day_of_month, rent_score_paid, rent_score_partially_paid, rent_score_paid_late, rent_score_not_paid, rent_score_exempt, rent_carry_forward_enabled, inspection_default_item_status, inspection_item_labels, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            """
+            INSERT INTO shelter_operation_settings (
+                shelter,
+                rent_late_day_of_month,
+                rent_score_paid,
+                rent_score_partially_paid,
+                rent_score_paid_late,
+                rent_score_not_paid,
+                rent_score_exempt,
+                rent_carry_forward_enabled,
+                inspection_default_item_status,
+                inspection_item_labels,
+                created_at,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
             if g.get("db_kind") == "pg"
             else
-            "INSERT INTO shelter_operation_settings (shelter, rent_late_day_of_month, rent_score_paid, rent_score_partially_paid, rent_score_paid_late, rent_score_not_paid, rent_score_exempt, rent_carry_forward_enabled, inspection_default_item_status, inspection_item_labels, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            """
+            INSERT INTO shelter_operation_settings (
+                shelter,
+                rent_late_day_of_month,
+                rent_score_paid,
+                rent_score_partially_paid,
+                rent_score_paid_late,
+                rent_score_not_paid,
+                rent_score_exempt,
+                rent_carry_forward_enabled,
+                inspection_default_item_status,
+                inspection_item_labels,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
         ),
-        (shelter, 6, 100, 75, 75, 0, 100, True if g.get("db_kind") == "pg" else 1, "passed", None, now, now),
+        (
+            shelter,
+            6,
+            100,
+            75,
+            75,
+            0,
+            100,
+            True if g.get("db_kind") == "pg" else 1,
+            "passed",
+            None,
+            now,
+            now,
+        ),
     )
+
     row = db_fetchone(
         f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
         (shelter,),
     )
     return dict(row) if row else {}
-
-
-def _float_value(value) -> float:
-    try:
-        if value in (None, ""):
-            return 0.0
-        return round(float(value), 2)
-    except Exception:
-        return 0.0
 
 
 def _score_for_status(settings: dict, status: str) -> int:
@@ -265,26 +310,26 @@ def _score_for_status(settings: dict, status: str) -> int:
     return mapping.get(status, 0)
 
 
-def _late_status_if_needed(settings: dict, requested_status: str, paid_date_text: str | None, remaining_balance: float) -> str:
-    if requested_status == "Exempt":
+def _derive_status(settings: dict, total_due: float, amount_paid: float, paid_date: str | None, is_exempt: bool) -> str:
+    if is_exempt:
         return "Exempt"
-    if requested_status == "Not Paid" and remaining_balance > 0:
+
+    if amount_paid <= 0:
         return "Not Paid"
-    if requested_status == "Partially Paid" and remaining_balance > 0:
-        return "Partially Paid"
-    if remaining_balance > 0 and requested_status == "Paid":
+
+    if amount_paid < total_due:
         return "Partially Paid"
 
-    if requested_status == "Paid":
-        late_day = int(settings.get("rent_late_day_of_month", 6) or 6)
-        paid_date = (paid_date_text or "").strip()
+    late_day = int(settings.get("rent_late_day_of_month", 6) or 6)
+    if paid_date:
         try:
             dt = datetime.fromisoformat(paid_date)
             if dt.day >= late_day:
                 return "Paid Late"
         except Exception:
             pass
-    return requested_status
+
+    return "Paid"
 
 
 def _active_residents_for_shelter(shelter: str):
@@ -299,24 +344,6 @@ def _active_residents_for_shelter(shelter: str):
         """,
         (shelter,),
     )
-
-
-def _latest_prior_balance(resident_id: int, shelter: str, carry_forward_enabled: bool) -> float:
-    if not carry_forward_enabled:
-        return 0.0
-    ph = _placeholder()
-    row = db_fetchone(
-        f"""
-        SELECT remaining_balance
-        FROM resident_rent_sheet_entries
-        WHERE resident_id = {ph}
-          AND LOWER(COALESCE(shelter_snapshot, '')) = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (resident_id, shelter),
-    )
-    return _float_value(row.get("remaining_balance") if row else 0)
 
 
 def _active_rent_config_for_resident(resident_id: int, shelter: str):
@@ -340,14 +367,46 @@ def _ensure_default_rent_config(resident_id: int, shelter: str) -> dict:
     config = _active_rent_config_for_resident(resident_id, shelter)
     if config:
         return config
+
     now = utcnow_iso()
     today = _today_chicago().date().isoformat()
+
     db_execute(
         (
-            "INSERT INTO resident_rent_configs (resident_id, shelter, level_snapshot, apartment_size_snapshot, monthly_rent, is_exempt, effective_start_date, effective_end_date, created_by_staff_user_id, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            """
+            INSERT INTO resident_rent_configs (
+                resident_id,
+                shelter,
+                level_snapshot,
+                apartment_size_snapshot,
+                monthly_rent,
+                is_exempt,
+                effective_start_date,
+                effective_end_date,
+                created_by_staff_user_id,
+                created_at,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
             if g.get("db_kind") == "pg"
             else
-            "INSERT INTO resident_rent_configs (resident_id, shelter, level_snapshot, apartment_size_snapshot, monthly_rent, is_exempt, effective_start_date, effective_end_date, created_by_staff_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            """
+            INSERT INTO resident_rent_configs (
+                resident_id,
+                shelter,
+                level_snapshot,
+                apartment_size_snapshot,
+                monthly_rent,
+                is_exempt,
+                effective_start_date,
+                effective_end_date,
+                created_by_staff_user_id,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
         ),
         (
             resident_id,
@@ -363,57 +422,170 @@ def _ensure_default_rent_config(resident_id: int, shelter: str) -> dict:
             now,
         ),
     )
+
     return _active_rent_config_for_resident(resident_id, shelter) or {}
+
+
+def _latest_prior_balance(resident_id: int, shelter: str, carry_forward_enabled: bool) -> float:
+    if not carry_forward_enabled:
+        return 0.0
+
+    ph = _placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT remaining_balance
+        FROM resident_rent_sheet_entries
+        WHERE resident_id = {ph}
+          AND LOWER(COALESCE(shelter_snapshot, '')) = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
+    return _float_value(row.get("remaining_balance") if row else 0)
 
 
 def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
     _ensure_tables()
     settings = _load_settings(shelter)
     ph = _placeholder()
+
     sheet = db_fetchone(
-        f"SELECT * FROM resident_rent_sheets WHERE LOWER(COALESCE(shelter, '')) = {ph} AND rent_year = {ph} AND rent_month = {ph} LIMIT 1",
+        f"""
+        SELECT *
+        FROM resident_rent_sheets
+        WHERE LOWER(COALESCE(shelter, '')) = {ph}
+          AND rent_year = {ph}
+          AND rent_month = {ph}
+        LIMIT 1
+        """,
         (shelter, rent_year, rent_month),
     )
+
     if not sheet:
         now = utcnow_iso()
         generated_on = _today_chicago().date().isoformat()
         db_execute(
             (
-                "INSERT INTO resident_rent_sheets (shelter, rent_year, rent_month, generated_on, created_by_staff_user_id, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+                """
+                INSERT INTO resident_rent_sheets (
+                    shelter,
+                    rent_year,
+                    rent_month,
+                    generated_on,
+                    created_by_staff_user_id,
+                    created_at,
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """
                 if g.get("db_kind") == "pg"
                 else
-                "INSERT INTO resident_rent_sheets (shelter, rent_year, rent_month, generated_on, created_by_staff_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                """
+                INSERT INTO resident_rent_sheets (
+                    shelter,
+                    rent_year,
+                    rent_month,
+                    generated_on,
+                    created_by_staff_user_id,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """
             ),
             (shelter, rent_year, rent_month, generated_on, session.get("staff_user_id"), now, now),
         )
+
         sheet = db_fetchone(
-            f"SELECT * FROM resident_rent_sheets WHERE LOWER(COALESCE(shelter, '')) = {ph} AND rent_year = {ph} AND rent_month = {ph} LIMIT 1",
+            f"""
+            SELECT *
+            FROM resident_rent_sheets
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND rent_year = {ph}
+              AND rent_month = {ph}
+            LIMIT 1
+            """,
             (shelter, rent_year, rent_month),
         )
 
     sheet = dict(sheet)
+
     for resident in _active_residents_for_shelter(shelter):
         resident_id = resident["id"]
+
         existing = db_fetchone(
             f"SELECT id FROM resident_rent_sheet_entries WHERE sheet_id = {ph} AND resident_id = {ph} LIMIT 1",
             (sheet["id"], resident_id),
         )
         if existing:
             continue
+
         config = _ensure_default_rent_config(resident_id, shelter)
-        prior_balance = _latest_prior_balance(resident_id, shelter, bool(settings.get("rent_carry_forward_enabled", True)))
-        current_charge = 0.0 if config.get("is_exempt") else _float_value(config.get("monthly_rent"))
+        carry_forward_enabled = bool(settings.get("rent_carry_forward_enabled", True))
+        prior_balance = _latest_prior_balance(resident_id, shelter, carry_forward_enabled)
+        monthly_rent = _float_value(config.get("monthly_rent"))
+        is_exempt = bool(config.get("is_exempt"))
+        current_charge = 0.0 if is_exempt else monthly_rent
         total_due = round(prior_balance + current_charge, 2)
-        status = "Exempt" if config.get("is_exempt") else "Not Paid"
-        remaining_balance = 0.0 if status == "Exempt" else total_due
+        paid_date = None
+        amount_paid = 0.0
+        remaining_balance = 0.0 if is_exempt else total_due
+        status = "Exempt" if is_exempt else "Not Paid"
+        compliance_score = _score_for_status(settings, status)
         resident_name = f"{resident.get('first_name', '')} {resident.get('last_name', '')}".strip()
         now = utcnow_iso()
+
         db_execute(
             (
-                "INSERT INTO resident_rent_sheet_entries (sheet_id, resident_id, shelter_snapshot, resident_name_snapshot, level_snapshot, apartment_size_snapshot, prior_balance, current_charge, total_due, amount_paid, remaining_balance, status, compliance_score, paid_date, notes, updated_by_staff_user_id, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                """
+                INSERT INTO resident_rent_sheet_entries (
+                    sheet_id,
+                    resident_id,
+                    shelter_snapshot,
+                    resident_name_snapshot,
+                    level_snapshot,
+                    apartment_size_snapshot,
+                    prior_balance,
+                    current_charge,
+                    total_due,
+                    amount_paid,
+                    remaining_balance,
+                    status,
+                    compliance_score,
+                    paid_date,
+                    notes,
+                    updated_by_staff_user_id,
+                    created_at,
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
                 if g.get("db_kind") == "pg"
                 else
-                "INSERT INTO resident_rent_sheet_entries (sheet_id, resident_id, shelter_snapshot, resident_name_snapshot, level_snapshot, apartment_size_snapshot, prior_balance, current_charge, total_due, amount_paid, remaining_balance, status, compliance_score, paid_date, notes, updated_by_staff_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                """
+                INSERT INTO resident_rent_sheet_entries (
+                    sheet_id,
+                    resident_id,
+                    shelter_snapshot,
+                    resident_name_snapshot,
+                    level_snapshot,
+                    apartment_size_snapshot,
+                    prior_balance,
+                    current_charge,
+                    total_due,
+                    amount_paid,
+                    remaining_balance,
+                    status,
+                    compliance_score,
+                    paid_date,
+                    notes,
+                    updated_by_staff_user_id,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
             ),
             (
                 sheet["id"],
@@ -425,17 +597,18 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                 prior_balance,
                 current_charge,
                 total_due,
-                0.0,
+                amount_paid,
                 remaining_balance,
                 status,
-                _score_for_status(settings, status),
-                None,
+                compliance_score,
+                paid_date,
                 None,
                 session.get("staff_user_id"),
                 now,
                 now,
             ),
         )
+
     return sheet, settings
 
 
@@ -453,10 +626,62 @@ def _load_sheet_entries(sheet_id: int):
     return [dict(row) for row in rows]
 
 
-@rent_tracking.get("")
+def _weighted_score_for_resident(resident_id: int) -> int | None:
+    ph = _placeholder()
+    rows = db_fetchall(
+        f"""
+        SELECT compliance_score
+        FROM resident_rent_sheet_entries
+        WHERE resident_id = {ph}
+        ORDER BY id DESC
+        LIMIT 6
+        """,
+        (resident_id,),
+    )
+    values = [int(row["compliance_score"]) for row in rows if row.get("compliance_score") is not None]
+    if not values:
+        return None
+    return round(sum(values) / len(values))
+
+
+@rent_tracking.get("/roll")
 @require_login
 @require_shelter
-def current_month_sheet():
+def rent_roll():
+    if not _allowed():
+        flash("Case manager, shelter director, or admin access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    _ensure_tables()
+
+    rows = []
+    for resident in _active_residents_for_shelter(shelter):
+        config = _ensure_default_rent_config(resident["id"], shelter)
+        rows.append(
+            {
+                "resident_id": resident["id"],
+                "resident_name": f"{resident.get('first_name', '')} {resident.get('last_name', '')}".strip(),
+                "level_snapshot": config.get("level_snapshot"),
+                "apartment_size_snapshot": config.get("apartment_size_snapshot"),
+                "monthly_rent": _float_value(config.get("monthly_rent")),
+                "is_exempt": bool(config.get("is_exempt")),
+            }
+        )
+
+    rows.sort(key=lambda row: row["resident_name"].lower())
+
+    return render_template(
+        "case_management/rent_roll.html",
+        shelter=shelter,
+        rows=rows,
+    )
+
+
+@rent_tracking.route("/entry", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def payment_entry_sheet():
     if not _allowed():
         flash("Case manager, shelter director, or admin access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
@@ -469,88 +694,73 @@ def current_month_sheet():
 
     sheet, settings = _ensure_sheet_for_month(shelter, rent_year, rent_month)
     entries = _load_sheet_entries(sheet["id"])
+
+    if request.method == "POST":
+        for entry in entries:
+            entry_id = entry["id"]
+            amount_paid = _float_value(request.form.get(f"amount_paid_{entry_id}"))
+            paid_date = (request.form.get(f"paid_date_{entry_id}") or "").strip() or None
+            notes = (request.form.get(f"notes_{entry_id}") or "").strip() or None
+
+            total_due = _float_value(entry.get("total_due"))
+            is_exempt = str(entry.get("status") or "").strip() == "Exempt"
+            status = _derive_status(settings, total_due, amount_paid, paid_date, is_exempt)
+            remaining_balance = 0.0 if is_exempt else round(max(total_due - amount_paid, 0.0), 2)
+            compliance_score = _score_for_status(settings, status)
+            now = utcnow_iso()
+
+            db_execute(
+                (
+                    """
+                    UPDATE resident_rent_sheet_entries
+                    SET amount_paid = %s,
+                        remaining_balance = %s,
+                        status = %s,
+                        compliance_score = %s,
+                        paid_date = %s,
+                        notes = %s,
+                        updated_by_staff_user_id = %s,
+                        updated_at = %s
+                    WHERE id = %s
+                    """
+                    if g.get("db_kind") == "pg"
+                    else
+                    """
+                    UPDATE resident_rent_sheet_entries
+                    SET amount_paid = ?,
+                        remaining_balance = ?,
+                        status = ?,
+                        compliance_score = ?,
+                        paid_date = ?,
+                        notes = ?,
+                        updated_by_staff_user_id = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                    """
+                ),
+                (
+                    amount_paid,
+                    remaining_balance,
+                    status,
+                    compliance_score,
+                    paid_date,
+                    notes,
+                    session.get("staff_user_id"),
+                    now,
+                    entry_id,
+                ),
+            )
+
+        flash("Rent payment sheet saved.", "ok")
+        return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
+
     return render_template(
-        "case_management/rent_tracking.html",
+        "case_management/rent_entry.html",
         shelter=shelter,
         sheet=sheet,
         entries=entries,
-        settings=settings,
-        statuses=VALID_RENT_STATUSES,
+        month_label=_month_label(rent_year, rent_month),
     )
-
-
-@rent_tracking.post("/entry/<int:entry_id>")
-@require_login
-@require_shelter
-def update_entry(entry_id: int):
-    if not _allowed():
-        flash("Case manager, shelter director, or admin access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    _ensure_tables()
-    shelter = _normalize_shelter_name(session.get("shelter"))
-    settings = _load_settings(shelter)
-    ph = _placeholder()
-    row = db_fetchone(
-        f"""
-        SELECT e.*, s.shelter AS sheet_shelter, s.rent_year, s.rent_month
-        FROM resident_rent_sheet_entries e
-        JOIN resident_rent_sheets s ON s.id = e.sheet_id
-        WHERE e.id = {ph}
-          AND LOWER(COALESCE(s.shelter, '')) = {ph}
-        LIMIT 1
-        """,
-        (entry_id, shelter),
-    )
-    if not row:
-        flash("Rent entry not found.", "error")
-        return redirect(url_for("rent_tracking.current_month_sheet"))
-
-    row = dict(row)
-    requested_status = (request.form.get("status") or "Not Paid").strip()
-    if requested_status not in VALID_RENT_STATUSES:
-        requested_status = "Not Paid"
-
-    amount_paid = _float_value(request.form.get("amount_paid"))
-    total_due = _float_value(row.get("total_due"))
-    remaining_balance = round(max(total_due - amount_paid, 0.0), 2)
-    paid_date = (request.form.get("paid_date") or "").strip() or None
-    notes = (request.form.get("notes") or "").strip() or None
-
-    if requested_status == "Exempt":
-        amount_paid = 0.0
-        remaining_balance = 0.0
-    elif requested_status == "Not Paid":
-        amount_paid = 0.0
-        remaining_balance = total_due
-    elif requested_status == "Partially Paid":
-        if amount_paid <= 0 or remaining_balance <= 0:
-            requested_status = "Not Paid" if amount_paid <= 0 else "Paid"
-    elif requested_status in {"Paid", "Paid Late"}:
-        amount_paid = total_due
-        remaining_balance = 0.0
-        if not paid_date:
-            paid_date = _today_chicago().date().isoformat()
-
-    final_status = _late_status_if_needed(settings, requested_status, paid_date, remaining_balance)
-    if final_status == "Paid Late":
-        amount_paid = total_due
-        remaining_balance = 0.0
-    compliance_score = _score_for_status(settings, final_status)
-    now = utcnow_iso()
-
-    db_execute(
-        (
-            "UPDATE resident_rent_sheet_entries SET amount_paid = %s, remaining_balance = %s, status = %s, compliance_score = %s, paid_date = %s, notes = %s, updated_by_staff_user_id = %s, updated_at = %s WHERE id = %s"
-            if g.get("db_kind") == "pg"
-            else
-            "UPDATE resident_rent_sheet_entries SET amount_paid = ?, remaining_balance = ?, status = ?, compliance_score = ?, paid_date = ?, notes = ?, updated_by_staff_user_id = ?, updated_at = ? WHERE id = ?"
-        ),
-        (amount_paid, remaining_balance, final_status, compliance_score, paid_date, notes, session.get("staff_user_id"), now, entry_id),
-    )
-
-    flash("Rent entry updated.", "ok")
-    return redirect(url_for("rent_tracking.current_month_sheet", year=row.get("rent_year"), month=row.get("rent_month")))
 
 
 @rent_tracking.route("/resident/<int:resident_id>/config", methods=["GET", "POST"])
@@ -564,18 +774,31 @@ def resident_rent_config(resident_id: int):
     _ensure_tables()
     shelter = _normalize_shelter_name(session.get("shelter"))
     ph = _placeholder()
+
     resident = db_fetchone(
-        f"SELECT id, first_name, last_name, shelter FROM residents WHERE id = {ph} AND LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
+        f"""
+        SELECT id, first_name, last_name, shelter
+        FROM residents
+        WHERE id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+        LIMIT 1
+        """,
         (resident_id, shelter),
     )
     if not resident:
         flash("Resident not found.", "error")
-        return redirect(url_for("rent_tracking.current_month_sheet"))
+        return redirect(url_for("rent_tracking.rent_roll"))
 
     resident = dict(resident)
     current_config = _ensure_default_rent_config(resident_id, shelter)
     history = db_fetchall(
-        f"SELECT * FROM resident_rent_configs WHERE resident_id = {ph} AND LOWER(COALESCE(shelter, '')) = {ph} ORDER BY effective_start_date DESC, id DESC",
+        f"""
+        SELECT *
+        FROM resident_rent_configs
+        WHERE resident_id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+        ORDER BY effective_start_date DESC, id DESC
+        """,
         (resident_id, shelter),
     )
 
@@ -589,22 +812,78 @@ def resident_rent_config(resident_id: int):
 
         db_execute(
             (
-                "UPDATE resident_rent_configs SET effective_end_date = %s, updated_at = %s WHERE resident_id = %s AND LOWER(COALESCE(shelter, '')) = %s AND COALESCE(effective_end_date, '') = ''"
+                """
+                UPDATE resident_rent_configs
+                SET effective_end_date = %s,
+                    updated_at = %s
+                WHERE resident_id = %s
+                  AND LOWER(COALESCE(shelter, '')) = %s
+                  AND COALESCE(effective_end_date, '') = ''
+                """
                 if g.get("db_kind") == "pg"
                 else
-                "UPDATE resident_rent_configs SET effective_end_date = ?, updated_at = ? WHERE resident_id = ? AND LOWER(COALESCE(shelter, '')) = ? AND COALESCE(effective_end_date, '') = ''"
+                """
+                UPDATE resident_rent_configs
+                SET effective_end_date = ?,
+                    updated_at = ?
+                WHERE resident_id = ?
+                  AND LOWER(COALESCE(shelter, '')) = ?
+                  AND COALESCE(effective_end_date, '') = ''
+                """
             ),
             (effective_start_date, now, resident_id, shelter),
         )
 
         db_execute(
             (
-                "INSERT INTO resident_rent_configs (resident_id, shelter, level_snapshot, apartment_size_snapshot, monthly_rent, is_exempt, effective_start_date, effective_end_date, created_by_staff_user_id, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                """
+                INSERT INTO resident_rent_configs (
+                    resident_id,
+                    shelter,
+                    level_snapshot,
+                    apartment_size_snapshot,
+                    monthly_rent,
+                    is_exempt,
+                    effective_start_date,
+                    effective_end_date,
+                    created_by_staff_user_id,
+                    created_at,
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
                 if g.get("db_kind") == "pg"
                 else
-                "INSERT INTO resident_rent_configs (resident_id, shelter, level_snapshot, apartment_size_snapshot, monthly_rent, is_exempt, effective_start_date, effective_end_date, created_by_staff_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                """
+                INSERT INTO resident_rent_configs (
+                    resident_id,
+                    shelter,
+                    level_snapshot,
+                    apartment_size_snapshot,
+                    monthly_rent,
+                    is_exempt,
+                    effective_start_date,
+                    effective_end_date,
+                    created_by_staff_user_id,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
             ),
-            (resident_id, shelter, level_snapshot, apartment_size_snapshot, monthly_rent, is_exempt if g.get("db_kind") == "pg" else (1 if is_exempt else 0), effective_start_date, None, session.get("staff_user_id"), now, now),
+            (
+                resident_id,
+                shelter,
+                level_snapshot,
+                apartment_size_snapshot,
+                monthly_rent,
+                is_exempt if g.get("db_kind") == "pg" else (1 if is_exempt else 0),
+                effective_start_date,
+                None,
+                session.get("staff_user_id"),
+                now,
+                now,
+            ),
         )
 
         flash("Resident rent setup updated.", "ok")
@@ -615,4 +894,55 @@ def resident_rent_config(resident_id: int):
         resident=resident,
         current_config=current_config,
         history=history,
+    )
+
+
+@rent_tracking.get("/resident/<int:resident_id>/history")
+@require_login
+@require_shelter
+def resident_rent_history(resident_id: int):
+    if not _allowed():
+        flash("Case manager, shelter director, or admin access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    _ensure_tables()
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    ph = _placeholder()
+
+    resident = db_fetchone(
+        f"""
+        SELECT id, first_name, last_name, shelter
+        FROM residents
+        WHERE id = {ph}
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    resident = dict(resident)
+
+    rows = db_fetchall(
+        f"""
+        SELECT
+            e.*,
+            s.rent_year,
+            s.rent_month
+        FROM resident_rent_sheet_entries e
+        JOIN resident_rent_sheets s ON s.id = e.sheet_id
+        WHERE e.resident_id = {ph}
+        ORDER BY s.rent_year DESC, s.rent_month DESC, e.id DESC
+        """,
+        (resident_id,),
+    )
+
+    weighted_score = _weighted_score_for_resident(resident_id)
+
+    return render_template(
+        "case_management/resident_rent_history.html",
+        resident=resident,
+        rows=rows,
+        weighted_score=weighted_score,
     )
