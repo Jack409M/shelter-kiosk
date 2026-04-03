@@ -6,11 +6,13 @@ from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 
+
 writeups = Blueprint(
     "writeups",
     __name__,
     url_prefix="/staff/writeups",
 )
+
 
 VALID_WRITEUP_STATUSES = ["Open", "Resolved", "Dismissed"]
 VALID_WRITEUP_CATEGORIES = [
@@ -90,7 +92,13 @@ def _ensure_tables() -> None:
 def _resident_context(resident_id: int, shelter: str):
     ph = _placeholder()
     row = db_fetchone(
-        f"SELECT id, first_name, last_name, shelter FROM residents WHERE id = {ph} AND LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
+        f"""
+        SELECT id, first_name, last_name, shelter
+        FROM residents
+        WHERE id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+        LIMIT 1
+        """,
         (resident_id, shelter),
     )
     return dict(row) if row else None
@@ -105,6 +113,7 @@ def resident_writeups(resident_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     _ensure_tables()
+
     shelter = _normalize_shelter_name(session.get("shelter"))
     resident = _resident_context(resident_id, shelter)
     if not resident:
@@ -127,18 +136,58 @@ def resident_writeups(resident_id: int):
             severity = "Low"
         if status not in VALID_WRITEUP_STATUSES:
             status = "Open"
+
         if not incident_date or not summary:
             flash("Incident date and summary are required.", "error")
             return redirect(url_for("writeups.resident_writeups", resident_id=resident_id))
 
         now = utcnow_iso()
         resolved_at = now if status in {"Resolved", "Dismissed"} else None
+
         db_execute(
             (
-                "INSERT INTO resident_writeups (resident_id, shelter_snapshot, incident_date, category, severity, summary, full_notes, action_taken, status, resolution_notes, resolved_at, created_by_staff_user_id, updated_by_staff_user_id, created_at, updated_at) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                """
+                INSERT INTO resident_writeups (
+                    resident_id,
+                    shelter_snapshot,
+                    incident_date,
+                    category,
+                    severity,
+                    summary,
+                    full_notes,
+                    action_taken,
+                    status,
+                    resolution_notes,
+                    resolved_at,
+                    created_by_staff_user_id,
+                    updated_by_staff_user_id,
+                    created_at,
+                    updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
                 if g.get("db_kind") == "pg"
                 else
-                "INSERT INTO resident_writeups (resident_id, shelter_snapshot, incident_date, category, severity, summary, full_notes, action_taken, status, resolution_notes, resolved_at, created_by_staff_user_id, updated_by_staff_user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                """
+                INSERT INTO resident_writeups (
+                    resident_id,
+                    shelter_snapshot,
+                    incident_date,
+                    category,
+                    severity,
+                    summary,
+                    full_notes,
+                    action_taken,
+                    status,
+                    resolution_notes,
+                    resolved_at,
+                    created_by_staff_user_id,
+                    updated_by_staff_user_id,
+                    created_at,
+                    updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """
             ),
             (
                 resident_id,
@@ -158,14 +207,21 @@ def resident_writeups(resident_id: int):
                 now,
             ),
         )
+
         flash("Write up saved.", "ok")
         return redirect(url_for("writeups.resident_writeups", resident_id=resident_id))
 
     ph = _placeholder()
     rows = db_fetchall(
-        f"SELECT * FROM resident_writeups WHERE resident_id = {ph} ORDER BY incident_date DESC, id DESC",
+        f"""
+        SELECT *
+        FROM resident_writeups
+        WHERE resident_id = {ph}
+        ORDER BY incident_date DESC, id DESC
+        """,
         (resident_id,),
     )
+
     return render_template(
         "case_management/writeups.html",
         resident=resident,
