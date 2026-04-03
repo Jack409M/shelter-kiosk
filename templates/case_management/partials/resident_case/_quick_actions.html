@@ -77,34 +77,49 @@
 
   <div class="cmx-card cmx-quick-card">
     <div>
-      <h3 class="cmx-quick-title">Rent Tracking</h3>
-      <div class="cmx-quick-subtitle">Open the current shelter rent sheet or update this resident’s rent setup from the workspace.</div>
+      <h3 class="cmx-quick-title">Rent Score</h3>
+      <div class="cmx-quick-subtitle">This is the weighted rent compliance score. Click through to view the resident’s rent payment history.</div>
     </div>
 
+    {% set rent_score = resident.get('rent_weighted_score') if resident is mapping else none %}
+
     <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Monthly Sheet</span><span>Current Shelter</span></div>
-      <div class="cmx-row-block"><span>Resident Rent Setup</span><span>Level and apartment tied</span></div>
+      <div class="cmx-row-block">
+        <span>Weighted Score</span>
+        <span>{{ rent_score if rent_score is not none else "—" }}</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Source</span>
+        <span>Rent payment history</span>
+      </div>
     </div>
 
     <div class="cmx-button-row" style="margin-top:12px;">
-      <a class="cmx-btn" href="{{ url_for('rent_tracking.current_month_sheet') }}">Open Rent Sheet</a>
-      <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_config', resident_id=resident_id) }}">Resident Rent Setup</a>
+      <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}">View Rent History</a>
     </div>
   </div>
 
   <div class="cmx-card cmx-quick-card">
     <div>
-      <h3 class="cmx-quick-title">Living Area Inspection</h3>
-      <div class="cmx-quick-subtitle">Use the simplified inspection form where every item starts passed and only exceptions are changed.</div>
+      <h3 class="cmx-quick-title">Living Area Score</h3>
+      <div class="cmx-quick-subtitle">This is the weighted living area score. Click through to view the resident’s inspection pass or fail history.</div>
     </div>
 
+    {% set living_area_score = resident.get('living_area_weighted_score') if resident is mapping else none %}
+
     <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Default</span><span>Passed</span></div>
-      <div class="cmx-row-block"><span>Change Only</span><span>Needs Attention or Failed</span></div>
+      <div class="cmx-row-block">
+        <span>Weighted Score</span>
+        <span>{{ living_area_score if living_area_score is not none else "—" }}</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Source</span>
+        <span>Inspection pass or fail history</span>
+      </div>
     </div>
 
     <div class="cmx-button-row" style="margin-top:12px;">
-      <a class="cmx-btn" href="{{ url_for('inspection_v2.inspection_form', resident_id=resident_id) }}">Open Inspection</a>
+      <a class="cmx-btn" href="{{ url_for('inspection_v2.resident_inspection_history', resident_id=resident_id) }}">View Inspection History</a>
     </div>
   </div>
 
