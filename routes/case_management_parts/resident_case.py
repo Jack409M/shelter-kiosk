@@ -16,6 +16,7 @@ from routes.case_management_parts.resident_case_notes import build_note_objects
 from routes.case_management_parts.resident_case_viewmodel import build_meeting_defaults
 from routes.case_management_parts.resident_case_viewmodel import build_operations_snapshot
 from routes.case_management_parts.resident_case_viewmodel import build_workspace_header
+from routes.rent_tracking import build_rent_stability_snapshot
 
 
 def _normalize_exit_assessment(row):
@@ -368,6 +369,7 @@ def resident_case_view(resident_id: int):
     )
 
     operations_snapshot = build_operations_snapshot(recovery_snapshot)
+    rent_snapshot = build_rent_stability_snapshot(resident_id)
 
     return render_template(
         "case_management/resident_case.html",
@@ -390,5 +392,6 @@ def resident_case_view(resident_id: int):
         meeting_defaults=meeting_defaults,
         workspace_header=workspace_header,
         operations_snapshot=operations_snapshot,
+        rent_snapshot=rent_snapshot,
         is_deceased_case=enrollment_context["is_deceased_case"],
     )
