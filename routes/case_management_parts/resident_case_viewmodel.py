@@ -51,26 +51,6 @@ def _yes_no_from_need_state(is_need_present):
     return "no" if not bool(is_need_present) else ""
 
 
-def _build_blocker_from_open_needs(open_needs):
-    labels = []
-    for need in open_needs or []:
-        label = _clean_text((need or {}).get("need_label"))
-        if label:
-            labels.append(label)
-
-    if not labels:
-        return ""
-
-    if len(labels) == 1:
-        return f"Open need still blocking progress: {labels[0]}"
-
-    preview = ", ".join(labels[:4])
-    if len(labels) > 4:
-        preview += ", and more"
-
-    return f"Open needs still blocking progress: {preview}"
-
-
 def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     rs = recovery_snapshot or {}
     fs = family_snapshot or {}
@@ -85,7 +65,9 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     if days_sober is not None and str(days_sober).strip() != "":
         parts.append(f"{days_sober} days sober")
 
-    employment_status = _clean_text(rs.get("employment_status_display") or rs.get("employment_status_current"))
+    employment_status = _clean_text(
+        rs.get("employment_status_display") or rs.get("employment_status_current")
+    )
     if employment_status and employment_status != "—":
         parts.append(f"employment status {employment_status.lower()}")
 
@@ -96,12 +78,6 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     kids_at_dwc = fs.get("kids_at_dwc")
     if kids_at_dwc not in (None, ""):
         parts.append(f"children at DWC {kids_at_dwc}")
-
-    open_need_count = len(open_needs or [])
-    if open_need_count:
-        parts.append(f"{open_need_count} open needs")
-    else:
-        parts.append("no open intake needs")
 
     return ". ".join(parts)
 
@@ -150,13 +126,23 @@ def _is_current_or_future_appointment(value: str | None) -> bool:
 
 
 def _resolve_meeting_default_next_appointment(last_note, latest_appointment) -> str:
-    latest_appointment_date = _clean_text(latest_appointment.get("appointment_date")) if latest_appointment else ""
-    last_note_next_appointment = _clean_text(last_note.get("next_appointment")) if last_note else ""
+    latest_appointment_date = (
+        _clean_text(latest_appointment.get("appointment_date"))
+        if latest_appointment
+        else ""
+    )
+    last_note_next_appointment = (
+        _clean_text(last_note.get("next_appointment")) if last_note else ""
+    )
 
-    if latest_appointment_date and _is_current_or_future_appointment(latest_appointment_date):
+    if latest_appointment_date and _is_current_or_future_appointment(
+        latest_appointment_date
+    ):
         return _normalize_appointment_display(latest_appointment_date)
 
-    if last_note_next_appointment and _is_current_or_future_appointment(last_note_next_appointment):
+    if last_note_next_appointment and _is_current_or_future_appointment(
+        last_note_next_appointment
+    ):
         return _normalize_appointment_display(last_note_next_appointment)
 
     return ""
@@ -181,12 +167,8 @@ def build_meeting_defaults(
     last_note = notes[-1] if notes else {}
     latest_appointment = appointments[0] if appointments else {}
 
-    next_appointment = _resolve_meeting_default_next_appointment(last_note, latest_appointment)
-
-    blocker_reason = _first_non_empty(
-        last_note.get("blocker_reason"),
-        _build_blocker_from_open_needs(open_needs),
-        "",
+    next_appointment = _resolve_meeting_default_next_appointment(
+        last_note, latest_appointment
     )
 
     summary_hint = _build_summary_hint(
@@ -211,7 +193,7 @@ def build_meeting_defaults(
             else ""
         ),
         "recommended_next_level": _clean_text(last_note.get("recommended_next_level")),
-        "blocker_reason": blocker_reason or "",
+        "blocker_reason": "",
         "override_or_exception": _clean_text(last_note.get("override_or_exception")),
         "staff_review_note": _clean_text(last_note.get("staff_review_note")),
         "updated_grit": intake_assessment.get("grit_score"),
