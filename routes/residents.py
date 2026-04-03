@@ -226,6 +226,7 @@ def staff_residents_post():
 @require_shelter
 def staff_resident_transfer(resident_id: int):
     from core.residents import record_resident_transfer
+    from routes.rent_tracking import _current_year_month, _ensure_sheet_for_month
 
     if not _require_transfer_role():
         flash("Admin, shelter director, or case manager only.", "error")
@@ -314,6 +315,12 @@ def staff_resident_transfer(resident_id: int):
             else "UPDATE residents SET shelter = ? WHERE id = ?",
             (to_shelter, resident_id),
         )
+
+        try:
+            rent_year, rent_month = _current_year_month()
+            _ensure_sheet_for_month(to_shelter, rent_year, rent_month)
+        except Exception:
+            pass
 
         log_action(
             "resident",
