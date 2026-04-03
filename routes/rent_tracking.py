@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
@@ -52,6 +52,119 @@ def _float_value(value) -> float:
         return round(float(value), 2)
     except Exception:
         return 0.0
+
+
+def _shift_month(year: int, month: int, delta: int) -> tuple[int, int]:
+    month_index = (year * 12 + (month - 1)) + delta
+    shifted_year = month_index // 12
+    shifted_month = (month_index % 12) + 1
+    return shifted_year, shifted_month
+
+
+def _completed_month_keys(lookback_months: int = 9) -> list[tuple[int, int]]:
+    current_year, current_month = _current_year_month()
+    months: list[tuple[int, int]] = []
+    for offset in range(1, lookback_months + 1):
+        months.append(_shift_month(current_year, current_month, -offset))
+    return months
+
+
+def _rent_band_for_score(score: float | int | None) -> dict:
+    numeric_score = float(score or 0)
+
+    if numeric_score >= 95:
+        return {
+            "band_key": "green",
+            "band_label": "Green",
+            "card_style": "background:#eef8f0; border:1px solid #9bc8a6;",
+            "value_style": "color:#1f6b33; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#dcefe1; border:1px solid #9bc8a6; color:#1f6b33; font-weight:700;",
+        }
+
+    if numeric_score >= 79:
+        return {
+            "band_key": "yellow",
+            "band_label": "Yellow",
+            "card_style": "background:#fff8df; border:1px solid #e0cd7a;",
+            "value_style": "color:#7a6500; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#fff1b8; border:1px solid #e0cd7a; color:#7a6500; font-weight:700;",
+        }
+
+    if numeric_score >= 62:
+        return {
+            "band_key": "orange",
+            "band_label": "Orange",
+            "card_style": "background:#fff0e4; border:1px solid #e2b27d;",
+            "value_style": "color:#9a4f00; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd8b0; border:1px solid #e2b27d; color:#9a4f00; font-weight:700;",
+        }
+
+    return {
+        "band_key": "red",
+        "band_label": "Red",
+        "card_style": "background:#fff0f0; border:1px solid #e2a0a0;",
+        "value_style": "color:#9a1f1f; font-weight:700;",
+        "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd6d6; border:1px solid #e2a0a0; color:#9a1f1f; font-weight:700;",
+    }
+
+
+def build_rent_stability_snapshot(resident_id: int, lookback_months: int = 9) -> dict:
+    month_keys = _completed_month_keys(lookback_months)
+    ph = _placeholder()
+
+    rows = db_fetchall(
+        f"""
+        SELECT
+            e.compliance_score,
+            s.rent_year,
+            s.rent_month
+        FROM resident_rent_sheet_entries e
+        JOIN resident_rent_sheets s ON s.id = e.sheet_id
+        WHERE e.resident_id = {ph}
+        ORDER BY s.rent_year DESC, s.rent_month DESC, e.id DESC
+        """,
+        (resident_id,),
+    )
+
+    score_by_month: dict[tuple[int, int], int] = {}
+    for row in rows:
+        year = int(row["rent_year"])
+        month = int(row["rent_month"])
+        key = (year, month)
+        if key not in score_by_month:
+            score_by_month[key] = int(row.get("compliance_score") or 0)
+
+    month_rows = []
+    month_scores: list[int] = []
+
+    for year, month in month_keys:
+        score = score_by_month.get((year, month), 0)
+        month_scores.append(score)
+        month_rows.append(
+            {
+                "year": year,
+                "month": month,
+                "label": _month_label(year, month),
+                "score": score,
+            }
+        )
+
+    average_score = round(sum(month_scores) / len(month_scores), 1) if month_scores else 0.0
+    band = _rent_band_for_score(average_score)
+
+    return {
+        "lookback_months": lookback_months,
+        "average_score": average_score,
+        "average_score_display": f"{average_score:.1f}",
+        "graduation_target": 95,
+        "passes_graduation": average_score >= 95,
+        "band_key": band["band_key"],
+        "band_label": band["band_label"],
+        "card_style": band["card_style"],
+        "value_style": band["value_style"],
+        "pill_style": band["pill_style"],
+        "month_rows": month_rows,
+    }
 
 
 def _ensure_operations_settings_table() -> None:
@@ -626,24 +739,6 @@ def _load_sheet_entries(sheet_id: int):
     return [dict(row) for row in rows]
 
 
-def _weighted_score_for_resident(resident_id: int) -> int | None:
-    ph = _placeholder()
-    rows = db_fetchall(
-        f"""
-        SELECT compliance_score
-        FROM resident_rent_sheet_entries
-        WHERE resident_id = {ph}
-        ORDER BY id DESC
-        LIMIT 6
-        """,
-        (resident_id,),
-    )
-    values = [int(row["compliance_score"]) for row in rows if row.get("compliance_score") is not None]
-    if not values:
-        return None
-    return round(sum(values) / len(values))
-
-
 @rent_tracking.get("/roll")
 @require_login
 @require_shelter
@@ -937,11 +1032,11 @@ def resident_rent_history(resident_id: int):
         (resident_id,),
     )
 
-    weighted_score = _weighted_score_for_resident(resident_id)
+    rent_snapshot = build_rent_stability_snapshot(resident_id)
 
     return render_template(
         "case_management/resident_rent_history.html",
         resident=resident,
         rows=rows,
-        weighted_score=weighted_score,
+        rent_snapshot=rent_snapshot,
     )
