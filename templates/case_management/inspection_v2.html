@@ -1,0 +1,108 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Simplified Living Area Inspection</h1>
+          <div class="cmx-section-subtitle">{{ resident['first_name'] }} {{ resident['last_name'] }}</div>
+        </div>
+
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">Back to Resident</a>
+          <a class="cmx-btn-muted" href="{{ url_for('operations_settings.settings_page') }}">Inspection Defaults</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">New Inspection</h2>
+          <div class="cmx-section-subtitle">Everything starts as passed. Change only the items that failed or need attention.</div>
+        </div>
+      </div>
+
+      <form method="post" action="{{ url_for('inspection_v2.inspection_form', resident_id=resident['id']) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Inspection Date</label>
+            <input type="date" name="inspection_date" required>
+          </div>
+        </div>
+
+        <div class="cmx-stack" style="margin-top:16px;">
+          {% for label in item_labels %}
+            <div class="cmx-panel-soft">
+              <div class="cmx-grid cmx-grid-2">
+                <div class="cmx-field">
+                  <label>{{ label }}</label>
+                  <select name="item_status_{{ loop.index0 }}">
+                    {% for item_status in valid_statuses %}
+                      <option value="{{ item_status }}" {% if item_status == default_status %}selected{% endif %}>{{ item_status.replace('_', ' ')|title }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="cmx-field">
+                  <label>Note</label>
+                  <input type="text" name="item_note_{{ loop.index0 }}" placeholder="Optional">
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="cmx-field" style="margin-top:16px;">
+          <label>Inspection Notes</label>
+          <textarea name="notes" rows="4" placeholder="Optional overall notes"></textarea>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Inspection</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">Inspection History</h2>
+        </div>
+      </div>
+
+      {% if history %}
+        <div class="cmx-stack">
+          {% for row in history %}
+            <div class="cmx-panel-soft">
+              <div class="cmx-panel-head">
+                <h3>{{ row['inspection_date'] or '—' }}</h3>
+                <span>{{ (row['overall_status'] or 'passed').replace('_', ' ')|title }}</span>
+              </div>
+              {% if row['notes'] %}
+                <div class="cmx-summary-text">{{ row['notes'] }}</div>
+              {% endif %}
+              <div class="cmx-stack" style="margin-top:10px;">
+                {% for item in row['items'] %}
+                  <div class="cmx-row-block">
+                    <span>{{ item['item_label'] }}</span>
+                    <span>{{ (item['item_status'] or 'passed').replace('_', ' ')|title }}</span>
+                  </div>
+                  {% if item['item_note'] %}
+                    <div class="cmx-muted">{{ item['item_note'] }}</div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="cmx-muted">No inspection history yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

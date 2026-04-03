@@ -1,0 +1,108 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Operations Settings</h1>
+          <div class="cmx-section-subtitle">
+            Shelter specific rent scoring, late day, and inspection defaults for {{ shelter | shelter if shelter else "Current Shelter" }}.
+          </div>
+        </div>
+
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('admin.admin_dashboard') }}">Back to Admin</a>
+          <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.current_month_sheet') }}">Open Rent Sheet</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <form method="post" action="{{ url_for('operations_settings.settings_page') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="cmx-section-head">
+          <div>
+            <h2 class="cmx-section-title">Rent Rules</h2>
+            <div class="cmx-section-subtitle">These values drive rent scoring and late logic for the active shelter.</div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Late Begins On Day</label>
+            <input type="number" min="1" max="28" name="rent_late_day_of_month" value="{{ settings['rent_late_day_of_month'] if settings else 6 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Carry Forward Unpaid Balance</label>
+            <select name="rent_carry_forward_enabled">
+              <option value="yes" {% if settings and settings['rent_carry_forward_enabled'] %}selected{% endif %}>Yes</option>
+              <option value="no" {% if settings and not settings['rent_carry_forward_enabled'] %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+          <div class="cmx-field">
+            <label>Paid Score</label>
+            <input type="number" name="rent_score_paid" value="{{ settings['rent_score_paid'] if settings else 100 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Partially Paid Score</label>
+            <input type="number" name="rent_score_partially_paid" value="{{ settings['rent_score_partially_paid'] if settings else 75 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Paid Late Score</label>
+            <input type="number" name="rent_score_paid_late" value="{{ settings['rent_score_paid_late'] if settings else 75 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+          <div class="cmx-field">
+            <label>Not Paid Score</label>
+            <input type="number" name="rent_score_not_paid" value="{{ settings['rent_score_not_paid'] if settings else 0 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Exempt Score</label>
+            <input type="number" name="rent_score_exempt" value="{{ settings['rent_score_exempt'] if settings else 100 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-section-head" style="margin-top:24px;">
+          <div>
+            <h2 class="cmx-section-title">Inspection Defaults</h2>
+            <div class="cmx-section-subtitle">New inspections use these defaults. Staff only change items that need attention.</div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Default Item Status</label>
+            <select name="inspection_default_item_status">
+              {% set _default_status = settings['inspection_default_item_status'] if settings else 'passed' %}
+              <option value="passed" {% if _default_status == 'passed' %}selected{% endif %}>Passed</option>
+              <option value="needs_attention" {% if _default_status == 'needs_attention' %}selected{% endif %}>Needs Attention</option>
+              <option value="failed" {% if _default_status == 'failed' %}selected{% endif %}>Failed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field" style="margin-top:16px;">
+          <label>Inspection Checklist Items</label>
+          <textarea name="inspection_item_labels" rows="8">{{ settings['inspection_item_labels'] if settings and settings['inspection_item_labels'] else default_inspection_items }}</textarea>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Operations Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
