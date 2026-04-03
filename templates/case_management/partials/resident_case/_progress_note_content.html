@@ -4,7 +4,6 @@
   {% set note_progress_notes = note["progress_notes"] %}
   {% set note_setbacks_or_incidents = note["setbacks_or_incidents"] %}
   {% set note_action_items = note["action_items"] %}
-  {% set note_next_appointment = note["next_appointment"] %}
   {% set note_ready_for_next_level_display = note["ready_for_next_level_display"] %}
   {% set note_recommended_next_level = note["recommended_next_level"] %}
   {% set note_staff_review_note = note["staff_review_note"] %}
@@ -32,28 +31,31 @@
       {% set item_label = (item["item_label"] or "")|trim %}
       {% set detail = (item["detail"] or "")|trim %}
       {% set new_value = (item["new_value"] or "")|trim %}
+      {% set label_value = item_label if item_label and item_label != "—" else detail if detail else new_value %}
 
       {% if group_key == "need_addressed" %}
         {% if item["change_type"] == "all_resolved" %}
           {% set ns.all_identified_needs_resolved = true %}
-        {% else %}
-          {% set label_value = item_label if item_label and item_label != "—" else detail if detail else new_value %}
-          {% if label_value and label_value not in ns.needs_addressed_merge %}
-            {% set _ = ns.needs_addressed_merge.append(label_value) %}
-          {% endif %}
+        {% elif label_value and label_value not in ns.needs_addressed_merge %}
+          {% set _ = ns.needs_addressed_merge.append(label_value) %}
         {% endif %}
       {% elif group_key == "need_outstanding" %}
-        {% set label_value = item_label if item_label and item_label != "—" else detail if detail else new_value %}
         {% if label_value and label_value not in ns.needs_outstanding_merge %}
           {% set _ = ns.needs_outstanding_merge.append(label_value) %}
         {% endif %}
       {% elif group_key == "employment" or group_key == "sobriety" %}
-        {% set label_value = item_label if item_label and item_label != "—" else detail if detail else new_value %}
         {% if label_value and label_value not in ns.profile_updates_merge %}
           {% set _ = ns.profile_updates_merge.append(label_value) %}
         {% endif %}
       {% elif group_key == "advancement" %}
-        {% if item_label in ["Readiness for next level", "Recommended next level", "Barrier to advancement", "Override or exception", "Staff review note", "Setbacks or incidents"] %}
+        {% if item_label in [
+          "Readiness for next level",
+          "Recommended next level",
+          "Barrier to advancement",
+          "Override or exception",
+          "Staff review note",
+          "Setbacks or incidents"
+        ] %}
           {% if item_label and item_label not in ns.profile_updates_merge %}
             {% set _ = ns.profile_updates_merge.append(item_label) %}
           {% endif %}
@@ -66,9 +68,38 @@
     <div class="case-note-report-header">
       <div class="case-note-report-meta">
         <strong>Meeting {{ note_meeting_date or "—" }}</strong>
-        {% if note_next_appointment %}
-          <span class="case-note-report-sep">|</span>
-          <span>Follow up Appt: {{ note_next_appointment }}</span>
+      </div>
+    </div>
+
+    <div class="case-note-report-section">
+      <div class="case-note-report-title">Meeting Record Snapshot</div>
+      <div class="case-note-text-block">
+        {% if ns.services_merge %}
+          Services recorded: {{ ns.services_merge | join(", ") }}.
+        {% else %}
+          No direct services were recorded for this meeting.
+        {% endif %}
+
+        {% if ns.needs_addressed_merge %}
+          Needs addressed: {{ ns.needs_addressed_merge | join(", ") }}.
+        {% endif %}
+
+        {% if ns.all_identified_needs_resolved %}
+          All identified intake needs were marked resolved at this point.
+        {% elif ns.needs_outstanding_merge %}
+          Open needs requiring continued follow up: {{ ns.needs_outstanding_merge | join(", ") }}.
+        {% else %}
+          No unresolved special needs were recorded in this note.
+        {% endif %}
+
+        {% if note_ready_for_next_level_display and note_ready_for_next_level_display != "—" %}
+          Advancement review: {{ note_ready_for_next_level_display }}{% if note_recommended_next_level %}. Recommended next level: {{ note_recommended_next_level }}{% endif %}.
+        {% elif note_staff_review_note %}
+          Staff review note: {{ note_staff_review_note }}.
+        {% endif %}
+
+        {% if ns.profile_updates_merge %}
+          Profile areas reviewed or updated: {{ ns.profile_updates_merge | join(", ") }}.
         {% endif %}
       </div>
     </div>
@@ -80,39 +111,6 @@
       {% else %}
         <div class="case-note-report-empty">No case summary was recorded for this meeting.</div>
       {% endif %}
-    </div>
-
-    <div class="case-note-report-section">
-      <div class="case-note-report-title">Contact Summary</div>
-      <div class="case-note-text-block">
-        {% if ns.services_merge %}
-          During this contact, services provided included {{ ns.services_merge | join(", ") }}.
-        {% else %}
-          No direct services were recorded during this contact.
-        {% endif %}
-
-        {% if ns.needs_addressed_merge %}
-          Needs addressed during this reporting period included {{ ns.needs_addressed_merge | join(", ") }}.
-        {% endif %}
-
-        {% if ns.all_identified_needs_resolved %}
-          At this time, all identified needs at intake have been resolved.
-        {% elif ns.needs_outstanding_merge %}
-          The following needs remain open or require continued follow up: {{ ns.needs_outstanding_merge | join(", ") }}.
-        {% else %}
-          No unresolved special needs were identified at this meeting.
-        {% endif %}
-
-        {% if ns.profile_updates_merge %}
-          Resident profile information reviewed or updated in connection with this note included {{ ns.profile_updates_merge | join(", ") }}.
-        {% endif %}
-
-        {% if note_ready_for_next_level_display and note_ready_for_next_level_display != "—" %}
-          Advancement review recorded a determination of {{ note_ready_for_next_level_display }}{% if note_recommended_next_level %}, with recommendation for level {{ note_recommended_next_level }}{% endif %}.
-        {% elif note_staff_review_note %}
-          Staff review reflected {{ note_staff_review_note }}.
-        {% endif %}
-      </div>
     </div>
 
     <div class="case-note-report-section">
