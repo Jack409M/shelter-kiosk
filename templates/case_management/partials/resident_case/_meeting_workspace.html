@@ -221,6 +221,12 @@
           <label>Barriers And Concerns</label>
           <textarea name="setbacks_or_incidents" rows="3" placeholder="Record setbacks, incidents, or current concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
         </div>
+
+        <div class="cmx-button-row" style="margin-top:12px;">
+          <a class="cmx-btn-muted" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id) }}">
+            Transfer Shelter
+          </a>
+        </div>
       </div>
     </div>
 
