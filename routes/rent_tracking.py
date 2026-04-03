@@ -906,7 +906,6 @@ def resident_rent_history(resident_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     _ensure_tables()
-    shelter = _normalize_shelter_name(session.get("shelter"))
     ph = _placeholder()
 
     resident = db_fetchone(
