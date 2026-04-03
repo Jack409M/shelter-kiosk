@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Living Area Inspection Sheet</h1>
+          <div class="cmx-section-subtitle">{{ shelter|shelter }} residents</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <form method="post" action="{{ url_for('inspection_v2.inspection_sheet', year=inspection_year, month=inspection_month) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="cmx-grid cmx-grid-2">
+          <div class="cmx-field">
+            <label>Inspection Date</label>
+            <input type="date" name="inspection_date" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Notes</label>
+            <input type="text" name="notes" placeholder="Optional overall notes">
+          </div>
+        </div>
+
+        {% if residents %}
+          <div style="overflow-x:auto; margin-top:16px;">
+            <table class="audit-table">
+              <thead>
+                <tr>
+                  <th>Resident Name</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for resident in residents %}
+                  <tr>
+                    <td>{{ resident['first_name'] }} {{ resident['last_name'] }}</td>
+                    <td>
+                      <select name="status_{{ resident['id'] }}">
+                        <option value="passed" selected>Passed</option>
+                        <option value="failed">Failed</option>
+                      </select>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="cmx-button-row" style="margin-top:16px;">
+            <button type="submit" class="cmx-btn">Save Inspection Sheet</button>
+          </div>
+        {% else %}
+          <div class="cmx-muted" style="margin-top:16px;">No active residents found.</div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
