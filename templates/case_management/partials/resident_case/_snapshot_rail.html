@@ -15,6 +15,24 @@
       <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
       <div class="cmx-row-block"><span>Employment</span><span>{{ rs_employment_status or "—" }}</span></div>
     </div>
+
+    {% if session.get("role") == "admin" %}
+      <div class="cmx-button-row" style="margin-top:12px;">
+        {% if resident_active %}
+          <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" style="margin:0;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="active" value="0">
+            <button type="submit" class="cmx-btn-warn">Deactivate Resident</button>
+          </form>
+        {% else %}
+          <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" style="margin:0;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="active" value="1">
+            <button type="submit" class="cmx-btn-secondary">Activate Resident</button>
+          </form>
+        {% endif %}
+      </div>
+    {% endif %}
   </div>
 
   <div class="cmx-card">
