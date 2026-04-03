@@ -205,6 +205,32 @@
     color: #7a2e2e;
   }
 
+  .view-switch {
+    display: inline-flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .view-switch .switch-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    background: #eef2f6;
+    color: #243447;
+  }
+
+  .view-switch .switch-link.is-active {
+    background: #1f5eff;
+    color: #ffffff;
+  }
+
   @media (max-width: 820px) {
     .cm-header {
       flex-direction: column;
@@ -261,7 +287,28 @@
     <div class="section-card-head">
       <div>
         <h2>Residents</h2>
-        <p>Active and inactive resident records for the currently selected shelter.</p>
+        <p>
+          {% if show == "all" %}
+            All resident records for the currently selected shelter.
+          {% else %}
+            Active resident records for the currently selected shelter.
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="view-switch">
+        <a
+          class="switch-link {% if show == 'active' %}is-active{% endif %}"
+          href="{{ url_for('case_management.index', show='active') }}"
+        >
+          See Active
+        </a>
+        <a
+          class="switch-link {% if show == 'all' %}is-active{% endif %}"
+          href="{{ url_for('case_management.index', show='all') }}"
+        >
+          See All
+        </a>
       </div>
     </div>
 
@@ -305,7 +352,11 @@
         </div>
       {% else %}
         <div class="empty-state">
-          No residents found for this shelter yet.
+          {% if show == "all" %}
+            No residents found for this shelter yet.
+          {% else %}
+            No active residents found for this shelter yet.
+          {% endif %}
         </div>
       {% endif %}
     </div>
