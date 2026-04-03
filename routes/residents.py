@@ -34,6 +34,13 @@ def _shelter_equals_sql(column_name: str) -> str:
     return f"LOWER(COALESCE({column_name}, '')) = ?"
 
 
+def _return_redirect(default_endpoint: str = "residents.staff_residents", **default_values):
+    next_url = (request.form.get("next") or request.args.get("next") or "").strip()
+    if next_url:
+        return redirect(next_url)
+    return redirect(url_for(default_endpoint, **default_values))
+
+
 def _normalize_all_shelter_values() -> None:
     updates = [
         ("residents", "shelter"),
@@ -229,6 +236,7 @@ def staff_resident_transfer(resident_id: int):
 
     all_shelters = [_normalize_shelter_name(s) for s in get_all_shelters()]
     current_shelter = _normalize_shelter_name(session.get("shelter"))
+    next_url = (request.form.get("next") or request.args.get("next") or "").strip()
 
     resident = db_fetchone(
         f"SELECT * FROM residents WHERE id = {('%s' if g.get('db_kind') == 'pg' else '?')} AND {_shelter_equals_sql('shelter')}",
@@ -247,11 +255,11 @@ def staff_resident_transfer(resident_id: int):
 
         if to_shelter not in all_shelters:
             flash("Select a valid shelter.", "error")
-            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id))
+            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url) if next_url else url_for("residents.staff_resident_transfer", resident_id=resident_id))
 
         if to_shelter == from_shelter:
             flash("Resident is already at that shelter.", "error")
-            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id))
+            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url) if next_url else url_for("residents.staff_resident_transfer", resident_id=resident_id))
 
         record_resident_transfer(
             resident_id=resident_id,
@@ -317,13 +325,14 @@ def staff_resident_transfer(resident_id: int):
         )
 
         flash(f"Resident transferred from {from_shelter} to {to_shelter}.", "ok")
-        return redirect(url_for("residents.staff_residents"))
+        return _return_redirect()
 
     return render_template(
         "staff_resident_transfer.html",
         resident=resident,
         from_shelter=from_shelter,
         shelters=[s for s in all_shelters if s != from_shelter],
+        next=next_url,
     )
 
 
@@ -344,7 +353,7 @@ def staff_resident_set_active(resident_id: int):
 
     if active not in ["0", "1"]:
         flash("Invalid action.", "error")
-        return redirect(url_for("residents.staff_residents"))
+        return _return_redirect()
 
     resident = db_fetchone(
         f"SELECT id FROM residents WHERE id = {('%s' if g.get('db_kind') == 'pg' else '?')} AND {_shelter_equals_sql('shelter')}",
@@ -352,7 +361,7 @@ def staff_resident_set_active(resident_id: int):
     )
     if not resident:
         flash("Resident not found.", "error")
-        return redirect(url_for("residents.staff_residents"))
+        return _return_redirect()
 
     if g.get("db_kind") == "pg":
         db_execute(
@@ -367,4 +376,4 @@ def staff_resident_set_active(resident_id: int):
 
     log_action("resident", resident_id, shelter, staff_id, "set_active", f"active={active}")
     flash("Updated.", "ok")
-    return redirect(url_for("residents.staff_residents"))
+    return _return_redirect()
