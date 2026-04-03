@@ -1,98 +1,166 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<div style="max-width:1100px; margin:0 auto; display:grid; gap:20px;">
+  <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+    <div style="display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0; font-size:1.9rem; font-weight:800; color:#0f172a;">Family Intake</h1>
+        <div style="margin-top:6px; color:#475569; font-size:0.96rem;">
+          Add and manage child records for this resident without leaving the page.
+        </div>
+      </div>
 
-<h1>Family Intake</h1>
-
-<div class="card">
-  <form method="post">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    <label><strong>Child Name</strong></label>
-    <input type="text" name="child_name" required>
-
-    <label><strong>Birth Year</strong></label>
-    <input type="number" name="birth_year">
-
-    <label><strong>Relationship</strong></label>
-    <select name="relationship">
-      <option value="">Select</option>
-      <option value="son">Son</option>
-      <option value="daughter">Daughter</option>
-      <option value="foster">Foster Child</option>
-      <option value="relative">Relative</option>
-      <option value="non_relative">Non Relative</option>
-      <option value="guardian">Legal Guardian Placement</option>
-    </select>
-
-    <label><strong>Living Status</strong></label>
-    <select name="living_status">
-      <option value="living_with_mom">Living with Mom</option>
-      <option value="not_with_mom">Not with Mom</option>
-      <option value="foster_care">Foster Care</option>
-      <option value="kinship_care">Kinship Care</option>
-      <option value="reunified">Reunified</option>
-      <option value="unknown">Unknown</option>
-    </select>
-
-    <div style="margin-top:10px;">
-      <button type="submit">Save Child</button>
-      <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
-        Done with Family
-      </a>
-    </div>
-  </form>
-</div>
-
-{% if children %}
-  <div class="card" style="margin-top:12px;">
-    <h2>Current Children</h2>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Birth Year</th>
-          <th>Relationship</th>
-          <th>Living Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for child in children %}
-          {% set child_id = child["id"] if child is mapping else child[0] %}
-          {% set child_name = child["child_name"] if child is mapping else child[2] %}
-          {% set birth_year = child["birth_year"] if child is mapping else child[3] %}
-          {% set relationship = child["relationship"] if child is mapping else child[4] %}
-          {% set living_status = child["living_status"] if child is mapping else child[5] %}
-
-          <tr>
-            <td>{{ child_name or "—" }}</td>
-            <td>{{ birth_year or "—" }}</td>
-            <td>{{ relationship or "—" }}</td>
-            <td>{{ living_status|replace("_", " ")|title if living_status else "—" }}</td>
-            <td>
-              <a class="btn btn-sm" href="{{ url_for('case_management.edit_child', child_id=child_id) }}">
-                Edit
-              </a>
-              <form method="post" action="{{ url_for('case_management.delete_child', child_id=child_id) }}" style="display:inline;">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Remove this child?');">
-                  Delete
-                </button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-
-    <div style="margin-top:12px;">
-      <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
-        Done with Family
+      <a
+        class="btn"
+        href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}"
+        style="border-radius:14px; padding:11px 16px;"
+      >
+        Back to Case Management
       </a>
     </div>
   </div>
-{% endif %}
 
+  <div style="display:grid; grid-template-columns:minmax(0, 1.2fr) minmax(320px, 0.9fr); gap:20px; align-items:start;">
+    <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+      <div style="margin-bottom:14px;">
+        <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Add Child</h2>
+        <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
+          Record a child, relationship, and current living status.
+        </div>
+      </div>
+
+      <form method="post">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Child Name</strong></label>
+          <input type="text" name="child_name" required style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Birth Year</strong></label>
+          <input type="number" name="birth_year" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Relationship</strong></label>
+          <select name="relationship" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+            <option value="">Select</option>
+            <option value="son">Son</option>
+            <option value="daughter">Daughter</option>
+            <option value="foster">Foster Child</option>
+            <option value="relative">Relative</option>
+            <option value="non_relative">Non Relative</option>
+            <option value="guardian">Legal Guardian Placement</option>
+          </select>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Living Status</strong></label>
+          <select name="living_status" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+            <option value="living_with_mom">Living with Mom</option>
+            <option value="not_with_mom">Not with Mom</option>
+            <option value="foster_care">Foster Care</option>
+            <option value="kinship_care">Kinship Care</option>
+            <option value="reunified">Reunified</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+
+        <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Child</button>
+          <a
+            class="btn"
+            href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}"
+            style="border-radius:14px; padding:11px 16px;"
+          >
+            Done with Family
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+      <div style="margin-bottom:14px;">
+        <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Current Children</h2>
+        <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
+          Review and manage children already attached to this resident.
+        </div>
+      </div>
+
+      {% if children %}
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Name</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Birth Year</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Relationship</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Living Status</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for child in children %}
+                {% set child_id = child["id"] if child is mapping else child[0] %}
+                {% set child_name = child["child_name"] if child is mapping else child[2] %}
+                {% set birth_year = child["birth_year"] if child is mapping else child[3] %}
+                {% set relationship = child["relationship"] if child is mapping else child[4] %}
+                {% set living_status = child["living_status"] if child is mapping else child[5] %}
+
+                <tr>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ child_name or "—" }}</td>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ birth_year or "—" }}</td>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ relationship or "—" }}</td>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ living_status|replace("_", " ")|title if living_status else "—" }}</td>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7; white-space:nowrap;">
+                    <a
+                      class="btn btn-sm"
+                      href="{{ url_for('case_management.edit_child', child_id=child_id) }}"
+                      style="border-radius:12px;"
+                    >
+                      Edit
+                    </a>
+                    <form method="post" action="{{ url_for('case_management.delete_child', child_id=child_id) }}" style="display:inline;">
+                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                      <button
+                        type="submit"
+                        class="btn btn-sm btn-danger"
+                        style="border-radius:12px;"
+                        onclick="return confirm('Remove this child?');"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p style="margin:0; color:#475569;">No children have been added for this resident yet.</p>
+      {% endif %}
+
+      <div style="margin-top:16px;">
+        <a
+          class="btn"
+          href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}"
+          style="border-radius:14px; padding:11px 16px;"
+        >
+          Done with Family
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @media (max-width: 900px) {
+    div[style*="grid-template-columns:minmax(0, 1.2fr) minmax(320px, 0.9fr)"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
 {% endblock %}
