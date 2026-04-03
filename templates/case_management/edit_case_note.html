@@ -109,7 +109,6 @@
   {% set progress_notes_value = note["progress_notes"] %}
   {% set setbacks_or_incidents_value = note["setbacks_or_incidents"] %}
   {% set action_items_value = note["action_items"] %}
-  {% set next_appointment_value = note["next_appointment"] %}
   {% set overall_summary_value = note["overall_summary"] %}
   {% set ready_for_next_level_value = note["ready_for_next_level"] %}
   {% set recommended_next_level_value = note["recommended_next_level"] %}
@@ -126,7 +125,6 @@
   {% set progress_notes_value = note[5] %}
   {% set setbacks_or_incidents_value = "" %}
   {% set action_items_value = note[6] %}
-  {% set next_appointment_value = note[7] %}
   {% set overall_summary_value = note[8] %}
   {% set ready_for_next_level_value = none %}
   {% set recommended_next_level_value = "" %}
@@ -151,29 +149,17 @@
     </div>
 
     <div class="cmx-appt" style="margin-bottom:16px;">
-      <strong>Appointment note</strong><br>
-      The <strong>Next Appointment</strong> field belongs to this saved meeting note. The official appointment record should still be created from the resident case workspace.
+      <strong>Official appointment workflow</strong><br>
+      Appointment scheduling now belongs only to the official appointment record on the resident case workspace.
     </div>
 
     <form method="post" action="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note_id) }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-      <div class="cmx-grid cmx-grid-4">
+      <div class="cmx-grid cmx-grid-3">
         <div class="cmx-field">
           <label>Meeting Date</label>
           <input type="date" name="meeting_date" value="{{ meeting_date or '' }}" required>
-        </div>
-
-        <div class="cmx-field">
-          <label>Next Appointment</label>
-          <input
-            type="text"
-            name="next_appointment"
-            value="{{ next_appointment_value or '' }}"
-            placeholder="04/15/2026 10:00 AM"
-            inputmode="text"
-          >
-          <div class="cmx-muted">Use month/day/year and time, for example 04/15/2026 10:00 AM.</div>
         </div>
 
         <div class="cmx-field">
