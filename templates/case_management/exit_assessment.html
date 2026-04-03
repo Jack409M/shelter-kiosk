@@ -31,7 +31,8 @@
 
   .resident-card,
   .section-card,
-  .footer-card {
+  .footer-card,
+  .deceased-card {
     background: #ffffff;
     border: 1px solid #d8e0ea;
     border-radius: 12px;
@@ -40,19 +41,32 @@
     overflow: hidden;
   }
 
+  .deceased-card {
+    border-color: #f3c7c7;
+    background: #fff7f7;
+  }
+
   .resident-card-body,
   .section-card-body,
-  .footer-card-body {
+  .footer-card-body,
+  .deceased-card-body {
     padding: 14px 16px;
   }
 
-  .section-card-head {
+  .section-card-head,
+  .deceased-card-head {
     padding: 12px 16px;
     border-bottom: 1px solid #e6ebf1;
     background: #fafbfd;
   }
 
-  .section-card-head h2 {
+  .deceased-card-head {
+    background: #fff1f1;
+    border-bottom-color: #f3c7c7;
+  }
+
+  .section-card-head h2,
+  .deceased-card-head h2 {
     margin: 0;
     font-size: 17px;
     line-height: 1.2;
@@ -256,6 +270,13 @@
     display: none !important;
   }
 
+  .deceased-note {
+    margin: 0;
+    color: #7a2e2e;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
   @media (max-width: 980px) {
     .resident-meta {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -409,7 +430,7 @@
             </select>
           </div>
 
-          <div class="toggle-field span-2">
+          <div class="toggle-field span-2" id="graduate-wrap">
             <label>Graduate DWC</label>
             <div class="toggle-inputs">
               <input type="radio" id="graduate_dwc_yes" name="graduate_dwc" value="yes" {% if form_data.get('graduate_dwc') == 'yes' %}checked{% endif %}>
@@ -420,7 +441,7 @@
             </div>
           </div>
 
-          <div class="field span-3 field-compact">
+          <div class="field span-3 field-compact" id="date-graduated-wrap">
             <label for="date_graduated">Date Graduated</label>
             <input
               id="date_graduated"
@@ -430,7 +451,7 @@
             >
           </div>
 
-          <div class="toggle-field span-3">
+          <div class="toggle-field span-3" id="leave-ama-wrap">
             <label>Leave Amarillo</label>
             <div class="toggle-inputs">
               <input type="radio" id="leave_ama_yes" name="leave_ama" value="yes" {% if form_data.get('leave_ama') == 'yes' %}checked{% endif %}>
@@ -462,7 +483,18 @@
       </div>
     </section>
 
-    <section class="section-card">
+    <section id="deceased-card" class="deceased-card is-hidden">
+      <div class="deceased-card-head">
+        <h2>Death In Program</h2>
+      </div>
+      <div class="deceased-card-body">
+        <p class="deceased-note">
+          Use this exit path only when the resident died while enrolled in the program. This should be coded as <strong>Administrative Exit</strong> with reason <strong>Deceased</strong>. Regular graduation, relocation, and outcome fields do not apply to this exit type. Complete any required external incident, leadership, and emergency response steps under DWC policy.
+        </p>
+      </div>
+    </section>
+
+    <section class="section-card" id="outcomes-card">
       <div class="section-card-head">
         <h2>Monthly Income, Education, and Grit at Exit</h2>
       </div>
@@ -511,7 +543,7 @@
       </div>
     </section>
 
-    <section class="section-card">
+    <section class="section-card" id="transport-card">
       <div class="section-card-head">
         <h2>Transportation and Insurance at Exit</h2>
       </div>
@@ -564,7 +596,7 @@
       </div>
     </section>
 
-    <section class="section-card">
+    <section class="section-card" id="needs-card">
       <div class="section-card-head">
         <h2>Needs Resolved at Exit</h2>
       </div>
@@ -635,7 +667,8 @@
       "Incarceration",
       "Medical Discharge",
       "Safety Removal",
-      "Left by Choice"
+      "Left by Choice",
+      "Deceased"
     ]
   };
 
@@ -654,6 +687,19 @@
   const graduateYes = document.getElementById("graduate_dwc_yes");
   const graduateNo = document.getElementById("graduate_dwc_no");
   const dateGraduatedInput = document.getElementById("date_graduated");
+  const graduateWrap = document.getElementById("graduate-wrap");
+  const dateGraduatedWrap = document.getElementById("date-graduated-wrap");
+  const leaveAmaWrap = document.getElementById("leave-ama-wrap");
+  const deceasedCard = document.getElementById("deceased-card");
+  const outcomesCard = document.getElementById("outcomes-card");
+  const transportCard = document.getElementById("transport-card");
+  const needsCard = document.getElementById("needs-card");
+
+  function isDeceasedExit() {
+    return categorySelect && reasonSelect
+      && categorySelect.value === "Administrative Exit"
+      && reasonSelect.value === "Deceased";
+  }
 
   function updateExitReasons() {
     if (!categorySelect || !reasonSelect) return;
@@ -678,20 +724,26 @@
     }
 
     reasonSelect.dataset.currentValue = reasonSelect.value;
+    updateDeceasedExitState();
   }
 
   function updateLeaveAmarillo() {
     const leaving = leaveYes && leaveYes.checked;
     const unknown = leaveUnknownInput && leaveUnknownInput.checked;
+    const deceased = isDeceasedExit();
 
-    leaveCityWrap.classList.toggle("is-hidden", !leaving);
-    leaveUnknownWrap.classList.toggle("is-hidden", !leaving);
+    leaveCityWrap.classList.toggle("is-hidden", !leaving || deceased);
+    leaveUnknownWrap.classList.toggle("is-hidden", !leaving || deceased);
 
-    if (!leaving) {
-      leaveCityInput.value = "";
-      leaveUnknownInput.checked = false;
-      leaveCityInput.disabled = true;
-      leaveUnknownInput.disabled = true;
+    if (!leaving || deceased) {
+      if (leaveCityInput) {
+        leaveCityInput.value = "";
+        leaveCityInput.disabled = true;
+      }
+      if (leaveUnknownInput) {
+        leaveUnknownInput.checked = false;
+        leaveUnknownInput.disabled = true;
+      }
       return;
     }
 
@@ -705,24 +757,52 @@
 
   function updateCarInsurance() {
     const hasCar = receivedCarYes && receivedCarYes.checked;
+    const deceased = isDeceasedExit();
 
-    if (!hasCar) {
-      carInsuranceYes.checked = false;
-      if (carInsuranceNo) {
-        carInsuranceNo.checked = false;
-      }
+    if (!hasCar || deceased) {
+      if (carInsuranceYes) carInsuranceYes.checked = false;
+      if (carInsuranceNo) carInsuranceNo.checked = false;
     }
 
-    if (carInsuranceYes) carInsuranceYes.disabled = !hasCar;
-    if (carInsuranceNo) carInsuranceNo.disabled = !hasCar;
+    if (carInsuranceYes) carInsuranceYes.disabled = !hasCar || deceased;
+    if (carInsuranceNo) carInsuranceNo.disabled = !hasCar || deceased;
   }
 
   function updateGraduationDate() {
     const graduated = graduateYes && graduateYes.checked;
-    dateGraduatedInput.disabled = !graduated;
-    if (!graduated) {
+    const deceased = isDeceasedExit();
+
+    dateGraduatedInput.disabled = !graduated || deceased;
+    if (!graduated || deceased) {
       dateGraduatedInput.value = "";
     }
+  }
+
+  function updateDeceasedExitState() {
+    const deceased = isDeceasedExit();
+
+    if (deceasedCard) deceasedCard.classList.toggle("is-hidden", !deceased);
+    if (outcomesCard) outcomesCard.classList.toggle("is-hidden", deceased);
+    if (transportCard) transportCard.classList.toggle("is-hidden", deceased);
+    if (needsCard) needsCard.classList.toggle("is-hidden", deceased);
+    if (graduateWrap) graduateWrap.classList.toggle("is-hidden", deceased);
+    if (dateGraduatedWrap) dateGraduatedWrap.classList.toggle("is-hidden", deceased);
+    if (leaveAmaWrap) leaveAmaWrap.classList.toggle("is-hidden", deceased);
+
+    if (deceased) {
+      if (graduateYes) graduateYes.checked = false;
+      if (graduateNo) graduateNo.checked = true;
+      if (leaveYes) leaveYes.checked = false;
+      if (leaveNo) leaveNo.checked = true;
+      if (receivedCarYes) receivedCarYes.checked = false;
+      if (receivedCarNo) receivedCarNo.checked = false;
+      if (carInsuranceYes) carInsuranceYes.checked = false;
+      if (carInsuranceNo) carInsuranceNo.checked = false;
+    }
+
+    updateLeaveAmarillo();
+    updateCarInsurance();
+    updateGraduationDate();
   }
 
   if (categorySelect && reasonSelect) {
@@ -733,6 +813,7 @@
 
     reasonSelect.addEventListener("change", function () {
       reasonSelect.dataset.currentValue = reasonSelect.value;
+      updateDeceasedExitState();
     });
   }
 
@@ -753,12 +834,14 @@
     updateLeaveAmarillo();
     updateCarInsurance();
     updateGraduationDate();
+    updateDeceasedExitState();
   });
 
   updateExitReasons();
   updateLeaveAmarillo();
   updateCarInsurance();
   updateGraduationDate();
+  updateDeceasedExitState();
 </script>
 
 {% endblock %}
