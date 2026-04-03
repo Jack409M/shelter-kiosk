@@ -66,7 +66,7 @@
         <div class="resident-notebook-eyebrow">Resident Record</div>
         <h2 class="resident-notebook-section-title">Basic Information</h2>
         <div class="resident-notebook-section-copy">
-          Core resident information, emergency details, medical information, and resident management actions.
+          Core resident information, emergency details, medical information, and program details.
         </div>
 
         {% if session.get("role") in ["admin", "shelter_director", "case_manager"] %}
@@ -139,44 +139,6 @@
                 <strong>Medical Notes:</strong><br>
                 {{ medical_notes or "—" }}
               </div>
-            </div>
-          </div>
-
-          <div class="card resident-profile-section-card">
-            <h3 class="resident-profile-card-title">Resident Controls</h3>
-
-            <div class="profile-actions resident-profile-actions-top">
-
-              {% if session.get("role") == "admin" %}
-                {% if resident_active %}
-                  <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" class="resident-profile-inline-form">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="active" value="0">
-                    <button type="submit">Deactivate</button>
-                  </form>
-                {% else %}
-                  <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" class="resident-profile-inline-form">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="active" value="1">
-                    <button type="submit">Activate</button>
-                  </form>
-                {% endif %}
-              {% endif %}
-
-              <a class="btn" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id) }}">
-                Transfer Shelter
-              </a>
-
-              {% if resident_active and enrollment_id and not exit_date %}
-                <a class="btn" href="{{ url_for('case_management_exit.exit_assessment_form', resident_id=resident_id) }}">
-                  Exit Resident
-                </a>
-              {% elif enrollment_id and exit_date %}
-                <a class="btn" href="{{ url_for('case_management_exit.exit_assessment_form', resident_id=resident_id) }}">
-                  View Exit Assessment
-                </a>
-              {% endif %}
-
             </div>
           </div>
 
