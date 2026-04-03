@@ -64,7 +64,7 @@
 {% set header_program_status = workspace_header.get("program_status") %}
 {% set last_note = notes[-1] if notes else none %}
 {% set last_meeting_date = last_note["meeting_date"] if last_note else "—" %}
-{% set next_appt = last_note["next_appointment"] if last_note and last_note["next_appointment"] else meeting_defaults.get("next_appointment", "—") %}
+{% set next_appt = meeting_defaults.get("next_appointment", "—") %}
 {% set case_note_saved = request.args.get("case_note_saved") == "1" %}
 
 <div class="cmx-page">
