@@ -2,7 +2,9 @@
   <div class="cmx-card">
     <div class="cmx-side-card-head">
       <h3>Case Snapshot</h3>
-      <a class="cmx-side-action" href="#meeting-workspace-form">Today’s Meeting</a>
+      {% if not is_deceased_case %}
+        <a class="cmx-side-action" href="#meeting-workspace-form">Today’s Meeting</a>
+      {% endif %}
     </div>
 
     <div class="cmx-stack">
@@ -14,9 +16,12 @@
       <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
       <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
       <div class="cmx-row-block"><span>Employment</span><span>{{ rs_employment_status or "—" }}</span></div>
+      {% if is_deceased_case %}
+        <div class="cmx-row-block"><span>Exit Reason</span><span>{{ exit_reason or "Deceased" }}</span></div>
+      {% endif %}
     </div>
 
-    {% if session.get("role") == "admin" %}
+    {% if session.get("role") == "admin" and not is_deceased_case %}
       <div class="cmx-button-row" style="margin-top:12px;">
         {% if resident_active %}
           <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" style="margin:0;">
@@ -40,7 +45,9 @@
   <div class="cmx-card">
     <div class="cmx-side-card-head">
       <h3>Open Needs</h3>
-      <a class="cmx-side-action" href="#meeting-workspace-form">Work In Meeting</a>
+      {% if not is_deceased_case %}
+        <a class="cmx-side-action" href="#meeting-workspace-form">Work In Meeting</a>
+      {% endif %}
     </div>
 
     {% if open_needs %}
@@ -53,7 +60,13 @@
         {% endfor %}
       </div>
     {% else %}
-      <p class="cmx-muted">All identified intake needs have been resolved or no open needs are currently on file.</p>
+      <p class="cmx-muted">
+        {% if is_deceased_case %}
+          Open needs are not active because this case is closed as deceased.
+        {% else %}
+          All identified intake needs have been resolved or no open needs are currently on file.
+        {% endif %}
+      </p>
     {% endif %}
   </div>
 
