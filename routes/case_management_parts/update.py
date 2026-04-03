@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
-
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
@@ -35,68 +33,6 @@ def _clean_text(value):
     return (value or "").strip()
 
 
-def _parse_meeting_date_iso(value: str) -> datetime | None:
-    text = (value or "").strip()
-    if not text:
-        return None
-    try:
-        return datetime.strptime(text, "%Y-%m-%d")
-    except ValueError:
-        return None
-
-
-def _parse_next_appointment_datetime(value: str) -> tuple[datetime | None, str | None]:
-    normalized = " ".join((value or "").strip().split())
-    if not normalized:
-        return None, None
-
-    accepted_formats = [
-        ("%m/%d/%Y", "%m/%d/%Y"),
-        ("%m/%d/%Y %I:%M %p", "%m/%d/%Y %I:%M %p"),
-        ("%m/%d/%Y %H:%M", "%m/%d/%Y %I:%M %p"),
-        ("%m/%d/%y", "%m/%d/%Y"),
-        ("%m/%d/%y %I:%M %p", "%m/%d/%Y %I:%M %p"),
-        ("%m/%d/%y %H:%M", "%m/%d/%Y %I:%M %p"),
-        ("%Y-%m-%d", "%m/%d/%Y"),
-    ]
-
-    for input_format, output_format in accepted_formats:
-        try:
-            parsed = datetime.strptime(normalized, input_format)
-            rendered = parsed.strftime(output_format).replace(" 0", " ")
-            return parsed, rendered
-        except ValueError:
-            continue
-
-    return None, None
-
-
-def _normalize_next_appointment(raw_value: str, meeting_date: str) -> tuple[str, str | None]:
-    text = (raw_value or "").strip()
-    if not text:
-        return "", None
-
-    meeting_dt = _parse_meeting_date_iso(meeting_date)
-    if not meeting_dt:
-        return text, None
-
-    parsed_next_appointment, rendered_next_appointment = _parse_next_appointment_datetime(text)
-
-    if not parsed_next_appointment or not rendered_next_appointment:
-        return (
-            text,
-            "Next appointment must use a valid date in month/day/year format, with optional time.",
-        )
-
-    if parsed_next_appointment.date() < meeting_dt.date():
-        return (
-            rendered_next_appointment,
-            "Next appointment cannot be earlier than the meeting date.",
-        )
-
-    return rendered_next_appointment, None
-
-
 def _get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
     ph = placeholder()
 
@@ -123,8 +59,6 @@ def _collect_note_form_values():
     progress_notes = _clean_text(request.form.get("progress_notes"))
     setbacks_or_incidents = _clean_text(request.form.get("setbacks_or_incidents"))
     action_items = _clean_text(request.form.get("action_items"))
-    next_appointment_raw = _clean_text(request.form.get("next_appointment"))
-    next_appointment, next_appointment_error = _normalize_next_appointment(next_appointment_raw, meeting_date)
     overall_summary = _clean_text(request.form.get("overall_summary"))
     ready_for_next_level = yes_no_to_int(request.form.get("ready_for_next_level"))
     recommended_next_level = _clean_text(request.form.get("recommended_next_level"))
@@ -146,8 +80,6 @@ def _collect_note_form_values():
         "progress_notes": progress_notes,
         "setbacks_or_incidents": setbacks_or_incidents,
         "action_items": action_items,
-        "next_appointment": next_appointment,
-        "next_appointment_error": next_appointment_error,
         "overall_summary": overall_summary,
         "ready_for_next_level": ready_for_next_level,
         "recommended_next_level": recommended_next_level,
@@ -215,10 +147,6 @@ def add_case_note_view(resident_id: int):
         flash("Meeting date is required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    if values["next_appointment_error"]:
-        flash(values["next_appointment_error"], "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
-
     has_structured_progress = _has_structured_progress(values, include_needs=True)
 
     if (
@@ -226,12 +154,11 @@ def add_case_note_view(resident_id: int):
         and not values["progress_notes"]
         and not values["setbacks_or_incidents"]
         and not values["action_items"]
-        and not values["next_appointment"]
         and not values["overall_summary"]
         and not has_structured_progress
     ):
         flash(
-            "Enter notes, progress notes, setbacks or incidents, action items, next appointment, meeting summary, advancement review details, structured progress, need resolutions, or at least one service.",
+            "Enter notes, progress notes, setbacks or incidents, action items, meeting summary, advancement review details, structured progress, need resolutions, or at least one service.",
             "error",
         )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
@@ -278,7 +205,7 @@ def add_case_note_view(resident_id: int):
                     values["progress_notes"] or None,
                     values["setbacks_or_incidents"] or None,
                     values["action_items"] or None,
-                    values["next_appointment"] or None,
+                    None,
                     values["overall_summary"] or None,
                     values["updated_grit"],
                     values["parenting_class_completed"],
@@ -438,10 +365,6 @@ def edit_case_note_view(resident_id: int, update_id: int):
         flash("Meeting date is required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    if values["next_appointment_error"]:
-        flash(values["next_appointment_error"], "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
-
     has_structured_progress = _has_structured_progress(values, include_needs=False)
 
     if (
@@ -449,12 +372,11 @@ def edit_case_note_view(resident_id: int, update_id: int):
         and not values["progress_notes"]
         and not values["setbacks_or_incidents"]
         and not values["action_items"]
-        and not values["next_appointment"]
         and not values["overall_summary"]
         and not has_structured_progress
     ):
         flash(
-            "Enter notes, progress notes, setbacks or incidents, action items, next appointment, meeting summary, advancement review details, structured progress, or at least one service.",
+            "Enter notes, progress notes, setbacks or incidents, action items, meeting summary, advancement review details, structured progress, or at least one service.",
             "error",
         )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
@@ -491,7 +413,7 @@ def edit_case_note_view(resident_id: int, update_id: int):
                     values["progress_notes"] or None,
                     values["setbacks_or_incidents"] or None,
                     values["action_items"] or None,
-                    values["next_appointment"] or None,
+                    None,
                     values["overall_summary"] or None,
                     values["updated_grit"],
                     values["parenting_class_completed"],
