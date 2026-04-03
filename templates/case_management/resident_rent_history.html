@@ -1,0 +1,64 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Resident Rent History</h1>
+          <div class="cmx-section-subtitle">{{ resident['first_name'] }} {{ resident['last_name'] }}</div>
+        </div>
+
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">Back to Resident</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <div class="cmx-row-block">
+        <span>Weighted Rent Score</span>
+        <span>{{ weighted_score if weighted_score is not none else '—' }}</span>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      {% if rows %}
+        <div style="overflow-x:auto;">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Shelter</th>
+                <th>Total Due</th>
+                <th>Amount Paid</th>
+                <th>Date Paid</th>
+                <th>Status</th>
+                <th>Score</th>
+                <th>Remaining</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr>
+                  <td>{{ row['rent_month'] }}/{{ row['rent_year'] }}</td>
+                  <td>{{ row['shelter_snapshot']|shelter }}</td>
+                  <td>${{ '%.2f'|format(row['total_due'] or 0) }}</td>
+                  <td>${{ '%.2f'|format(row['amount_paid'] or 0) }}</td>
+                  <td>{{ row['paid_date'] or '—' }}</td>
+                  <td>{{ row['status'] }}</td>
+                  <td>{{ row['compliance_score'] }}</td>
+                  <td>${{ '%.2f'|format(row['remaining_balance'] or 0) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="cmx-muted">No rent history yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
