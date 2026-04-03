@@ -78,34 +78,58 @@
 
       {% include "case_management/partials/resident_case/_workspace_header.html" %}
 
+      {% if is_deceased_case %}
+        <div class="cmx-card" style="margin-bottom:18px; border:1px solid #f1b5b5; background:#fff7f7;">
+          <div style="padding:16px 18px;">
+            <div class="cmx-section-head" style="margin-bottom:8px;">
+              <div>
+                <h2 class="cmx-section-title" style="color:#8b1e1e;">Death In Program</h2>
+                <div class="cmx-section-subtitle" style="color:#7a2e2e;">
+                  This resident was closed as Administrative Exit — Deceased. Normal program actions are suppressed on this workspace.
+                </div>
+              </div>
+            </div>
+
+            <div class="cmx-stack">
+              <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "Exited" }}</span></div>
+              <div class="cmx-row-block"><span>Exit Category</span><span>{{ exit_category or "Administrative Exit" }}</span></div>
+              <div class="cmx-row-block"><span>Exit Reason</span><span>{{ exit_reason or "Deceased" }}</span></div>
+              <div class="cmx-row-block"><span>Date Exit</span><span>{{ exit_date_exit_dwc or "—" }}</span></div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
       <main class="cmx-layout">
         <section class="cmx-main">
 
-          <div style="border-radius:18px; background:#e2ecfb; padding:14px; border:1px solid #b7cbee; margin-bottom:18px;">
-            <div class="cmx-section-head" style="margin-bottom:12px;">
-              <div>
-                <h2 class="cmx-section-title">Today’s Meeting</h2>
-                <div class="cmx-section-subtitle">
-                  Save today’s meeting narrative, services, need work, and advancement review here.
+          {% if not is_deceased_case %}
+            <div style="border-radius:18px; background:#e2ecfb; padding:14px; border:1px solid #b7cbee; margin-bottom:18px;">
+              <div class="cmx-section-head" style="margin-bottom:12px;">
+                <div>
+                  <h2 class="cmx-section-title">Today’s Meeting</h2>
+                  <div class="cmx-section-subtitle">
+                    Save today’s meeting narrative, services, need work, and advancement review here.
+                  </div>
                 </div>
               </div>
+              {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
             </div>
-            {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
-          </div>
 
-          {% include "case_management/partials/resident_case/_quick_actions.html" %}
+            {% include "case_management/partials/resident_case/_quick_actions.html" %}
 
-          <div style="border-radius:18px; background:#eadcf8; padding:14px; border:1px solid #ccb4e8; margin-top:18px; margin-bottom:18px;">
-            <div class="cmx-section-head" style="margin-bottom:12px;">
-              <div>
-                <h2 class="cmx-section-title">Resident Profile</h2>
-                <div class="cmx-section-subtitle">
-                  Update recovery, sobriety, sponsor, employment, and income here. These changes save only with <strong>Save Profile</strong>.
+            <div style="border-radius:18px; background:#eadcf8; padding:14px; border:1px solid #ccb4e8; margin-top:18px; margin-bottom:18px;">
+              <div class="cmx-section-head" style="margin-bottom:12px;">
+                <div>
+                  <h2 class="cmx-section-title">Resident Profile</h2>
+                  <div class="cmx-section-subtitle">
+                    Update recovery, sobriety, sponsor, employment, and income here. These changes save only with <strong>Save Profile</strong>.
+                  </div>
                 </div>
               </div>
+              {% include "case_management/partials/resident_case/_profile_editor.html" %}
             </div>
-            {% include "case_management/partials/resident_case/_profile_editor.html" %}
-          </div>
+          {% endif %}
 
           {% include "case_management/partials/resident_case/_meeting_history.html" %}
           {% include "case_management/partials/resident_case/_exit_panels.html" %}
