@@ -109,9 +109,24 @@ def duplicate_review_use_existing_view(draft_id: int):
         return redirect(url_for("case_management.intake_form", draft_id=draft_id))
 
     existing_resident_id = _row_value(existing_resident, "id", 0)
+    existing_enrollment = _fetch_existing_enrollment_for_resident(existing_resident_id)
+
+    if existing_enrollment:
+        flash(
+            "This resident already has an active enrollment. Open the existing case manager workspace instead of starting a new enrollment.",
+            "error",
+        )
+        return redirect(url_for("case_management.resident_case", resident_id=existing_resident_id))
+
+    enrollment_id = _insert_program_enrollment(existing_resident_id, pending_form_data, current_shelter)
+    _insert_intake_assessment(enrollment_id, pending_form_data)
+    _insert_family_snapshot(enrollment_id, pending_form_data)
     _complete_intake_draft(draft_id)
 
-    flash("Continued on the existing resident record. No new resident was created.", "success")
+    flash(
+        "Returning resident matched. Existing resident record kept and a new enrollment was started.",
+        "success",
+    )
     return redirect(url_for("case_management.resident_case", resident_id=existing_resident_id))
 
 
