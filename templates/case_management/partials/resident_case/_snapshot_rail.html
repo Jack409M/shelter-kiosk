@@ -42,6 +42,36 @@
     {% endif %}
   </div>
 
+  <div class="cmx-card" style="{{ rent_snapshot['card_style'] }}">
+    <div class="cmx-side-card-head">
+      <h3>Rent Stability</h3>
+      <a class="cmx-side-action" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}">View History</a>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <span style="{{ rent_snapshot['pill_style'] }}">{{ rent_snapshot['band_label'] }}</span>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block">
+        <span>9 Month Weighted Average</span>
+        <span style="{{ rent_snapshot['value_style'] }}">{{ rent_snapshot['average_score_display'] }}</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Graduation Target</span>
+        <span>95+</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Graduation Ready</span>
+        <span>{{ "Yes" if rent_snapshot['passes_graduation'] else "No" }}</span>
+      </div>
+    </div>
+
+    <div style="margin-top:10px; font-size:12px; color:#666;">
+      Based on the last {{ rent_snapshot['lookback_months'] }} completed months.
+    </div>
+  </div>
+
   <div class="cmx-card">
     <div class="cmx-side-card-head">
       <h3>Open Needs</h3>
