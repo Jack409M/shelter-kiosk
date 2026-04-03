@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Rent Roll</h1>
+          <div class="cmx-section-subtitle">{{ shelter|shelter }} resident rent setup</div>
+        </div>
+
+        <div class="cmx-button-row">
+          <a class="cmx-btn" href="{{ url_for('rent_tracking.payment_entry_sheet') }}">Open Payment Entry</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      {% if rows %}
+        <div style="overflow-x:auto;">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Resident Name</th>
+                <th>Level</th>
+                <th>Apartment Size</th>
+                <th>Rent</th>
+                <th>Exempt</th>
+                <th>Setup</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr>
+                  <td>{{ row['resident_name'] }}</td>
+                  <td>{{ row['level_snapshot'] or '—' }}</td>
+                  <td>{{ row['apartment_size_snapshot'] or '—' }}</td>
+                  <td>${{ '%.2f'|format(row['monthly_rent'] or 0) }}</td>
+                  <td>{{ 'Yes' if row['is_exempt'] else 'No' }}</td>
+                  <td>
+                    <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_config', resident_id=row['resident_id']) }}">Edit Rent</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="cmx-muted">No active residents found.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
