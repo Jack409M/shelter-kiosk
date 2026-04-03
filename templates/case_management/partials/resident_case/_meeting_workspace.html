@@ -223,7 +223,7 @@
         </div>
 
         <div class="cmx-button-row" style="margin-top:12px;">
-          <a class="cmx-btn-muted" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id) }}">
+          <a class="cmx-btn-muted" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id, next=url_for('case_management.resident_case', resident_id=resident_id)) }}">
             Transfer Shelter
           </a>
         </div>
