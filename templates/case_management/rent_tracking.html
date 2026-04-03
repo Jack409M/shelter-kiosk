@@ -1,0 +1,95 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Monthly Rent Tracking</h1>
+          <div class="cmx-section-subtitle">
+            {{ shelter | shelter if shelter else "Current Shelter" }} — {{ sheet['rent_month'] }}/{{ sheet['rent_year'] }}
+          </div>
+        </div>
+
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('operations_settings.settings_page') }}">Operations Settings</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">Rent Sheet</h2>
+          <div class="cmx-section-subtitle">
+            Late begins on day {{ settings['rent_late_day_of_month'] if settings else 6 }}. History stays with the shelter where it happened. Active residents follow the current shelter log.
+          </div>
+        </div>
+      </div>
+
+      {% if entries %}
+        <div style="overflow-x:auto;">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Resident Name</th>
+                <th>Level</th>
+                <th>Apartment Size</th>
+                <th>Prior Balance</th>
+                <th>Current Charge</th>
+                <th>Total Due</th>
+                <th>Amount Paid</th>
+                <th>Remaining Balance</th>
+                <th>Status</th>
+                <th>Paid Date</th>
+                <th>Notes</th>
+                <th>Save</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in entries %}
+                <tr>
+                  <form method="post" action="{{ url_for('rent_tracking.update_entry', entry_id=entry['id']) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <td class="event-cell">
+                      <a href="{{ url_for('rent_tracking.resident_rent_config', resident_id=entry['resident_id']) }}">{{ entry['resident_name_snapshot'] }}</a>
+                    </td>
+                    <td>{{ entry['level_snapshot'] or '—' }}</td>
+                    <td>{{ entry['apartment_size_snapshot'] or '—' }}</td>
+                    <td>${{ '%.2f'|format(entry['prior_balance'] or 0) }}</td>
+                    <td>${{ '%.2f'|format(entry['current_charge'] or 0) }}</td>
+                    <td>${{ '%.2f'|format(entry['total_due'] or 0) }}</td>
+                    <td>
+                      <input type="number" step="0.01" min="0" name="amount_paid" value="{{ entry['amount_paid'] or 0 }}" style="min-width:90px;">
+                    </td>
+                    <td>${{ '%.2f'|format(entry['remaining_balance'] or 0) }}</td>
+                    <td>
+                      <select name="status">
+                        {% for status in statuses %}
+                          <option value="{{ status }}" {% if entry['status'] == status %}selected{% endif %}>{{ status }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td>
+                      <input type="date" name="paid_date" value="{{ entry['paid_date'] or '' }}">
+                    </td>
+                    <td>
+                      <input type="text" name="notes" value="{{ entry['notes'] or '' }}" placeholder="Optional">
+                    </td>
+                    <td>
+                      <button type="submit" class="cmx-btn">Save</button>
+                    </td>
+                  </form>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="cmx-muted">No rent entries found for this month.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
