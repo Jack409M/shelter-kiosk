@@ -34,16 +34,14 @@
       </div>
 
       <div class="cmx-field">
-        <label>Next Appointment</label>
+        <label>Official Next Appointment</label>
         <input
           type="text"
-          name="next_appointment"
-          value="{{ meeting_defaults.next_appointment if meeting_defaults.next_appointment else '' }}"
-          placeholder="04/25/2026 10:00 AM"
-          inputmode="text"
+          value="{{ next_appt if next_appt and next_appt != '—' else 'No upcoming appointment scheduled' }}"
+          readonly
         >
         <div class="cmx-muted">
-          Use month/day/year and time. This note field is separate from the official appointment record.
+          Use <strong>Schedule Appointment</strong> below to create or update the official appointment record with date and time.
         </div>
       </div>
 
