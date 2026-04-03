@@ -60,7 +60,11 @@
       {% set reports_url = safe_url_for('reports.reports_index') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
       {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
+
       {% set kiosk_manual_url = url_for('static', filename='docs/dwc_kiosk_manual.pdf') %}
+      {% set intake_manual_url = url_for('static', filename='docs/dwc_new_resident_intake_software_manual.pdf') %}
+      {% set progress_note_manual_url = url_for('static', filename='docs/dwc_first_progress_note_software_manual.pdf') %}
+      {% set resident_workspace_manual_url = url_for('static', filename='docs/dwc_resident_case_workspace_software_manual.pdf') %}
 
       <nav>
         <div class="nav-mobile">
@@ -147,6 +151,9 @@
               <button type="button">Documents ▾</button>
               <div class="menu">
                 <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
+                <a href="{{ intake_manual_url }}" target="_blank" rel="noopener">New Resident Intake Software Manual</a>
+                <a href="{{ progress_note_manual_url }}" target="_blank" rel="noopener">First Progress Note Software Manual</a>
+                <a href="{{ resident_workspace_manual_url }}" target="_blank" rel="noopener">Resident Case Workspace Software Manual</a>
               </div>
             </div>
 
