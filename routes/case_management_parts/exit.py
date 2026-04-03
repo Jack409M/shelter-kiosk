@@ -57,6 +57,7 @@ EXIT_REASON_MAP = {
         "Medical Discharge",
         "Safety Removal",
         "Left by Choice",
+        "Deceased",
     },
 }
 
@@ -207,6 +208,11 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
     ):
         errors.append("Exit Reason must match the selected Exit Category.")
 
+    is_deceased_exit = (
+        data["exit_category"] == "Administrative Exit"
+        and data["exit_reason"] == "Deceased"
+    )
+
     income = parse_money(data["income_at_exit"])
     if data["income_at_exit"] and income is None:
         errors.append("Current Monthly Income must be a valid number.")
@@ -240,24 +246,40 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
         if value not in {None, "", "yes", "no"}:
             errors.append(f"{field_name.replace('_', ' ').title()} must be Yes or No.")
 
-    if data["graduate_dwc"] == "yes" and not data["date_graduated"]:
-        errors.append("Date Graduated is required when Graduate DWC is Yes.")
+    if not is_deceased_exit:
+        if data["graduate_dwc"] == "yes" and not data["date_graduated"]:
+            errors.append("Date Graduated is required when Graduate DWC is Yes.")
 
-    if data["date_graduated"] and data["graduate_dwc"] != "yes":
-        errors.append("Graduate DWC must be Yes when Date Graduated is entered.")
+        if data["date_graduated"] and data["graduate_dwc"] != "yes":
+            errors.append("Graduate DWC must be Yes when Date Graduated is entered.")
 
-    if data["car_insurance"] == "yes" and data["received_car"] != "yes":
-        errors.append("Car Insurance cannot be Yes unless Received Car is Yes.")
+        if data["car_insurance"] == "yes" and data["received_car"] != "yes":
+            errors.append("Car Insurance cannot be Yes unless Received Car is Yes.")
 
-    if data["leave_ama"] == "yes":
-        if data["leave_amarillo_unknown"] != "yes" and not data["leave_amarillo_city"]:
-            errors.append("Enter the city left for or mark it Unknown when Leave Amarillo is Yes.")
+        if data["leave_ama"] == "yes":
+            if data["leave_amarillo_unknown"] != "yes" and not data["leave_amarillo_city"]:
+                errors.append("Enter the city left for or mark it Unknown when Leave Amarillo is Yes.")
+        else:
+            data["leave_amarillo_city"] = ""
+            data["leave_amarillo_unknown"] = "no"
+
+        if data["leave_amarillo_unknown"] == "yes":
+            data["leave_amarillo_city"] = ""
     else:
+        data["date_graduated"] = None
+        data["graduate_dwc"] = "no"
+        data["leave_ama"] = "no"
         data["leave_amarillo_city"] = ""
         data["leave_amarillo_unknown"] = "no"
-
-    if data["leave_amarillo_unknown"] == "yes":
-        data["leave_amarillo_city"] = ""
+        data["income_at_exit"] = None
+        data["education_at_exit"] = ""
+        data["grit_at_exit"] = None
+        data["received_car"] = ""
+        data["car_insurance"] = ""
+        data["dental_needs_met"] = ""
+        data["vision_needs_met"] = ""
+        data["obtained_public_insurance"] = ""
+        data["private_insurance"] = ""
 
     entry_dt = parse_iso_date(entry_date)
     if entry_dt and exit_date and exit_date < entry_dt:
