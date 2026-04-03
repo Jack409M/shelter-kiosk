@@ -1,380 +1,847 @@
-from __future__ import annotations
+{% extends "layout.html" %}
 
-from flask import flash, redirect, render_template, session, url_for
+{% block extra_head %}
+<style>
+  .exit-page {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 16px 12px 32px 12px;
+  }
 
-from core.db import db_fetchall, db_fetchone
-from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
-from routes.case_management_parts.needs import get_open_enrollment_needs
-from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
-from routes.case_management_parts.resident_case_children import load_children_with_services
-from routes.case_management_parts.resident_case_notes import build_note_objects
-from routes.case_management_parts.resident_case_viewmodel import build_meeting_defaults
-from routes.case_management_parts.resident_case_viewmodel import build_operations_snapshot
-from routes.case_management_parts.resident_case_viewmodel import build_workspace_header
+  .exit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
 
+  .exit-header-copy h1 {
+    margin: 0 0 4px 0;
+    font-size: 28px;
+    line-height: 1.1;
+  }
 
-def _normalize_exit_assessment(row):
-    if not row:
-        return None
+  .exit-header-copy p {
+    margin: 0;
+    color: #5f6b7a;
+    max-width: 760px;
+    font-size: 14px;
+  }
 
-    leave_ama = row.get("leave_ama")
-    leave_amarillo_city = row.get("leave_amarillo_city")
-    leave_amarillo_unknown = row.get("leave_amarillo_unknown")
+  .resident-card,
+  .section-card,
+  .footer-card,
+  .deceased-card {
+    background: #ffffff;
+    border: 1px solid #d8e0ea;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
 
-    destination = None
-    if leave_ama:
-        if leave_amarillo_city:
-            destination = leave_amarillo_city
-        elif leave_amarillo_unknown:
-            destination = "Unknown"
+  .deceased-card {
+    border-color: #f3c7c7;
+    background: #fff7f7;
+  }
 
-    normalized = dict(row)
-    normalized["leave_ama_destination"] = destination
-    return normalized
+  .resident-card-body,
+  .section-card-body,
+  .footer-card-body,
+  .deceased-card-body {
+    padding: 14px 16px;
+  }
 
+  .section-card-head,
+  .deceased-card-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e6ebf1;
+    background: #fafbfd;
+  }
 
-def _load_current_enrollment(resident_id: int):
-    return fetch_current_enrollment_for_resident(
-        resident_id,
-        columns="""
-            id,
-            shelter,
-            program_status,
-            entry_date,
-            exit_date
-        """,
-    )
+  .deceased-card-head {
+    background: #fff1f1;
+    border-bottom-color: #f3c7c7;
+  }
 
+  .section-card-head h2,
+  .deceased-card-head h2 {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.2;
+  }
 
-def _load_resident_in_scope(resident_id: int, shelter: str):
-    ph = placeholder()
+  .resident-card h2 {
+    margin: 0 0 10px 0;
+    font-size: 19px;
+    line-height: 1.2;
+  }
 
-    return db_fetchone(
-        f"""
-        SELECT
-            id,
-            resident_identifier,
-            first_name,
-            last_name,
-            resident_code,
-            shelter,
-            is_active
-        FROM residents
-        WHERE id = {ph}
-          AND {shelter_equals_sql("shelter")}
-        """,
-        (resident_id, shelter),
-    )
+  .resident-meta {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
 
+  .meta-item {
+    background: #f8fbff;
+    border: 1px solid #d7e7ff;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
 
-def _get_latest_followup(enrollment_id: int, followup_type: str):
-    ph = placeholder()
+  .meta-label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #5f6b7a;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
 
-    row = db_fetchone(
-        f"""
-        SELECT
-            followup_date,
-            income_at_followup,
-            sober_at_followup,
-            notes
-        FROM followups
-        WHERE enrollment_id = {ph}
-          AND followup_type = {ph}
-        ORDER BY
-            COALESCE(followup_date, '') DESC,
-            id DESC
-        LIMIT 1
-        """,
-        (enrollment_id, followup_type),
-    )
+  .meta-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #102030;
+  }
 
-    return row if row else None
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 12px;
+  }
 
+  .field,
+  .toggle-field {
+    display: grid;
+    gap: 5px;
+  }
 
-def _load_case_history(enrollment_id: int):
-    ph = placeholder()
+  .field.span-12,
+  .toggle-field.span-12 { grid-column: span 12; }
 
-    notes_raw = db_fetchall(
-        f"""
-        SELECT
-            id,
-            meeting_date,
-            notes,
-            progress_notes,
-            setbacks_or_incidents,
-            action_items,
-            next_appointment,
-            overall_summary,
-            ready_for_next_level,
-            recommended_next_level,
-            blocker_reason,
-            override_or_exception,
-            staff_review_note,
-            updated_grit,
-            parenting_class_completed,
-            warrants_or_fines_paid,
-            created_at
-        FROM case_manager_updates
-        WHERE enrollment_id = {ph}
-        ORDER BY meeting_date ASC, id ASC
-        """,
-        (enrollment_id,),
-    )
+  .field.span-6,
+  .toggle-field.span-6 { grid-column: span 6; }
 
-    services_raw = db_fetchall(
-        f"""
-        SELECT
-            case_manager_update_id,
-            service_type,
-            service_date,
-            quantity,
-            unit,
-            notes
-        FROM client_services
-        WHERE enrollment_id = {ph}
-        ORDER BY service_date DESC, id DESC
-        """,
-        (enrollment_id,),
-    )
+  .field.span-5,
+  .toggle-field.span-5 { grid-column: span 5; }
 
-    note_ids = [note["id"] for note in notes_raw]
-    summary_rows_raw = []
+  .field.span-4,
+  .toggle-field.span-4 { grid-column: span 4; }
 
-    if note_ids:
-        note_placeholders = ",".join([ph] * len(note_ids))
-        summary_rows_raw = db_fetchall(
-            f"""
-            SELECT
-                case_manager_update_id,
-                change_group,
-                change_type,
-                item_key,
-                item_label,
-                old_value,
-                new_value,
-                detail,
-                sort_order
-            FROM case_manager_update_summary
-            WHERE case_manager_update_id IN ({note_placeholders})
-            ORDER BY case_manager_update_id ASC, sort_order ASC, id ASC
-            """,
-            tuple(note_ids),
-        )
+  .field.span-3,
+  .toggle-field.span-3 { grid-column: span 3; }
 
-    return build_note_objects(notes_raw, services_raw, summary_rows_raw)
+  .field.span-2,
+  .toggle-field.span-2 { grid-column: span 2; }
 
+  .field label,
+  .toggle-field > label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+  }
 
-def _load_enrollment_context(enrollment_id: int):
-    ph = placeholder()
+  .field input,
+  .field select,
+  .field textarea {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid #c7d1dc;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 14px;
+    background: #ffffff;
+    color: #13202c;
+    box-sizing: border-box;
+  }
 
-    family_snapshot = db_fetchone(
-        f"""
-        SELECT
-            id,
-            enrollment_id,
-            kids_at_dwc,
-            kids_served_outside_under_18,
-            kids_ages_0_5,
-            kids_ages_6_11,
-            kids_ages_12_17,
-            kids_reunited_while_in_program,
-            healthy_babies_born_at_dwc,
-            created_at,
-            updated_at
-        FROM family_snapshots
-        WHERE enrollment_id = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (enrollment_id,),
-    )
+  .field textarea {
+    min-height: 88px;
+    resize: vertical;
+  }
 
-    intake_assessment = db_fetchone(
-        f"""
-        SELECT
-            grit_score,
-            sobriety_date,
-            treatment_grad_date,
-            dental_need_at_entry,
-            vision_need_at_entry,
-            parenting_class_needed,
-            warrants_unpaid,
-            mental_health_need_at_entry,
-            medical_need_at_entry,
-            has_drivers_license,
-            has_social_security_card
-        FROM intake_assessments
-        WHERE enrollment_id = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (enrollment_id,),
-    )
+  .field.field-compact input[type="date"],
+  .field.field-compact input[type="number"],
+  .field.field-compact input[type="text"],
+  .field.field-compact select {
+    max-width: 180px;
+  }
 
-    raw_exit_assessment = db_fetchone(
-        f"""
-        SELECT
-            date_graduated,
-            date_exit_dwc,
-            exit_category,
-            exit_reason,
-            graduate_dwc,
-            leave_ama,
-            leave_amarillo_city,
-            leave_amarillo_unknown,
-            income_at_exit,
-            education_at_exit,
-            grit_at_exit,
-            received_car,
-            car_insurance,
-            dental_needs_met,
-            vision_needs_met,
-            obtained_public_insurance,
-            private_insurance
-        FROM exit_assessments
-        WHERE enrollment_id = {ph}
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (enrollment_id,),
-    )
+  .field.field-max-25 select,
+  .field.field-max-25 input[type="text"] {
+    max-width: 220px;
+  }
 
-    goals = db_fetchall(
-        f"""
-        SELECT
-            goal_text,
-            status,
-            target_date,
-            created_at
-        FROM goals
-        WHERE enrollment_id = {ph}
-        ORDER BY created_at DESC, id DESC
-        """,
-        (enrollment_id,),
-    )
+  .field.field-max-30 select,
+  .field.field-max-30 input[type="text"] {
+    max-width: 280px;
+  }
 
-    appointments = db_fetchall(
-        f"""
-        SELECT
-            appointment_date,
-            appointment_type,
-            notes
-        FROM appointments
-        WHERE enrollment_id = {ph}
-        ORDER BY appointment_date DESC, id DESC
-        """,
-        (enrollment_id,),
-    )
+  .toggle-inputs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
 
-    notes, services = _load_case_history(enrollment_id)
+  .toggle-inputs input[type="radio"],
+  .toggle-inputs input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
 
-    return {
-        "family_snapshot": family_snapshot,
-        "intake_assessment": intake_assessment,
-        "exit_assessment": _normalize_exit_assessment(raw_exit_assessment),
-        "goals": goals,
-        "appointments": appointments,
-        "notes": notes,
-        "services": services,
-        "open_needs": get_open_enrollment_needs(enrollment_id),
-        "followup_6_month": _get_latest_followup(enrollment_id, "6_month"),
-        "followup_1_year": _get_latest_followup(enrollment_id, "1_year"),
+  .toggle-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid #c7d1dc;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .toggle-inputs input:checked + .toggle-chip {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+  }
+
+  .footer-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .footer-note {
+    font-size: 12px;
+    color: #6b7280;
+    max-width: 760px;
+  }
+
+  .action-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn-soft,
+  .btn-primary {
+    appearance: none;
+    border: 0;
+    border-radius: 9px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-soft {
+    background: #eef2f6;
+    color: #243447;
+  }
+
+  .btn-primary,
+  .btn-primary:hover,
+  .btn-primary:focus,
+  .btn-primary:visited {
+    background: #2563eb;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  .is-hidden {
+    display: none !important;
+  }
+
+  .deceased-note {
+    margin: 0;
+    color: #7a2e2e;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 980px) {
+    .resident-meta {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-
-def _calculate_grit_difference(intake_assessment, exit_assessment):
-    intake_grit = intake_assessment.get("grit_score") if intake_assessment else None
-    exit_grit = exit_assessment.get("grit_at_exit") if exit_assessment else None
-
-    if intake_grit is None or exit_grit is None:
-        return None
-
-    return exit_grit - intake_grit
-
-
-def resident_case_view(resident_id: int):
-    if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    init_db()
-
-    shelter = normalize_shelter_name(session.get("shelter"))
-    resident = _load_resident_in_scope(resident_id, shelter)
-
-    if not resident:
-        flash("Resident not found.", "error")
-        return redirect(url_for("case_management.index"))
-
-    enrollment = _load_current_enrollment(resident_id)
-    enrollment_id = enrollment["id"] if enrollment else None
-
-    children = load_children_with_services(resident_id)
-    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
-
-    enrollment_context = {
-        "family_snapshot": None,
-        "intake_assessment": None,
-        "exit_assessment": None,
-        "goals": [],
-        "appointments": [],
-        "notes": [],
-        "services": [],
-        "open_needs": [],
-        "followup_6_month": None,
-        "followup_1_year": None,
+    .field.span-6,
+    .toggle-field.span-6,
+    .field.span-5,
+    .toggle-field.span-5,
+    .field.span-4,
+    .toggle-field.span-4,
+    .field.span-3,
+    .toggle-field.span-3,
+    .field.span-2,
+    .toggle-field.span-2 {
+      grid-column: span 12;
     }
 
-    if enrollment_id:
-        enrollment_context = _load_enrollment_context(enrollment_id)
+    .field.field-compact input[type="date"],
+    .field.field-compact input[type="number"],
+    .field.field-compact input[type="text"],
+    .field.field-compact select,
+    .field.field-max-25 select,
+    .field.field-max-25 input[type="text"],
+    .field.field-max-30 select,
+    .field.field-max-30 input[type="text"] {
+      max-width: 100%;
+    }
+  }
 
-    grit_difference = _calculate_grit_difference(
-        enrollment_context["intake_assessment"],
-        enrollment_context["exit_assessment"],
-    )
+  @media (max-width: 640px) {
+    .resident-meta {
+      grid-template-columns: 1fr;
+    }
 
-    meeting_defaults = build_meeting_defaults(
-        intake_assessment=enrollment_context["intake_assessment"],
-        family_snapshot=enrollment_context["family_snapshot"],
-        recovery_snapshot=recovery_snapshot,
-        open_needs=enrollment_context["open_needs"],
-        notes=enrollment_context["notes"],
-        appointments=enrollment_context["appointments"],
-    )
+    .exit-header {
+      flex-direction: column;
+    }
 
-    workspace_header = build_workspace_header(
-        resident=resident,
-        enrollment=enrollment,
-        recovery_snapshot=recovery_snapshot,
-        open_needs=enrollment_context["open_needs"],
-    )
+    .footer-card-body {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
+{% endblock %}
 
-    operations_snapshot = build_operations_snapshot(recovery_snapshot)
+{% block content %}
 
-    return render_template(
-        "case_management/resident_case.html",
-        resident=resident,
-        enrollment=enrollment,
-        enrollment_id=enrollment_id,
-        family_snapshot=enrollment_context["family_snapshot"],
-        intake_assessment=enrollment_context["intake_assessment"],
-        exit_assessment=enrollment_context["exit_assessment"],
-        grit_difference=grit_difference,
-        goals=enrollment_context["goals"],
-        appointments=enrollment_context["appointments"],
-        notes=enrollment_context["notes"],
-        services=enrollment_context["services"],
-        children=children,
-        open_needs=enrollment_context["open_needs"],
-        recovery_snapshot=recovery_snapshot,
-        followup_6_month=enrollment_context["followup_6_month"],
-        followup_1_year=enrollment_context["followup_1_year"],
-        meeting_defaults=meeting_defaults,
-        workspace_header=workspace_header,
-        operations_snapshot=operations_snapshot,
-    )
+{% if resident is mapping %}
+  {% set resident_id = resident["id"] %}
+  {% set first_name = resident["first_name"] %}
+  {% set last_name = resident["last_name"] %}
+  {% set resident_code = resident["resident_code"] %}
+{% else %}
+  {% set resident_id = resident[0] %}
+  {% set first_name = resident[2] %}
+  {% set last_name = resident[3] %}
+  {% set resident_code = resident[4] %}
+{% endif %}
+
+{% if enrollment is mapping %}
+  {% set enrollment_id = enrollment["id"] %}
+  {% set entry_date = enrollment["entry_date"] %}
+  {% set current_exit_date = enrollment["exit_date"] %}
+  {% set program_status = enrollment["program_status"] %}
+{% else %}
+  {% set enrollment_id = enrollment[0] %}
+  {% set entry_date = enrollment[3] %}
+  {% set current_exit_date = enrollment[4] %}
+  {% set program_status = enrollment[5] %}
+{% endif %}
+
+<div class="exit-page">
+  <div class="exit-header">
+    <div class="exit-header-copy">
+      <h1>Exit Assessment</h1>
+      <p>Complete the resident’s exit details, outcome status, and closing measures before saving.</p>
+    </div>
+  </div>
+
+  <div class="resident-card">
+    <div class="resident-card-body">
+      <h2>{{ first_name }} {{ last_name }}</h2>
+
+      <div class="resident-meta">
+        <div class="meta-item">
+          <span class="meta-label">Resident Code</span>
+          <span class="meta-value">{{ resident_code or "—" }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Enrollment ID</span>
+          <span class="meta-value">{{ enrollment_id }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Entry Date</span>
+          <span class="meta-value">{{ entry_date or "—" }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Current Exit Date</span>
+          <span class="meta-value">{{ current_exit_date or "—" }}</span>
+        </div>
+
+        <div class="meta-item">
+          <span class="meta-label">Program Status</span>
+          <span class="meta-value">{{ program_status|replace("_", " ")|title if program_status else "—" }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" action="{{ url_for('case_management.submit_exit_assessment', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <section class="section-card">
+      <div class="section-card-head">
+        <h2>Exit Details</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-grid">
+          <div class="field span-3 field-compact">
+            <label for="date_exit_dwc">Date Exit DWC</label>
+            <input
+              id="date_exit_dwc"
+              name="date_exit_dwc"
+              type="date"
+              required
+              value="{{ form_data.get('date_exit_dwc', '') }}"
+            >
+          </div>
+
+          <div class="field span-3 field-max-25">
+            <label for="exit_category">Exit Category</label>
+            <select id="exit_category" name="exit_category" required>
+              <option value="">Select</option>
+              <option value="Successful Completion" {% if form_data.get('exit_category') == 'Successful Completion' %}selected{% endif %}>Successful Completion</option>
+              <option value="Positive Exit" {% if form_data.get('exit_category') == 'Positive Exit' %}selected{% endif %}>Positive Exit</option>
+              <option value="Neutral Exit" {% if form_data.get('exit_category') == 'Neutral Exit' %}selected{% endif %}>Neutral Exit</option>
+              <option value="Negative Exit" {% if form_data.get('exit_category') == 'Negative Exit' %}selected{% endif %}>Negative Exit</option>
+              <option value="Administrative Exit" {% if form_data.get('exit_category') == 'Administrative Exit' %}selected{% endif %}>Administrative Exit</option>
+            </select>
+          </div>
+
+          <div class="field span-4 field-max-30">
+            <label for="exit_reason">Exit Reason</label>
+            <select id="exit_reason" name="exit_reason" required data-current-value="{{ form_data.get('exit_reason', '') }}">
+              <option value="">Select</option>
+            </select>
+          </div>
+
+          <div class="toggle-field span-2" id="graduate-wrap">
+            <label>Graduate DWC</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="graduate_dwc_yes" name="graduate_dwc" value="yes" {% if form_data.get('graduate_dwc') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="graduate_dwc_yes">Yes</label>
+
+              <input type="radio" id="graduate_dwc_no" name="graduate_dwc" value="no" {% if form_data.get('graduate_dwc') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="graduate_dwc_no">No</label>
+            </div>
+          </div>
+
+          <div class="field span-3 field-compact" id="date-graduated-wrap">
+            <label for="date_graduated">Date Graduated</label>
+            <input
+              id="date_graduated"
+              name="date_graduated"
+              type="date"
+              value="{{ form_data.get('date_graduated', '') }}"
+            >
+          </div>
+
+          <div class="toggle-field span-3" id="leave-ama-wrap">
+            <label>Leave Amarillo</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="leave_ama_yes" name="leave_ama" value="yes" {% if form_data.get('leave_ama') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="leave_ama_yes">Yes</label>
+
+              <input type="radio" id="leave_ama_no" name="leave_ama" value="no" {% if form_data.get('leave_ama') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="leave_ama_no">No</label>
+            </div>
+          </div>
+
+          <div class="field span-3 field-compact is-hidden" id="leave-amarillo-city-wrap">
+            <label for="leave_amarillo_city">Destination City</label>
+            <input
+              id="leave_amarillo_city"
+              name="leave_amarillo_city"
+              type="text"
+              value="{{ form_data.get('leave_amarillo_city', '') }}"
+            >
+          </div>
+
+          <div class="toggle-field span-2 is-hidden" id="leave-amarillo-unknown-wrap">
+            <label>Unknown Destination</label>
+            <div class="toggle-inputs">
+              <input type="checkbox" id="leave_amarillo_unknown" name="leave_amarillo_unknown" value="yes" {% if form_data.get('leave_amarillo_unknown') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="leave_amarillo_unknown">Unknown</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="deceased-card" class="deceased-card is-hidden">
+      <div class="deceased-card-head">
+        <h2>Death In Program</h2>
+      </div>
+      <div class="deceased-card-body">
+        <p class="deceased-note">
+          Use this exit path only when the resident died while enrolled in the program. This should be coded as <strong>Administrative Exit</strong> with reason <strong>Deceased</strong>. Regular graduation, relocation, and outcome fields do not apply to this exit type. Complete any required external incident, leadership, and emergency response steps under DWC policy.
+        </p>
+      </div>
+    </section>
+
+    <section class="section-card" id="outcomes-card">
+      <div class="section-card-head">
+        <h2>Monthly Income, Education, and Grit at Exit</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-grid">
+          <div class="field span-4 field-compact">
+            <label for="income_at_exit">Current Monthly Income</label>
+            <input
+              id="income_at_exit"
+              name="income_at_exit"
+              type="number"
+              min="0"
+              step="0.01"
+              value="{{ form_data.get('income_at_exit', '') }}"
+            >
+          </div>
+
+          <div class="field span-4 field-max-30">
+            <label for="education_at_exit">Education at Exit</label>
+            <select id="education_at_exit" name="education_at_exit">
+              <option value="">Select</option>
+              <option value="No High School" {% if form_data.get('education_at_exit') == 'No High School' %}selected{% endif %}>No High School</option>
+              <option value="Some High School" {% if form_data.get('education_at_exit') == 'Some High School' %}selected{% endif %}>Some High School</option>
+              <option value="High School Graduate" {% if form_data.get('education_at_exit') == 'High School Graduate' %}selected{% endif %}>High School Graduate</option>
+              <option value="GED" {% if form_data.get('education_at_exit') == 'GED' %}selected{% endif %}>GED</option>
+              <option value="Vocational" {% if form_data.get('education_at_exit') == 'Vocational' %}selected{% endif %}>Vocational</option>
+              <option value="Associates" {% if form_data.get('education_at_exit') == 'Associates' %}selected{% endif %}>Associates</option>
+              <option value="Bachelor" {% if form_data.get('education_at_exit') == 'Bachelor' %}selected{% endif %}>Bachelor</option>
+              <option value="Masters" {% if form_data.get('education_at_exit') == 'Masters' %}selected{% endif %}>Masters</option>
+              <option value="Doctorate" {% if form_data.get('education_at_exit') == 'Doctorate' %}selected{% endif %}>Doctorate</option>
+            </select>
+          </div>
+
+          <div class="field span-4 field-compact">
+            <label for="grit_at_exit">Grit at Exit</label>
+            <input
+              id="grit_at_exit"
+              name="grit_at_exit"
+              type="number"
+              min="0"
+              step="0.01"
+              value="{{ form_data.get('grit_at_exit', '') }}"
+            >
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" id="transport-card">
+      <div class="section-card-head">
+        <h2>Transportation and Insurance at Exit</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-grid">
+          <div class="toggle-field span-3">
+            <label>Received Car</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="received_car_yes" name="received_car" value="yes" {% if form_data.get('received_car') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="received_car_yes">Yes</label>
+
+              <input type="radio" id="received_car_no" name="received_car" value="no" {% if form_data.get('received_car') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="received_car_no">No</label>
+            </div>
+          </div>
+
+          <div class="toggle-field span-3">
+            <label>Car Insurance</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="car_insurance_yes" name="car_insurance" value="yes" {% if form_data.get('car_insurance') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="car_insurance_yes">Yes</label>
+
+              <input type="radio" id="car_insurance_no" name="car_insurance" value="no" {% if form_data.get('car_insurance') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="car_insurance_no">No</label>
+            </div>
+          </div>
+
+          <div class="toggle-field span-3">
+            <label>Obtained Public Insurance</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="obtained_public_insurance_yes" name="obtained_public_insurance" value="yes" {% if form_data.get('obtained_public_insurance') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="obtained_public_insurance_yes">Yes</label>
+
+              <input type="radio" id="obtained_public_insurance_no" name="obtained_public_insurance" value="no" {% if form_data.get('obtained_public_insurance') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="obtained_public_insurance_no">No</label>
+            </div>
+          </div>
+
+          <div class="toggle-field span-3">
+            <label>Private Insurance</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="private_insurance_yes" name="private_insurance" value="yes" {% if form_data.get('private_insurance') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="private_insurance_yes">Yes</label>
+
+              <input type="radio" id="private_insurance_no" name="private_insurance" value="no" {% if form_data.get('private_insurance') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="private_insurance_no">No</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-card" id="needs-card">
+      <div class="section-card-head">
+        <h2>Needs Resolved at Exit</h2>
+      </div>
+      <div class="section-card-body">
+        <div class="field-grid">
+          <div class="toggle-field span-3">
+            <label>Dental Needs Met</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="dental_needs_met_yes" name="dental_needs_met" value="yes" {% if form_data.get('dental_needs_met') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="dental_needs_met_yes">Yes</label>
+
+              <input type="radio" id="dental_needs_met_no" name="dental_needs_met" value="no" {% if form_data.get('dental_needs_met') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="dental_needs_met_no">No</label>
+            </div>
+          </div>
+
+          <div class="toggle-field span-3">
+            <label>Vision Needs Met</label>
+            <div class="toggle-inputs">
+              <input type="radio" id="vision_needs_met_yes" name="vision_needs_met" value="yes" {% if form_data.get('vision_needs_met') == 'yes' %}checked{% endif %}>
+              <label class="toggle-chip" for="vision_needs_met_yes">Yes</label>
+
+              <input type="radio" id="vision_needs_met_no" name="vision_needs_met" value="no" {% if form_data.get('vision_needs_met') == 'no' %}checked{% endif %}>
+              <label class="toggle-chip" for="vision_needs_met_no">No</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-card">
+      <div class="footer-card-body">
+        <div class="footer-note">
+          Review the exit details carefully before saving. This will close the enrollment and mark the resident inactive.
+        </div>
+
+        <div class="action-group">
+          <button class="btn-primary" type="submit">Save Exit Assessment</button>
+          <a class="btn-soft" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Cancel</a>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  const EXIT_REASON_MAP = {
+    "Successful Completion": [
+      "Program Graduated"
+    ],
+    "Positive Exit": [
+      "Permanent Housing",
+      "Family Placement",
+      "Health Placement"
+    ],
+    "Neutral Exit": [
+      "Transferred to Another Program",
+      "Unknown / Lost Contact"
+    ],
+    "Negative Exit": [
+      "Relapse",
+      "Behavioral Conflict",
+      "Rules Violation",
+      "Non Compliance with Program",
+      "Left Without Notice"
+    ],
+    "Administrative Exit": [
+      "Incarceration",
+      "Medical Discharge",
+      "Safety Removal",
+      "Left by Choice",
+      "Deceased"
+    ]
+  };
+
+  const categorySelect = document.getElementById("exit_category");
+  const reasonSelect = document.getElementById("exit_reason");
+  const leaveYes = document.getElementById("leave_ama_yes");
+  const leaveNo = document.getElementById("leave_ama_no");
+  const leaveCityWrap = document.getElementById("leave-amarillo-city-wrap");
+  const leaveCityInput = document.getElementById("leave_amarillo_city");
+  const leaveUnknownWrap = document.getElementById("leave-amarillo-unknown-wrap");
+  const leaveUnknownInput = document.getElementById("leave_amarillo_unknown");
+  const receivedCarYes = document.getElementById("received_car_yes");
+  const receivedCarNo = document.getElementById("received_car_no");
+  const carInsuranceYes = document.getElementById("car_insurance_yes");
+  const carInsuranceNo = document.getElementById("car_insurance_no");
+  const graduateYes = document.getElementById("graduate_dwc_yes");
+  const graduateNo = document.getElementById("graduate_dwc_no");
+  const dateGraduatedInput = document.getElementById("date_graduated");
+  const graduateWrap = document.getElementById("graduate-wrap");
+  const dateGraduatedWrap = document.getElementById("date-graduated-wrap");
+  const leaveAmaWrap = document.getElementById("leave-ama-wrap");
+  const deceasedCard = document.getElementById("deceased-card");
+  const outcomesCard = document.getElementById("outcomes-card");
+  const transportCard = document.getElementById("transport-card");
+  const needsCard = document.getElementById("needs-card");
+
+  function isDeceasedExit() {
+    return categorySelect && reasonSelect
+      && categorySelect.value === "Administrative Exit"
+      && reasonSelect.value === "Deceased";
+  }
+
+  function updateExitReasons() {
+    if (!categorySelect || !reasonSelect) return;
+
+    const selectedCategory = categorySelect.value;
+    const allowedReasons = EXIT_REASON_MAP[selectedCategory] || [];
+    const currentValue = reasonSelect.dataset.currentValue || reasonSelect.value || "";
+
+    reasonSelect.innerHTML = '<option value="">Select</option>';
+
+    allowedReasons.forEach((reason) => {
+      const opt = document.createElement("option");
+      opt.value = reason;
+      opt.textContent = reason;
+      reasonSelect.appendChild(opt);
+    });
+
+    if (allowedReasons.includes(currentValue)) {
+      reasonSelect.value = currentValue;
+    } else {
+      reasonSelect.value = "";
+    }
+
+    reasonSelect.dataset.currentValue = reasonSelect.value;
+    updateDeceasedExitState();
+  }
+
+  function updateLeaveAmarillo() {
+    const leaving = leaveYes && leaveYes.checked;
+    const unknown = leaveUnknownInput && leaveUnknownInput.checked;
+    const deceased = isDeceasedExit();
+
+    leaveCityWrap.classList.toggle("is-hidden", !leaving || deceased);
+    leaveUnknownWrap.classList.toggle("is-hidden", !leaving || deceased);
+
+    if (!leaving || deceased) {
+      if (leaveCityInput) {
+        leaveCityInput.value = "";
+        leaveCityInput.disabled = true;
+      }
+      if (leaveUnknownInput) {
+        leaveUnknownInput.checked = false;
+        leaveUnknownInput.disabled = true;
+      }
+      return;
+    }
+
+    leaveUnknownInput.disabled = false;
+    leaveCityInput.disabled = unknown;
+
+    if (unknown) {
+      leaveCityInput.value = "";
+    }
+  }
+
+  function updateCarInsurance() {
+    const hasCar = receivedCarYes && receivedCarYes.checked;
+    const deceased = isDeceasedExit();
+
+    if (!hasCar || deceased) {
+      if (carInsuranceYes) carInsuranceYes.checked = false;
+      if (carInsuranceNo) carInsuranceNo.checked = false;
+    }
+
+    if (carInsuranceYes) carInsuranceYes.disabled = !hasCar || deceased;
+    if (carInsuranceNo) carInsuranceNo.disabled = !hasCar || deceased;
+  }
+
+  function updateGraduationDate() {
+    const graduated = graduateYes && graduateYes.checked;
+    const deceased = isDeceasedExit();
+
+    dateGraduatedInput.disabled = !graduated || deceased;
+    if (!graduated || deceased) {
+      dateGraduatedInput.value = "";
+    }
+  }
+
+  function updateDeceasedExitState() {
+    const deceased = isDeceasedExit();
+
+    if (deceasedCard) deceasedCard.classList.toggle("is-hidden", !deceased);
+    if (outcomesCard) outcomesCard.classList.toggle("is-hidden", deceased);
+    if (transportCard) transportCard.classList.toggle("is-hidden", deceased);
+    if (needsCard) needsCard.classList.toggle("is-hidden", deceased);
+    if (graduateWrap) graduateWrap.classList.toggle("is-hidden", deceased);
+    if (dateGraduatedWrap) dateGraduatedWrap.classList.toggle("is-hidden", deceased);
+    if (leaveAmaWrap) leaveAmaWrap.classList.toggle("is-hidden", deceased);
+
+    if (deceased) {
+      if (graduateYes) graduateYes.checked = false;
+      if (graduateNo) graduateNo.checked = true;
+      if (leaveYes) leaveYes.checked = false;
+      if (leaveNo) leaveNo.checked = true;
+      if (receivedCarYes) receivedCarYes.checked = false;
+      if (receivedCarNo) receivedCarNo.checked = false;
+      if (carInsuranceYes) carInsuranceYes.checked = false;
+      if (carInsuranceNo) carInsuranceNo.checked = false;
+    }
+
+    updateLeaveAmarillo();
+    updateCarInsurance();
+    updateGraduationDate();
+  }
+
+  if (categorySelect && reasonSelect) {
+    categorySelect.addEventListener("change", function () {
+      reasonSelect.dataset.currentValue = "";
+      updateExitReasons();
+    });
+
+    reasonSelect.addEventListener("change", function () {
+      reasonSelect.dataset.currentValue = reasonSelect.value;
+      updateDeceasedExitState();
+    });
+  }
+
+  [leaveYes, leaveNo, leaveUnknownInput].forEach((el) => {
+    if (el) el.addEventListener("change", updateLeaveAmarillo);
+  });
+
+  [receivedCarYes, receivedCarNo].forEach((el) => {
+    if (el) el.addEventListener("change", updateCarInsurance);
+  });
+
+  [graduateYes, graduateNo].forEach((el) => {
+    if (el) el.addEventListener("change", updateGraduationDate);
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    updateExitReasons();
+    updateLeaveAmarillo();
+    updateCarInsurance();
+    updateGraduationDate();
+    updateDeceasedExitState();
+  });
+
+  updateExitReasons();
+  updateLeaveAmarillo();
+  updateCarInsurance();
+  updateGraduationDate();
+  updateDeceasedExitState();
+</script>
+
+{% endblock %}
