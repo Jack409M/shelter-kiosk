@@ -2,7 +2,7 @@
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Schedule Appointment</h3>
-      <div class="cmx-quick-subtitle">Create the official appointment record from the resident workspace.</div>
+      <div class="cmx-quick-subtitle">Create the official appointment record with both date and time from the resident workspace.</div>
     </div>
 
     <form method="post" action="{{ url_for('case_management.add_appointment', resident_id=resident_id) }}">
@@ -10,8 +10,8 @@
 
       <div class="cmx-grid cmx-grid-2">
         <div class="cmx-field">
-          <label>Appointment Date</label>
-          <input type="date" name="appointment_date" required>
+          <label>Appointment Date And Time</label>
+          <input type="datetime-local" name="appointment_datetime" required>
         </div>
 
         <div class="cmx-field">
