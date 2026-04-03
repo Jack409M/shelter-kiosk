@@ -1,0 +1,133 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Resident Write Ups</h1>
+          <div class="cmx-section-subtitle">{{ resident['first_name'] }} {{ resident['last_name'] }}</div>
+        </div>
+
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">Back to Resident</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">New Write Up</h2>
+          <div class="cmx-section-subtitle">Document behavior, safety, room, and program concerns from the case manager workspace.</div>
+        </div>
+      </div>
+
+      <form method="post" action="{{ url_for('writeups.resident_writeups', resident_id=resident['id']) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Incident Date</label>
+            <input type="date" name="incident_date" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Category</label>
+            <select name="category">
+              {% for category in categories %}
+                <option value="{{ category }}">{{ category }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="cmx-field">
+            <label>Severity</label>
+            <select name="severity">
+              {% for severity in severities %}
+                <option value="{{ severity }}">{{ severity }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field" style="margin-top:12px;">
+          <label>Summary</label>
+          <input type="text" name="summary" required>
+        </div>
+
+        <div class="cmx-field" style="margin-top:12px;">
+          <label>Full Notes</label>
+          <textarea name="full_notes" rows="4" placeholder="Optional"></textarea>
+        </div>
+
+        <div class="cmx-grid cmx-grid-2" style="margin-top:12px;">
+          <div class="cmx-field">
+            <label>Action Taken</label>
+            <input type="text" name="action_taken" placeholder="Optional">
+          </div>
+
+          <div class="cmx-field">
+            <label>Status</label>
+            <select name="status">
+              {% for status in statuses %}
+                <option value="{{ status }}">{{ status }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field" style="margin-top:12px;">
+          <label>Resolution Notes</label>
+          <textarea name="resolution_notes" rows="3" placeholder="Optional"></textarea>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Write Up</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">Write Up History</h2>
+        </div>
+      </div>
+
+      {% if rows %}
+        <div class="cmx-stack">
+          {% for row in rows %}
+            <div class="cmx-panel-soft">
+              <div class="cmx-panel-head">
+                <h3>{{ row['incident_date'] }}</h3>
+                <span>{{ row['status'] }}</span>
+              </div>
+
+              <div class="cmx-summary-text">
+                <strong>{{ row['category'] }}</strong> · {{ row['severity'] }}<br>
+                {{ row['summary'] }}
+              </div>
+
+              {% if row['full_notes'] %}
+                <div class="cmx-summary-text" style="margin-top:8px;">{{ row['full_notes'] }}</div>
+              {% endif %}
+
+              {% if row['action_taken'] %}
+                <div class="cmx-muted" style="margin-top:8px;">Action Taken: {{ row['action_taken'] }}</div>
+              {% endif %}
+
+              {% if row['resolution_notes'] %}
+                <div class="cmx-muted">Resolution: {{ row['resolution_notes'] }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="cmx-muted">No write ups recorded yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
