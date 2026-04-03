@@ -60,7 +60,11 @@
       <div>
         <h2 class="cmx-section-title" style="font-size:1.2rem;">6 Month Follow Up</h2>
         <div class="cmx-section-subtitle">
-          Record or review the resident’s 6 month follow up here.
+          {% if is_deceased_case %}
+            Follow ups are suppressed because this case is closed as deceased.
+          {% else %}
+            Record or review the resident’s 6 month follow up here.
+          {% endif %}
         </div>
       </div>
     </div>
@@ -84,20 +88,26 @@
         </div>
       {% else %}
         <p class="cmx-muted" style="margin:0;">
-          No 6 month follow up is recorded yet.
+          {% if is_deceased_case %}
+            No follow up actions are available for a deceased case.
+          {% else %}
+            No 6 month follow up is recorded yet.
+          {% endif %}
         </p>
       {% endif %}
     </div>
 
-    <div style="margin-top:12px;">
-      <a class="cmx-btn-muted" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='6_month') }}">
-        {% if followup_6_month %}
-          View Or Edit 6 Month Follow Up
-        {% else %}
-          Complete 6 Month Follow Up
-        {% endif %}
-      </a>
-    </div>
+    {% if not is_deceased_case %}
+      <div style="margin-top:12px;">
+        <a class="cmx-btn-muted" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='6_month') }}">
+          {% if followup_6_month %}
+            View Or Edit 6 Month Follow Up
+          {% else %}
+            Complete 6 Month Follow Up
+          {% endif %}
+        </a>
+      </div>
+    {% endif %}
   </div>
 
   <div class="cmx-card">
@@ -105,7 +115,11 @@
       <div>
         <h2 class="cmx-section-title" style="font-size:1.2rem;">1 Year Follow Up</h2>
         <div class="cmx-section-subtitle">
-          Record or review the resident’s 1 year follow up here.
+          {% if is_deceased_case %}
+            Follow ups are suppressed because this case is closed as deceased.
+          {% else %}
+            Record or review the resident’s 1 year follow up here.
+          {% endif %}
         </div>
       </div>
     </div>
@@ -129,19 +143,25 @@
         </div>
       {% else %}
         <p class="cmx-muted" style="margin:0;">
-          No 1 year follow up is recorded yet.
+          {% if is_deceased_case %}
+            No follow up actions are available for a deceased case.
+          {% else %}
+            No 1 year follow up is recorded yet.
+          {% endif %}
         </p>
       {% endif %}
     </div>
 
-    <div style="margin-top:12px;">
-      <a class="cmx-btn-muted" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='1_year') }}">
-        {% if followup_1_year %}
-          View Or Edit 1 Year Follow Up
-        {% else %}
-          Complete 1 Year Follow Up
-        {% endif %}
-      </a>
-    </div>
+    {% if not is_deceased_case %}
+      <div style="margin-top:12px;">
+        <a class="cmx-btn-muted" href="{{ url_for('case_management.followup_form', resident_id=resident_id, followup_type='1_year') }}">
+          {% if followup_1_year %}
+            View Or Edit 1 Year Follow Up
+          {% else %}
+            Complete 1 Year Follow Up
+          {% endif %}
+        </a>
+      </div>
+    {% endif %}
   </div>
 </div>
