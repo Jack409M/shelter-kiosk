@@ -77,6 +77,55 @@
 
   <div class="cmx-card cmx-quick-card">
     <div>
+      <h3 class="cmx-quick-title">Rent Tracking</h3>
+      <div class="cmx-quick-subtitle">Open the current shelter rent sheet or update this resident’s rent setup from the workspace.</div>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Monthly Sheet</span><span>Current Shelter</span></div>
+      <div class="cmx-row-block"><span>Resident Rent Setup</span><span>Level and apartment tied</span></div>
+    </div>
+
+    <div class="cmx-button-row" style="margin-top:12px;">
+      <a class="cmx-btn" href="{{ url_for('rent_tracking.current_month_sheet') }}">Open Rent Sheet</a>
+      <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_config', resident_id=resident_id) }}">Resident Rent Setup</a>
+    </div>
+  </div>
+
+  <div class="cmx-card cmx-quick-card">
+    <div>
+      <h3 class="cmx-quick-title">Living Area Inspection</h3>
+      <div class="cmx-quick-subtitle">Use the simplified inspection form where every item starts passed and only exceptions are changed.</div>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Default</span><span>Passed</span></div>
+      <div class="cmx-row-block"><span>Change Only</span><span>Needs Attention or Failed</span></div>
+    </div>
+
+    <div class="cmx-button-row" style="margin-top:12px;">
+      <a class="cmx-btn" href="{{ url_for('inspection_v2.inspection_form', resident_id=resident_id) }}">Open Inspection</a>
+    </div>
+  </div>
+
+  <div class="cmx-card cmx-quick-card">
+    <div>
+      <h3 class="cmx-quick-title">Write Ups</h3>
+      <div class="cmx-quick-subtitle">Create and review resident write ups from the case manager workspace.</div>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Status</span><span>Open, Resolved, Dismissed</span></div>
+      <div class="cmx-row-block"><span>Use</span><span>Behavior, safety, room, and program concerns</span></div>
+    </div>
+
+    <div class="cmx-button-row" style="margin-top:12px;">
+      <a class="cmx-btn" href="{{ url_for('writeups.resident_writeups', resident_id=resident_id) }}">Open Write Ups</a>
+    </div>
+  </div>
+
+  <div class="cmx-card cmx-quick-card">
+    <div>
       <h3 class="cmx-quick-title">Quick Add Child Service</h3>
       <div class="cmx-quick-subtitle">Record child service activity from the same resident workspace.</div>
     </div>
