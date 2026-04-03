@@ -267,10 +267,6 @@
           <span>{{ report.resident.shelter | shelter if report.resident.shelter else "—" }}</span>
           <span class="report-header-sep">|</span>
           <span>Meeting {{ report.note.meeting_date or "—" }}</span>
-          {% if report.note.next_appointment %}
-            <span class="report-header-sep">|</span>
-            <span>Follow up Appt: {{ report.note.next_appointment }}</span>
-          {% endif %}
         </div>
       </header>
 
