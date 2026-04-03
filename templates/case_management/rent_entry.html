@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Rent Payment Entry</h1>
+          <div class="cmx-section-subtitle">{{ shelter|shelter }} — {{ month_label }}</div>
+        </div>
+
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.rent_roll') }}">Rent Roll</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <form method="post" action="{{ url_for('rent_tracking.payment_entry_sheet', year=sheet['rent_year'], month=sheet['rent_month']) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        {% if entries %}
+          <div style="overflow-x:auto;">
+            <table class="audit-table">
+              <thead>
+                <tr>
+                  <th>Resident Name</th>
+                  <th>Level</th>
+                  <th>Rent</th>
+                  <th>Prior Balance</th>
+                  <th>Total Due</th>
+                  <th>Amount Paid</th>
+                  <th>Date Paid</th>
+                  <th>Status</th>
+                  <th>Remaining</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for entry in entries %}
+                  <tr>
+                    <td>{{ entry['resident_name_snapshot'] }}</td>
+                    <td>{{ entry['level_snapshot'] or '—' }}</td>
+                    <td>${{ '%.2f'|format(entry['current_charge'] or 0) }}</td>
+                    <td>${{ '%.2f'|format(entry['prior_balance'] or 0) }}</td>
+                    <td>${{ '%.2f'|format(entry['total_due'] or 0) }}</td>
+                    <td>
+                      <input type="number" step="0.01" min="0" name="amount_paid_{{ entry['id'] }}" value="{{ entry['amount_paid'] or 0 }}">
+                    </td>
+                    <td>
+                      <input type="date" name="paid_date_{{ entry['id'] }}" value="{{ entry['paid_date'] or '' }}">
+                    </td>
+                    <td>{{ entry['status'] }}</td>
+                    <td>${{ '%.2f'|format(entry['remaining_balance'] or 0) }}</td>
+                    <td>
+                      <input type="text" name="notes_{{ entry['id'] }}" value="{{ entry['notes'] or '' }}" placeholder="Optional">
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="cmx-button-row" style="margin-top:16px;">
+            <button type="submit" class="cmx-btn">Save Payment Sheet</button>
+          </div>
+        {% else %}
+          <div class="cmx-muted">No rent entries found for this month.</div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
