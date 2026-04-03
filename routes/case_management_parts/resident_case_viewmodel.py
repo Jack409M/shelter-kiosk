@@ -32,19 +32,6 @@ def _clean_text(value):
     return str(value).strip()
 
 
-def _first_non_empty(*values):
-    for value in values:
-        if value is None:
-            continue
-        if isinstance(value, str):
-            cleaned = value.strip()
-            if cleaned:
-                return cleaned
-            continue
-        return value
-    return None
-
-
 def _yes_no_from_need_state(is_need_present):
     if is_need_present is None:
         return ""
@@ -65,9 +52,7 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     if days_sober is not None and str(days_sober).strip() != "":
         parts.append(f"{days_sober} days sober")
 
-    employment_status = _clean_text(
-        rs.get("employment_status_display") or rs.get("employment_status_current")
-    )
+    employment_status = _clean_text(rs.get("employment_status_display") or rs.get("employment_status_current"))
     if employment_status and employment_status != "—":
         parts.append(f"employment status {employment_status.lower()}")
 
@@ -82,12 +67,14 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     return ". ".join(parts)
 
 
-def _parse_future_date_from_text(value: str | None) -> date | None:
+def _parse_future_date_from_text(value: str | None) -> datetime | None:
     text = _clean_text(value)
     if not text:
         return None
 
     candidates = [
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d %H:%M",
         "%Y-%m-%d",
         "%m/%d/%Y",
         "%m/%d/%y",
@@ -99,7 +86,7 @@ def _parse_future_date_from_text(value: str | None) -> date | None:
 
     for fmt in candidates:
         try:
-            return datetime.strptime(text, fmt).date()
+            return datetime.strptime(text, fmt)
         except ValueError:
             continue
 
@@ -111,39 +98,28 @@ def _normalize_appointment_display(value: str | None) -> str:
     if not text:
         return ""
 
-    parsed_date = _parse_future_date_from_text(text)
-    if parsed_date and len(text) <= 10:
-        return parsed_date.strftime("%m/%d/%Y")
+    parsed_dt = _parse_future_date_from_text(text)
+    if not parsed_dt:
+        return text
 
-    return text
+    if parsed_dt.hour == 0 and parsed_dt.minute == 0:
+        return parsed_dt.strftime("%m/%d/%Y")
+
+    return parsed_dt.strftime("%m/%d/%Y %I:%M %p").replace(" 0", " ")
 
 
 def _is_current_or_future_appointment(value: str | None) -> bool:
-    parsed_date = _parse_future_date_from_text(value)
-    if not parsed_date:
+    parsed_dt = _parse_future_date_from_text(value)
+    if not parsed_dt:
         return False
-    return parsed_date >= chicago_today()
+    return parsed_dt.date() >= chicago_today()
 
 
-def _resolve_meeting_default_next_appointment(last_note, latest_appointment) -> str:
-    latest_appointment_date = (
-        _clean_text(latest_appointment.get("appointment_date"))
-        if latest_appointment
-        else ""
-    )
-    last_note_next_appointment = (
-        _clean_text(last_note.get("next_appointment")) if last_note else ""
-    )
+def _resolve_meeting_default_next_appointment(latest_appointment) -> str:
+    latest_appointment_date = _clean_text(latest_appointment.get("appointment_date")) if latest_appointment else ""
 
-    if latest_appointment_date and _is_current_or_future_appointment(
-        latest_appointment_date
-    ):
+    if latest_appointment_date and _is_current_or_future_appointment(latest_appointment_date):
         return _normalize_appointment_display(latest_appointment_date)
-
-    if last_note_next_appointment and _is_current_or_future_appointment(
-        last_note_next_appointment
-    ):
-        return _normalize_appointment_display(last_note_next_appointment)
 
     return ""
 
@@ -167,9 +143,7 @@ def build_meeting_defaults(
     last_note = notes[-1] if notes else {}
     latest_appointment = appointments[0] if appointments else {}
 
-    next_appointment = _resolve_meeting_default_next_appointment(
-        last_note, latest_appointment
-    )
+    next_appointment = _resolve_meeting_default_next_appointment(latest_appointment)
 
     summary_hint = _build_summary_hint(
         recovery_snapshot=recovery_snapshot,
