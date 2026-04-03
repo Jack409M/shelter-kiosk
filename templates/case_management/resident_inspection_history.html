@@ -1,0 +1,58 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Resident Inspection History</h1>
+          <div class="cmx-section-subtitle">{{ resident['first_name'] }} {{ resident['last_name'] }}</div>
+        </div>
+
+        <div class="cmx-button-row">
+          <a class="cmx-btn-muted" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">Back to Resident</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      <div class="cmx-row-block">
+        <span>Weighted Living Area Score</span>
+        <span>{{ weighted_score if weighted_score is not none else '—' }}</span>
+      </div>
+    </div>
+
+    <div class="cmx-card">
+      {% if rows %}
+        <div style="overflow-x:auto;">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Shelter</th>
+                <th>Result</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in rows %}
+                <tr>
+                  <td>{{ row['inspection_date'] }}</td>
+                  <td>{{ row['shelter_snapshot']|shelter }}</td>
+                  <td>{{ 'Passed' if row['passed'] else 'Failed' }}</td>
+                  <td>{{ 100 if row['passed'] else 0 }}</td>
+                  <td>{{ row['notes'] or '—' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="cmx-muted">No inspection history yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
