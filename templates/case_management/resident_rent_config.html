@@ -19,79 +19,96 @@
       </div>
     </div>
 
-    <div class="cmx-card">
-      <div class="cmx-section-head">
-        <div>
-          <h2 class="cmx-section-title">Current Rent Setup</h2>
-          <div class="cmx-section-subtitle">Update this when level or apartment changes happen.</div>
+    <div class="cmx-grid cmx-grid-2">
+      <div class="cmx-card">
+        <div class="cmx-section-head">
+          <div>
+            <h2 class="cmx-section-title">Current Rent Setup</h2>
+            <div class="cmx-section-subtitle">Update this when level or apartment changes happen.</div>
+          </div>
         </div>
-      </div>
 
-      <form method="post" action="{{ url_for('rent_tracking.resident_rent_config', resident_id=resident['id']) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <form method="post" action="{{ url_for('rent_tracking.resident_rent_config', resident_id=resident['id']) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-        <div class="cmx-grid cmx-grid-3">
           <div class="cmx-field">
             <label>Level</label>
-            <input type="text" name="level_snapshot" value="{{ current_config['level_snapshot'] if current_config else '' }}">
+            <select name="level_snapshot">
+              {% set current_level = current_config['level_snapshot'] if current_config else '' %}
+              <option value="">Select level</option>
+              <option value="1" {% if current_level == '1' %}selected{% endif %}>1</option>
+              <option value="2" {% if current_level == '2' %}selected{% endif %}>2</option>
+              <option value="3" {% if current_level == '3' %}selected{% endif %}>3</option>
+              <option value="4" {% if current_level == '4' %}selected{% endif %}>4</option>
+              <option value="5" {% if current_level == '5' %}selected{% endif %}>5</option>
+            </select>
           </div>
-          <div class="cmx-field">
+
+          <div class="cmx-field" style="margin-top:12px;">
             <label>Apartment Size</label>
-            <input type="text" name="apartment_size_snapshot" value="{{ current_config['apartment_size_snapshot'] if current_config else '' }}">
+            <select name="apartment_size_snapshot">
+              {% set current_apartment_size = current_config['apartment_size_snapshot'] if current_config else '' %}
+              <option value="">Select apartment size</option>
+              <option value="Bed" {% if current_apartment_size == 'Bed' %}selected{% endif %}>Bed</option>
+              <option value="One Bedroom" {% if current_apartment_size == 'One Bedroom' %}selected{% endif %}>One Bedroom</option>
+              <option value="Two Bedroom" {% if current_apartment_size == 'Two Bedroom' %}selected{% endif %}>Two Bedroom</option>
+              <option value="Town Home" {% if current_apartment_size == 'Town Home' %}selected{% endif %}>Town Home</option>
+            </select>
           </div>
-          <div class="cmx-field">
+
+          <div class="cmx-field" style="margin-top:12px;">
             <label>Monthly Rent</label>
             <input type="number" step="0.01" min="0" name="monthly_rent" value="{{ current_config['monthly_rent'] if current_config else 0 }}">
           </div>
-        </div>
 
-        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
-          <div class="cmx-field">
+          <div class="cmx-field" style="margin-top:12px;">
             <label>Effective Start Date</label>
             <input type="date" name="effective_start_date" value="{{ current_config['effective_start_date'] if current_config else '' }}" required>
           </div>
-          <div class="cmx-field">
+
+          <div class="cmx-field" style="margin-top:12px;">
             <label>Exempt</label>
             <select name="is_exempt">
               <option value="no" {% if not current_config or not current_config['is_exempt'] %}selected{% endif %}>No</option>
               <option value="yes" {% if current_config and current_config['is_exempt'] %}selected{% endif %}>Yes</option>
             </select>
           </div>
-        </div>
 
-        <div class="cmx-button-row">
-          <button type="submit" class="cmx-btn">Save Rent Setup</button>
-        </div>
-      </form>
-    </div>
-
-    <div class="cmx-card">
-      <div class="cmx-section-head">
-        <div>
-          <h2 class="cmx-section-title">Rent Setup History</h2>
-        </div>
+          <div class="cmx-button-row" style="margin-top:16px;">
+            <button type="submit" class="cmx-btn">Save Rent Setup</button>
+          </div>
+        </form>
       </div>
 
-      {% if history %}
-        <div class="cmx-stack">
-          {% for row in history %}
-            <div class="cmx-panel-soft">
-              <div class="cmx-panel-head">
-                <h3>{{ row['effective_start_date'] or '—' }}</h3>
-                <span>{{ 'Active' if not row['effective_end_date'] else row['effective_end_date'] }}</span>
-              </div>
-              <div class="cmx-summary-text">
-                Level: {{ row['level_snapshot'] or '—' }}<br>
-                Apartment Size: {{ row['apartment_size_snapshot'] or '—' }}<br>
-                Monthly Rent: ${{ '%.2f'|format(row['monthly_rent'] or 0) }}<br>
-                Exempt: {{ 'Yes' if row['is_exempt'] else 'No' }}
-              </div>
-            </div>
-          {% endfor %}
+      <div class="cmx-card">
+        <div class="cmx-section-head">
+          <div>
+            <h2 class="cmx-section-title">Rent Setup History</h2>
+            <div class="cmx-section-subtitle">Newest at the top.</div>
+          </div>
         </div>
-      {% else %}
-        <div class="cmx-muted">No rent setup history yet.</div>
-      {% endif %}
+
+        {% if history %}
+          <div class="cmx-stack">
+            {% for row in history %}
+              <div class="cmx-panel-soft">
+                <div class="cmx-panel-head">
+                  <h3>{{ row['effective_start_date'] or '—' }}</h3>
+                  <span>{{ 'Active' if not row['effective_end_date'] else row['effective_end_date'] }}</span>
+                </div>
+                <div class="cmx-summary-text">
+                  Level: {{ row['level_snapshot'] or '—' }}<br>
+                  Apartment Size: {{ row['apartment_size_snapshot'] or '—' }}<br>
+                  Monthly Rent: ${{ '%.2f'|format(row['monthly_rent'] or 0) }}<br>
+                  Exempt: {{ 'Yes' if row['is_exempt'] else 'No' }}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="cmx-muted">No rent setup history yet.</div>
+        {% endif %}
+      </div>
     </div>
   </div>
 </div>
