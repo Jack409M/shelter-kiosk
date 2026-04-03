@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from flask import flash, redirect, request, session, url_for
 
 from core.db import db_execute, db_fetchone
@@ -17,6 +19,37 @@ from routes.case_management_parts.helpers import (
 
 def _clean_text(value: str | None) -> str:
     return (value or "").strip()
+
+
+def _parse_appointment_datetime(value: str | None) -> tuple[datetime | None, str | None]:
+    text = _clean_text(value)
+    if not text:
+        return None, None
+
+    accepted_formats = [
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d %H:%M",
+        "%m/%d/%Y %I:%M %p",
+        "%m/%d/%Y %H:%M",
+        "%m/%d/%y %I:%M %p",
+        "%m/%d/%y %H:%M",
+        "%Y-%m-%d",
+    ]
+
+    for fmt in accepted_formats:
+        try:
+            parsed = datetime.strptime(text, fmt)
+            return parsed, None
+        except ValueError:
+            continue
+
+    return None, "Appointment date and time must be valid."
+
+
+def _render_appointment_datetime(value: datetime) -> str:
+    if value.hour == 0 and value.minute == 0 and value.second == 0 and value.microsecond == 0:
+        return value.strftime("%Y-%m-%d")
+    return value.strftime("%Y-%m-%d %H:%M")
 
 
 def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict[str, object]:
@@ -204,19 +237,23 @@ def add_appointment_view(resident_id: int):
         flash("No active enrollment.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    appointment_date = _clean_text(request.form.get("appointment_date"))
+    appointment_datetime_raw = _clean_text(
+        request.form.get("appointment_datetime") or request.form.get("appointment_date")
+    )
     appointment_type = _clean_text(request.form.get("appointment_type"))
     notes = _clean_text(request.form.get("notes"))
 
-    if not appointment_date:
-        flash("Appointment date required.", "error")
+    if not appointment_datetime_raw:
+        flash("Appointment date and time required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    if not parse_iso_date(appointment_date):
-        flash("Appointment date must be a valid date.", "error")
+    parsed_appointment, appointment_error = _parse_appointment_datetime(appointment_datetime_raw)
+    if appointment_error or not parsed_appointment:
+        flash(appointment_error or "Appointment date and time must be valid.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
+    appointment_value = _render_appointment_datetime(parsed_appointment)
 
     db_execute(
         f"""
@@ -238,7 +275,7 @@ def add_appointment_view(resident_id: int):
         (
             enrollment_id,
             appointment_type or None,
-            appointment_date,
+            appointment_value,
             notes or None,
             0,
             now,
