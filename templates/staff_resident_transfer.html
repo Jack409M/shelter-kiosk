@@ -1,35 +1,40 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
 {% block content %}
-<h2>Transfer Resident</h2>
+  <h1>Transfer Resident</h1>
+  <p>
+    Move
+    <strong>
+      {% if resident is mapping %}
+        {{ resident["first_name"] }} {{ resident["last_name"] }}
+      {% else %}
+        {{ resident[4] }} {{ resident[5] }}
+      {% endif %}
+    </strong>
+    from <strong>{{ from_shelter|title }}</strong>.
+  </p>
 
-<p>
-  <strong>
-    {{ resident["first_name"] if resident is mapping else resident[4] }}
-    {{ resident["last_name"] if resident is mapping else resident[5] }}
-  </strong><br>
-  Resident Code:
-  <strong>{{ resident["resident_code"] if resident is mapping else resident[3] }}</strong><br>
-  From shelter: <strong>{{ from_shelter | shelter }}</strong>
-</p>
+  <form method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ next or '' }}">
 
-<form method="post">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <label for="to_shelter">To shelter</label><br>
-  <select name="to_shelter" id="to_shelter" required>
-    <option value="">Select…</option>
-    {% for s in shelters %}
-      <option value="{{ s }}">{{ s | shelter }}</option>
-    {% endfor %}
-  </select>
+    <label for="to_shelter">New shelter</label>
+    <select id="to_shelter" name="to_shelter" required>
+      <option value="">Select shelter</option>
+      {% for s in shelters %}
+        <option value="{{ s }}">{{ s|title }}</option>
+      {% endfor %}
+    </select>
 
-  <br><br>
+    <label for="note">Note</label>
+    <textarea id="note" name="note" rows="4" placeholder="Optional reason or note"></textarea>
 
-  <label for="note">Note (optional)</label><br>
-  <textarea name="note" id="note" rows="3" style="width: 100%;"></textarea>
-
-  <br><br>
-
-  <button type="submit">Transfer</button>
-  <a href="{{ url_for('residents.staff_residents') }}">Cancel</a>
-</form>
+    <div style="margin-top: 1rem;">
+      <button type="submit">Transfer Resident</button>
+      {% if next %}
+        <a href="{{ next }}">Cancel</a>
+      {% else %}
+        <a href="{{ url_for('residents.staff_residents') }}">Cancel</a>
+      {% endif %}
+    </div>
+  </form>
 {% endblock %}
