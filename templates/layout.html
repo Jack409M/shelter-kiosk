@@ -58,6 +58,7 @@
       {% set chore_config_url = safe_url_for('shelter_operations.chore_management') %}
       {% set calendar_url = safe_url_for('calendar.calendar_view') %}
       {% set reports_url = safe_url_for('reports.reports_index') %}
+      {% set operations_settings_url = safe_url_for('operations_settings.settings_page') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
       {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
 
@@ -162,6 +163,9 @@
                 <button type="button">Admin ▾</button>
                 <div class="menu">
                   <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
+                  {% if operations_settings_url %}
+                    <a href="{{ operations_settings_url }}">Operations Settings</a>
+                  {% endif %}
                   <a href="{{ url_for('admin.admin_users') }}">Users</a>
                   <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
                   <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
