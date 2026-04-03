@@ -100,53 +100,6 @@ def _ensure_tables() -> None:
             pass
 
 
-def _settings_for_shelter(shelter: str) -> dict:
-    _ensure_settings_table()
-    ph = _placeholder()
-
-    row = db_fetchone(
-        f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
-        (shelter,),
-    )
-    if row:
-        return dict(row)
-
-    now = utcnow_iso()
-    db_execute(
-        (
-            """
-            INSERT INTO shelter_operation_settings (
-                shelter,
-                inspection_default_item_status,
-                inspection_item_labels,
-                created_at,
-                updated_at
-            )
-            VALUES (%s, %s, %s, %s, %s)
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            INSERT INTO shelter_operation_settings (
-                shelter,
-                inspection_default_item_status,
-                inspection_item_labels,
-                created_at,
-                updated_at
-            )
-            VALUES (?, ?, ?, ?, ?)
-            """
-        ),
-        (shelter, "passed", None, now, now),
-    )
-
-    row = db_fetchone(
-        f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
-        (shelter,),
-    )
-    return dict(row) if row else {}
-
-
 def _active_residents_for_shelter(shelter: str):
     ph = _placeholder()
     return db_fetchall(
@@ -161,10 +114,6 @@ def _active_residents_for_shelter(shelter: str):
     )
 
 
-def _overall_score_from_passed(passed: bool) -> int:
-    return 100 if passed else 0
-
-
 def _weighted_score_for_resident(resident_id: int) -> int | None:
     ph = _placeholder()
     rows = db_fetchall(
@@ -177,10 +126,12 @@ def _weighted_score_for_resident(resident_id: int) -> int | None:
         """,
         (resident_id,),
     )
-    values = []
+
+    values: list[int] = []
     for row in rows:
         passed = row.get("passed")
         values.append(100 if passed else 0)
+
     if not values:
         return None
     return round(sum(values) / len(values))
