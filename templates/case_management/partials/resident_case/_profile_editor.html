@@ -16,6 +16,7 @@
   {% set resolved_sobriety_date = rs_sobriety_date or intake_sobriety_date or enrollment_entry_date or "" %}
   {% set resolved_treatment_graduation_date = rs_treatment_graduation_date or intake_treatment_grad_date or "" %}
   {% set eis = employment_income_snapshot if employment_income_snapshot is defined else {} %}
+  {% set ess = employment_stability_snapshot if employment_stability_snapshot is defined else {} %}
 
   {% if eis.get("band_key") == "green" %}
     {% set income_field_card_style = "background:#e3efe7; border:1px solid #98baa3;" %}
@@ -142,8 +143,8 @@
 
     <div class="cmx-panel-soft" style="margin-top:20px;">
       <div class="cmx-panel-head">
-        <h3>Employment Profile</h3>
-        <span>Work and income</span>
+        <h3>Employment Stability Module</h3>
+        <span>Income, tenure, continuity, and upward move protection</span>
       </div>
 
       <div class="cmx-grid cmx-grid-4">
@@ -183,6 +184,70 @@
         </div>
 
         <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Employment Type</div>
+          <div class="cmx-field">
+            <select name="employment_type_current">
+              <option value="" {% if not rs.get('employment_type_current') %}selected{% endif %}>—</option>
+              <option value="full_time" {% if rs.get('employment_type_current') == 'full_time' %}selected{% endif %}>Full Time</option>
+              <option value="part_time" {% if rs.get('employment_type_current') == 'part_time' %}selected{% endif %}>Part Time</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Current Job Start Date</div>
+          <div class="cmx-field">
+            <input type="date" name="current_job_start_date" value="{{ rs.get('current_job_start_date') or '' }}">
+          </div>
+          <div style="margin-top:8px; font-size:12px; color:#53687c;">
+            {% if rs.get('current_job_days') is not none %}
+              {{ rs.get('current_job_days') }} days at current job
+            {% else %}
+              Days at current job derive from this date
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Continuous Employment Start</div>
+          <div class="cmx-field">
+            <input type="date" name="continuous_employment_start_date" value="{{ rs.get('continuous_employment_start_date') or '' }}">
+          </div>
+          <div style="margin-top:8px; font-size:12px; color:#53687c;">
+            {% if rs.get('continuous_employment_days') is not none %}
+              {{ rs.get('continuous_employment_days') }} days continuous employment
+            {% else %}
+              Continuous employment derives from this date
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Previous Job End Date</div>
+          <div class="cmx-field">
+            <input type="date" name="previous_job_end_date" value="{{ rs.get('previous_job_end_date') or '' }}">
+          </div>
+          <div style="margin-top:8px; font-size:12px; color:#53687c;">
+            {% if rs.get('employment_gap_days') is not none %}
+              {{ rs.get('employment_gap_days') }} day gap before current job
+            {% else %}
+              Gap derives from current start and previous end dates
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">Upward Job Change</div>
+          <div class="cmx-field">
+            <select name="upward_job_change">
+              <option value="" {% if rs.get('upward_job_change') is none %}selected{% endif %}>—</option>
+              <option value="yes" {% if rs.get('upward_job_change') is sameas true or rs.get('upward_job_change') == 1 %}selected{% endif %}>Yes</option>
+              <option value="no" {% if rs.get('upward_job_change') is sameas false or rs.get('upward_job_change') == 0 %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
           <div class="cmx-field-card-label">Supervisor</div>
           <div class="cmx-field">
             <input type="text" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
@@ -201,6 +266,34 @@
         <div class="cmx-field" id="employment_fields_unemployed">
           <label>Unemployment Reason</label>
           <input type="text" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
+        </div>
+
+        <div class="cmx-field">
+          <label>Job Change Notes</label>
+          <textarea name="job_change_notes" rows="3">{{ rs.get('job_change_notes') or '' }}</textarea>
+        </div>
+      </div>
+
+      <div style="{{ ess.get('card_style', 'background:#eef2f6; border:1px solid #c7d2de;') }} border-radius:16px; padding:14px; margin-top:16px;">
+        <div class="cmx-section-head" style="margin-bottom:8px;">
+          <div>
+            <h3 class="cmx-section-title">Employment Stability Readout</h3>
+            <div class="cmx-section-subtitle">
+              Pass if currently employed and either {{ ess.get('current_job_days_min', 90) }} or more days at current job or {{ ess.get('continuous_days_min', 180) }} or more days of continuous employment.
+            </div>
+          </div>
+          <div>
+            <span style="display:inline-flex; align-items:center; justify-content:center; padding:5px 10px; border-radius:999px; background:#ffffffaa; border:1px solid #c4d1dc; font-weight:700;">
+              {{ ess.get('label', '—') }}
+            </span>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-4">
+          <div class="cmx-row-block"><span>Current Job Days</span><span>{{ ess.get('current_job_days') if ess.get('current_job_days') is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Continuous Days</span><span>{{ ess.get('continuous_days') if ess.get('continuous_days') is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Gap Days</span><span>{{ ess.get('gap_days') if ess.get('gap_days') is not none else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Upward Move Protected</span><span>{{ "Yes" if ess.get('upward_protected') else "No" }}</span></div>
         </div>
       </div>
     </div>
