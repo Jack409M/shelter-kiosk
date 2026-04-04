@@ -165,6 +165,9 @@ def ensure_resident_children_table(kind: str) -> None:
             birth_year INTEGER,
             relationship TEXT,
             living_status TEXT,
+            receives_survivor_benefit INTEGER NOT NULL DEFAULT 0,
+            survivor_benefit_amount REAL,
+            survivor_benefit_notes TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             notes TEXT,
             created_at TEXT,
@@ -180,6 +183,9 @@ def ensure_resident_children_table(kind: str) -> None:
             birth_year INTEGER,
             relationship TEXT,
             living_status TEXT,
+            receives_survivor_benefit BOOLEAN NOT NULL DEFAULT FALSE,
+            survivor_benefit_amount DOUBLE PRECISION,
+            survivor_benefit_notes TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             notes TEXT,
             created_at TEXT,
@@ -187,6 +193,25 @@ def ensure_resident_children_table(kind: str) -> None:
         )
         """,
     )
+
+    if kind == "pg":
+        statements = [
+            "ALTER TABLE resident_children ADD COLUMN IF NOT EXISTS receives_survivor_benefit BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE resident_children ADD COLUMN IF NOT EXISTS survivor_benefit_amount DOUBLE PRECISION",
+            "ALTER TABLE resident_children ADD COLUMN IF NOT EXISTS survivor_benefit_notes TEXT",
+        ]
+    else:
+        statements = [
+            "ALTER TABLE resident_children ADD COLUMN receives_survivor_benefit INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE resident_children ADD COLUMN survivor_benefit_amount REAL",
+            "ALTER TABLE resident_children ADD COLUMN survivor_benefit_notes TEXT",
+        ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
 
 
 def ensure_resident_substances_table(kind: str) -> None:
@@ -509,6 +534,7 @@ def ensure_indexes() -> None:
         "CREATE INDEX IF NOT EXISTS resident_children_resident_idx ON resident_children (resident_id)",
         "CREATE INDEX IF NOT EXISTS resident_children_resident_active_idx ON resident_children (resident_id, is_active)",
         "CREATE INDEX IF NOT EXISTS resident_children_living_status_idx ON resident_children (living_status)",
+        "CREATE INDEX IF NOT EXISTS resident_children_survivor_benefit_idx ON resident_children (receives_survivor_benefit)",
         """
         CREATE UNIQUE INDEX IF NOT EXISTS resident_children_active_dedupe_uidx
         ON resident_children (
