@@ -19,7 +19,6 @@ from routes.case_management_parts.helpers import parse_iso_date
 from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
-from routes.case_management_parts.helpers import yes_no_to_int
 
 from .schema_helpers import create_table
 
@@ -573,6 +572,15 @@ def ensure_columns_and_constraints(kind: str) -> None:
     backfill_resident_codes(kind)
 
 
+def _yes_no_to_bool(value: str | None):
+    normalized = (value or "").strip().lower()
+    if normalized == "yes":
+        return True
+    if normalized == "no":
+        return False
+    return None
+
+
 def update_recovery_profile_view(resident_id: int):
     init_db()
 
@@ -606,8 +614,8 @@ def update_recovery_profile_view(resident_id: int):
     level_start_date = parse_iso_date(request.form.get("level_start_date"))
     step_current = parse_int(request.form.get("step_current"))
     sponsor_name = clean(request.form.get("sponsor_name"))
-    sponsor_active = yes_no_to_int(request.form.get("sponsor_active"))
-    step_work_active = yes_no_to_int(request.form.get("step_work_active"))
+    sponsor_active = _yes_no_to_bool(request.form.get("sponsor_active"))
+    step_work_active = _yes_no_to_bool(request.form.get("step_work_active"))
     sobriety_date = parse_iso_date(request.form.get("sobriety_date"))
     treatment_graduation_date = parse_iso_date(request.form.get("treatment_graduation_date"))
     drug_of_choice = clean(request.form.get("drug_of_choice"))
@@ -622,20 +630,22 @@ def update_recovery_profile_view(resident_id: int):
         request.form.get("continuous_employment_start_date")
     )
     previous_job_end_date = parse_iso_date(request.form.get("previous_job_end_date"))
-    upward_job_change = yes_no_to_int(request.form.get("upward_job_change"))
+    upward_job_change = _yes_no_to_bool(request.form.get("upward_job_change"))
     supervisor_name = clean(request.form.get("supervisor_name"))
     supervisor_phone = clean(request.form.get("supervisor_phone"))
     unemployment_reason = clean(request.form.get("unemployment_reason"))
     job_change_notes = clean(request.form.get("job_change_notes"))
 
     current_app.logger.info(
-        "Recovery profile submit resident_id=%s employment_type_current=%r current_job_start_date=%r previous_job_end_date=%r upward_job_change=%r job_change_notes=%r",
+        "Recovery profile submit resident_id=%s employment_type_current=%r current_job_start_date=%r previous_job_end_date=%r upward_job_change=%r job_change_notes=%r sponsor_active=%r step_work_active=%r",
         resident_id,
         request.form.get("employment_type_current"),
         request.form.get("current_job_start_date"),
         request.form.get("previous_job_end_date"),
         request.form.get("upward_job_change"),
         request.form.get("job_change_notes"),
+        request.form.get("sponsor_active"),
+        request.form.get("step_work_active"),
     )
 
     now = utcnow_iso()
