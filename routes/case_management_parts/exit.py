@@ -73,6 +73,13 @@ def _row_value(row: Any, key: str, index: int):
     return row[index]
 
 
+def _ensure_exit_assessment_columns() -> None:
+    try:
+        db_execute("ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS graduation_income_snapshot DOUBLE PRECISION")
+    except Exception:
+        pass
+
+
 def _fetch_resident_and_enrollment(resident_id: int):
     ph = placeholder()
 
@@ -123,6 +130,7 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
             leave_amarillo_city,
             leave_amarillo_unknown,
             income_at_exit,
+            graduation_income_snapshot,
             education_at_exit,
             grit_at_exit,
             received_car,
@@ -151,14 +159,15 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
         "leave_amarillo_city": _row_value(row, "leave_amarillo_city", 6) or "",
         "leave_amarillo_unknown": "yes" if int(_row_value(row, "leave_amarillo_unknown", 7) or 0) else "no",
         "income_at_exit": _row_value(row, "income_at_exit", 8) or "",
-        "education_at_exit": _row_value(row, "education_at_exit", 9) or "",
-        "grit_at_exit": _row_value(row, "grit_at_exit", 10) or "",
-        "received_car": "yes" if int(_row_value(row, "received_car", 11) or 0) else "no",
-        "car_insurance": "yes" if int(_row_value(row, "car_insurance", 12) or 0) else "no",
-        "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 13) or 0) else "no",
-        "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 14) or 0) else "no",
-        "obtained_public_insurance": "yes" if int(_row_value(row, "obtained_public_insurance", 15) or 0) else "no",
-        "private_insurance": "yes" if int(_row_value(row, "private_insurance", 16) or 0) else "no",
+        "graduation_income_snapshot": _row_value(row, "graduation_income_snapshot", 9) or "",
+        "education_at_exit": _row_value(row, "education_at_exit", 10) or "",
+        "grit_at_exit": _row_value(row, "grit_at_exit", 11) or "",
+        "received_car": "yes" if int(_row_value(row, "received_car", 12) or 0) else "no",
+        "car_insurance": "yes" if int(_row_value(row, "car_insurance", 13) or 0) else "no",
+        "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 14) or 0) else "no",
+        "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 15) or 0) else "no",
+        "obtained_public_insurance": "yes" if int(_row_value(row, "obtained_public_insurance", 16) or 0) else "no",
+        "private_insurance": "yes" if int(_row_value(row, "private_insurance", 17) or 0) else "no",
     }
 
 
@@ -288,14 +297,36 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
     return data, errors
 
 
+def _derive_graduation_income_snapshot(existing_row: Any, data: dict[str, Any]) -> float | None:
+    existing_snapshot = None
+    if existing_row:
+        existing_snapshot = _row_value(existing_row, "graduation_income_snapshot", 1)
+
+    is_graduate = (
+        data.get("graduate_dwc") == "yes"
+        and data.get("exit_category") == "Successful Completion"
+        and data.get("exit_reason") == "Program Graduated"
+    )
+
+    if existing_snapshot not in (None, ""):
+        return existing_snapshot
+
+    if is_graduate:
+        return data.get("income_at_exit")
+
+    return None
+
+
 def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     ph = placeholder()
     now = utcnow_iso()
 
     existing = db_fetchone(
-        f"SELECT id FROM exit_assessments WHERE enrollment_id = {ph}",
+        f"SELECT id, graduation_income_snapshot FROM exit_assessments WHERE enrollment_id = {ph}",
         (enrollment_id,),
     )
+
+    graduation_income_snapshot = _derive_graduation_income_snapshot(existing, data)
 
     if existing:
         db_execute(
@@ -310,6 +341,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 leave_amarillo_city = {ph},
                 leave_amarillo_unknown = {ph},
                 income_at_exit = {ph},
+                graduation_income_snapshot = {ph},
                 education_at_exit = {ph},
                 grit_at_exit = {ph},
                 received_car = {ph},
@@ -331,6 +363,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
                 data["leave_amarillo_city"],
                 yes_no_to_int(data["leave_amarillo_unknown"]),
                 data["income_at_exit"],
+                graduation_income_snapshot,
                 data["education_at_exit"],
                 data["grit_at_exit"],
                 yes_no_to_int(data["received_car"]),
@@ -359,6 +392,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             leave_amarillo_city,
             leave_amarillo_unknown,
             income_at_exit,
+            graduation_income_snapshot,
             education_at_exit,
             grit_at_exit,
             received_car,
@@ -372,6 +406,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
         )
         VALUES
         (
+            {ph},
             {ph},
             {ph},
             {ph},
@@ -405,6 +440,7 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
             data["leave_amarillo_city"],
             yes_no_to_int(data["leave_amarillo_unknown"]),
             data["income_at_exit"],
+            graduation_income_snapshot,
             data["education_at_exit"],
             data["grit_at_exit"],
             yes_no_to_int(data["received_car"]),
@@ -463,6 +499,7 @@ def exit_assessment_form_view(resident_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+    _ensure_exit_assessment_columns()
 
     resident, enrollment = _fetch_resident_and_enrollment(resident_id)
 
@@ -491,6 +528,7 @@ def submit_exit_assessment_view(resident_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+    _ensure_exit_assessment_columns()
 
     resident, enrollment = _fetch_resident_and_enrollment(resident_id)
 
