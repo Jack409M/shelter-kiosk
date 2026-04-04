@@ -11,6 +11,7 @@ from routes.case_management_parts.helpers import clean
 from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import parse_int
+from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
@@ -70,6 +71,9 @@ def _child_in_scope(child_id: int):
             rc.birth_year,
             rc.relationship,
             rc.living_status,
+            rc.receives_survivor_benefit,
+            rc.survivor_benefit_amount,
+            rc.survivor_benefit_notes,
             rc.is_active
         FROM resident_children rc
         JOIN residents r
@@ -123,7 +127,10 @@ def _active_children_for_resident(resident_id: int):
             child_name,
             birth_year,
             relationship,
-            living_status
+            living_status,
+            receives_survivor_benefit,
+            survivor_benefit_amount,
+            survivor_benefit_notes
         FROM resident_children
         WHERE resident_id = {ph}
           AND is_active = TRUE
@@ -168,6 +175,15 @@ def _resolve_child_service_type(form) -> str | None:
     return service_type
 
 
+def _yes_no_to_bool(value: str | None):
+    normalized = (value or "").strip().lower()
+    if normalized == "yes":
+        return True
+    if normalized == "no":
+        return False
+    return None
+
+
 def family_intake_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -187,6 +203,9 @@ def family_intake_view(resident_id: int):
         birth_year = parse_int(request.form.get("birth_year"))
         relationship = clean(request.form.get("relationship"))
         living_status = clean(request.form.get("living_status"))
+        receives_survivor_benefit = _yes_no_to_bool(request.form.get("receives_survivor_benefit"))
+        survivor_benefit_amount = parse_money(request.form.get("survivor_benefit_amount"))
+        survivor_benefit_notes = clean(request.form.get("survivor_benefit_notes"))
 
         if not child_name:
             children = _active_children_for_resident(resident_id)
@@ -239,12 +258,18 @@ def family_intake_view(resident_id: int):
                     birth_year,
                     relationship,
                     living_status,
+                    receives_survivor_benefit,
+                    survivor_benefit_amount,
+                    survivor_benefit_notes,
                     is_active,
                     created_at,
                     updated_at
                 )
                 VALUES
                 (
+                    {ph},
+                    {ph},
+                    {ph},
                     {ph},
                     {ph},
                     {ph},
@@ -261,6 +286,9 @@ def family_intake_view(resident_id: int):
                     birth_year,
                     relationship,
                     living_status,
+                    receives_survivor_benefit,
+                    survivor_benefit_amount,
+                    survivor_benefit_notes,
                     now,
                     now,
                 ),
@@ -318,6 +346,9 @@ def edit_child_view(child_id: int):
         birth_year = parse_int(request.form.get("birth_year"))
         relationship = clean(request.form.get("relationship"))
         living_status = clean(request.form.get("living_status"))
+        receives_survivor_benefit = _yes_no_to_bool(request.form.get("receives_survivor_benefit"))
+        survivor_benefit_amount = parse_money(request.form.get("survivor_benefit_amount"))
+        survivor_benefit_notes = clean(request.form.get("survivor_benefit_notes"))
 
         if not child_name:
             flash("Child name is required.", "error")
@@ -360,6 +391,9 @@ def edit_child_view(child_id: int):
                     birth_year = {ph},
                     relationship = {ph},
                     living_status = {ph},
+                    receives_survivor_benefit = {ph},
+                    survivor_benefit_amount = {ph},
+                    survivor_benefit_notes = {ph},
                     updated_at = {ph}
                 WHERE id = {ph}
                 """,
@@ -368,6 +402,9 @@ def edit_child_view(child_id: int):
                     birth_year,
                     relationship,
                     living_status,
+                    receives_survivor_benefit,
+                    survivor_benefit_amount,
+                    survivor_benefit_notes,
                     datetime.utcnow().isoformat(),
                     child_id,
                 ),
