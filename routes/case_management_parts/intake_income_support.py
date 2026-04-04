@@ -9,10 +9,17 @@ from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import yes_no_to_int
+from routes.case_management_parts.recovery_profile import (
+    ensure_resident_child_income_supports_table,
+)
 
 
 def ensure_intake_income_supports_table() -> None:
-    if g.get("db_kind") == "pg":
+    db_kind = g.get("db_kind")
+
+    ensure_resident_child_income_supports_table(db_kind)
+
+    if db_kind == "pg":
         db_execute(
             """
             CREATE TABLE IF NOT EXISTS intake_income_supports (
