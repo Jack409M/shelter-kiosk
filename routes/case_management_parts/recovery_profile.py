@@ -6,7 +6,20 @@ from __future__ import annotations
 
 import secrets
 
+from flask import flash, redirect, request, session, url_for
+
 from core.db import db_execute, db_fetchall, db_fetchone
+from core.helpers import utcnow_iso
+from core.runtime import init_db
+from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import clean
+from routes.case_management_parts.helpers import normalize_shelter_name
+from routes.case_management_parts.helpers import parse_int
+from routes.case_management_parts.helpers import parse_iso_date
+from routes.case_management_parts.helpers import parse_money
+from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import yes_no_to_int
 
 from .schema_helpers import create_table
 
@@ -558,3 +571,129 @@ def ensure_columns_and_constraints(kind: str) -> None:
     ensure_resident_code_schema(kind)
     backfill_birth_year_from_legacy_dob(kind)
     backfill_resident_codes(kind)
+
+
+def update_recovery_profile_view(resident_id: int):
+    init_db()
+
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    shelter = normalize_shelter_name(session.get("shelter"))
+    ph = placeholder()
+
+    resident = db_fetchone(
+        f"""
+        SELECT
+            id,
+            shelter,
+            first_name,
+            last_name
+        FROM residents
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    program_level = clean(request.form.get("program_level"))
+    level_start_date = parse_iso_date(request.form.get("level_start_date"))
+    step_current = parse_int(request.form.get("step_current"))
+    sponsor_name = clean(request.form.get("sponsor_name"))
+    sponsor_active = yes_no_to_int(request.form.get("sponsor_active"))
+    step_work_active = yes_no_to_int(request.form.get("step_work_active"))
+    sobriety_date = parse_iso_date(request.form.get("sobriety_date"))
+    treatment_graduation_date = parse_iso_date(request.form.get("treatment_graduation_date"))
+    drug_of_choice = clean(request.form.get("drug_of_choice"))
+    employment_notes = clean(request.form.get("employment_notes"))
+
+    employment_status_current = clean(request.form.get("employment_status_current"))
+    employer_name = clean(request.form.get("employer_name"))
+    employment_type_current = clean(request.form.get("employment_type_current"))
+    monthly_income = parse_money(request.form.get("monthly_income"))
+    current_job_start_date = parse_iso_date(request.form.get("current_job_start_date"))
+    continuous_employment_start_date = parse_iso_date(
+        request.form.get("continuous_employment_start_date")
+    )
+    previous_job_end_date = parse_iso_date(request.form.get("previous_job_end_date"))
+    upward_job_change = yes_no_to_int(request.form.get("upward_job_change"))
+    supervisor_name = clean(request.form.get("supervisor_name"))
+    supervisor_phone = clean(request.form.get("supervisor_phone"))
+    unemployment_reason = clean(request.form.get("unemployment_reason"))
+    job_change_notes = clean(request.form.get("job_change_notes"))
+
+    now = utcnow_iso()
+
+    try:
+        db_execute(
+            f"""
+            UPDATE residents
+            SET
+                program_level = {ph},
+                level_start_date = {ph},
+                step_current = {ph},
+                sponsor_name = {ph},
+                sponsor_active = {ph},
+                step_work_active = {ph},
+                sobriety_date = {ph},
+                treatment_graduation_date = {ph},
+                drug_of_choice = {ph},
+                employment_notes = {ph},
+                employment_status_current = {ph},
+                employer_name = {ph},
+                employment_type_current = {ph},
+                monthly_income = {ph},
+                current_job_start_date = {ph},
+                continuous_employment_start_date = {ph},
+                previous_job_end_date = {ph},
+                upward_job_change = {ph},
+                supervisor_name = {ph},
+                supervisor_phone = {ph},
+                unemployment_reason = {ph},
+                job_change_notes = {ph},
+                employment_updated_at = {ph},
+                step_changed_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                program_level,
+                level_start_date.isoformat() if level_start_date else None,
+                step_current,
+                sponsor_name,
+                sponsor_active,
+                step_work_active,
+                sobriety_date.isoformat() if sobriety_date else None,
+                treatment_graduation_date.isoformat() if treatment_graduation_date else None,
+                drug_of_choice,
+                employment_notes,
+                employment_status_current,
+                employer_name,
+                employment_type_current,
+                monthly_income,
+                current_job_start_date.isoformat() if current_job_start_date else None,
+                continuous_employment_start_date.isoformat()
+                if continuous_employment_start_date
+                else None,
+                previous_job_end_date.isoformat() if previous_job_end_date else None,
+                upward_job_change,
+                supervisor_name,
+                supervisor_phone,
+                unemployment_reason,
+                job_change_notes,
+                now,
+                now,
+                resident_id,
+            ),
+        )
+    except Exception:
+        flash("Unable to save profile changes.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    flash("Recovery profile updated.", "success")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
