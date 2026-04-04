@@ -63,7 +63,7 @@ def _child_in_scope(child_id: int):
     ph = placeholder()
     shelter = _current_shelter()
 
-    return db_fetchone(
+    child = db_fetchone(
         f"""
         SELECT
             rc.id,
@@ -85,6 +85,12 @@ def _child_in_scope(child_id: int):
         """,
         (child_id, shelter),
     )
+
+    if not child:
+        return None
+
+    child["income_supports"] = _load_child_income_supports(child_id)
+    return child
 
 
 def _child_service_in_scope(service_id: int):
@@ -117,10 +123,41 @@ def _child_service_in_scope(service_id: int):
     )
 
 
+def _load_child_income_supports(child_id: int):
+    ph = placeholder()
+
+    rows = db_fetchall(
+        f"""
+        SELECT
+            id,
+            child_id,
+            support_type,
+            monthly_amount,
+            notes,
+            is_active,
+            created_at,
+            updated_at
+        FROM resident_child_income_supports
+        WHERE child_id = {ph}
+          AND COALESCE(is_active, TRUE) = TRUE
+        ORDER BY
+            CASE
+                WHEN support_type = 'survivor_benefit' THEN 1
+                WHEN support_type = 'child_support' THEN 2
+                ELSE 9
+            END,
+            id ASC
+        """,
+        (child_id,),
+    )
+
+    return rows or []
+
+
 def _active_children_for_resident(resident_id: int):
     ph = placeholder()
 
-    return db_fetchall(
+    children = db_fetchall(
         f"""
         SELECT
             id,
@@ -139,6 +176,11 @@ def _active_children_for_resident(resident_id: int):
         """,
         (resident_id,),
     )
+
+    for child in children or []:
+        child["income_supports"] = _load_child_income_supports(child["id"])
+
+    return children
 
 
 def _latest_enrollment_for_resident(resident_id: int):
@@ -193,6 +235,115 @@ def _yes_no_to_bool(value: str | None):
     return None
 
 
+def _upsert_child_income_support(child_id: int, support_type: str, monthly_amount, notes: str | None) -> None:
+    ph = placeholder()
+    now = datetime.utcnow().isoformat()
+
+    existing = db_fetchone(
+        f"""
+        SELECT id
+        FROM resident_child_income_supports
+        WHERE child_id = {ph}
+          AND support_type = {ph}
+          AND COALESCE(is_active, TRUE) = TRUE
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (child_id, support_type),
+    )
+
+    has_value = monthly_amount not in (None, "", 0, 0.0) or bool((notes or "").strip())
+
+    if not has_value:
+        if existing:
+            db_execute(
+                f"""
+                UPDATE resident_child_income_supports
+                SET
+                    is_active = FALSE,
+                    updated_at = {ph}
+                WHERE id = {ph}
+                """,
+                (now, existing["id"]),
+            )
+        return
+
+    if existing:
+        db_execute(
+            f"""
+            UPDATE resident_child_income_supports
+            SET
+                monthly_amount = {ph},
+                notes = {ph},
+                is_active = TRUE,
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                monthly_amount,
+                (notes or "").strip() or None,
+                now,
+                existing["id"],
+            ),
+        )
+        return
+
+    db_execute(
+        f"""
+        INSERT INTO resident_child_income_supports
+        (
+            child_id,
+            support_type,
+            monthly_amount,
+            notes,
+            is_active,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            {ph},
+            {ph},
+            {ph},
+            {ph},
+            TRUE,
+            {ph},
+            {ph}
+        )
+        """,
+        (
+            child_id,
+            support_type,
+            monthly_amount,
+            (notes or "").strip() or None,
+            now,
+            now,
+        ),
+    )
+
+
+def _sync_child_support_records(
+    child_id: int,
+    receives_survivor_benefit,
+    survivor_benefit_amount,
+    survivor_benefit_notes,
+    child_support_amount,
+    child_support_notes,
+) -> None:
+    _upsert_child_income_support(
+        child_id=child_id,
+        support_type="survivor_benefit",
+        monthly_amount=survivor_benefit_amount if receives_survivor_benefit else None,
+        notes=survivor_benefit_notes,
+    )
+    _upsert_child_income_support(
+        child_id=child_id,
+        support_type="child_support",
+        monthly_amount=child_support_amount,
+        notes=child_support_notes,
+    )
+
+
 def family_intake_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -215,6 +366,8 @@ def family_intake_view(resident_id: int):
         receives_survivor_benefit = _yes_no_to_bool(request.form.get("receives_survivor_benefit"))
         survivor_benefit_amount = parse_money(request.form.get("survivor_benefit_amount"))
         survivor_benefit_notes = clean(request.form.get("survivor_benefit_notes"))
+        child_support_amount = parse_money(request.form.get("child_support_amount"))
+        child_support_notes = clean(request.form.get("child_support_notes"))
 
         if not child_name:
             children = _active_children_for_resident(resident_id)
@@ -302,6 +455,39 @@ def family_intake_view(resident_id: int):
                     now,
                 ),
             )
+
+            child_row = db_fetchone(
+                f"""
+                SELECT id
+                FROM resident_children
+                WHERE resident_id = {ph}
+                  AND LOWER(child_name) = LOWER({ph})
+                  AND (
+                        (birth_year IS NULL AND {ph} IS NULL)
+                        OR birth_year = {ph}
+                      )
+                  AND is_active = TRUE
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (
+                    resident_id,
+                    child_name,
+                    birth_year,
+                    birth_year,
+                ),
+            )
+
+            if child_row:
+                _sync_child_support_records(
+                    child_id=child_row["id"],
+                    receives_survivor_benefit=receives_survivor_benefit,
+                    survivor_benefit_amount=survivor_benefit_amount,
+                    survivor_benefit_notes=survivor_benefit_notes,
+                    child_support_amount=child_support_amount,
+                    child_support_notes=child_support_notes,
+                )
+
             _recalculate_current_enrollment_income_support(resident_id)
         except Exception as exc:
             if _is_unique_constraint_error(exc):
@@ -359,6 +545,8 @@ def edit_child_view(child_id: int):
         receives_survivor_benefit = _yes_no_to_bool(request.form.get("receives_survivor_benefit"))
         survivor_benefit_amount = parse_money(request.form.get("survivor_benefit_amount"))
         survivor_benefit_notes = clean(request.form.get("survivor_benefit_notes"))
+        child_support_amount = parse_money(request.form.get("child_support_amount"))
+        child_support_notes = clean(request.form.get("child_support_notes"))
 
         if not child_name:
             flash("Child name is required.", "error")
@@ -419,6 +607,16 @@ def edit_child_view(child_id: int):
                     child_id,
                 ),
             )
+
+            _sync_child_support_records(
+                child_id=child_id,
+                receives_survivor_benefit=receives_survivor_benefit,
+                survivor_benefit_amount=survivor_benefit_amount,
+                survivor_benefit_notes=survivor_benefit_notes,
+                child_support_amount=child_support_amount,
+                child_support_notes=child_support_notes,
+            )
+
             _recalculate_current_enrollment_income_support(resident_id)
         except Exception as exc:
             if _is_unique_constraint_error(exc):
@@ -458,6 +656,8 @@ def delete_child_view(child_id: int):
     ph = placeholder()
 
     try:
+        now = datetime.utcnow().isoformat()
+
         db_execute(
             f"""
             UPDATE resident_children
@@ -467,10 +667,26 @@ def delete_child_view(child_id: int):
             WHERE id = {ph}
             """,
             (
-                datetime.utcnow().isoformat(),
+                now,
                 child_id,
             ),
         )
+
+        db_execute(
+            f"""
+            UPDATE resident_child_income_supports
+            SET
+                is_active = FALSE,
+                updated_at = {ph}
+            WHERE child_id = {ph}
+              AND COALESCE(is_active, TRUE) = TRUE
+            """,
+            (
+                now,
+                child_id,
+            ),
+        )
+
         _recalculate_current_enrollment_income_support(resident_id)
     except Exception:
         current_app.logger.exception(
