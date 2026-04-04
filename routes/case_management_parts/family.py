@@ -15,6 +15,9 @@ from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.intake_income_support import recalculate_intake_income_support
+from routes.case_management_parts.recovery_profile import (
+    ensure_resident_child_income_supports_table,
+)
 
 
 def _resident_case_redirect(resident_id: int):
@@ -37,6 +40,10 @@ def _post_child_service_redirect(child_id: int, resident_id: int):
     if _quick_add_requested():
         return _resident_case_redirect(resident_id)
     return _child_services_redirect(child_id)
+
+
+def _ensure_family_income_support_schema() -> None:
+    ensure_resident_child_income_supports_table("pg" if session.get("_db_kind") == "pg" else None)
 
 
 def _resident_in_scope(resident_id: int):
@@ -350,6 +357,7 @@ def family_intake_view(resident_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+    _ensure_family_income_support_schema()
 
     resident = _resident_in_scope(resident_id)
     if not resident:
@@ -529,6 +537,7 @@ def edit_child_view(child_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+    _ensure_family_income_support_schema()
 
     child = _child_in_scope(child_id)
     if not child:
@@ -646,6 +655,7 @@ def delete_child_view(child_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+    _ensure_family_income_support_schema()
 
     child = _child_in_scope(child_id)
     if not child:
@@ -707,6 +717,7 @@ def edit_child_service_view(service_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+    _ensure_family_income_support_schema()
 
     service = _child_service_in_scope(service_id)
     if not service:
@@ -780,6 +791,7 @@ def delete_child_service_view(service_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+    _ensure_family_income_support_schema()
 
     service = _child_service_in_scope(service_id)
     if not service:
@@ -828,6 +840,7 @@ def child_services_view(child_id: int):
         return redirect(url_for("attendance.staff_attendance"))
 
     init_db()
+    _ensure_family_income_support_schema()
 
     child = _child_in_scope(child_id)
     if not child:
