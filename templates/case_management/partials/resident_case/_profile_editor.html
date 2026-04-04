@@ -153,7 +153,6 @@
       <input type="hidden" name="employment_type_current" value="{{ rs.get('employment_type_current') or '' }}">
       <input type="hidden" name="monthly_income" value="{{ eis.get('income_value') if eis.get('income_value') is not none else '' }}">
       <input type="hidden" name="current_job_start_date" value="{{ rs.get('current_job_start_date') or '' }}">
-      <input type="hidden" name="continuous_employment_start_date" value="{{ rs.get('continuous_employment_start_date') or '' }}">
       <input type="hidden" name="previous_job_end_date" value="{{ rs.get('previous_job_end_date') or '' }}">
       <input type="hidden" name="upward_job_change" value="{% if rs.get('upward_job_change') is sameas true or rs.get('upward_job_change') == 1 %}yes{% elif rs.get('upward_job_change') is sameas false or rs.get('upward_job_change') == 0 %}no{% endif %}">
       <input type="hidden" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
@@ -171,7 +170,7 @@
 
         <div class="cmx-field-card" style="{{ income_field_card_style }}">
           <div class="cmx-field-card-label" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-            <span>Monthly Cash Support</span>
+            <span>Weighted Stable Income</span>
             {% if eis.get("module_enabled", True) %}
               <span style="{{ eis.get('pill_style', '') }}">{{ eis.get("readiness_percent_display", "—") }}</span>
             {% endif %}
