@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 
 {% block content %}
+{% set stability_card_style = "background:#f3dede; border:1px solid #d88484;" if rent_snapshot['band_key'] == 'red' else rent_snapshot['card_style'] %}
 <div class="cmx-page">
   <div class="cmx-shell">
     <div class="cmx-card">
@@ -16,7 +17,7 @@
       </div>
     </div>
 
-    <div class="cmx-card" style="{{ rent_snapshot['card_style'] }}">
+    <div class="cmx-card" style="{{ stability_card_style }}">
       <div class="cmx-section-head" style="margin-bottom:12px;">
         <div>
           <h2 class="cmx-section-title">Rent Stability Score</h2>
@@ -57,36 +58,57 @@
 
     <div class="cmx-card">
       {% if rows %}
-        <div style="overflow-x:auto;">
-          <table class="audit-table">
-            <thead>
-              <tr>
-                <th>Month</th>
-                <th>Shelter</th>
-                <th>Total Due</th>
-                <th>Amount Paid</th>
-                <th>Date Paid</th>
-                <th>Status</th>
-                <th>Score</th>
-                <th>Remaining</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in rows %}
-                <tr>
-                  <td>{{ row['rent_month'] }}/{{ row['rent_year'] }}</td>
-                  <td>{{ row['shelter_snapshot']|shelter }}</td>
-                  <td>${{ '%.2f'|format(row['total_due'] or 0) }}</td>
-                  <td>${{ '%.2f'|format(row['amount_paid'] or 0) }}</td>
-                  <td>{{ row['paid_date'] or '—' }}</td>
-                  <td>{{ row['status'] }}</td>
-                  <td>{{ row['compliance_score'] }}</td>
-                  <td>${{ '%.2f'|format(row['remaining_balance'] or 0) }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        {% set current_year = rows[0]['rent_year'] %}
+        {% for row in rows %}
+          {% if loop.first or loop.previtem['rent_year'] != row['rent_year'] %}
+            {% if not loop.first %}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+            {% endif %}
+
+            {% set year_month_count = rows | selectattr('rent_year', 'equalto', row['rent_year']) | list | length %}
+            <details {% if row['rent_year'] == current_year %}open{% endif %} style="margin-bottom:14px; border:1px solid #9ab7cf; border-radius:14px; background:#d9e8f4;">
+              <summary style="cursor:pointer; list-style:none; padding:14px 16px; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
+                <span>{{ row['rent_year'] }}</span>
+                <span style="font-weight:400; color:#486173;">{{ year_month_count }} month{{ "" if year_month_count == 1 else "s" }}</span>
+              </summary>
+              <div style="overflow-x:auto; padding:0 18px 18px 18px;">
+                <table class="audit-table">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Shelter</th>
+                      <th>Total Due</th>
+                      <th>Amount Paid</th>
+                      <th>Date Paid</th>
+                      <th>Status</th>
+                      <th>Score</th>
+                      <th>Remaining</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+          {% endif %}
+
+                    <tr>
+                      <td>{{ row['rent_month'] }}/{{ row['rent_year'] }}</td>
+                      <td>{{ row['shelter_snapshot']|shelter }}</td>
+                      <td>${{ '%.2f'|format(row['total_due'] or 0) }}</td>
+                      <td>${{ '%.2f'|format(row['amount_paid'] or 0) }}</td>
+                      <td>{{ row['paid_date'] or '—' }}</td>
+                      <td>{{ row['status'] }}</td>
+                      <td>{{ row['compliance_score'] }}</td>
+                      <td>${{ '%.2f'|format(row['remaining_balance'] or 0) }}</td>
+                    </tr>
+
+          {% if loop.last %}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          {% endif %}
+        {% endfor %}
       {% else %}
         <div class="cmx-muted">No rent history yet.</div>
       {% endif %}
