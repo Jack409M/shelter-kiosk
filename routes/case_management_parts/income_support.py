@@ -77,7 +77,6 @@ def _load_resident_in_scope(resident_id: int, shelter: str):
 def _sync_resident_income_snapshot(
     resident_id: int,
     weighted_stable_income,
-    total_cash_support,
     employment_status_current,
     employer_name,
     employment_type_current,
@@ -120,7 +119,7 @@ def _sync_resident_income_snapshot(
             supervisor_phone,
             unemployment_reason,
             employment_notes,
-            weighted_stable_income if weighted_stable_income not in (None, "") else total_cash_support,
+            weighted_stable_income,
             current_job_start_date.isoformat() if current_job_start_date else None,
             previous_job_end_date.isoformat() if previous_job_end_date else None,
             upward_job_change,
@@ -156,7 +155,6 @@ def income_support_view(resident_id: int):
         upsert_intake_income_support(enrollment_id, request.form)
 
         intake_income_support = load_intake_income_support(enrollment_id) or {}
-        total_cash_support = intake_income_support.get("total_cash_support")
         weighted_stable_income = intake_income_support.get("weighted_stable_income")
 
         employment_status_current = clean(request.form.get("employment_status_current"))
@@ -174,7 +172,6 @@ def income_support_view(resident_id: int):
         _sync_resident_income_snapshot(
             resident_id=resident_id,
             weighted_stable_income=weighted_stable_income,
-            total_cash_support=total_cash_support,
             employment_status_current=employment_status_current,
             employer_name=employer_name,
             employment_type_current=employment_type_current,
@@ -197,11 +194,10 @@ def income_support_view(resident_id: int):
     total_cash_support = intake_income_support.get("total_cash_support")
     weighted_stable_income = intake_income_support.get("weighted_stable_income")
 
-    if weighted_stable_income not in (None, "") or total_cash_support not in (None, ""):
+    if weighted_stable_income not in (None, ""):
         _sync_resident_income_snapshot(
             resident_id=resident_id,
             weighted_stable_income=weighted_stable_income,
-            total_cash_support=total_cash_support,
             employment_status_current=resident.get("employment_status_current"),
             employer_name=resident.get("employer_name"),
             employment_type_current=resident.get("employment_type_current"),
@@ -215,12 +211,6 @@ def income_support_view(resident_id: int):
             job_change_notes=resident.get("job_change_notes"),
         )
         resident = _load_resident_in_scope(resident_id, shelter)
-
-    if total_cash_support in (None, ""):
-        total_cash_support = resident.get("monthly_income")
-
-    if weighted_stable_income in (None, ""):
-        weighted_stable_income = resident.get("monthly_income")
 
     return render_template(
         "case_management/income_support.html",
