@@ -8,51 +8,117 @@
   {% set birth_year = child["birth_year"] %}
   {% set relationship = child["relationship"] %}
   {% set living_status = child["living_status"] %}
+  {% set receives_survivor_benefit = child["receives_survivor_benefit"] %}
+  {% set survivor_benefit_amount = child["survivor_benefit_amount"] %}
+  {% set survivor_benefit_notes = child["survivor_benefit_notes"] %}
 {% else %}
   {% set child_id = child[0] %}
   {% set child_name = child[2] %}
   {% set birth_year = child[3] %}
   {% set relationship = child[4] %}
   {% set living_status = child[5] %}
+  {% set receives_survivor_benefit = child[6] %}
+  {% set survivor_benefit_amount = child[7] %}
+  {% set survivor_benefit_notes = child[8] %}
 {% endif %}
 
-<h1>Edit Child</h1>
+<div style="max-width:820px; margin:0 auto; display:grid; gap:20px;">
+  <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+    <div style="display:flex; justify-content:space-between; gap:16px; align-items:center; flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0; font-size:1.9rem; font-weight:800; color:#0f172a;">Edit Child</h1>
+        <div style="margin-top:6px; color:#475569; font-size:0.96rem;">
+          Update child details and any survivor benefit tied to this child.
+        </div>
+      </div>
 
-<div class="card">
-  <form method="post">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    <label><strong>Child Name</strong></label>
-    <input type="text" name="child_name" value="{{ child_name or '' }}" required>
-
-    <label><strong>Birth Year</strong></label>
-    <input type="number" name="birth_year" value="{{ birth_year or '' }}">
-
-    <label><strong>Relationship</strong></label>
-    <select name="relationship">
-      <option value="">Select</option>
-      <option value="son" {% if relationship == "son" %}selected{% endif %}>Son</option>
-      <option value="daughter" {% if relationship == "daughter" %}selected{% endif %}>Daughter</option>
-      <option value="foster" {% if relationship == "foster" %}selected{% endif %}>Foster Child</option>
-      <option value="relative" {% if relationship == "relative" %}selected{% endif %}>Relative</option>
-      <option value="non_relative" {% if relationship == "non_relative" %}selected{% endif %}>Non Relative</option>
-      <option value="guardian" {% if relationship == "guardian" %}selected{% endif %}>Legal Guardian Placement</option>
-    </select>
-
-    <label><strong>Living Status</strong></label>
-    <select name="living_status">
-      <option value="living_with_mom" {% if living_status == "living_with_mom" %}selected{% endif %}>Living with Mom</option>
-      <option value="not_with_mom" {% if living_status == "not_with_mom" %}selected{% endif %}>Not with Mom</option>
-      <option value="foster_care" {% if living_status == "foster_care" %}selected{% endif %}>Foster Care</option>
-      <option value="kinship_care" {% if living_status == "kinship_care" %}selected{% endif %}>Kinship Care</option>
-      <option value="reunified" {% if living_status == "reunified" %}selected{% endif %}>Reunified</option>
-      <option value="unknown" {% if living_status == "unknown" %}selected{% endif %}>Unknown</option>
-    </select>
-
-    <div style="margin-top:10px;">
-      <button type="submit">Save Changes</button>
+      <a
+        class="btn"
+        href="{{ url_for('case_management.resident_case', resident_id=child['resident_id'] if child is mapping else child[1]) }}"
+        style="border-radius:14px; padding:11px 16px;"
+      >
+        Back to Case Management
+      </a>
     </div>
-  </form>
+  </div>
+
+  <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+    <form method="post">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div>
+        <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Child Name</strong></label>
+        <input type="text" name="child_name" value="{{ child_name or '' }}" required style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+      </div>
+
+      <div style="margin-top:16px;">
+        <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Birth Year</strong></label>
+        <input type="number" name="birth_year" value="{{ birth_year or '' }}" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+      </div>
+
+      <div style="margin-top:16px;">
+        <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Relationship</strong></label>
+        <select name="relationship" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+          <option value="">Select</option>
+          <option value="son" {% if relationship == "son" %}selected{% endif %}>Son</option>
+          <option value="daughter" {% if relationship == "daughter" %}selected{% endif %}>Daughter</option>
+          <option value="foster" {% if relationship == "foster" %}selected{% endif %}>Foster Child</option>
+          <option value="relative" {% if relationship == "relative" %}selected{% endif %}>Relative</option>
+          <option value="non_relative" {% if relationship == "non_relative" %}selected{% endif %}>Non Relative</option>
+          <option value="guardian" {% if relationship == "guardian" %}selected{% endif %}>Legal Guardian Placement</option>
+        </select>
+      </div>
+
+      <div style="margin-top:16px;">
+        <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Living Status</strong></label>
+        <select name="living_status" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+          <option value="living_with_mom" {% if living_status == "living_with_mom" %}selected{% endif %}>Living with Mom</option>
+          <option value="not_with_mom" {% if living_status == "not_with_mom" %}selected{% endif %}>Not with Mom</option>
+          <option value="foster_care" {% if living_status == "foster_care" %}selected{% endif %}>Foster Care</option>
+          <option value="kinship_care" {% if living_status == "kinship_care" %}selected{% endif %}>Kinship Care</option>
+          <option value="reunified" {% if living_status == "reunified" %}selected{% endif %}>Reunified</option>
+          <option value="unknown" {% if living_status == "unknown" %}selected{% endif %}>Unknown</option>
+        </select>
+      </div>
+
+      <div style="margin-top:24px; padding:16px; border-radius:16px; background:#f8fafc; border:1px solid #dbe5f0;">
+        <div style="font-weight:800; color:#0f172a; margin-bottom:6px;">Child Linked Survivor Benefit</div>
+        <div style="color:#475569; font-size:0.92rem; margin-bottom:14px;">
+          Survivor benefits are attached to the child record but roll up into the mother household income total.
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Receives Survivor Benefit</strong></label>
+          <select name="receives_survivor_benefit" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+            <option value="" {% if receives_survivor_benefit is none %}selected{% endif %}>Select</option>
+            <option value="yes" {% if receives_survivor_benefit is sameas true or receives_survivor_benefit == 1 %}selected{% endif %}>Yes</option>
+            <option value="no" {% if receives_survivor_benefit is sameas false or receives_survivor_benefit == 0 %}selected{% endif %}>No</option>
+          </select>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Monthly Survivor Benefit Amount</strong></label>
+          <input type="text" name="survivor_benefit_amount" value="{{ survivor_benefit_amount if survivor_benefit_amount is not none else '' }}" placeholder="$0.00" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Survivor Benefit Notes</strong></label>
+          <textarea name="survivor_benefit_notes" rows="3" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">{{ survivor_benefit_notes or '' }}</textarea>
+        </div>
+      </div>
+
+      <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Changes</button>
+        <a
+          class="btn"
+          href="{{ url_for('case_management.resident_case', resident_id=child['resident_id'] if child is mapping else child[1]) }}"
+          style="border-radius:14px; padding:11px 16px;"
+        >
+          Done
+        </a>
+      </div>
+    </form>
+  </div>
 </div>
 
 {% endblock %}
