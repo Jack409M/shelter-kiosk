@@ -266,11 +266,6 @@
 
         <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
           <div class="cmx-field">
-            <label>Child Support Base Weight</label>
-            <input type="number" step="0.01" min="0" name="income_weight_child_support" value="{{ settings['income_weight_child_support'] if settings else 1.00 }}" required>
-          </div>
-
-          <div class="cmx-field">
             <label>Alimony Weight</label>
             <input type="number" step="0.01" min="0" name="income_weight_alimony" value="{{ settings['income_weight_alimony'] if settings else 0.50 }}" required>
           </div>
@@ -279,9 +274,7 @@
             <label>Other Income Weight</label>
             <input type="number" step="0.01" min="0" name="income_weight_other_income" value="{{ settings['income_weight_other_income'] if settings else 0.25 }}" required>
           </div>
-        </div>
 
-        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
           <div class="cmx-field">
             <label>Child Based Cutoff Months Before Age 18</label>
             <input type="number" min="0" name="income_weight_survivor_cutoff_months" value="{{ settings['income_weight_survivor_cutoff_months'] if settings else 18 }}" required>
