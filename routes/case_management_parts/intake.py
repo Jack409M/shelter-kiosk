@@ -169,6 +169,7 @@ def _normalize_yes_no_fields(form_data: dict[str, Any]) -> dict[str, Any]:
         "probation_parole",
         "car_at_entry",
         "car_insurance_at_entry",
+        "receives_snap_at_entry",
     ]
 
     for field_name in yes_no_fields:
@@ -204,6 +205,9 @@ def _apply_intake_edit_aliases(form_data: dict[str, Any]) -> dict[str, Any]:
 
     if "car_insurance_at_entry" in form_data:
         form_data["car_insurance_at_entry"] = _normalize_yes_no_value(form_data.get("car_insurance_at_entry"))
+
+    if "receives_snap_at_entry" in form_data:
+        form_data["receives_snap_at_entry"] = _normalize_yes_no_value(form_data.get("receives_snap_at_entry"))
 
     return form_data
 
