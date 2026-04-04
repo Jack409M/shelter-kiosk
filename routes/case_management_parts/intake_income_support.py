@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from flask import g
 
-from core.db import db_execute, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import yes_no_to_int
@@ -28,35 +29,51 @@ def ensure_intake_income_supports_table() -> None:
                 other_income_description TEXT,
                 receives_snap_at_entry BOOLEAN,
                 total_cash_support DOUBLE PRECISION,
+                weighted_stable_income DOUBLE PRECISION,
+                survivor_benefit_total DOUBLE PRECISION,
+                survivor_benefit_weighted_total DOUBLE PRECISION,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
             """
         )
-        return
-
-    db_execute(
-        """
-        CREATE TABLE IF NOT EXISTS intake_income_supports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            enrollment_id INTEGER NOT NULL UNIQUE,
-            employment_income_1 REAL,
-            employment_income_2 REAL,
-            employment_income_3 REAL,
-            ssi_ssdi_income REAL,
-            tanf_income REAL,
-            child_support_income REAL,
-            alimony_income REAL,
-            other_income REAL,
-            other_income_description TEXT,
-            receives_snap_at_entry INTEGER,
-            total_cash_support REAL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id) ON DELETE CASCADE
+    else:
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS intake_income_supports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                enrollment_id INTEGER NOT NULL UNIQUE,
+                employment_income_1 REAL,
+                employment_income_2 REAL,
+                employment_income_3 REAL,
+                ssi_ssdi_income REAL,
+                tanf_income REAL,
+                child_support_income REAL,
+                alimony_income REAL,
+                other_income REAL,
+                other_income_description TEXT,
+                receives_snap_at_entry INTEGER,
+                total_cash_support REAL,
+                weighted_stable_income REAL,
+                survivor_benefit_total REAL,
+                survivor_benefit_weighted_total REAL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id) ON DELETE CASCADE
+            )
+            """
         )
-        """
-    )
+
+    statements = [
+        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS weighted_stable_income DOUBLE PRECISION",
+        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS survivor_benefit_total DOUBLE PRECISION",
+        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS survivor_benefit_weighted_total DOUBLE PRECISION",
+    ]
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
 
 
 def _safe_money(value: Any) -> float:
@@ -68,7 +85,139 @@ def _safe_money(value: Any) -> float:
         return 0.0
 
 
-def _build_income_support_payload(data: dict[str, Any]) -> dict[str, Any]:
+def _to_float(value: Any, default: float) -> float:
+    try:
+        if value in (None, ""):
+            return default
+        return float(value)
+    except Exception:
+        return default
+
+
+def _to_int(value: Any, default: int) -> int:
+    try:
+        if value in (None, ""):
+            return default
+        return int(value)
+    except Exception:
+        return default
+
+
+def _load_income_weight_settings_for_enrollment(enrollment_id: int) -> dict[str, float | int]:
+    ph = placeholder()
+
+    default_settings: dict[str, float | int] = {
+        "income_weight_employment": 1.00,
+        "income_weight_ssi_ssdi_self": 1.00,
+        "income_weight_child_support": 0.50,
+        "income_weight_alimony": 0.50,
+        "income_weight_other_income": 0.25,
+        "income_weight_survivor_cutoff_months": 18,
+    }
+
+    try:
+        row = db_fetchone(
+            f"""
+            SELECT
+                sos.income_weight_employment,
+                sos.income_weight_ssi_ssdi_self,
+                sos.income_weight_child_support,
+                sos.income_weight_alimony,
+                sos.income_weight_other_income,
+                sos.income_weight_survivor_cutoff_months
+            FROM program_enrollments pe
+            LEFT JOIN shelter_operation_settings sos
+              ON LOWER(COALESCE(sos.shelter, '')) = LOWER(COALESCE(pe.shelter, ''))
+            WHERE pe.id = {ph}
+            LIMIT 1
+            """,
+            (enrollment_id,),
+        )
+    except Exception:
+        row = None
+
+    if not row:
+        return default_settings
+
+    resolved = dict(default_settings)
+    for key, default_value in default_settings.items():
+        if row.get(key) is None:
+            continue
+        if isinstance(default_value, int):
+            resolved[key] = _to_int(row.get(key), default_value)
+        else:
+            resolved[key] = _to_float(row.get(key), default_value)
+    return resolved
+
+
+def _child_age_from_birth_year(birth_year: Any) -> float | None:
+    try:
+        year = int(birth_year)
+    except Exception:
+        return None
+
+    now = datetime.utcnow()
+    age = now.year - year
+    if age < 0:
+        return None
+    return float(age)
+
+
+def _survivor_weight_for_child(age_years: float | None, cutoff_months: int) -> float:
+    if age_years is None:
+        return 0.0
+
+    months_remaining = max((18.0 - age_years) * 12.0, 0.0)
+    if months_remaining < float(cutoff_months):
+        return 0.0
+
+    weight = (18.0 - age_years) / 18.0
+    if weight < 0.0:
+        return 0.0
+    if weight > 1.0:
+        return 1.0
+    return weight
+
+
+def _load_survivor_benefit_rollup(enrollment_id: int, cutoff_months: int) -> dict[str, float]:
+    ph = placeholder()
+
+    rows = db_fetchall(
+        f"""
+        SELECT
+            rc.birth_year,
+            rc.survivor_benefit_amount
+        FROM resident_children rc
+        JOIN program_enrollments pe
+          ON pe.resident_id = rc.resident_id
+        WHERE pe.id = {ph}
+          AND COALESCE(rc.is_active, TRUE) = TRUE
+          AND COALESCE(rc.receives_survivor_benefit, FALSE) = TRUE
+        """,
+        (enrollment_id,),
+    )
+
+    raw_total = 0.0
+    weighted_total = 0.0
+
+    for row in rows or []:
+        amount = _safe_money(row.get("survivor_benefit_amount"))
+        if amount <= 0:
+            continue
+
+        age_years = _child_age_from_birth_year(row.get("birth_year"))
+        weight = _survivor_weight_for_child(age_years, cutoff_months)
+
+        raw_total += amount
+        weighted_total += round(amount * weight, 2)
+
+    return {
+        "survivor_benefit_total": round(raw_total, 2),
+        "survivor_benefit_weighted_total": round(weighted_total, 2),
+    }
+
+
+def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> dict[str, Any]:
     employment_income_1 = _safe_money(data.get("employment_income_1"))
     employment_income_2 = _safe_money(data.get("employment_income_2"))
     employment_income_3 = _safe_money(data.get("employment_income_3"))
@@ -78,6 +227,17 @@ def _build_income_support_payload(data: dict[str, Any]) -> dict[str, Any]:
     alimony_income = _safe_money(data.get("alimony_income"))
     other_income = _safe_money(data.get("other_income"))
 
+    settings = _load_income_weight_settings_for_enrollment(enrollment_id)
+    survivor_rollup = _load_survivor_benefit_rollup(
+        enrollment_id,
+        _to_int(settings.get("income_weight_survivor_cutoff_months"), 18),
+    )
+
+    survivor_benefit_total = _safe_money(survivor_rollup.get("survivor_benefit_total"))
+    survivor_benefit_weighted_total = _safe_money(
+        survivor_rollup.get("survivor_benefit_weighted_total")
+    )
+
     total_cash_support = round(
         employment_income_1
         + employment_income_2
@@ -86,7 +246,19 @@ def _build_income_support_payload(data: dict[str, Any]) -> dict[str, Any]:
         + tanf_income
         + child_support_income
         + alimony_income
-        + other_income,
+        + other_income
+        + survivor_benefit_total,
+        2,
+    )
+
+    weighted_stable_income = round(
+        (employment_income_1 + employment_income_2 + employment_income_3)
+        * _to_float(settings.get("income_weight_employment"), 1.00)
+        + ssi_ssdi_income * _to_float(settings.get("income_weight_ssi_ssdi_self"), 1.00)
+        + child_support_income * _to_float(settings.get("income_weight_child_support"), 0.50)
+        + alimony_income * _to_float(settings.get("income_weight_alimony"), 0.50)
+        + other_income * _to_float(settings.get("income_weight_other_income"), 0.25)
+        + survivor_benefit_weighted_total,
         2,
     )
 
@@ -102,6 +274,9 @@ def _build_income_support_payload(data: dict[str, Any]) -> dict[str, Any]:
         "other_income_description": (data.get("other_income_description") or "").strip() or None,
         "receives_snap_at_entry": yes_no_to_int(data.get("receives_snap_at_entry")),
         "total_cash_support": total_cash_support,
+        "weighted_stable_income": weighted_stable_income,
+        "survivor_benefit_total": survivor_benefit_total,
+        "survivor_benefit_weighted_total": survivor_benefit_weighted_total,
     }
 
 
@@ -125,7 +300,10 @@ def load_intake_income_support(enrollment_id: int):
             other_income,
             other_income_description,
             receives_snap_at_entry,
-            total_cash_support
+            total_cash_support,
+            weighted_stable_income,
+            survivor_benefit_total,
+            survivor_benefit_weighted_total
         FROM intake_income_supports
         WHERE enrollment_id = {ph}
         LIMIT 1
@@ -139,7 +317,7 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
         return
 
     ensure_intake_income_supports_table()
-    payload = _build_income_support_payload(data)
+    payload = _build_income_support_payload(enrollment_id, data)
     ph = placeholder()
     now = utcnow_iso()
 
@@ -169,6 +347,9 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
                 other_income_description = {ph},
                 receives_snap_at_entry = {ph},
                 total_cash_support = {ph},
+                weighted_stable_income = {ph},
+                survivor_benefit_total = {ph},
+                survivor_benefit_weighted_total = {ph},
                 updated_at = {ph}
             WHERE enrollment_id = {ph}
             """,
@@ -184,6 +365,9 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
                 payload["other_income_description"],
                 payload["receives_snap_at_entry"],
                 payload["total_cash_support"],
+                payload["weighted_stable_income"],
+                payload["survivor_benefit_total"],
+                payload["survivor_benefit_weighted_total"],
                 now,
                 enrollment_id,
             ),
@@ -206,11 +390,17 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
             other_income_description,
             receives_snap_at_entry,
             total_cash_support,
+            weighted_stable_income,
+            survivor_benefit_total,
+            survivor_benefit_weighted_total,
             created_at,
             updated_at
         )
         VALUES
         (
+            {ph},
+            {ph},
+            {ph},
             {ph},
             {ph},
             {ph},
@@ -240,10 +430,37 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
             payload["other_income_description"],
             payload["receives_snap_at_entry"],
             payload["total_cash_support"],
+            payload["weighted_stable_income"],
+            payload["survivor_benefit_total"],
+            payload["survivor_benefit_weighted_total"],
             now,
             now,
         ),
     )
+
+
+def recalculate_intake_income_support(enrollment_id: int) -> None:
+    if not enrollment_id:
+        return
+
+    current = load_intake_income_support(enrollment_id) or {}
+    source_data = {
+        "employment_income_1": current.get("employment_income_1"),
+        "employment_income_2": current.get("employment_income_2"),
+        "employment_income_3": current.get("employment_income_3"),
+        "ssi_ssdi_income": current.get("ssi_ssdi_income"),
+        "tanf_income": current.get("tanf_income"),
+        "child_support_income": current.get("child_support_income"),
+        "alimony_income": current.get("alimony_income"),
+        "other_income": current.get("other_income"),
+        "other_income_description": current.get("other_income_description"),
+        "receives_snap_at_entry": "yes"
+        if current.get("receives_snap_at_entry") in (True, 1)
+        else "no"
+        if current.get("receives_snap_at_entry") in (False, 0)
+        else "",
+    }
+    upsert_intake_income_support(enrollment_id, source_data)
 
 
 def benefits_screening_needed(data: dict[str, Any]) -> bool:
