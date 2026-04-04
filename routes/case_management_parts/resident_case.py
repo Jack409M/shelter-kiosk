@@ -9,6 +9,7 @@ from routes.case_management_parts.helpers import fetch_current_enrollment_for_re
 from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.intake_income_support import load_intake_income_support
 from routes.case_management_parts.needs import get_open_enrollment_needs
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
 from routes.case_management_parts.resident_case_children import load_children_with_services
@@ -218,7 +219,9 @@ def _load_enrollment_context(enrollment_id: int):
             mental_health_need_at_entry,
             medical_need_at_entry,
             has_drivers_license,
-            has_social_security_card
+            has_social_security_card,
+            employment_status_at_entry,
+            income_at_entry
         FROM intake_assessments
         WHERE enrollment_id = {ph}
         ORDER BY id DESC
@@ -226,6 +229,8 @@ def _load_enrollment_context(enrollment_id: int):
         """,
         (enrollment_id,),
     )
+
+    intake_income_support = load_intake_income_support(enrollment_id)
 
     raw_exit_assessment = db_fetchone(
         f"""
@@ -289,6 +294,7 @@ def _load_enrollment_context(enrollment_id: int):
     return {
         "family_snapshot": family_snapshot,
         "intake_assessment": intake_assessment,
+        "intake_income_support": intake_income_support,
         "exit_assessment": exit_assessment,
         "goals": goals,
         "appointments": appointments,
@@ -467,6 +473,7 @@ def resident_case_view(resident_id: int):
     enrollment_context = {
         "family_snapshot": None,
         "intake_assessment": None,
+        "intake_income_support": None,
         "exit_assessment": None,
         "goals": [],
         "appointments": [],
@@ -505,9 +512,23 @@ def resident_case_view(resident_id: int):
     operations_snapshot = build_operations_snapshot(recovery_snapshot)
     rent_snapshot = build_rent_stability_snapshot(resident_id)
     inspection_snapshot = build_inspection_stability_snapshot(resident_id, shelter=shelter)
+
     employment_income_settings = _load_employment_income_settings(shelter)
+
+    monthly_income_for_display = None
+    if recovery_snapshot:
+        monthly_income_for_display = recovery_snapshot.get("monthly_income")
+
+    if monthly_income_for_display in (None, ""):
+        intake_income_support = enrollment_context.get("intake_income_support") or {}
+        monthly_income_for_display = intake_income_support.get("total_cash_support")
+
+    if monthly_income_for_display in (None, ""):
+        intake_assessment = enrollment_context.get("intake_assessment") or {}
+        monthly_income_for_display = intake_assessment.get("income_at_entry")
+
     employment_income_snapshot = _build_employment_income_snapshot(
-        recovery_snapshot.get("monthly_income") if recovery_snapshot else None,
+        monthly_income_for_display,
         employment_income_settings,
     )
     employment_stability_snapshot = _build_employment_stability_snapshot(recovery_snapshot)
