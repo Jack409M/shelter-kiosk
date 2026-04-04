@@ -1,0 +1,222 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="reports-header card">
+    <div>
+      <h1>Graduation Income And Sobriety Outcome Study</h1>
+      <p class="reports-subtitle">
+        Graduates only. Uses frozen monthly income at graduation and compares it to 6 month and 12 month sobriety follow up outcomes.
+      </p>
+    </div>
+  </div>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <div class="section-head">
+      <h2>Filters</h2>
+    </div>
+
+    <form method="get" action="{{ url_for('reports.graduation_income_sobriety_study') }}">
+      <div style="display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px;">
+        <div>
+          <label style="display:block; font-weight:700; margin-bottom:6px;">Scope</label>
+          <select name="scope" style="width:100%;">
+            {% for option in scope_options %}
+              <option value="{{ option.value }}" {% if scope == option.value %}selected{% endif %}>{{ option.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:700; margin-bottom:6px;">Graduation Start Date</label>
+          <input type="date" name="start_date" value="{{ start_date }}" style="width:100%;">
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:700; margin-bottom:6px;">Graduation End Date</label>
+          <input type="date" name="end_date" value="{{ end_date }}" style="width:100%;">
+        </div>
+
+        <div style="display:flex; align-items:end;">
+          <button type="submit" class="btn btn-primary">Apply Filters</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <div class="section-head">
+      <h2>Study Summary</h2>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px;">
+      <div class="subsection">
+        <h3>Total Graduates In Study</h3>
+        <p style="font-size:1.8rem; font-weight:800; margin:0;">{{ study.graduate_count }}</p>
+      </div>
+
+      <div class="subsection">
+        <h3>6 Month Follow Ups Completed</h3>
+        <p style="font-size:1.8rem; font-weight:800; margin:0;">{{ study.six_month_followup_count }}</p>
+        <p style="margin-top:6px;">Sober rate: <strong>{{ study.six_month_sober_rate }}</strong></p>
+      </div>
+
+      <div class="subsection">
+        <h3>12 Month Follow Ups Completed</h3>
+        <p style="font-size:1.8rem; font-weight:800; margin:0;">{{ study.one_year_followup_count }}</p>
+        <p style="margin-top:6px;">Sober rate: <strong>{{ study.one_year_sober_rate }}</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <div class="section-head">
+      <h2>Income Comparison</h2>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:16px;">
+      <div class="subsection">
+        <h3>6 Month Outcome Comparison</h3>
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Group</th>
+              <th>Average Graduation Income</th>
+              <th>Median Graduation Income</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Sober At 6 Months</td>
+              <td>{{ fmt_currency(study.avg_income_six_month_sober) }}</td>
+              <td>{{ fmt_currency(study.median_income_six_month_sober) }}</td>
+            </tr>
+            <tr>
+              <td>Not Sober At 6 Months</td>
+              <td>{{ fmt_currency(study.avg_income_six_month_not_sober) }}</td>
+              <td>{{ fmt_currency(study.median_income_six_month_not_sober) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="subsection">
+        <h3>12 Month Outcome Comparison</h3>
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Group</th>
+              <th>Average Graduation Income</th>
+              <th>Median Graduation Income</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Sober At 12 Months</td>
+              <td>{{ fmt_currency(study.avg_income_one_year_sober) }}</td>
+              <td>{{ fmt_currency(study.median_income_one_year_sober) }}</td>
+            </tr>
+            <tr>
+              <td>Not Sober At 12 Months</td>
+              <td>{{ fmt_currency(study.avg_income_one_year_not_sober) }}</td>
+              <td>{{ fmt_currency(study.median_income_one_year_not_sober) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <div class="section-head">
+      <h2>Sobriety Rate By Graduation Income Band</h2>
+    </div>
+
+    <table class="audit-table">
+      <thead>
+        <tr>
+          <th>Income Band</th>
+          <th>Graduates</th>
+          <th>6 Month Follow Ups</th>
+          <th>6 Month Sober</th>
+          <th>6 Month Sober Rate</th>
+          <th>12 Month Follow Ups</th>
+          <th>12 Month Sober</th>
+          <th>12 Month Sober Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in study.band_rows %}
+          <tr>
+            <td>{{ row.band_label }}</td>
+            <td>{{ row.graduates }}</td>
+            <td>{{ row.six_month_with_followup }}</td>
+            <td>{{ row.six_month_sober }}</td>
+            <td>{{ row.six_month_sober_rate }}</td>
+            <td>{{ row.one_year_with_followup }}</td>
+            <td>{{ row.one_year_sober }}</td>
+            <td>{{ row.one_year_sober_rate }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <h2>Graduate Detail</h2>
+    </div>
+
+    {% if study.detail_rows %}
+      <div style="overflow-x:auto;">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>ID</th>
+              <th>Shelter</th>
+              <th>Date Graduated</th>
+              <th>Graduation Income</th>
+              <th>Income Band</th>
+              <th>6 Month Date</th>
+              <th>6 Month Sober</th>
+              <th>12 Month Date</th>
+              <th>12 Month Sober</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in study.detail_rows %}
+              <tr>
+                <td>{{ row.resident_name }}</td>
+                <td>{{ row.resident_display_id }}</td>
+                <td>{{ row.shelter|shelter if row.shelter else "—" }}</td>
+                <td>{{ row.date_graduated or "—" }}</td>
+                <td>{{ fmt_currency(row.graduation_income_snapshot) }}</td>
+                <td>{{ row.income_band }}</td>
+                <td>{{ row.six_month_date or "—" }}</td>
+                <td>
+                  {% if row.six_month_sober is none %}
+                    —
+                  {% else %}
+                    {{ "Yes" if row.six_month_sober else "No" }}
+                  {% endif %}
+                </td>
+                <td>{{ row.one_year_date or "—" }}</td>
+                <td>
+                  {% if row.one_year_sober is none %}
+                    —
+                  {% else %}
+                    {{ "Yes" if row.one_year_sober else "No" }}
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No matching graduates were found for this study.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
