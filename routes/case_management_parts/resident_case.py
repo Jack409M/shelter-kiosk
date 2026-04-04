@@ -404,10 +404,37 @@ def _build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
     }
 
 
-def _build_employment_stability_snapshot(recovery_snapshot: dict | None) -> dict:
+def _resolve_employment_status_snapshot(recovery_snapshot: dict | None, intake_assessment: dict | None) -> str:
+    rs = recovery_snapshot or {}
+    ia = intake_assessment or {}
+
+    recovery_employment_status = str(
+        rs.get("employment_status_current")
+        or rs.get("employment_status")
+        or ""
+    ).strip().lower()
+
+    if recovery_employment_status in {"employed", "unemployed"}:
+        return recovery_employment_status
+
+    intake_employment_status = str(ia.get("employment_status_at_entry") or "").strip().lower()
+    intake_to_profile_map = {
+        "employed_full_time": "employed",
+        "employed_part_time": "employed",
+        "unemployed": "unemployed",
+        "disabled": "unemployed",
+        "unknown": "",
+    }
+    return intake_to_profile_map.get(intake_employment_status, "")
+
+
+def _build_employment_stability_snapshot(
+    recovery_snapshot: dict | None,
+    employment_status_snapshot: str = "",
+) -> dict:
     rs = recovery_snapshot or {}
 
-    employment_status = str(rs.get("employment_status_current") or "").strip().lower()
+    employment_status = str(employment_status_snapshot or "").strip().lower()
     current_job_days = rs.get("current_job_days")
     continuous_days = rs.get("continuous_employment_days")
     gap_days = rs.get("employment_gap_days")
@@ -531,7 +558,16 @@ def resident_case_view(resident_id: int):
         monthly_income_for_display,
         employment_income_settings,
     )
-    employment_stability_snapshot = _build_employment_stability_snapshot(recovery_snapshot)
+
+    employment_status_snapshot = _resolve_employment_status_snapshot(
+        recovery_snapshot,
+        enrollment_context.get("intake_assessment"),
+    )
+
+    employment_stability_snapshot = _build_employment_stability_snapshot(
+        recovery_snapshot,
+        employment_status_snapshot=employment_status_snapshot,
+    )
 
     return render_template(
         "case_management/resident_case.html",
@@ -557,6 +593,7 @@ def resident_case_view(resident_id: int):
         rent_snapshot=rent_snapshot,
         inspection_snapshot=inspection_snapshot,
         employment_income_snapshot=employment_income_snapshot,
+        employment_status_snapshot=employment_status_snapshot,
         employment_stability_snapshot=employment_stability_snapshot,
         is_deceased_case=enrollment_context["is_deceased_case"],
     )
