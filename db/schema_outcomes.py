@@ -254,6 +254,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
             leave_amarillo_city TEXT,
             leave_amarillo_unknown INTEGER NOT NULL DEFAULT 0,
             income_at_exit REAL,
+            graduation_income_snapshot REAL,
             education_at_exit TEXT,
             grit_at_exit REAL,
             received_car INTEGER NOT NULL DEFAULT 0,
@@ -280,6 +281,7 @@ def ensure_exit_assessments_table(kind: str) -> None:
             leave_amarillo_city TEXT,
             leave_amarillo_unknown INTEGER NOT NULL DEFAULT 0,
             income_at_exit DOUBLE PRECISION,
+            graduation_income_snapshot DOUBLE PRECISION,
             education_at_exit TEXT,
             grit_at_exit DOUBLE PRECISION,
             received_car INTEGER NOT NULL DEFAULT 0,
@@ -306,6 +308,7 @@ def ensure_exit_assessment_columns(kind: str) -> None:
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS grit_at_exit DOUBLE PRECISION",
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS obtained_public_insurance INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS private_insurance INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS graduation_income_snapshot DOUBLE PRECISION",
         ]
 
         for sql in statements:
@@ -395,6 +398,18 @@ def ensure_indexes() -> None:
             """
             CREATE INDEX IF NOT EXISTS followups_enrollment_idx
             ON followups (enrollment_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        from core.db import db_execute
+
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS followups_enrollment_type_idx
+            ON followups (enrollment_id, followup_type)
             """
         )
     except Exception:
