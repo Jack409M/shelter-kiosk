@@ -16,10 +16,36 @@
       </div>
     </div>
 
-    <div class="cmx-card">
-      <div class="cmx-row-block">
-        <span>Weighted Living Area Score</span>
-        <span>{{ weighted_score if weighted_score is not none else '—' }}</span>
+    <div class="cmx-card" style="{{ inspection_snapshot['card_style'] }}">
+      <div class="cmx-section-head" style="margin-bottom:12px;">
+        <div>
+          <h2 class="cmx-section-title">Living Area Stability Score</h2>
+          <div class="cmx-section-subtitle">
+            Last {{ inspection_snapshot['lookback_months'] }} completed months{% if inspection_snapshot['include_current_open_month'] %}, including current month{% else %}. Current open month is excluded.{% endif %}
+          </div>
+        </div>
+        <div>
+          <span style="{{ inspection_snapshot['pill_style'] }}">{{ inspection_snapshot['band_label'] }}</span>
+        </div>
+      </div>
+
+      <div class="cmx-stack">
+        <div class="cmx-row-block">
+          <span>Inspection Average</span>
+          <span style="{{ inspection_snapshot['value_style'] }}">{{ inspection_snapshot['average_score_display'] }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Goal</span>
+          <span>{{ inspection_snapshot['passing_threshold'] }}+</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Inspections In Window</span>
+          <span>{{ inspection_snapshot['inspection_count'] }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Meets Goal</span>
+          <span>{{ "Yes" if inspection_snapshot['passes_goal'] else "No" }}</span>
+        </div>
       </div>
     </div>
 
@@ -41,8 +67,16 @@
                 <tr>
                   <td>{{ row['inspection_date'] }}</td>
                   <td>{{ row['shelter_snapshot']|shelter }}</td>
-                  <td>{{ 'Passed' if row['passed'] else 'Failed' }}</td>
-                  <td>{{ 100 if row['passed'] else 0 }}</td>
+                  <td>{{ (row['overall_status'] or ('passed' if row['passed'] else 'failed'))|replace('_', ' ')|title }}</td>
+                  <td>
+                    {% if (row['overall_status'] or '') == 'needs_attention' %}
+                      {{ inspection_snapshot['settings']['inspection_score_needs_attention'] if inspection_snapshot['settings']['inspection_needs_attention_enabled'] else inspection_snapshot['settings']['inspection_score_failed'] }}
+                    {% elif (row['overall_status'] or '') == 'failed' or ((row['overall_status'] or '') == '' and not row['passed']) %}
+                      {{ inspection_snapshot['settings']['inspection_score_failed'] }}
+                    {% else %}
+                      {{ inspection_snapshot['settings']['inspection_score_passed'] }}
+                    {% endif %}
+                  </td>
                   <td>{{ row['notes'] or '—' }}</td>
                 </tr>
               {% endfor %}
@@ -50,7 +84,7 @@
           </table>
         </div>
       {% else %}
-        <div class="cmx-muted">No inspection history yet.</div>
+        <div class="cmx-muted">No inspection history yet in the current scoring window.</div>
       {% endif %}
     </div>
   </div>
