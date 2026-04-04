@@ -82,6 +82,11 @@ def ensure_residents_table(kind: str) -> None:
             unemployment_reason TEXT,
             employment_notes TEXT,
             monthly_income REAL,
+            current_job_start_date TEXT,
+            continuous_employment_start_date TEXT,
+            previous_job_end_date TEXT,
+            upward_job_change INTEGER,
+            job_change_notes TEXT,
             employment_updated_at TEXT,
             step_current INTEGER,
             step_work_active INTEGER,
@@ -121,6 +126,11 @@ def ensure_residents_table(kind: str) -> None:
             unemployment_reason TEXT,
             employment_notes TEXT,
             monthly_income DOUBLE PRECISION,
+            current_job_start_date TEXT,
+            continuous_employment_start_date TEXT,
+            previous_job_end_date TEXT,
+            upward_job_change BOOLEAN,
+            job_change_notes TEXT,
             employment_updated_at TEXT,
             step_current INTEGER,
             step_work_active BOOLEAN,
@@ -241,6 +251,11 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS unemployment_reason TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS employment_notes TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS monthly_income DOUBLE PRECISION",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS current_job_start_date TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS continuous_employment_start_date TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS previous_job_end_date TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS upward_job_change BOOLEAN",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS job_change_notes TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS employment_updated_at TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_current INTEGER",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_work_active BOOLEAN",
@@ -263,6 +278,11 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN unemployment_reason TEXT",
             "ALTER TABLE residents ADD COLUMN employment_notes TEXT",
             "ALTER TABLE residents ADD COLUMN monthly_income REAL",
+            "ALTER TABLE residents ADD COLUMN current_job_start_date TEXT",
+            "ALTER TABLE residents ADD COLUMN continuous_employment_start_date TEXT",
+            "ALTER TABLE residents ADD COLUMN previous_job_end_date TEXT",
+            "ALTER TABLE residents ADD COLUMN upward_job_change INTEGER",
+            "ALTER TABLE residents ADD COLUMN job_change_notes TEXT",
             "ALTER TABLE residents ADD COLUMN employment_updated_at TEXT",
             "ALTER TABLE residents ADD COLUMN step_current INTEGER",
             "ALTER TABLE residents ADD COLUMN step_work_active INTEGER",
@@ -463,124 +483,37 @@ def backfill_birth_year_from_legacy_dob(kind: str) -> None:
 
 
 def ensure_indexes() -> None:
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_shelter_active_name_idx "
-            "ON residents (shelter, is_active, last_name, first_name)"
+    index_statements = [
+        "CREATE INDEX IF NOT EXISTS residents_shelter_active_name_idx ON residents (shelter, is_active, last_name, first_name)",
+        "CREATE INDEX IF NOT EXISTS residents_resident_identifier_idx ON residents (resident_identifier)",
+        "CREATE INDEX IF NOT EXISTS residents_status_idx ON residents (status)",
+        "CREATE INDEX IF NOT EXISTS residents_date_entered_idx ON residents (date_entered)",
+        "CREATE INDEX IF NOT EXISTS residents_date_exit_dwc_idx ON residents (date_exit_dwc)",
+        "CREATE INDEX IF NOT EXISTS residents_birth_year_idx ON residents (birth_year)",
+        "CREATE INDEX IF NOT EXISTS residents_program_level_idx ON residents (program_level)",
+        "CREATE INDEX IF NOT EXISTS residents_step_current_idx ON residents (step_current)",
+        "CREATE INDEX IF NOT EXISTS residents_current_job_start_date_idx ON residents (current_job_start_date)",
+        "CREATE INDEX IF NOT EXISTS residents_continuous_employment_start_date_idx ON residents (continuous_employment_start_date)",
+        "CREATE INDEX IF NOT EXISTS resident_children_resident_idx ON resident_children (resident_id)",
+        "CREATE INDEX IF NOT EXISTS resident_children_resident_active_idx ON resident_children (resident_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS resident_children_living_status_idx ON resident_children (living_status)",
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS resident_children_active_dedupe_uidx
+        ON resident_children (
+            resident_id,
+            LOWER(COALESCE(child_name, '')),
+            COALESCE(birth_year, -1),
+            is_active
         )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_resident_identifier_idx "
-            "ON residents (resident_identifier)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_status_idx "
-            "ON residents (status)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_date_entered_idx "
-            "ON residents (date_entered)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_date_exit_dwc_idx "
-            "ON residents (date_exit_dwc)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_birth_year_idx "
-            "ON residents (birth_year)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_program_level_idx "
-            "ON residents (program_level)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_step_current_idx "
-            "ON residents (step_current)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS resident_children_resident_idx "
-            "ON resident_children (resident_id)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS resident_children_resident_active_idx "
-            "ON resident_children (resident_id, is_active)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS resident_children_living_status_idx "
-            "ON resident_children (living_status)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            """
-            CREATE UNIQUE INDEX IF NOT EXISTS resident_children_active_dedupe_uidx
-            ON resident_children (
-                resident_id,
-                LOWER(COALESCE(child_name, '')),
-                COALESCE(birth_year, -1),
-                is_active
-            )
-            """
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS resident_substances_resident_idx "
-            "ON resident_substances (resident_id)"
-        )
-    except Exception:
-        pass
-
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS resident_substances_primary_idx "
-            "ON resident_substances (is_primary)"
-        )
-    except Exception:
-        pass
+        """,
+        "CREATE INDEX IF NOT EXISTS resident_substances_resident_idx ON resident_substances (resident_id)",
+        "CREATE INDEX IF NOT EXISTS resident_substances_primary_idx ON resident_substances (is_primary)",
+    ]
+    for statement in index_statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
 
 
 def backfill_resident_codes(kind: str) -> None:
