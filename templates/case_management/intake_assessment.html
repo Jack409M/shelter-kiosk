@@ -343,8 +343,17 @@
                     </div>
 
                     <div class="field span-2 field-money-tight">
-                      <label for="income_at_entry">Monthly Income at Entry</label>
-                      <input id="income_at_entry" name="income_at_entry" type="number" min="0" step="0.01" value="{{ form_data.get('income_at_entry', '') }}">
+                      <label for="income_at_entry">Monthly Cash Support at Entry</label>
+                      <input
+                        id="income_at_entry"
+                        name="income_at_entry"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value="{{ form_data.get('income_at_entry', '') }}"
+                        readonly
+                      >
+                      <small>Total is built from the source fields below.</small>
                     </div>
 
                     <div class="field span-2 field-select-tight">
@@ -422,6 +431,64 @@
                     <div class="field span-12">
                       <label for="entry_notes">Entry Notes</label>
                       <textarea id="entry_notes" name="entry_notes" placeholder="Reason for admission, immediate concerns, or placement context.">{{ form_data.get('entry_notes', '') }}</textarea>
+                    </div>
+                  </div>
+
+                  <div class="field-grid" style="margin-top:16px;">
+                    <div class="field span-2 field-money-tight">
+                      <label for="employment_income_1">Employment Income 1</label>
+                      <input id="employment_income_1" name="employment_income_1" type="number" min="0" step="0.01" value="{{ form_data.get('employment_income_1', '') }}">
+                    </div>
+
+                    <div class="field span-2 field-money-tight">
+                      <label for="employment_income_2">Employment Income 2</label>
+                      <input id="employment_income_2" name="employment_income_2" type="number" min="0" step="0.01" value="{{ form_data.get('employment_income_2', '') }}">
+                    </div>
+
+                    <div class="field span-2 field-money-tight">
+                      <label for="employment_income_3">Employment Income 3</label>
+                      <input id="employment_income_3" name="employment_income_3" type="number" min="0" step="0.01" value="{{ form_data.get('employment_income_3', '') }}">
+                    </div>
+
+                    <div class="field span-2 field-money-tight">
+                      <label for="ssi_ssdi_income">SSI / SSDI</label>
+                      <input id="ssi_ssdi_income" name="ssi_ssdi_income" type="number" min="0" step="0.01" value="{{ form_data.get('ssi_ssdi_income', '') }}">
+                    </div>
+
+                    <div class="field span-2 field-money-tight">
+                      <label for="tanf_income">TANF</label>
+                      <input id="tanf_income" name="tanf_income" type="number" min="0" step="0.01" value="{{ form_data.get('tanf_income', '') }}">
+                    </div>
+
+                    <div class="field span-2 field-money-tight">
+                      <label for="child_support_income">Child Support</label>
+                      <input id="child_support_income" name="child_support_income" type="number" min="0" step="0.01" value="{{ form_data.get('child_support_income', '') }}">
+                    </div>
+
+                    <div class="field span-2 field-money-tight">
+                      <label for="alimony_income">Alimony</label>
+                      <input id="alimony_income" name="alimony_income" type="number" min="0" step="0.01" value="{{ form_data.get('alimony_income', '') }}">
+                    </div>
+
+                    <div class="field span-2 field-money-tight">
+                      <label for="other_income">Other Income</label>
+                      <input id="other_income" name="other_income" type="number" min="0" step="0.01" value="{{ form_data.get('other_income', '') }}">
+                    </div>
+
+                    <div class="field span-4">
+                      <label for="other_income_description">Other Income Description</label>
+                      <input id="other_income_description" name="other_income_description" type="text" value="{{ form_data.get('other_income_description', '') }}">
+                    </div>
+
+                    <div class="toggle-field span-2">
+                      <label>Receiving SNAP at Entry</label>
+                      <div class="toggle-inputs">
+                        <input type="radio" id="receives_snap_at_entry_yes" name="receives_snap_at_entry" value="yes" {% if form_data.get('receives_snap_at_entry') == 'yes' %}checked{% endif %}>
+                        <label class="toggle-chip toggle-yes" for="receives_snap_at_entry_yes">Yes</label>
+
+                        <input type="radio" id="receives_snap_at_entry_no" name="receives_snap_at_entry" value="no" {% if form_data.get('receives_snap_at_entry') == 'no' %}checked{% endif %}>
+                        <label class="toggle-chip toggle-no" for="receives_snap_at_entry_no">No</label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -534,6 +601,11 @@
                       <label class="needs-entry-item">
                         <input type="checkbox" name="entry_need" value="parenting_class_needed" {% if form_data.get('need_parenting_class_needed') == 'yes' %}checked{% endif %}>
                         <span>Parenting class needed</span>
+                      </label>
+
+                      <label class="needs-entry-item">
+                        <input type="checkbox" name="entry_need" value="benefits_screening_texas" {% if form_data.get('need_benefits_screening_texas') == 'yes' %}checked{% endif %}>
+                        <span>Benefits screening (Your Texas Benefits)</span>
                       </label>
                     </div>
 
