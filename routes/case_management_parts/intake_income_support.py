@@ -250,14 +250,14 @@ def _load_child_linked_support_rollups(enrollment_id: int, cutoff_months: int) -
             continue
 
         age_years = _child_age_from_birth_year(row.get("birth_year"))
-        weight = _age_weight_for_child(age_years, cutoff_months)
+        age_weight = _age_weight_for_child(age_years, cutoff_months)
 
         if support_type == "survivor_benefit":
             survivor_total += amount
-            survivor_weighted_total += round(amount * weight, 2)
+            survivor_weighted_total += round(amount * age_weight, 2)
         elif support_type == "child_support":
             child_support_total += amount
-            child_support_weighted_total += round(amount * weight, 2)
+            child_support_weighted_total += round(amount * age_weight, 2)
 
     return {
         "survivor_benefit_total": round(survivor_total, 2),
