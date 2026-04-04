@@ -17,6 +17,7 @@
   {% set resolved_treatment_graduation_date = rs_treatment_graduation_date or intake_treatment_grad_date or "" %}
   {% set eis = employment_income_snapshot if employment_income_snapshot is defined else {} %}
   {% set ess = employment_stability_snapshot if employment_stability_snapshot is defined else {} %}
+  {% set resolved_employment_status = employment_status_snapshot if employment_status_snapshot is defined else (rs_employment_status or "") %}
 
   {% if eis.get("band_key") == "green" %}
     {% set income_field_card_style = "background:#e3efe7; border:1px solid #98baa3;" %}
@@ -152,9 +153,9 @@
           <div class="cmx-field-card-label">Employment Status</div>
           <div class="cmx-field">
             <select name="employment_status_current" id="employment_status_current" onchange="toggleEmploymentProfileFields()">
-              <option value="" {% if not rs_employment_status %}selected{% endif %}>—</option>
-              <option value="employed" {% if rs_employment_status == "employed" %}selected{% endif %}>Employed</option>
-              <option value="unemployed" {% if rs_employment_status == "unemployed" %}selected{% endif %}>Unemployed</option>
+              <option value="" {% if not resolved_employment_status %}selected{% endif %}>—</option>
+              <option value="employed" {% if resolved_employment_status == "employed" %}selected{% endif %}>Employed</option>
+              <option value="unemployed" {% if resolved_employment_status == "unemployed" %}selected{% endif %}>Unemployed</option>
             </select>
           </div>
         </div>
