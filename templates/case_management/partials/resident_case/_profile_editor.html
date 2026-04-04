@@ -3,7 +3,7 @@
     <div>
       <h2 class="cmx-section-title">Profile Editor</h2>
       <div class="cmx-section-subtitle">
-        Update recovery, sobriety, sponsor, employment, and income here. These changes are saved only when you click <strong>Save Profile</strong>.
+        Update recovery, sobriety, sponsor, and core profile facts here. Employment and income support details are managed on their own page.
       </div>
     </div>
     <button type="submit" class="cmx-btn" form="profile-editor-form">Save Profile</button>
@@ -144,31 +144,40 @@
 
     <div class="cmx-panel-soft" style="margin-top:20px;">
       <div class="cmx-panel-head">
-        <h3>Employment Stability Module</h3>
-        <span>Income, tenure, continuity, and upward move protection</span>
+        <h3>Employment and Income Support</h3>
+        <span>Summary only on this page</span>
       </div>
 
-      <div class="cmx-grid cmx-grid-4">
+      <input type="hidden" name="employment_status_current" value="{{ resolved_employment_status or '' }}">
+      <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
+      <input type="hidden" name="employment_type_current" value="{{ rs.get('employment_type_current') or '' }}">
+      <input type="hidden" name="monthly_income" value="{{ eis.get('income_value') if eis.get('income_value') is not none else '' }}">
+      <input type="hidden" name="current_job_start_date" value="{{ rs.get('current_job_start_date') or '' }}">
+      <input type="hidden" name="continuous_employment_start_date" value="{{ rs.get('continuous_employment_start_date') or '' }}">
+      <input type="hidden" name="previous_job_end_date" value="{{ rs.get('previous_job_end_date') or '' }}">
+      <input type="hidden" name="upward_job_change" value="{% if rs.get('upward_job_change') is sameas true or rs.get('upward_job_change') == 1 %}yes{% elif rs.get('upward_job_change') is sameas false or rs.get('upward_job_change') == 0 %}no{% endif %}">
+      <input type="hidden" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
+      <input type="hidden" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
+      <input type="hidden" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
+      <input type="hidden" name="job_change_notes" value="{{ rs.get('job_change_notes') or '' }}">
+
+      <div class="cmx-grid cmx-grid-3">
         <div class="cmx-field-card">
           <div class="cmx-field-card-label">Employment Status</div>
           <div class="cmx-field">
-            <select name="employment_status_current" id="employment_status_current" onchange="toggleEmploymentProfileFields()">
-              <option value="" {% if not resolved_employment_status %}selected{% endif %}>—</option>
-              <option value="employed" {% if resolved_employment_status == "employed" %}selected{% endif %}>Employed</option>
-              <option value="unemployed" {% if resolved_employment_status == "unemployed" %}selected{% endif %}>Unemployed</option>
-            </select>
+            <input type="text" value="{{ resolved_employment_status|replace('_', ' ')|title if resolved_employment_status else '—' }}" readonly>
           </div>
         </div>
 
         <div class="cmx-field-card" style="{{ income_field_card_style }}">
           <div class="cmx-field-card-label" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-            <span>Monthly Income</span>
+            <span>Monthly Cash Support</span>
             {% if eis.get("module_enabled", True) %}
               <span style="{{ eis.get('pill_style', '') }}">{{ eis.get("readiness_percent_display", "—") }}</span>
             {% endif %}
           </div>
           <div class="cmx-field">
-            <input type="text" name="monthly_income" value="{{ eis.get('income_value') if eis.get('income_value') is not none else '' }}" placeholder="$0.00">
+            <input type="text" value="{{ '$%.2f'|format(eis.get('income_value')) if eis.get('income_value') is not none else '—' }}" readonly>
           </div>
           {% if eis.get("module_enabled", True) %}
             <div style="margin-top:8px; font-size:12px; color:#53687c;">
@@ -178,100 +187,10 @@
         </div>
 
         <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Employer</div>
-          <div class="cmx-field">
-            <input type="text" name="employer_name" value="{{ rs_employer or '' }}">
+          <div class="cmx-field-card-label">Detailed Management</div>
+          <div class="cmx-field" style="display:flex; align-items:flex-end; height:100%;">
+            <a class="cmx-btn" href="{{ url_for('case_management.income_support', resident_id=resident_id) }}">Manage Employment and Income</a>
           </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Employment Type</div>
-          <div class="cmx-field">
-            <select name="employment_type_current">
-              <option value="" {% if not rs.get('employment_type_current') %}selected{% endif %}>—</option>
-              <option value="full_time" {% if rs.get('employment_type_current') == 'full_time' %}selected{% endif %}>Full Time</option>
-              <option value="part_time" {% if rs.get('employment_type_current') == 'part_time' %}selected{% endif %}>Part Time</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Current Job Start Date</div>
-          <div class="cmx-field">
-            <input type="date" name="current_job_start_date" value="{{ rs.get('current_job_start_date') or '' }}">
-          </div>
-          <div style="margin-top:8px; font-size:12px; color:#53687c;">
-            {% if rs.get('current_job_days') is not none %}
-              {{ rs.get('current_job_days') }} days at current job
-            {% else %}
-              Days at current job derive from this date
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Continuous Employment Start</div>
-          <div class="cmx-field">
-            <input type="date" name="continuous_employment_start_date" value="{{ rs.get('continuous_employment_start_date') or '' }}">
-          </div>
-          <div style="margin-top:8px; font-size:12px; color:#53687c;">
-            {% if rs.get('continuous_employment_days') is not none %}
-              {{ rs.get('continuous_employment_days') }} days continuous employment
-            {% else %}
-              Continuous employment derives from this date
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Previous Job End Date</div>
-          <div class="cmx-field">
-            <input type="date" name="previous_job_end_date" value="{{ rs.get('previous_job_end_date') or '' }}">
-          </div>
-          <div style="margin-top:8px; font-size:12px; color:#53687c;">
-            {% if rs.get('employment_gap_days') is not none %}
-              {{ rs.get('employment_gap_days') }} day gap before current job
-            {% else %}
-              Gap derives from current start and previous end dates
-            {% endif %}
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Upward Job Change</div>
-          <div class="cmx-field">
-            <select name="upward_job_change">
-              <option value="" {% if rs.get('upward_job_change') is none %}selected{% endif %}>—</option>
-              <option value="yes" {% if rs.get('upward_job_change') is sameas true or rs.get('upward_job_change') == 1 %}selected{% endif %}>Yes</option>
-              <option value="no" {% if rs.get('upward_job_change') is sameas false or rs.get('upward_job_change') == 0 %}selected{% endif %}>No</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Supervisor</div>
-          <div class="cmx-field">
-            <input type="text" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Supervisor Phone</div>
-          <div class="cmx-field">
-            <input type="text" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
-          </div>
-        </div>
-      </div>
-
-      <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
-        <div class="cmx-field" id="employment_fields_unemployed">
-          <label>Unemployment Reason</label>
-          <input type="text" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
-        </div>
-
-        <div class="cmx-field">
-          <label>Job Change Notes</label>
-          <textarea name="job_change_notes" rows="3">{{ rs.get('job_change_notes') or '' }}</textarea>
         </div>
       </div>
 
