@@ -11,9 +11,6 @@ from routes.case_management_parts.helpers import yes_no_to_int
 
 
 def ensure_intake_income_supports_table() -> None:
-    ph = placeholder()
-    del ph
-
     if g.get("db_kind") == "pg":
         db_execute(
             """
