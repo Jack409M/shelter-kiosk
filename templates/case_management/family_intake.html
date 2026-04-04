@@ -26,7 +26,7 @@
       <div style="margin-bottom:14px;">
         <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Add Child</h2>
         <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
-          Record a child, relationship, and current living status.
+          Record a child, relationship, living status, and any survivor benefit tied to that child.
         </div>
       </div>
 
@@ -68,6 +68,32 @@
           </select>
         </div>
 
+        <div style="margin-top:24px; padding:16px; border-radius:16px; background:#f8fafc; border:1px solid #dbe5f0;">
+          <div style="font-weight:800; color:#0f172a; margin-bottom:6px;">Child Linked Survivor Benefit</div>
+          <div style="color:#475569; font-size:0.92rem; margin-bottom:14px;">
+            Survivor benefits are attached to the child record but roll up into the mother household income total.
+          </div>
+
+          <div>
+            <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Receives Survivor Benefit</strong></label>
+            <select name="receives_survivor_benefit" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+              <option value="">Select</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </div>
+
+          <div style="margin-top:16px;">
+            <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Monthly Survivor Benefit Amount</strong></label>
+            <input type="text" name="survivor_benefit_amount" placeholder="$0.00" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+          </div>
+
+          <div style="margin-top:16px;">
+            <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Survivor Benefit Notes</strong></label>
+            <textarea name="survivor_benefit_notes" rows="3" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"></textarea>
+          </div>
+        </div>
+
         <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
           <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Child</button>
           <a
@@ -98,6 +124,7 @@
                 <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Birth Year</th>
                 <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Relationship</th>
                 <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Living Status</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Survivor Benefit</th>
                 <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Actions</th>
               </tr>
             </thead>
@@ -108,12 +135,23 @@
                 {% set birth_year = child["birth_year"] if child is mapping else child[3] %}
                 {% set relationship = child["relationship"] if child is mapping else child[4] %}
                 {% set living_status = child["living_status"] if child is mapping else child[5] %}
+                {% set receives_survivor_benefit = child["receives_survivor_benefit"] if child is mapping else child[6] %}
+                {% set survivor_benefit_amount = child["survivor_benefit_amount"] if child is mapping else child[7] %}
 
                 <tr>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ child_name or "—" }}</td>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ birth_year or "—" }}</td>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ relationship or "—" }}</td>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ living_status|replace("_", " ")|title if living_status else "—" }}</td>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7;">
+                    {% if receives_survivor_benefit is sameas true or receives_survivor_benefit == 1 %}
+                      {{ "$%.2f"|format(survivor_benefit_amount) if survivor_benefit_amount is not none else "Yes" }}
+                    {% elif receives_survivor_benefit is sameas false or receives_survivor_benefit == 0 %}
+                      No
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7; white-space:nowrap;">
                     <a
                       class="btn btn-sm"
