@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import secrets
 
-from flask import flash, redirect, request, session, url_for
+from flask import current_app, flash, redirect, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
@@ -692,6 +692,10 @@ def update_recovery_profile_view(resident_id: int):
             ),
         )
     except Exception:
+        current_app.logger.exception(
+            "Failed to save recovery profile for resident_id=%s",
+            resident_id,
+        )
         flash("Unable to save profile changes.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
