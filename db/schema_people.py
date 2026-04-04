@@ -153,6 +153,9 @@ def ensure_resident_children_table(kind: str) -> None:
             birth_year INTEGER,
             relationship TEXT,
             living_status TEXT,
+            receives_survivor_benefit INTEGER NOT NULL DEFAULT 0,
+            survivor_benefit_amount REAL,
+            survivor_benefit_notes TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             notes TEXT,
             created_at TEXT,
@@ -168,6 +171,9 @@ def ensure_resident_children_table(kind: str) -> None:
             birth_year INTEGER,
             relationship TEXT,
             living_status TEXT,
+            receives_survivor_benefit BOOLEAN NOT NULL DEFAULT FALSE,
+            survivor_benefit_amount DOUBLE PRECISION,
+            survivor_benefit_notes TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             notes TEXT,
             created_at TEXT,
@@ -175,6 +181,62 @@ def ensure_resident_children_table(kind: str) -> None:
         )
         """,
     )
+
+
+def ensure_resident_child_income_supports_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS resident_child_income_supports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            child_id INTEGER NOT NULL,
+            support_type TEXT NOT NULL,
+            monthly_amount REAL,
+            notes TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY (child_id) REFERENCES resident_children(id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_child_income_supports (
+            id SERIAL PRIMARY KEY,
+            child_id INTEGER NOT NULL REFERENCES resident_children(id),
+            support_type TEXT NOT NULL,
+            monthly_amount DOUBLE PRECISION,
+            notes TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
+    )
+
+    if kind == "pg":
+        statements = [
+            "ALTER TABLE resident_child_income_supports ADD COLUMN IF NOT EXISTS support_type TEXT",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN IF NOT EXISTS monthly_amount DOUBLE PRECISION",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN IF NOT EXISTS notes TEXT",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN IF NOT EXISTS created_at TEXT",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN IF NOT EXISTS updated_at TEXT",
+        ]
+    else:
+        statements = [
+            "ALTER TABLE resident_child_income_supports ADD COLUMN support_type TEXT",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN monthly_amount REAL",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN notes TEXT",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN created_at TEXT",
+            "ALTER TABLE resident_child_income_supports ADD COLUMN updated_at TEXT",
+        ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
 
 
 def ensure_resident_substances_table(kind: str) -> None:
@@ -235,7 +297,7 @@ def ensure_basic_profile_columns(kind: str) -> None:
 
 def ensure_recovery_profile_columns(kind: str) -> None:
     if kind == "pg":
-        statements = [
+        resident_statements = [
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS program_level TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS level_start_date TEXT",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sponsor_name TEXT",
@@ -261,8 +323,13 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_work_active BOOLEAN",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_changed_at TEXT",
         ]
+        child_statements = [
+            "ALTER TABLE resident_children ADD COLUMN IF NOT EXISTS receives_survivor_benefit BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE resident_children ADD COLUMN IF NOT EXISTS survivor_benefit_amount DOUBLE PRECISION",
+            "ALTER TABLE resident_children ADD COLUMN IF NOT EXISTS survivor_benefit_notes TEXT",
+        ]
     else:
-        statements = [
+        resident_statements = [
             "ALTER TABLE residents ADD COLUMN program_level TEXT",
             "ALTER TABLE residents ADD COLUMN level_start_date TEXT",
             "ALTER TABLE residents ADD COLUMN sponsor_name TEXT",
@@ -288,8 +355,19 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN step_work_active INTEGER",
             "ALTER TABLE residents ADD COLUMN step_changed_at TEXT",
         ]
+        child_statements = [
+            "ALTER TABLE resident_children ADD COLUMN receives_survivor_benefit INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE resident_children ADD COLUMN survivor_benefit_amount REAL",
+            "ALTER TABLE resident_children ADD COLUMN survivor_benefit_notes TEXT",
+        ]
 
-    for statement in statements:
+    for statement in resident_statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+    for statement in child_statements:
         try:
             db_execute(statement)
         except Exception:
@@ -497,6 +575,7 @@ def ensure_indexes() -> None:
         "CREATE INDEX IF NOT EXISTS resident_children_resident_idx ON resident_children (resident_id)",
         "CREATE INDEX IF NOT EXISTS resident_children_resident_active_idx ON resident_children (resident_id, is_active)",
         "CREATE INDEX IF NOT EXISTS resident_children_living_status_idx ON resident_children (living_status)",
+        "CREATE INDEX IF NOT EXISTS resident_children_survivor_benefit_idx ON resident_children (receives_survivor_benefit)",
         """
         CREATE UNIQUE INDEX IF NOT EXISTS resident_children_active_dedupe_uidx
         ON resident_children (
@@ -506,6 +585,9 @@ def ensure_indexes() -> None:
             is_active
         )
         """,
+        "CREATE INDEX IF NOT EXISTS resident_child_income_supports_child_idx ON resident_child_income_supports (child_id)",
+        "CREATE INDEX IF NOT EXISTS resident_child_income_supports_active_idx ON resident_child_income_supports (child_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS resident_child_income_supports_type_idx ON resident_child_income_supports (support_type)",
         "CREATE INDEX IF NOT EXISTS resident_substances_resident_idx ON resident_substances (resident_id)",
         "CREATE INDEX IF NOT EXISTS resident_substances_primary_idx ON resident_substances (is_primary)",
     ]
@@ -547,6 +629,7 @@ def backfill_resident_codes(kind: str) -> None:
 def ensure_tables(kind: str) -> None:
     ensure_residents_table(kind)
     ensure_resident_children_table(kind)
+    ensure_resident_child_income_supports_table(kind)
     ensure_resident_substances_table(kind)
 
 
