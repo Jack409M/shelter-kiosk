@@ -98,6 +98,97 @@
           <textarea name="inspection_item_labels" rows="8">{{ settings['inspection_item_labels'] if settings and settings['inspection_item_labels'] else default_inspection_items }}</textarea>
         </div>
 
+        <div class="cmx-section-head" style="margin-top:24px;">
+          <div>
+            <h2 class="cmx-section-title">Inspection Stability Scoring</h2>
+            <div class="cmx-section-subtitle">This controls the living area stability average used over the last completed months.</div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Inspection Scoring Active</label>
+            <select name="inspection_scoring_enabled">
+              <option value="yes" {% if settings and settings['inspection_scoring_enabled'] %}selected{% endif %}>Yes</option>
+              <option value="no" {% if settings and not settings['inspection_scoring_enabled'] %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="cmx-field">
+            <label>Lookback Months</label>
+            <input type="number" min="1" name="inspection_lookback_months" value="{{ settings['inspection_lookback_months'] if settings else 9 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Include Current Open Month</label>
+            <select name="inspection_include_current_open_month">
+              <option value="no" {% if settings and not settings['inspection_include_current_open_month'] %}selected{% endif %}>No</option>
+              <option value="yes" {% if settings and settings['inspection_include_current_open_month'] %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+          <div class="cmx-field">
+            <label>Passed Score</label>
+            <input type="number" name="inspection_score_passed" value="{{ settings['inspection_score_passed'] if settings else 100 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Needs Attention Enabled</label>
+            <select name="inspection_needs_attention_enabled">
+              <option value="no" {% if settings and not settings['inspection_needs_attention_enabled'] %}selected{% endif %}>No</option>
+              <option value="yes" {% if settings and settings['inspection_needs_attention_enabled'] %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+
+          <div class="cmx-field">
+            <label>Needs Attention Score</label>
+            <input type="number" name="inspection_score_needs_attention" value="{{ settings['inspection_score_needs_attention'] if settings else 70 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+          <div class="cmx-field">
+            <label>Failed Score</label>
+            <input type="number" name="inspection_score_failed" value="{{ settings['inspection_score_failed'] if settings else 0 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Passing Threshold</label>
+            <input type="number" name="inspection_passing_threshold" value="{{ settings['inspection_passing_threshold'] if settings else 83 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-section-head" style="margin-top:24px;">
+          <div>
+            <h2 class="cmx-section-title">Inspection Color Bands</h2>
+            <div class="cmx-section-subtitle">Locked target is green at 83 and above with room for future adjustment.</div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-4">
+          <div class="cmx-field">
+            <label>Green Minimum</label>
+            <input type="number" name="inspection_band_green_min" value="{{ settings['inspection_band_green_min'] if settings else 83 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Yellow Minimum</label>
+            <input type="number" name="inspection_band_yellow_min" value="{{ settings['inspection_band_yellow_min'] if settings else 78 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Orange Minimum</label>
+            <input type="number" name="inspection_band_orange_min" value="{{ settings['inspection_band_orange_min'] if settings else 56 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Red Maximum</label>
+            <input type="number" name="inspection_band_red_max" value="{{ settings['inspection_band_red_max'] if settings else 55 }}" required>
+          </div>
+        </div>
+
         <div class="cmx-button-row">
           <button type="submit" class="cmx-btn">Save Operations Settings</button>
         </div>
