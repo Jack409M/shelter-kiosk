@@ -1,490 +1,493 @@
 from __future__ import annotations
 
-from datetime import date, datetime
-from typing import Any
+from flask import flash, redirect, render_template, session, url_for
 
-from core.db import db_fetchall, db_fetchone
-from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
+from core.db import db_execute, db_fetchall, db_fetchone
+from core.runtime import init_db
+from routes.case_management_parts.helpers import case_manager_allowed
+from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
+from routes.case_management_parts.helpers import normalize_shelter_name
 from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.needs import get_open_enrollment_needs
+from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
+from routes.case_management_parts.resident_case_children import load_children_with_services
+from routes.case_management_parts.resident_case_notes import build_note_objects
+from routes.case_management_parts.resident_case_viewmodel import build_meeting_defaults
+from routes.case_management_parts.resident_case_viewmodel import build_operations_snapshot
+from routes.case_management_parts.resident_case_viewmodel import build_workspace_header
+from routes.inspection_v2 import build_inspection_stability_snapshot
+from routes.rent_tracking import build_rent_stability_snapshot
 
 
-def _parse_dateish(value: Any):
-    if value in (None, ""):
+def _normalize_exit_assessment(row):
+    if not row:
         return None
 
-    if isinstance(value, datetime):
-        return value.date()
+    leave_ama = row.get("leave_ama")
+    leave_amarillo_city = row.get("leave_amarillo_city")
+    leave_amarillo_unknown = row.get("leave_amarillo_unknown")
 
-    if isinstance(value, date):
-        return value
+    destination = None
+    if leave_ama:
+        if leave_amarillo_city:
+            destination = leave_amarillo_city
+        elif leave_amarillo_unknown:
+            destination = "Unknown"
 
-    text = str(value).strip()
-    if not text:
-        return None
-
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-
-    try:
-        return datetime.fromisoformat(text).date()
-    except ValueError:
-        pass
-
-    try:
-        return date.fromisoformat(text[:10])
-    except ValueError:
-        return None
+    normalized = dict(row)
+    normalized["leave_ama_destination"] = destination
+    return normalized
 
 
-def _days_since(value: Any):
-    parsed = _parse_dateish(value)
-    if not parsed:
-        return None
-
-    days = (date.today() - parsed).days
-    if days < 0:
-        days = 0
-    return days
+def _is_deceased_exit(exit_assessment) -> bool:
+    if not exit_assessment:
+        return False
+    return (
+        str(exit_assessment.get("exit_category") or "").strip() == "Administrative Exit"
+        and str(exit_assessment.get("exit_reason") or "").strip() == "Deceased"
+    )
 
 
-def _money_display(value: Any) -> str:
-    if value in (None, ""):
-        return "—"
-
-    try:
-        amount = float(value)
-    except (TypeError, ValueError):
-        return str(value)
-
-    return f"${amount:,.2f}"
-
-
-def _bool_display(value: Any) -> str:
-    if value is None:
-        return "—"
-    return "Yes" if bool(value) else "No"
+def _load_current_enrollment(resident_id: int):
+    return fetch_current_enrollment_for_resident(
+        resident_id,
+        columns="""
+            id,
+            shelter,
+            program_status,
+            entry_date,
+            exit_date
+        """,
+    )
 
 
-def _employment_status_display(value: Any) -> str:
-    normalized = str(value or "").strip().lower()
-    if not normalized:
-        return "—"
-    if normalized == "employed":
-        return "Employed"
-    if normalized == "unemployed":
-        return "Unemployed"
-    return str(value)
-
-
-def _employment_type_display(value: Any) -> str:
-    normalized = str(value or "").strip().lower()
-    if not normalized:
-        return "—"
-    if normalized == "full_time":
-        return "Full Time"
-    if normalized == "part_time":
-        return "Part Time"
-    return str(value).replace("_", " ").title()
-
-
-def _result_display(value: Any) -> str:
-    normalized = str(value or "").strip()
-    return normalized or "—"
-
-
-def _medication_items(rows):
-    items = []
-    for med in rows or []:
-        items.append(
-            {
-                "id": med.get("id"),
-                "medication_name": med.get("medication_name"),
-                "dosage": med.get("dosage"),
-                "frequency": med.get("frequency"),
-                "purpose": med.get("purpose"),
-                "prescribed_by": med.get("prescribed_by"),
-                "started_on": med.get("started_on"),
-                "ended_on": med.get("ended_on"),
-                "is_active": med.get("is_active"),
-                "notes": med.get("notes"),
-            }
-        )
-    return items
-
-
-def _ua_items(rows):
-    items = []
-    for row in rows or []:
-        items.append(
-            {
-                "id": row.get("id"),
-                "ua_date": row.get("ua_date"),
-                "result": row.get("result"),
-                "result_display": _result_display(row.get("result")),
-                "substances_detected": row.get("substances_detected"),
-                "notes": row.get("notes"),
-            }
-        )
-    return items
-
-
-def _inspection_items(rows):
-    items = []
-    for row in rows or []:
-        items.append(
-            {
-                "id": row.get("id"),
-                "inspection_date": row.get("inspection_date"),
-                "passed": row.get("passed"),
-                "passed_display": _bool_display(row.get("passed")),
-                "notes": row.get("notes"),
-            }
-        )
-    return items
-
-
-def _budget_items(rows):
-    items = []
-    for row in rows or []:
-        items.append(
-            {
-                "id": row.get("id"),
-                "session_date": row.get("session_date"),
-                "notes": row.get("notes"),
-            }
-        )
-    return items
-
-
-def _load_resident_profile(resident_id: int):
+def _load_resident_in_scope(resident_id: int, shelter: str):
     ph = placeholder()
 
     return db_fetchone(
         f"""
         SELECT
-            program_level,
-            level_start_date,
-            sponsor_name,
-            sponsor_active,
-            employer_name,
-            employment_status_current,
-            employment_type_current,
-            supervisor_name,
-            supervisor_phone,
-            unemployment_reason,
-            employment_notes,
-            monthly_income,
-            current_job_start_date,
-            continuous_employment_start_date,
-            previous_job_end_date,
-            upward_job_change,
-            job_change_notes,
-            employment_updated_at,
-            step_current,
-            step_work_active,
-            step_changed_at,
-            sobriety_date,
-            drug_of_choice,
-            treatment_graduation_date
+            id,
+            resident_identifier,
+            first_name,
+            last_name,
+            resident_code,
+            shelter,
+            is_active
         FROM residents
         WHERE id = {ph}
-        LIMIT 1
+          AND {shelter_equals_sql("shelter")}
         """,
-        (resident_id,),
-    ) or {}
+        (resident_id, shelter),
+    )
 
 
-def _load_enrollment_baseline(enrollment_id: int | None):
-    if not enrollment_id:
-        return {}
-
+def _get_latest_followup(enrollment_id: int, followup_type: str):
     ph = placeholder()
 
     row = db_fetchone(
         f"""
         SELECT
-            entry_date
-        FROM program_enrollments
-        WHERE id = {ph}
+            followup_date,
+            income_at_followup,
+            sober_at_followup,
+            notes
+        FROM followups
+        WHERE enrollment_id = {ph}
+          AND followup_type = {ph}
+        ORDER BY
+            COALESCE(followup_date, '') DESC,
+            id DESC
+        LIMIT 1
+        """,
+        (enrollment_id, followup_type),
+    )
+
+    return row if row else None
+
+
+def _load_case_history(enrollment_id: int):
+    ph = placeholder()
+
+    notes_raw = db_fetchall(
+        f"""
+        SELECT
+            id,
+            meeting_date,
+            notes,
+            progress_notes,
+            setbacks_or_incidents,
+            action_items,
+            next_appointment,
+            overall_summary,
+            ready_for_next_level,
+            recommended_next_level,
+            blocker_reason,
+            override_or_exception,
+            staff_review_note,
+            updated_grit,
+            parenting_class_completed,
+            warrants_or_fines_paid,
+            created_at
+        FROM case_manager_updates
+        WHERE enrollment_id = {ph}
+        ORDER BY meeting_date ASC, id ASC
+        """,
+        (enrollment_id,),
+    )
+
+    services_raw = db_fetchall(
+        f"""
+        SELECT
+            case_manager_update_id,
+            service_type,
+            service_date,
+            quantity,
+            unit,
+            notes
+        FROM client_services
+        WHERE enrollment_id = {ph}
+        ORDER BY service_date DESC, id DESC
+        """,
+        (enrollment_id,),
+    )
+
+    note_ids = [note["id"] for note in notes_raw]
+    summary_rows_raw = []
+
+    if note_ids:
+        note_placeholders = ",".join([ph] * len(note_ids))
+        summary_rows_raw = db_fetchall(
+            f"""
+            SELECT
+                case_manager_update_id,
+                change_group,
+                change_type,
+                item_key,
+                item_label,
+                old_value,
+                new_value,
+                detail,
+                sort_order
+            FROM case_manager_update_summary
+            WHERE case_manager_update_id IN ({note_placeholders})
+            ORDER BY case_manager_update_id ASC, sort_order ASC, id ASC
+            """,
+            tuple(note_ids),
+        )
+
+    return build_note_objects(notes_raw, services_raw, summary_rows_raw)
+
+
+def _load_enrollment_context(enrollment_id: int):
+    ph = placeholder()
+
+    family_snapshot = db_fetchone(
+        f"""
+        SELECT
+            id,
+            enrollment_id,
+            kids_at_dwc,
+            kids_served_outside_under_18,
+            kids_ages_0_5,
+            kids_ages_6_11,
+            kids_ages_12_17,
+            kids_reunited_while_in_program,
+            healthy_babies_born_at_dwc,
+            created_at,
+            updated_at
+        FROM family_snapshots
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
         LIMIT 1
         """,
         (enrollment_id,),
-    ) or {}
+    )
 
-    intake_row = db_fetchone(
+    intake_assessment = db_fetchone(
         f"""
         SELECT
+            grit_score,
             sobriety_date,
-            treatment_grad_date
+            treatment_grad_date,
+            dental_need_at_entry,
+            vision_need_at_entry,
+            parenting_class_needed,
+            warrants_unpaid,
+            mental_health_need_at_entry,
+            medical_need_at_entry,
+            has_drivers_license,
+            has_social_security_card
         FROM intake_assessments
         WHERE enrollment_id = {ph}
         ORDER BY id DESC
         LIMIT 1
         """,
         (enrollment_id,),
-    ) or {}
+    )
 
-    row["intake_sobriety_date"] = intake_row.get("sobriety_date")
-    row["intake_treatment_grad_date"] = intake_row.get("treatment_grad_date")
-    return row
-
-
-def _load_medications(resident_id: int, enrollment_id: int | None):
-    ph = placeholder()
-
-    if enrollment_id is not None:
-        return db_fetchall(
-            f"""
-            SELECT
-                id,
-                medication_name,
-                dosage,
-                frequency,
-                purpose,
-                prescribed_by,
-                started_on,
-                ended_on,
-                is_active,
-                notes,
-                updated_at,
-                created_at
-            FROM resident_medications
-            WHERE resident_id = {ph}
-              AND enrollment_id = {ph}
-              AND COALESCE(is_active, TRUE) = {('TRUE' if ph == '%s' else '1')}
-            ORDER BY
-                COALESCE(updated_at, created_at) DESC,
-                id DESC
-            """,
-            (resident_id, enrollment_id),
-        )
-
-    return db_fetchall(
+    raw_exit_assessment = db_fetchone(
         f"""
         SELECT
-            id,
-            medication_name,
-            dosage,
-            frequency,
-            purpose,
-            prescribed_by,
-            started_on,
-            ended_on,
-            is_active,
-            notes,
-            updated_at,
+            date_graduated,
+            date_exit_dwc,
+            exit_category,
+            exit_reason,
+            graduate_dwc,
+            leave_ama,
+            leave_amarillo_city,
+            leave_amarillo_unknown,
+            income_at_exit,
+            education_at_exit,
+            grit_at_exit,
+            received_car,
+            car_insurance,
+            dental_needs_met,
+            vision_needs_met,
+            obtained_public_insurance,
+            private_insurance
+        FROM exit_assessments
+        WHERE enrollment_id = {ph}
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (enrollment_id,),
+    )
+
+    goals = db_fetchall(
+        f"""
+        SELECT
+            goal_text,
+            status,
+            target_date,
             created_at
-        FROM resident_medications
-        WHERE resident_id = {ph}
-          AND COALESCE(is_active, TRUE) = {('TRUE' if ph == '%s' else '1')}
-        ORDER BY
-            COALESCE(updated_at, created_at) DESC,
-            id DESC
+        FROM goals
+        WHERE enrollment_id = {ph}
+        ORDER BY created_at DESC, id DESC
         """,
-        (resident_id,),
+        (enrollment_id,),
     )
 
-
-def _load_ua_rows(resident_id: int, enrollment_id: int | None):
-    ph = placeholder()
-
-    if enrollment_id is not None:
-        return db_fetchall(
-            f"""
-            SELECT
-                id,
-                ua_date,
-                result,
-                substances_detected,
-                notes
-            FROM resident_ua_log
-            WHERE resident_id = {ph}
-              AND enrollment_id = {ph}
-            ORDER BY ua_date DESC, id DESC
-            """,
-            (resident_id, enrollment_id),
-        )
-
-    return db_fetchall(
+    appointments = db_fetchall(
         f"""
         SELECT
-            id,
-            ua_date,
-            result,
-            substances_detected,
+            appointment_date,
+            appointment_type,
             notes
-        FROM resident_ua_log
-        WHERE resident_id = {ph}
-        ORDER BY ua_date DESC, id DESC
+        FROM appointments
+        WHERE enrollment_id = {ph}
+        ORDER BY appointment_date DESC, id DESC
         """,
-        (resident_id,),
+        (enrollment_id,),
     )
 
-
-def _load_inspection_rows(resident_id: int, enrollment_id: int | None):
-    ph = placeholder()
-
-    if enrollment_id is not None:
-        return db_fetchall(
-            f"""
-            SELECT
-                id,
-                inspection_date,
-                passed,
-                notes
-            FROM resident_living_area_inspections
-            WHERE resident_id = {ph}
-              AND enrollment_id = {ph}
-            ORDER BY inspection_date DESC, id DESC
-            """,
-            (resident_id, enrollment_id),
-        )
-
-    return db_fetchall(
-        f"""
-        SELECT
-            id,
-            inspection_date,
-            passed,
-            notes
-        FROM resident_living_area_inspections
-        WHERE resident_id = {ph}
-        ORDER BY inspection_date DESC, id DESC
-        """,
-        (resident_id,),
-    )
-
-
-def _load_budget_rows(resident_id: int, enrollment_id: int | None):
-    ph = placeholder()
-
-    if enrollment_id is not None:
-        return db_fetchall(
-            f"""
-            SELECT
-                id,
-                session_date,
-                notes
-            FROM resident_budget_sessions
-            WHERE resident_id = {ph}
-              AND enrollment_id = {ph}
-            ORDER BY session_date DESC, id DESC
-            """,
-            (resident_id, enrollment_id),
-        )
-
-    return db_fetchall(
-        f"""
-        SELECT
-            id,
-            session_date,
-            notes
-        FROM resident_budget_sessions
-        WHERE resident_id = {ph}
-        ORDER BY session_date DESC, id DESC
-        """,
-        (resident_id,),
-    )
-
-
-def _normalize_level_start_date(resident: dict, enrollment_baseline: dict) -> Any:
-    return resident.get("level_start_date") or enrollment_baseline.get("entry_date")
-
-
-def _normalize_sobriety_date(resident: dict, enrollment_baseline: dict) -> Any:
-    return (
-        resident.get("sobriety_date")
-        or enrollment_baseline.get("intake_sobriety_date")
-        or enrollment_baseline.get("entry_date")
-    )
-
-
-def _normalize_treatment_graduation_date(resident: dict, enrollment_baseline: dict) -> Any:
-    return resident.get("treatment_graduation_date") or enrollment_baseline.get("intake_treatment_grad_date")
-
-
-def _employment_gap_days(current_job_start_date: Any, previous_job_end_date: Any):
-    current_dt = _parse_dateish(current_job_start_date)
-    previous_dt = _parse_dateish(previous_job_end_date)
-    if not current_dt or not previous_dt:
-        return None
-    gap = (current_dt - previous_dt).days
-    if gap < 0:
-        gap = 0
-    return gap
-
-
-def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
-    current_enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
-
-    resident = _load_resident_profile(resident_id)
-    enrollment_baseline = _load_enrollment_baseline(current_enrollment_id)
-
-    level_start_date = _normalize_level_start_date(resident, enrollment_baseline)
-    sobriety_date = _normalize_sobriety_date(resident, enrollment_baseline)
-    treatment_graduation_date = _normalize_treatment_graduation_date(resident, enrollment_baseline)
-
-    step_changed_at = resident.get("step_changed_at")
-    employment_updated_at = resident.get("employment_updated_at")
-    current_job_start_date = resident.get("current_job_start_date")
-    continuous_employment_start_date = resident.get("continuous_employment_start_date")
-    previous_job_end_date = resident.get("previous_job_end_date")
-
-    medications_raw = _load_medications(resident_id, current_enrollment_id)
-    ua_rows_raw = _load_ua_rows(resident_id, current_enrollment_id)
-    inspection_rows_raw = _load_inspection_rows(resident_id, current_enrollment_id)
-    budget_rows_raw = _load_budget_rows(resident_id, current_enrollment_id)
-
-    medication_items = _medication_items(medications_raw)
-    ua_items = _ua_items(ua_rows_raw)
-    inspection_items = _inspection_items(inspection_rows_raw)
-    budget_items = _budget_items(budget_rows_raw)
+    notes, services = _load_case_history(enrollment_id)
+    exit_assessment = _normalize_exit_assessment(raw_exit_assessment)
+    is_deceased_case = _is_deceased_exit(exit_assessment)
 
     return {
-        "program_level": resident.get("program_level") or "1",
-        "level_start_date": level_start_date,
-        "days_on_level": _days_since(level_start_date),
-        "sponsor_name": resident.get("sponsor_name"),
-        "sponsor_active": resident.get("sponsor_active"),
-        "sponsor_active_display": _bool_display(resident.get("sponsor_active")),
-        "employer_name": resident.get("employer_name"),
-        "employment_status_current": resident.get("employment_status_current"),
-        "employment_status_display": _employment_status_display(resident.get("employment_status_current")),
-        "employment_type_current": resident.get("employment_type_current"),
-        "employment_type_display": _employment_type_display(resident.get("employment_type_current")),
-        "supervisor_name": resident.get("supervisor_name"),
-        "supervisor_phone": resident.get("supervisor_phone"),
-        "unemployment_reason": resident.get("unemployment_reason"),
-        "employment_notes": resident.get("employment_notes"),
-        "monthly_income": resident.get("monthly_income"),
-        "monthly_income_display": _money_display(resident.get("monthly_income")),
-        "current_job_start_date": current_job_start_date,
-        "current_job_days": _days_since(current_job_start_date),
-        "continuous_employment_start_date": continuous_employment_start_date,
-        "continuous_employment_days": _days_since(continuous_employment_start_date),
-        "previous_job_end_date": previous_job_end_date,
-        "employment_gap_days": _employment_gap_days(current_job_start_date, previous_job_end_date),
-        "upward_job_change": resident.get("upward_job_change"),
-        "upward_job_change_display": _bool_display(resident.get("upward_job_change")),
-        "job_change_notes": resident.get("job_change_notes"),
-        "employment_updated_at": employment_updated_at,
-        "employment_days": _days_since(employment_updated_at),
-        "step_current": resident.get("step_current"),
-        "step_work_active": resident.get("step_work_active"),
-        "step_work_active_display": _bool_display(resident.get("step_work_active")),
-        "step_changed_at": step_changed_at,
-        "step_days": _days_since(step_changed_at),
-        "sobriety_date": sobriety_date,
-        "days_sober_today": _days_since(sobriety_date),
-        "days_sober_at_entry": None,
-        "drug_of_choice": resident.get("drug_of_choice"),
-        "treatment_graduation_date": treatment_graduation_date,
-        "medications": medication_items,
-        "medication_count": len(medication_items),
-        "ua_rows": ua_items,
-        "inspection_rows": inspection_items,
-        "budget_rows": budget_items,
-        "latest_ua": ua_items[0] if ua_items else None,
-        "latest_inspection": inspection_items[0] if inspection_items else None,
-        "latest_budget_session": budget_items[0] if budget_items else None,
+        "family_snapshot": family_snapshot,
+        "intake_assessment": intake_assessment,
+        "exit_assessment": exit_assessment,
+        "goals": goals,
+        "appointments": appointments,
+        "notes": notes,
+        "services": services,
+        "open_needs": [] if is_deceased_case else get_open_enrollment_needs(enrollment_id),
+        "followup_6_month": None if is_deceased_case else _get_latest_followup(enrollment_id, "6_month"),
+        "followup_1_year": None if is_deceased_case else _get_latest_followup(enrollment_id, "1_year"),
+        "is_deceased_case": is_deceased_case,
     }
+
+
+def _calculate_grit_difference(intake_assessment, exit_assessment):
+    intake_grit = intake_assessment.get("grit_score") if intake_assessment else None
+    exit_grit = exit_assessment.get("grit_at_exit") if exit_assessment else None
+
+    if intake_grit is None or exit_grit is None:
+        return None
+
+    return exit_grit - intake_grit
+
+
+def _load_employment_income_settings(shelter: str) -> dict:
+    ph = placeholder()
+
+    default_settings = {
+        "employment_income_module_enabled": True,
+        "employment_income_graduation_minimum": 1200.0,
+        "employment_income_band_green_min": 1200.0,
+        "employment_income_band_yellow_min": 1000.0,
+        "employment_income_band_orange_min": 700.0,
+        "employment_income_band_red_max": 699.99,
+    }
+
+    try:
+        row = db_fetchone(
+            f"""
+            SELECT
+                employment_income_module_enabled,
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max
+            FROM shelter_operation_settings
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+            LIMIT 1
+            """,
+            (shelter,),
+        )
+    except Exception:
+        row = None
+
+    if not row:
+        return default_settings
+
+    resolved = dict(default_settings)
+    for key in resolved.keys():
+        if row.get(key) is not None:
+            resolved[key] = row.get(key)
+    return resolved
+
+
+def _build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
+    graduation_minimum = float(settings.get("employment_income_graduation_minimum") or 1200.0)
+    green_min = float(settings.get("employment_income_band_green_min") or graduation_minimum)
+    yellow_min = float(settings.get("employment_income_band_yellow_min") or 1000.0)
+    orange_min = float(settings.get("employment_income_band_orange_min") or 700.0)
+
+    income_value = None
+    if monthly_income not in (None, ""):
+        try:
+            income_value = float(monthly_income)
+        except Exception:
+            income_value = None
+
+    if income_value is None or graduation_minimum <= 0:
+        readiness_percent = None
+    else:
+        readiness_percent = round(min((income_value / graduation_minimum) * 100.0, 100.0))
+
+    if income_value is None:
+        band_key = "neutral"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#eef2f6; border:1px solid #c7d2de; color:#46607a; font-weight:700; font-size:12px; line-height:1;"
+    elif income_value >= green_min:
+        band_key = "green"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#dfeee5; border:1px solid #8fbea0; color:#1d5f33; font-weight:700; font-size:12px; line-height:1;"
+    elif income_value >= yellow_min:
+        band_key = "yellow"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#fff3c7; border:1px solid #ddc56d; color:#7a6500; font-weight:700; font-size:12px; line-height:1;"
+    elif income_value >= orange_min:
+        band_key = "orange"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#ffe0bf; border:1px solid #d9a06a; color:#98510a; font-weight:700; font-size:12px; line-height:1;"
+    else:
+        band_key = "red"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#f6dada; border:1px solid #d38b8b; color:#8f1f1f; font-weight:700; font-size:12px; line-height:1;"
+
+    return {
+        "module_enabled": bool(settings.get("employment_income_module_enabled", True)),
+        "graduation_minimum": graduation_minimum,
+        "income_value": income_value,
+        "readiness_percent": readiness_percent,
+        "readiness_percent_display": f"{readiness_percent}%" if readiness_percent is not None else "—",
+        "meets_goal": bool(income_value is not None and income_value >= graduation_minimum),
+        "band_key": band_key,
+        "pill_style": pill_style,
+    }
+
+
+def resident_case_view(resident_id: int):
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    init_db()
+
+    shelter = normalize_shelter_name(session.get("shelter"))
+    resident = _load_resident_in_scope(resident_id, shelter)
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    enrollment = _load_current_enrollment(resident_id)
+    enrollment_id = enrollment["id"] if enrollment else None
+
+    children = load_children_with_services(resident_id)
+    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
+
+    enrollment_context = {
+        "family_snapshot": None,
+        "intake_assessment": None,
+        "exit_assessment": None,
+        "goals": [],
+        "appointments": [],
+        "notes": [],
+        "services": [],
+        "open_needs": [],
+        "followup_6_month": None,
+        "followup_1_year": None,
+        "is_deceased_case": False,
+    }
+
+    if enrollment_id:
+        enrollment_context = _load_enrollment_context(enrollment_id)
+
+    grit_difference = _calculate_grit_difference(
+        enrollment_context["intake_assessment"],
+        enrollment_context["exit_assessment"],
+    )
+
+    meeting_defaults = build_meeting_defaults(
+        intake_assessment=enrollment_context["intake_assessment"],
+        family_snapshot=enrollment_context["family_snapshot"],
+        recovery_snapshot=recovery_snapshot,
+        open_needs=enrollment_context["open_needs"],
+        notes=enrollment_context["notes"],
+        appointments=enrollment_context["appointments"],
+    )
+
+    workspace_header = build_workspace_header(
+        resident=resident,
+        enrollment=enrollment,
+        recovery_snapshot=recovery_snapshot,
+        open_needs=enrollment_context["open_needs"],
+    )
+
+    operations_snapshot = build_operations_snapshot(recovery_snapshot)
+    rent_snapshot = build_rent_stability_snapshot(resident_id)
+    inspection_snapshot = build_inspection_stability_snapshot(resident_id, shelter=shelter)
+    employment_income_settings = _load_employment_income_settings(shelter)
+    employment_income_snapshot = _build_employment_income_snapshot(
+        recovery_snapshot.get("monthly_income") if recovery_snapshot else None,
+        employment_income_settings,
+    )
+
+    return render_template(
+        "case_management/resident_case.html",
+        resident=resident,
+        enrollment=enrollment,
+        enrollment_id=enrollment_id,
+        family_snapshot=enrollment_context["family_snapshot"],
+        intake_assessment=enrollment_context["intake_assessment"],
+        exit_assessment=enrollment_context["exit_assessment"],
+        grit_difference=grit_difference,
+        goals=enrollment_context["goals"],
+        appointments=enrollment_context["appointments"],
+        notes=enrollment_context["notes"],
+        services=enrollment_context["services"],
+        children=children,
+        open_needs=enrollment_context["open_needs"],
+        recovery_snapshot=recovery_snapshot,
+        followup_6_month=enrollment_context["followup_6_month"],
+        followup_1_year=enrollment_context["followup_1_year"],
+        meeting_defaults=meeting_defaults,
+        workspace_header=workspace_header,
+        operations_snapshot=operations_snapshot,
+        rent_snapshot=rent_snapshot,
+        inspection_snapshot=inspection_snapshot,
+        employment_income_snapshot=employment_income_snapshot,
+        is_deceased_case=enrollment_context["is_deceased_case"],
+    )
