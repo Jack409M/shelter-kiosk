@@ -41,6 +41,17 @@ def _current_year_month() -> tuple[int, int]:
     return now.year, now.month
 
 
+def _shift_month(year: int, month: int, delta: int) -> tuple[int, int]:
+    month_index = (year * 12 + (month - 1)) + delta
+    shifted_year = month_index // 12
+    shifted_month = (month_index % 12) + 1
+    return shifted_year, shifted_month
+
+
+def _month_label(year: int, month: int) -> str:
+    return datetime(year, month, 1).strftime("%B %Y")
+
+
 def _ensure_settings_table() -> None:
     if g.get("db_kind") == "pg":
         db_execute(
@@ -57,6 +68,18 @@ def _ensure_settings_table() -> None:
                 rent_carry_forward_enabled BOOLEAN NOT NULL DEFAULT TRUE,
                 inspection_default_item_status TEXT NOT NULL DEFAULT 'passed',
                 inspection_item_labels TEXT,
+                inspection_scoring_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                inspection_lookback_months INTEGER NOT NULL DEFAULT 9,
+                inspection_include_current_open_month BOOLEAN NOT NULL DEFAULT FALSE,
+                inspection_score_passed INTEGER NOT NULL DEFAULT 100,
+                inspection_needs_attention_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                inspection_score_needs_attention INTEGER NOT NULL DEFAULT 70,
+                inspection_score_failed INTEGER NOT NULL DEFAULT 0,
+                inspection_passing_threshold INTEGER NOT NULL DEFAULT 83,
+                inspection_band_green_min INTEGER NOT NULL DEFAULT 83,
+                inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
+                inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
+                inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -77,11 +100,53 @@ def _ensure_settings_table() -> None:
                 rent_carry_forward_enabled INTEGER NOT NULL DEFAULT 1,
                 inspection_default_item_status TEXT NOT NULL DEFAULT 'passed',
                 inspection_item_labels TEXT,
+                inspection_scoring_enabled INTEGER NOT NULL DEFAULT 1,
+                inspection_lookback_months INTEGER NOT NULL DEFAULT 9,
+                inspection_include_current_open_month INTEGER NOT NULL DEFAULT 0,
+                inspection_score_passed INTEGER NOT NULL DEFAULT 100,
+                inspection_needs_attention_enabled INTEGER NOT NULL DEFAULT 0,
+                inspection_score_needs_attention INTEGER NOT NULL DEFAULT 70,
+                inspection_score_failed INTEGER NOT NULL DEFAULT 0,
+                inspection_passing_threshold INTEGER NOT NULL DEFAULT 83,
+                inspection_band_green_min INTEGER NOT NULL DEFAULT 83,
+                inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
+                inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
+                inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
             """
         )
+
+    statements = [
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_scoring_enabled BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_lookback_months INTEGER DEFAULT 9",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_include_current_open_month BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_passed INTEGER DEFAULT 100",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_needs_attention_enabled BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_needs_attention INTEGER DEFAULT 70",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_failed INTEGER DEFAULT 0",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_passing_threshold INTEGER DEFAULT 83",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_green_min INTEGER DEFAULT 83",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_yellow_min INTEGER DEFAULT 78",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_orange_min INTEGER DEFAULT 56",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_red_max INTEGER DEFAULT 55",
+    ]
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def _load_settings(shelter: str) -> dict:
+    _ensure_settings_table()
+    ph = _placeholder()
+    row = db_fetchone(
+        f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
+        (shelter,),
+    )
+    return dict(row) if row else {}
 
 
 def _ensure_tables() -> None:
@@ -114,27 +179,155 @@ def _active_residents_for_shelter(shelter: str):
     )
 
 
-def _weighted_score_for_resident(resident_id: int) -> int | None:
+def _inspection_status_score(settings: dict, overall_status: str | None, passed_value) -> int:
+    status = (overall_status or "").strip().lower()
+
+    if status == "passed":
+        return int(settings.get("inspection_score_passed", 100) or 100)
+
+    if status == "needs_attention":
+        if bool(settings.get("inspection_needs_attention_enabled", False)):
+            return int(settings.get("inspection_score_needs_attention", 70) or 70)
+        return int(settings.get("inspection_score_failed", 0) or 0)
+
+    if status == "failed":
+        return int(settings.get("inspection_score_failed", 0) or 0)
+
+    return int(settings.get("inspection_score_passed", 100) or 100) if passed_value else int(
+        settings.get("inspection_score_failed", 0) or 0
+    )
+
+
+def _inspection_band_for_score(settings: dict, score: float | int | None) -> dict:
+    numeric_score = float(score or 0)
+    green_min = int(settings.get("inspection_band_green_min", 83) or 83)
+    yellow_min = int(settings.get("inspection_band_yellow_min", 78) or 78)
+    orange_min = int(settings.get("inspection_band_orange_min", 56) or 56)
+
+    if numeric_score >= green_min:
+        return {
+            "band_key": "green",
+            "band_label": "Green",
+            "card_style": "background:#eef8f0; border:1px solid #9bc8a6;",
+            "value_style": "color:#1f6b33; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#dcefe1; border:1px solid #9bc8a6; color:#1f6b33; font-weight:700;",
+        }
+
+    if numeric_score >= yellow_min:
+        return {
+            "band_key": "yellow",
+            "band_label": "Yellow",
+            "card_style": "background:#fff8df; border:1px solid #e0cd7a;",
+            "value_style": "color:#7a6500; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#fff1b8; border:1px solid #e0cd7a; color:#7a6500; font-weight:700;",
+        }
+
+    if numeric_score >= orange_min:
+        return {
+            "band_key": "orange",
+            "band_label": "Orange",
+            "card_style": "background:#fff0e4; border:1px solid #e2b27d;",
+            "value_style": "color:#9a4f00; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd8b0; border:1px solid #e2b27d; color:#9a4f00; font-weight:700;",
+        }
+
+    return {
+        "band_key": "red",
+        "band_label": "Red",
+        "card_style": "background:#fff0f0; border:1px solid #e2a0a0;",
+        "value_style": "color:#9a1f1f; font-weight:700;",
+        "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd6d6; border:1px solid #e2a0a0; color:#9a1f1f; font-weight:700;",
+    }
+
+
+def build_inspection_stability_snapshot(resident_id: int, shelter: str | None = None) -> dict:
+    _ensure_tables()
+    effective_shelter = _normalize_shelter_name(shelter or session.get("shelter"))
+    settings = _load_settings(effective_shelter)
+
+    lookback_months = max(int(settings.get("inspection_lookback_months", 9) or 9), 1)
+    include_current_open_month = bool(settings.get("inspection_include_current_open_month", False))
+    passing_threshold = int(settings.get("inspection_passing_threshold", 83) or 83)
+
+    current_year, current_month = _current_year_month()
+    if include_current_open_month:
+        month_keys = [_shift_month(current_year, current_month, -offset) for offset in range(0, lookback_months)]
+    else:
+        month_keys = [_shift_month(current_year, current_month, -offset) for offset in range(1, lookback_months + 1)]
+
+    allowed_keys = set(month_keys)
     ph = _placeholder()
     rows = db_fetchall(
         f"""
-        SELECT passed
+        SELECT
+            id,
+            inspection_date,
+            shelter_snapshot,
+            overall_status,
+            passed,
+            inspection_year,
+            inspection_month,
+            notes
         FROM resident_living_area_inspections
         WHERE resident_id = {ph}
         ORDER BY inspection_date DESC, id DESC
-        LIMIT 6
         """,
         (resident_id,),
     )
 
-    values: list[int] = []
-    for row in rows:
-        passed = row.get("passed")
-        values.append(100 if passed else 0)
+    filtered_rows = []
+    score_values: list[int] = []
 
-    if not values:
-        return None
-    return round(sum(values) / len(values))
+    for row in rows:
+        year = row.get("inspection_year")
+        month = row.get("inspection_month")
+
+        if year is None or month is None:
+            inspection_date = (row.get("inspection_date") or "").strip()
+            try:
+                dt = datetime.fromisoformat(inspection_date)
+                year = dt.year
+                month = dt.month
+            except Exception:
+                continue
+
+        key = (int(year), int(month))
+        if key not in allowed_keys:
+            continue
+
+        score = _inspection_status_score(settings, row.get("overall_status"), row.get("passed"))
+        filtered_rows.append(dict(row))
+        score_values.append(score)
+
+    average_score = round(sum(score_values) / len(score_values), 1) if score_values else 0.0
+    band = _inspection_band_for_score(settings, average_score)
+
+    month_rows = [
+        {
+            "year": year,
+            "month": month,
+            "label": _month_label(year, month),
+        }
+        for year, month in month_keys
+    ]
+
+    return {
+        "lookback_months": lookback_months,
+        "include_current_open_month": include_current_open_month,
+        "inspection_count": len(score_values),
+        "average_score": average_score,
+        "average_score_display": f"{average_score:.1f}",
+        "passing_threshold": passing_threshold,
+        "passes_goal": average_score >= passing_threshold,
+        "band_key": band["band_key"],
+        "band_label": band["band_label"],
+        "card_style": band["card_style"],
+        "value_style": band["value_style"],
+        "pill_style": band["pill_style"],
+        "month_rows": month_rows,
+        "rows": filtered_rows,
+        "settings": settings,
+    }
 
 
 @inspection_v2.route("/sheet", methods=["GET", "POST"])
@@ -168,8 +361,11 @@ def inspection_sheet():
         for resident in residents:
             resident_id = resident["id"]
             status_raw = (request.form.get(f"status_{resident_id}") or "passed").strip().lower()
-            passed = status_raw != "failed"
-            overall_status = "passed" if passed else "failed"
+            if status_raw not in {"passed", "needs_attention", "failed"}:
+                status_raw = "passed"
+
+            passed = status_raw == "passed"
+            overall_status = status_raw
 
             db_execute(
                 (
@@ -263,30 +459,12 @@ def resident_inspection_history(resident_id: int):
         return redirect(url_for("case_management.index"))
 
     resident = dict(resident)
-
-    rows = db_fetchall(
-        f"""
-        SELECT
-            id,
-            inspection_date,
-            shelter_snapshot,
-            overall_status,
-            passed,
-            inspection_year,
-            inspection_month,
-            notes
-        FROM resident_living_area_inspections
-        WHERE resident_id = {ph}
-        ORDER BY inspection_date DESC, id DESC
-        """,
-        (resident_id,),
-    )
-
-    weighted_score = _weighted_score_for_resident(resident_id)
+    shelter = _normalize_shelter_name(resident.get("shelter"))
+    inspection_snapshot = build_inspection_stability_snapshot(resident_id, shelter=shelter)
 
     return render_template(
         "case_management/resident_inspection_history.html",
         resident=resident,
-        rows=rows,
-        weighted_score=weighted_score,
+        rows=inspection_snapshot["rows"],
+        inspection_snapshot=inspection_snapshot,
     )
