@@ -18,6 +18,7 @@
   {% set eis = employment_income_snapshot if employment_income_snapshot is defined else {} %}
   {% set ess = employment_stability_snapshot if employment_stability_snapshot is defined else {} %}
   {% set resolved_employment_status = employment_status_snapshot if employment_status_snapshot is defined else (rs_employment_status or "") %}
+  {% set iis = intake_income_support if intake_income_support is defined and intake_income_support else {} %}
 
   {% if eis.get("band_key") == "green" %}
     {% set income_field_card_style = "background:#e3efe7; border:1px solid #98baa3;" %}
@@ -190,6 +191,31 @@
           <div class="cmx-field" style="display:flex; align-items:flex-end; height:100%;">
             <a class="cmx-btn" href="{{ url_for('case_management.income_support', resident_id=resident_id) }}">Manage Employment and Income</a>
           </div>
+        </div>
+      </div>
+
+      <div class="cmx-grid cmx-grid-4" style="margin-top:16px;">
+        <div class="cmx-row-block">
+          <span>Total Cash Support</span>
+          <span>{{ "$%.2f"|format(iis.get('total_cash_support')) if iis.get('total_cash_support') is not none else "—" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>TANF Weight</span>
+          <span>
+            {% if iis.get('tanf_weight_applied') is not none %}
+              {{ "%.2f"|format(iis.get('tanf_weight_applied')) }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Child Support Weighted</span>
+          <span>{{ "$%.2f"|format(iis.get('child_support_weighted_total')) if iis.get('child_support_weighted_total') is not none else "—" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Survivor Weighted</span>
+          <span>{{ "$%.2f"|format(iis.get('survivor_benefit_weighted_total')) if iis.get('survivor_benefit_weighted_total') is not none else "—" }}</span>
         </div>
       </div>
 
