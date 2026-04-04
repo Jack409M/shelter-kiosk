@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import flash, redirect, render_template, session, url_for
 
-from core.db import db_execute, db_fetchall, db_fetchone
+from core.db import db_fetchall, db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
@@ -398,6 +398,52 @@ def _build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
     }
 
 
+def _build_employment_stability_snapshot(recovery_snapshot: dict | None) -> dict:
+    rs = recovery_snapshot or {}
+
+    employment_status = str(rs.get("employment_status_current") or "").strip().lower()
+    current_job_days = rs.get("current_job_days")
+    continuous_days = rs.get("continuous_employment_days")
+    gap_days = rs.get("employment_gap_days")
+    upward_value = rs.get("upward_job_change")
+
+    currently_employed = employment_status == "employed"
+    upward_protected = bool(currently_employed and upward_value is True)
+
+    current_job_days_min = 90
+    continuous_days_min = 180
+
+    passes = bool(
+        currently_employed
+        and (
+            (isinstance(current_job_days, int) and current_job_days >= current_job_days_min)
+            or (isinstance(continuous_days, int) and continuous_days >= continuous_days_min)
+        )
+    )
+
+    if not currently_employed:
+        label = "Not Employed"
+        card_style = "background:#eef2f6; border:1px solid #c7d2de;"
+    elif passes:
+        label = "Pass"
+        card_style = "background:#dfeee5; border:1px solid #8fbea0;"
+    else:
+        label = "Below Threshold"
+        card_style = "background:#fff3c7; border:1px solid #ddc56d;"
+
+    return {
+        "label": label,
+        "card_style": card_style,
+        "current_job_days_min": current_job_days_min,
+        "continuous_days_min": continuous_days_min,
+        "current_job_days": current_job_days,
+        "continuous_days": continuous_days,
+        "gap_days": gap_days,
+        "upward_protected": upward_protected,
+        "passes": passes,
+    }
+
+
 def resident_case_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -464,6 +510,7 @@ def resident_case_view(resident_id: int):
         recovery_snapshot.get("monthly_income") if recovery_snapshot else None,
         employment_income_settings,
     )
+    employment_stability_snapshot = _build_employment_stability_snapshot(recovery_snapshot)
 
     return render_template(
         "case_management/resident_case.html",
@@ -489,5 +536,6 @@ def resident_case_view(resident_id: int):
         rent_snapshot=rent_snapshot,
         inspection_snapshot=inspection_snapshot,
         employment_income_snapshot=employment_income_snapshot,
+        employment_stability_snapshot=employment_stability_snapshot,
         is_deceased_case=enrollment_context["is_deceased_case"],
     )
