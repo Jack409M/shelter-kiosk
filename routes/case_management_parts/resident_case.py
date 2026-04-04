@@ -580,6 +580,7 @@ def resident_case_view(resident_id: int):
         enrollment_id=enrollment_id,
         family_snapshot=enrollment_context["family_snapshot"],
         intake_assessment=enrollment_context["intake_assessment"],
+        intake_income_support=intake_income_support,
         exit_assessment=enrollment_context["exit_assessment"],
         grit_difference=grit_difference,
         goals=enrollment_context["goals"],
