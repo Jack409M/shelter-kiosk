@@ -1,0 +1,262 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set resident_id = resident["id"] %}
+{% set first_name = resident["first_name"] %}
+{% set last_name = resident["last_name"] %}
+{% set resident_code = resident["resident_code"] %}
+{% set shelter = resident["shelter"] %}
+{% set support = intake_income_support or {} %}
+
+<div class="cmx-page">
+  <div class="cmx-shell">
+    <div class="cmx-card" style="margin-bottom:18px;">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-title">Employment and Income Support</h1>
+          <div class="cmx-section-subtitle">
+            {{ first_name }} {{ last_name }}{% if resident_code %} · {{ resident_code }}{% endif %}{% if shelter %} · {{ shelter }}{% endif %}
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <a class="cmx-btn cmx-btn-ghost" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Back to Resident Case</a>
+        </div>
+      </div>
+
+      <div class="cmx-grid cmx-grid-3" style="margin-top:14px;">
+        <div class="cmx-row-block">
+          <span>Total Cash Support</span>
+          <span>{{ "$%.2f"|format(total_cash_support) if total_cash_support is not none else "—" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>SNAP At Entry</span>
+          <span>
+            {% if support.get("receives_snap_at_entry") is sameas true or support.get("receives_snap_at_entry") == 1 %}
+              Yes
+            {% elif support.get("receives_snap_at_entry") is sameas false or support.get("receives_snap_at_entry") == 0 %}
+              No
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Income Rule</span>
+          <span>SNAP does not count toward cash total</span>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('case_management.income_support', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div class="cmx-card" style="margin-bottom:18px;">
+        <div class="cmx-panel-head">
+          <h3>Employment Overview</h3>
+          <span>Core employment facts used by the workspace summary</span>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Employment Status</div>
+            <div class="cmx-field">
+              <select name="employment_status_current">
+                <option value="" {% if not resident.get("employment_status_current") %}selected{% endif %}>—</option>
+                <option value="employed" {% if resident.get("employment_status_current") == "employed" %}selected{% endif %}>Employed</option>
+                <option value="unemployed" {% if resident.get("employment_status_current") == "unemployed" %}selected{% endif %}>Unemployed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Primary Employer</div>
+            <div class="cmx-field">
+              <input type="text" name="employer_name" value="{{ resident.get('employer_name') or '' }}">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Employment Type</div>
+            <div class="cmx-field">
+              <select name="employment_type_current">
+                <option value="" {% if not resident.get("employment_type_current") %}selected{% endif %}>—</option>
+                <option value="full_time" {% if resident.get("employment_type_current") == "full_time" %}selected{% endif %}>Full Time</option>
+                <option value="part_time" {% if resident.get("employment_type_current") == "part_time" %}selected{% endif %}>Part Time</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Current Job Start Date</div>
+            <div class="cmx-field">
+              <input type="date" name="current_job_start_date" value="{{ resident.get('current_job_start_date') or '' }}">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Continuous Employment Start</div>
+            <div class="cmx-field">
+              <input type="date" name="continuous_employment_start_date" value="{{ resident.get('continuous_employment_start_date') or '' }}">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Previous Job End Date</div>
+            <div class="cmx-field">
+              <input type="date" name="previous_job_end_date" value="{{ resident.get('previous_job_end_date') or '' }}">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Upward Job Change</div>
+            <div class="cmx-field">
+              <select name="upward_job_change">
+                <option value="" {% if resident.get('upward_job_change') is none %}selected{% endif %}>—</option>
+                <option value="yes" {% if resident.get('upward_job_change') is sameas true or resident.get('upward_job_change') == 1 %}selected{% endif %}>Yes</option>
+                <option value="no" {% if resident.get('upward_job_change') is sameas false or resident.get('upward_job_change') == 0 %}selected{% endif %}>No</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Supervisor</div>
+            <div class="cmx-field">
+              <input type="text" name="supervisor_name" value="{{ resident.get('supervisor_name') or '' }}">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Supervisor Phone</div>
+            <div class="cmx-field">
+              <input type="text" name="supervisor_phone" value="{{ resident.get('supervisor_phone') or '' }}">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Unemployment Reason</div>
+            <div class="cmx-field">
+              <input type="text" name="unemployment_reason" value="{{ resident.get('unemployment_reason') or '' }}">
+            </div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-1" style="margin-top:16px;">
+          <div class="cmx-field">
+            <label>Employment Notes</label>
+            <textarea name="employment_notes" rows="4">{{ resident.get('employment_notes') or '' }}</textarea>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-1" style="margin-top:16px;">
+          <div class="cmx-field">
+            <label>Job Change Notes</label>
+            <textarea name="job_change_notes" rows="4">{{ resident.get('job_change_notes') or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmx-card">
+        <div class="cmx-panel-head">
+          <h3>Income Support Breakdown</h3>
+          <span>Edit the source amounts behind the total</span>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Employment Income 1</div>
+            <div class="cmx-field">
+              <input type="text" name="employment_income_1" value="{{ support.get('employment_income_1') if support.get('employment_income_1') is not none else '' }}" placeholder="$0.00">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Employment Income 2</div>
+            <div class="cmx-field">
+              <input type="text" name="employment_income_2" value="{{ support.get('employment_income_2') if support.get('employment_income_2') is not none else '' }}" placeholder="$0.00">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Employment Income 3</div>
+            <div class="cmx-field">
+              <input type="text" name="employment_income_3" value="{{ support.get('employment_income_3') if support.get('employment_income_3') is not none else '' }}" placeholder="$0.00">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">SSI / SSDI</div>
+            <div class="cmx-field">
+              <input type="text" name="ssi_ssdi_income" value="{{ support.get('ssi_ssdi_income') if support.get('ssi_ssdi_income') is not none else '' }}" placeholder="$0.00">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">TANF</div>
+            <div class="cmx-field">
+              <input type="text" name="tanf_income" value="{{ support.get('tanf_income') if support.get('tanf_income') is not none else '' }}" placeholder="$0.00">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Child Support</div>
+            <div class="cmx-field">
+              <input type="text" name="child_support_income" value="{{ support.get('child_support_income') if support.get('child_support_income') is not none else '' }}" placeholder="$0.00">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Alimony</div>
+            <div class="cmx-field">
+              <input type="text" name="alimony_income" value="{{ support.get('alimony_income') if support.get('alimony_income') is not none else '' }}" placeholder="$0.00">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Other Income</div>
+            <div class="cmx-field">
+              <input type="text" name="other_income" value="{{ support.get('other_income') if support.get('other_income') is not none else '' }}" placeholder="$0.00">
+            </div>
+          </div>
+
+          <div class="cmx-field-card">
+            <div class="cmx-field-card-label">Receiving SNAP At Entry</div>
+            <div class="cmx-field">
+              <select name="receives_snap_at_entry">
+                <option value="" {% if support.get('receives_snap_at_entry') is none %}selected{% endif %}>—</option>
+                <option value="yes" {% if support.get('receives_snap_at_entry') is sameas true or support.get('receives_snap_at_entry') == 1 %}selected{% endif %}>Yes</option>
+                <option value="no" {% if support.get('receives_snap_at_entry') is sameas false or support.get('receives_snap_at_entry') == 0 %}selected{% endif %}>No</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
+          <div class="cmx-field">
+            <label>Other Income Description</label>
+            <textarea name="other_income_description" rows="4">{{ support.get('other_income_description') or '' }}</textarea>
+          </div>
+
+          <div class="cmx-field-card" style="background:#f6f8fb; border:1px solid #ccd5e0;">
+            <div class="cmx-field-card-label">Computed Total Cash Support</div>
+            <div class="cmx-field">
+              <input type="text" value="{{ '$%.2f'|format(total_cash_support) if total_cash_support is not none else '$0.00' }}" readonly>
+            </div>
+            <div style="margin-top:8px; font-size:12px; color:#53687c;">
+              This total is recalculated from the source amounts when you save. SNAP is tracked separately and does not count toward the cash total.
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px; display:flex; gap:10px;">
+          <button type="submit" class="cmx-btn">Save Employment and Income</button>
+          <a class="cmx-btn cmx-btn-ghost" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Done</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
