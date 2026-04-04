@@ -11,6 +11,7 @@ from routes.case_management_parts.helpers import parse_int
 from routes.case_management_parts.helpers import parse_iso_date
 from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.intake_income_support import benefits_screening_needed
 from routes.case_management_parts.needs import normalize_selected_need_keys
 
 
@@ -180,16 +181,6 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "sobriety_date": clean(form.get("sobriety_date")),
         "drug_of_choice": clean(form.get("drug_of_choice")),
         "income_at_entry": clean(form.get("income_at_entry")),
-        "employment_income_1": clean(form.get("employment_income_1")),
-        "employment_income_2": clean(form.get("employment_income_2")),
-        "employment_income_3": clean(form.get("employment_income_3")),
-        "ssi_ssdi_income": clean(form.get("ssi_ssdi_income")),
-        "tanf_income": clean(form.get("tanf_income")),
-        "child_support_income": clean(form.get("child_support_income")),
-        "alimony_income": clean(form.get("alimony_income")),
-        "other_income": clean(form.get("other_income")),
-        "other_income_description": clean(form.get("other_income_description")),
-        "receives_snap_at_entry": clean(form.get("receives_snap_at_entry")),
         "education_at_entry": clean(form.get("education_at_entry")),
         "disability": clean(form.get("disability")),
         "dwc_level_today": clean(form.get("dwc_level_today")),
@@ -217,6 +208,16 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "kids_ages_12_17": clean(form.get("kids_ages_12_17")),
         "kids_reunited_while_in_program": clean(form.get("kids_reunited_while_in_program")),
         "healthy_babies_born_at_dwc": clean(form.get("healthy_babies_born_at_dwc")),
+        "employment_income_1": clean(form.get("employment_income_1")),
+        "employment_income_2": clean(form.get("employment_income_2")),
+        "employment_income_3": clean(form.get("employment_income_3")),
+        "ssi_ssdi_income": clean(form.get("ssi_ssdi_income")),
+        "tanf_income": clean(form.get("tanf_income")),
+        "child_support_income": clean(form.get("child_support_income")),
+        "alimony_income": clean(form.get("alimony_income")),
+        "other_income": clean(form.get("other_income")),
+        "other_income_description": clean(form.get("other_income_description")),
+        "receives_snap_at_entry": clean(form.get("receives_snap_at_entry")),
         "entry_need_keys": selected_need_keys,
         "days_sober_at_entry": None,
     }
@@ -357,40 +358,7 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
             errors.append(f"{field_name.replace('_', ' ').title()} cannot be negative.")
         data[field_name] = parsed_value
 
-    benefits_screening_needed = False
-
-    if data["income_at_entry"] < 1200.0:
-        benefits_screening_needed = True
-
-    if str(data.get("pregnant") or "").strip().lower() == "yes":
-        benefits_screening_needed = True
-
-    if str(data.get("veteran") or "").strip().lower() == "yes":
-        benefits_screening_needed = True
-
-    disability = str(data.get("disability") or "").strip()
-    if disability and disability.lower() != "unknown":
-        benefits_screening_needed = True
-
-    employment_status = str(data.get("employment_status") or "").strip().lower()
-    if employment_status in {"unemployed", "disabled", "unknown"}:
-        benefits_screening_needed = True
-
-    for field_name in [
-        "kids_at_dwc",
-        "kids_served_outside_under_18",
-        "kids_ages_0_5",
-        "kids_ages_6_11",
-        "kids_ages_12_17",
-    ]:
-        try:
-            if int(data.get(field_name) or 0) > 0:
-                benefits_screening_needed = True
-                break
-        except Exception:
-            pass
-
-    if benefits_screening_needed:
+    if benefits_screening_needed(data):
         selected_keys = list(data["entry_need_keys"])
         if "benefits_screening_texas" not in selected_keys:
             selected_keys.append("benefits_screening_texas")
