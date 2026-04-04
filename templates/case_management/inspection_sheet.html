@@ -20,54 +20,57 @@
           .inspection-toolbar {
             display: grid;
             grid-template-columns: 220px minmax(260px, 1fr) auto;
-            gap: 12px;
+            gap: 10px;
             align-items: end;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
           }
 
           .inspection-summary {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 14px;
+            gap: 10px;
+            margin-bottom: 10px;
             font-size: 14px;
             color: #4e6478;
           }
 
           .inspection-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
           }
 
           .inspection-card {
             border: 1px solid #9ab7cf;
-            border-radius: 14px;
+            border-radius: 12px;
             background: #d9e8f4;
-            padding: 10px 12px;
+            padding: 8px 10px;
           }
 
           .inspection-card-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 10px;
-            flex-wrap: nowrap;
+            gap: 8px;
+            min-height: 30px;
           }
 
           .inspection-card-name {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 700;
             color: #14324d;
-            line-height: 1.15;
+            line-height: 1.1;
             min-width: 0;
             flex: 1 1 auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
           .inspection-toggle-row {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             flex: 0 0 auto;
           }
 
@@ -85,22 +88,18 @@
             display: inline-flex;
             justify-content: center;
             align-items: center;
-            min-width: 86px;
-            padding: 7px 12px;
+            min-width: 54px;
+            padding: 5px 8px;
             border-radius: 999px;
             border: 1px solid #b9c9d8;
             background: #eef4f8;
             color: #26435c;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 12px;
             line-height: 1;
             cursor: pointer;
             user-select: none;
             transition: all 0.15s ease;
-          }
-
-          .inspection-toggle-label:hover {
-            filter: brightness(0.98);
           }
 
           .inspection-toggle.pass input[type="radio"]:checked + .inspection-toggle-label {
@@ -115,7 +114,13 @@
             color: #ffffff;
           }
 
-          @media (max-width: 1180px) {
+          @media (max-width: 1320px) {
+            .inspection-grid {
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+          }
+
+          @media (max-width: 1040px) {
             .inspection-grid {
               grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -137,6 +142,10 @@
 
             .inspection-card-top {
               flex-wrap: wrap;
+            }
+
+            .inspection-card-name {
+              white-space: normal;
             }
           }
         </style>
@@ -167,19 +176,19 @@
             {% for resident in residents %}
               <div class="inspection-card">
                 <div class="inspection-card-top">
-                  <div class="inspection-card-name">
+                  <div class="inspection-card-name" title="{{ resident['first_name'] }} {{ resident['last_name'] }}">
                     {{ resident['first_name'] }} {{ resident['last_name'] }}
                   </div>
 
                   <div class="inspection-toggle-row">
                     <label class="inspection-toggle pass">
                       <input type="radio" name="status_{{ resident['id'] }}" value="passed" checked>
-                      <span class="inspection-toggle-label">Passed</span>
+                      <span class="inspection-toggle-label">Pass</span>
                     </label>
 
                     <label class="inspection-toggle fail">
                       <input type="radio" name="status_{{ resident['id'] }}" value="failed">
-                      <span class="inspection-toggle-label">Failed</span>
+                      <span class="inspection-toggle-label">Fail</span>
                     </label>
                   </div>
                 </div>
@@ -187,7 +196,7 @@
             {% endfor %}
           </div>
 
-          <div class="cmx-button-row" style="margin-top:16px;">
+          <div class="cmx-button-row" style="margin-top:14px;">
             <button type="submit" class="cmx-btn">Save Inspection Sheet</button>
           </div>
         {% else %}
