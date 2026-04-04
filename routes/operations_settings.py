@@ -119,6 +119,12 @@ def _ensure_operations_settings_table() -> None:
                 employment_income_band_yellow_min DOUBLE PRECISION NOT NULL DEFAULT 1000.00,
                 employment_income_band_orange_min DOUBLE PRECISION NOT NULL DEFAULT 700.00,
                 employment_income_band_red_max DOUBLE PRECISION NOT NULL DEFAULT 699.99,
+                income_weight_employment DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+                income_weight_ssi_ssdi_self DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+                income_weight_child_support DOUBLE PRECISION NOT NULL DEFAULT 0.50,
+                income_weight_alimony DOUBLE PRECISION NOT NULL DEFAULT 0.50,
+                income_weight_other_income DOUBLE PRECISION NOT NULL DEFAULT 0.25,
+                income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -157,6 +163,12 @@ def _ensure_operations_settings_table() -> None:
                 employment_income_band_yellow_min REAL NOT NULL DEFAULT 1000.00,
                 employment_income_band_orange_min REAL NOT NULL DEFAULT 700.00,
                 employment_income_band_red_max REAL NOT NULL DEFAULT 699.99,
+                income_weight_employment REAL NOT NULL DEFAULT 1.00,
+                income_weight_ssi_ssdi_self REAL NOT NULL DEFAULT 1.00,
+                income_weight_child_support REAL NOT NULL DEFAULT 0.50,
+                income_weight_alimony REAL NOT NULL DEFAULT 0.50,
+                income_weight_other_income REAL NOT NULL DEFAULT 0.25,
+                income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -191,6 +203,12 @@ def _ensure_operations_settings_table() -> None:
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_yellow_min DOUBLE PRECISION DEFAULT 1000.00",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_orange_min DOUBLE PRECISION DEFAULT 700.00",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_red_max DOUBLE PRECISION DEFAULT 699.99",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_employment DOUBLE PRECISION DEFAULT 1.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_ssi_ssdi_self DOUBLE PRECISION DEFAULT 1.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_child_support DOUBLE PRECISION DEFAULT 0.50",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_alimony DOUBLE PRECISION DEFAULT 0.50",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_other_income DOUBLE PRECISION DEFAULT 0.25",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_survivor_cutoff_months INTEGER DEFAULT 18",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS created_at TEXT",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
@@ -244,9 +262,15 @@ def _settings_row_for_shelter(shelter: str):
                 employment_income_band_yellow_min,
                 employment_income_band_orange_min,
                 employment_income_band_red_max,
+                income_weight_employment,
+                income_weight_ssi_ssdi_self,
+                income_weight_child_support,
+                income_weight_alimony,
+                income_weight_other_income,
+                income_weight_survivor_cutoff_months,
                 created_at,
                 updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if g.get("db_kind") == "pg"
             else
@@ -280,9 +304,15 @@ def _settings_row_for_shelter(shelter: str):
                 employment_income_band_yellow_min,
                 employment_income_band_orange_min,
                 employment_income_band_red_max,
+                income_weight_employment,
+                income_weight_ssi_ssdi_self,
+                income_weight_child_support,
+                income_weight_alimony,
+                income_weight_other_income,
+                income_weight_survivor_cutoff_months,
                 created_at,
                 updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         ),
         (
@@ -314,6 +344,12 @@ def _settings_row_for_shelter(shelter: str):
             1000.00,
             700.00,
             699.99,
+            1.00,
+            1.00,
+            0.50,
+            0.50,
+            0.25,
+            18,
             now,
             now,
         ),
@@ -489,6 +525,16 @@ def settings_page():
         if employment_income_band_red_max >= employment_income_band_orange_min:
             employment_income_band_red_max = employment_income_band_orange_min - 0.01
 
+        income_weight_employment = max(_to_float(request.form.get("income_weight_employment"), 1.00), 0.0)
+        income_weight_ssi_ssdi_self = max(_to_float(request.form.get("income_weight_ssi_ssdi_self"), 1.00), 0.0)
+        income_weight_child_support = max(_to_float(request.form.get("income_weight_child_support"), 0.50), 0.0)
+        income_weight_alimony = max(_to_float(request.form.get("income_weight_alimony"), 0.50), 0.0)
+        income_weight_other_income = max(_to_float(request.form.get("income_weight_other_income"), 0.25), 0.0)
+        income_weight_survivor_cutoff_months = max(
+            _to_int(request.form.get("income_weight_survivor_cutoff_months"), 18),
+            0,
+        )
+
         db_execute(
             (
                 """
@@ -520,6 +566,12 @@ def settings_page():
                     employment_income_band_yellow_min = %s,
                     employment_income_band_orange_min = %s,
                     employment_income_band_red_max = %s,
+                    income_weight_employment = %s,
+                    income_weight_ssi_ssdi_self = %s,
+                    income_weight_child_support = %s,
+                    income_weight_alimony = %s,
+                    income_weight_other_income = %s,
+                    income_weight_survivor_cutoff_months = %s,
                     updated_at = %s
                 WHERE LOWER(COALESCE(shelter, '')) = %s
                 """
@@ -554,6 +606,12 @@ def settings_page():
                     employment_income_band_yellow_min = ?,
                     employment_income_band_orange_min = ?,
                     employment_income_band_red_max = ?,
+                    income_weight_employment = ?,
+                    income_weight_ssi_ssdi_self = ?,
+                    income_weight_child_support = ?,
+                    income_weight_alimony = ?,
+                    income_weight_other_income = ?,
+                    income_weight_survivor_cutoff_months = ?,
                     updated_at = ?
                 WHERE LOWER(COALESCE(shelter, '')) = ?
                 """
@@ -586,6 +644,12 @@ def settings_page():
                 employment_income_band_yellow_min,
                 employment_income_band_orange_min,
                 employment_income_band_red_max,
+                income_weight_employment,
+                income_weight_ssi_ssdi_self,
+                income_weight_child_support,
+                income_weight_alimony,
+                income_weight_other_income,
+                income_weight_survivor_cutoff_months,
                 now,
                 shelter,
             ),
