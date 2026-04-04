@@ -80,36 +80,42 @@
   {% set inspection_card_style = "background:#f3dede; border:1px solid #d88484;" if inspection_snapshot and inspection_snapshot['band_key'] == 'red' else (inspection_snapshot['card_style'] if inspection_snapshot else "") %}
   {% set inspection_value_style = inspection_snapshot['value_style'] if inspection_snapshot else "font-weight:700;" %}
 
-  <div style="display:grid; gap:12px; align-self:start;">
-    <div class="cmx-card cmx-quick-card" style="{{ rent_card_style }} padding:14px;">
-      <div>
-        <h3 class="cmx-quick-title" style="font-size:0.96rem;">Rent Score</h3>
-        <div class="cmx-quick-subtitle" style="font-size:0.8rem; line-height:1.3;">9 month weighted rent stability score for graduation readiness. Current open month is excluded.</div>
+  <div class="cmx-card cmx-quick-card" style="padding:12px;">
+    <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">
+      <div style="{{ rent_card_style }} border-radius:14px; padding:12px; min-width:0;">
+        <div>
+          <h3 class="cmx-quick-title" style="font-size:0.94rem; margin-bottom:2px;">Rent Score</h3>
+          <div class="cmx-quick-subtitle" style="font-size:0.78rem; line-height:1.25;">
+            9 month weighted rent stability score. Current open month excluded.
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:baseline; gap:4px; margin-top:8px; margin-bottom:10px;">
+          <span style="font-size:26px; line-height:1; {{ rent_value_style }}">{{ rent_snapshot['average_score_display'] if rent_snapshot else "—" }}</span>
+          <span style="font-size:15px; font-weight:700;">%</span>
+        </div>
+
+        <div class="cmx-button-row" style="margin-top:0;">
+          <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}" style="padding:9px 12px; font-size:0.88rem;">View Rent History</a>
+        </div>
       </div>
 
-      <div style="display:flex; align-items:baseline; gap:5px; margin-top:2px; margin-bottom:8px;">
-        <span style="font-size:28px; line-height:1; {{ rent_value_style }}">{{ rent_snapshot['average_score_display'] if rent_snapshot else "—" }}</span>
-        <span style="font-size:16px; font-weight:700;">%</span>
-      </div>
+      <div style="{{ inspection_card_style }} border-radius:14px; padding:12px; min-width:0;">
+        <div>
+          <h3 class="cmx-quick-title" style="font-size:0.94rem; margin-bottom:2px;">Living Area Score</h3>
+          <div class="cmx-quick-subtitle" style="font-size:0.78rem; line-height:1.25;">
+            {{ inspection_snapshot['lookback_months'] if inspection_snapshot else 9 }} month weighted living area stability score. Current open month excluded.
+          </div>
+        </div>
 
-      <div class="cmx-button-row" style="margin-top:4px;">
-        <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}" style="padding:10px 14px;">View Rent History</a>
-      </div>
-    </div>
+        <div style="display:flex; align-items:baseline; gap:4px; margin-top:8px; margin-bottom:10px;">
+          <span style="font-size:26px; line-height:1; {{ inspection_value_style }}">{{ inspection_snapshot['average_score_display'] if inspection_snapshot else "—" }}</span>
+          <span style="font-size:15px; font-weight:700;">%</span>
+        </div>
 
-    <div class="cmx-card cmx-quick-card" style="{{ inspection_card_style }} padding:14px;">
-      <div>
-        <h3 class="cmx-quick-title" style="font-size:0.96rem;">Living Area Score</h3>
-        <div class="cmx-quick-subtitle" style="font-size:0.8rem; line-height:1.3;">{{ inspection_snapshot['lookback_months'] if inspection_snapshot else 9 }} month weighted living area stability score for graduation readiness. Current open month is excluded.</div>
-      </div>
-
-      <div style="display:flex; align-items:baseline; gap:5px; margin-top:2px; margin-bottom:8px;">
-        <span style="font-size:28px; line-height:1; {{ inspection_value_style }}">{{ inspection_snapshot['average_score_display'] if inspection_snapshot else "—" }}</span>
-        <span style="font-size:16px; font-weight:700;">%</span>
-      </div>
-
-      <div class="cmx-button-row" style="margin-top:4px;">
-        <a class="cmx-btn" href="{{ url_for('inspection_v2.resident_inspection_history', resident_id=resident_id) }}" style="padding:10px 14px;">View Inspection History</a>
+        <div class="cmx-button-row" style="margin-top:0;">
+          <a class="cmx-btn" href="{{ url_for('inspection_v2.resident_inspection_history', resident_id=resident_id) }}" style="padding:9px 12px; font-size:0.88rem;">View Inspection History</a>
+        </div>
       </div>
     </div>
   </div>
