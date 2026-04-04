@@ -17,6 +17,18 @@
   {% set resolved_treatment_graduation_date = rs_treatment_graduation_date or intake_treatment_grad_date or "" %}
   {% set eis = employment_income_snapshot if employment_income_snapshot is defined else {} %}
 
+  {% if eis.get("band_key") == "green" %}
+    {% set income_field_card_style = "background:#e3efe7; border:1px solid #98baa3;" %}
+  {% elif eis.get("band_key") == "yellow" %}
+    {% set income_field_card_style = "background:#fff4cf; border:1px solid #dec66f;" %}
+  {% elif eis.get("band_key") == "orange" %}
+    {% set income_field_card_style = "background:#ffe3c7; border:1px solid #d9a06a;" %}
+  {% elif eis.get("band_key") == "red" %}
+    {% set income_field_card_style = "background:#f6dada; border:1px solid #d38b8b;" %}
+  {% else %}
+    {% set income_field_card_style = "" %}
+  {% endif %}
+
   <form id="profile-editor-form" method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
@@ -146,7 +158,7 @@
           </div>
         </div>
 
-        <div class="cmx-field-card">
+        <div class="cmx-field-card" style="{{ income_field_card_style }}">
           <div class="cmx-field-card-label" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
             <span>Monthly Income</span>
             {% if eis.get("module_enabled", True) %}
