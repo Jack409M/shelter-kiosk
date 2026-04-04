@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 
 {% block content %}
+{% set stability_card_style = "background:#f3dede; border:1px solid #d88484;" if inspection_snapshot['band_key'] == 'red' else inspection_snapshot['card_style'] %}
 <div class="cmx-page">
   <div class="cmx-shell">
     <div class="cmx-card">
@@ -16,7 +17,7 @@
       </div>
     </div>
 
-    <div class="cmx-card" style="{{ inspection_snapshot['card_style'] }}">
+    <div class="cmx-card" style="{{ stability_card_style }}">
       <div class="cmx-section-head" style="margin-bottom:12px;">
         <div>
           <h2 class="cmx-section-title">Living Area Stability Score</h2>
@@ -29,11 +30,12 @@
         </div>
       </div>
 
+      <div style="display:flex; align-items:baseline; gap:6px; margin-top:6px; margin-bottom:14px;">
+        <span style="font-size:34px; line-height:1; {{ inspection_snapshot['value_style'] }}">{{ inspection_snapshot['average_score_display'] }}</span>
+        <span style="font-size:18px; font-weight:700;">%</span>
+      </div>
+
       <div class="cmx-stack">
-        <div class="cmx-row-block">
-          <span>Inspection Average</span>
-          <span style="{{ inspection_snapshot['value_style'] }}">{{ inspection_snapshot['average_score_display'] }}</span>
-        </div>
         <div class="cmx-row-block">
           <span>Goal</span>
           <span>{{ inspection_snapshot['passing_threshold'] }}+</span>
