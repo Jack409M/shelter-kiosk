@@ -26,7 +26,7 @@
       <div style="margin-bottom:14px;">
         <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Add Child</h2>
         <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
-          Record a child, relationship, living status, and any survivor benefit tied to that child.
+          Record a child, relationship, living status, and child linked support details.
         </div>
       </div>
 
@@ -94,6 +94,23 @@
           </div>
         </div>
 
+        <div style="margin-top:20px; padding:16px; border-radius:16px; background:#f8fafc; border:1px solid #dbe5f0;">
+          <div style="font-weight:800; color:#0f172a; margin-bottom:6px;">Child Linked Child Support</div>
+          <div style="color:#475569; font-size:0.92rem; margin-bottom:14px;">
+            Child support is attached to the specific child and weighted based on that child’s age and cutoff rule.
+          </div>
+
+          <div>
+            <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Monthly Child Support Amount</strong></label>
+            <input type="text" name="child_support_amount" placeholder="$0.00" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+          </div>
+
+          <div style="margin-top:16px;">
+            <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Child Support Notes</strong></label>
+            <textarea name="child_support_notes" rows="3" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;"></textarea>
+          </div>
+        </div>
+
         <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
           <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Child</button>
           <a
@@ -124,19 +141,28 @@
                 <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Birth Year</th>
                 <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Relationship</th>
                 <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Living Status</th>
-                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Survivor Benefit</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Support</th>
                 <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for child in children %}
-                {% set child_id = child["id"] if child is mapping else child[0] %}
-                {% set child_name = child["child_name"] if child is mapping else child[2] %}
-                {% set birth_year = child["birth_year"] if child is mapping else child[3] %}
-                {% set relationship = child["relationship"] if child is mapping else child[4] %}
-                {% set living_status = child["living_status"] if child is mapping else child[5] %}
-                {% set receives_survivor_benefit = child["receives_survivor_benefit"] if child is mapping else child[6] %}
-                {% set survivor_benefit_amount = child["survivor_benefit_amount"] if child is mapping else child[7] %}
+                {% set child_id = child["id"] %}
+                {% set child_name = child["child_name"] %}
+                {% set birth_year = child["birth_year"] %}
+                {% set relationship = child["relationship"] %}
+                {% set living_status = child["living_status"] %}
+                {% set income_supports = child.get("income_supports") or [] %}
+                {% set survivor_amount = none %}
+                {% set child_support_amount = none %}
+                {% for support in income_supports %}
+                  {% if support.get("support_type") == "survivor_benefit" %}
+                    {% set survivor_amount = support.get("monthly_amount") %}
+                  {% endif %}
+                  {% if support.get("support_type") == "child_support" %}
+                    {% set child_support_amount = support.get("monthly_amount") %}
+                  {% endif %}
+                {% endfor %}
 
                 <tr>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ child_name or "—" }}</td>
@@ -144,13 +170,10 @@
                   <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ relationship or "—" }}</td>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ living_status|replace("_", " ")|title if living_status else "—" }}</td>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7;">
-                    {% if receives_survivor_benefit is sameas true or receives_survivor_benefit == 1 %}
-                      {{ "$%.2f"|format(survivor_benefit_amount) if survivor_benefit_amount is not none else "Yes" }}
-                    {% elif receives_survivor_benefit is sameas false or receives_survivor_benefit == 0 %}
-                      No
-                    {% else %}
-                      —
-                    {% endif %}
+                    <div style="display:grid; gap:4px;">
+                      <div>Survivor: {{ "$%.2f"|format(survivor_amount) if survivor_amount is not none else "—" }}</div>
+                      <div>Child Support: {{ "$%.2f"|format(child_support_amount) if child_support_amount is not none else "—" }}</div>
+                    </div>
                   </td>
                   <td style="padding:10px; border-bottom:1px solid #eef2f7; white-space:nowrap;">
                     <a
