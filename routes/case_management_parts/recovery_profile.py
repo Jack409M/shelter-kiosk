@@ -628,6 +628,16 @@ def update_recovery_profile_view(resident_id: int):
     unemployment_reason = clean(request.form.get("unemployment_reason"))
     job_change_notes = clean(request.form.get("job_change_notes"))
 
+    current_app.logger.info(
+        "Recovery profile submit resident_id=%s employment_type_current=%r current_job_start_date=%r previous_job_end_date=%r upward_job_change=%r job_change_notes=%r",
+        resident_id,
+        request.form.get("employment_type_current"),
+        request.form.get("current_job_start_date"),
+        request.form.get("previous_job_end_date"),
+        request.form.get("upward_job_change"),
+        request.form.get("job_change_notes"),
+    )
+
     now = utcnow_iso()
 
     try:
