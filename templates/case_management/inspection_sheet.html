@@ -16,41 +16,50 @@
       <form method="post" action="{{ url_for('inspection_v2.inspection_sheet', year=inspection_year, month=inspection_month) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-        <div class="cmx-grid cmx-grid-2">
-          <div class="cmx-field">
+        <div style="display:grid; grid-template-columns: 220px minmax(220px, 1fr) auto; gap:12px; align-items:end; margin-bottom:16px;">
+          <div class="cmx-field" style="margin:0;">
             <label>Inspection Date</label>
             <input type="date" name="inspection_date" required>
           </div>
 
-          <div class="cmx-field">
+          <div class="cmx-field" style="margin:0;">
             <label>Notes</label>
             <input type="text" name="notes" placeholder="Optional overall notes">
+          </div>
+
+          <div class="cmx-button-row" style="margin:0;">
+            <button type="submit" class="cmx-btn">Save Inspection Sheet</button>
           </div>
         </div>
 
         {% if residents %}
-          <div style="overflow-x:auto; margin-top:16px;">
-            <table class="audit-table">
-              <thead>
-                <tr>
-                  <th>Resident Name</th>
-                  <th>Result</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for resident in residents %}
-                  <tr>
-                    <td>{{ resident['first_name'] }} {{ resident['last_name'] }}</td>
-                    <td>
-                      <select name="status_{{ resident['id'] }}">
-                        <option value="passed" selected>Passed</option>
-                        <option value="failed">Failed</option>
-                      </select>
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:14px; color:#4e6478;">
+            <div>{{ residents|length }} resident{{ "" if residents|length == 1 else "s" }}</div>
+            <div>Default is Passed. Change only the exceptions.</div>
+          </div>
+
+          <div style="border:1px solid #9ab7cf; border-radius:14px; overflow:hidden; background:#d9e8f4;">
+            <div style="display:grid; grid-template-columns: minmax(220px, 1fr) 220px; gap:12px; padding:12px 16px; background:#5b94bf; color:#14324d; font-weight:700;">
+              <div>Resident Name</div>
+              <div>Result</div>
+            </div>
+
+            <div>
+              {% for resident in residents %}
+                <div style="display:grid; grid-template-columns: minmax(220px, 1fr) 220px; gap:12px; align-items:center; padding:10px 16px; border-top:1px solid #b8cfe2; background:{{ '#e7f1f9' if loop.index0 % 2 == 0 else '#dfeaf4' }};">
+                  <div style="font-size:16px; font-weight:500;">
+                    {{ resident['first_name'] }} {{ resident['last_name'] }}
+                  </div>
+
+                  <div>
+                    <select name="status_{{ resident['id'] }}" style="min-width:160px;">
+                      <option value="passed" selected>Passed</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
           </div>
 
           <div class="cmx-button-row" style="margin-top:16px;">
