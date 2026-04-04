@@ -11,6 +11,7 @@
   {% set receives_survivor_benefit = child["receives_survivor_benefit"] %}
   {% set survivor_benefit_amount = child["survivor_benefit_amount"] %}
   {% set survivor_benefit_notes = child["survivor_benefit_notes"] %}
+  {% set income_supports = child.get("income_supports") or [] %}
 {% else %}
   {% set child_id = child[0] %}
   {% set child_name = child[2] %}
@@ -20,7 +21,17 @@
   {% set receives_survivor_benefit = child[6] %}
   {% set survivor_benefit_amount = child[7] %}
   {% set survivor_benefit_notes = child[8] %}
+  {% set income_supports = [] %}
 {% endif %}
+
+{% set child_support_amount = none %}
+{% set child_support_notes = "" %}
+{% for support in income_supports %}
+  {% if support.get("support_type") == "child_support" %}
+    {% set child_support_amount = support.get("monthly_amount") %}
+    {% set child_support_notes = support.get("notes") or "" %}
+  {% endif %}
+{% endfor %}
 
 <div style="max-width:820px; margin:0 auto; display:grid; gap:20px;">
   <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
@@ -28,7 +39,7 @@
       <div>
         <h1 style="margin:0; font-size:1.9rem; font-weight:800; color:#0f172a;">Edit Child</h1>
         <div style="margin-top:6px; color:#475569; font-size:0.96rem;">
-          Update child details and any survivor benefit tied to this child.
+          Update child details and any child linked support tied to this child.
         </div>
       </div>
 
@@ -104,6 +115,23 @@
         <div style="margin-top:16px;">
           <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Survivor Benefit Notes</strong></label>
           <textarea name="survivor_benefit_notes" rows="3" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">{{ survivor_benefit_notes or '' }}</textarea>
+        </div>
+      </div>
+
+      <div style="margin-top:20px; padding:16px; border-radius:16px; background:#f8fafc; border:1px solid #dbe5f0;">
+        <div style="font-weight:800; color:#0f172a; margin-bottom:6px;">Child Linked Child Support</div>
+        <div style="color:#475569; font-size:0.92rem; margin-bottom:14px;">
+          Child support is attached to the specific child and weighted from that child’s age and cutoff rule.
+        </div>
+
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Monthly Child Support Amount</strong></label>
+          <input type="text" name="child_support_amount" value="{{ child_support_amount if child_support_amount is not none else '' }}" placeholder="$0.00" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Child Support Notes</strong></label>
+          <textarea name="child_support_notes" rows="3" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">{{ child_support_notes }}</textarea>
         </div>
       </div>
 
