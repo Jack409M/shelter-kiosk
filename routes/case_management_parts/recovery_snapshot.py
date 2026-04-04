@@ -174,6 +174,11 @@ def _load_resident_profile(resident_id: int):
             unemployment_reason,
             employment_notes,
             monthly_income,
+            current_job_start_date,
+            continuous_employment_start_date,
+            previous_job_end_date,
+            upward_job_change,
+            job_change_notes,
             employment_updated_at,
             step_current,
             step_work_active,
@@ -398,6 +403,17 @@ def _normalize_treatment_graduation_date(resident: dict, enrollment_baseline: di
     return resident.get("treatment_graduation_date") or enrollment_baseline.get("intake_treatment_grad_date")
 
 
+def _employment_gap_days(current_job_start_date: Any, previous_job_end_date: Any):
+    current_dt = _parse_dateish(current_job_start_date)
+    previous_dt = _parse_dateish(previous_job_end_date)
+    if not current_dt or not previous_dt:
+        return None
+    gap = (current_dt - previous_dt).days
+    if gap < 0:
+        gap = 0
+    return gap
+
+
 def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     current_enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
 
@@ -410,6 +426,9 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
 
     step_changed_at = resident.get("step_changed_at")
     employment_updated_at = resident.get("employment_updated_at")
+    current_job_start_date = resident.get("current_job_start_date")
+    continuous_employment_start_date = resident.get("continuous_employment_start_date")
+    previous_job_end_date = resident.get("previous_job_end_date")
 
     medications_raw = _load_medications(resident_id, current_enrollment_id)
     ua_rows_raw = _load_ua_rows(resident_id, current_enrollment_id)
@@ -439,6 +458,15 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "employment_notes": resident.get("employment_notes"),
         "monthly_income": resident.get("monthly_income"),
         "monthly_income_display": _money_display(resident.get("monthly_income")),
+        "current_job_start_date": current_job_start_date,
+        "current_job_days": _days_since(current_job_start_date),
+        "continuous_employment_start_date": continuous_employment_start_date,
+        "continuous_employment_days": _days_since(continuous_employment_start_date),
+        "previous_job_end_date": previous_job_end_date,
+        "employment_gap_days": _employment_gap_days(current_job_start_date, previous_job_end_date),
+        "upward_job_change": resident.get("upward_job_change"),
+        "upward_job_change_display": _bool_display(resident.get("upward_job_change")),
+        "job_change_notes": resident.get("job_change_notes"),
         "employment_updated_at": employment_updated_at,
         "employment_days": _days_since(employment_updated_at),
         "step_current": resident.get("step_current"),
