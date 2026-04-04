@@ -6,6 +6,7 @@ from flask import current_app, flash, g, redirect, render_template, request, ses
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
+from db.schema_people import ensure_resident_child_income_supports_table
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import clean
 from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
@@ -15,9 +16,6 @@ from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.intake_income_support import recalculate_intake_income_support
-from routes.case_management_parts.recovery_profile import (
-    ensure_resident_child_income_supports_table,
-)
 
 
 def _resident_case_redirect(resident_id: int):
