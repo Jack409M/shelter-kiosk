@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import flash, redirect, render_template, session, url_for
 
-from core.db import db_fetchall, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
 from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
@@ -311,6 +311,93 @@ def _calculate_grit_difference(intake_assessment, exit_assessment):
     return exit_grit - intake_grit
 
 
+def _load_employment_income_settings(shelter: str) -> dict:
+    ph = placeholder()
+
+    default_settings = {
+        "employment_income_module_enabled": True,
+        "employment_income_graduation_minimum": 1200.0,
+        "employment_income_band_green_min": 1200.0,
+        "employment_income_band_yellow_min": 1000.0,
+        "employment_income_band_orange_min": 700.0,
+        "employment_income_band_red_max": 699.99,
+    }
+
+    try:
+        row = db_fetchone(
+            f"""
+            SELECT
+                employment_income_module_enabled,
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max
+            FROM shelter_operation_settings
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+            LIMIT 1
+            """,
+            (shelter,),
+        )
+    except Exception:
+        row = None
+
+    if not row:
+        return default_settings
+
+    resolved = dict(default_settings)
+    for key in resolved.keys():
+        if row.get(key) is not None:
+            resolved[key] = row.get(key)
+    return resolved
+
+
+def _build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
+    graduation_minimum = float(settings.get("employment_income_graduation_minimum") or 1200.0)
+    green_min = float(settings.get("employment_income_band_green_min") or graduation_minimum)
+    yellow_min = float(settings.get("employment_income_band_yellow_min") or 1000.0)
+    orange_min = float(settings.get("employment_income_band_orange_min") or 700.0)
+
+    income_value = None
+    if monthly_income not in (None, ""):
+        try:
+            income_value = float(monthly_income)
+        except Exception:
+            income_value = None
+
+    if income_value is None or graduation_minimum <= 0:
+        readiness_percent = None
+    else:
+        readiness_percent = round(min((income_value / graduation_minimum) * 100.0, 100.0))
+
+    if income_value is None:
+        band_key = "neutral"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#eef2f6; border:1px solid #c7d2de; color:#46607a; font-weight:700; font-size:12px; line-height:1;"
+    elif income_value >= green_min:
+        band_key = "green"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#dfeee5; border:1px solid #8fbea0; color:#1d5f33; font-weight:700; font-size:12px; line-height:1;"
+    elif income_value >= yellow_min:
+        band_key = "yellow"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#fff3c7; border:1px solid #ddc56d; color:#7a6500; font-weight:700; font-size:12px; line-height:1;"
+    elif income_value >= orange_min:
+        band_key = "orange"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#ffe0bf; border:1px solid #d9a06a; color:#98510a; font-weight:700; font-size:12px; line-height:1;"
+    else:
+        band_key = "red"
+        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#f6dada; border:1px solid #d38b8b; color:#8f1f1f; font-weight:700; font-size:12px; line-height:1;"
+
+    return {
+        "module_enabled": bool(settings.get("employment_income_module_enabled", True)),
+        "graduation_minimum": graduation_minimum,
+        "income_value": income_value,
+        "readiness_percent": readiness_percent,
+        "readiness_percent_display": f"{readiness_percent}%" if readiness_percent is not None else "—",
+        "meets_goal": bool(income_value is not None and income_value >= graduation_minimum),
+        "band_key": band_key,
+        "pill_style": pill_style,
+    }
+
+
 def resident_case_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -372,6 +459,11 @@ def resident_case_view(resident_id: int):
     operations_snapshot = build_operations_snapshot(recovery_snapshot)
     rent_snapshot = build_rent_stability_snapshot(resident_id)
     inspection_snapshot = build_inspection_stability_snapshot(resident_id, shelter=shelter)
+    employment_income_settings = _load_employment_income_settings(shelter)
+    employment_income_snapshot = _build_employment_income_snapshot(
+        recovery_snapshot.get("monthly_income") if recovery_snapshot else None,
+        employment_income_settings,
+    )
 
     return render_template(
         "case_management/resident_case.html",
@@ -396,5 +488,6 @@ def resident_case_view(resident_id: int):
         operations_snapshot=operations_snapshot,
         rent_snapshot=rent_snapshot,
         inspection_snapshot=inspection_snapshot,
+        employment_income_snapshot=employment_income_snapshot,
         is_deceased_case=enrollment_context["is_deceased_case"],
     )
