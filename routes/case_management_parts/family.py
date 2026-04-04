@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import current_app, flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
@@ -43,7 +43,7 @@ def _post_child_service_redirect(child_id: int, resident_id: int):
 
 
 def _ensure_family_income_support_schema() -> None:
-    ensure_resident_child_income_supports_table("pg" if session.get("_db_kind") == "pg" else None)
+    ensure_resident_child_income_supports_table(g.get("db_kind"))
 
 
 def _resident_in_scope(resident_id: int):
