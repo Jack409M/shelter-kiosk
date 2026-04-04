@@ -75,23 +75,18 @@
     </form>
   </div>
 
-  <div class="cmx-card cmx-quick-card">
+  {% set rent_card_style = "background:#f3dede; border:1px solid #d88484;" if rent_snapshot and rent_snapshot['band_key'] == 'red' else (rent_snapshot['card_style'] if rent_snapshot else "") %}
+  {% set rent_value_style = rent_snapshot['value_style'] if rent_snapshot else "font-weight:700;" %}
+
+  <div class="cmx-card cmx-quick-card" style="{{ rent_card_style }}">
     <div>
       <h3 class="cmx-quick-title">Rent Score</h3>
-      <div class="cmx-quick-subtitle">This is the weighted rent compliance score. Click through to view the resident’s rent payment history.</div>
+      <div class="cmx-quick-subtitle">This is the 9 month weighted rent stability score used for graduation readiness. Current open month is excluded.</div>
     </div>
 
-    {% set rent_score = resident.get('rent_weighted_score') if resident is mapping else none %}
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block">
-        <span>Weighted Score</span>
-        <span>{{ rent_score if rent_score is not none else "—" }}</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Source</span>
-        <span>Rent payment history</span>
-      </div>
+    <div style="display:flex; align-items:baseline; gap:6px; margin-top:6px; margin-bottom:12px;">
+      <span style="font-size:34px; line-height:1; {{ rent_value_style }}">{{ rent_snapshot['average_score_display'] if rent_snapshot else "—" }}</span>
+      <span style="font-size:18px; font-weight:700;">%</span>
     </div>
 
     <div class="cmx-button-row" style="margin-top:12px;">
