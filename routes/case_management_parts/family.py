@@ -14,6 +14,7 @@ from routes.case_management_parts.helpers import parse_int
 from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.intake_income_support import recalculate_intake_income_support
 
 
 def _resident_case_redirect(resident_id: int):
@@ -142,6 +143,14 @@ def _active_children_for_resident(resident_id: int):
 
 def _latest_enrollment_for_resident(resident_id: int):
     return fetch_current_enrollment_for_resident(resident_id, columns="id")
+
+
+def _recalculate_current_enrollment_income_support(resident_id: int) -> None:
+    enrollment = _latest_enrollment_for_resident(resident_id)
+    if not enrollment:
+        return
+    enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
+    recalculate_intake_income_support(enrollment_id)
 
 
 def _parse_service_date(value: str | None) -> str | None:
@@ -293,6 +302,7 @@ def family_intake_view(resident_id: int):
                     now,
                 ),
             )
+            _recalculate_current_enrollment_income_support(resident_id)
         except Exception as exc:
             if _is_unique_constraint_error(exc):
                 children = _active_children_for_resident(resident_id)
@@ -409,6 +419,7 @@ def edit_child_view(child_id: int):
                     child_id,
                 ),
             )
+            _recalculate_current_enrollment_income_support(resident_id)
         except Exception as exc:
             if _is_unique_constraint_error(exc):
                 flash("This child already exists for this resident.", "error")
@@ -460,6 +471,7 @@ def delete_child_view(child_id: int):
                 child_id,
             ),
         )
+        _recalculate_current_enrollment_income_support(resident_id)
     except Exception:
         current_app.logger.exception(
             "Failed to delete child_id=%s resident_id=%s",
