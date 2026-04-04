@@ -79,6 +79,7 @@ from routes.case_management_parts.helpers import parse_money
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.helpers import yes_no_to_int
+from routes.case_management_parts.income_support import income_support_view
 from routes.case_management_parts.index import index_view
 from routes.case_management_parts.index import intake_index_view
 from routes.case_management_parts.inspection_log import add_inspection_log_view
@@ -669,6 +670,13 @@ def add_appointment(resident_id: int):
 @require_shelter
 def update_recovery_profile(resident_id: int):
     return update_recovery_profile_view(resident_id)
+
+
+@case_management.route("/<int:resident_id>/income-support", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def income_support(resident_id: int):
+    return income_support_view(resident_id)
 
 
 # ============================================================================
