@@ -542,14 +542,13 @@ def resident_case_view(resident_id: int):
 
     employment_income_settings = _load_employment_income_settings(shelter)
 
-    monthly_income_for_display = None
-    if recovery_snapshot:
-        monthly_income_for_display = recovery_snapshot.get("monthly_income")
-
     intake_income_support = enrollment_context.get("intake_income_support") or {}
 
+    monthly_income_for_display = intake_income_support.get("weighted_stable_income")
+
     if monthly_income_for_display in (None, ""):
-        monthly_income_for_display = intake_income_support.get("weighted_stable_income")
+        if recovery_snapshot:
+            monthly_income_for_display = recovery_snapshot.get("monthly_income")
 
     if monthly_income_for_display in (None, ""):
         monthly_income_for_display = intake_income_support.get("total_cash_support")
