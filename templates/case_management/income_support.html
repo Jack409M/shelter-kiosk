@@ -37,16 +37,15 @@
           <span>{{ "$%.2f"|format(weighted_stable_income) if weighted_stable_income is not none else "—" }}</span>
         </div>
         <div class="cmx-row-block">
-          <span>Survivor Benefit Raw Total</span>
-          <span>{{ "$%.2f"|format(survivor_benefit_total) if survivor_benefit_total is not none else "$0.00" }}</span>
+          <span>TANF Weight Applied</span>
+          <span>
+            {% if support.get("tanf_weight_applied") is not none %}
+              {{ "%.2f"|format(support.get("tanf_weight_applied")) }}
+            {% else %}
+              —
+            {% endif %}
+          </span>
         </div>
-        <div class="cmx-row-block">
-          <span>Survivor Benefit Weighted Total</span>
-          <span>{{ "$%.2f"|format(survivor_benefit_weighted_total) if survivor_benefit_weighted_total is not none else "$0.00" }}</span>
-        </div>
-      </div>
-
-      <div class="cmx-grid cmx-grid-3" style="margin-top:14px;">
         <div class="cmx-row-block">
           <span>SNAP At Entry</span>
           <span>
@@ -59,13 +58,35 @@
             {% endif %}
           </span>
         </div>
+      </div>
+
+      <div class="cmx-grid cmx-grid-3" style="margin-top:14px;">
+        <div class="cmx-row-block">
+          <span>Survivor Benefit Raw Total</span>
+          <span>{{ "$%.2f"|format(support.get("survivor_benefit_total")) if support.get("survivor_benefit_total") is not none else "$0.00" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Survivor Benefit Weighted Total</span>
+          <span>{{ "$%.2f"|format(support.get("survivor_benefit_weighted_total")) if support.get("survivor_benefit_weighted_total") is not none else "$0.00" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Child Support Raw Total</span>
+          <span>{{ "$%.2f"|format(support.get("child_support_total")) if support.get("child_support_total") is not none else "$0.00" }}</span>
+        </div>
+      </div>
+
+      <div class="cmx-grid cmx-grid-3" style="margin-top:14px;">
+        <div class="cmx-row-block">
+          <span>Child Support Weighted Total</span>
+          <span>{{ "$%.2f"|format(support.get("child_support_weighted_total")) if support.get("child_support_weighted_total") is not none else "$0.00" }}</span>
+        </div>
         <div class="cmx-row-block">
           <span>Cash Rule</span>
           <span>SNAP does not count toward cash total</span>
         </div>
         <div class="cmx-row-block">
-          <span>Weighting Rule</span>
-          <span>Survivor benefits come from child records</span>
+          <span>Child Based Weighting</span>
+          <span>Survivor and child support are child linked. TANF uses youngest child.</span>
         </div>
       </div>
     </div>
@@ -173,8 +194,8 @@
 
       <div class="cmx-card" style="margin-bottom:18px;">
         <div class="cmx-panel-head">
-          <h3>Income Support Breakdown</h3>
-          <span>Edit the source amounts behind the total</span>
+          <h3>Household Income Support Breakdown</h3>
+          <span>Edit household level sources here. Child linked support is managed on the child record.</span>
         </div>
 
         <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
@@ -211,12 +232,8 @@
             <div class="cmx-field">
               <input type="text" name="tanf_income" value="{{ support.get('tanf_income') if support.get('tanf_income') is not none else '' }}" placeholder="$0.00">
             </div>
-          </div>
-
-          <div class="cmx-field-card">
-            <div class="cmx-field-card-label">Child Support</div>
-            <div class="cmx-field">
-              <input type="text" name="child_support_income" value="{{ support.get('child_support_income') if support.get('child_support_income') is not none else '' }}" placeholder="$0.00">
+            <div style="margin-top:8px; font-size:12px; color:#53687c;">
+              Weighted from the youngest active child.
             </div>
           </div>
 
@@ -244,6 +261,16 @@
               </select>
             </div>
           </div>
+
+          <div class="cmx-field-card" style="background:#f6f8fb; border:1px solid #ccd5e0;">
+            <div class="cmx-field-card-label">Child Linked Support</div>
+            <div class="cmx-field">
+              <input type="text" value="Managed on family child records" readonly>
+            </div>
+            <div style="margin-top:8px; font-size:12px; color:#53687c;">
+              Survivor benefits and child support are edited on each child record.
+            </div>
+          </div>
         </div>
 
         <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
@@ -258,7 +285,7 @@
               <input type="text" value="{{ '$%.2f'|format(total_cash_support) if total_cash_support is not none else '$0.00' }}" readonly>
             </div>
             <div style="margin-top:8px; font-size:12px; color:#53687c;">
-              This total is recalculated from the source amounts when you save. SNAP is tracked separately and does not count toward the cash total.
+              This total is recalculated from household sources plus child linked survivor benefits and child support when you save.
             </div>
           </div>
         </div>
@@ -267,26 +294,36 @@
       <div class="cmx-card" style="margin-bottom:18px;">
         <div class="cmx-panel-head">
           <h3>Weighted Income Summary</h3>
-          <span>Reliability adjusted income used for the stability view</span>
+          <span>Reliability adjusted totals used for the stability view</span>
         </div>
 
-        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+        <div class="cmx-grid cmx-grid-4" style="margin-top:16px;">
           <div class="cmx-row-block">
             <span>Weighted Stable Income</span>
             <span>{{ "$%.2f"|format(weighted_stable_income) if weighted_stable_income is not none else "—" }}</span>
           </div>
           <div class="cmx-row-block">
-            <span>Survivor Benefit Raw Total</span>
-            <span>{{ "$%.2f"|format(survivor_benefit_total) if survivor_benefit_total is not none else "$0.00" }}</span>
+            <span>Child Support Weighted Total</span>
+            <span>{{ "$%.2f"|format(support.get('child_support_weighted_total')) if support.get('child_support_weighted_total') is not none else "$0.00" }}</span>
           </div>
           <div class="cmx-row-block">
-            <span>Survivor Benefit Weighted Total</span>
-            <span>{{ "$%.2f"|format(survivor_benefit_weighted_total) if survivor_benefit_weighted_total is not none else "$0.00" }}</span>
+            <span>Survivor Weighted Total</span>
+            <span>{{ "$%.2f"|format(support.get('survivor_benefit_weighted_total')) if support.get('survivor_benefit_weighted_total') is not none else "$0.00" }}</span>
+          </div>
+          <div class="cmx-row-block">
+            <span>TANF Weight Applied</span>
+            <span>
+              {% if support.get("tanf_weight_applied") is not none %}
+                {{ "%.2f"|format(support.get("tanf_weight_applied")) }}
+              {% else %}
+                —
+              {% endif %}
+            </span>
           </div>
         </div>
 
         <div style="margin-top:14px; color:#53687c; font-size:12px;">
-          Survivor benefits are attached to child records, roll into the mother household total, and are weighted down as the child gets closer to age 18 according to admin configuration.
+          Survivor benefits and child support are weighted from the linked child. TANF remains a household source and is weighted from the youngest active child.
         </div>
       </div>
 
