@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import math
+from statistics import median
+
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from core.audit import log_action
@@ -36,17 +39,6 @@ _DEFAULT_TOP_METRIC_KEYS = [
     "graduates",
     "avg_stay",
 ]
-
-
-@reports.route("/staff/reports", methods=["GET"])
-@require_login
-@require_shelter
-@require_roles("admin", "shelter_director", "case_manager", "demographics_viewer")
-def reports_index():
-    return render_template(
-        "reports/index.html",
-        title="Reports",
-    )
 
 
 def _clean_scope(value: str | None) -> str:
@@ -280,6 +272,282 @@ def _parse_reorder_payload(payload) -> list[dict[str, int | str]]:
     return cleaned_items
 
 
+def _fmt_currency(value) -> str:
+    if value in (None, ""):
+        return "—"
+    try:
+        return f"${float(value):,.2f}"
+    except Exception:
+        return "—"
+
+
+def _fmt_percent(numerator: int, denominator: int) -> str:
+    if denominator <= 0:
+        return "—"
+    return f"{(numerator / denominator) * 100:.1f}%"
+
+
+def _median_or_none(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return float(median(values))
+
+
+def _average_or_none(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return round(sum(values) / len(values), 2)
+
+
+def _income_band_for_value(value: float | None) -> str:
+    if value is None:
+        return "Unknown"
+    if value < 1200:
+        return "Under $1,200"
+    if value < 1600:
+        return "$1,200 to $1,599"
+    if value < 2000:
+        return "$1,600 to $1,999"
+    return "$2,000 and above"
+
+
+def _sort_income_band_key(label: str) -> int:
+    order = {
+        "Under $1,200": 1,
+        "$1,200 to $1,599": 2,
+        "$1,600 to $1,999": 3,
+        "$2,000 and above": 4,
+        "Unknown": 5,
+    }
+    return order.get(label, 99)
+
+
+def _fetch_graduation_income_study_rows(scope: str, start_date: str | None, end_date: str | None) -> list[dict]:
+    scope_filter_sql = ""
+    params: list = []
+
+    if scope != "total_program":
+        scope_filter_sql += " AND LOWER(COALESCE(pe.shelter, '')) = ?"
+        params.append(scope)
+
+    if start_date:
+        scope_filter_sql += " AND COALESCE(ea.date_graduated, ea.date_exit_dwc, '') >= ?"
+        params.append(start_date)
+
+    if end_date:
+        scope_filter_sql += " AND COALESCE(ea.date_graduated, ea.date_exit_dwc, '') <= ?"
+        params.append(end_date)
+
+    rows = db_fetchall(
+        f"""
+        SELECT
+            pe.id AS enrollment_id,
+            pe.resident_id,
+            pe.shelter,
+            pe.entry_date,
+            pe.exit_date,
+            r.first_name,
+            r.last_name,
+            r.resident_identifier,
+            r.resident_code,
+            ea.date_graduated,
+            ea.date_exit_dwc,
+            ea.exit_category,
+            ea.exit_reason,
+            ea.graduate_dwc,
+            ea.income_at_exit,
+            ea.graduation_income_snapshot,
+            f.followup_type,
+            f.followup_date,
+            f.income_at_followup,
+            f.sober_at_followup
+        FROM program_enrollments pe
+        JOIN residents r ON r.id = pe.resident_id
+        JOIN exit_assessments ea ON ea.enrollment_id = pe.id
+        LEFT JOIN followups f ON f.enrollment_id = pe.id
+        WHERE COALESCE(ea.exit_category, '') = 'Successful Completion'
+          AND COALESCE(ea.exit_reason, '') = 'Program Graduated'
+          AND COALESCE(ea.graduate_dwc, 0) = 1
+          {scope_filter_sql}
+        ORDER BY COALESCE(ea.date_graduated, ea.date_exit_dwc, '') DESC, pe.id DESC
+        """,
+        tuple(params),
+    )
+    return [dict(row) for row in rows]
+
+
+def _build_graduation_income_study(scope: str, start_date: str | None, end_date: str | None) -> dict:
+    raw_rows = _fetch_graduation_income_study_rows(scope, start_date, end_date)
+
+    graduates: dict[int, dict] = {}
+
+    for row in raw_rows:
+        enrollment_id = row["enrollment_id"]
+        graduate = graduates.get(enrollment_id)
+        if not graduate:
+            snapshot_income = row.get("graduation_income_snapshot")
+            if snapshot_income in (None, ""):
+                snapshot_income = row.get("income_at_exit")
+
+            graduate = {
+                "enrollment_id": enrollment_id,
+                "resident_id": row.get("resident_id"),
+                "resident_name": " ".join(
+                    part for part in [row.get("first_name"), row.get("last_name")] if part
+                ).strip(),
+                "resident_display_id": row.get("resident_identifier") or row.get("resident_code") or str(row.get("resident_id") or ""),
+                "shelter": row.get("shelter"),
+                "date_graduated": row.get("date_graduated") or row.get("date_exit_dwc"),
+                "graduation_income_snapshot": float(snapshot_income) if snapshot_income not in (None, "") else None,
+                "followups": {},
+            }
+            graduates[enrollment_id] = graduate
+
+        followup_type = (row.get("followup_type") or "").strip()
+        if followup_type not in {"6_month", "1_year"}:
+            continue
+
+        existing = graduate["followups"].get(followup_type)
+        current_date = row.get("followup_date") or ""
+        existing_date = existing.get("followup_date") if existing else ""
+
+        if existing and existing_date >= current_date:
+            continue
+
+        graduate["followups"][followup_type] = {
+            "followup_date": current_date,
+            "income_at_followup": float(row["income_at_followup"]) if row.get("income_at_followup") not in (None, "") else None,
+            "sober_at_followup": bool(int(row.get("sober_at_followup") or 0)),
+        }
+
+    graduate_rows = list(graduates.values())
+
+    six_month_sober_incomes: list[float] = []
+    six_month_not_sober_incomes: list[float] = []
+    one_year_sober_incomes: list[float] = []
+    one_year_not_sober_incomes: list[float] = []
+
+    band_rollup: dict[str, dict] = {}
+
+    six_month_count = 0
+    one_year_count = 0
+    six_month_sober_count = 0
+    one_year_sober_count = 0
+
+    detail_rows: list[dict] = []
+
+    for graduate in graduate_rows:
+        grad_income = graduate["graduation_income_snapshot"]
+        band_label = _income_band_for_value(grad_income)
+
+        if band_label not in band_rollup:
+            band_rollup[band_label] = {
+                "band_label": band_label,
+                "graduates": 0,
+                "six_month_with_followup": 0,
+                "six_month_sober": 0,
+                "one_year_with_followup": 0,
+                "one_year_sober": 0,
+            }
+
+        band_rollup[band_label]["graduates"] += 1
+
+        six_month = graduate["followups"].get("6_month")
+        one_year = graduate["followups"].get("1_year")
+
+        detail_row = {
+            "resident_name": graduate["resident_name"],
+            "resident_display_id": graduate["resident_display_id"],
+            "shelter": graduate["shelter"],
+            "date_graduated": graduate["date_graduated"],
+            "graduation_income_snapshot": grad_income,
+            "income_band": band_label,
+            "six_month_date": six_month.get("followup_date") if six_month else "",
+            "six_month_sober": six_month.get("sober_at_followup") if six_month else None,
+            "one_year_date": one_year.get("followup_date") if one_year else "",
+            "one_year_sober": one_year.get("sober_at_followup") if one_year else None,
+        }
+        detail_rows.append(detail_row)
+
+        if six_month:
+            six_month_count += 1
+            band_rollup[band_label]["six_month_with_followup"] += 1
+            if six_month["sober_at_followup"]:
+                six_month_sober_count += 1
+                band_rollup[band_label]["six_month_sober"] += 1
+                if grad_income is not None:
+                    six_month_sober_incomes.append(grad_income)
+            else:
+                if grad_income is not None:
+                    six_month_not_sober_incomes.append(grad_income)
+
+        if one_year:
+            one_year_count += 1
+            band_rollup[band_label]["one_year_with_followup"] += 1
+            if one_year["sober_at_followup"]:
+                one_year_sober_count += 1
+                band_rollup[band_label]["one_year_sober"] += 1
+                if grad_income is not None:
+                    one_year_sober_incomes.append(grad_income)
+            else:
+                if grad_income is not None:
+                    one_year_not_sober_incomes.append(grad_income)
+
+    band_rows = []
+    for band_label in sorted(band_rollup.keys(), key=_sort_income_band_key):
+        band = band_rollup[band_label]
+        band_rows.append(
+            {
+                **band,
+                "six_month_sober_rate": _fmt_percent(band["six_month_sober"], band["six_month_with_followup"]),
+                "one_year_sober_rate": _fmt_percent(band["one_year_sober"], band["one_year_with_followup"]),
+            }
+        )
+
+    detail_rows.sort(
+        key=lambda row: (
+            row["date_graduated"] or "",
+            row["resident_name"] or "",
+        ),
+        reverse=True,
+    )
+
+    return {
+        "scope": scope,
+        "start_date": start_date,
+        "end_date": end_date,
+        "graduate_count": len(graduate_rows),
+        "six_month_followup_count": six_month_count,
+        "one_year_followup_count": one_year_count,
+        "six_month_sober_count": six_month_sober_count,
+        "one_year_sober_count": one_year_sober_count,
+        "six_month_sober_rate": _fmt_percent(six_month_sober_count, six_month_count),
+        "one_year_sober_rate": _fmt_percent(one_year_sober_count, one_year_count),
+        "avg_income_six_month_sober": _average_or_none(six_month_sober_incomes),
+        "avg_income_six_month_not_sober": _average_or_none(six_month_not_sober_incomes),
+        "avg_income_one_year_sober": _average_or_none(one_year_sober_incomes),
+        "avg_income_one_year_not_sober": _average_or_none(one_year_not_sober_incomes),
+        "median_income_six_month_sober": _median_or_none(six_month_sober_incomes),
+        "median_income_six_month_not_sober": _median_or_none(six_month_not_sober_incomes),
+        "median_income_one_year_sober": _median_or_none(one_year_sober_incomes),
+        "median_income_one_year_not_sober": _median_or_none(one_year_not_sober_incomes),
+        "band_rows": band_rows,
+        "detail_rows": detail_rows,
+        "fmt_currency": _fmt_currency,
+    }
+
+
+@reports.route("/staff/reports", methods=["GET"])
+@require_login
+@require_shelter
+@require_roles("admin", "shelter_director", "case_manager", "demographics_viewer")
+def reports_index():
+    return render_template(
+        "reports/index.html",
+        title="Reports",
+    )
+
+
 @reports.route("/staff/reports/demographics/favorites/toggle", methods=["POST"])
 @require_login
 @require_shelter
@@ -498,4 +766,34 @@ def demographics_dashboard():
             {"value": "all_time", "label": "All Time"},
             {"value": "custom", "label": "Custom Range"},
         ],
+    )
+
+
+@reports.route("/staff/reports/studies/graduation-income-sobriety", methods=["GET"])
+@require_login
+@require_shelter
+@require_roles("admin", "shelter_director", "case_manager", "demographics_viewer")
+def graduation_income_sobriety_study():
+    init_db()
+
+    scope = _clean_scope(request.args.get("scope"))
+    start_date = _clean_iso_date(request.args.get("start_date"))
+    end_date = _clean_iso_date(request.args.get("end_date"))
+
+    study = _build_graduation_income_study(scope=scope, start_date=start_date, end_date=end_date)
+
+    return render_template(
+        "reports/graduation_income_sobriety_study.html",
+        title="Graduation Income And Sobriety Outcome Study",
+        study=study,
+        scope=scope,
+        start_date=start_date or "",
+        end_date=end_date or "",
+        scope_options=[
+            {"value": "total_program", "label": "Total Program"},
+            {"value": "abba", "label": "Abba House"},
+            {"value": "haven", "label": "Haven House"},
+            {"value": "gratitude", "label": "Gratitude House"},
+        ],
+        fmt_currency=_fmt_currency,
     )
