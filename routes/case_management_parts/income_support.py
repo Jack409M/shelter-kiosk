@@ -109,7 +109,9 @@ def income_support_view(resident_id: int):
         employment_notes = clean(request.form.get("employment_notes"))
         job_change_notes = clean(request.form.get("job_change_notes"))
         current_job_start_date = parse_iso_date(request.form.get("current_job_start_date"))
-        continuous_employment_start_date = parse_iso_date(request.form.get("continuous_employment_start_date"))
+        continuous_employment_start_date = parse_iso_date(
+            request.form.get("continuous_employment_start_date")
+        )
         previous_job_end_date = parse_iso_date(request.form.get("previous_job_end_date"))
         upward_job_change = _yes_no_to_bool(request.form.get("upward_job_change"))
         now = utcnow_iso()
@@ -145,7 +147,9 @@ def income_support_view(resident_id: int):
                 employment_notes,
                 total_cash_support,
                 current_job_start_date.isoformat() if current_job_start_date else None,
-                continuous_employment_start_date.isoformat() if continuous_employment_start_date else None,
+                continuous_employment_start_date.isoformat()
+                if continuous_employment_start_date
+                else None,
                 previous_job_end_date.isoformat() if previous_job_end_date else None,
                 upward_job_change,
                 job_change_notes,
