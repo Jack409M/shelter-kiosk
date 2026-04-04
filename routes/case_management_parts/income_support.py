@@ -13,6 +13,7 @@ from routes.case_management_parts.helpers import parse_iso_date
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.intake_income_support import load_intake_income_support
+from routes.case_management_parts.intake_income_support import recalculate_intake_income_support
 from routes.case_management_parts.intake_income_support import upsert_intake_income_support
 
 
@@ -73,6 +74,63 @@ def _load_resident_in_scope(resident_id: int, shelter: str):
     )
 
 
+def _sync_resident_income_snapshot(
+    resident_id: int,
+    weighted_stable_income,
+    total_cash_support,
+    employment_status_current,
+    employer_name,
+    employment_type_current,
+    supervisor_name,
+    supervisor_phone,
+    unemployment_reason,
+    employment_notes,
+    current_job_start_date,
+    previous_job_end_date,
+    upward_job_change,
+    job_change_notes,
+) -> None:
+    ph = placeholder()
+    now = utcnow_iso()
+
+    db_execute(
+        f"""
+        UPDATE residents
+        SET
+            employment_status_current = {ph},
+            employer_name = {ph},
+            employment_type_current = {ph},
+            supervisor_name = {ph},
+            supervisor_phone = {ph},
+            unemployment_reason = {ph},
+            employment_notes = {ph},
+            monthly_income = {ph},
+            current_job_start_date = {ph},
+            previous_job_end_date = {ph},
+            upward_job_change = {ph},
+            job_change_notes = {ph},
+            employment_updated_at = {ph}
+        WHERE id = {ph}
+        """,
+        (
+            employment_status_current,
+            employer_name,
+            employment_type_current,
+            supervisor_name,
+            supervisor_phone,
+            unemployment_reason,
+            employment_notes,
+            weighted_stable_income if weighted_stable_income not in (None, "") else total_cash_support,
+            current_job_start_date.isoformat() if current_job_start_date else None,
+            previous_job_end_date.isoformat() if previous_job_end_date else None,
+            upward_job_change,
+            job_change_notes,
+            now,
+            resident_id,
+        ),
+    )
+
+
 def income_support_view(resident_id: int):
     init_db()
 
@@ -112,61 +170,57 @@ def income_support_view(resident_id: int):
         current_job_start_date = parse_iso_date(request.form.get("current_job_start_date"))
         previous_job_end_date = parse_iso_date(request.form.get("previous_job_end_date"))
         upward_job_change = _yes_no_to_bool(request.form.get("upward_job_change"))
-        now = utcnow_iso()
-        ph = placeholder()
 
-        db_execute(
-            f"""
-            UPDATE residents
-            SET
-                employment_status_current = {ph},
-                employer_name = {ph},
-                employment_type_current = {ph},
-                supervisor_name = {ph},
-                supervisor_phone = {ph},
-                unemployment_reason = {ph},
-                employment_notes = {ph},
-                monthly_income = {ph},
-                current_job_start_date = {ph},
-                previous_job_end_date = {ph},
-                upward_job_change = {ph},
-                job_change_notes = {ph},
-                employment_updated_at = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                employment_status_current,
-                employer_name,
-                employment_type_current,
-                supervisor_name,
-                supervisor_phone,
-                unemployment_reason,
-                employment_notes,
-                weighted_stable_income if weighted_stable_income not in (None, "") else total_cash_support,
-                current_job_start_date.isoformat() if current_job_start_date else None,
-                previous_job_end_date.isoformat() if previous_job_end_date else None,
-                upward_job_change,
-                job_change_notes,
-                now,
-                resident_id,
-            ),
+        _sync_resident_income_snapshot(
+            resident_id=resident_id,
+            weighted_stable_income=weighted_stable_income,
+            total_cash_support=total_cash_support,
+            employment_status_current=employment_status_current,
+            employer_name=employer_name,
+            employment_type_current=employment_type_current,
+            supervisor_name=supervisor_name,
+            supervisor_phone=supervisor_phone,
+            unemployment_reason=unemployment_reason,
+            employment_notes=employment_notes,
+            current_job_start_date=current_job_start_date,
+            previous_job_end_date=previous_job_end_date,
+            upward_job_change=upward_job_change,
+            job_change_notes=job_change_notes,
         )
 
         flash("Employment and income support updated.", "success")
         return redirect(url_for("case_management.income_support", resident_id=resident_id))
 
+    recalculate_intake_income_support(enrollment_id)
     intake_income_support = load_intake_income_support(enrollment_id) or {}
 
     total_cash_support = intake_income_support.get("total_cash_support")
+    weighted_stable_income = intake_income_support.get("weighted_stable_income")
+
+    if weighted_stable_income not in (None, "") or total_cash_support not in (None, ""):
+        _sync_resident_income_snapshot(
+            resident_id=resident_id,
+            weighted_stable_income=weighted_stable_income,
+            total_cash_support=total_cash_support,
+            employment_status_current=resident.get("employment_status_current"),
+            employer_name=resident.get("employer_name"),
+            employment_type_current=resident.get("employment_type_current"),
+            supervisor_name=resident.get("supervisor_name"),
+            supervisor_phone=resident.get("supervisor_phone"),
+            unemployment_reason=resident.get("unemployment_reason"),
+            employment_notes=resident.get("employment_notes"),
+            current_job_start_date=parse_iso_date(resident.get("current_job_start_date")),
+            previous_job_end_date=parse_iso_date(resident.get("previous_job_end_date")),
+            upward_job_change=resident.get("upward_job_change"),
+            job_change_notes=resident.get("job_change_notes"),
+        )
+        resident = _load_resident_in_scope(resident_id, shelter)
+
     if total_cash_support in (None, ""):
         total_cash_support = resident.get("monthly_income")
 
-    weighted_stable_income = intake_income_support.get("weighted_stable_income")
     if weighted_stable_income in (None, ""):
         weighted_stable_income = resident.get("monthly_income")
-
-    survivor_benefit_total = intake_income_support.get("survivor_benefit_total")
-    survivor_benefit_weighted_total = intake_income_support.get("survivor_benefit_weighted_total")
 
     return render_template(
         "case_management/income_support.html",
@@ -176,6 +230,4 @@ def income_support_view(resident_id: int):
         intake_income_support=intake_income_support,
         total_cash_support=total_cash_support,
         weighted_stable_income=weighted_stable_income,
-        survivor_benefit_total=survivor_benefit_total,
-        survivor_benefit_weighted_total=survivor_benefit_weighted_total,
     )
