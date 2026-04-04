@@ -27,11 +27,26 @@
         </div>
       </div>
 
-      <div class="cmx-grid cmx-grid-3" style="margin-top:14px;">
+      <div class="cmx-grid cmx-grid-4" style="margin-top:14px;">
         <div class="cmx-row-block">
           <span>Total Cash Support</span>
           <span>{{ "$%.2f"|format(total_cash_support) if total_cash_support is not none else "—" }}</span>
         </div>
+        <div class="cmx-row-block">
+          <span>Weighted Stable Income</span>
+          <span>{{ "$%.2f"|format(weighted_stable_income) if weighted_stable_income is not none else "—" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Survivor Benefit Raw Total</span>
+          <span>{{ "$%.2f"|format(survivor_benefit_total) if survivor_benefit_total is not none else "$0.00" }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Survivor Benefit Weighted Total</span>
+          <span>{{ "$%.2f"|format(survivor_benefit_weighted_total) if survivor_benefit_weighted_total is not none else "$0.00" }}</span>
+        </div>
+      </div>
+
+      <div class="cmx-grid cmx-grid-3" style="margin-top:14px;">
         <div class="cmx-row-block">
           <span>SNAP At Entry</span>
           <span>
@@ -45,8 +60,12 @@
           </span>
         </div>
         <div class="cmx-row-block">
-          <span>Income Rule</span>
+          <span>Cash Rule</span>
           <span>SNAP does not count toward cash total</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Weighting Rule</span>
+          <span>Survivor benefits come from child records</span>
         </div>
       </div>
     </div>
@@ -94,13 +113,6 @@
             <div class="cmx-field-card-label">Current Job Start Date</div>
             <div class="cmx-field">
               <input type="date" name="current_job_start_date" value="{{ resident.get('current_job_start_date') or '' }}">
-            </div>
-          </div>
-
-          <div class="cmx-field-card">
-            <div class="cmx-field-card-label">Continuous Employment Start</div>
-            <div class="cmx-field">
-              <input type="date" name="continuous_employment_start_date" value="{{ resident.get('continuous_employment_start_date') or '' }}">
             </div>
           </div>
 
@@ -159,7 +171,7 @@
         </div>
       </div>
 
-      <div class="cmx-card">
+      <div class="cmx-card" style="margin-bottom:18px;">
         <div class="cmx-panel-head">
           <h3>Income Support Breakdown</h3>
           <span>Edit the source amounts behind the total</span>
@@ -188,7 +200,7 @@
           </div>
 
           <div class="cmx-field-card">
-            <div class="cmx-field-card-label">SSI / SSDI</div>
+            <div class="cmx-field-card-label">SSI / SSDI For Self</div>
             <div class="cmx-field">
               <input type="text" name="ssi_ssdi_income" value="{{ support.get('ssi_ssdi_income') if support.get('ssi_ssdi_income') is not none else '' }}" placeholder="$0.00">
             </div>
@@ -250,11 +262,37 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <div style="margin-top:18px; display:flex; gap:10px;">
-          <button type="submit" class="cmx-btn">Save Employment and Income</button>
-          <a class="cmx-btn cmx-btn-ghost" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Done</a>
+      <div class="cmx-card" style="margin-bottom:18px;">
+        <div class="cmx-panel-head">
+          <h3>Weighted Income Summary</h3>
+          <span>Reliability adjusted income used for the stability view</span>
         </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
+          <div class="cmx-row-block">
+            <span>Weighted Stable Income</span>
+            <span>{{ "$%.2f"|format(weighted_stable_income) if weighted_stable_income is not none else "—" }}</span>
+          </div>
+          <div class="cmx-row-block">
+            <span>Survivor Benefit Raw Total</span>
+            <span>{{ "$%.2f"|format(survivor_benefit_total) if survivor_benefit_total is not none else "$0.00" }}</span>
+          </div>
+          <div class="cmx-row-block">
+            <span>Survivor Benefit Weighted Total</span>
+            <span>{{ "$%.2f"|format(survivor_benefit_weighted_total) if survivor_benefit_weighted_total is not none else "$0.00" }}</span>
+          </div>
+        </div>
+
+        <div style="margin-top:14px; color:#53687c; font-size:12px;">
+          Survivor benefits are attached to child records, roll into the mother household total, and are weighted down as the child gets closer to age 18 according to admin configuration.
+        </div>
+      </div>
+
+      <div style="margin-top:18px; display:flex; gap:10px;">
+        <button type="submit" class="cmx-btn">Save Employment and Income</button>
+        <a class="cmx-btn cmx-btn-ghost" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Done</a>
       </div>
     </form>
   </div>
