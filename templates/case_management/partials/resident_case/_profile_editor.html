@@ -15,6 +15,7 @@
   {% set resolved_level_start_date = rs_level_start_date or enrollment_entry_date or "" %}
   {% set resolved_sobriety_date = rs_sobriety_date or intake_sobriety_date or enrollment_entry_date or "" %}
   {% set resolved_treatment_graduation_date = rs_treatment_graduation_date or intake_treatment_grad_date or "" %}
+  {% set eis = employment_income_snapshot if employment_income_snapshot is defined else {} %}
 
   <form id="profile-editor-form" method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -146,10 +147,20 @@
         </div>
 
         <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Monthly Income</div>
+          <div class="cmx-field-card-label" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <span>Monthly Income</span>
+            {% if eis.get("module_enabled", True) %}
+              <span style="{{ eis.get('pill_style', '') }}">{{ eis.get("readiness_percent_display", "—") }}</span>
+            {% endif %}
+          </div>
           <div class="cmx-field">
             <input type="text" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}" placeholder="$0.00">
           </div>
+          {% if eis.get("module_enabled", True) %}
+            <div style="margin-top:8px; font-size:12px; color:#53687c;">
+              Graduation minimum: {{ "$%.2f"|format(eis.get("graduation_minimum", 1200.0)) }}
+            </div>
+          {% endif %}
         </div>
 
         <div class="cmx-field-card">
