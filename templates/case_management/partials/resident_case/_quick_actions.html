@@ -77,6 +77,8 @@
 
   {% set rent_card_style = "background:#f3dede; border:1px solid #d88484;" if rent_snapshot and rent_snapshot['band_key'] == 'red' else (rent_snapshot['card_style'] if rent_snapshot else "") %}
   {% set rent_value_style = rent_snapshot['value_style'] if rent_snapshot else "font-weight:700;" %}
+  {% set inspection_card_style = "background:#f3dede; border:1px solid #d88484;" if inspection_snapshot and inspection_snapshot['band_key'] == 'red' else (inspection_snapshot['card_style'] if inspection_snapshot else "") %}
+  {% set inspection_value_style = inspection_snapshot['value_style'] if inspection_snapshot else "font-weight:700;" %}
 
   <div class="cmx-card cmx-quick-card" style="{{ rent_card_style }}">
     <div>
@@ -94,23 +96,15 @@
     </div>
   </div>
 
-  <div class="cmx-card cmx-quick-card">
+  <div class="cmx-card cmx-quick-card" style="{{ inspection_card_style }}">
     <div>
       <h3 class="cmx-quick-title">Living Area Score</h3>
-      <div class="cmx-quick-subtitle">This is the weighted living area score. Click through to view the resident’s inspection pass or fail history.</div>
+      <div class="cmx-quick-subtitle">This is the {{ inspection_snapshot['lookback_months'] if inspection_snapshot else 9 }} month weighted living area stability score used for graduation readiness. Current open month is excluded.</div>
     </div>
 
-    {% set living_area_score = resident.get('living_area_weighted_score') if resident is mapping else none %}
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block">
-        <span>Weighted Score</span>
-        <span>{{ living_area_score if living_area_score is not none else "—" }}</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Source</span>
-        <span>Inspection pass or fail history</span>
-      </div>
+    <div style="display:flex; align-items:baseline; gap:6px; margin-top:6px; margin-bottom:12px;">
+      <span style="font-size:34px; line-height:1; {{ inspection_value_style }}">{{ inspection_snapshot['average_score_display'] if inspection_snapshot else "—" }}</span>
+      <span style="font-size:18px; font-weight:700;">%</span>
     </div>
 
     <div class="cmx-button-row" style="margin-top:12px;">
