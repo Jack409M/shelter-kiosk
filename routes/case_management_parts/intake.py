@@ -18,6 +18,8 @@ from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.intake_drafts import _complete_intake_draft
 from routes.case_management_parts.intake_drafts import _load_intake_draft
 from routes.case_management_parts.intake_drafts import _save_intake_draft
+from routes.case_management_parts.intake_income_support import load_intake_income_support
+from routes.case_management_parts.intake_income_support import upsert_intake_income_support
 from routes.case_management_parts.intake_inserts import _build_family_snapshot_payload
 from routes.case_management_parts.intake_inserts import _build_intake_assessment_payload
 from routes.case_management_parts.intake_inserts import _insert_family_snapshot
@@ -328,6 +330,8 @@ def intake_edit_view(resident_id: int):
         (enrollment_id,),
     )
 
+    income_support = load_intake_income_support(enrollment_id)
+
     form_data: dict[str, Any] = {}
 
     if resident:
@@ -341,6 +345,9 @@ def intake_edit_view(resident_id: int):
 
     if family:
         form_data.update(dict(family))
+
+    if income_support:
+        form_data.update(dict(income_support))
 
     form_data = _apply_intake_edit_aliases(form_data)
     form_data = _normalize_yes_no_fields(form_data)
@@ -716,6 +723,8 @@ def submit_intake_assessment_view():
                 else:
                     _insert_family_snapshot(enrollment_id, data)
 
+                upsert_intake_income_support(enrollment_id, data)
+
                 sync_enrollment_needs(
                     enrollment_id,
                     selected_need_keys=data.get("entry_need_keys", []),
@@ -778,6 +787,7 @@ def submit_intake_assessment_view():
             enrollment_id = _insert_program_enrollment(new_resident_id, data, current_shelter)
             _insert_intake_assessment(enrollment_id, data)
             _insert_family_snapshot(enrollment_id, data)
+            upsert_intake_income_support(enrollment_id, data)
 
             if draft_id is not None:
                 _complete_intake_draft(draft_id)
