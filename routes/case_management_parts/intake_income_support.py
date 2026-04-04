@@ -32,6 +32,9 @@ def ensure_intake_income_supports_table() -> None:
                 weighted_stable_income DOUBLE PRECISION,
                 survivor_benefit_total DOUBLE PRECISION,
                 survivor_benefit_weighted_total DOUBLE PRECISION,
+                child_support_total DOUBLE PRECISION,
+                child_support_weighted_total DOUBLE PRECISION,
+                tanf_weight_applied DOUBLE PRECISION,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -57,6 +60,9 @@ def ensure_intake_income_supports_table() -> None:
                 weighted_stable_income REAL,
                 survivor_benefit_total REAL,
                 survivor_benefit_weighted_total REAL,
+                child_support_total REAL,
+                child_support_weighted_total REAL,
+                tanf_weight_applied REAL,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id) ON DELETE CASCADE
@@ -68,6 +74,9 @@ def ensure_intake_income_supports_table() -> None:
         "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS weighted_stable_income DOUBLE PRECISION",
         "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS survivor_benefit_total DOUBLE PRECISION",
         "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS survivor_benefit_weighted_total DOUBLE PRECISION",
+        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS child_support_total DOUBLE PRECISION",
+        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS child_support_weighted_total DOUBLE PRECISION",
+        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS tanf_weight_applied DOUBLE PRECISION",
     ]
     for statement in statements:
         try:
@@ -109,7 +118,7 @@ def _load_income_weight_settings_for_enrollment(enrollment_id: int) -> dict[str,
     default_settings: dict[str, float | int] = {
         "income_weight_employment": 1.00,
         "income_weight_ssi_ssdi_self": 1.00,
-        "income_weight_child_support": 0.50,
+        "income_weight_tanf": 1.00,
         "income_weight_alimony": 0.50,
         "income_weight_other_income": 0.25,
         "income_weight_survivor_cutoff_months": 18,
@@ -121,7 +130,7 @@ def _load_income_weight_settings_for_enrollment(enrollment_id: int) -> dict[str,
             SELECT
                 sos.income_weight_employment,
                 sos.income_weight_ssi_ssdi_self,
-                sos.income_weight_child_support,
+                sos.income_weight_tanf,
                 sos.income_weight_alimony,
                 sos.income_weight_other_income,
                 sos.income_weight_survivor_cutoff_months
@@ -163,7 +172,7 @@ def _child_age_from_birth_year(birth_year: Any) -> float | None:
     return float(age)
 
 
-def _survivor_weight_for_child(age_years: float | None, cutoff_months: int) -> float:
+def _age_weight_for_child(age_years: float | None, cutoff_months: int) -> float:
     if age_years is None:
         return 0.0
 
@@ -179,41 +188,82 @@ def _survivor_weight_for_child(age_years: float | None, cutoff_months: int) -> f
     return weight
 
 
-def _load_survivor_benefit_rollup(enrollment_id: int, cutoff_months: int) -> dict[str, float]:
+def _load_youngest_active_child_weight(enrollment_id: int, cutoff_months: int) -> float:
+    ph = placeholder()
+
+    rows = db_fetchall(
+        f"""
+        SELECT
+            rc.birth_year
+        FROM resident_children rc
+        JOIN program_enrollments pe
+          ON pe.resident_id = rc.resident_id
+        WHERE pe.id = {ph}
+          AND COALESCE(rc.is_active, TRUE) = TRUE
+          AND rc.birth_year IS NOT NULL
+        """,
+        (enrollment_id,),
+    )
+
+    youngest_age = None
+    for row in rows or []:
+        age_years = _child_age_from_birth_year(row.get("birth_year"))
+        if age_years is None:
+            continue
+        if youngest_age is None or age_years < youngest_age:
+            youngest_age = age_years
+
+    return round(_age_weight_for_child(youngest_age, cutoff_months), 4)
+
+
+def _load_child_linked_support_rollups(enrollment_id: int, cutoff_months: int) -> dict[str, float]:
     ph = placeholder()
 
     rows = db_fetchall(
         f"""
         SELECT
             rc.birth_year,
-            rc.survivor_benefit_amount
-        FROM resident_children rc
+            rcis.support_type,
+            rcis.monthly_amount
+        FROM resident_child_income_supports rcis
+        JOIN resident_children rc
+          ON rc.id = rcis.child_id
         JOIN program_enrollments pe
           ON pe.resident_id = rc.resident_id
         WHERE pe.id = {ph}
           AND COALESCE(rc.is_active, TRUE) = TRUE
-          AND COALESCE(rc.receives_survivor_benefit, FALSE) = TRUE
+          AND COALESCE(rcis.is_active, TRUE) = TRUE
+        ORDER BY rcis.id ASC
         """,
         (enrollment_id,),
     )
 
-    raw_total = 0.0
-    weighted_total = 0.0
+    survivor_total = 0.0
+    survivor_weighted_total = 0.0
+    child_support_total = 0.0
+    child_support_weighted_total = 0.0
 
     for row in rows or []:
-        amount = _safe_money(row.get("survivor_benefit_amount"))
+        support_type = str(row.get("support_type") or "").strip().lower()
+        amount = _safe_money(row.get("monthly_amount"))
         if amount <= 0:
             continue
 
         age_years = _child_age_from_birth_year(row.get("birth_year"))
-        weight = _survivor_weight_for_child(age_years, cutoff_months)
+        weight = _age_weight_for_child(age_years, cutoff_months)
 
-        raw_total += amount
-        weighted_total += round(amount * weight, 2)
+        if support_type == "survivor_benefit":
+            survivor_total += amount
+            survivor_weighted_total += round(amount * weight, 2)
+        elif support_type == "child_support":
+            child_support_total += amount
+            child_support_weighted_total += round(amount * weight, 2)
 
     return {
-        "survivor_benefit_total": round(raw_total, 2),
-        "survivor_benefit_weighted_total": round(weighted_total, 2),
+        "survivor_benefit_total": round(survivor_total, 2),
+        "survivor_benefit_weighted_total": round(survivor_weighted_total, 2),
+        "child_support_total": round(child_support_total, 2),
+        "child_support_weighted_total": round(child_support_weighted_total, 2),
     }
 
 
@@ -223,20 +273,19 @@ def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> d
     employment_income_3 = _safe_money(data.get("employment_income_3"))
     ssi_ssdi_income = _safe_money(data.get("ssi_ssdi_income"))
     tanf_income = _safe_money(data.get("tanf_income"))
-    child_support_income = _safe_money(data.get("child_support_income"))
     alimony_income = _safe_money(data.get("alimony_income"))
     other_income = _safe_money(data.get("other_income"))
 
     settings = _load_income_weight_settings_for_enrollment(enrollment_id)
-    survivor_rollup = _load_survivor_benefit_rollup(
-        enrollment_id,
-        _to_int(settings.get("income_weight_survivor_cutoff_months"), 18),
-    )
+    cutoff_months = _to_int(settings.get("income_weight_survivor_cutoff_months"), 18)
 
-    survivor_benefit_total = _safe_money(survivor_rollup.get("survivor_benefit_total"))
-    survivor_benefit_weighted_total = _safe_money(
-        survivor_rollup.get("survivor_benefit_weighted_total")
-    )
+    child_rollups = _load_child_linked_support_rollups(enrollment_id, cutoff_months)
+    youngest_child_weight = _load_youngest_active_child_weight(enrollment_id, cutoff_months)
+
+    survivor_benefit_total = _safe_money(child_rollups.get("survivor_benefit_total"))
+    survivor_benefit_weighted_total = _safe_money(child_rollups.get("survivor_benefit_weighted_total"))
+    child_support_total = _safe_money(child_rollups.get("child_support_total"))
+    child_support_weighted_total = _safe_money(child_rollups.get("child_support_weighted_total"))
 
     total_cash_support = round(
         employment_income_1
@@ -244,7 +293,7 @@ def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> d
         + employment_income_3
         + ssi_ssdi_income
         + tanf_income
-        + child_support_income
+        + child_support_total
         + alimony_income
         + other_income
         + survivor_benefit_total,
@@ -255,7 +304,8 @@ def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> d
         (employment_income_1 + employment_income_2 + employment_income_3)
         * _to_float(settings.get("income_weight_employment"), 1.00)
         + ssi_ssdi_income * _to_float(settings.get("income_weight_ssi_ssdi_self"), 1.00)
-        + child_support_income * _to_float(settings.get("income_weight_child_support"), 0.50)
+        + tanf_income * _to_float(settings.get("income_weight_tanf"), 1.00) * youngest_child_weight
+        + child_support_weighted_total
         + alimony_income * _to_float(settings.get("income_weight_alimony"), 0.50)
         + other_income * _to_float(settings.get("income_weight_other_income"), 0.25)
         + survivor_benefit_weighted_total,
@@ -268,7 +318,7 @@ def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> d
         "employment_income_3": employment_income_3 or None,
         "ssi_ssdi_income": ssi_ssdi_income or None,
         "tanf_income": tanf_income or None,
-        "child_support_income": child_support_income or None,
+        "child_support_income": child_support_total or None,
         "alimony_income": alimony_income or None,
         "other_income": other_income or None,
         "other_income_description": (data.get("other_income_description") or "").strip() or None,
@@ -277,6 +327,9 @@ def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> d
         "weighted_stable_income": weighted_stable_income,
         "survivor_benefit_total": survivor_benefit_total,
         "survivor_benefit_weighted_total": survivor_benefit_weighted_total,
+        "child_support_total": child_support_total,
+        "child_support_weighted_total": child_support_weighted_total,
+        "tanf_weight_applied": youngest_child_weight,
     }
 
 
@@ -303,7 +356,10 @@ def load_intake_income_support(enrollment_id: int):
             total_cash_support,
             weighted_stable_income,
             survivor_benefit_total,
-            survivor_benefit_weighted_total
+            survivor_benefit_weighted_total,
+            child_support_total,
+            child_support_weighted_total,
+            tanf_weight_applied
         FROM intake_income_supports
         WHERE enrollment_id = {ph}
         LIMIT 1
@@ -350,6 +406,9 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
                 weighted_stable_income = {ph},
                 survivor_benefit_total = {ph},
                 survivor_benefit_weighted_total = {ph},
+                child_support_total = {ph},
+                child_support_weighted_total = {ph},
+                tanf_weight_applied = {ph},
                 updated_at = {ph}
             WHERE enrollment_id = {ph}
             """,
@@ -368,6 +427,9 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
                 payload["weighted_stable_income"],
                 payload["survivor_benefit_total"],
                 payload["survivor_benefit_weighted_total"],
+                payload["child_support_total"],
+                payload["child_support_weighted_total"],
+                payload["tanf_weight_applied"],
                 now,
                 enrollment_id,
             ),
@@ -393,11 +455,17 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
             weighted_stable_income,
             survivor_benefit_total,
             survivor_benefit_weighted_total,
+            child_support_total,
+            child_support_weighted_total,
+            tanf_weight_applied,
             created_at,
             updated_at
         )
         VALUES
         (
+            {ph},
+            {ph},
+            {ph},
             {ph},
             {ph},
             {ph},
@@ -433,6 +501,9 @@ def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> No
             payload["weighted_stable_income"],
             payload["survivor_benefit_total"],
             payload["survivor_benefit_weighted_total"],
+            payload["child_support_total"],
+            payload["child_support_weighted_total"],
+            payload["tanf_weight_applied"],
             now,
             now,
         ),
@@ -450,7 +521,6 @@ def recalculate_intake_income_support(enrollment_id: int) -> None:
         "employment_income_3": current.get("employment_income_3"),
         "ssi_ssdi_income": current.get("ssi_ssdi_income"),
         "tanf_income": current.get("tanf_income"),
-        "child_support_income": current.get("child_support_income"),
         "alimony_income": current.get("alimony_income"),
         "other_income": current.get("other_income"),
         "other_income_description": current.get("other_income_description"),
