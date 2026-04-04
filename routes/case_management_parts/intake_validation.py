@@ -180,6 +180,16 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         "sobriety_date": clean(form.get("sobriety_date")),
         "drug_of_choice": clean(form.get("drug_of_choice")),
         "income_at_entry": clean(form.get("income_at_entry")),
+        "employment_income_1": clean(form.get("employment_income_1")),
+        "employment_income_2": clean(form.get("employment_income_2")),
+        "employment_income_3": clean(form.get("employment_income_3")),
+        "ssi_ssdi_income": clean(form.get("ssi_ssdi_income")),
+        "tanf_income": clean(form.get("tanf_income")),
+        "child_support_income": clean(form.get("child_support_income")),
+        "alimony_income": clean(form.get("alimony_income")),
+        "other_income": clean(form.get("other_income")),
+        "other_income_description": clean(form.get("other_income_description")),
+        "receives_snap_at_entry": clean(form.get("receives_snap_at_entry")),
         "education_at_entry": clean(form.get("education_at_entry")),
         "disability": clean(form.get("disability")),
         "dwc_level_today": clean(form.get("dwc_level_today")),
@@ -298,10 +308,36 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         errors.append("Grit Score must be between 0 and 100.")
     data["grit_score"] = grit_score
 
-    income_at_entry = parse_money(data["income_at_entry"])
-    if income_at_entry is not None and income_at_entry < 0:
-        errors.append("Monthly Income cannot be negative.")
-    data["income_at_entry"] = income_at_entry
+    income_component_fields = [
+        "employment_income_1",
+        "employment_income_2",
+        "employment_income_3",
+        "ssi_ssdi_income",
+        "tanf_income",
+        "child_support_income",
+        "alimony_income",
+        "other_income",
+    ]
+
+    total_cash_support = 0.0
+
+    for field_name in income_component_fields:
+        parsed_value = parse_money(data[field_name])
+        if parsed_value is not None and parsed_value < 0:
+            errors.append(f"{field_name.replace('_', ' ').title()} cannot be negative.")
+        data[field_name] = parsed_value
+        if parsed_value is not None:
+            total_cash_support += parsed_value
+
+    data["income_at_entry"] = round(total_cash_support, 2)
+
+    receives_snap_normalized = str(data.get("receives_snap_at_entry") or "").strip().lower()
+    if receives_snap_normalized in {"yes", "true", "1", "on"}:
+        data["receives_snap_at_entry"] = "yes"
+    elif receives_snap_normalized in {"no", "false", "0", "off"}:
+        data["receives_snap_at_entry"] = "no"
+    else:
+        data["receives_snap_at_entry"] = ""
 
     family_count_fields = [
         "kids_at_dwc",
@@ -320,5 +356,45 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         if parsed_value is not None and parsed_value < 0:
             errors.append(f"{field_name.replace('_', ' ').title()} cannot be negative.")
         data[field_name] = parsed_value
+
+    benefits_screening_needed = False
+
+    if data["income_at_entry"] < 1200.0:
+        benefits_screening_needed = True
+
+    if str(data.get("pregnant") or "").strip().lower() == "yes":
+        benefits_screening_needed = True
+
+    if str(data.get("veteran") or "").strip().lower() == "yes":
+        benefits_screening_needed = True
+
+    disability = str(data.get("disability") or "").strip()
+    if disability and disability.lower() != "unknown":
+        benefits_screening_needed = True
+
+    employment_status = str(data.get("employment_status") or "").strip().lower()
+    if employment_status in {"unemployed", "disabled", "unknown"}:
+        benefits_screening_needed = True
+
+    for field_name in [
+        "kids_at_dwc",
+        "kids_served_outside_under_18",
+        "kids_ages_0_5",
+        "kids_ages_6_11",
+        "kids_ages_12_17",
+    ]:
+        try:
+            if int(data.get(field_name) or 0) > 0:
+                benefits_screening_needed = True
+                break
+        except Exception:
+            pass
+
+    if benefits_screening_needed:
+        selected_keys = list(data["entry_need_keys"])
+        if "benefits_screening_texas" not in selected_keys:
+            selected_keys.append("benefits_screening_texas")
+        data["entry_need_keys"] = selected_keys
+        data["need_benefits_screening_texas"] = "yes"
 
     return data, errors
