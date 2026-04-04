@@ -167,7 +167,7 @@
             {% endif %}
           </div>
           <div class="cmx-field">
-            <input type="text" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}" placeholder="$0.00">
+            <input type="text" name="monthly_income" value="{{ eis.get('income_value') if eis.get('income_value') is not none else '' }}" placeholder="$0.00">
           </div>
           {% if eis.get("module_enabled", True) %}
             <div style="margin-top:8px; font-size:12px; color:#53687c;">
