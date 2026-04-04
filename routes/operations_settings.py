@@ -1,40 +1,131 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any
+from statistics import median
 
-from flask import g
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for, g
 
+from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import yes_no_to_int
+
+operations_settings = Blueprint(
+    "operations_settings",
+    __name__,
+    url_prefix="/staff/admin/operations-settings",
+)
 
 
-def ensure_intake_income_supports_table() -> None:
+DEFAULT_INSPECTION_ITEMS = [
+    "Floors clean",
+    "Bed made",
+    "Trash removed",
+    "Bathroom clean",
+    "No prohibited items visible",
+    "General room condition acceptable",
+]
+
+
+def _placeholder() -> str:
+    return "%s" if g.get("db_kind") == "pg" else "?"
+
+
+def _normalize_shelter_name(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+def _director_allowed() -> bool:
+    return session.get("role") in {"admin", "shelter_director"}
+
+
+def _to_bool(value: str | None, default: bool = False) -> bool:
+    normalized = (value or "").strip().lower()
+    if normalized in {"yes", "true", "1", "on"}:
+        return True
+    if normalized in {"no", "false", "0", "off"}:
+        return False
+    return default
+
+
+def _to_int(value: str | None, default: int) -> int:
+    try:
+        return int((value or "").strip() or str(default))
+    except Exception:
+        return default
+
+
+def _to_float(value: str | None, default: float) -> float:
+    try:
+        return float((value or "").strip() or str(default))
+    except Exception:
+        return default
+
+
+def _default_labels_text() -> str:
+    return "\n".join(DEFAULT_INSPECTION_ITEMS)
+
+
+def _currency(value) -> str:
+    if value in (None, ""):
+        return "—"
+    try:
+        return f"${float(value):,.2f}"
+    except Exception:
+        return "—"
+
+
+def _average_or_none(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return round(sum(values) / len(values), 2)
+
+
+def _median_or_none(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return round(float(median(values)), 2)
+
+
+def _ensure_operations_settings_table() -> None:
     if g.get("db_kind") == "pg":
         db_execute(
             """
-            CREATE TABLE IF NOT EXISTS intake_income_supports (
+            CREATE TABLE IF NOT EXISTS shelter_operation_settings (
                 id SERIAL PRIMARY KEY,
-                enrollment_id INTEGER NOT NULL UNIQUE REFERENCES program_enrollments(id) ON DELETE CASCADE,
-                employment_income_1 DOUBLE PRECISION,
-                employment_income_2 DOUBLE PRECISION,
-                employment_income_3 DOUBLE PRECISION,
-                ssi_ssdi_income DOUBLE PRECISION,
-                tanf_income DOUBLE PRECISION,
-                child_support_income DOUBLE PRECISION,
-                alimony_income DOUBLE PRECISION,
-                other_income DOUBLE PRECISION,
-                other_income_description TEXT,
-                receives_snap_at_entry BOOLEAN,
-                total_cash_support DOUBLE PRECISION,
-                weighted_stable_income DOUBLE PRECISION,
-                survivor_benefit_total DOUBLE PRECISION,
-                survivor_benefit_weighted_total DOUBLE PRECISION,
-                child_support_total DOUBLE PRECISION,
-                child_support_weighted_total DOUBLE PRECISION,
-                tanf_weight_applied DOUBLE PRECISION,
+                shelter TEXT NOT NULL UNIQUE,
+                rent_late_day_of_month INTEGER NOT NULL DEFAULT 6,
+                rent_score_paid INTEGER NOT NULL DEFAULT 100,
+                rent_score_partially_paid INTEGER NOT NULL DEFAULT 75,
+                rent_score_paid_late INTEGER NOT NULL DEFAULT 75,
+                rent_score_not_paid INTEGER NOT NULL DEFAULT 0,
+                rent_score_exempt INTEGER NOT NULL DEFAULT 100,
+                rent_carry_forward_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                inspection_default_item_status TEXT NOT NULL DEFAULT 'passed',
+                inspection_item_labels TEXT,
+                inspection_scoring_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                inspection_lookback_months INTEGER NOT NULL DEFAULT 9,
+                inspection_include_current_open_month BOOLEAN NOT NULL DEFAULT FALSE,
+                inspection_score_passed INTEGER NOT NULL DEFAULT 100,
+                inspection_needs_attention_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                inspection_score_needs_attention INTEGER NOT NULL DEFAULT 70,
+                inspection_score_failed INTEGER NOT NULL DEFAULT 0,
+                inspection_passing_threshold INTEGER NOT NULL DEFAULT 83,
+                inspection_band_green_min INTEGER NOT NULL DEFAULT 83,
+                inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
+                inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
+                inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
+                employment_income_module_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                employment_income_graduation_minimum DOUBLE PRECISION NOT NULL DEFAULT 1200.00,
+                employment_income_band_green_min DOUBLE PRECISION NOT NULL DEFAULT 1200.00,
+                employment_income_band_yellow_min DOUBLE PRECISION NOT NULL DEFAULT 1000.00,
+                employment_income_band_orange_min DOUBLE PRECISION NOT NULL DEFAULT 700.00,
+                employment_income_band_red_max DOUBLE PRECISION NOT NULL DEFAULT 699.99,
+                income_weight_employment DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+                income_weight_ssi_ssdi_self DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+                income_weight_tanf DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+                income_weight_child_support DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+                income_weight_alimony DOUBLE PRECISION NOT NULL DEFAULT 0.50,
+                income_weight_other_income DOUBLE PRECISION NOT NULL DEFAULT 0.25,
+                income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -43,40 +134,86 @@ def ensure_intake_income_supports_table() -> None:
     else:
         db_execute(
             """
-            CREATE TABLE IF NOT EXISTS intake_income_supports (
+            CREATE TABLE IF NOT EXISTS shelter_operation_settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                enrollment_id INTEGER NOT NULL UNIQUE,
-                employment_income_1 REAL,
-                employment_income_2 REAL,
-                employment_income_3 REAL,
-                ssi_ssdi_income REAL,
-                tanf_income REAL,
-                child_support_income REAL,
-                alimony_income REAL,
-                other_income REAL,
-                other_income_description TEXT,
-                receives_snap_at_entry INTEGER,
-                total_cash_support REAL,
-                weighted_stable_income REAL,
-                survivor_benefit_total REAL,
-                survivor_benefit_weighted_total REAL,
-                child_support_total REAL,
-                child_support_weighted_total REAL,
-                tanf_weight_applied REAL,
+                shelter TEXT NOT NULL UNIQUE,
+                rent_late_day_of_month INTEGER NOT NULL DEFAULT 6,
+                rent_score_paid INTEGER NOT NULL DEFAULT 100,
+                rent_score_partially_paid INTEGER NOT NULL DEFAULT 75,
+                rent_score_paid_late INTEGER NOT NULL DEFAULT 75,
+                rent_score_not_paid INTEGER NOT NULL DEFAULT 0,
+                rent_score_exempt INTEGER NOT NULL DEFAULT 100,
+                rent_carry_forward_enabled INTEGER NOT NULL DEFAULT 1,
+                inspection_default_item_status TEXT NOT NULL DEFAULT 'passed',
+                inspection_item_labels TEXT,
+                inspection_scoring_enabled INTEGER NOT NULL DEFAULT 1,
+                inspection_lookback_months INTEGER NOT NULL DEFAULT 9,
+                inspection_include_current_open_month INTEGER NOT NULL DEFAULT 0,
+                inspection_score_passed INTEGER NOT NULL DEFAULT 100,
+                inspection_needs_attention_enabled INTEGER NOT NULL DEFAULT 0,
+                inspection_score_needs_attention INTEGER NOT NULL DEFAULT 70,
+                inspection_score_failed INTEGER NOT NULL DEFAULT 0,
+                inspection_passing_threshold INTEGER NOT NULL DEFAULT 83,
+                inspection_band_green_min INTEGER NOT NULL DEFAULT 83,
+                inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
+                inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
+                inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
+                employment_income_module_enabled INTEGER NOT NULL DEFAULT 1,
+                employment_income_graduation_minimum REAL NOT NULL DEFAULT 1200.00,
+                employment_income_band_green_min REAL NOT NULL DEFAULT 1200.00,
+                employment_income_band_yellow_min REAL NOT NULL DEFAULT 1000.00,
+                employment_income_band_orange_min REAL NOT NULL DEFAULT 700.00,
+                employment_income_band_red_max REAL NOT NULL DEFAULT 699.99,
+                income_weight_employment REAL NOT NULL DEFAULT 1.00,
+                income_weight_ssi_ssdi_self REAL NOT NULL DEFAULT 1.00,
+                income_weight_tanf REAL NOT NULL DEFAULT 1.00,
+                income_weight_child_support REAL NOT NULL DEFAULT 1.00,
+                income_weight_alimony REAL NOT NULL DEFAULT 0.50,
+                income_weight_other_income REAL NOT NULL DEFAULT 0.25,
+                income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
                 created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id) ON DELETE CASCADE
+                updated_at TEXT NOT NULL
             )
             """
         )
 
     statements = [
-        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS weighted_stable_income DOUBLE PRECISION",
-        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS survivor_benefit_total DOUBLE PRECISION",
-        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS survivor_benefit_weighted_total DOUBLE PRECISION",
-        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS child_support_total DOUBLE PRECISION",
-        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS child_support_weighted_total DOUBLE PRECISION",
-        "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS tanf_weight_applied DOUBLE PRECISION",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_late_day_of_month INTEGER DEFAULT 6",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_paid INTEGER DEFAULT 100",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_partially_paid INTEGER DEFAULT 75",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_paid_late INTEGER DEFAULT 75",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_not_paid INTEGER DEFAULT 0",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_exempt INTEGER DEFAULT 100",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_carry_forward_enabled BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_default_item_status TEXT DEFAULT 'passed'",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_item_labels TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_scoring_enabled BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_lookback_months INTEGER DEFAULT 9",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_include_current_open_month BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_passed INTEGER DEFAULT 100",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_needs_attention_enabled BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_needs_attention INTEGER DEFAULT 70",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_failed INTEGER DEFAULT 0",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_passing_threshold INTEGER DEFAULT 83",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_green_min INTEGER DEFAULT 83",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_yellow_min INTEGER DEFAULT 78",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_orange_min INTEGER DEFAULT 56",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_red_max INTEGER DEFAULT 55",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_module_enabled BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_graduation_minimum DOUBLE PRECISION DEFAULT 1200.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_green_min DOUBLE PRECISION DEFAULT 1200.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_yellow_min DOUBLE PRECISION DEFAULT 1000.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_orange_min DOUBLE PRECISION DEFAULT 700.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_red_max DOUBLE PRECISION DEFAULT 699.99",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_employment DOUBLE PRECISION DEFAULT 1.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_ssi_ssdi_self DOUBLE PRECISION DEFAULT 1.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_tanf DOUBLE PRECISION DEFAULT 1.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_child_support DOUBLE PRECISION DEFAULT 1.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_alimony DOUBLE PRECISION DEFAULT 0.50",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_other_income DOUBLE PRECISION DEFAULT 0.25",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_survivor_cutoff_months INTEGER DEFAULT 18",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
     for statement in statements:
         try:
@@ -85,484 +222,459 @@ def ensure_intake_income_supports_table() -> None:
             pass
 
 
-def _safe_money(value: Any) -> float:
-    if value in (None, ""):
-        return 0.0
-    try:
-        return round(float(value), 2)
-    except Exception:
-        return 0.0
-
-
-def _to_float(value: Any, default: float) -> float:
-    try:
-        if value in (None, ""):
-            return default
-        return float(value)
-    except Exception:
-        return default
-
-
-def _to_int(value: Any, default: int) -> int:
-    try:
-        if value in (None, ""):
-            return default
-        return int(value)
-    except Exception:
-        return default
-
-
-def _load_income_weight_settings_for_enrollment(enrollment_id: int) -> dict[str, float | int]:
-    ph = placeholder()
-
-    default_settings: dict[str, float | int] = {
-        "income_weight_employment": 1.00,
-        "income_weight_ssi_ssdi_self": 1.00,
-        "income_weight_tanf": 1.00,
-        "income_weight_alimony": 0.50,
-        "income_weight_other_income": 0.25,
-        "income_weight_survivor_cutoff_months": 18,
-    }
-
-    try:
-        row = db_fetchone(
-            f"""
-            SELECT
-                sos.income_weight_employment,
-                sos.income_weight_ssi_ssdi_self,
-                sos.income_weight_tanf,
-                sos.income_weight_alimony,
-                sos.income_weight_other_income,
-                sos.income_weight_survivor_cutoff_months
-            FROM program_enrollments pe
-            LEFT JOIN shelter_operation_settings sos
-              ON LOWER(COALESCE(sos.shelter, '')) = LOWER(COALESCE(pe.shelter, ''))
-            WHERE pe.id = {ph}
-            LIMIT 1
-            """,
-            (enrollment_id,),
-        )
-    except Exception:
-        row = None
-
-    if not row:
-        return default_settings
-
-    resolved = dict(default_settings)
-    for key, default_value in default_settings.items():
-        if row.get(key) is None:
-            continue
-        if isinstance(default_value, int):
-            resolved[key] = _to_int(row.get(key), default_value)
-        else:
-            resolved[key] = _to_float(row.get(key), default_value)
-    return resolved
-
-
-def _child_age_from_birth_year(birth_year: Any) -> float | None:
-    try:
-        year = int(birth_year)
-    except Exception:
-        return None
-
-    now = datetime.utcnow()
-    age = now.year - year
-    if age < 0:
-        return None
-    return float(age)
-
-
-def _age_weight_for_child(age_years: float | None, cutoff_months: int) -> float:
-    if age_years is None:
-        return 0.0
-
-    months_remaining = max((18.0 - age_years) * 12.0, 0.0)
-    if months_remaining < float(cutoff_months):
-        return 0.0
-
-    weight = (18.0 - age_years) / 18.0
-    if weight < 0.0:
-        return 0.0
-    if weight > 1.0:
-        return 1.0
-    return weight
-
-
-def _load_youngest_active_child_weight(enrollment_id: int, cutoff_months: int) -> float:
-    ph = placeholder()
-
-    rows = db_fetchall(
-        f"""
-        SELECT
-            rc.birth_year
-        FROM resident_children rc
-        JOIN program_enrollments pe
-          ON pe.resident_id = rc.resident_id
-        WHERE pe.id = {ph}
-          AND COALESCE(rc.is_active, TRUE) = TRUE
-          AND rc.birth_year IS NOT NULL
-        """,
-        (enrollment_id,),
+def _settings_row_for_shelter(shelter: str):
+    _ensure_operations_settings_table()
+    ph = _placeholder()
+    row = db_fetchone(
+        f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
+        (shelter,),
     )
+    if row:
+        return row
 
-    youngest_age = None
-    for row in rows or []:
-        age_years = _child_age_from_birth_year(row.get("birth_year"))
-        if age_years is None:
-            continue
-        if youngest_age is None or age_years < youngest_age:
-            youngest_age = age_years
-
-    return round(_age_weight_for_child(youngest_age, cutoff_months), 4)
-
-
-def _load_child_linked_support_rollups(enrollment_id: int, cutoff_months: int) -> dict[str, float]:
-    ph = placeholder()
-
-    rows = db_fetchall(
-        f"""
-        SELECT
-            rc.birth_year,
-            rcis.support_type,
-            rcis.monthly_amount
-        FROM resident_child_income_supports rcis
-        JOIN resident_children rc
-          ON rc.id = rcis.child_id
-        JOIN program_enrollments pe
-          ON pe.resident_id = rc.resident_id
-        WHERE pe.id = {ph}
-          AND COALESCE(rc.is_active, TRUE) = TRUE
-          AND COALESCE(rcis.is_active, TRUE) = TRUE
-        ORDER BY rcis.id ASC
-        """,
-        (enrollment_id,),
-    )
-
-    survivor_total = 0.0
-    survivor_weighted_total = 0.0
-    child_support_total = 0.0
-    child_support_weighted_total = 0.0
-
-    for row in rows or []:
-        support_type = str(row.get("support_type") or "").strip().lower()
-        amount = _safe_money(row.get("monthly_amount"))
-        if amount <= 0:
-            continue
-
-        age_years = _child_age_from_birth_year(row.get("birth_year"))
-        age_weight = _age_weight_for_child(age_years, cutoff_months)
-
-        if support_type == "survivor_benefit":
-            survivor_total += amount
-            survivor_weighted_total += round(amount * age_weight, 2)
-        elif support_type == "child_support":
-            child_support_total += amount
-            child_support_weighted_total += round(amount * age_weight, 2)
-
-    return {
-        "survivor_benefit_total": round(survivor_total, 2),
-        "survivor_benefit_weighted_total": round(survivor_weighted_total, 2),
-        "child_support_total": round(child_support_total, 2),
-        "child_support_weighted_total": round(child_support_weighted_total, 2),
-    }
-
-
-def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> dict[str, Any]:
-    employment_income_1 = _safe_money(data.get("employment_income_1"))
-    employment_income_2 = _safe_money(data.get("employment_income_2"))
-    employment_income_3 = _safe_money(data.get("employment_income_3"))
-    ssi_ssdi_income = _safe_money(data.get("ssi_ssdi_income"))
-    tanf_income = _safe_money(data.get("tanf_income"))
-    alimony_income = _safe_money(data.get("alimony_income"))
-    other_income = _safe_money(data.get("other_income"))
-
-    settings = _load_income_weight_settings_for_enrollment(enrollment_id)
-    cutoff_months = _to_int(settings.get("income_weight_survivor_cutoff_months"), 18)
-
-    child_rollups = _load_child_linked_support_rollups(enrollment_id, cutoff_months)
-    youngest_child_weight = _load_youngest_active_child_weight(enrollment_id, cutoff_months)
-
-    survivor_benefit_total = _safe_money(child_rollups.get("survivor_benefit_total"))
-    survivor_benefit_weighted_total = _safe_money(child_rollups.get("survivor_benefit_weighted_total"))
-    child_support_total = _safe_money(child_rollups.get("child_support_total"))
-    child_support_weighted_total = _safe_money(child_rollups.get("child_support_weighted_total"))
-
-    total_cash_support = round(
-        employment_income_1
-        + employment_income_2
-        + employment_income_3
-        + ssi_ssdi_income
-        + tanf_income
-        + child_support_total
-        + alimony_income
-        + other_income
-        + survivor_benefit_total,
-        2,
-    )
-
-    weighted_stable_income = round(
-        (employment_income_1 + employment_income_2 + employment_income_3)
-        * _to_float(settings.get("income_weight_employment"), 1.00)
-        + ssi_ssdi_income * _to_float(settings.get("income_weight_ssi_ssdi_self"), 1.00)
-        + tanf_income * _to_float(settings.get("income_weight_tanf"), 1.00) * youngest_child_weight
-        + child_support_weighted_total
-        + alimony_income * _to_float(settings.get("income_weight_alimony"), 0.50)
-        + other_income * _to_float(settings.get("income_weight_other_income"), 0.25)
-        + survivor_benefit_weighted_total,
-        2,
-    )
-
-    return {
-        "employment_income_1": employment_income_1 or None,
-        "employment_income_2": employment_income_2 or None,
-        "employment_income_3": employment_income_3 or None,
-        "ssi_ssdi_income": ssi_ssdi_income or None,
-        "tanf_income": tanf_income or None,
-        "child_support_income": child_support_total or None,
-        "alimony_income": alimony_income or None,
-        "other_income": other_income or None,
-        "other_income_description": (data.get("other_income_description") or "").strip() or None,
-        "receives_snap_at_entry": yes_no_to_int(data.get("receives_snap_at_entry")),
-        "total_cash_support": total_cash_support,
-        "weighted_stable_income": weighted_stable_income,
-        "survivor_benefit_total": survivor_benefit_total,
-        "survivor_benefit_weighted_total": survivor_benefit_weighted_total,
-        "child_support_total": child_support_total,
-        "child_support_weighted_total": child_support_weighted_total,
-        "tanf_weight_applied": youngest_child_weight,
-    }
-
-
-def load_intake_income_support(enrollment_id: int):
-    if not enrollment_id:
-        return None
-
-    ensure_intake_income_supports_table()
-    ph = placeholder()
-
-    return db_fetchone(
-        f"""
-        SELECT
-            employment_income_1,
-            employment_income_2,
-            employment_income_3,
-            ssi_ssdi_income,
-            tanf_income,
-            child_support_income,
-            alimony_income,
-            other_income,
-            other_income_description,
-            receives_snap_at_entry,
-            total_cash_support,
-            weighted_stable_income,
-            survivor_benefit_total,
-            survivor_benefit_weighted_total,
-            child_support_total,
-            child_support_weighted_total,
-            tanf_weight_applied
-        FROM intake_income_supports
-        WHERE enrollment_id = {ph}
-        LIMIT 1
-        """,
-        (enrollment_id,),
-    )
-
-
-def upsert_intake_income_support(enrollment_id: int, data: dict[str, Any]) -> None:
-    if not enrollment_id:
-        return
-
-    ensure_intake_income_supports_table()
-    payload = _build_income_support_payload(enrollment_id, data)
-    ph = placeholder()
     now = utcnow_iso()
-
-    existing = db_fetchone(
-        f"""
-        SELECT id
-        FROM intake_income_supports
-        WHERE enrollment_id = {ph}
-        LIMIT 1
-        """,
-        (enrollment_id,),
-    )
-
-    if existing:
-        db_execute(
-            f"""
-            UPDATE intake_income_supports
-            SET
-                employment_income_1 = {ph},
-                employment_income_2 = {ph},
-                employment_income_3 = {ph},
-                ssi_ssdi_income = {ph},
-                tanf_income = {ph},
-                child_support_income = {ph},
-                alimony_income = {ph},
-                other_income = {ph},
-                other_income_description = {ph},
-                receives_snap_at_entry = {ph},
-                total_cash_support = {ph},
-                weighted_stable_income = {ph},
-                survivor_benefit_total = {ph},
-                survivor_benefit_weighted_total = {ph},
-                child_support_total = {ph},
-                child_support_weighted_total = {ph},
-                tanf_weight_applied = {ph},
-                updated_at = {ph}
-            WHERE enrollment_id = {ph}
-            """,
-            (
-                payload["employment_income_1"],
-                payload["employment_income_2"],
-                payload["employment_income_3"],
-                payload["ssi_ssdi_income"],
-                payload["tanf_income"],
-                payload["child_support_income"],
-                payload["alimony_income"],
-                payload["other_income"],
-                payload["other_income_description"],
-                payload["receives_snap_at_entry"],
-                payload["total_cash_support"],
-                payload["weighted_stable_income"],
-                payload["survivor_benefit_total"],
-                payload["survivor_benefit_weighted_total"],
-                payload["child_support_total"],
-                payload["child_support_weighted_total"],
-                payload["tanf_weight_applied"],
-                now,
-                enrollment_id,
-            ),
-        )
-        return
-
     db_execute(
-        f"""
-        INSERT INTO intake_income_supports
         (
-            enrollment_id,
-            employment_income_1,
-            employment_income_2,
-            employment_income_3,
-            ssi_ssdi_income,
-            tanf_income,
-            child_support_income,
-            alimony_income,
-            other_income,
-            other_income_description,
-            receives_snap_at_entry,
-            total_cash_support,
-            weighted_stable_income,
-            survivor_benefit_total,
-            survivor_benefit_weighted_total,
-            child_support_total,
-            child_support_weighted_total,
-            tanf_weight_applied,
-            created_at,
-            updated_at
-        )
-        VALUES
+            """
+            INSERT INTO shelter_operation_settings (
+                shelter,
+                rent_late_day_of_month,
+                rent_score_paid,
+                rent_score_partially_paid,
+                rent_score_paid_late,
+                rent_score_not_paid,
+                rent_score_exempt,
+                rent_carry_forward_enabled,
+                inspection_default_item_status,
+                inspection_item_labels,
+                inspection_scoring_enabled,
+                inspection_lookback_months,
+                inspection_include_current_open_month,
+                inspection_score_passed,
+                inspection_needs_attention_enabled,
+                inspection_score_needs_attention,
+                inspection_score_failed,
+                inspection_passing_threshold,
+                inspection_band_green_min,
+                inspection_band_yellow_min,
+                inspection_band_orange_min,
+                inspection_band_red_max,
+                employment_income_module_enabled,
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max,
+                income_weight_employment,
+                income_weight_ssi_ssdi_self,
+                income_weight_tanf,
+                income_weight_child_support,
+                income_weight_alimony,
+                income_weight_other_income,
+                income_weight_survivor_cutoff_months,
+                created_at,
+                updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            INSERT INTO shelter_operation_settings (
+                shelter,
+                rent_late_day_of_month,
+                rent_score_paid,
+                rent_score_partially_paid,
+                rent_score_paid_late,
+                rent_score_not_paid,
+                rent_score_exempt,
+                rent_carry_forward_enabled,
+                inspection_default_item_status,
+                inspection_item_labels,
+                inspection_scoring_enabled,
+                inspection_lookback_months,
+                inspection_include_current_open_month,
+                inspection_score_passed,
+                inspection_needs_attention_enabled,
+                inspection_score_needs_attention,
+                inspection_score_failed,
+                inspection_passing_threshold,
+                inspection_band_green_min,
+                inspection_band_yellow_min,
+                inspection_band_orange_min,
+                inspection_band_red_max,
+                employment_income_module_enabled,
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max,
+                income_weight_employment,
+                income_weight_ssi_ssdi_self,
+                income_weight_tanf,
+                income_weight_child_support,
+                income_weight_alimony,
+                income_weight_other_income,
+                income_weight_survivor_cutoff_months,
+                created_at,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+        ),
         (
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph},
-            {ph}
-        )
-        """,
-        (
-            enrollment_id,
-            payload["employment_income_1"],
-            payload["employment_income_2"],
-            payload["employment_income_3"],
-            payload["ssi_ssdi_income"],
-            payload["tanf_income"],
-            payload["child_support_income"],
-            payload["alimony_income"],
-            payload["other_income"],
-            payload["other_income_description"],
-            payload["receives_snap_at_entry"],
-            payload["total_cash_support"],
-            payload["weighted_stable_income"],
-            payload["survivor_benefit_total"],
-            payload["survivor_benefit_weighted_total"],
-            payload["child_support_total"],
-            payload["child_support_weighted_total"],
-            payload["tanf_weight_applied"],
+            shelter,
+            6,
+            100,
+            75,
+            75,
+            0,
+            100,
+            True if g.get("db_kind") == "pg" else 1,
+            "passed",
+            _default_labels_text(),
+            True if g.get("db_kind") == "pg" else 1,
+            9,
+            False if g.get("db_kind") == "pg" else 0,
+            100,
+            False if g.get("db_kind") == "pg" else 0,
+            70,
+            0,
+            83,
+            83,
+            78,
+            56,
+            55,
+            True if g.get("db_kind") == "pg" else 1,
+            1200.00,
+            1200.00,
+            1000.00,
+            700.00,
+            699.99,
+            1.00,
+            1.00,
+            1.00,
+            1.00,
+            0.50,
+            0.25,
+            18,
             now,
             now,
         ),
     )
+    return db_fetchone(
+        f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
+        (shelter,),
+    )
 
 
-def recalculate_intake_income_support(enrollment_id: int) -> None:
-    if not enrollment_id:
-        return
+def _employment_income_guidance(shelter: str) -> dict:
+    ph = _placeholder()
+    rows = db_fetchall(
+        f"""
+        SELECT
+            pe.id AS enrollment_id,
+            ea.income_at_exit,
+            ea.graduation_income_snapshot,
+            f.followup_type,
+            f.followup_date,
+            f.sober_at_followup
+        FROM program_enrollments pe
+        JOIN exit_assessments ea ON ea.enrollment_id = pe.id
+        LEFT JOIN followups f ON f.enrollment_id = pe.id
+        WHERE LOWER(COALESCE(pe.shelter, '')) = {ph}
+          AND COALESCE(ea.exit_category, '') = 'Successful Completion'
+          AND COALESCE(ea.exit_reason, '') = 'Program Graduated'
+          AND COALESCE(ea.graduate_dwc, 0) = 1
+        ORDER BY pe.id ASC, COALESCE(f.followup_date, '') DESC
+        """,
+        (shelter,),
+    )
 
-    current = load_intake_income_support(enrollment_id) or {}
-    source_data = {
-        "employment_income_1": current.get("employment_income_1"),
-        "employment_income_2": current.get("employment_income_2"),
-        "employment_income_3": current.get("employment_income_3"),
-        "ssi_ssdi_income": current.get("ssi_ssdi_income"),
-        "tanf_income": current.get("tanf_income"),
-        "alimony_income": current.get("alimony_income"),
-        "other_income": current.get("other_income"),
-        "other_income_description": current.get("other_income_description"),
-        "receives_snap_at_entry": "yes"
-        if current.get("receives_snap_at_entry") in (True, 1)
-        else "no"
-        if current.get("receives_snap_at_entry") in (False, 0)
-        else "",
+    graduates: dict[int, dict] = {}
+    for row in rows:
+        enrollment_id = int(row["enrollment_id"])
+        graduate = graduates.get(enrollment_id)
+        if not graduate:
+            snapshot = row.get("graduation_income_snapshot")
+            if snapshot in (None, ""):
+                snapshot = row.get("income_at_exit")
+            graduate = {
+                "graduation_income": float(snapshot) if snapshot not in (None, "") else None,
+                "followups": {},
+            }
+            graduates[enrollment_id] = graduate
+
+        followup_type = (row.get("followup_type") or "").strip()
+        if followup_type not in {"6_month", "1_year"}:
+            continue
+
+        existing = graduate["followups"].get(followup_type)
+        current_date = row.get("followup_date") or ""
+        existing_date = existing.get("followup_date") if existing else ""
+
+        if existing and existing_date >= current_date:
+            continue
+
+        graduate["followups"][followup_type] = {
+            "followup_date": current_date,
+            "sober": bool(int(row.get("sober_at_followup") or 0)),
+        }
+
+    graduation_incomes: list[float] = []
+    six_month_sober_incomes: list[float] = []
+    one_year_sober_incomes: list[float] = []
+
+    for graduate in graduates.values():
+        grad_income = graduate["graduation_income"]
+        if grad_income is not None:
+            graduation_incomes.append(grad_income)
+
+        six_month = graduate["followups"].get("6_month")
+        if six_month and six_month["sober"] and grad_income is not None:
+            six_month_sober_incomes.append(grad_income)
+
+        one_year = graduate["followups"].get("1_year")
+        if one_year and one_year["sober"] and grad_income is not None:
+            one_year_sober_incomes.append(grad_income)
+
+    return {
+        "average_graduation_income": _average_or_none(graduation_incomes),
+        "median_graduation_income": _median_or_none(graduation_incomes),
+        "average_sober_6_month_income": _average_or_none(six_month_sober_incomes),
+        "average_sober_12_month_income": _average_or_none(one_year_sober_incomes),
     }
-    upsert_intake_income_support(enrollment_id, source_data)
 
 
-def benefits_screening_needed(data: dict[str, Any]) -> bool:
-    total_cash_support = _safe_money(data.get("income_at_entry"))
-    if total_cash_support < 1200.0:
-        return True
+@operations_settings.route("", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def settings_page():
+    if not _director_allowed():
+        flash("Admin or shelter director access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
 
-    if str(data.get("pregnant") or "").strip().lower() == "yes":
-        return True
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    row = _settings_row_for_shelter(shelter)
 
-    if str(data.get("veteran") or "").strip().lower() == "yes":
-        return True
+    if request.method == "POST":
+        now = utcnow_iso()
 
-    disability = str(data.get("disability") or "").strip()
-    if disability and disability.lower() != "unknown":
-        return True
+        late_day = min(max(_to_int(request.form.get("rent_late_day_of_month"), 6), 1), 28)
+        carry_forward_enabled = _to_bool(request.form.get("rent_carry_forward_enabled"), True)
 
-    employment_status = str(data.get("employment_status") or "").strip().lower()
-    if employment_status in {"unemployed", "disabled", "unknown"}:
-        return True
+        inspection_default_item_status = (request.form.get("inspection_default_item_status") or "passed").strip().lower()
+        if inspection_default_item_status not in {"passed", "needs_attention", "failed"}:
+            inspection_default_item_status = "passed"
 
-    for field_name in [
-        "kids_at_dwc",
-        "kids_served_outside_under_18",
-        "kids_ages_0_5",
-        "kids_ages_6_11",
-        "kids_ages_12_17",
-    ]:
-        try:
-            if int(data.get(field_name) or 0) > 0:
-                return True
-        except Exception:
-            pass
+        inspection_item_labels = (request.form.get("inspection_item_labels") or "").strip() or _default_labels_text()
 
-    return False
+        rent_score_paid = _to_int(request.form.get("rent_score_paid"), 100)
+        rent_score_partially_paid = _to_int(request.form.get("rent_score_partially_paid"), 75)
+        rent_score_paid_late = _to_int(request.form.get("rent_score_paid_late"), 75)
+        rent_score_not_paid = _to_int(request.form.get("rent_score_not_paid"), 0)
+        rent_score_exempt = _to_int(request.form.get("rent_score_exempt"), 100)
+
+        inspection_scoring_enabled = _to_bool(request.form.get("inspection_scoring_enabled"), True)
+        inspection_lookback_months = max(_to_int(request.form.get("inspection_lookback_months"), 9), 1)
+        inspection_include_current_open_month = _to_bool(
+            request.form.get("inspection_include_current_open_month"),
+            False,
+        )
+        inspection_score_passed = _to_int(request.form.get("inspection_score_passed"), 100)
+        inspection_needs_attention_enabled = _to_bool(
+            request.form.get("inspection_needs_attention_enabled"),
+            False,
+        )
+        inspection_score_needs_attention = _to_int(request.form.get("inspection_score_needs_attention"), 70)
+        inspection_score_failed = _to_int(request.form.get("inspection_score_failed"), 0)
+        inspection_passing_threshold = _to_int(request.form.get("inspection_passing_threshold"), 83)
+        inspection_band_green_min = _to_int(request.form.get("inspection_band_green_min"), 83)
+        inspection_band_yellow_min = _to_int(request.form.get("inspection_band_yellow_min"), 78)
+        inspection_band_orange_min = _to_int(request.form.get("inspection_band_orange_min"), 56)
+        inspection_band_red_max = _to_int(request.form.get("inspection_band_red_max"), 55)
+
+        if inspection_band_green_min < inspection_band_yellow_min:
+            inspection_band_green_min = inspection_band_yellow_min + 1
+        if inspection_band_yellow_min < inspection_band_orange_min:
+            inspection_band_yellow_min = inspection_band_orange_min + 1
+        if inspection_band_red_max >= inspection_band_orange_min:
+            inspection_band_red_max = inspection_band_orange_min - 1
+
+        employment_income_module_enabled = _to_bool(
+            request.form.get("employment_income_module_enabled"),
+            True,
+        )
+        employment_income_graduation_minimum = _to_float(
+            request.form.get("employment_income_graduation_minimum"),
+            1200.00,
+        )
+        employment_income_band_green_min = _to_float(
+            request.form.get("employment_income_band_green_min"),
+            1200.00,
+        )
+        employment_income_band_yellow_min = _to_float(
+            request.form.get("employment_income_band_yellow_min"),
+            1000.00,
+        )
+        employment_income_band_orange_min = _to_float(
+            request.form.get("employment_income_band_orange_min"),
+            700.00,
+        )
+        employment_income_band_red_max = _to_float(
+            request.form.get("employment_income_band_red_max"),
+            699.99,
+        )
+
+        if employment_income_band_green_min < employment_income_band_yellow_min:
+            employment_income_band_green_min = employment_income_band_yellow_min + 0.01
+        if employment_income_band_yellow_min < employment_income_band_orange_min:
+            employment_income_band_yellow_min = employment_income_band_orange_min + 0.01
+        if employment_income_band_red_max >= employment_income_band_orange_min:
+            employment_income_band_red_max = employment_income_band_orange_min - 0.01
+
+        income_weight_employment = max(_to_float(request.form.get("income_weight_employment"), 1.00), 0.0)
+        income_weight_ssi_ssdi_self = max(_to_float(request.form.get("income_weight_ssi_ssdi_self"), 1.00), 0.0)
+        income_weight_tanf = max(_to_float(request.form.get("income_weight_tanf"), 1.00), 0.0)
+        income_weight_child_support = max(_to_float(request.form.get("income_weight_child_support"), 1.00), 0.0)
+        income_weight_alimony = max(_to_float(request.form.get("income_weight_alimony"), 0.50), 0.0)
+        income_weight_other_income = max(_to_float(request.form.get("income_weight_other_income"), 0.25), 0.0)
+        income_weight_survivor_cutoff_months = max(
+            _to_int(request.form.get("income_weight_survivor_cutoff_months"), 18),
+            0,
+        )
+
+        db_execute(
+            (
+                """
+                UPDATE shelter_operation_settings
+                SET rent_late_day_of_month = %s,
+                    rent_score_paid = %s,
+                    rent_score_partially_paid = %s,
+                    rent_score_paid_late = %s,
+                    rent_score_not_paid = %s,
+                    rent_score_exempt = %s,
+                    rent_carry_forward_enabled = %s,
+                    inspection_default_item_status = %s,
+                    inspection_item_labels = %s,
+                    inspection_scoring_enabled = %s,
+                    inspection_lookback_months = %s,
+                    inspection_include_current_open_month = %s,
+                    inspection_score_passed = %s,
+                    inspection_needs_attention_enabled = %s,
+                    inspection_score_needs_attention = %s,
+                    inspection_score_failed = %s,
+                    inspection_passing_threshold = %s,
+                    inspection_band_green_min = %s,
+                    inspection_band_yellow_min = %s,
+                    inspection_band_orange_min = %s,
+                    inspection_band_red_max = %s,
+                    employment_income_module_enabled = %s,
+                    employment_income_graduation_minimum = %s,
+                    employment_income_band_green_min = %s,
+                    employment_income_band_yellow_min = %s,
+                    employment_income_band_orange_min = %s,
+                    employment_income_band_red_max = %s,
+                    income_weight_employment = %s,
+                    income_weight_ssi_ssdi_self = %s,
+                    income_weight_tanf = %s,
+                    income_weight_child_support = %s,
+                    income_weight_alimony = %s,
+                    income_weight_other_income = %s,
+                    income_weight_survivor_cutoff_months = %s,
+                    updated_at = %s
+                WHERE LOWER(COALESCE(shelter, '')) = %s
+                """
+                if g.get("db_kind") == "pg"
+                else
+                """
+                UPDATE shelter_operation_settings
+                SET rent_late_day_of_month = ?,
+                    rent_score_paid = ?,
+                    rent_score_partially_paid = ?,
+                    rent_score_paid_late = ?,
+                    rent_score_not_paid = ?,
+                    rent_score_exempt = ?,
+                    rent_carry_forward_enabled = ?,
+                    inspection_default_item_status = ?,
+                    inspection_item_labels = ?,
+                    inspection_scoring_enabled = ?,
+                    inspection_lookback_months = ?,
+                    inspection_include_current_open_month = ?,
+                    inspection_score_passed = ?,
+                    inspection_needs_attention_enabled = ?,
+                    inspection_score_needs_attention = ?,
+                    inspection_score_failed = ?,
+                    inspection_passing_threshold = ?,
+                    inspection_band_green_min = ?,
+                    inspection_band_yellow_min = ?,
+                    inspection_band_orange_min = ?,
+                    inspection_band_red_max = ?,
+                    employment_income_module_enabled = ?,
+                    employment_income_graduation_minimum = ?,
+                    employment_income_band_green_min = ?,
+                    employment_income_band_yellow_min = ?,
+                    employment_income_band_orange_min = ?,
+                    employment_income_band_red_max = ?,
+                    income_weight_employment = ?,
+                    income_weight_ssi_ssdi_self = ?,
+                    income_weight_tanf = ?,
+                    income_weight_child_support = ?,
+                    income_weight_alimony = ?,
+                    income_weight_other_income = ?,
+                    income_weight_survivor_cutoff_months = ?,
+                    updated_at = ?
+                WHERE LOWER(COALESCE(shelter, '')) = ?
+                """
+            ),
+            (
+                late_day,
+                rent_score_paid,
+                rent_score_partially_paid,
+                rent_score_paid_late,
+                rent_score_not_paid,
+                rent_score_exempt,
+                carry_forward_enabled if g.get("db_kind") == "pg" else (1 if carry_forward_enabled else 0),
+                inspection_default_item_status,
+                inspection_item_labels,
+                inspection_scoring_enabled if g.get("db_kind") == "pg" else (1 if inspection_scoring_enabled else 0),
+                inspection_lookback_months,
+                inspection_include_current_open_month if g.get("db_kind") == "pg" else (1 if inspection_include_current_open_month else 0),
+                inspection_score_passed,
+                inspection_needs_attention_enabled if g.get("db_kind") == "pg" else (1 if inspection_needs_attention_enabled else 0),
+                inspection_score_needs_attention,
+                inspection_score_failed,
+                inspection_passing_threshold,
+                inspection_band_green_min,
+                inspection_band_yellow_min,
+                inspection_band_orange_min,
+                inspection_band_red_max,
+                employment_income_module_enabled if g.get("db_kind") == "pg" else (1 if employment_income_module_enabled else 0),
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max,
+                income_weight_employment,
+                income_weight_ssi_ssdi_self,
+                income_weight_tanf,
+                income_weight_child_support,
+                income_weight_alimony,
+                income_weight_other_income,
+                income_weight_survivor_cutoff_months,
+                now,
+                shelter,
+            ),
+        )
+
+        flash("Operations settings updated.", "ok")
+        return redirect(url_for("operations_settings.settings_page"))
+
+    guidance = _employment_income_guidance(shelter)
+
+    return render_template(
+        "admin_operations_settings.html",
+        shelter=shelter,
+        settings=row,
+        default_inspection_items=_default_labels_text(),
+        employment_guidance=guidance,
+        currency=_currency,
+    )
