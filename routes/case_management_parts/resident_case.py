@@ -547,10 +547,6 @@ def resident_case_view(resident_id: int):
     monthly_income_for_display = intake_income_support.get("weighted_stable_income")
 
     if monthly_income_for_display in (None, ""):
-        if recovery_snapshot:
-            monthly_income_for_display = recovery_snapshot.get("monthly_income")
-
-    if monthly_income_for_display in (None, ""):
         monthly_income_for_display = intake_income_support.get("total_cash_support")
 
     if monthly_income_for_display in (None, ""):
