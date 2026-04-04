@@ -4,7 +4,7 @@ Resident identity and resident centered schema logic.
 
 from __future__ import annotations
 
-from flask import current_app, flash, redirect, request, session, url_for
+from flask import current_app, flash, g, redirect, request, session, url_for
 
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
@@ -36,7 +36,7 @@ def update_recovery_profile_view(resident_id: int):
         flash("Case manager access required.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    ensure_resident_child_income_supports_table(session.get("db_kind"))
+    ensure_resident_child_income_supports_table(g.get("db_kind"))
 
     shelter = normalize_shelter_name(session.get("shelter"))
     ph = placeholder()
