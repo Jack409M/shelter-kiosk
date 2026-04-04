@@ -49,6 +49,10 @@ OFFICIAL_NEEDS = [
         "need_label": "Food Stamps/SNAP",
     },
     {
+        "need_key": "benefits_screening_texas",
+        "need_label": "Benefits Screening (Your Texas Benefits)",
+    },
+    {
         "need_key": "parenting_class_needed",
         "need_label": "Parenting Class Needed",
     },
