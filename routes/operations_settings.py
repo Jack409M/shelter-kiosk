@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from statistics import median
+
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for, g
 
 from core.auth import require_login, require_shelter
-from core.db import db_execute, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 
 operations_settings = Blueprint(
@@ -51,6 +53,38 @@ def _to_int(value: str | None, default: int) -> int:
         return default
 
 
+def _to_float(value: str | None, default: float) -> float:
+    try:
+        return float((value or "").strip() or str(default))
+    except Exception:
+        return default
+
+
+def _default_labels_text() -> str:
+    return "\n".join(DEFAULT_INSPECTION_ITEMS)
+
+
+def _currency(value) -> str:
+    if value in (None, ""):
+        return "—"
+    try:
+        return f"${float(value):,.2f}"
+    except Exception:
+        return "—"
+
+
+def _average_or_none(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return round(sum(values) / len(values), 2)
+
+
+def _median_or_none(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return round(float(median(values)), 2)
+
+
 def _ensure_operations_settings_table() -> None:
     if g.get("db_kind") == "pg":
         db_execute(
@@ -79,6 +113,12 @@ def _ensure_operations_settings_table() -> None:
                 inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
                 inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
                 inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
+                employment_income_module_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                employment_income_graduation_minimum DOUBLE PRECISION NOT NULL DEFAULT 1200.00,
+                employment_income_band_green_min DOUBLE PRECISION NOT NULL DEFAULT 1200.00,
+                employment_income_band_yellow_min DOUBLE PRECISION NOT NULL DEFAULT 1000.00,
+                employment_income_band_orange_min DOUBLE PRECISION NOT NULL DEFAULT 700.00,
+                employment_income_band_red_max DOUBLE PRECISION NOT NULL DEFAULT 699.99,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -111,6 +151,12 @@ def _ensure_operations_settings_table() -> None:
                 inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
                 inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
                 inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
+                employment_income_module_enabled INTEGER NOT NULL DEFAULT 1,
+                employment_income_graduation_minimum REAL NOT NULL DEFAULT 1200.00,
+                employment_income_band_green_min REAL NOT NULL DEFAULT 1200.00,
+                employment_income_band_yellow_min REAL NOT NULL DEFAULT 1000.00,
+                employment_income_band_orange_min REAL NOT NULL DEFAULT 700.00,
+                employment_income_band_red_max REAL NOT NULL DEFAULT 699.99,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -139,6 +185,12 @@ def _ensure_operations_settings_table() -> None:
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_yellow_min INTEGER DEFAULT 78",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_orange_min INTEGER DEFAULT 56",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_red_max INTEGER DEFAULT 55",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_module_enabled BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_graduation_minimum DOUBLE PRECISION DEFAULT 1200.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_green_min DOUBLE PRECISION DEFAULT 1200.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_yellow_min DOUBLE PRECISION DEFAULT 1000.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_orange_min DOUBLE PRECISION DEFAULT 700.00",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_red_max DOUBLE PRECISION DEFAULT 699.99",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS created_at TEXT",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
@@ -147,10 +199,6 @@ def _ensure_operations_settings_table() -> None:
             db_execute(statement)
         except Exception:
             pass
-
-
-def _default_labels_text() -> str:
-    return "\n".join(DEFAULT_INSPECTION_ITEMS)
 
 
 def _settings_row_for_shelter(shelter: str):
@@ -190,9 +238,15 @@ def _settings_row_for_shelter(shelter: str):
                 inspection_band_yellow_min,
                 inspection_band_orange_min,
                 inspection_band_red_max,
+                employment_income_module_enabled,
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max,
                 created_at,
                 updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if g.get("db_kind") == "pg"
             else
@@ -220,9 +274,15 @@ def _settings_row_for_shelter(shelter: str):
                 inspection_band_yellow_min,
                 inspection_band_orange_min,
                 inspection_band_red_max,
+                employment_income_module_enabled,
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max,
                 created_at,
                 updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         ),
         (
@@ -248,6 +308,12 @@ def _settings_row_for_shelter(shelter: str):
             78,
             56,
             55,
+            True if g.get("db_kind") == "pg" else 1,
+            1200.00,
+            1200.00,
+            1000.00,
+            700.00,
+            699.99,
             now,
             now,
         ),
@@ -256,6 +322,84 @@ def _settings_row_for_shelter(shelter: str):
         f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
         (shelter,),
     )
+
+
+def _employment_income_guidance(shelter: str) -> dict:
+    ph = _placeholder()
+    rows = db_fetchall(
+        f"""
+        SELECT
+            pe.id AS enrollment_id,
+            ea.income_at_exit,
+            ea.graduation_income_snapshot,
+            f.followup_type,
+            f.followup_date,
+            f.sober_at_followup
+        FROM program_enrollments pe
+        JOIN exit_assessments ea ON ea.enrollment_id = pe.id
+        LEFT JOIN followups f ON f.enrollment_id = pe.id
+        WHERE LOWER(COALESCE(pe.shelter, '')) = {ph}
+          AND COALESCE(ea.exit_category, '') = 'Successful Completion'
+          AND COALESCE(ea.exit_reason, '') = 'Program Graduated'
+          AND COALESCE(ea.graduate_dwc, 0) = 1
+        ORDER BY pe.id ASC, COALESCE(f.followup_date, '') DESC
+        """,
+        (shelter,),
+    )
+
+    graduates: dict[int, dict] = {}
+    for row in rows:
+        enrollment_id = int(row["enrollment_id"])
+        graduate = graduates.get(enrollment_id)
+        if not graduate:
+            snapshot = row.get("graduation_income_snapshot")
+            if snapshot in (None, ""):
+                snapshot = row.get("income_at_exit")
+            graduate = {
+                "graduation_income": float(snapshot) if snapshot not in (None, "") else None,
+                "followups": {},
+            }
+            graduates[enrollment_id] = graduate
+
+        followup_type = (row.get("followup_type") or "").strip()
+        if followup_type not in {"6_month", "1_year"}:
+            continue
+
+        existing = graduate["followups"].get(followup_type)
+        current_date = row.get("followup_date") or ""
+        existing_date = existing.get("followup_date") if existing else ""
+
+        if existing and existing_date >= current_date:
+            continue
+
+        graduate["followups"][followup_type] = {
+            "followup_date": current_date,
+            "sober": bool(int(row.get("sober_at_followup") or 0)),
+        }
+
+    graduation_incomes: list[float] = []
+    six_month_sober_incomes: list[float] = []
+    one_year_sober_incomes: list[float] = []
+
+    for graduate in graduates.values():
+        grad_income = graduate["graduation_income"]
+        if grad_income is not None:
+            graduation_incomes.append(grad_income)
+
+        six_month = graduate["followups"].get("6_month")
+        if six_month and six_month["sober"] and grad_income is not None:
+            six_month_sober_incomes.append(grad_income)
+
+        one_year = graduate["followups"].get("1_year")
+        if one_year and one_year["sober"] and grad_income is not None:
+            one_year_sober_incomes.append(grad_income)
+
+    return {
+        "average_graduation_income": _average_or_none(graduation_incomes),
+        "median_graduation_income": _median_or_none(graduation_incomes),
+        "average_sober_6_month_income": _average_or_none(six_month_sober_incomes),
+        "average_sober_12_month_income": _average_or_none(one_year_sober_incomes),
+    }
 
 
 @operations_settings.route("", methods=["GET", "POST"])
@@ -313,6 +457,38 @@ def settings_page():
         if inspection_band_red_max >= inspection_band_orange_min:
             inspection_band_red_max = inspection_band_orange_min - 1
 
+        employment_income_module_enabled = _to_bool(
+            request.form.get("employment_income_module_enabled"),
+            True,
+        )
+        employment_income_graduation_minimum = _to_float(
+            request.form.get("employment_income_graduation_minimum"),
+            1200.00,
+        )
+        employment_income_band_green_min = _to_float(
+            request.form.get("employment_income_band_green_min"),
+            1200.00,
+        )
+        employment_income_band_yellow_min = _to_float(
+            request.form.get("employment_income_band_yellow_min"),
+            1000.00,
+        )
+        employment_income_band_orange_min = _to_float(
+            request.form.get("employment_income_band_orange_min"),
+            700.00,
+        )
+        employment_income_band_red_max = _to_float(
+            request.form.get("employment_income_band_red_max"),
+            699.99,
+        )
+
+        if employment_income_band_green_min < employment_income_band_yellow_min:
+            employment_income_band_green_min = employment_income_band_yellow_min + 0.01
+        if employment_income_band_yellow_min < employment_income_band_orange_min:
+            employment_income_band_yellow_min = employment_income_band_orange_min + 0.01
+        if employment_income_band_red_max >= employment_income_band_orange_min:
+            employment_income_band_red_max = employment_income_band_orange_min - 0.01
+
         db_execute(
             (
                 """
@@ -338,6 +514,12 @@ def settings_page():
                     inspection_band_yellow_min = %s,
                     inspection_band_orange_min = %s,
                     inspection_band_red_max = %s,
+                    employment_income_module_enabled = %s,
+                    employment_income_graduation_minimum = %s,
+                    employment_income_band_green_min = %s,
+                    employment_income_band_yellow_min = %s,
+                    employment_income_band_orange_min = %s,
+                    employment_income_band_red_max = %s,
                     updated_at = %s
                 WHERE LOWER(COALESCE(shelter, '')) = %s
                 """
@@ -366,6 +548,12 @@ def settings_page():
                     inspection_band_yellow_min = ?,
                     inspection_band_orange_min = ?,
                     inspection_band_red_max = ?,
+                    employment_income_module_enabled = ?,
+                    employment_income_graduation_minimum = ?,
+                    employment_income_band_green_min = ?,
+                    employment_income_band_yellow_min = ?,
+                    employment_income_band_orange_min = ?,
+                    employment_income_band_red_max = ?,
                     updated_at = ?
                 WHERE LOWER(COALESCE(shelter, '')) = ?
                 """
@@ -392,6 +580,12 @@ def settings_page():
                 inspection_band_yellow_min,
                 inspection_band_orange_min,
                 inspection_band_red_max,
+                employment_income_module_enabled if g.get("db_kind") == "pg" else (1 if employment_income_module_enabled else 0),
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max,
                 now,
                 shelter,
             ),
@@ -400,9 +594,13 @@ def settings_page():
         flash("Operations settings updated.", "ok")
         return redirect(url_for("operations_settings.settings_page"))
 
+    guidance = _employment_income_guidance(shelter)
+
     return render_template(
         "admin_operations_settings.html",
         shelter=shelter,
         settings=row,
         default_inspection_items=_default_labels_text(),
+        employment_guidance=guidance,
+        currency=_currency,
     )
