@@ -501,6 +501,7 @@ def kiosk_checkin(shelter: str):
             resident_code_value=resident_code,
         )
 
+    checkin_time_value = utcnow_iso()
     actual_obligation_end_value = None
 
     if actual_end_required:
@@ -531,6 +532,16 @@ def kiosk_checkin(shelter: str):
                 resident_code_value=resident_code,
             ), 400
 
+        if actual_obligation_end_value > checkin_time_value:
+            flash("Actual end time cannot be later than the time you are checking in.", "error")
+            return render_template(
+                "kiosk_checkin.html",
+                shelter=display_shelter,
+                actual_end_required=True,
+                prior_activity_label=prior_activity_label,
+                resident_code_value=resident_code,
+            ), 400
+
         checkout_id = int(_row_get(open_checkout, "id", 0, 0))
         db_execute(
             """
@@ -553,7 +564,7 @@ def kiosk_checkin(shelter: str):
 
     db_execute(
         _attendance_insert_sql(),
-        (resident_id, shelter_key, "check_in", utcnow_iso(), None, None, None, None, None, None),
+        (resident_id, shelter_key, "check_in", checkin_time_value, None, None, None, None, None, None),
     )
 
     _complete_active_passes(resident_id, shelter_key)
