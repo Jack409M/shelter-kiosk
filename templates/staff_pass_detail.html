@@ -141,6 +141,36 @@
     font-size: 14px;
   }
 
+  .hours-status-box {
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
+  }
+
+  .hours-status-box.pass {
+    background: #e8f6ec;
+    border-color: #7fbe8f;
+    color: #1f5f2f;
+  }
+
+  .hours-status-box.fail {
+    background: #fdecec;
+    border-color: #d38a8a;
+    color: #8a1f1f;
+  }
+
+  .hours-status-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .hours-status-text {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
   @media print {
     nav,
     .topbar,
@@ -209,6 +239,18 @@
     {% if hour_summary %}
       <div class="paper-section">
         <div class="paper-section-title">Previous Week Attendance Hours</div>
+
+        <div class="hours-status-box {{ hour_summary.status_class }}">
+          <div class="hours-status-title">{{ hour_summary.status_label }}</div>
+          <div class="hours-status-text">
+            Productive: {{ hour_summary.productive_hours }} / {{ hour_summary.productive_required_hours }}
+            • Work: {{ hour_summary.work_hours }} / {{ hour_summary.work_required_hours }}
+            {% if not hour_summary.passes_requirement %}
+              <br>
+              Short by {{ hour_summary.productive_short_hours }} productive hours and {{ hour_summary.work_short_hours }} work hours.
+            {% endif %}
+          </div>
+        </div>
 
         <div class="paper-grid-2">
           <div class="paper-field">
