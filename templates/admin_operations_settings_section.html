@@ -1,0 +1,455 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+<style>
+  .config-page-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .config-section-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(160px, 1fr));
+    gap: 18px;
+  }
+
+  .config-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 12px 18px;
+    margin-top: 12px;
+  }
+
+  .config-checkline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+  }
+
+  .config-checkline input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+  }
+
+  .config-kiosk-row {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-soft);
+    padding: 14px;
+    margin-top: 14px;
+  }
+
+  .config-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  @media (max-width: 980px) {
+    .config-section-grid-4,
+    .config-stats-grid,
+    .config-checkbox-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">{{ current_section_meta.title }}</h1>
+          <div class="cmx-section-subtitle">
+            {{ current_section_meta.summary }} for {{ shelter | shelter if shelter else "Current Shelter" }}.
+          </div>
+        </div>
+
+        <div class="config-page-actions">
+          <a class="cmx-btn-muted" href="{{ url_for('operations_settings.settings_page') }}">All Configuration Menus</a>
+          <a class="cmx-btn-muted" href="{{ url_for('admin.admin_dashboard') }}">Back to Admin</a>
+        </div>
+      </div>
+    </div>
+
+    {% if current_section == "rent_rules" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="cmx-grid cmx-grid-2">
+          <div class="cmx-field">
+            <label>Late Begins On Day</label>
+            <input type="number" min="1" max="28" name="rent_late_day_of_month" value="{{ settings['rent_late_day_of_month'] if settings else 6 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Carry Forward Unpaid Balance</label>
+            <select name="rent_carry_forward_enabled">
+              <option value="yes" {% if settings and settings['rent_carry_forward_enabled'] %}selected{% endif %}>Yes</option>
+              <option value="no" {% if settings and not settings['rent_carry_forward_enabled'] %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="config-section-grid-4" style="margin-top: 18px;">
+          <div class="cmx-field">
+            <label>Paid Score</label>
+            <input type="number" name="rent_score_paid" value="{{ settings['rent_score_paid'] if settings else 100 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Partially Paid Score</label>
+            <input type="number" name="rent_score_partially_paid" value="{{ settings['rent_score_partially_paid'] if settings else 75 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Paid Late Score</label>
+            <input type="number" name="rent_score_paid_late" value="{{ settings['rent_score_paid_late'] if settings else 75 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Not Paid Score</label>
+            <input type="number" name="rent_score_not_paid" value="{{ settings['rent_score_not_paid'] if settings else 0 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-2" style="margin-top: 18px;">
+          <div class="cmx-field">
+            <label>Exempt Score</label>
+            <input type="number" name="rent_score_exempt" value="{{ settings['rent_score_exempt'] if settings else 100 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Rent Rules</button>
+        </div>
+      </form>
+
+    {% elif current_section == "inspection_defaults" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="cmx-grid cmx-grid-2">
+          <div class="cmx-field">
+            <label>Default Item Status</label>
+            <select name="inspection_default_item_status">
+              {% set _default_status = settings['inspection_default_item_status'] if settings else 'passed' %}
+              <option value="passed" {% if _default_status == 'passed' %}selected{% endif %}>Passed</option>
+              <option value="needs_attention" {% if _default_status == 'needs_attention' %}selected{% endif %}>Needs Attention</option>
+              <option value="failed" {% if _default_status == 'failed' %}selected{% endif %}>Failed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Inspection Checklist Items</label>
+          <textarea name="inspection_item_labels" rows="10">{{ settings['inspection_item_labels'] if settings and settings['inspection_item_labels'] else default_inspection_items }}</textarea>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Inspection Defaults</button>
+        </div>
+      </form>
+
+    {% elif current_section == "inspection_stability_scoring" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Inspection Scoring Active</label>
+            <select name="inspection_scoring_enabled">
+              <option value="yes" {% if settings and settings['inspection_scoring_enabled'] %}selected{% endif %}>Yes</option>
+              <option value="no" {% if settings and not settings['inspection_scoring_enabled'] %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="cmx-field">
+            <label>Lookback Months</label>
+            <input type="number" min="1" name="inspection_lookback_months" value="{{ settings['inspection_lookback_months'] if settings else 9 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Include Current Open Month</label>
+            <select name="inspection_include_current_open_month">
+              <option value="no" {% if settings and not settings['inspection_include_current_open_month'] %}selected{% endif %}>No</option>
+              <option value="yes" {% if settings and settings['inspection_include_current_open_month'] %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top: 18px;">
+          <div class="cmx-field">
+            <label>Passed Score</label>
+            <input type="number" name="inspection_score_passed" value="{{ settings['inspection_score_passed'] if settings else 100 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Needs Attention Enabled</label>
+            <select name="inspection_needs_attention_enabled">
+              <option value="no" {% if settings and not settings['inspection_needs_attention_enabled'] %}selected{% endif %}>No</option>
+              <option value="yes" {% if settings and settings['inspection_needs_attention_enabled'] %}selected{% endif %}>Yes</option>
+            </select>
+          </div>
+
+          <div class="cmx-field">
+            <label>Needs Attention Score</label>
+            <input type="number" name="inspection_score_needs_attention" value="{{ settings['inspection_score_needs_attention'] if settings else 70 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-2" style="margin-top: 18px;">
+          <div class="cmx-field">
+            <label>Failed Score</label>
+            <input type="number" name="inspection_score_failed" value="{{ settings['inspection_score_failed'] if settings else 0 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Passing Threshold</label>
+            <input type="number" name="inspection_passing_threshold" value="{{ settings['inspection_passing_threshold'] if settings else 83 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Inspection Stability Scoring</button>
+        </div>
+      </form>
+
+    {% elif current_section == "inspection_color_bands" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="config-section-grid-4">
+          <div class="cmx-field">
+            <label>Green Minimum</label>
+            <input type="number" name="inspection_band_green_min" value="{{ settings['inspection_band_green_min'] if settings else 83 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Yellow Minimum</label>
+            <input type="number" name="inspection_band_yellow_min" value="{{ settings['inspection_band_yellow_min'] if settings else 78 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Orange Minimum</label>
+            <input type="number" name="inspection_band_orange_min" value="{{ settings['inspection_band_orange_min'] if settings else 56 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Red Maximum</label>
+            <input type="number" name="inspection_band_red_max" value="{{ settings['inspection_band_red_max'] if settings else 55 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Inspection Color Bands</button>
+        </div>
+      </form>
+
+    {% elif current_section == "employment_income_graduation_settings" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="cmx-grid cmx-grid-2">
+          <div class="cmx-field">
+            <label>Employment Income Module Active</label>
+            <select name="employment_income_module_enabled">
+              <option value="yes" {% if settings and settings['employment_income_module_enabled'] %}selected{% endif %}>Yes</option>
+              <option value="no" {% if settings and not settings['employment_income_module_enabled'] %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="cmx-field">
+            <label>Graduation Minimum Monthly Income</label>
+            <input type="number" step="0.01" min="0" name="employment_income_graduation_minimum" value="{{ settings['employment_income_graduation_minimum'] if settings else 1200.00 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Employment Income Graduation Settings</button>
+        </div>
+      </form>
+
+    {% elif current_section == "employment_income_color_bands" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="config-section-grid-4">
+          <div class="cmx-field">
+            <label>Green Minimum</label>
+            <input type="number" step="0.01" min="0" name="employment_income_band_green_min" value="{{ settings['employment_income_band_green_min'] if settings else 1200.00 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Yellow Minimum</label>
+            <input type="number" step="0.01" min="0" name="employment_income_band_yellow_min" value="{{ settings['employment_income_band_yellow_min'] if settings else 1000.00 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Orange Minimum</label>
+            <input type="number" step="0.01" min="0" name="employment_income_band_orange_min" value="{{ settings['employment_income_band_orange_min'] if settings else 700.00 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Red Maximum</label>
+            <input type="number" step="0.01" min="0" name="employment_income_band_red_max" value="{{ settings['employment_income_band_red_max'] if settings else 699.99 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Employment Income Color Bands</button>
+        </div>
+      </form>
+
+    {% elif current_section == "income_stability_weighting" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Employment Weight</label>
+            <input type="number" step="0.01" min="0" name="income_weight_employment" value="{{ settings['income_weight_employment'] if settings else 1.00 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>SSI / SSDI For Self Weight</label>
+            <input type="number" step="0.01" min="0" name="income_weight_ssi_ssdi_self" value="{{ settings['income_weight_ssi_ssdi_self'] if settings else 1.00 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>TANF Base Weight</label>
+            <input type="number" step="0.01" min="0" name="income_weight_tanf" value="{{ settings['income_weight_tanf'] if settings else 1.00 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3" style="margin-top: 18px;">
+          <div class="cmx-field">
+            <label>Alimony Weight</label>
+            <input type="number" step="0.01" min="0" name="income_weight_alimony" value="{{ settings['income_weight_alimony'] if settings else 0.50 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Other Income Weight</label>
+            <input type="number" step="0.01" min="0" name="income_weight_other_income" value="{{ settings['income_weight_other_income'] if settings else 0.25 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Child Based Cutoff Months Before Age 18</label>
+            <input type="number" min="0" name="income_weight_survivor_cutoff_months" value="{{ settings['income_weight_survivor_cutoff_months'] if settings else 18 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Income Stability Weighting</button>
+        </div>
+      </form>
+
+    {% elif current_section == "kiosk_activity_categories" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        {% for category in kiosk_activity_categories %}
+          <div class="config-kiosk-row">
+            <input type="hidden" name="category_id[]" value="{{ category.get('id', '') }}">
+
+            <div class="config-section-grid-4">
+              <div class="cmx-field">
+                <label>Activity Label</label>
+                <input type="text" name="activity_label[]" value="{{ category.get('activity_label', '') }}">
+              </div>
+
+              <div class="cmx-field">
+                <label>Sort Order</label>
+                <input type="number" name="sort_order[]" value="{{ category.get('sort_order', loop.index) }}">
+              </div>
+
+              <div class="cmx-field">
+                <label>Weekly Cap Hours</label>
+                <input type="number" step="0.25" min="0" name="weekly_cap_hours[]" value="{{ category.get('weekly_cap_hours', '') if category.get('weekly_cap_hours') is not none else '' }}">
+              </div>
+
+              <div class="cmx-field">
+                <label>Notes</label>
+                <input type="text" name="category_notes[]" value="{{ category.get('notes', '') }}">
+              </div>
+            </div>
+
+            <div class="config-checkbox-grid">
+              <label class="config-checkline">
+                <input type="checkbox" name="active[]" value="{{ loop.index0 }}" {% if category.get('active') %}checked{% endif %}>
+                <span>Active</span>
+              </label>
+
+              <label class="config-checkline">
+                <input type="checkbox" name="counts_as_work_hours[]" value="{{ loop.index0 }}" {% if category.get('counts_as_work_hours') %}checked{% endif %}>
+                <span>Counts As Work Hours</span>
+              </label>
+
+              <label class="config-checkline">
+                <input type="checkbox" name="counts_as_productive_hours[]" value="{{ loop.index0 }}" {% if category.get('counts_as_productive_hours') %}checked{% endif %}>
+                <span>Counts As Productive Hours</span>
+              </label>
+
+              <label class="config-checkline">
+                <input type="checkbox" name="requires_approved_pass[]" value="{{ loop.index0 }}" {% if category.get('requires_approved_pass') %}checked{% endif %}>
+                <span>Requires Approved Pass</span>
+              </label>
+            </div>
+
+            <div style="margin-top: 12px;">
+              <label class="config-checkline" style="color: #8b1e1e;">
+                <input type="checkbox" name="remove_category[]" value="{{ loop.index0 }}">
+                <span>Remove This Category</span>
+              </label>
+            </div>
+          </div>
+        {% endfor %}
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Kiosk Activity Categories</button>
+        </div>
+      </form>
+
+    {% elif current_section == "employment_income_guidance" %}
+      <div class="cmx-card">
+        <div class="config-stats-grid">
+          <div class="cmx-row-block">
+            <span>Average Income At Graduation</span>
+            <span>{{ currency(employment_guidance['average_graduation_income']) }}</span>
+          </div>
+
+          <div class="cmx-row-block">
+            <span>Median Income At Graduation</span>
+            <span>{{ currency(employment_guidance['median_graduation_income']) }}</span>
+          </div>
+
+          <div class="cmx-row-block">
+            <span>Average Income For Still Sober Graduates At 6 Months</span>
+            <span>{{ currency(employment_guidance['average_sober_6_month_income']) }}</span>
+          </div>
+
+          <div class="cmx-row-block">
+            <span>Average Income For Still Sober Graduates At 12 Months</span>
+            <span>{{ currency(employment_guidance['average_sober_12_month_income']) }}</span>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
