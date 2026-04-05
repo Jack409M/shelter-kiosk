@@ -42,108 +42,104 @@
     {% endif %}
   </div>
 
-  <div class="cmx-card" style="{{ attendance_hours_snapshot['card_style'] if attendance_hours_snapshot else '' }}">
+  <div class="cmx-card" style="{{ attendance_hours_snapshot['card_style'] }}">
     <div class="cmx-side-card-head">
       <h3>Attendance Hours</h3>
       <a class="cmx-side-action" href="#attendance-hours-weekly-detail">Weekly Detail</a>
     </div>
 
-    {% if attendance_hours_snapshot %}
-      <div style="margin-bottom:10px;">
-        <span style="{{ attendance_hours_snapshot['pill_style'] }}">{{ attendance_hours_snapshot['band_label'] }}</span>
+    <div style="margin-bottom:10px;">
+      <span style="{{ attendance_hours_snapshot['pill_style'] }}">{{ attendance_hours_snapshot['band_label'] }}</span>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block">
+        <span>9 Month Weighted Average</span>
+        <span style="{{ attendance_hours_snapshot['value_style'] }}">{{ attendance_hours_snapshot['average_percent_display'] }}</span>
       </div>
-
-      <div class="cmx-stack">
-        <div class="cmx-row-block">
-          <span>9 Month Weighted Average</span>
-          <span style="{{ attendance_hours_snapshot['value_style'] }}">{{ attendance_hours_snapshot['average_percent_display'] or "—" }}</span>
-        </div>
-        <div class="cmx-row-block">
-          <span>Eligible Weeks Used</span>
-          <span>{{ attendance_hours_snapshot['eligible_weeks_count'] or 0 }}</span>
-        </div>
-        <div class="cmx-row-block">
-          <span>Weeks Excluded Before Entry</span>
-          <span>{{ attendance_hours_snapshot['excluded_pre_entry_weeks_count'] or 0 }}</span>
-        </div>
-        <div class="cmx-row-block">
-          <span>Current Weekly Result</span>
-          <span>{{ attendance_hours_snapshot['current_week_status_label'] or "—" }}</span>
-        </div>
+      <div class="cmx-row-block">
+        <span>Weighted Pass</span>
+        <span>{{ "Yes" if attendance_hours_snapshot['weighted_passes'] else "No" }}</span>
       </div>
-
-      <div style="margin-top:10px; font-size:12px; color:#666;">
-        {% if attendance_hours_snapshot['average_label'] %}
-          {{ attendance_hours_snapshot['average_label'] }}
-        {% else %}
-          Based on eligible program weeks only.
-        {% endif %}
+      <div class="cmx-row-block">
+        <span>Pass Threshold</span>
+        <span>{{ attendance_hours_snapshot['weighted_pass_threshold'] }}%</span>
       </div>
+      <div class="cmx-row-block">
+        <span>Eligible Weeks Used</span>
+        <span>{{ attendance_hours_snapshot['eligible_weeks_count'] }}</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Weeks Excluded Before Entry</span>
+        <span>{{ attendance_hours_snapshot['excluded_pre_entry_weeks_count'] }}</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Most Recent Completed Week</span>
+        <span>{{ attendance_hours_snapshot['current_week_status_label'] }}</span>
+      </div>
+    </div>
 
-      <div id="attendance-hours-weekly-detail" style="margin-top:12px;">
-        <details>
-          <summary style="cursor:pointer; font-weight:700;">Show weekly progress hours and grade</summary>
+    <div style="margin-top:10px; font-size:12px; color:#666;">
+      {{ attendance_hours_snapshot['average_label'] }}
+    </div>
 
-          {% if attendance_hours_snapshot['weekly_rows'] %}
-            <div style="margin-top:10px; display:grid; gap:8px;">
-              {% for week in attendance_hours_snapshot['weekly_rows'] %}
-                <div
-                  class="cmx-chip-block"
-                  style="
-                    border:1px solid #d9dee7;
-                    background:#fff;
-                    {% if week.get('status_class') == 'pass' %}
-                      border-color:#9bc8a6; background:#eef8f0;
-                    {% elif week.get('status_class') == 'fail' %}
-                      border-color:#e2a0a0; background:#fff0f0;
-                    {% elif week.get('status_class') == 'close' %}
-                      border-color:#e0cd7a; background:#fff8df;
-                    {% elif week.get('status_class') == 'needs_work' %}
-                      border-color:#e2b27d; background:#fff0e4;
-                    {% endif %}
-                  "
-                >
-                  <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
-                    <div>
-                      <strong>{{ week.get("week_label") or "Week" }}</strong><br>
-                      <span style="font-size:12px; color:#666;">
-                        {% if week.get("included_in_average") %}
-                          Included in 9 month average
-                        {% else %}
-                          Excluded from average
-                        {% endif %}
-                      </span>
-                    </div>
-                    <div style="text-align:right;">
-                      <strong>{{ week.get("percent_grade_display") or "—" }}</strong><br>
-                      <span style="font-size:12px;">{{ week.get("status_label") or "—" }}</span>
-                    </div>
+    <div id="attendance-hours-weekly-detail" style="margin-top:12px;">
+      <details>
+        <summary style="cursor:pointer; font-weight:700;">Show weekly progress hours and grade</summary>
+
+        {% if attendance_hours_snapshot['weekly_rows'] %}
+          <div style="margin-top:10px; display:grid; gap:8px;">
+            {% for week in attendance_hours_snapshot['weekly_rows'] %}
+              <div
+                class="cmx-chip-block"
+                style="
+                  border:1px solid #d9dee7;
+                  background:#fff;
+                  {% if week.get('status_class') == 'pass' %}
+                    border-color:#9bc8a6; background:#eef8f0;
+                  {% else %}
+                    border-color:#e2a0a0; background:#fff0f0;
+                  {% endif %}
+                "
+              >
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+                  <div>
+                    <strong>{{ week.get("week_label") or "Week" }}</strong><br>
+                    <span style="font-size:12px; color:#666;">
+                      {% if week.get("included_in_average") %}
+                        Included in 9 month average
+                      {% else %}
+                        Excluded because resident was not yet in program
+                      {% endif %}
+                    </span>
                   </div>
-
-                  <div style="margin-top:8px; display:grid; gap:4px;">
-                    <div class="cmx-row-block">
-                      <span>Productive</span>
-                      <span>{{ week.get("productive_hours", 0) }} / {{ week.get("productive_required_hours", 35) }}</span>
-                    </div>
-                    <div class="cmx-row-block">
-                      <span>Work</span>
-                      <span>{{ week.get("work_hours", 0) }} / {{ week.get("work_required_hours", 29) }}</span>
-                    </div>
-                    {% if week.get("short_text") %}
-                      <div style="font-size:12px; color:#666;">{{ week.get("short_text") }}</div>
-                    {% endif %}
+                  <div style="text-align:right;">
+                    <strong>{{ week.get("percent_grade_display") or "—" }}</strong><br>
+                    <span style="font-size:12px;">{{ week.get("status_label") or "—" }}</span>
                   </div>
                 </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <p class="cmx-muted" style="margin-top:10px;">No weekly attendance hour detail is available yet.</p>
-          {% endif %}
-        </details>
-      </div>
-    {% else %}
-      <p class="cmx-muted">Attendance hours module is not available yet.</p>
-    {% endif %}
+
+                <div style="margin-top:8px; display:grid; gap:4px;">
+                  <div class="cmx-row-block">
+                    <span>Productive</span>
+                    <span>{{ week.get("productive_hours", 0) }} / {{ week.get("productive_required_hours", 35) }}</span>
+                  </div>
+                  <div class="cmx-row-block">
+                    <span>Work</span>
+                    <span>{{ week.get("work_hours", 0) }} / {{ week.get("work_required_hours", 29) }}</span>
+                  </div>
+                  {% if week.get("short_text") %}
+                    <div style="font-size:12px; color:#666;">{{ week.get("short_text") }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="cmx-muted" style="margin-top:10px;">No weekly attendance hour detail is available yet.</p>
+        {% endif %}
+      </details>
+    </div>
   </div>
 
   <div class="cmx-card" style="{{ rent_snapshot['card_style'] }}">
