@@ -28,6 +28,7 @@ from routes.operations_settings_parts.parsing import (
     _merge_text,
 )
 from routes.operations_settings_parts.settings_store import (
+    _default_labels_text,
     _placeholder,
     _settings_row_for_shelter,
 )
@@ -46,7 +47,7 @@ def _build_settings_section_context(shelter: str, row, current_section: str) -> 
     if current_section == "employment_income_guidance":
         context["employment_guidance"] = _employment_income_guidance(shelter, _placeholder())
     else:
-        context["employment_guidance"] = None
+        context["employment_income_guidance"] = None
 
     if current_section == "kiosk_activity_categories":
         context["kiosk_activity_categories"] = _load_kiosk_activity_categories_for_shelter(shelter)
@@ -115,9 +116,15 @@ def settings_section_page(section_key: str):
         now = utcnow_iso()
         form = request.form
         is_pg = _placeholder() == "%s"
+        default_inspection_items = _default_labels_text()
 
         late_day = min(max(_merge_int("rent_late_day_of_month", form, row.get("rent_late_day_of_month"), 6), 1), 28)
-        carry_forward_enabled = _merge_bool("rent_carry_forward_enabled", form, row.get("rent_carry_forward_enabled"), True)
+        carry_forward_enabled = _merge_bool(
+            "rent_carry_forward_enabled",
+            form,
+            row.get("rent_carry_forward_enabled"),
+            True,
+        )
 
         inspection_default_item_status = _merge_text(
             "inspection_default_item_status",
@@ -132,8 +139,8 @@ def settings_section_page(section_key: str):
             "inspection_item_labels",
             form,
             row.get("inspection_item_labels"),
-            _build_settings_section_context(shelter, row, current_section)["default_inspection_items"],
-        ) or _build_settings_section_context(shelter, row, current_section)["default_inspection_items"]
+            default_inspection_items,
+        ) or default_inspection_items
 
         rent_score_paid = _merge_int("rent_score_paid", form, row.get("rent_score_paid"), 100)
         rent_score_partially_paid = _merge_int(
@@ -162,7 +169,12 @@ def settings_section_page(section_key: str):
             row.get("inspection_include_current_open_month"),
             False,
         )
-        inspection_score_passed = _merge_int("inspection_score_passed", form, row.get("inspection_score_passed"), 100)
+        inspection_score_passed = _merge_int(
+            "inspection_score_passed",
+            form,
+            row.get("inspection_score_passed"),
+            100,
+        )
         inspection_needs_attention_enabled = _merge_bool(
             "inspection_needs_attention_enabled",
             form,
@@ -175,7 +187,12 @@ def settings_section_page(section_key: str):
             row.get("inspection_score_needs_attention"),
             70,
         )
-        inspection_score_failed = _merge_int("inspection_score_failed", form, row.get("inspection_score_failed"), 0)
+        inspection_score_failed = _merge_int(
+            "inspection_score_failed",
+            form,
+            row.get("inspection_score_failed"),
+            0,
+        )
         inspection_passing_threshold = _merge_int(
             "inspection_passing_threshold",
             form,
