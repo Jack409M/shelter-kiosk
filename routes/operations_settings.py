@@ -5,6 +5,11 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from core.auth import require_login, require_shelter
 from core.db import db_execute
 from core.helpers import utcnow_iso
+from core.kiosk_activity_categories import (
+    load_kiosk_activity_categories_for_shelter,
+    reset_kiosk_activity_categories_for_shelter,
+    save_kiosk_activity_categories_for_shelter,
+)
 from routes.operations_settings_parts.access import (
     _director_allowed,
     _normalize_shelter_name,
@@ -16,11 +21,6 @@ from routes.operations_settings_parts.config_sections import (
 )
 from routes.operations_settings_parts.employment_guidance import (
     _employment_income_guidance,
-)
-from routes.operations_settings_parts.kiosk_categories import (
-    _load_kiosk_activity_categories_for_shelter,
-    _reset_kiosk_activity_categories_for_shelter,
-    _save_kiosk_activity_categories_for_shelter,
 )
 from routes.operations_settings_parts.parsing import (
     _merge_bool,
@@ -51,7 +51,7 @@ def _build_settings_section_context(shelter: str, row, current_section: str) -> 
         context["employment_guidance"] = None
 
     if current_section == "kiosk_activity_categories":
-        context["kiosk_activity_categories"] = _load_kiosk_activity_categories_for_shelter(shelter)
+        context["kiosk_activity_categories"] = load_kiosk_activity_categories_for_shelter(shelter)
     else:
         context["kiosk_activity_categories"] = None
 
@@ -112,10 +112,10 @@ def settings_section_page(section_key: str):
         if current_section == "kiosk_activity_categories":
             action = (form.get("kiosk_action") or "save").strip().lower()
             if action == "reset_defaults":
-                _reset_kiosk_activity_categories_for_shelter(shelter)
+                reset_kiosk_activity_categories_for_shelter(shelter)
                 flash("Kiosk Activity Categories reset to shelter defaults.", "ok")
             else:
-                _save_kiosk_activity_categories_for_shelter(shelter)
+                save_kiosk_activity_categories_for_shelter(shelter)
                 flash("Kiosk Activity Categories updated.", "ok")
 
             return redirect(
