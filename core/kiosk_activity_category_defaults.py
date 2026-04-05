@@ -1,5 +1,5 @@
 KIOSK_ACTIVITY_CATEGORY_SEEDS = {
-    "haven house": [
+    "haven": [
         ("Employment", True, True, None, False),
         ("RAD", True, True, None, False),
         ("Job Search", False, True, None, False),
@@ -16,7 +16,7 @@ KIOSK_ACTIVITY_CATEGORY_SEEDS = {
         ("Pass", False, False, None, True),
         ("Other Approved Activity", False, False, None, False),
     ],
-    "gratitude house": [
+    "gratitude": [
         ("Employment", True, True, None, False),
         ("Job Search", False, True, None, False),
         ("AA or NA Meeting", False, True, None, False),
@@ -33,7 +33,7 @@ KIOSK_ACTIVITY_CATEGORY_SEEDS = {
         ("Pass", False, False, None, True),
         ("Other Approved Activity", False, False, None, False),
     ],
-    "abba house": [
+    "abba": [
         ("Employment", True, True, None, False),
         ("Job Search", False, True, None, False),
         ("AA or NA Meeting", False, True, None, False),
