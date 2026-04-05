@@ -21,6 +21,37 @@
     background: #fff;
   }
 
+  .hours-status-box {
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 12px;
+    margin-bottom: 10px;
+    border: 1px solid transparent;
+  }
+
+  .hours-status-box.pass {
+    background: #e8f6ec;
+    border-color: #7fbe8f;
+    color: #1f5f2f;
+  }
+
+  .hours-status-box.fail {
+    background: #fdecec;
+    border-color: #d38a8a;
+    color: #8a1f1f;
+  }
+
+  .hours-status-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .hours-status-text {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
   .hours-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -88,6 +119,18 @@
   <div class="hours-card">
     <strong>Previous week attendance hours</strong>
     <div class="hours-note">{{ hour_summary.week_label }}</div>
+
+    <div class="hours-status-box {{ hour_summary.status_class }}">
+      <div class="hours-status-title">{{ hour_summary.status_label }}</div>
+      <div class="hours-status-text">
+        Productive: {{ hour_summary.productive_hours }} / {{ hour_summary.productive_required_hours }}
+        • Work: {{ hour_summary.work_hours }} / {{ hour_summary.work_required_hours }}
+        {% if not hour_summary.passes_requirement %}
+          <br>
+          Short by {{ hour_summary.productive_short_hours }} productive hours and {{ hour_summary.work_short_hours }} work hours.
+        {% endif %}
+      </div>
+    </div>
 
     <div class="hours-grid">
       <div class="hours-pill">
