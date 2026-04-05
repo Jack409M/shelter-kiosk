@@ -151,17 +151,24 @@
         </div>
 
         <div>
-          <label for="destination">Destination</label>
+          <label for="destination">Activity Category</label>
           <select
             id="destination"
             name="destination"
             required
             autocomplete="off"
           >
-            <option value="">Select destination</option>
+            <option value="">Select activity category</option>
             {% set selected_destination = request.form.get('destination', '') %}
-            {% for item in ['Work', 'School', 'Meeting', 'Appointment', 'Store', 'Errand', 'Family', 'Church', 'Job Search', 'Recreation', 'Pass', 'Other'] %}
-              <option value="{{ item }}" {% if selected_destination == item %}selected{% endif %}>{{ item }}</option>
+            {% for item in checkout_categories %}
+              {% set item_label = item.get('activity_label', '') %}
+              <option
+                value="{{ item_label }}"
+                data-requires-approved-pass="{{ '1' if item.get('requires_approved_pass') else '0' }}"
+                {% if selected_destination == item_label %}selected{% endif %}
+              >
+                {{ item_label }}
+              </option>
             {% endfor %}
           </select>
         </div>
@@ -306,85 +313,91 @@
       const minute = document.getElementById("expected_back_minute");
       const ampm = document.getElementById("expected_back_ampm");
 
-      const isPass = destination && destination.value === "Pass";
+      const selectedOption = destination && destination.selectedOptions.length
+        ? destination.selectedOptions[0]
+        : null;
+
+      const requiresApprovedPass = selectedOption
+        && selectedOption.dataset
+        && selectedOption.dataset.requiresApprovedPass === "1";
 
       if (startWrap) {
-        startWrap.classList.toggle("hidden", isPass);
+        startWrap.classList.toggle("hidden", requiresApprovedPass);
       }
 
       if (endWrap) {
-        endWrap.classList.toggle("hidden", isPass);
+        endWrap.classList.toggle("hidden", requiresApprovedPass);
       }
 
       if (expectedBackWrap) {
-        expectedBackWrap.classList.toggle("hidden", isPass);
+        expectedBackWrap.classList.toggle("hidden", requiresApprovedPass);
       }
 
       if (startHour) {
-        startHour.required = !isPass;
-        if (isPass) {
+        startHour.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           startHour.value = "";
         }
       }
 
       if (startMinute) {
-        startMinute.required = !isPass;
-        if (isPass) {
+        startMinute.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           startMinute.value = "";
         }
       }
 
       if (startAmpm) {
-        startAmpm.required = !isPass;
-        if (isPass) {
+        startAmpm.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           startAmpm.value = "";
         }
       }
 
       if (endHour) {
-        endHour.required = !isPass;
-        if (isPass) {
+        endHour.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           endHour.value = "";
         }
       }
 
       if (endMinute) {
-        endMinute.required = !isPass;
-        if (isPass) {
+        endMinute.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           endMinute.value = "";
         }
       }
 
       if (endAmpm) {
-        endAmpm.required = !isPass;
-        if (isPass) {
+        endAmpm.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           endAmpm.value = "";
         }
       }
 
       if (hour) {
-        hour.required = !isPass;
-        if (isPass) {
+        hour.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           hour.value = "";
         }
       }
 
       if (minute) {
-        minute.required = !isPass;
-        if (isPass) {
+        minute.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           minute.value = "";
         }
       }
 
       if (ampm) {
-        ampm.required = !isPass;
-        if (isPass) {
+        ampm.required = !requiresApprovedPass;
+        if (requiresApprovedPass) {
           ampm.value = "";
         }
       }
 
       if (timeHelp) {
-        timeHelp.textContent = isPass
+        timeHelp.textContent = requiresApprovedPass
           ? "An approved pass already controls the return time."
           : "Choose the time the resident expects to return to shelter.";
       }
