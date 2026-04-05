@@ -79,6 +79,9 @@
             {% if calendar_url %}
               <a href="{{ calendar_url }}">Calendar</a>
             {% endif %}
+            {% if can_view_shelter_operations and shelter_operations_home_url %}
+              <a href="{{ shelter_operations_home_url }}">Shelter Operations</a>
+            {% endif %}
             <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
           {% elif show_logged_out_nav %}
             <a href="{{ url_for('resident_requests.resident_signin') }}">Resident Sign In</a>
@@ -137,36 +140,8 @@
               </div>
             </div>
 
-            {% if can_view_shelter_operations %}
-              <div class="nav-dd">
-                <button type="button">Shelter Operations ▾</button>
-                <div class="menu">
-                  {% if shelter_operations_home_url %}
-                    <a href="{{ shelter_operations_home_url }}">Operations Home</a>
-                  {% endif %}
-                  {% if chore_board_url %}
-                    <a href="{{ chore_board_url }}">Weekly Chore Board</a>
-                  {% endif %}
-                  <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-                  <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
-                  <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
-                  {% if operations_settings_url %}
-                    <a href="{{ operations_settings_url }}">Operations Settings</a>
-                  {% endif %}
-                  {% if rent_roll_url %}
-                    <a href="{{ rent_roll_url }}">Rent Roll</a>
-                  {% endif %}
-                  {% if rent_entry_url %}
-                    <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
-                  {% endif %}
-                  {% if inspection_sheet_url %}
-                    <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
-                  {% endif %}
-                  {% if chore_config_url %}
-                    <a href="{{ chore_config_url }}">Chore Configuration</a>
-                  {% endif %}
-                </div>
-              </div>
+            {% if can_view_shelter_operations and shelter_operations_home_url %}
+              <a href="{{ shelter_operations_home_url }}">Shelter Operations</a>
             {% endif %}
 
             {% if reports_url and can_view_reports %}
