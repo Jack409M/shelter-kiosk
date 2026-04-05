@@ -12,7 +12,137 @@
   {% set shelter_label = shelter %}
 {% endif %}
 
+<style>
+  .hours-card {
+    margin-bottom: 16px;
+    border: 1px solid #d7dbe3;
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
+  }
+
+  .hours-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .hours-pill {
+    border: 1px solid #d7dbe3;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fafbfc;
+  }
+
+  .hours-pill-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    color: #555;
+  }
+
+  .hours-pill-value {
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .hours-breakdown {
+    margin-top: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .hours-breakdown table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+  }
+
+  .hours-breakdown th,
+  .hours-breakdown td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #e6e8ec;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .hours-note {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  @media (max-width: 900px) {
+    .hours-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
 <h1>Pass Request</h1>
+
+{% if hour_summary %}
+  <div class="hours-card">
+    <strong>Previous week attendance hours</strong>
+    <div class="hours-note">{{ hour_summary.week_label }}</div>
+
+    <div class="hours-grid">
+      <div class="hours-pill">
+        <span class="hours-pill-label">Productive Hours</span>
+        <div class="hours-pill-value">{{ hour_summary.productive_hours }}</div>
+      </div>
+
+      <div class="hours-pill">
+        <span class="hours-pill-label">Work Hours</span>
+        <div class="hours-pill-value">{{ hour_summary.work_hours }}</div>
+      </div>
+    </div>
+
+    {% if hour_summary.breakdown %}
+      <div class="hours-breakdown">
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Credited</th>
+              <th>Raw</th>
+              <th>Cap</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in hour_summary.breakdown %}
+              <tr>
+                <td>{{ item.label }}</td>
+                <td>{{ item.credited_hours }}</td>
+                <td>{{ item.raw_hours }}</td>
+                <td>
+                  {% if item.weekly_cap_hours is not none %}
+                    {{ item.weekly_cap_hours }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% if hour_summary.uncategorized_hours %}
+          <div class="hours-note">
+            Uncategorized attendance hours found: {{ hour_summary.uncategorized_hours }}
+          </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="hours-note">
+        No completed attendance hours were found for the previous week.
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
 
 <form method="post" class="card">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
@@ -56,9 +186,7 @@
   <label for="destination">Destination</label>
   <input id="destination" name="destination" required>
 
-  <!-- ORDINARY PASS -->
   <div id="ordinary_fields">
-
     <div class="grid tight-row">
       <div>
         <label for="start_at">Leave date and time</label>
@@ -70,12 +198,9 @@
         <input id="end_at" type="datetime-local" name="end_at" class="w-dt">
       </div>
     </div>
-
   </div>
 
-  <!-- EXTENDED PASS -->
   <div id="extended_fields" style="display:none;">
-
     <div class="grid tight-row">
       <div>
         <label for="start_date">Start date</label>
@@ -87,7 +212,6 @@
         <input id="end_date" type="date" name="end_date" class="w-date">
       </div>
     </div>
-
   </div>
 
   <label for="requirements_acknowledged">Will you meet all program requirements for this pass</label>
