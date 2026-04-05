@@ -32,6 +32,7 @@
     }
 
     .kiosk-form input,
+    .kiosk-form select,
     .kiosk-form button {
       width: 100%;
       box-sizing: border-box;
@@ -41,6 +42,12 @@
 
     .kiosk-form button {
       cursor: pointer;
+    }
+
+    .time-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
     }
 
     .flash-list {
@@ -78,6 +85,25 @@
       text-align: center;
       text-decoration: none;
       font-size: 16px;
+    }
+
+    .kiosk-prompt {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      background: #fafafa;
+    }
+
+    .kiosk-prompt-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .kiosk-prompt-text {
+      font-size: 15px;
+      color: #555;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -120,13 +146,51 @@
             maxlength="8"
             placeholder="8 digit code"
             required
-            autofocus
+            {% if not actual_end_required %}autofocus{% endif %}
             autocomplete="off"
             autocorrect="off"
             autocapitalize="off"
             spellcheck="false"
+            value="{{ resident_code_value or request.form.get('resident_code', '') }}"
           >
         </div>
+
+        {% if actual_end_required %}
+          <div class="kiosk-prompt">
+            <div class="kiosk-prompt-title">Actual time {{ prior_activity_label }} ended</div>
+            <div class="kiosk-prompt-text">
+              Enter the actual time the activity ended before returning to shelter.
+            </div>
+
+            <div class="time-row">
+              {% set selected_actual_hour = request.form.get('actual_end_hour', '') %}
+              {% set selected_actual_minute = request.form.get('actual_end_minute', '') %}
+              {% set selected_actual_ampm = request.form.get('actual_end_ampm', '') %}
+
+              <select id="actual_end_hour" name="actual_end_hour" required autofocus>
+                <option value="">Hour</option>
+                {% for h in range(1, 13) %}
+                  {% set h_text = h|string %}
+                  <option value="{{ h_text }}" {% if selected_actual_hour == h_text %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+              </select>
+
+              <select id="actual_end_minute" name="actual_end_minute" required>
+                <option value="">Min</option>
+                <option value="00" {% if selected_actual_minute == '00' %}selected{% endif %}>00</option>
+                <option value="15" {% if selected_actual_minute == '15' %}selected{% endif %}>15</option>
+                <option value="30" {% if selected_actual_minute == '30' %}selected{% endif %}>30</option>
+                <option value="45" {% if selected_actual_minute == '45' %}selected{% endif %}>45</option>
+              </select>
+
+              <select id="actual_end_ampm" name="actual_end_ampm" required>
+                <option value="">AM or PM</option>
+                <option value="AM" {% if selected_actual_ampm == 'AM' %}selected{% endif %}>AM</option>
+                <option value="PM" {% if selected_actual_ampm == 'PM' %}selected{% endif %}>PM</option>
+              </select>
+            </div>
+          </div>
+        {% endif %}
 
         <button type="submit">Check In</button>
       </form>
