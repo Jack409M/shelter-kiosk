@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import abort, flash, g, redirect, render_template, session, url_for
 
+from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_dt, utcnow_iso
@@ -343,10 +344,17 @@ def staff_pass_detail_view(pass_id: int):
     if pass_detail:
         pass_detail["reviewed_at_local"] = to_local(pass_detail.get("reviewed_at"))
 
+    hour_summary = None
+    try:
+        hour_summary = calculate_prior_week_attendance_hours(int(p["resident_id"]), str(p["shelter"]))
+    except Exception:
+        hour_summary = None
+
     return render_template(
         "staff_pass_detail.html",
         p=p,
         pass_detail=pass_detail,
+        hour_summary=hour_summary,
         fmt_dt=fmt_dt,
     )
 
