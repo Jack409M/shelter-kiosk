@@ -540,12 +540,10 @@ def resident_case_view(resident_id: int):
     operations_snapshot = build_operations_snapshot(recovery_snapshot)
     rent_snapshot = build_rent_stability_snapshot(resident_id)
     inspection_snapshot = build_inspection_stability_snapshot(resident_id, shelter=shelter)
-
     attendance_hours_snapshot = build_attendance_hours_snapshot(
         resident_id=resident_id,
         shelter=shelter,
         enrollment_entry_date=(enrollment.get("entry_date") if enrollment else None),
-        enrollment_exit_date=(enrollment.get("exit_date") if enrollment else None),
     )
 
     employment_income_settings = _load_employment_income_settings(shelter)
