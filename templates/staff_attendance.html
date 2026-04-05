@@ -124,13 +124,6 @@
     align-items: end;
   }
 
-  .att_three_col {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 10px;
-    align-items: end;
-  }
-
   .att_note_input {
     width: 100%;
   }
@@ -171,33 +164,6 @@
     line-height: 1.35;
   }
 
-  .att_edit_box {
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 10px;
-    background: #fafafa;
-    min-width: 300px;
-  }
-
-  .att_edit_grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .att_edit_grid label {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-
-  .att_edit_grid input,
-  .att_edit_grid select {
-    width: 100%;
-    box-sizing: border-box;
-  }
-
   @media (max-width: 900px) {
     .att_wrap {
       flex-direction: column;
@@ -213,8 +179,7 @@
       position: static;
     }
 
-    .att_two_col,
-    .att_three_col {
+    .att_two_col {
       grid-template-columns: 1fr;
     }
   }
@@ -238,11 +203,11 @@
     <table class="compact">
       <thead>
         <tr>
-          <th style="width: 22%;">Name</th>
-          <th style="width: 12%;">Status</th>
-          <th style="width: 10%;">Out</th>
-          <th style="width: 18%;">Activity</th>
-          <th style="width: 38%;">Check in and correct</th>
+          <th style="width: 28%;">Name</th>
+          <th style="width: 14%;">Status</th>
+          <th style="width: 12%;">Out</th>
+          <th style="width: 28%;">Where supposed to be</th>
+          <th style="width: 18%;">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -291,46 +256,13 @@
               </td>
 
               <td>
-                <form method="post" action="{{ url_for('attendance.staff_attendance_check_in', resident_id=row.resident_id) }}">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-                  <div class="att_edit_box">
-                    <div class="att_edit_grid">
-                      <div>
-                        <label>Activity Category</label>
-                        <select name="destination">
-                          <option value="">Select activity category…</option>
-                          {% for item in editable_checkout_categories %}
-                            {% set item_label = item.get('activity_label', '') %}
-                            <option value="{{ item_label }}" {% if row.destination == item_label %}selected{% endif %}>
-                              {{ item_label }}
-                            </option>
-                          {% endfor %}
-                        </select>
-                      </div>
-
-                      <div class="att_two_col">
-                        <div>
-                          <label>Scheduled Start</label>
-                          <input type="datetime-local" name="obligation_start_at" value="{{ row.obligation_start_input }}">
-                        </div>
-                        <div>
-                          <label>Scheduled End</label>
-                          <input type="datetime-local" name="obligation_end_at" value="{{ row.obligation_end_input }}">
-                        </div>
-                      </div>
-
-                      <div>
-                        <label>Actual End{% if row.actual_end_required %} required{% endif %}</label>
-                        <input type="datetime-local" name="actual_obligation_end_at" value="{{ row.actual_obligation_end_input }}">
-                      </div>
-
-                      <div>
-                        <button class="att_btn" type="submit">Check in and save corrections</button>
-                      </div>
-                    </div>
-                  </div>
-                </form>
+                <div class="att_actions">
+                  <form method="post" action="{{ url_for('attendance.staff_attendance_check_in', resident_id=row.resident_id) }}">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button class="att_btn" type="submit">Check in</button>
+                  </form>
+                  <a class="att_link_btn" href="{{ url_for('attendance.staff_attendance_edit_open', resident_id=row.resident_id) }}">Edit</a>
+                </div>
               </td>
             </tr>
           {% endfor %}
@@ -403,16 +335,14 @@
     <table class="compact">
       <thead>
         <tr>
-          <th style="width: 22%;">Name</th>
-          <th style="width: 12%;">Status</th>
-          <th style="width: 16%;">Last Out</th>
-          <th style="width: 50%;">Edit last attendance record</th>
+          <th style="width: 70%;">Name</th>
+          <th style="width: 30%;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% if not in_rows %}
           <tr>
-            <td colspan="4">No residents found.</td>
+            <td colspan="2">No residents found.</td>
           </tr>
         {% else %}
           {% for row in in_rows %}
@@ -425,81 +355,20 @@
                     <span class="att_badge att_badge_pass">Pass Approved</span>
                   {% endif %}
                 </div>
+                {% if row.last_completed_pair and row.last_completed_destination %}
+                  <div class="att_note_text">
+                    Last attendance: {{ row.last_completed_destination }}
+                    {% if row.last_completed_pair.checkout_time %} • Out: {{ fmt_time(row.last_completed_pair.checkout_time) }}{% endif %}
+                    {% if row.last_completed_pair.checkin_time %} • In: {{ fmt_time(row.last_completed_pair.checkin_time) }}{% endif %}
+                  </div>
+                {% endif %}
               </td>
-
               <td>
-                <div class="att_status_stack">
-                  <span class="att_badge">In</span>
-                </div>
-              </td>
-
-              <td>
-                {% if row.last_completed_pair %}
-                  {{ fmt_time(row.last_completed_pair.checkout_time) }}
-                  {% if row.last_completed_destination %}
-                    <div class="att_note_text">{{ row.last_completed_destination }}</div>
+                <div class="att_actions">
+                  {% if row.last_completed_pair and not row.has_active_pass %}
+                    <a class="att_link_btn" href="{{ url_for('attendance.staff_attendance_edit_last', resident_id=row.resident_id) }}">Edit last attendance</a>
                   {% endif %}
-                {% else %}
-                  <span style="color:#666;">No recent record</span>
-                {% endif %}
-              </td>
-
-              <td>
-                {% if row.last_completed_pair and not row.has_active_pass %}
-                  <form method="post" action="{{ url_for('attendance.staff_attendance_edit_last', resident_id=row.resident_id) }}">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-                    <div class="att_edit_box">
-                      <div class="att_edit_grid">
-                        <div class="att_two_col">
-                          <div>
-                            <label>Checkout Time</label>
-                            <input type="datetime-local" name="checkout_at" value="{{ row.last_completed_checkout_time_input }}" required>
-                          </div>
-                          <div>
-                            <label>Check In Time</label>
-                            <input type="datetime-local" name="checkin_at" value="{{ row.last_completed_checkin_time_input }}" required>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label>Activity Category</label>
-                          <select name="destination" required>
-                            <option value="">Select activity category…</option>
-                            {% for item in editable_checkout_categories %}
-                              {% set item_label = item.get('activity_label', '') %}
-                              <option value="{{ item_label }}" {% if row.last_completed_destination == item_label %}selected{% endif %}>
-                                {{ item_label }}
-                              </option>
-                            {% endfor %}
-                          </select>
-                        </div>
-
-                        <div class="att_two_col">
-                          <div>
-                            <label>Scheduled Start</label>
-                            <input type="datetime-local" name="obligation_start_at" value="{{ row.last_completed_start_input }}">
-                          </div>
-                          <div>
-                            <label>Scheduled End</label>
-                            <input type="datetime-local" name="obligation_end_at" value="{{ row.last_completed_end_input }}">
-                          </div>
-                        </div>
-
-                        <div>
-                          <label>Actual End{% if row.last_completed_actual_end_required %} required{% endif %}</label>
-                          <input type="datetime-local" name="actual_obligation_end_at" value="{{ row.last_completed_actual_end_input }}">
-                        </div>
-
-                        <div>
-                          <button class="att_btn" type="submit">Save last attendance corrections</button>
-                        </div>
-                      </div>
-                    </div>
-                  </form>
-                {% else %}
-                  <span style="color:#666;">No editable completed record.</span>
-                {% endif %}
+                </div>
               </td>
             </tr>
           {% endfor %}
