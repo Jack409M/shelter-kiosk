@@ -420,7 +420,8 @@
         {% endfor %}
 
         <div class="cmx-button-row">
-          <button type="submit" class="cmx-btn">Save Kiosk Activity Categories</button>
+          <button type="submit" name="kiosk_action" value="save" class="cmx-btn">Save Kiosk Activity Categories</button>
+          <button type="submit" name="kiosk_action" value="reset_defaults" class="cmx-btn-muted">Reset to Shelter Defaults</button>
         </div>
       </form>
 
@@ -429,22 +430,22 @@
         <div class="config-stats-grid">
           <div class="cmx-row-block">
             <span>Average Income At Graduation</span>
-            <span>{{ currency(employment_guidance['average_graduation_income']) }}</span>
+            <span>{{ currency(employment_income_guidance['average_graduation_income']) }}</span>
           </div>
 
           <div class="cmx-row-block">
             <span>Median Income At Graduation</span>
-            <span>{{ currency(employment_guidance['median_graduation_income']) }}</span>
+            <span>{{ currency(employment_income_guidance['median_graduation_income']) }}</span>
           </div>
 
           <div class="cmx-row-block">
             <span>Average Income For Still Sober Graduates At 6 Months</span>
-            <span>{{ currency(employment_guidance['average_sober_6_month_income']) }}</span>
+            <span>{{ currency(employment_income_guidance['average_sober_6_month_income']) }}</span>
           </div>
 
           <div class="cmx-row-block">
             <span>Average Income For Still Sober Graduates At 12 Months</span>
-            <span>{{ currency(employment_guidance['average_sober_12_month_income']) }}</span>
+            <span>{{ currency(employment_income_guidance['average_sober_12_month_income']) }}</span>
           </div>
         </div>
       </div>
