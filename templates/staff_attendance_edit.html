@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+{% block content %}
+
+{% set shelter_key = shelter|string|lower %}
+{% if shelter_key == "abba" %}
+  {% set shelter_label = "Abba House" %}
+{% elif shelter_key == "haven" %}
+  {% set shelter_label = "Haven House" %}
+{% elif shelter_key == "gratitude" %}
+  {% set shelter_label = "Gratitude House" %}
+{% else %}
+  {% set shelter_label = shelter %}
+{% endif %}
+
+<style>
+  .att_edit_page {
+    max-width: 860px;
+  }
+
+  .att_edit_card {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 18px;
+    background: #fff;
+  }
+
+  .att_edit_grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .att_two_col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .att_actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .att_btn,
+  .att_link_btn {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    background: #fff;
+    color: #111;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .att_meta {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .att_two_col {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="att_edit_page">
+  <h1>
+    {% if mode == "open" %}
+      Edit Open Attendance Record
+    {% else %}
+      Edit Last Attendance Record
+    {% endif %}
+  </h1>
+
+  <div class="att_meta">
+    {{ resident.name }} • {{ shelter_label }}
+  </div>
+
+  <form method="post" action="{% if mode == 'open' %}{{ url_for('attendance.staff_attendance_edit_open_submit', resident_id=resident.resident_id) }}{% else %}{{ url_for('attendance.staff_attendance_edit_last_submit', resident_id=resident.resident_id) }}{% endif %}" class="att_edit_card">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+    <div class="att_edit_grid">
+      {% if mode == "last" %}
+        <div class="att_two_col">
+          <div>
+            <label>Checkout Time</label>
+            <input type="datetime-local" name="checkout_at" value="{{ resident.last_completed_checkout_time_input }}" required>
+          </div>
+          <div>
+            <label>Check In Time</label>
+            <input type="datetime-local" name="checkin_at" value="{{ resident.last_completed_checkin_time_input }}" required>
+          </div>
+        </div>
+      {% endif %}
+
+      <div>
+        <label>Activity Category</label>
+        <select name="destination" required>
+          <option value="">Select activity category…</option>
+          {% for item in editable_checkout_categories %}
+            {% set item_label = item.get('activity_label', '') %}
+            <option value="{{ item_label }}"
+              {% if (mode == 'open' and resident.destination == item_label) or (mode == 'last' and resident.last_completed_destination == item_label) %}selected{% endif %}>
+              {{ item_label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="att_two_col">
+        <div>
+          <label>Scheduled Start</label>
+          <input type="datetime-local" name="obligation_start_at" value="{% if mode == 'open' %}{{ resident.obligation_start_input }}{% else %}{{ resident.last_completed_start_input }}{% endif %}" required>
+        </div>
+        <div>
+          <label>Scheduled End</label>
+          <input type="datetime-local" name="obligation_end_at" value="{% if mode == 'open' %}{{ resident.obligation_end_input }}{% else %}{{ resident.last_completed_end_input }}{% endif %}" required>
+        </div>
+      </div>
+
+      <div>
+        <label>Actual Obligation End</label>
+        <input type="datetime-local" name="actual_obligation_end_at" value="{% if mode == 'open' %}{{ resident.actual_obligation_end_input }}{% else %}{{ resident.last_completed_actual_end_input }}{% endif %}" required>
+      </div>
+    </div>
+
+    <div class="att_actions">
+      <button type="submit" class="att_btn">Save</button>
+      <a href="{{ url_for('attendance.staff_attendance') }}" class="att_link_btn">Cancel</a>
+      {% if mode == "open" %}
+        <form method="post" action="{{ url_for('attendance.staff_attendance_check_in', resident_id=resident.resident_id) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="att_btn">Check in without more edits</button>
+        </form>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+{% endblock %}
