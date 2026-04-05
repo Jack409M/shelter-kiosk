@@ -12,6 +12,8 @@ from core.kiosk_activity_categories import load_kiosk_activity_categories_for_sh
 
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
+PASS_REQUIRED_PRODUCTIVE_HOURS = 35.0
+PASS_REQUIRED_WORK_HOURS = 29.0
 
 
 @dataclass
@@ -98,7 +100,7 @@ def previous_full_week_window(now_local: datetime | None = None) -> dict[str, An
         "end_local": prior_week_end,
         "start_utc_iso": _local_to_utc_iso(prior_week_start),
         "end_utc_iso": _local_to_utc_iso(prior_week_end),
-        "label": f"{prior_week_start.strftime('%b %d, %Y')} to {(prior_week_end - timedelta(seconds=1)).strftime('%b %d, %Y')}",
+        "label": f"Previous week Monday through Sunday ({prior_week_start.strftime('%b %d, %Y')} to {(prior_week_end - timedelta(seconds=1)).strftime('%b %d, %Y')})",
     }
 
 
@@ -197,10 +199,9 @@ def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dic
 
     productive_total = 0.0
     work_total = 0.0
-
     breakdown: list[dict[str, Any]] = []
 
-    for label, bucket in by_category.items():
+    for _label, bucket in by_category.items():
         raw_hours = round(bucket["raw_hours"], 2)
         cap_hours = bucket["weekly_cap_hours"]
         credited_hours = raw_hours
@@ -224,12 +225,30 @@ def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dic
 
     breakdown.sort(key=lambda item: item["label"].lower())
 
+    productive_total = round(productive_total, 2)
+    work_total = round(work_total, 2)
+
+    productive_short = round(max(0.0, PASS_REQUIRED_PRODUCTIVE_HOURS - productive_total), 2)
+    work_short = round(max(0.0, PASS_REQUIRED_WORK_HOURS - work_total), 2)
+    meets_productive = productive_short == 0
+    meets_work = work_short == 0
+    passes_requirement = meets_productive and meets_work
+
     return {
         "week_label": window["label"],
         "week_start_local": window["start_local"],
         "week_end_local": window["end_local"],
-        "productive_hours": round(productive_total, 2),
-        "work_hours": round(work_total, 2),
+        "productive_hours": productive_total,
+        "work_hours": work_total,
+        "productive_required_hours": PASS_REQUIRED_PRODUCTIVE_HOURS,
+        "work_required_hours": PASS_REQUIRED_WORK_HOURS,
+        "productive_short_hours": productive_short,
+        "work_short_hours": work_short,
+        "meets_productive_requirement": meets_productive,
+        "meets_work_requirement": meets_work,
+        "passes_requirement": passes_requirement,
+        "status_label": "Pass" if passes_requirement else "Fail",
+        "status_class": "pass" if passes_requirement else "fail",
         "breakdown": breakdown,
         "uncategorized_hours": round(uncategorized_hours, 2),
         "has_data": bool(breakdown or uncategorized_hours),
