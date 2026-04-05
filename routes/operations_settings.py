@@ -945,7 +945,32 @@ def _employment_income_guidance(shelter: str) -> dict:
     }
 
 
-@operations_settings.route("", methods=["GET", "POST"])
+def _build_settings_section_context(shelter: str, row, current_section: str) -> dict:
+    sections = _configuration_sections()
+    section_map = _configuration_section_map()
+    current_section_meta = section_map.get(current_section)
+
+    guidance = _employment_income_guidance(shelter) if current_section == "employment_income_guidance" else None
+    kiosk_activity_categories = (
+        _load_kiosk_activity_categories_for_shelter(shelter)
+        if current_section == "kiosk_activity_categories"
+        else None
+    )
+
+    return {
+        "shelter": shelter,
+        "settings": row,
+        "default_inspection_items": _default_labels_text(),
+        "employment_guidance": guidance,
+        "currency": _currency,
+        "kiosk_activity_categories": kiosk_activity_categories,
+        "sections": sections,
+        "current_section": current_section,
+        "current_section_meta": current_section_meta,
+    }
+
+
+@operations_settings.route("", methods=["GET"])
 @require_login
 @require_shelter
 def settings_page():
@@ -954,22 +979,52 @@ def settings_page():
         return redirect(url_for("attendance.staff_attendance"))
 
     shelter = _normalize_shelter_name(session.get("shelter"))
-    row = _settings_row_for_shelter(shelter)
-    sections = _configuration_sections()
+    requested_section = (request.args.get("section") or "").strip().lower()
     section_map = _configuration_section_map()
 
-    requested_section = (request.args.get("section") or request.form.get("section") or "").strip().lower()
-    current_section = requested_section if requested_section in section_map else ""
-    current_section_meta = section_map.get(current_section)
+    if requested_section in section_map:
+        return redirect(
+            url_for("operations_settings.settings_section_page", section_key=requested_section)
+        )
+
+    return render_template(
+        "admin_operations_settings.html",
+        shelter=shelter,
+        sections=_configuration_sections(),
+    )
+
+
+@operations_settings.route("/<section_key>", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def settings_section_page(section_key: str):
+    if not _director_allowed():
+        flash("Admin or shelter director access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    shelter = _normalize_shelter_name(session.get("shelter"))
+    row = _settings_row_for_shelter(shelter)
+    section_map = _configuration_section_map()
+    current_section = (section_key or "").strip().lower()
+
+    if current_section not in section_map:
+        flash("Configuration section not found.", "error")
+        return redirect(url_for("operations_settings.settings_page"))
+
+    current_section_meta = section_map[current_section]
 
     if request.method == "POST":
         if current_section == "employment_income_guidance":
-            return redirect(url_for("operations_settings.settings_page", section=current_section))
+            return redirect(
+                url_for("operations_settings.settings_section_page", section_key=current_section)
+            )
 
         if current_section == "kiosk_activity_categories":
             _save_kiosk_activity_categories_for_shelter(shelter)
             flash("Kiosk Activity Categories updated.", "ok")
-            return redirect(url_for("operations_settings.settings_page", section=current_section))
+            return redirect(
+                url_for("operations_settings.settings_section_page", section_key=current_section)
+            )
 
         now = utcnow_iso()
 
@@ -1243,24 +1298,11 @@ def settings_page():
         )
 
         flash(f"{current_section_meta['title']} updated.", "ok")
-        return redirect(url_for("operations_settings.settings_page", section=current_section))
-
-    guidance = _employment_income_guidance(shelter) if current_section == "employment_income_guidance" else None
-    kiosk_activity_categories = (
-        _load_kiosk_activity_categories_for_shelter(shelter)
-        if current_section == "kiosk_activity_categories"
-        else None
-    )
+        return redirect(
+            url_for("operations_settings.settings_section_page", section_key=current_section)
+        )
 
     return render_template(
-        "admin_operations_settings.html",
-        shelter=shelter,
-        settings=row,
-        default_inspection_items=_default_labels_text(),
-        employment_guidance=guidance,
-        currency=_currency,
-        kiosk_activity_categories=kiosk_activity_categories,
-        sections=sections,
-        current_section=current_section,
-        current_section_meta=current_section_meta,
+        "admin_operations_settings_section.html",
+        **_build_settings_section_context(shelter, row, current_section),
     )
