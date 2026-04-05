@@ -252,62 +252,6 @@ def _clone_previous_week(
     return False, "error", "No new assignments were cloned."
 
 
-@shelter_operations.route("")
-@require_login
-@require_shelter
-def index():
-    if not _ops_allowed():
-        return _ops_access_redirect()
-
-    return render_template(
-        "shelter_operations/index.html",
-        operations_links=[
-            {
-                "title": "Inspections",
-                "description": "Inspection sheets, room checks, and inspection history tools.",
-                "href": url_for("inspection_v2.inspection_sheet"),
-            },
-            {
-                "title": "Rent",
-                "description": "Rent roll, payment entry, and rent tracking tools.",
-                "href": url_for("rent_tracking.rent_roll"),
-            },
-            {
-                "title": "Checkout Log",
-                "description": "Attendance board, check out activity, and resident return tracking.",
-                "href": url_for("attendance.staff_attendance"),
-            },
-            {
-                "title": "Passes",
-                "description": "Approved pass activity and pass related shelter operations.",
-                "href": url_for("attendance.staff_passes_approved"),
-            },
-            {
-                "title": "Transport",
-                "description": "Transport board and transportation operations.",
-                "href": url_for("transport.staff_transport_board"),
-            },
-            {
-                "title": "Weekly Chore Board",
-                "description": "Weekly chore assignments and chore board operations.",
-                "href": url_for("shelter_operations.chore_board"),
-            },
-        ],
-        configuration_links=[
-            {
-                "title": "Operations Settings",
-                "description": "Rent rules, inspections, income settings, and kiosk activity categories.",
-                "href": url_for("operations_settings.settings_page"),
-            },
-            {
-                "title": "Chore Configuration",
-                "description": "Manage chore templates and defaults for this shelter.",
-                "href": url_for("shelter_operations.chore_management"),
-            },
-        ],
-    )
-
-
 @shelter_operations.route("/chores/config", methods=["GET", "POST"])
 @require_login
 @require_shelter
