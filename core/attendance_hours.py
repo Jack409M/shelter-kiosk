@@ -14,7 +14,8 @@ from core.kiosk_activity_categories import load_kiosk_activity_categories_for_sh
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 PASS_REQUIRED_PRODUCTIVE_HOURS = 35.0
 PASS_REQUIRED_WORK_HOURS = 29.0
-ROLLING_MODULE_PASS_PERCENT = 95.0
+ATTENDANCE_LOOKBACK_WEEKS = 39
+ATTENDANCE_WEIGHTED_PASS_PERCENT = 95.0
 
 
 @dataclass
@@ -81,8 +82,8 @@ def _local_to_utc_iso(local_dt: datetime) -> str:
     )
 
 
-def _start_of_current_week_local(now_local: datetime) -> datetime:
-    return (now_local - timedelta(days=now_local.weekday())).replace(
+def _start_of_week_local(any_local_dt: datetime) -> datetime:
+    return (any_local_dt - timedelta(days=any_local_dt.weekday())).replace(
         hour=0,
         minute=0,
         second=0,
@@ -90,38 +91,45 @@ def _start_of_current_week_local(now_local: datetime) -> datetime:
     )
 
 
-def _subtract_months(dt_value: datetime, months: int) -> datetime:
-    year = dt_value.year
-    month = dt_value.month - months
-
-    while month <= 0:
-        month += 12
-        year -= 1
-
-    return dt_value.replace(year=year, month=month)
-
-
-def _parse_iso_date_local(value: str | None) -> datetime | None:
-    text = (value or "").strip()
-    if not text:
+def _parse_entry_date(value: str | None) -> date | None:
+    raw = (value or "").strip()
+    if not raw:
         return None
     try:
-        parsed = datetime.fromisoformat(text)
-        if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=CHICAGO_TZ)
-        return parsed.astimezone(CHICAGO_TZ)
+        return datetime.fromisoformat(raw).date()
     except Exception:
-        pass
-    try:
-        parsed_date = date.fromisoformat(text)
-        return datetime(parsed_date.year, parsed_date.month, parsed_date.day, tzinfo=CHICAGO_TZ)
-    except Exception:
-        return None
+        try:
+            return datetime.strptime(raw[:10], "%Y-%m-%d").date()
+        except Exception:
+            return None
+
+
+def _completed_week_windows(lookback_weeks: int = ATTENDANCE_LOOKBACK_WEEKS) -> list[dict[str, Any]]:
+    now_local = datetime.now(CHICAGO_TZ)
+    current_week_start = _start_of_week_local(now_local)
+
+    weeks: list[dict[str, Any]] = []
+
+    for offset in range(1, lookback_weeks + 1):
+        week_start = current_week_start - timedelta(days=7 * offset)
+        week_end = week_start + timedelta(days=7)
+        week_end_display = week_end - timedelta(seconds=1)
+
+        weeks.append(
+            {
+                "week_start_local": week_start,
+                "week_end_local_exclusive": week_end,
+                "week_label": f"{week_start.strftime('%b %d, %Y')} to {week_end_display.strftime('%b %d, %Y')}",
+                "week_key": week_start.date().isoformat(),
+            }
+        )
+
+    return weeks
 
 
 def previous_full_week_window(now_local: datetime | None = None) -> dict[str, Any]:
     current_local = now_local or datetime.now(CHICAGO_TZ)
-    current_week_start = _start_of_current_week_local(current_local)
+    current_week_start = _start_of_week_local(current_local)
     prior_week_start = current_week_start - timedelta(days=7)
     prior_week_end = current_week_start
 
@@ -134,70 +142,20 @@ def previous_full_week_window(now_local: datetime | None = None) -> dict[str, An
     }
 
 
-def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dict[str, Any]:
-    window = previous_full_week_window()
-    category_map = _category_map_for_shelter(shelter)
-
-    sql = (
-        """
-        SELECT
-            id,
-            destination,
-            obligation_start_time,
-            obligation_end_time,
-            actual_obligation_end_time
-        FROM attendance_events
-        WHERE resident_id = %s
-          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
-          AND event_type = %s
-          AND obligation_start_time IS NOT NULL
-          AND obligation_start_time >= %s
-          AND obligation_start_time < %s
-        ORDER BY obligation_start_time ASC, id ASC
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        SELECT
-            id,
-            destination,
-            obligation_start_time,
-            obligation_end_time,
-            actual_obligation_end_time
-        FROM attendance_events
-        WHERE resident_id = ?
-          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
-          AND event_type = ?
-          AND obligation_start_time IS NOT NULL
-          AND obligation_start_time >= ?
-          AND obligation_start_time < ?
-        ORDER BY obligation_start_time ASC, id ASC
-        """
-    )
-
-    rows = db_fetchall(
-        sql,
-        (
-            resident_id,
-            shelter,
-            "check_out",
-            window["start_utc_iso"],
-            window["end_utc_iso"],
-        ),
-    )
-
+def _summarize_rows(
+    rows: list[dict[str, Any]],
+    category_map: dict[str, AttendanceHourCategory],
+) -> dict[str, Any]:
     by_category: dict[str, dict[str, Any]] = {}
     uncategorized_hours = 0.0
 
     for row in rows or []:
-        destination = (row.get("destination") if isinstance(row, dict) else row[1]) or ""
-        destination = destination.strip()
+        destination = (row.get("destination") or "").strip()
 
-        start_iso = (row.get("obligation_start_time") if isinstance(row, dict) else row[2]) or ""
-        planned_end_iso = (row.get("obligation_end_time") if isinstance(row, dict) else row[3]) or ""
-        actual_end_iso = (row.get("actual_obligation_end_time") if isinstance(row, dict) else row[4]) or ""
-
-        start_local = _utc_iso_to_local(start_iso)
-        end_local = _utc_iso_to_local(actual_end_iso) or _utc_iso_to_local(planned_end_iso)
+        start_local = row.get("obligation_start_local")
+        planned_end_local = row.get("obligation_end_local")
+        actual_end_local = row.get("actual_obligation_end_local")
+        end_local = actual_end_local or planned_end_local
 
         if not start_local or not end_local:
             continue
@@ -264,14 +222,17 @@ def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dic
     meets_work = work_short == 0
     passes_requirement = meets_productive and meets_work
 
-    productive_ratio = min(productive_total / PASS_REQUIRED_PRODUCTIVE_HOURS, 1.0) if PASS_REQUIRED_PRODUCTIVE_HOURS > 0 else 0.0
-    work_ratio = min(work_total / PASS_REQUIRED_WORK_HOURS, 1.0) if PASS_REQUIRED_WORK_HOURS > 0 else 0.0
-    weekly_percent = round(((productive_ratio * 0.5) + (work_ratio * 0.5)) * 100.0, 1)
+    productive_ratio = 0.0
+    work_ratio = 0.0
+
+    if PASS_REQUIRED_PRODUCTIVE_HOURS > 0:
+        productive_ratio = min(productive_total / PASS_REQUIRED_PRODUCTIVE_HOURS, 1.0)
+    if PASS_REQUIRED_WORK_HOURS > 0:
+        work_ratio = min(work_total / PASS_REQUIRED_WORK_HOURS, 1.0)
+
+    percent_grade = round(((productive_ratio * 0.5) + (work_ratio * 0.5)) * 100.0, 1)
 
     return {
-        "week_label": window["label"],
-        "week_start_local": window["start_local"],
-        "week_end_local": window["end_local"],
         "productive_hours": productive_total,
         "work_hours": work_total,
         "productive_required_hours": PASS_REQUIRED_PRODUCTIVE_HOURS,
@@ -283,172 +244,24 @@ def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dic
         "passes_requirement": passes_requirement,
         "status_label": "Pass" if passes_requirement else "Fail",
         "status_class": "pass" if passes_requirement else "fail",
-        "weekly_percent": weekly_percent,
+        "percent_grade": percent_grade,
+        "percent_grade_display": f"{percent_grade:.1f}%",
         "breakdown": breakdown,
         "uncategorized_hours": round(uncategorized_hours, 2),
         "has_data": bool(breakdown or uncategorized_hours),
     }
 
 
-def _week_windows_for_last_9_months(now_local: datetime | None = None) -> list[dict[str, Any]]:
-    current_local = now_local or datetime.now(CHICAGO_TZ)
-    current_week_start = _start_of_current_week_local(current_local)
-    cutoff_local = _subtract_months(current_week_start, 9)
-
-    windows: list[dict[str, Any]] = []
-    cursor_end = current_week_start
-
-    while True:
-        week_start = cursor_end - timedelta(days=7)
-        week_end = cursor_end
-
-        if week_end <= cutoff_local:
-            break
-
-        windows.append(
-            {
-                "start_local": week_start,
-                "end_local": week_end,
-                "start_utc_iso": _local_to_utc_iso(week_start),
-                "end_utc_iso": _local_to_utc_iso(week_end),
-                "label": f"{week_start.strftime('%b %d, %Y')} to {(week_end - timedelta(seconds=1)).strftime('%b %d, %Y')}",
-            }
-        )
-        cursor_end = week_start
-
-    windows.reverse()
-    return windows
-
-
-def _eligible_week_for_program_window(
-    week_start_local: datetime,
-    week_end_local: datetime,
-    entry_local: datetime | None,
-    exit_local: datetime | None,
-) -> bool:
-    if entry_local and week_end_local <= entry_local:
-        return False
-    if exit_local and week_start_local >= exit_local:
-        return False
-    return True
-
-
-def _calculate_week_from_rows(
-    week_rows: list[dict[str, Any]],
-    category_map: dict[str, AttendanceHourCategory],
-) -> dict[str, Any]:
-    by_category: dict[str, dict[str, Any]] = {}
-    uncategorized_hours = 0.0
-
-    for row in week_rows:
-        destination = (row.get("destination") or "").strip()
-        start_iso = row.get("obligation_start_time") or ""
-        planned_end_iso = row.get("obligation_end_time") or ""
-        actual_end_iso = row.get("actual_obligation_end_time") or ""
-
-        start_local = _utc_iso_to_local(start_iso)
-        end_local = _utc_iso_to_local(actual_end_iso) or _utc_iso_to_local(planned_end_iso)
-
-        if not start_local or not end_local:
-            continue
-        if end_local <= start_local:
-            continue
-
-        duration_hours = round((end_local - start_local).total_seconds() / 3600.0, 4)
-        if duration_hours <= 0:
-            continue
-
-        category = category_map.get(destination)
-        if not category:
-            uncategorized_hours += duration_hours
-            continue
-
-        bucket = by_category.setdefault(
-            destination,
-            {
-                "label": destination,
-                "raw_hours": 0.0,
-                "credited_hours": 0.0,
-                "counts_as_work": category.counts_as_work,
-                "counts_as_productive": category.counts_as_productive,
-                "weekly_cap_hours": category.weekly_cap_hours,
-            },
-        )
-        bucket["raw_hours"] += duration_hours
-
-    productive_total = 0.0
-    work_total = 0.0
-
-    for bucket in by_category.values():
-        raw_hours = round(bucket["raw_hours"], 2)
-        cap_hours = bucket["weekly_cap_hours"]
-        credited_hours = min(raw_hours, float(cap_hours)) if cap_hours is not None else raw_hours
-        credited_hours = round(credited_hours, 2)
-
-        bucket["raw_hours"] = raw_hours
-        bucket["credited_hours"] = credited_hours
-
-        if bucket["counts_as_productive"]:
-            productive_total += credited_hours
-        if bucket["counts_as_work"]:
-            work_total += credited_hours
-
-    productive_total = round(productive_total, 2)
-    work_total = round(work_total, 2)
-
-    productive_short = round(max(0.0, PASS_REQUIRED_PRODUCTIVE_HOURS - productive_total), 2)
-    work_short = round(max(0.0, PASS_REQUIRED_WORK_HOURS - work_total), 2)
-
-    productive_ratio = min(productive_total / PASS_REQUIRED_PRODUCTIVE_HOURS, 1.0) if PASS_REQUIRED_PRODUCTIVE_HOURS > 0 else 0.0
-    work_ratio = min(work_total / PASS_REQUIRED_WORK_HOURS, 1.0) if PASS_REQUIRED_WORK_HOURS > 0 else 0.0
-    weekly_percent = round(((productive_ratio * 0.5) + (work_ratio * 0.5)) * 100.0, 1)
-
-    passes_requirement = productive_short == 0 and work_short == 0
-
-    return {
-        "productive_hours": productive_total,
-        "work_hours": work_total,
-        "productive_short_hours": productive_short,
-        "work_short_hours": work_short,
-        "weekly_percent": weekly_percent,
-        "passes_requirement": passes_requirement,
-        "uncategorized_hours": round(uncategorized_hours, 2),
-    }
-
-
-def build_attendance_hours_snapshot(
+def _fetch_attendance_rows_for_window(
     resident_id: int,
     shelter: str,
-    enrollment_entry_date: str | None = None,
-    enrollment_exit_date: str | None = None,
-) -> dict[str, Any]:
-    category_map = _category_map_for_shelter(shelter)
-    week_windows = _week_windows_for_last_9_months()
-
-    if not week_windows:
-        return {
-            "lookback_label": "Last 9 months",
-            "average_score": None,
-            "average_score_display": "—",
-            "counted_weeks": 0,
-            "passes_weighted": False,
-            "band_key": "neutral",
-            "band_label": "No Data",
-            "card_style": "background:#eef2f6; border:1px solid #c7d2de;",
-            "value_style": "color:#46607a; font-weight:700;",
-            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#eef2f6; border:1px solid #c7d2de; color:#46607a; font-weight:700;",
-            "weeks": [],
-        }
-
-    entry_local = _parse_iso_date_local(enrollment_entry_date)
-    exit_local = _parse_iso_date_local(enrollment_exit_date)
-
-    global_start_utc = week_windows[0]["start_utc_iso"]
-    global_end_utc = week_windows[-1]["end_utc_iso"]
-
+    start_utc_iso: str,
+    end_utc_iso: str,
+) -> list[dict[str, Any]]:
     sql = (
         """
         SELECT
+            id,
             destination,
             obligation_start_time,
             obligation_end_time,
@@ -460,11 +273,12 @@ def build_attendance_hours_snapshot(
           AND obligation_start_time IS NOT NULL
           AND obligation_start_time >= %s
           AND obligation_start_time < %s
-        ORDER BY obligation_start_time ASC
+        ORDER BY obligation_start_time ASC, id ASC
         """
         if g.get("db_kind") == "pg"
         else """
         SELECT
+            id,
             destination,
             obligation_start_time,
             obligation_end_time,
@@ -476,117 +290,189 @@ def build_attendance_hours_snapshot(
           AND obligation_start_time IS NOT NULL
           AND obligation_start_time >= ?
           AND obligation_start_time < ?
-        ORDER BY obligation_start_time ASC
+        ORDER BY obligation_start_time ASC, id ASC
         """
     )
 
-    rows = db_fetchall(
+    raw_rows = db_fetchall(
         sql,
         (
             resident_id,
             shelter,
             "check_out",
-            global_start_utc,
-            global_end_utc,
+            start_utc_iso,
+            end_utc_iso,
         ),
     )
 
-    normalized_rows: list[dict[str, Any]] = []
-    for row in rows or []:
+    rows: list[dict[str, Any]] = []
+    for row in raw_rows or []:
         if isinstance(row, dict):
-            normalized_rows.append(dict(row))
+            normalized = dict(row)
         else:
-            normalized_rows.append(
-                {
-                    "destination": row[0],
-                    "obligation_start_time": row[1],
-                    "obligation_end_time": row[2],
-                    "actual_obligation_end_time": row[3],
-                }
-            )
+            normalized = {
+                "id": row[0],
+                "destination": row[1],
+                "obligation_start_time": row[2],
+                "obligation_end_time": row[3],
+                "actual_obligation_end_time": row[4],
+            }
+
+        normalized["obligation_start_local"] = _utc_iso_to_local(normalized.get("obligation_start_time"))
+        normalized["obligation_end_local"] = _utc_iso_to_local(normalized.get("obligation_end_time"))
+        normalized["actual_obligation_end_local"] = _utc_iso_to_local(normalized.get("actual_obligation_end_time"))
+        rows.append(normalized)
+
+    return rows
+
+
+def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dict[str, Any]:
+    window = previous_full_week_window()
+    category_map = _category_map_for_shelter(shelter)
+
+    rows = _fetch_attendance_rows_for_window(
+        resident_id=resident_id,
+        shelter=shelter,
+        start_utc_iso=window["start_utc_iso"],
+        end_utc_iso=window["end_utc_iso"],
+    )
+
+    summary = _summarize_rows(rows, category_map)
+    summary["week_label"] = window["label"]
+    summary["week_start_local"] = window["start_local"]
+    summary["week_end_local"] = window["end_local"]
+    return summary
+
+
+def build_attendance_hours_snapshot(
+    resident_id: int,
+    shelter: str,
+    enrollment_entry_date: str | None = None,
+    lookback_weeks: int = ATTENDANCE_LOOKBACK_WEEKS,
+) -> dict[str, Any]:
+    completed_weeks = _completed_week_windows(lookback_weeks=lookback_weeks)
+    if not completed_weeks:
+        return {
+            "average_percent": 0.0,
+            "average_percent_display": "0.0%",
+            "weighted_passes": False,
+            "weighted_pass_threshold": ATTENDANCE_WEIGHTED_PASS_PERCENT,
+            "band_label": "Fail",
+            "card_style": "background:#fff0f0; border:1px solid #e2a0a0;",
+            "value_style": "color:#9a1f1f; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd6d6; border:1px solid #e2a0a0; color:#9a1f1f; font-weight:700;",
+            "eligible_weeks_count": 0,
+            "excluded_pre_entry_weeks_count": 0,
+            "current_week_status_label": "—",
+            "weekly_rows": [],
+            "average_label": "No completed attendance weeks available.",
+        }
+
+    oldest_week = completed_weeks[-1]
+    newest_week = completed_weeks[0]
+
+    overall_start_utc = _local_to_utc_iso(oldest_week["week_start_local"])
+    overall_end_utc = _local_to_utc_iso(newest_week["week_end_local_exclusive"])
+
+    category_map = _category_map_for_shelter(shelter)
+    all_rows = _fetch_attendance_rows_for_window(
+        resident_id=resident_id,
+        shelter=shelter,
+        start_utc_iso=overall_start_utc,
+        end_utc_iso=overall_end_utc,
+    )
+
+    rows_by_week: dict[str, list[dict[str, Any]]] = {}
+    for row in all_rows:
+        start_local = row.get("obligation_start_local")
+        if not start_local:
+            continue
+        week_key = _start_of_week_local(start_local).date().isoformat()
+        rows_by_week.setdefault(week_key, []).append(row)
+
+    entry_date = _parse_entry_date(enrollment_entry_date)
 
     weekly_rows: list[dict[str, Any]] = []
-    weekly_scores: list[float] = []
+    eligible_percent_values: list[float] = []
+    excluded_pre_entry_weeks_count = 0
 
-    for window in week_windows:
-        if not _eligible_week_for_program_window(
-            window["start_local"],
-            window["end_local"],
-            entry_local,
-            exit_local,
-        ):
-            continue
+    for week in completed_weeks:
+        week_key = week["week_key"]
+        week_rows = rows_by_week.get(week_key, [])
+        week_summary = _summarize_rows(week_rows, category_map)
 
-        week_rows = []
-        for row in normalized_rows:
-            start_local = _utc_iso_to_local(row.get("obligation_start_time"))
-            if not start_local:
-                continue
-            if window["start_local"] <= start_local < window["end_local"]:
-                week_rows.append(row)
+        included_in_average = True
+        if entry_date and week["week_start_local"].date() < entry_date:
+            included_in_average = False
+            excluded_pre_entry_weeks_count += 1
 
-        week_summary = _calculate_week_from_rows(week_rows, category_map)
-        weekly_scores.append(week_summary["weekly_percent"])
+        if included_in_average:
+            eligible_percent_values.append(week_summary["percent_grade"])
+
+        short_text = ""
+        if not week_summary["passes_requirement"]:
+            short_text = (
+                f"Short by {week_summary['productive_short_hours']} productive "
+                f"and {week_summary['work_short_hours']} work hours."
+            )
 
         weekly_rows.append(
             {
-                "week_label": window["label"],
+                "week_label": week["week_label"],
+                "week_key": week_key,
+                "included_in_average": included_in_average,
                 "productive_hours": week_summary["productive_hours"],
                 "work_hours": week_summary["work_hours"],
+                "productive_required_hours": week_summary["productive_required_hours"],
+                "work_required_hours": week_summary["work_required_hours"],
                 "productive_short_hours": week_summary["productive_short_hours"],
                 "work_short_hours": week_summary["work_short_hours"],
-                "weekly_percent": week_summary["weekly_percent"],
-                "weekly_percent_display": f"{week_summary['weekly_percent']:.1f}",
                 "passes_requirement": week_summary["passes_requirement"],
-                "status_label": "Pass" if week_summary["passes_requirement"] else "Fail",
-                "uncategorized_hours": week_summary["uncategorized_hours"],
+                "status_label": week_summary["status_label"],
+                "status_class": week_summary["status_class"],
+                "percent_grade": week_summary["percent_grade"],
+                "percent_grade_display": week_summary["percent_grade_display"],
+                "short_text": short_text,
             }
         )
 
-    average_score = round(sum(weekly_scores) / len(weekly_scores), 1) if weekly_scores else None
-    passes_weighted = bool(average_score is not None and average_score >= ROLLING_MODULE_PASS_PERCENT)
+    average_percent = round(
+        sum(eligible_percent_values) / len(eligible_percent_values),
+        1,
+    ) if eligible_percent_values else 0.0
 
-    if average_score is None:
-        band_key = "neutral"
-        band_label = "No Data"
-        card_style = "background:#eef2f6; border:1px solid #c7d2de;"
-        value_style = "color:#46607a; font-weight:700;"
-        pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#eef2f6; border:1px solid #c7d2de; color:#46607a; font-weight:700;"
-    elif average_score >= 95:
-        band_key = "green"
-        band_label = "Green"
+    weighted_passes = average_percent >= ATTENDANCE_WEIGHTED_PASS_PERCENT
+
+    if weighted_passes:
+        band_label = "Pass"
         card_style = "background:#eef8f0; border:1px solid #9bc8a6;"
         value_style = "color:#1f6b33; font-weight:700;"
         pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#dcefe1; border:1px solid #9bc8a6; color:#1f6b33; font-weight:700;"
-    elif average_score >= 79:
-        band_key = "yellow"
-        band_label = "Yellow"
-        card_style = "background:#fff8df; border:1px solid #e0cd7a;"
-        value_style = "color:#7a6500; font-weight:700;"
-        pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#fff1b8; border:1px solid #e0cd7a; color:#7a6500; font-weight:700;"
-    elif average_score >= 62:
-        band_key = "orange"
-        band_label = "Orange"
-        card_style = "background:#fff0e4; border:1px solid #e2b27d;"
-        value_style = "color:#9a4f00; font-weight:700;"
-        pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd8b0; border:1px solid #e2b27d; color:#9a4f00; font-weight:700;"
     else:
-        band_key = "red"
-        band_label = "Red"
+        band_label = "Fail"
         card_style = "background:#fff0f0; border:1px solid #e2a0a0;"
         value_style = "color:#9a1f1f; font-weight:700;"
         pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd6d6; border:1px solid #e2a0a0; color:#9a1f1f; font-weight:700;"
 
+    latest_included_week = next((row for row in weekly_rows if row["included_in_average"]), None)
+
     return {
-        "lookback_label": "Last 9 months",
-        "average_score": average_score,
-        "average_score_display": f"{average_score:.1f}" if average_score is not None else "—",
-        "counted_weeks": len(weekly_rows),
-        "passes_weighted": passes_weighted,
-        "band_key": band_key,
+        "average_percent": average_percent,
+        "average_percent_display": f"{average_percent:.1f}%",
+        "weighted_passes": weighted_passes,
+        "weighted_pass_threshold": ATTENDANCE_WEIGHTED_PASS_PERCENT,
         "band_label": band_label,
         "card_style": card_style,
         "value_style": value_style,
         "pill_style": pill_style,
-        "weeks": weekly_rows,
+        "eligible_weeks_count": len(eligible_percent_values),
+        "excluded_pre_entry_weeks_count": excluded_pre_entry_weeks_count,
+        "current_week_status_label": latest_included_week["status_label"] if latest_included_week else "—",
+        "current_week_percent_display": latest_included_week["percent_grade_display"] if latest_included_week else "—",
+        "current_week_label": latest_included_week["week_label"] if latest_included_week else "",
+        "weekly_rows": weekly_rows,
+        "average_label": (
+            f"9 month weighted average using completed program weeks only. "
+            f"Weeks before entry are excluded."
+        ),
     }
