@@ -178,6 +178,106 @@ def _latest_open_checkout_row(resident_id: int, shelter: str):
     return row
 
 
+def _latest_completed_attendance_pair(resident_id: int, shelter: str):
+    checkin_row = db_fetchone(
+        """
+        SELECT id, event_time
+        FROM attendance_events
+        WHERE resident_id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
+          AND event_type = %s
+        ORDER BY event_time DESC, id DESC
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT id, event_time
+        FROM attendance_events
+        WHERE resident_id = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
+          AND event_type = ?
+        ORDER BY event_time DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, shelter, "check_in"),
+    )
+
+    if not checkin_row:
+        return None
+
+    checkin_id = int(checkin_row["id"] if isinstance(checkin_row, dict) else checkin_row[0])
+    checkin_time = (checkin_row["event_time"] if isinstance(checkin_row, dict) else checkin_row[1]) or ""
+
+    checkout_row = db_fetchone(
+        """
+        SELECT
+            id,
+            event_time,
+            note,
+            expected_back_time,
+            destination,
+            obligation_start_time,
+            obligation_end_time,
+            actual_obligation_end_time
+        FROM attendance_events
+        WHERE resident_id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
+          AND event_type = %s
+          AND event_time <= %s
+        ORDER BY event_time DESC, id DESC
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            id,
+            event_time,
+            note,
+            expected_back_time,
+            destination,
+            obligation_start_time,
+            obligation_end_time,
+            actual_obligation_end_time
+        FROM attendance_events
+        WHERE resident_id = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
+          AND event_type = ?
+          AND event_time <= ?
+        ORDER BY event_time DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, shelter, "check_out", checkin_time),
+    )
+
+    if not checkout_row:
+        return None
+
+    return {
+        "checkin_id": checkin_id,
+        "checkin_time": checkin_time,
+        "checkout_id": int(checkout_row["id"] if isinstance(checkout_row, dict) else checkout_row[0]),
+        "checkout_time": (checkout_row["event_time"] if isinstance(checkout_row, dict) else checkout_row[1]) or "",
+        "note": (checkout_row["note"] if isinstance(checkout_row, dict) else checkout_row[2]) or "",
+        "expected_back_time": (checkout_row["expected_back_time"] if isinstance(checkout_row, dict) else checkout_row[3]) or "",
+        "destination": (checkout_row["destination"] if isinstance(checkout_row, dict) else checkout_row[4]) or "",
+        "obligation_start_time": (checkout_row["obligation_start_time"] if isinstance(checkout_row, dict) else checkout_row[5]) or "",
+        "obligation_end_time": (checkout_row["obligation_end_time"] if isinstance(checkout_row, dict) else checkout_row[6]) or "",
+        "actual_obligation_end_time": (checkout_row["actual_obligation_end_time"] if isinstance(checkout_row, dict) else checkout_row[7]) or "",
+    }
+
+
+def _checkout_requires_actual_end_time_from_values(
+    destination: str | None,
+    obligation_start_time: str | None,
+    obligation_end_time: str | None,
+) -> bool:
+    return bool(
+        (destination or "").strip()
+        and (obligation_start_time or "").strip()
+        and (obligation_end_time or "").strip()
+    )
+
+
 def _checkout_requires_actual_end_time(checkout_row) -> bool:
     if not checkout_row:
         return False
@@ -186,7 +286,7 @@ def _checkout_requires_actual_end_time(checkout_row) -> bool:
     obligation_start = (checkout_row["obligation_start_time"] if isinstance(checkout_row, dict) else checkout_row[6]) or ""
     obligation_end = (checkout_row["obligation_end_time"] if isinstance(checkout_row, dict) else checkout_row[7]) or ""
 
-    return bool(str(destination).strip() and str(obligation_start).strip() and str(obligation_end).strip())
+    return _checkout_requires_actual_end_time_from_values(destination, obligation_start, obligation_end)
 
 
 def _attendance_insert_sql() -> str:
@@ -280,6 +380,7 @@ def staff_attendance_view():
 
         is_out = last_event_type == "check_out"
         active_pass = has_active_pass(rid, shelter)
+        last_completed_pair = None if is_out else _latest_completed_attendance_pair(rid, shelter)
 
         row = {
             "resident_id": rid,
@@ -299,6 +400,18 @@ def staff_attendance_view():
             "actual_obligation_end_input": _local_dt_input_value(actual_obligation_end_time),
             "has_active_pass": active_pass,
             "actual_end_required": bool(destination and obligation_start_time and obligation_end_time),
+            "last_completed_pair": last_completed_pair,
+            "last_completed_checkout_time_input": _local_dt_input_value(last_completed_pair["checkout_time"]) if last_completed_pair else "",
+            "last_completed_checkin_time_input": _local_dt_input_value(last_completed_pair["checkin_time"]) if last_completed_pair else "",
+            "last_completed_destination": last_completed_pair["destination"] if last_completed_pair else "",
+            "last_completed_start_input": _local_dt_input_value(last_completed_pair["obligation_start_time"]) if last_completed_pair else "",
+            "last_completed_end_input": _local_dt_input_value(last_completed_pair["obligation_end_time"]) if last_completed_pair else "",
+            "last_completed_actual_end_input": _local_dt_input_value(last_completed_pair["actual_obligation_end_time"]) if last_completed_pair else "",
+            "last_completed_actual_end_required": _checkout_requires_actual_end_time_from_values(
+                last_completed_pair["destination"] if last_completed_pair else "",
+                last_completed_pair["obligation_start_time"] if last_completed_pair else "",
+                last_completed_pair["obligation_end_time"] if last_completed_pair else "",
+            ),
         }
 
         if is_out:
@@ -610,4 +723,202 @@ def staff_attendance_check_out_global_view():
         ).strip(),
     )
     flash("Resident checked out.", "success")
+    return redirect(url_for("attendance.staff_attendance"))
+
+
+def staff_attendance_edit_last_view(resident_id: int):
+    shelter = session["shelter"]
+    staff_id = session["staff_user_id"]
+
+    resident = db_fetchone(
+        "SELECT id FROM residents WHERE id = %s AND shelter = %s AND is_active = TRUE"
+        if g.get("db_kind") == "pg"
+        else "SELECT id FROM residents WHERE id = ? AND shelter = ? AND is_active = 1",
+        (resident_id, shelter),
+    )
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    pair = _latest_completed_attendance_pair(resident_id, shelter)
+    if not pair:
+        flash("No completed attendance record found to edit.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    checkout_time_raw = (request.form.get("checkout_at") or "").strip()
+    checkin_time_raw = (request.form.get("checkin_at") or "").strip()
+    destination_raw = (request.form.get("destination") or "").strip()
+    start_raw = (request.form.get("obligation_start_at") or "").strip()
+    end_raw = (request.form.get("obligation_end_at") or "").strip()
+    actual_end_raw = (request.form.get("actual_obligation_end_at") or "").strip()
+
+    if not checkout_time_raw:
+        flash("Checkout time is required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    if not checkin_time_raw:
+        flash("Check in time is required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    try:
+        updated_checkout_time = _parse_datetime_local_to_utc_naive(checkout_time_raw)
+    except Exception:
+        flash("Invalid checkout time.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    try:
+        updated_checkin_time = _parse_datetime_local_to_utc_naive(checkin_time_raw)
+    except Exception:
+        flash("Invalid check in time.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    if updated_checkin_time < updated_checkout_time:
+        flash("Check in time cannot be earlier than checkout time.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    checkout_categories = _active_checkout_categories_for_shelter(shelter)
+    category_map = {
+        (item.get("activity_label") or "").strip(): item
+        for item in checkout_categories
+        if (item.get("activity_label") or "").strip()
+    }
+
+    if not destination_raw:
+        flash("Activity category is required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    selected_category = category_map.get(destination_raw)
+    if not selected_category:
+        flash("Select a valid activity category.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    if bool(selected_category.get("requires_approved_pass")):
+        flash("Pass based attendance records should be corrected through pass workflows, not this edit form.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    updated_start = None
+    updated_end = None
+    updated_actual_end = None
+
+    if start_raw:
+        try:
+            updated_start = _parse_datetime_local_to_utc_naive(start_raw)
+        except Exception:
+            flash("Invalid scheduled start time.", "error")
+            return redirect(url_for("attendance.staff_attendance"))
+
+    if end_raw:
+        try:
+            updated_end = _parse_datetime_local_to_utc_naive(end_raw)
+        except Exception:
+            flash("Invalid scheduled end time.", "error")
+            return redirect(url_for("attendance.staff_attendance"))
+
+    if actual_end_raw:
+        try:
+            updated_actual_end = _parse_datetime_local_to_utc_naive(actual_end_raw)
+        except Exception:
+            flash("Invalid actual obligation end time.", "error")
+            return redirect(url_for("attendance.staff_attendance"))
+
+    if not updated_start:
+        flash("Scheduled start time is required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    if not updated_end:
+        flash("Scheduled end time is required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    if updated_end < updated_start:
+        flash("Scheduled end time cannot be earlier than scheduled start time.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    if not updated_actual_end:
+        flash("Actual obligation end time is required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    if updated_actual_end < updated_start:
+        flash("Actual end time cannot be earlier than scheduled start time.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    if updated_actual_end > updated_checkin_time:
+        flash("Actual end time cannot be later than the check in time.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    db_execute(
+        """
+        UPDATE attendance_events
+        SET event_time = %s,
+            destination = %s,
+            obligation_start_time = %s,
+            obligation_end_time = %s,
+            actual_obligation_end_time = %s
+        WHERE id = %s
+          AND resident_id = %s
+          AND shelter = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE attendance_events
+        SET event_time = ?,
+            destination = ?,
+            obligation_start_time = ?,
+            obligation_end_time = ?,
+            actual_obligation_end_time = ?
+        WHERE id = ?
+          AND resident_id = ?
+          AND shelter = ?
+        """,
+        (
+            updated_checkout_time,
+            destination_raw,
+            updated_start,
+            updated_end,
+            updated_actual_end,
+            pair["checkout_id"],
+            resident_id,
+            shelter,
+        ),
+    )
+
+    db_execute(
+        """
+        UPDATE attendance_events
+        SET event_time = %s
+        WHERE id = %s
+          AND resident_id = %s
+          AND shelter = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE attendance_events
+        SET event_time = ?
+        WHERE id = ?
+          AND resident_id = ?
+          AND shelter = ?
+        """,
+        (
+            updated_checkin_time,
+            pair["checkin_id"],
+            resident_id,
+            shelter,
+        ),
+    )
+
+    log_action(
+        "attendance",
+        resident_id,
+        shelter,
+        staff_id,
+        "edit_last_attendance",
+        (
+            f"checkout={updated_checkout_time} "
+            f"checkin={updated_checkin_time} "
+            f"destination={destination_raw} "
+            f"start={updated_start} "
+            f"end={updated_end} "
+            f"actual_end={updated_actual_end}"
+        ).strip(),
+    )
+    flash("Last attendance record updated.", "ok")
     return redirect(url_for("attendance.staff_attendance"))
