@@ -181,7 +181,8 @@ def ensure_attendance_events_table(kind: str) -> None:
             expected_back_time TEXT,
             destination TEXT,
             obligation_start_time TEXT,
-            obligation_end_time TEXT
+            obligation_end_time TEXT,
+            actual_obligation_end_time TEXT
         )
         """,
         """
@@ -196,7 +197,8 @@ def ensure_attendance_events_table(kind: str) -> None:
             expected_back_time TEXT,
             destination TEXT,
             obligation_start_time TEXT,
-            obligation_end_time TEXT
+            obligation_end_time TEXT,
+            actual_obligation_end_time TEXT
         )
         """,
     )
@@ -208,12 +210,14 @@ def ensure_attendance_event_columns(kind: str) -> None:
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS destination TEXT",
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS obligation_start_time TEXT",
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS obligation_end_time TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS actual_obligation_end_time TEXT",
         ]
     else:
         statements = [
             "ALTER TABLE attendance_events ADD COLUMN destination TEXT",
             "ALTER TABLE attendance_events ADD COLUMN obligation_start_time TEXT",
             "ALTER TABLE attendance_events ADD COLUMN obligation_end_time TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN actual_obligation_end_time TEXT",
         ]
 
     for statement in statements:
