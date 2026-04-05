@@ -6,6 +6,7 @@ from core.auth import require_login, require_shelter
 from routes.attendance_parts.board import (
     staff_attendance_check_in_view,
     staff_attendance_check_out_global_view,
+    staff_attendance_edit_last_view,
     staff_attendance_view,
 )
 from routes.attendance_parts.passes import (
@@ -43,6 +44,13 @@ def staff_attendance_check_in(resident_id: int):
 @require_shelter
 def staff_attendance_check_out_global():
     return staff_attendance_check_out_global_view()
+
+
+@attendance.route("/staff/attendance/<int:resident_id>/edit-last", methods=["POST"])
+@require_login
+@require_shelter
+def staff_attendance_edit_last(resident_id: int):
+    return staff_attendance_edit_last_view(resident_id)
 
 
 @attendance.route("/staff/attendance/resident/<int:resident_id>/print")
