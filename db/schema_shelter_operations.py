@@ -75,6 +75,48 @@ def ensure_chore_tables(kind: str) -> None:
     )
 
 
+def ensure_kiosk_activity_category_tables(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS kiosk_activity_categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shelter TEXT NOT NULL,
+            activity_label TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            counts_as_work_hours INTEGER NOT NULL DEFAULT 0,
+            counts_as_productive_hours INTEGER NOT NULL DEFAULT 0,
+            weekly_cap_hours REAL,
+            requires_approved_pass INTEGER NOT NULL DEFAULT 0,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS kiosk_activity_categories (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            activity_label TEXT NOT NULL,
+            active BOOLEAN NOT NULL DEFAULT TRUE,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            counts_as_work_hours BOOLEAN NOT NULL DEFAULT FALSE,
+            counts_as_productive_hours BOOLEAN NOT NULL DEFAULT FALSE,
+            weekly_cap_hours DOUBLE PRECISION,
+            requires_approved_pass BOOLEAN NOT NULL DEFAULT FALSE,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_chore_template_columns() -> None:
     statements = [
         "ALTER TABLE chore_templates ADD COLUMN IF NOT EXISTS when_time TEXT",
@@ -105,6 +147,172 @@ def ensure_chore_assignment_columns() -> None:
             db_execute(statement)
         except Exception:
             pass
+
+
+def ensure_kiosk_activity_category_columns() -> None:
+    statements = [
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS activity_label TEXT",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS counts_as_work_hours INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS counts_as_productive_hours INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS weekly_cap_hours DOUBLE PRECISION",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS requires_approved_pass INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS notes TEXT",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS updated_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_default_kiosk_activity_categories(kind: str) -> None:
+    seed_map = {
+        "haven house": [
+            ("Employment", 1, 1, None, 0),
+            ("RAD", 1, 1, None, 0),
+            ("Job Search", 0, 1, None, 0),
+            ("AA or NA Meeting", 0, 1, None, 0),
+            ("Church", 0, 1, None, 0),
+            ("Doctor Appointment", 0, 1, None, 0),
+            ("Counseling", 0, 1, None, 0),
+            ("Step Work", 0, 1, 2.0, 0),
+            ("Sponsor Meeting", 0, 1, 1.0, 0),
+            ("Volunteer or Community Service", 0, 1, None, 0),
+            ("School", 0, 1, None, 0),
+            ("Legal Obligation", 0, 1, None, 0),
+            ("Store", 0, 0, None, 0),
+            ("Pass", 0, 0, None, 1),
+            ("Other Approved Activity", 0, 0, None, 0),
+        ],
+        "gratitude house": [
+            ("Employment", 1, 1, None, 0),
+            ("Job Search", 0, 1, None, 0),
+            ("AA or NA Meeting", 0, 1, None, 0),
+            ("Church", 0, 1, None, 0),
+            ("Doctor Appointment", 0, 1, None, 0),
+            ("Counseling", 0, 1, None, 0),
+            ("Step Work", 0, 1, 2.0, 0),
+            ("Sponsor Meeting", 0, 1, 1.0, 0),
+            ("Volunteer or Community Service", 0, 1, None, 0),
+            ("School", 0, 1, None, 0),
+            ("Daycare or School Drop Off", 0, 0, None, 0),
+            ("Legal Obligation", 0, 1, None, 0),
+            ("Store", 0, 0, None, 0),
+            ("Pass", 0, 0, None, 1),
+            ("Other Approved Activity", 0, 0, None, 0),
+        ],
+        "abba house": [
+            ("Employment", 1, 1, None, 0),
+            ("Job Search", 0, 1, None, 0),
+            ("AA or NA Meeting", 0, 1, None, 0),
+            ("Church", 0, 1, None, 0),
+            ("Doctor Appointment", 0, 1, None, 0),
+            ("Counseling", 0, 1, None, 0),
+            ("Step Work", 0, 1, 2.0, 0),
+            ("Sponsor Meeting", 0, 1, 1.0, 0),
+            ("Volunteer or Community Service", 0, 1, None, 0),
+            ("School", 0, 1, None, 0),
+            ("Daycare or School Drop Off", 0, 0, None, 0),
+            ("Legal Obligation", 0, 1, None, 0),
+            ("Store", 0, 0, None, 0),
+            ("Pass", 0, 0, None, 1),
+            ("Free Time", 0, 0, None, 0),
+            ("Other Approved Activity", 0, 0, None, 0),
+        ],
+    }
+
+    now = "1970-01-01T00:00:00"
+
+    for shelter, rows in seed_map.items():
+        existing = None
+        try:
+            existing = db_execute(
+                "SELECT 1"
+            )
+        except Exception:
+            pass
+
+        try:
+            count_row = db_execute(
+                "SELECT 1"
+            )
+        except Exception:
+            count_row = None
+
+        from core.db import db_fetchone
+
+        placeholder = "%s" if kind == "pg" else "?"
+        count_row = db_fetchone(
+            f"""
+            SELECT COUNT(*) AS row_count
+            FROM kiosk_activity_categories
+            WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+            """,
+            (shelter,),
+        )
+        row_count = int((count_row or {}).get("row_count") or 0)
+
+        if row_count > 0:
+            continue
+
+        for sort_order, row in enumerate(rows, start=1):
+            label, counts_work, counts_productive, weekly_cap_hours, requires_pass = row
+            db_execute(
+                (
+                    """
+                    INSERT INTO kiosk_activity_categories (
+                        shelter,
+                        activity_label,
+                        active,
+                        sort_order,
+                        counts_as_work_hours,
+                        counts_as_productive_hours,
+                        weekly_cap_hours,
+                        requires_approved_pass,
+                        notes,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """
+                    if kind == "pg"
+                    else
+                    """
+                    INSERT INTO kiosk_activity_categories (
+                        shelter,
+                        activity_label,
+                        active,
+                        sort_order,
+                        counts_as_work_hours,
+                        counts_as_productive_hours,
+                        weekly_cap_hours,
+                        requires_approved_pass,
+                        notes,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """
+                ),
+                (
+                    shelter,
+                    label,
+                    True if kind == "pg" else 1,
+                    sort_order,
+                    bool(counts_work) if kind == "pg" else int(bool(counts_work)),
+                    bool(counts_productive) if kind == "pg" else int(bool(counts_productive)),
+                    weekly_cap_hours,
+                    bool(requires_pass) if kind == "pg" else int(bool(requires_pass)),
+                    None,
+                    now,
+                    now,
+                ),
+            )
 
 
 def ensure_indexes() -> None:
@@ -208,9 +416,32 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS kiosk_activity_categories_shelter_idx
+            ON kiosk_activity_categories (shelter)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS kiosk_activity_categories_shelter_active_sort_idx
+            ON kiosk_activity_categories (shelter, active, sort_order)
+            """
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_chore_tables(kind)
+    ensure_kiosk_activity_category_tables(kind)
     ensure_chore_template_columns()
     ensure_chore_assignment_columns()
+    ensure_kiosk_activity_category_columns()
+    ensure_default_kiosk_activity_categories(kind)
     ensure_indexes()
