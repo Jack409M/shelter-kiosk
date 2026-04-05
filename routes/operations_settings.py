@@ -85,6 +85,98 @@ def _median_or_none(values: list[float]) -> float | None:
     return round(float(median(values)), 2)
 
 
+def _configuration_sections() -> list[dict]:
+    return [
+        {
+            "key": "rent_rules",
+            "title": "Rent Rules",
+            "summary": "Late logic and rent scoring values.",
+        },
+        {
+            "key": "inspection_defaults",
+            "title": "Inspection Defaults",
+            "summary": "Checklist defaults and standard item setup.",
+        },
+        {
+            "key": "inspection_stability_scoring",
+            "title": "Inspection Stability Scoring",
+            "summary": "Scoring behavior and lookback rules.",
+        },
+        {
+            "key": "inspection_color_bands",
+            "title": "Inspection Color Bands",
+            "summary": "Green, yellow, orange, and red thresholds.",
+        },
+        {
+            "key": "employment_income_graduation_settings",
+            "title": "Employment Income Graduation Settings",
+            "summary": "Module status and graduation minimum.",
+        },
+        {
+            "key": "employment_income_color_bands",
+            "title": "Employment Income Color Bands",
+            "summary": "Income thresholds by color band.",
+        },
+        {
+            "key": "income_stability_weighting",
+            "title": "Income Stability Weighting",
+            "summary": "Reliability weighting for income sources.",
+        },
+        {
+            "key": "kiosk_activity_categories",
+            "title": "Kiosk Activity Categories",
+            "summary": "Checkout categories and hour counting rules.",
+        },
+        {
+            "key": "employment_income_guidance",
+            "title": "Employment Income Guidance",
+            "summary": "Read only graduation guidance for this shelter.",
+        },
+    ]
+
+
+def _configuration_section_map() -> dict[str, dict]:
+    return {section["key"]: section for section in _configuration_sections()}
+
+
+def _merge_text(name: str, existing, default: str = "") -> str:
+    if name in request.form:
+        return (request.form.get(name) or "").strip()
+    if existing in (None, ""):
+        return default
+    return str(existing).strip()
+
+
+def _merge_bool(name: str, existing, default: bool = False) -> bool:
+    if name in request.form:
+        return _to_bool(request.form.get(name), default)
+    if existing is None:
+        return default
+    return bool(existing)
+
+
+def _merge_int(name: str, existing, default: int) -> int:
+    if name in request.form:
+        return _to_int(request.form.get(name), default)
+    if existing in (None, ""):
+        return default
+    try:
+        return int(existing)
+    except Exception:
+        return default
+
+
+def _merge_float(name: str, existing, default: float) -> float:
+    if name in request.form:
+        return _to_float(request.form.get(name), default)
+    if existing in (None, ""):
+        return default
+    try:
+        return float(existing)
+    except Exception:
+        return default
+
+
 def _ensure_operations_settings_table() -> None:
     if g.get("db_kind") == "pg":
         db_execute(
@@ -863,43 +955,98 @@ def settings_page():
 
     shelter = _normalize_shelter_name(session.get("shelter"))
     row = _settings_row_for_shelter(shelter)
+    sections = _configuration_sections()
+    section_map = _configuration_section_map()
+
+    requested_section = (request.args.get("section") or request.form.get("section") or "").strip().lower()
+    current_section = requested_section if requested_section in section_map else ""
+    current_section_meta = section_map.get(current_section)
 
     if request.method == "POST":
+        if current_section == "employment_income_guidance":
+            return redirect(url_for("operations_settings.settings_page", section=current_section))
+
+        if current_section == "kiosk_activity_categories":
+            _save_kiosk_activity_categories_for_shelter(shelter)
+            flash("Kiosk Activity Categories updated.", "ok")
+            return redirect(url_for("operations_settings.settings_page", section=current_section))
+
         now = utcnow_iso()
 
-        late_day = min(max(_to_int(request.form.get("rent_late_day_of_month"), 6), 1), 28)
-        carry_forward_enabled = _to_bool(request.form.get("rent_carry_forward_enabled"), True)
+        late_day = min(max(_merge_int("rent_late_day_of_month", row.get("rent_late_day_of_month"), 6), 1), 28)
+        carry_forward_enabled = _merge_bool("rent_carry_forward_enabled", row.get("rent_carry_forward_enabled"), True)
 
-        inspection_default_item_status = (request.form.get("inspection_default_item_status") or "passed").strip().lower()
+        inspection_default_item_status = _merge_text(
+            "inspection_default_item_status",
+            row.get("inspection_default_item_status"),
+            "passed",
+        ).lower()
         if inspection_default_item_status not in {"passed", "needs_attention", "failed"}:
             inspection_default_item_status = "passed"
 
-        inspection_item_labels = (request.form.get("inspection_item_labels") or "").strip() or _default_labels_text()
+        inspection_item_labels = _merge_text(
+            "inspection_item_labels",
+            row.get("inspection_item_labels"),
+            _default_labels_text(),
+        ) or _default_labels_text()
 
-        rent_score_paid = _to_int(request.form.get("rent_score_paid"), 100)
-        rent_score_partially_paid = _to_int(request.form.get("rent_score_partially_paid"), 75)
-        rent_score_paid_late = _to_int(request.form.get("rent_score_paid_late"), 75)
-        rent_score_not_paid = _to_int(request.form.get("rent_score_not_paid"), 0)
-        rent_score_exempt = _to_int(request.form.get("rent_score_exempt"), 100)
+        rent_score_paid = _merge_int("rent_score_paid", row.get("rent_score_paid"), 100)
+        rent_score_partially_paid = _merge_int("rent_score_partially_paid", row.get("rent_score_partially_paid"), 75)
+        rent_score_paid_late = _merge_int("rent_score_paid_late", row.get("rent_score_paid_late"), 75)
+        rent_score_not_paid = _merge_int("rent_score_not_paid", row.get("rent_score_not_paid"), 0)
+        rent_score_exempt = _merge_int("rent_score_exempt", row.get("rent_score_exempt"), 100)
 
-        inspection_scoring_enabled = _to_bool(request.form.get("inspection_scoring_enabled"), True)
-        inspection_lookback_months = max(_to_int(request.form.get("inspection_lookback_months"), 9), 1)
-        inspection_include_current_open_month = _to_bool(
-            request.form.get("inspection_include_current_open_month"),
+        inspection_scoring_enabled = _merge_bool(
+            "inspection_scoring_enabled",
+            row.get("inspection_scoring_enabled"),
+            True,
+        )
+        inspection_lookback_months = max(
+            _merge_int("inspection_lookback_months", row.get("inspection_lookback_months"), 9),
+            1,
+        )
+        inspection_include_current_open_month = _merge_bool(
+            "inspection_include_current_open_month",
+            row.get("inspection_include_current_open_month"),
             False,
         )
-        inspection_score_passed = _to_int(request.form.get("inspection_score_passed"), 100)
-        inspection_needs_attention_enabled = _to_bool(
-            request.form.get("inspection_needs_attention_enabled"),
+        inspection_score_passed = _merge_int("inspection_score_passed", row.get("inspection_score_passed"), 100)
+        inspection_needs_attention_enabled = _merge_bool(
+            "inspection_needs_attention_enabled",
+            row.get("inspection_needs_attention_enabled"),
             False,
         )
-        inspection_score_needs_attention = _to_int(request.form.get("inspection_score_needs_attention"), 70)
-        inspection_score_failed = _to_int(request.form.get("inspection_score_failed"), 0)
-        inspection_passing_threshold = _to_int(request.form.get("inspection_passing_threshold"), 83)
-        inspection_band_green_min = _to_int(request.form.get("inspection_band_green_min"), 83)
-        inspection_band_yellow_min = _to_int(request.form.get("inspection_band_yellow_min"), 78)
-        inspection_band_orange_min = _to_int(request.form.get("inspection_band_orange_min"), 56)
-        inspection_band_red_max = _to_int(request.form.get("inspection_band_red_max"), 55)
+        inspection_score_needs_attention = _merge_int(
+            "inspection_score_needs_attention",
+            row.get("inspection_score_needs_attention"),
+            70,
+        )
+        inspection_score_failed = _merge_int("inspection_score_failed", row.get("inspection_score_failed"), 0)
+        inspection_passing_threshold = _merge_int(
+            "inspection_passing_threshold",
+            row.get("inspection_passing_threshold"),
+            83,
+        )
+        inspection_band_green_min = _merge_int(
+            "inspection_band_green_min",
+            row.get("inspection_band_green_min"),
+            83,
+        )
+        inspection_band_yellow_min = _merge_int(
+            "inspection_band_yellow_min",
+            row.get("inspection_band_yellow_min"),
+            78,
+        )
+        inspection_band_orange_min = _merge_int(
+            "inspection_band_orange_min",
+            row.get("inspection_band_orange_min"),
+            56,
+        )
+        inspection_band_red_max = _merge_int(
+            "inspection_band_red_max",
+            row.get("inspection_band_red_max"),
+            55,
+        )
 
         if inspection_band_green_min < inspection_band_yellow_min:
             inspection_band_green_min = inspection_band_yellow_min + 1
@@ -908,28 +1055,34 @@ def settings_page():
         if inspection_band_red_max >= inspection_band_orange_min:
             inspection_band_red_max = inspection_band_orange_min - 1
 
-        employment_income_module_enabled = _to_bool(
-            request.form.get("employment_income_module_enabled"),
+        employment_income_module_enabled = _merge_bool(
+            "employment_income_module_enabled",
+            row.get("employment_income_module_enabled"),
             True,
         )
-        employment_income_graduation_minimum = _to_float(
-            request.form.get("employment_income_graduation_minimum"),
+        employment_income_graduation_minimum = _merge_float(
+            "employment_income_graduation_minimum",
+            row.get("employment_income_graduation_minimum"),
             1200.00,
         )
-        employment_income_band_green_min = _to_float(
-            request.form.get("employment_income_band_green_min"),
+        employment_income_band_green_min = _merge_float(
+            "employment_income_band_green_min",
+            row.get("employment_income_band_green_min"),
             1200.00,
         )
-        employment_income_band_yellow_min = _to_float(
-            request.form.get("employment_income_band_yellow_min"),
+        employment_income_band_yellow_min = _merge_float(
+            "employment_income_band_yellow_min",
+            row.get("employment_income_band_yellow_min"),
             1000.00,
         )
-        employment_income_band_orange_min = _to_float(
-            request.form.get("employment_income_band_orange_min"),
+        employment_income_band_orange_min = _merge_float(
+            "employment_income_band_orange_min",
+            row.get("employment_income_band_orange_min"),
             700.00,
         )
-        employment_income_band_red_max = _to_float(
-            request.form.get("employment_income_band_red_max"),
+        employment_income_band_red_max = _merge_float(
+            "employment_income_band_red_max",
+            row.get("employment_income_band_red_max"),
             699.99,
         )
 
@@ -940,13 +1093,32 @@ def settings_page():
         if employment_income_band_red_max >= employment_income_band_orange_min:
             employment_income_band_red_max = employment_income_band_orange_min - 0.01
 
-        income_weight_employment = max(_to_float(request.form.get("income_weight_employment"), 1.00), 0.0)
-        income_weight_ssi_ssdi_self = max(_to_float(request.form.get("income_weight_ssi_ssdi_self"), 1.00), 0.0)
-        income_weight_tanf = max(_to_float(request.form.get("income_weight_tanf"), 1.00), 0.0)
-        income_weight_alimony = max(_to_float(request.form.get("income_weight_alimony"), 0.50), 0.0)
-        income_weight_other_income = max(_to_float(request.form.get("income_weight_other_income"), 0.25), 0.0)
+        income_weight_employment = max(
+            _merge_float("income_weight_employment", row.get("income_weight_employment"), 1.00),
+            0.0,
+        )
+        income_weight_ssi_ssdi_self = max(
+            _merge_float("income_weight_ssi_ssdi_self", row.get("income_weight_ssi_ssdi_self"), 1.00),
+            0.0,
+        )
+        income_weight_tanf = max(
+            _merge_float("income_weight_tanf", row.get("income_weight_tanf"), 1.00),
+            0.0,
+        )
+        income_weight_alimony = max(
+            _merge_float("income_weight_alimony", row.get("income_weight_alimony"), 0.50),
+            0.0,
+        )
+        income_weight_other_income = max(
+            _merge_float("income_weight_other_income", row.get("income_weight_other_income"), 0.25),
+            0.0,
+        )
         income_weight_survivor_cutoff_months = max(
-            _to_int(request.form.get("income_weight_survivor_cutoff_months"), 18),
+            _merge_int(
+                "income_weight_survivor_cutoff_months",
+                row.get("income_weight_survivor_cutoff_months"),
+                18,
+            ),
             0,
         )
 
@@ -1070,13 +1242,15 @@ def settings_page():
             ),
         )
 
-        _save_kiosk_activity_categories_for_shelter(shelter)
+        flash(f"{current_section_meta['title']} updated.", "ok")
+        return redirect(url_for("operations_settings.settings_page", section=current_section))
 
-        flash("Operations settings updated.", "ok")
-        return redirect(url_for("operations_settings.settings_page"))
-
-    guidance = _employment_income_guidance(shelter)
-    kiosk_activity_categories = _load_kiosk_activity_categories_for_shelter(shelter)
+    guidance = _employment_income_guidance(shelter) if current_section == "employment_income_guidance" else None
+    kiosk_activity_categories = (
+        _load_kiosk_activity_categories_for_shelter(shelter)
+        if current_section == "kiosk_activity_categories"
+        else None
+    )
 
     return render_template(
         "admin_operations_settings.html",
@@ -1086,4 +1260,7 @@ def settings_page():
         employment_guidance=guidance,
         currency=_currency,
         kiosk_activity_categories=kiosk_activity_categories,
+        sections=sections,
+        current_section=current_section,
+        current_section_meta=current_section_meta,
     )
