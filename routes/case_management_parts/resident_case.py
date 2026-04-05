@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import flash, redirect, render_template, session, url_for
 
+from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_fetchall, db_fetchone
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed
@@ -539,6 +540,7 @@ def resident_case_view(resident_id: int):
     operations_snapshot = build_operations_snapshot(recovery_snapshot)
     rent_snapshot = build_rent_stability_snapshot(resident_id)
     inspection_snapshot = build_inspection_stability_snapshot(resident_id, shelter=shelter)
+    attendance_hours_snapshot = build_attendance_hours_snapshot(resident_id, shelter)
 
     employment_income_settings = _load_employment_income_settings(shelter)
 
@@ -592,6 +594,7 @@ def resident_case_view(resident_id: int):
         operations_snapshot=operations_snapshot,
         rent_snapshot=rent_snapshot,
         inspection_snapshot=inspection_snapshot,
+        attendance_hours_snapshot=attendance_hours_snapshot,
         employment_income_snapshot=employment_income_snapshot,
         employment_status_snapshot=employment_status_snapshot,
         employment_stability_snapshot=employment_stability_snapshot,
