@@ -8,7 +8,7 @@
         <div>
           <h1 class="cmx-section-title">Operations Settings</h1>
           <div class="cmx-section-subtitle">
-            Shelter specific rent scoring, late day, inspection defaults, and income weighting rules for {{ shelter | shelter if shelter else "Current Shelter" }}.
+            Shelter specific rent scoring, late day, inspection defaults, income weighting rules, and kiosk activity categories for {{ shelter | shelter if shelter else "Current Shelter" }}.
           </div>
         </div>
 
@@ -279,6 +279,80 @@
             <label>Child Based Cutoff Months Before Age 18</label>
             <input type="number" min="0" name="income_weight_survivor_cutoff_months" value="{{ settings['income_weight_survivor_cutoff_months'] if settings else 18 }}" required>
           </div>
+        </div>
+
+        <div class="cmx-section-head" style="margin-top:24px;">
+          <div>
+            <h2 class="cmx-section-title">Kiosk Activity Categories</h2>
+            <div class="cmx-section-subtitle">Add, edit, deactivate, reorder, or remove shelter specific checkout categories here. These rules will drive future kiosk hour counting.</div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-1">
+          {% for category in kiosk_activity_categories %}
+            <div class="cmx-card" style="border:1px solid #d8dee6; margin-bottom:12px;">
+              <input type="hidden" name="category_id[]" value="{{ category.get('id', '') }}">
+
+              <div class="cmx-grid cmx-grid-4">
+                <div class="cmx-field">
+                  <label>Activity Label</label>
+                  <input type="text" name="activity_label[]" value="{{ category.get('activity_label', '') }}">
+                </div>
+
+                <div class="cmx-field">
+                  <label>Sort Order</label>
+                  <input type="number" name="sort_order[]" value="{{ category.get('sort_order', loop.index) }}">
+                </div>
+
+                <div class="cmx-field">
+                  <label>Weekly Cap Hours</label>
+                  <input type="number" step="0.25" min="0" name="weekly_cap_hours[]" value="{{ category.get('weekly_cap_hours', '') if category.get('weekly_cap_hours') is not none else '' }}">
+                </div>
+
+                <div class="cmx-field">
+                  <label>Notes</label>
+                  <input type="text" name="category_notes[]" value="{{ category.get('notes', '') }}">
+                </div>
+              </div>
+
+              <div class="cmx-grid cmx-grid-4" style="margin-top:12px;">
+                <div class="cmx-field">
+                  <label style="display:flex; gap:8px; align-items:center;">
+                    <input type="checkbox" name="active[]" value="{{ loop.index0 }}" {% if category.get('active') %}checked{% endif %}>
+                    Active
+                  </label>
+                </div>
+
+                <div class="cmx-field">
+                  <label style="display:flex; gap:8px; align-items:center;">
+                    <input type="checkbox" name="counts_as_work_hours[]" value="{{ loop.index0 }}" {% if category.get('counts_as_work_hours') %}checked{% endif %}>
+                    Counts As Work Hours
+                  </label>
+                </div>
+
+                <div class="cmx-field">
+                  <label style="display:flex; gap:8px; align-items:center;">
+                    <input type="checkbox" name="counts_as_productive_hours[]" value="{{ loop.index0 }}" {% if category.get('counts_as_productive_hours') %}checked{% endif %}>
+                    Counts As Productive Hours
+                  </label>
+                </div>
+
+                <div class="cmx-field">
+                  <label style="display:flex; gap:8px; align-items:center;">
+                    <input type="checkbox" name="requires_approved_pass[]" value="{{ loop.index0 }}" {% if category.get('requires_approved_pass') %}checked{% endif %}>
+                    Requires Approved Pass
+                  </label>
+                </div>
+              </div>
+
+              <div class="cmx-field" style="margin-top:12px;">
+                <label style="display:flex; gap:8px; align-items:center; color:#8b1e1e;">
+                  <input type="checkbox" name="remove_category[]" value="{{ loop.index0 }}">
+                  Remove This Category
+                </label>
+              </div>
+            </div>
+          {% endfor %}
         </div>
 
         <div class="cmx-section-head" style="margin-top:24px;">
