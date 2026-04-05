@@ -75,20 +75,7 @@ def _ensure_kiosk_activity_categories_table() -> None:
             pass
 
 
-def _ensure_default_kiosk_activity_categories_for_shelter(shelter: str) -> None:
-    ph = _placeholder()
-    count_row = db_fetchone(
-        f"""
-        SELECT COUNT(*) AS row_count
-        FROM kiosk_activity_categories
-        WHERE LOWER(COALESCE(shelter, '')) = {ph}
-        """,
-        (shelter,),
-    )
-    row_count = int((count_row or {}).get("row_count") or 0)
-    if row_count > 0:
-        return
-
+def _insert_seed_rows_for_shelter(shelter: str) -> None:
     seed_rows = KIOSK_CATEGORY_SEEDS.get(shelter, [])
     if not seed_rows:
         return
@@ -149,6 +136,38 @@ def _ensure_default_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                 now,
             ),
         )
+
+
+def _ensure_default_kiosk_activity_categories_for_shelter(shelter: str) -> None:
+    ph = _placeholder()
+    count_row = db_fetchone(
+        f"""
+        SELECT COUNT(*) AS row_count
+        FROM kiosk_activity_categories
+        WHERE LOWER(COALESCE(shelter, '')) = {ph}
+        """,
+        (shelter,),
+    )
+    row_count = int((count_row or {}).get("row_count") or 0)
+    if row_count > 0:
+        return
+
+    _insert_seed_rows_for_shelter(shelter)
+
+
+def _reset_kiosk_activity_categories_for_shelter(shelter: str) -> None:
+    _ensure_kiosk_activity_categories_table()
+    ph = _placeholder()
+
+    db_execute(
+        f"""
+        DELETE FROM kiosk_activity_categories
+        WHERE LOWER(COALESCE(shelter, '')) = {ph}
+        """,
+        (shelter,),
+    )
+
+    _insert_seed_rows_for_shelter(shelter)
 
 
 def _load_kiosk_activity_categories_for_shelter(shelter: str) -> list[dict]:
