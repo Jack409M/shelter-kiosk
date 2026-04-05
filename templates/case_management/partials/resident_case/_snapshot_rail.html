@@ -42,6 +42,48 @@
     {% endif %}
   </div>
 
+  <div class="cmx-card" style="{{ attendance_hours_snapshot['card_style'] }}">
+    <div class="cmx-side-card-head">
+      <h3>Attendance Hours</h3>
+      <a class="cmx-side-action" href="{{ url_for('attendance.staff_attendance_resident_print', resident_id=resident_id) }}">Print Attendance</a>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <span style="{{ attendance_hours_snapshot['pill_style'] }}">{{ attendance_hours_snapshot['band_label'] }}</span>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block">
+        <span>Previous Week</span>
+        <span style="{{ attendance_hours_snapshot['value_style'] }}">{{ attendance_hours_snapshot['percent_grade_display'] }}%</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Productive Hours</span>
+        <span>{{ attendance_hours_snapshot['productive_hours'] }} / {{ attendance_hours_snapshot['productive_required_hours'] }}</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Work Hours</span>
+        <span>{{ attendance_hours_snapshot['work_hours'] }} / {{ attendance_hours_snapshot['work_required_hours'] }}</span>
+      </div>
+      <div class="cmx-row-block">
+        <span>Weighted Pass</span>
+        <span>{{ "Yes" if attendance_hours_snapshot['passes_requirement'] else "No" }}</span>
+      </div>
+    </div>
+
+    <div style="margin-top:10px; font-size:12px; color:#666;">
+      {{ attendance_hours_snapshot['week_label'] }}
+      {% if not attendance_hours_snapshot['passes_requirement'] %}
+        <br>
+        Short by {{ attendance_hours_snapshot['productive_short_hours'] }} productive and {{ attendance_hours_snapshot['work_short_hours'] }} work hours.
+      {% endif %}
+      {% if attendance_hours_snapshot['uncategorized_hours'] %}
+        <br>
+        Uncategorized hours: {{ attendance_hours_snapshot['uncategorized_hours'] }}
+      {% endif %}
+    </div>
+  </div>
+
   <div class="cmx-card" style="{{ rent_snapshot['card_style'] }}">
     <div class="cmx-side-card-head">
       <h3>Rent Stability</h3>
