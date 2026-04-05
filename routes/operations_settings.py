@@ -19,6 +19,7 @@ from routes.operations_settings_parts.employment_guidance import (
 )
 from routes.operations_settings_parts.kiosk_categories import (
     _load_kiosk_activity_categories_for_shelter,
+    _reset_kiosk_activity_categories_for_shelter,
     _save_kiosk_activity_categories_for_shelter,
 )
 from routes.operations_settings_parts.parsing import (
@@ -47,7 +48,7 @@ def _build_settings_section_context(shelter: str, row, current_section: str) -> 
     if current_section == "employment_income_guidance":
         context["employment_guidance"] = _employment_income_guidance(shelter, _placeholder())
     else:
-        context["employment_income_guidance"] = None
+        context["employment_guidance"] = None
 
     if current_section == "kiosk_activity_categories":
         context["kiosk_activity_categories"] = _load_kiosk_activity_categories_for_shelter(shelter)
@@ -101,24 +102,42 @@ def settings_section_page(section_key: str):
     current_section_meta = section_map[current_section]
 
     if request.method == "POST":
+        form = request.form
+
         if current_section == "employment_income_guidance":
             return redirect(
                 url_for("operations_settings.settings_section_page", section_key=current_section)
             )
 
         if current_section == "kiosk_activity_categories":
-            _save_kiosk_activity_categories_for_shelter(shelter)
-            flash("Kiosk Activity Categories updated.", "ok")
+            action = (form.get("kiosk_action") or "save").strip().lower()
+            if action == "reset_defaults":
+                _reset_kiosk_activity_categories_for_shelter(shelter)
+                flash("Kiosk Activity Categories reset to shelter defaults.", "ok")
+            else:
+                _save_kiosk_activity_categories_for_shelter(shelter)
+                flash("Kiosk Activity Categories updated.", "ok")
+
             return redirect(
                 url_for("operations_settings.settings_section_page", section_key=current_section)
             )
 
         now = utcnow_iso()
-        form = request.form
         is_pg = _placeholder() == "%s"
         default_inspection_items = _default_labels_text()
 
-        late_day = min(max(_merge_int("rent_late_day_of_month", form, row.get("rent_late_day_of_month"), 6), 1), 28)
+        late_day = min(
+            max(
+                _merge_int(
+                    "rent_late_day_of_month",
+                    form,
+                    row.get("rent_late_day_of_month"),
+                    6,
+                ),
+                1,
+            ),
+            28,
+        )
         carry_forward_enabled = _merge_bool(
             "rent_carry_forward_enabled",
             form,
@@ -149,9 +168,24 @@ def settings_section_page(section_key: str):
             row.get("rent_score_partially_paid"),
             75,
         )
-        rent_score_paid_late = _merge_int("rent_score_paid_late", form, row.get("rent_score_paid_late"), 75)
-        rent_score_not_paid = _merge_int("rent_score_not_paid", form, row.get("rent_score_not_paid"), 0)
-        rent_score_exempt = _merge_int("rent_score_exempt", form, row.get("rent_score_exempt"), 100)
+        rent_score_paid_late = _merge_int(
+            "rent_score_paid_late",
+            form,
+            row.get("rent_score_paid_late"),
+            75,
+        )
+        rent_score_not_paid = _merge_int(
+            "rent_score_not_paid",
+            form,
+            row.get("rent_score_not_paid"),
+            0,
+        )
+        rent_score_exempt = _merge_int(
+            "rent_score_exempt",
+            form,
+            row.get("rent_score_exempt"),
+            100,
+        )
 
         inspection_scoring_enabled = _merge_bool(
             "inspection_scoring_enabled",
@@ -160,7 +194,12 @@ def settings_section_page(section_key: str):
             True,
         )
         inspection_lookback_months = max(
-            _merge_int("inspection_lookback_months", form, row.get("inspection_lookback_months"), 9),
+            _merge_int(
+                "inspection_lookback_months",
+                form,
+                row.get("inspection_lookback_months"),
+                9,
+            ),
             1,
         )
         inspection_include_current_open_month = _merge_bool(
@@ -276,23 +315,48 @@ def settings_section_page(section_key: str):
             employment_income_band_red_max = employment_income_band_orange_min - 0.01
 
         income_weight_employment = max(
-            _merge_float("income_weight_employment", form, row.get("income_weight_employment"), 1.00),
+            _merge_float(
+                "income_weight_employment",
+                form,
+                row.get("income_weight_employment"),
+                1.00,
+            ),
             0.0,
         )
         income_weight_ssi_ssdi_self = max(
-            _merge_float("income_weight_ssi_ssdi_self", form, row.get("income_weight_ssi_ssdi_self"), 1.00),
+            _merge_float(
+                "income_weight_ssi_ssdi_self",
+                form,
+                row.get("income_weight_ssi_ssdi_self"),
+                1.00,
+            ),
             0.0,
         )
         income_weight_tanf = max(
-            _merge_float("income_weight_tanf", form, row.get("income_weight_tanf"), 1.00),
+            _merge_float(
+                "income_weight_tanf",
+                form,
+                row.get("income_weight_tanf"),
+                1.00,
+            ),
             0.0,
         )
         income_weight_alimony = max(
-            _merge_float("income_weight_alimony", form, row.get("income_weight_alimony"), 0.50),
+            _merge_float(
+                "income_weight_alimony",
+                form,
+                row.get("income_weight_alimony"),
+                0.50,
+            ),
             0.0,
         )
         income_weight_other_income = max(
-            _merge_float("income_weight_other_income", form, row.get("income_weight_other_income"), 0.25),
+            _merge_float(
+                "income_weight_other_income",
+                form,
+                row.get("income_weight_other_income"),
+                0.25,
+            ),
             0.0,
         )
         income_weight_survivor_cutoff_months = max(
