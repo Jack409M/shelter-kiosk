@@ -56,7 +56,6 @@
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
       {% set chore_board_url = safe_url_for('shelter_operations.chore_board') %}
       {% set chore_config_url = safe_url_for('shelter_operations.chore_management') %}
-      {% set shelter_operations_home_url = safe_url_for('shelter_operations.index') %}
       {% set calendar_url = safe_url_for('calendar.calendar_view') %}
       {% set reports_url = safe_url_for('reports.reports_index') %}
       {% set operations_settings_url = safe_url_for('operations_settings.settings_page') %}
@@ -65,7 +64,6 @@
       {% set inspection_sheet_url = safe_url_for('inspection_v2.inspection_sheet') %}
       {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
       {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
-      {% set can_view_shelter_operations = session.get("role") in ["admin", "shelter_director"] %}
 
       {% set kiosk_manual_url = url_for('static', filename='docs/dwc_kiosk_manual.pdf') %}
       {% set intake_manual_url = url_for('static', filename='docs/dwc_new_resident_intake_software_manual.pdf') %}
@@ -78,9 +76,6 @@
             <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Manuals</a>
             {% if calendar_url %}
               <a href="{{ calendar_url }}">Calendar</a>
-            {% endif %}
-            {% if can_view_shelter_operations and shelter_operations_home_url %}
-              <a href="{{ shelter_operations_home_url }}">Shelter Operations</a>
             {% endif %}
             <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
           {% elif show_logged_out_nav %}
@@ -140,9 +135,17 @@
               </div>
             </div>
 
-            {% if can_view_shelter_operations and shelter_operations_home_url %}
-              <a href="{{ shelter_operations_home_url }}">Shelter Operations</a>
-            {% endif %}
+            <div class="nav-dd">
+              <button type="button">Shelter Operations ▾</button>
+              <div class="menu">
+                {% if chore_board_url %}
+                  <a href="{{ chore_board_url }}">Weekly Chore Board</a>
+                {% endif %}
+                <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+                <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
+                <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+              </div>
+            </div>
 
             {% if reports_url and can_view_reports %}
               <a href="{{ reports_url }}">Reports</a>
