@@ -126,6 +126,21 @@
     margin-top: 14px;
   }
 
+  .hours-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+
+  .hours-table th,
+  .hours-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+    font-size: 14px;
+  }
+
   @media print {
     nav,
     .topbar,
@@ -190,6 +205,59 @@
         <div class="paper-value">{{ fmt_dt(p.created_at_local) }}</div>
       </div>
     </div>
+
+    {% if hour_summary %}
+      <div class="paper-section">
+        <div class="paper-section-title">Previous Week Attendance Hours</div>
+
+        <div class="paper-grid-2">
+          <div class="paper-field">
+            <span class="paper-label">Week</span>
+            <div class="paper-value">{{ hour_summary.week_label }}</div>
+          </div>
+
+          <div class="paper-field">
+            <span class="paper-label">Productive / Work</span>
+            <div class="paper-value">{{ hour_summary.productive_hours }} / {{ hour_summary.work_hours }}</div>
+          </div>
+        </div>
+
+        {% if hour_summary.breakdown %}
+          <table class="hours-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Credited</th>
+                <th>Raw</th>
+                <th>Cap</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in hour_summary.breakdown %}
+                <tr>
+                  <td>{{ item.label }}</td>
+                  <td>{{ item.credited_hours }}</td>
+                  <td>{{ item.raw_hours }}</td>
+                  <td>
+                    {% if item.weekly_cap_hours is not none %}
+                      {{ item.weekly_cap_hours }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="paper-value">No completed attendance hours found for the previous week.</div>
+        {% endif %}
+
+        {% if hour_summary.uncategorized_hours %}
+          <div class="paper-note">Uncategorized attendance hours found: {{ hour_summary.uncategorized_hours }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
 
     {% if pass_detail %}
       <div class="paper-grid-3">
@@ -312,8 +380,6 @@
         <div class="paper-value">
           {% if pass_detail and pass_detail.reviewed_at_local %}
             {{ fmt_dt(pass_detail.reviewed_at_local) }}
-          {% else %}
-            
           {% endif %}
         </div>
       </div>
