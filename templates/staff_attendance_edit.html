@@ -61,6 +61,13 @@
     margin-bottom: 12px;
   }
 
+  .att_pass_note {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
+    margin-top: 4px;
+  }
+
   @media (max-width: 900px) {
     .att_two_col {
       grid-template-columns: 1fr;
@@ -81,10 +88,22 @@
     {{ resident.name }} • {{ shelter_label }}
   </div>
 
-  <form method="post" action="{% if mode == 'open' %}{{ url_for('attendance.staff_attendance_edit_open_submit', resident_id=resident.resident_id) }}{% else %}{{ url_for('attendance.staff_attendance_edit_last_submit', resident_id=resident.resident_id) }}{% endif %}" class="att_edit_card">
+  <form
+    id="attendance-edit-form"
+    method="post"
+    action="{% if mode == 'open' %}{{ url_for('attendance.staff_attendance_edit_open_submit', resident_id=resident.resident_id) }}{% else %}{{ url_for('attendance.staff_attendance_edit_last_submit', resident_id=resident.resident_id) }}{% endif %}"
+    class="att_edit_card"
+  >
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
     <div class="att_edit_grid">
+      {% if mode == "open" %}
+        <div>
+          <label>Checkout Time</label>
+          <input type="datetime-local" name="checkout_at" value="{{ resident.checkout_time_input }}" required>
+        </div>
+      {% endif %}
+
       {% if mode == "last" %}
         <div class="att_two_col">
           <div>
@@ -100,32 +119,53 @@
 
       <div>
         <label>Activity Category</label>
-        <select name="destination" required>
+        <select name="destination" id="destination" required>
           <option value="">Select activity category…</option>
-          {% for item in editable_checkout_categories %}
+          {% for item in checkout_categories %}
             {% set item_label = item.get('activity_label', '') %}
-            <option value="{{ item_label }}"
-              {% if (mode == 'open' and resident.destination == item_label) or (mode == 'last' and resident.last_completed_destination == item_label) %}selected{% endif %}>
+            <option
+              value="{{ item_label }}"
+              data-requires-approved-pass="{{ '1' if item.get('requires_approved_pass') else '0' }}"
+              {% if (mode == 'open' and resident.destination == item_label) or (mode == 'last' and resident.last_completed_destination == item_label) %}selected{% endif %}
+            >
               {{ item_label }}
             </option>
           {% endfor %}
         </select>
+        <div id="edit_pass_note" class="att_pass_note" style="display:none;">
+          Pass based activity categories keep their expected back from pass data and do not use scheduled or actual obligation fields.
+        </div>
       </div>
 
-      <div class="att_two_col">
+      <div id="edit_schedule_block" class="att_two_col">
         <div>
           <label>Scheduled Start</label>
-          <input type="datetime-local" name="obligation_start_at" value="{% if mode == 'open' %}{{ resident.obligation_start_input }}{% else %}{{ resident.last_completed_start_input }}{% endif %}" required>
+          <input
+            type="datetime-local"
+            name="obligation_start_at"
+            id="obligation_start_at"
+            value="{% if mode == 'open' %}{{ resident.obligation_start_input }}{% else %}{{ resident.last_completed_start_input }}{% endif %}"
+          >
         </div>
         <div>
           <label>Scheduled End</label>
-          <input type="datetime-local" name="obligation_end_at" value="{% if mode == 'open' %}{{ resident.obligation_end_input }}{% else %}{{ resident.last_completed_end_input }}{% endif %}" required>
+          <input
+            type="datetime-local"
+            name="obligation_end_at"
+            id="obligation_end_at"
+            value="{% if mode == 'open' %}{{ resident.obligation_end_input }}{% else %}{{ resident.last_completed_end_input }}{% endif %}"
+          >
         </div>
       </div>
 
-      <div>
+      <div id="edit_actual_end_block">
         <label>Actual Obligation End</label>
-        <input type="datetime-local" name="actual_obligation_end_at" value="{% if mode == 'open' %}{{ resident.actual_obligation_end_input }}{% else %}{{ resident.last_completed_actual_end_input }}{% endif %}" required>
+        <input
+          type="datetime-local"
+          name="actual_obligation_end_at"
+          id="actual_obligation_end_at"
+          value="{% if mode == 'open' %}{{ resident.actual_obligation_end_input }}{% else %}{{ resident.last_completed_actual_end_input }}{% endif %}"
+        >
       </div>
     </div>
 
@@ -133,13 +173,79 @@
       <button type="submit" class="att_btn">Save</button>
       <a href="{{ url_for('attendance.staff_attendance') }}" class="att_link_btn">Cancel</a>
       {% if mode == "open" %}
-        <form method="post" action="{{ url_for('attendance.staff_attendance_check_in', resident_id=resident.resident_id) }}">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="att_btn">Check in without more edits</button>
-        </form>
+        <button
+          type="submit"
+          class="att_btn"
+          formaction="{{ url_for('attendance.staff_attendance_check_in', resident_id=resident.resident_id) }}"
+          formmethod="post"
+          formnovalidate
+        >
+          Check in without more edits
+        </button>
       {% endif %}
     </div>
   </form>
 </div>
+
+<script>
+  function syncAttendanceEditForm() {
+    const destination = document.getElementById("destination");
+    const scheduleBlock = document.getElementById("edit_schedule_block");
+    const actualEndBlock = document.getElementById("edit_actual_end_block");
+    const startField = document.getElementById("obligation_start_at");
+    const endField = document.getElementById("obligation_end_at");
+    const actualEndField = document.getElementById("actual_obligation_end_at");
+    const passNote = document.getElementById("edit_pass_note");
+
+    const selectedOption = destination && destination.selectedOptions.length
+      ? destination.selectedOptions[0]
+      : null;
+
+    const requiresApprovedPass = selectedOption
+      && selectedOption.dataset
+      && selectedOption.dataset.requiresApprovedPass === "1";
+
+    if (scheduleBlock) {
+      scheduleBlock.style.display = requiresApprovedPass ? "none" : "grid";
+    }
+
+    if (actualEndBlock) {
+      actualEndBlock.style.display = requiresApprovedPass ? "none" : "block";
+    }
+
+    if (startField) {
+      startField.required = !requiresApprovedPass;
+      if (requiresApprovedPass) {
+        startField.value = "";
+      }
+    }
+
+    if (endField) {
+      endField.required = !requiresApprovedPass;
+      if (requiresApprovedPass) {
+        endField.value = "";
+      }
+    }
+
+    if (actualEndField) {
+      actualEndField.required = !requiresApprovedPass;
+      if (requiresApprovedPass) {
+        actualEndField.value = "";
+      }
+    }
+
+    if (passNote) {
+      passNote.style.display = requiresApprovedPass ? "block" : "none";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const destination = document.getElementById("destination");
+    if (destination) {
+      destination.addEventListener("change", syncAttendanceEditForm);
+    }
+    syncAttendanceEditForm();
+  });
+</script>
 
 {% endblock %}
