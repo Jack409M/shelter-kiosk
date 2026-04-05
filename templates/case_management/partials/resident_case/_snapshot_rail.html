@@ -178,20 +178,4 @@
       <p class="cmx-muted">No child records are on file.</p>
     {% endif %}
   </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Shelter Ops</h3>
-      <a class="cmx-side-action" href="{{ url_for('case_management.inspection_log', resident_id=resident_id) }}">Details</a>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Level</span><span>{{ rs_level or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Open Needs</span><span>{{ header_open_needs_count }}</span></div>
-      {% if rs_latest_inspection %}
-        <div class="cmx-row-block"><span>Latest Inspection</span><span>{{ rs_latest_inspection["inspection_date"] or "—" }}</span></div>
-      {% endif %}
-    </div>
-  </div>
 </aside>
