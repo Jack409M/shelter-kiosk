@@ -240,6 +240,62 @@ def _active_checkout_categories_for_shelter(shelter: str) -> list[dict]:
     return categories
 
 
+def _latest_open_checkout_row(resident_id: int, shelter: str):
+    row = db_fetchone(
+        """
+        SELECT
+            id,
+            event_type,
+            event_time,
+            destination,
+            obligation_start_time,
+            obligation_end_time,
+            actual_obligation_end_time
+        FROM attendance_events
+        WHERE resident_id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
+        ORDER BY event_time DESC, id DESC
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT
+            id,
+            event_type,
+            event_time,
+            destination,
+            obligation_start_time,
+            obligation_end_time,
+            actual_obligation_end_time
+        FROM attendance_events
+        WHERE resident_id = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
+        ORDER BY event_time DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, (shelter or "").strip().lower()),
+    )
+
+    if not row:
+        return None
+
+    if (_row_get(row, "event_type", 1, "") or "").strip() != "check_out":
+        return None
+
+    return row
+
+
+def _checkout_requires_actual_end_time(checkout_row) -> bool:
+    if not checkout_row:
+        return False
+
+    destination = (_row_get(checkout_row, "destination", 3, "") or "").strip()
+    obligation_start = (_row_get(checkout_row, "obligation_start_time", 4, "") or "").strip()
+    obligation_end = (_row_get(checkout_row, "obligation_end_time", 5, "") or "").strip()
+
+    return bool(destination and obligation_start and obligation_end)
+
+
 @kiosk.route("/kiosk/<shelter>")
 def kiosk_home(shelter: str):
     init_db()
@@ -297,10 +353,19 @@ def kiosk_checkin(shelter: str):
         return "Kiosk intake is temporarily disabled.", 503
 
     if request.method == "GET":
-        return render_template("kiosk_checkin.html", shelter=display_shelter)
+        return render_template(
+            "kiosk_checkin.html",
+            shelter=display_shelter,
+            actual_end_required=False,
+            prior_activity_label="",
+        )
 
     resident_code = (request.form.get("resident_code") or "").strip()
     code_key = resident_code if resident_code else "blank"
+
+    actual_end_hour = (request.form.get("actual_end_hour") or "").strip()
+    actual_end_minute = (request.form.get("actual_end_minute") or "").strip()
+    actual_end_ampm = (request.form.get("actual_end_ampm") or "").strip().upper()
 
     kiosk_cooldown_key = f"kiosk_cooldown:{shelter_key}:{ip}"
     resident_code_lock_key = f"kiosk_resident_code_lock:{shelter_key}:{code_key}"
@@ -316,7 +381,12 @@ def kiosk_checkin(shelter: str):
             f"ip={ip} seconds_remaining={seconds_remaining}",
         )
         flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template("kiosk_checkin.html", shelter=display_shelter), 429
+        return render_template(
+            "kiosk_checkin.html",
+            shelter=display_shelter,
+            actual_end_required=False,
+            prior_activity_label="",
+        ), 429
 
     if is_key_locked(resident_code_lock_key):
         seconds_remaining = get_key_lock_seconds_remaining(resident_code_lock_key)
@@ -329,7 +399,12 @@ def kiosk_checkin(shelter: str):
             f"ip={ip} resident_code={code_key} seconds_remaining={seconds_remaining}",
         )
         flash("That Resident Code is temporarily locked. Please wait and try again.", "error")
-        return render_template("kiosk_checkin.html", shelter=display_shelter), 429
+        return render_template(
+            "kiosk_checkin.html",
+            shelter=display_shelter,
+            actual_end_required=False,
+            prior_activity_label="",
+        ), 429
 
     if is_rate_limited(
         f"kiosk_checkin_cooldown_trigger:{shelter_key}:{ip}",
@@ -346,7 +421,12 @@ def kiosk_checkin(shelter: str):
             f"ip={ip} seconds=30",
         )
         flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template("kiosk_checkin.html", shelter=display_shelter), 429
+        return render_template(
+            "kiosk_checkin.html",
+            shelter=display_shelter,
+            actual_end_required=False,
+            prior_activity_label="",
+        ), 429
 
     if is_rate_limited(f"kiosk_checkin_ip:{shelter_key}:{ip}", limit=15, window_seconds=60):
         log_action(
@@ -358,7 +438,12 @@ def kiosk_checkin(shelter: str):
             f"ip={ip}",
         )
         flash("Too many attempts. Please wait and try again.", "error")
-        return render_template("kiosk_checkin.html", shelter=display_shelter), 429
+        return render_template(
+            "kiosk_checkin.html",
+            shelter=display_shelter,
+            actual_end_required=False,
+            prior_activity_label="",
+        ), 429
 
     errors = []
 
@@ -395,9 +480,76 @@ def kiosk_checkin(shelter: str):
             "kiosk_checkin_failed",
             f"ip={ip} resident_code={code_key} errors={' | '.join(errors)}",
         )
-        return render_template("kiosk_checkin.html", shelter=display_shelter), 400
+        return render_template(
+            "kiosk_checkin.html",
+            shelter=display_shelter,
+            actual_end_required=False,
+            prior_activity_label="",
+        ), 400
 
     resident_id = int(_row_get(row, "id", 0, 0))
+    open_checkout = _latest_open_checkout_row(resident_id, shelter_key)
+    actual_end_required = _checkout_requires_actual_end_time(open_checkout)
+    prior_activity_label = (_row_get(open_checkout, "destination", 3, "") or "").strip()
+
+    if actual_end_required and not (actual_end_hour and actual_end_minute and actual_end_ampm):
+        return render_template(
+            "kiosk_checkin.html",
+            shelter=display_shelter,
+            actual_end_required=True,
+            prior_activity_label=prior_activity_label,
+            resident_code_value=resident_code,
+        )
+
+    actual_obligation_end_value = None
+
+    if actual_end_required:
+        try:
+            actual_obligation_end_value = _manual_time_value(
+                actual_end_hour,
+                actual_end_minute,
+                actual_end_ampm,
+            )
+        except Exception:
+            flash("Invalid actual obligation end time.", "error")
+            return render_template(
+                "kiosk_checkin.html",
+                shelter=display_shelter,
+                actual_end_required=True,
+                prior_activity_label=prior_activity_label,
+                resident_code_value=resident_code,
+            ), 400
+
+        planned_start = (_row_get(open_checkout, "obligation_start_time", 4, "") or "").strip()
+        if planned_start and actual_obligation_end_value < planned_start:
+            flash("Actual end time cannot be earlier than the scheduled start time.", "error")
+            return render_template(
+                "kiosk_checkin.html",
+                shelter=display_shelter,
+                actual_end_required=True,
+                prior_activity_label=prior_activity_label,
+                resident_code_value=resident_code,
+            ), 400
+
+        checkout_id = int(_row_get(open_checkout, "id", 0, 0))
+        db_execute(
+            """
+            UPDATE attendance_events
+            SET actual_obligation_end_time = %s
+            WHERE id = %s
+              AND resident_id = %s
+              AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
+            """
+            if g.get("db_kind") == "pg"
+            else """
+            UPDATE attendance_events
+            SET actual_obligation_end_time = ?
+            WHERE id = ?
+              AND resident_id = ?
+              AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
+            """,
+            (actual_obligation_end_value, checkout_id, resident_id, shelter_key),
+        )
 
     db_execute(
         _attendance_insert_sql(),
@@ -406,13 +558,17 @@ def kiosk_checkin(shelter: str):
 
     _complete_active_passes(resident_id, shelter_key)
 
+    log_note = ""
+    if actual_end_required and actual_obligation_end_value:
+        log_note = f"actual_obligation_end_time={actual_obligation_end_value}"
+
     log_action(
         "attendance",
         resident_id,
         shelter_key,
         None,
         "kiosk_check_in",
-        "",
+        log_note,
     )
 
     flash("Checked in.", "ok")
