@@ -164,6 +164,13 @@
     line-height: 1.35;
   }
 
+  .att_pass_note {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
+    margin-top: 4px;
+  }
+
   @media (max-width: 900px) {
     .att_wrap {
       flex-direction: column;
@@ -322,6 +329,7 @@
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button class="att_btn" type="submit">Check in</button>
                   </form>
+                  <a class="att_link_btn" href="{{ url_for('attendance.staff_attendance_edit_open', resident_id=row.resident_id) }}">Edit</a>
                 </div>
               </td>
             </tr>
@@ -365,7 +373,7 @@
               </td>
               <td>
                 <div class="att_actions">
-                  {% if row.last_completed_pair and not row.has_active_pass %}
+                  {% if row.last_completed_pair %}
                     <a class="att_link_btn" href="{{ url_for('attendance.staff_attendance_edit_last', resident_id=row.resident_id) }}">Edit last attendance</a>
                   {% endif %}
                 </div>
@@ -422,9 +430,12 @@
           </div>
         </div>
 
-        <div>
+        <div id="staff_expected_back_block">
           <label for="expected_back_at">Expected Back</label>
-          <input type="datetime-local" name="expected_back_at" id="expected_back_at" required>
+          <input type="datetime-local" name="expected_back_at" id="expected_back_at">
+          <div id="staff_pass_note" class="att_pass_note" style="display:none;">
+            Pass based activity categories pull expected back from the approved pass.
+          </div>
         </div>
 
         <div>
@@ -449,6 +460,8 @@
     const startField = document.getElementById("obligation_start_at");
     const endField = document.getElementById("obligation_end_at");
     const expectedBackField = document.getElementById("expected_back_at");
+    const expectedBackBlock = document.getElementById("staff_expected_back_block");
+    const passNote = document.getElementById("staff_pass_note");
 
     const selectedOption = destination && destination.selectedOptions.length
       ? destination.selectedOptions[0]
@@ -477,7 +490,18 @@
     }
 
     if (expectedBackField) {
-      expectedBackField.required = true;
+      expectedBackField.required = !requiresApprovedPass;
+      if (requiresApprovedPass) {
+        expectedBackField.value = "";
+      }
+    }
+
+    if (expectedBackBlock) {
+      expectedBackBlock.style.display = "block";
+    }
+
+    if (passNote) {
+      passNote.style.display = requiresApprovedPass ? "block" : "none";
     }
   }
 
