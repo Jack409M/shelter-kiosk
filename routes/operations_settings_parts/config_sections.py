@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from .employment_guidance import _employment_income_guidance
-from .kiosk_categories import _load_kiosk_activity_categories_for_shelter
 from .settings_store import _currency, _default_labels_text
 
 
@@ -59,25 +57,15 @@ def _configuration_section_map() -> dict[str, dict]:
     return {section["key"]: section for section in _configuration_sections()}
 
 
-def _build_settings_section_context(shelter: str, row, current_section: str) -> dict:
+def _base_section_context(shelter: str, current_section: str) -> dict:
     sections = _configuration_sections()
     section_map = _configuration_section_map()
     current_section_meta = section_map.get(current_section)
 
-    guidance = _employment_income_guidance(shelter) if current_section == "employment_income_guidance" else None
-    kiosk_activity_categories = (
-        _load_kiosk_activity_categories_for_shelter(shelter)
-        if current_section == "kiosk_activity_categories"
-        else None
-    )
-
     return {
         "shelter": shelter,
-        "settings": row,
         "default_inspection_items": _default_labels_text(),
-        "employment_guidance": guidance,
         "currency": _currency,
-        "kiosk_activity_categories": kiosk_activity_categories,
         "sections": sections,
         "current_section": current_section,
         "current_section_meta": current_section_meta,
