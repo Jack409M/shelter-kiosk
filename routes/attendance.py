@@ -6,7 +6,10 @@ from core.auth import require_login, require_shelter
 from routes.attendance_parts.board import (
     staff_attendance_check_in_view,
     staff_attendance_check_out_global_view,
+    staff_attendance_edit_last_submit_view,
     staff_attendance_edit_last_view,
+    staff_attendance_edit_open_submit_view,
+    staff_attendance_edit_open_view,
     staff_attendance_view,
 )
 from routes.attendance_parts.passes import (
@@ -20,7 +23,6 @@ from routes.attendance_parts.print_views import (
     staff_attendance_print_today_view,
     staff_attendance_resident_print_view,
 )
-
 
 attendance = Blueprint("attendance", __name__)
 
@@ -46,11 +48,32 @@ def staff_attendance_check_out_global():
     return staff_attendance_check_out_global_view()
 
 
-@attendance.route("/staff/attendance/<int:resident_id>/edit-last", methods=["POST"])
+@attendance.route("/staff/attendance/<int:resident_id>/edit-open")
+@require_login
+@require_shelter
+def staff_attendance_edit_open(resident_id: int):
+    return staff_attendance_edit_open_view(resident_id)
+
+
+@attendance.route("/staff/attendance/<int:resident_id>/edit-open", methods=["POST"])
+@require_login
+@require_shelter
+def staff_attendance_edit_open_submit(resident_id: int):
+    return staff_attendance_edit_open_submit_view(resident_id)
+
+
+@attendance.route("/staff/attendance/<int:resident_id>/edit-last")
 @require_login
 @require_shelter
 def staff_attendance_edit_last(resident_id: int):
     return staff_attendance_edit_last_view(resident_id)
+
+
+@attendance.route("/staff/attendance/<int:resident_id>/edit-last", methods=["POST"])
+@require_login
+@require_shelter
+def staff_attendance_edit_last_submit(resident_id: int):
+    return staff_attendance_edit_last_submit_view(resident_id)
 
 
 @attendance.route("/staff/attendance/resident/<int:resident_id>/print")
