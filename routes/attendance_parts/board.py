@@ -30,9 +30,12 @@ def _active_checkout_categories_for_shelter(shelter: str) -> list[dict]:
     return categories
 
 
-def _editable_checkout_categories_for_shelter(shelter: str) -> list[dict]:
-    rows = _active_checkout_categories_for_shelter(shelter)
-    return [row for row in rows if not bool(row.get("requires_approved_pass"))]
+def _checkout_category_map_for_shelter(shelter: str) -> dict[str, dict]:
+    return {
+        (row.get("activity_label") or "").strip(): row
+        for row in _active_checkout_categories_for_shelter(shelter)
+        if (row.get("activity_label") or "").strip()
+    }
 
 
 def _active_pass_row(resident_id: int, shelter: str):
@@ -380,6 +383,7 @@ def _attendance_base_row(r, shelter: str) -> dict[str, Any]:
         "obligation_start_at": obligation_start_time,
         "obligation_end_at": obligation_end_time,
         "actual_obligation_end_at": actual_obligation_end_time,
+        "checkout_time_input": _local_dt_input_value(checkout_time),
         "obligation_start_input": _local_dt_input_value(obligation_start_time),
         "obligation_end_input": _local_dt_input_value(obligation_end_time),
         "actual_obligation_end_input": _local_dt_input_value(actual_obligation_end_time),
@@ -673,7 +677,7 @@ def staff_attendance_edit_open_view(resident_id: int):
         mode="open",
         shelter=shelter,
         resident=row,
-        editable_checkout_categories=_editable_checkout_categories_for_shelter(shelter),
+        checkout_categories=_active_checkout_categories_for_shelter(shelter),
     )
 
 
@@ -690,73 +694,101 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
         flash("No open attendance record found to edit.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
+    checkout_time_raw = (request.form.get("checkout_at") or "").strip()
     destination_raw = (request.form.get("destination") or "").strip()
     start_raw = (request.form.get("obligation_start_at") or "").strip()
     end_raw = (request.form.get("obligation_end_at") or "").strip()
     actual_end_raw = (request.form.get("actual_obligation_end_at") or "").strip()
 
+    if not checkout_time_raw:
+        flash("Checkout time is required.", "error")
+        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+
+    try:
+        updated_checkout_time = _parse_datetime_local_to_utc_naive(checkout_time_raw)
+    except Exception:
+        flash("Invalid checkout time.", "error")
+        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+
     if not destination_raw:
         flash("Activity category is required.", "error")
         return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
-    category_map = {
-        (item.get("activity_label") or "").strip(): item
-        for item in _editable_checkout_categories_for_shelter(shelter)
-    }
-    if destination_raw not in category_map:
-        flash("Select a valid editable activity category.", "error")
+    category_map = _checkout_category_map_for_shelter(shelter)
+    selected_category = category_map.get(destination_raw)
+    if not selected_category:
+        flash("Select a valid activity category.", "error")
         return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
-    if not start_raw:
-        flash("Scheduled start time is required.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+    requires_approved_pass = bool(selected_category.get("requires_approved_pass"))
+    existing_expected_back = (open_checkout["expected_back_time"] if isinstance(open_checkout, dict) else open_checkout[4]) or ""
 
-    if not end_raw:
-        flash("Scheduled end time is required.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
-
-    try:
-        updated_start = _parse_datetime_local_to_utc_naive(start_raw)
-    except Exception:
-        flash("Invalid scheduled start time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
-
-    try:
-        updated_end = _parse_datetime_local_to_utc_naive(end_raw)
-    except Exception:
-        flash("Invalid scheduled end time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
-
-    if updated_end < updated_start:
-        flash("Scheduled end time cannot be earlier than scheduled start time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
-
+    updated_expected_back = existing_expected_back
+    updated_start = None
+    updated_end = None
     updated_actual_end = None
-    if actual_end_raw:
+
+    if requires_approved_pass:
+        active_pass = _active_pass_row(resident_id, shelter)
+        if not active_pass:
+            flash("No approved pass found for that activity category.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+
+        updated_expected_back = _pass_expected_back_value(active_pass)
+        if not updated_expected_back:
+            flash("Approved pass is missing an end time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+    else:
+        if not start_raw:
+            flash("Scheduled start time is required.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+
+        if not end_raw:
+            flash("Scheduled end time is required.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+
+        if not actual_end_raw:
+            flash("Actual obligation end time is required.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+
+        try:
+            updated_start = _parse_datetime_local_to_utc_naive(start_raw)
+        except Exception:
+            flash("Invalid scheduled start time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+
+        try:
+            updated_end = _parse_datetime_local_to_utc_naive(end_raw)
+        except Exception:
+            flash("Invalid scheduled end time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+
         try:
             updated_actual_end = _parse_datetime_local_to_utc_naive(actual_end_raw)
         except Exception:
             flash("Invalid actual obligation end time.", "error")
             return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
-    if not updated_actual_end:
-        flash("Actual obligation end time is required.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+        if updated_end < updated_start:
+            flash("Scheduled end time cannot be earlier than scheduled start time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
-    if updated_actual_end < updated_start:
-        flash("Actual end time cannot be earlier than scheduled start time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+        if updated_actual_end < updated_start:
+            flash("Actual end time cannot be earlier than scheduled start time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
-    if updated_actual_end > utcnow_iso():
-        flash("Actual end time cannot be later than right now.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+        if updated_actual_end > utcnow_iso():
+            flash("Actual end time cannot be later than right now.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
     checkout_id = int(open_checkout["id"] if isinstance(open_checkout, dict) else open_checkout[0])
 
     db_execute(
         """
         UPDATE attendance_events
-        SET destination = %s,
+        SET event_time = %s,
+            destination = %s,
+            expected_back_time = %s,
             obligation_start_time = %s,
             obligation_end_time = %s,
             actual_obligation_end_time = %s
@@ -767,7 +799,9 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
         if current_app.config.get("DATABASE_URL")
         else """
         UPDATE attendance_events
-        SET destination = ?,
+        SET event_time = ?,
+            destination = ?,
+            expected_back_time = ?,
             obligation_start_time = ?,
             obligation_end_time = ?,
             actual_obligation_end_time = ?
@@ -776,7 +810,9 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
           AND shelter = ?
         """,
         (
+            updated_checkout_time,
             destination_raw,
+            updated_expected_back,
             updated_start,
             updated_end,
             updated_actual_end,
@@ -793,10 +829,12 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
         staff_id,
         "edit_open_attendance",
         (
+            f"checkout={updated_checkout_time} "
             f"destination={destination_raw} "
-            f"start={updated_start} "
-            f"end={updated_end} "
-            f"actual_end={updated_actual_end}"
+            f"expected_back={updated_expected_back or ''} "
+            f"start={updated_start or ''} "
+            f"end={updated_end or ''} "
+            f"actual_end={updated_actual_end or ''}"
         ).strip(),
     )
     flash("Open attendance record updated.", "ok")
@@ -819,7 +857,7 @@ def staff_attendance_edit_last_view(resident_id: int):
         mode="last",
         shelter=shelter,
         resident=row,
-        editable_checkout_categories=_editable_checkout_categories_for_shelter(shelter),
+        checkout_categories=_active_checkout_categories_for_shelter(shelter),
     )
 
 
@@ -871,61 +909,71 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
         flash("Activity category is required.", "error")
         return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    category_map = {
-        (item.get("activity_label") or "").strip(): item
-        for item in _editable_checkout_categories_for_shelter(shelter)
-    }
-    if destination_raw not in category_map:
-        flash("Select a valid editable activity category.", "error")
+    category_map = _checkout_category_map_for_shelter(shelter)
+    selected_category = category_map.get(destination_raw)
+    if not selected_category:
+        flash("Select a valid activity category.", "error")
         return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    if not start_raw:
-        flash("Scheduled start time is required.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+    requires_approved_pass = bool(selected_category.get("requires_approved_pass"))
+    updated_expected_back = pair["expected_back_time"] or ""
+    updated_start = None
+    updated_end = None
+    updated_actual_end = None
 
-    if not end_raw:
-        flash("Scheduled end time is required.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+    if requires_approved_pass:
+        if destination_raw != (pair["destination"] or ""):
+            flash("Completed attendance cannot be changed into a different pass based category after the fact.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+    else:
+        if not start_raw:
+            flash("Scheduled start time is required.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    if not actual_end_raw:
-        flash("Actual obligation end time is required.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+        if not end_raw:
+            flash("Scheduled end time is required.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    try:
-        updated_start = _parse_datetime_local_to_utc_naive(start_raw)
-    except Exception:
-        flash("Invalid scheduled start time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+        if not actual_end_raw:
+            flash("Actual obligation end time is required.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    try:
-        updated_end = _parse_datetime_local_to_utc_naive(end_raw)
-    except Exception:
-        flash("Invalid scheduled end time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+        try:
+            updated_start = _parse_datetime_local_to_utc_naive(start_raw)
+        except Exception:
+            flash("Invalid scheduled start time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    try:
-        updated_actual_end = _parse_datetime_local_to_utc_naive(actual_end_raw)
-    except Exception:
-        flash("Invalid actual obligation end time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+        try:
+            updated_end = _parse_datetime_local_to_utc_naive(end_raw)
+        except Exception:
+            flash("Invalid scheduled end time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    if updated_end < updated_start:
-        flash("Scheduled end time cannot be earlier than scheduled start time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+        try:
+            updated_actual_end = _parse_datetime_local_to_utc_naive(actual_end_raw)
+        except Exception:
+            flash("Invalid actual obligation end time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    if updated_actual_end < updated_start:
-        flash("Actual end time cannot be earlier than scheduled start time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+        if updated_end < updated_start:
+            flash("Scheduled end time cannot be earlier than scheduled start time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
-    if updated_actual_end > updated_checkin_time:
-        flash("Actual end time cannot be later than the check in time.", "error")
-        return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+        if updated_actual_end < updated_start:
+            flash("Actual end time cannot be earlier than scheduled start time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+
+        if updated_actual_end > updated_checkin_time:
+            flash("Actual end time cannot be later than the check in time.", "error")
+            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
     db_execute(
         """
         UPDATE attendance_events
         SET event_time = %s,
             destination = %s,
+            expected_back_time = %s,
             obligation_start_time = %s,
             obligation_end_time = %s,
             actual_obligation_end_time = %s
@@ -938,6 +986,7 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
         UPDATE attendance_events
         SET event_time = ?,
             destination = ?,
+            expected_back_time = ?,
             obligation_start_time = ?,
             obligation_end_time = ?,
             actual_obligation_end_time = ?
@@ -948,6 +997,7 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
         (
             updated_checkout_time,
             destination_raw,
+            updated_expected_back,
             updated_start,
             updated_end,
             updated_actual_end,
@@ -991,9 +1041,10 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
             f"checkout={updated_checkout_time} "
             f"checkin={updated_checkin_time} "
             f"destination={destination_raw} "
-            f"start={updated_start} "
-            f"end={updated_end} "
-            f"actual_end={updated_actual_end}"
+            f"expected_back={updated_expected_back or ''} "
+            f"start={updated_start or ''} "
+            f"end={updated_end or ''} "
+            f"actual_end={updated_actual_end or ''}"
         ).strip(),
     )
     flash("Last attendance record updated.", "ok")
