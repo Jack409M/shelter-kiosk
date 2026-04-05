@@ -10,6 +10,7 @@ from routes.operations_settings_parts.access import (
     _normalize_shelter_name,
 )
 from routes.operations_settings_parts.config_sections import (
+    _base_section_context,
     _configuration_section_map,
     _configuration_sections,
 )
@@ -27,8 +28,6 @@ from routes.operations_settings_parts.parsing import (
     _merge_text,
 )
 from routes.operations_settings_parts.settings_store import (
-    _currency,
-    _default_labels_text,
     _placeholder,
     _settings_row_for_shelter,
 )
@@ -41,32 +40,20 @@ operations_settings = Blueprint(
 
 
 def _build_settings_section_context(shelter: str, row, current_section: str) -> dict:
-    sections = _configuration_sections()
-    section_map = _configuration_section_map()
-    current_section_meta = section_map.get(current_section)
+    context = _base_section_context(shelter, current_section)
+    context["settings"] = row
 
-    guidance = (
-        _employment_income_guidance(shelter, _placeholder())
-        if current_section == "employment_income_guidance"
-        else None
-    )
-    kiosk_activity_categories = (
-        _load_kiosk_activity_categories_for_shelter(shelter)
-        if current_section == "kiosk_activity_categories"
-        else None
-    )
+    if current_section == "employment_income_guidance":
+        context["employment_guidance"] = _employment_income_guidance(shelter, _placeholder())
+    else:
+        context["employment_guidance"] = None
 
-    return {
-        "shelter": shelter,
-        "settings": row,
-        "default_inspection_items": _default_labels_text(),
-        "employment_guidance": guidance,
-        "currency": _currency,
-        "kiosk_activity_categories": kiosk_activity_categories,
-        "sections": sections,
-        "current_section": current_section,
-        "current_section_meta": current_section_meta,
-    }
+    if current_section == "kiosk_activity_categories":
+        context["kiosk_activity_categories"] = _load_kiosk_activity_categories_for_shelter(shelter)
+    else:
+        context["kiosk_activity_categories"] = None
+
+    return context
 
 
 @operations_settings.route("", methods=["GET"])
@@ -127,6 +114,7 @@ def settings_section_page(section_key: str):
 
         now = utcnow_iso()
         form = request.form
+        is_pg = _placeholder() == "%s"
 
         late_day = min(max(_merge_int("rent_late_day_of_month", form, row.get("rent_late_day_of_month"), 6), 1), 28)
         carry_forward_enabled = _merge_bool("rent_carry_forward_enabled", form, row.get("rent_carry_forward_enabled"), True)
@@ -144,8 +132,8 @@ def settings_section_page(section_key: str):
             "inspection_item_labels",
             form,
             row.get("inspection_item_labels"),
-            _default_labels_text(),
-        ) or _default_labels_text()
+            _build_settings_section_context(shelter, row, current_section)["default_inspection_items"],
+        ) or _build_settings_section_context(shelter, row, current_section)["default_inspection_items"]
 
         rent_score_paid = _merge_int("rent_score_paid", form, row.get("rent_score_paid"), 100)
         rent_score_partially_paid = _merge_int(
@@ -339,7 +327,7 @@ def settings_section_page(section_key: str):
                 updated_at = %s
             WHERE LOWER(COALESCE(shelter, '')) = %s
             """
-            if _placeholder() == "%s"
+            if is_pg
             else
             """
             UPDATE shelter_operation_settings
@@ -386,14 +374,14 @@ def settings_section_page(section_key: str):
                 rent_score_paid_late,
                 rent_score_not_paid,
                 rent_score_exempt,
-                carry_forward_enabled if _placeholder() == "%s" else (1 if carry_forward_enabled else 0),
+                carry_forward_enabled if is_pg else (1 if carry_forward_enabled else 0),
                 inspection_default_item_status,
                 inspection_item_labels,
-                inspection_scoring_enabled if _placeholder() == "%s" else (1 if inspection_scoring_enabled else 0),
+                inspection_scoring_enabled if is_pg else (1 if inspection_scoring_enabled else 0),
                 inspection_lookback_months,
-                inspection_include_current_open_month if _placeholder() == "%s" else (1 if inspection_include_current_open_month else 0),
+                inspection_include_current_open_month if is_pg else (1 if inspection_include_current_open_month else 0),
                 inspection_score_passed,
-                inspection_needs_attention_enabled if _placeholder() == "%s" else (1 if inspection_needs_attention_enabled else 0),
+                inspection_needs_attention_enabled if is_pg else (1 if inspection_needs_attention_enabled else 0),
                 inspection_score_needs_attention,
                 inspection_score_failed,
                 inspection_passing_threshold,
@@ -401,7 +389,7 @@ def settings_section_page(section_key: str):
                 inspection_band_yellow_min,
                 inspection_band_orange_min,
                 inspection_band_red_max,
-                employment_income_module_enabled if _placeholder() == "%s" else (1 if employment_income_module_enabled else 0),
+                employment_income_module_enabled if is_pg else (1 if employment_income_module_enabled else 0),
                 employment_income_graduation_minimum,
                 employment_income_band_green_min,
                 employment_income_band_yellow_min,
