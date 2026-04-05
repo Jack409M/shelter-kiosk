@@ -56,7 +56,6 @@
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
       {% set chore_board_url = safe_url_for('shelter_operations.chore_board') %}
       {% set chore_config_url = safe_url_for('shelter_operations.chore_management') %}
-      {% set shelter_operations_home_url = safe_url_for('shelter_operations.index') %}
       {% set calendar_url = safe_url_for('calendar.calendar_view') %}
       {% set reports_url = safe_url_for('reports.reports_index') %}
       {% set operations_settings_url = safe_url_for('operations_settings.settings_page') %}
@@ -167,8 +166,8 @@
                 <button type="button">Admin ▾</button>
                 <div class="menu">
                   <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
-                  {% if shelter_operations_home_url %}
-                    <a href="{{ shelter_operations_home_url }}">Configurations</a>
+                  {% if operations_settings_url %}
+                    <a href="{{ operations_settings_url }}">Operations Settings</a>
                   {% endif %}
                   {% if rent_roll_url %}
                     <a href="{{ rent_roll_url }}">Rent Roll</a>
