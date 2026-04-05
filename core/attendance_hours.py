@@ -253,3 +253,66 @@ def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dic
         "uncategorized_hours": round(uncategorized_hours, 2),
         "has_data": bool(breakdown or uncategorized_hours),
     }
+
+
+def build_attendance_hours_snapshot(resident_id: int, shelter: str) -> dict[str, Any]:
+    summary = calculate_prior_week_attendance_hours(resident_id, shelter)
+
+    productive_ratio = 0.0
+    work_ratio = 0.0
+
+    if summary["productive_required_hours"] > 0:
+        productive_ratio = min(summary["productive_hours"] / summary["productive_required_hours"], 1.0)
+
+    if summary["work_required_hours"] > 0:
+        work_ratio = min(summary["work_hours"] / summary["work_required_hours"], 1.0)
+
+    percent_grade = round(((productive_ratio * 0.5) + (work_ratio * 0.5)) * 100.0, 1)
+
+    if summary["passes_requirement"]:
+        band_key = "green"
+        band_label = "Pass"
+        card_style = "background:#eef8f0; border:1px solid #9bc8a6;"
+        value_style = "color:#1f6b33; font-weight:700;"
+        pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#dcefe1; border:1px solid #9bc8a6; color:#1f6b33; font-weight:700;"
+    elif percent_grade >= 80:
+        band_key = "yellow"
+        band_label = "Close"
+        card_style = "background:#fff8df; border:1px solid #e0cd7a;"
+        value_style = "color:#7a6500; font-weight:700;"
+        pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#fff1b8; border:1px solid #e0cd7a; color:#7a6500; font-weight:700;"
+    elif percent_grade >= 60:
+        band_key = "orange"
+        band_label = "Needs Work"
+        card_style = "background:#fff0e4; border:1px solid #e2b27d;"
+        value_style = "color:#9a4f00; font-weight:700;"
+        pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd8b0; border:1px solid #e2b27d; color:#9a4f00; font-weight:700;"
+    else:
+        band_key = "red"
+        band_label = "Fail"
+        card_style = "background:#fff0f0; border:1px solid #e2a0a0;"
+        value_style = "color:#9a1f1f; font-weight:700;"
+        pill_style = "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd6d6; border:1px solid #e2a0a0; color:#9a1f1f; font-weight:700;"
+
+    return {
+        "week_label": summary["week_label"],
+        "productive_hours": summary["productive_hours"],
+        "work_hours": summary["work_hours"],
+        "productive_required_hours": summary["productive_required_hours"],
+        "work_required_hours": summary["work_required_hours"],
+        "productive_short_hours": summary["productive_short_hours"],
+        "work_short_hours": summary["work_short_hours"],
+        "passes_requirement": summary["passes_requirement"],
+        "status_label": summary["status_label"],
+        "status_class": summary["status_class"],
+        "percent_grade": percent_grade,
+        "percent_grade_display": f"{percent_grade:.1f}",
+        "band_key": band_key,
+        "band_label": band_label,
+        "card_style": card_style,
+        "value_style": value_style,
+        "pill_style": pill_style,
+        "uncategorized_hours": summary["uncategorized_hours"],
+        "breakdown": summary["breakdown"],
+        "has_data": summary["has_data"],
+    }
