@@ -6,23 +6,97 @@
     <div class="cmx-card">
       <div class="cmx-section-head">
         <div>
-          <h1 class="cmx-section-title">Operations Settings</h1>
+          <h1 class="cmx-section-title">Configurations</h1>
           <div class="cmx-section-subtitle">
-            Shelter specific rent scoring, late day, inspection defaults, income weighting rules, and kiosk activity categories for {{ shelter | shelter if shelter else "Current Shelter" }}.
+            Shelter specific configuration areas for {{ shelter | shelter if shelter else "Current Shelter" }}.
           </div>
         </div>
 
         <div class="cmx-button-row">
           <a class="cmx-btn-muted" href="{{ url_for('admin.admin_dashboard') }}">Back to Admin</a>
-          <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.payment_entry_sheet') }}">Open Rent Sheet</a>
+          <button type="submit" form="config-form" class="cmx-btn">Save All Configurations</button>
         </div>
       </div>
     </div>
 
     <div class="cmx-card">
-      <form method="post" action="{{ url_for('operations_settings.settings_page') }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">Configuration Categories</h2>
+          <div class="cmx-section-subtitle">Choose the section you want to review or edit.</div>
+        </div>
+      </div>
 
+      <div class="cmx-grid cmx-grid-3">
+        <a class="cmx-card" href="#rent-rules-section" style="border:1px solid #d8dee6; text-decoration:none; color:inherit;">
+          <div class="cmx-section-head">
+            <div>
+              <h3 class="cmx-section-title">Rent Rules</h3>
+              <div class="cmx-section-subtitle">Late logic and rent scoring values.</div>
+            </div>
+          </div>
+        </a>
+
+        <a class="cmx-card" href="#inspection-defaults-section" style="border:1px solid #d8dee6; text-decoration:none; color:inherit;">
+          <div class="cmx-section-head">
+            <div>
+              <h3 class="cmx-section-title">Inspection Defaults</h3>
+              <div class="cmx-section-subtitle">Checklist defaults and standard item setup.</div>
+            </div>
+          </div>
+        </a>
+
+        <a class="cmx-card" href="#inspection-scoring-section" style="border:1px solid #d8dee6; text-decoration:none; color:inherit;">
+          <div class="cmx-section-head">
+            <div>
+              <h3 class="cmx-section-title">Inspection Stability</h3>
+              <div class="cmx-section-subtitle">Scoring, thresholds, and color bands.</div>
+            </div>
+          </div>
+        </a>
+
+        <a class="cmx-card" href="#employment-income-section" style="border:1px solid #d8dee6; text-decoration:none; color:inherit;">
+          <div class="cmx-section-head">
+            <div>
+              <h3 class="cmx-section-title">Employment Income</h3>
+              <div class="cmx-section-subtitle">Graduation minimum and income color bands.</div>
+            </div>
+          </div>
+        </a>
+
+        <a class="cmx-card" href="#income-weighting-section" style="border:1px solid #d8dee6; text-decoration:none; color:inherit;">
+          <div class="cmx-section-head">
+            <div>
+              <h3 class="cmx-section-title">Income Weighting</h3>
+              <div class="cmx-section-subtitle">Reliability weighting rules for income support.</div>
+            </div>
+          </div>
+        </a>
+
+        <a class="cmx-card" href="#kiosk-activity-section" style="border:1px solid #d8dee6; text-decoration:none; color:inherit;">
+          <div class="cmx-section-head">
+            <div>
+              <h3 class="cmx-section-title">Kiosk Activity Categories</h3>
+              <div class="cmx-section-subtitle">Checkout categories and hour counting rules.</div>
+            </div>
+          </div>
+        </a>
+
+        <a class="cmx-card" href="#employment-guidance-section" style="border:1px solid #d8dee6; text-decoration:none; color:inherit;">
+          <div class="cmx-section-head">
+            <div>
+              <h3 class="cmx-section-title">Employment Guidance</h3>
+              <div class="cmx-section-subtitle">Read only graduation guidance for this shelter.</div>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <form id="config-form" method="post" action="{{ url_for('operations_settings.settings_page') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div id="rent-rules-section" class="cmx-card">
         <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Rent Rules</h2>
@@ -73,8 +147,10 @@
             <input type="number" name="rent_score_exempt" value="{{ settings['rent_score_exempt'] if settings else 100 }}" required>
           </div>
         </div>
+      </div>
 
-        <div class="cmx-section-head" style="margin-top:24px;">
+      <div id="inspection-defaults-section" class="cmx-card">
+        <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Inspection Defaults</h2>
             <div class="cmx-section-subtitle">New inspections use these defaults. Staff only change items that need attention.</div>
@@ -97,8 +173,10 @@
           <label>Inspection Checklist Items</label>
           <textarea name="inspection_item_labels" rows="8">{{ settings['inspection_item_labels'] if settings and settings['inspection_item_labels'] else default_inspection_items }}</textarea>
         </div>
+      </div>
 
-        <div class="cmx-section-head" style="margin-top:24px;">
+      <div id="inspection-scoring-section" class="cmx-card">
+        <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Inspection Stability Scoring</h2>
             <div class="cmx-section-subtitle">This controls the living area stability average used over the last completed months.</div>
@@ -162,7 +240,7 @@
 
         <div class="cmx-section-head" style="margin-top:24px;">
           <div>
-            <h2 class="cmx-section-title">Inspection Color Bands</h2>
+            <h3 class="cmx-section-title">Inspection Color Bands</h3>
             <div class="cmx-section-subtitle">Locked target is green at 83 and above with room for future adjustment.</div>
           </div>
         </div>
@@ -188,11 +266,13 @@
             <input type="number" name="inspection_band_red_max" value="{{ settings['inspection_band_red_max'] if settings else 55 }}" required>
           </div>
         </div>
+      </div>
 
-        <div class="cmx-section-head" style="margin-top:24px;">
+      <div id="employment-income-section" class="cmx-card">
+        <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Employment Income Graduation Settings</h2>
-            <div class="cmx-section-subtitle">Historical graduation floor is editable here. Guidance numbers below are read only.</div>
+            <div class="cmx-section-subtitle">Historical graduation floor is editable here.</div>
           </div>
         </div>
 
@@ -213,8 +293,8 @@
 
         <div class="cmx-section-head" style="margin-top:24px;">
           <div>
-            <h2 class="cmx-section-title">Employment Income Color Bands</h2>
-            <div class="cmx-section-subtitle">These apply to the resident income value, not to the read only guidance averages.</div>
+            <h3 class="cmx-section-title">Employment Income Color Bands</h3>
+            <div class="cmx-section-subtitle">These apply to the resident income value.</div>
           </div>
         </div>
 
@@ -239,11 +319,13 @@
             <input type="number" step="0.01" min="0" name="employment_income_band_red_max" value="{{ settings['employment_income_band_red_max'] if settings else 699.99 }}" required>
           </div>
         </div>
+      </div>
 
-        <div class="cmx-section-head" style="margin-top:24px;">
+      <div id="income-weighting-section" class="cmx-card">
+        <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Income Stability Weighting</h2>
-            <div class="cmx-section-subtitle">These settings control weighted income reliability. Survivor benefits and child support are child linked. TANF remains a household line but is weighted from the youngest active child.</div>
+            <div class="cmx-section-subtitle">These settings control weighted income reliability.</div>
           </div>
         </div>
 
@@ -280,82 +362,84 @@
             <input type="number" min="0" name="income_weight_survivor_cutoff_months" value="{{ settings['income_weight_survivor_cutoff_months'] if settings else 18 }}" required>
           </div>
         </div>
+      </div>
 
-        <div class="cmx-section-head" style="margin-top:24px;">
+      <div id="kiosk-activity-section" class="cmx-card">
+        <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Kiosk Activity Categories</h2>
-            <div class="cmx-section-subtitle">Add, edit, deactivate, reorder, or remove shelter specific checkout categories here. These rules will drive future kiosk hour counting.</div>
+            <div class="cmx-section-subtitle">Add, edit, deactivate, reorder, or remove shelter specific checkout categories here.</div>
           </div>
         </div>
 
-        <div class="cmx-grid cmx-grid-1">
-          {% for category in kiosk_activity_categories %}
-            <div class="cmx-card" style="border:1px solid #d8dee6; margin-bottom:12px;">
-              <input type="hidden" name="category_id[]" value="{{ category.get('id', '') }}">
+        {% for category in kiosk_activity_categories %}
+          <div class="cmx-card" style="border:1px solid #d8dee6; margin-bottom:12px;">
+            <input type="hidden" name="category_id[]" value="{{ category.get('id', '') }}">
 
-              <div class="cmx-grid cmx-grid-4">
-                <div class="cmx-field">
-                  <label>Activity Label</label>
-                  <input type="text" name="activity_label[]" value="{{ category.get('activity_label', '') }}">
-                </div>
-
-                <div class="cmx-field">
-                  <label>Sort Order</label>
-                  <input type="number" name="sort_order[]" value="{{ category.get('sort_order', loop.index) }}">
-                </div>
-
-                <div class="cmx-field">
-                  <label>Weekly Cap Hours</label>
-                  <input type="number" step="0.25" min="0" name="weekly_cap_hours[]" value="{{ category.get('weekly_cap_hours', '') if category.get('weekly_cap_hours') is not none else '' }}">
-                </div>
-
-                <div class="cmx-field">
-                  <label>Notes</label>
-                  <input type="text" name="category_notes[]" value="{{ category.get('notes', '') }}">
-                </div>
+            <div class="cmx-grid cmx-grid-4">
+              <div class="cmx-field">
+                <label>Activity Label</label>
+                <input type="text" name="activity_label[]" value="{{ category.get('activity_label', '') }}">
               </div>
 
-              <div class="cmx-grid cmx-grid-4" style="margin-top:12px;">
-                <div class="cmx-field">
-                  <label style="display:flex; gap:8px; align-items:center;">
-                    <input type="checkbox" name="active[]" value="{{ loop.index0 }}" {% if category.get('active') %}checked{% endif %}>
-                    Active
-                  </label>
-                </div>
-
-                <div class="cmx-field">
-                  <label style="display:flex; gap:8px; align-items:center;">
-                    <input type="checkbox" name="counts_as_work_hours[]" value="{{ loop.index0 }}" {% if category.get('counts_as_work_hours') %}checked{% endif %}>
-                    Counts As Work Hours
-                  </label>
-                </div>
-
-                <div class="cmx-field">
-                  <label style="display:flex; gap:8px; align-items:center;">
-                    <input type="checkbox" name="counts_as_productive_hours[]" value="{{ loop.index0 }}" {% if category.get('counts_as_productive_hours') %}checked{% endif %}>
-                    Counts As Productive Hours
-                  </label>
-                </div>
-
-                <div class="cmx-field">
-                  <label style="display:flex; gap:8px; align-items:center;">
-                    <input type="checkbox" name="requires_approved_pass[]" value="{{ loop.index0 }}" {% if category.get('requires_approved_pass') %}checked{% endif %}>
-                    Requires Approved Pass
-                  </label>
-                </div>
+              <div class="cmx-field">
+                <label>Sort Order</label>
+                <input type="number" name="sort_order[]" value="{{ category.get('sort_order', loop.index) }}">
               </div>
 
-              <div class="cmx-field" style="margin-top:12px;">
-                <label style="display:flex; gap:8px; align-items:center; color:#8b1e1e;">
-                  <input type="checkbox" name="remove_category[]" value="{{ loop.index0 }}">
-                  Remove This Category
+              <div class="cmx-field">
+                <label>Weekly Cap Hours</label>
+                <input type="number" step="0.25" min="0" name="weekly_cap_hours[]" value="{{ category.get('weekly_cap_hours', '') if category.get('weekly_cap_hours') is not none else '' }}">
+              </div>
+
+              <div class="cmx-field">
+                <label>Notes</label>
+                <input type="text" name="category_notes[]" value="{{ category.get('notes', '') }}">
+              </div>
+            </div>
+
+            <div class="cmx-grid cmx-grid-4" style="margin-top:12px;">
+              <div class="cmx-field">
+                <label style="display:flex; gap:8px; align-items:center;">
+                  <input type="checkbox" name="active[]" value="{{ loop.index0 }}" {% if category.get('active') %}checked{% endif %}>
+                  Active
+                </label>
+              </div>
+
+              <div class="cmx-field">
+                <label style="display:flex; gap:8px; align-items:center;">
+                  <input type="checkbox" name="counts_as_work_hours[]" value="{{ loop.index0 }}" {% if category.get('counts_as_work_hours') %}checked{% endif %}>
+                  Counts As Work Hours
+                </label>
+              </div>
+
+              <div class="cmx-field">
+                <label style="display:flex; gap:8px; align-items:center;">
+                  <input type="checkbox" name="counts_as_productive_hours[]" value="{{ loop.index0 }}" {% if category.get('counts_as_productive_hours') %}checked{% endif %}>
+                  Counts As Productive Hours
+                </label>
+              </div>
+
+              <div class="cmx-field">
+                <label style="display:flex; gap:8px; align-items:center;">
+                  <input type="checkbox" name="requires_approved_pass[]" value="{{ loop.index0 }}" {% if category.get('requires_approved_pass') %}checked{% endif %}>
+                  Requires Approved Pass
                 </label>
               </div>
             </div>
-          {% endfor %}
-        </div>
 
-        <div class="cmx-section-head" style="margin-top:24px;">
+            <div class="cmx-field" style="margin-top:12px;">
+              <label style="display:flex; gap:8px; align-items:center; color:#8b1e1e;">
+                <input type="checkbox" name="remove_category[]" value="{{ loop.index0 }}">
+                Remove This Category
+              </label>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div id="employment-guidance-section" class="cmx-card">
+        <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Employment Income Guidance</h2>
             <div class="cmx-section-subtitle">These are read only guidance numbers calculated from true graduates in this shelter.</div>
@@ -383,12 +467,12 @@
             <span>{{ currency(employment_guidance['average_sober_12_month_income']) }}</span>
           </div>
         </div>
+      </div>
 
-        <div class="cmx-button-row">
-          <button type="submit" class="cmx-btn">Save Operations Settings</button>
-        </div>
-      </form>
-    </div>
+      <div class="cmx-button-row">
+        <button type="submit" class="cmx-btn">Save All Configurations</button>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}
