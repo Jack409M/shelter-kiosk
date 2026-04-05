@@ -5,6 +5,7 @@ from flask import g, request
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 
+from .kiosk_category_defaults import KIOSK_CATEGORY_SEEDS
 from .settings_store import _placeholder
 
 
@@ -88,66 +89,13 @@ def _ensure_default_kiosk_activity_categories_for_shelter(shelter: str) -> None:
     if row_count > 0:
         return
 
-    seed_map = {
-        "haven house": [
-            ("Employment", True, True, None, False),
-            ("RAD", True, True, None, False),
-            ("Job Search", False, True, None, False),
-            ("AA or NA Meeting", False, True, None, False),
-            ("Church", False, True, None, False),
-            ("Doctor Appointment", False, True, None, False),
-            ("Counseling", False, True, None, False),
-            ("Step Work", False, True, 2.0, False),
-            ("Sponsor Meeting", False, True, 1.0, False),
-            ("Volunteer or Community Service", False, True, None, False),
-            ("School", False, True, None, False),
-            ("Legal Obligation", False, True, None, False),
-            ("Store", False, False, None, False),
-            ("Pass", False, False, None, True),
-            ("Other Approved Activity", False, False, None, False),
-        ],
-        "gratitude house": [
-            ("Employment", True, True, None, False),
-            ("Job Search", False, True, None, False),
-            ("AA or NA Meeting", False, True, None, False),
-            ("Church", False, True, None, False),
-            ("Doctor Appointment", False, True, None, False),
-            ("Counseling", False, True, None, False),
-            ("Step Work", False, True, 2.0, False),
-            ("Sponsor Meeting", False, True, 1.0, False),
-            ("Volunteer or Community Service", False, True, None, False),
-            ("School", False, True, None, False),
-            ("Daycare or School Drop Off", False, False, None, False),
-            ("Legal Obligation", False, True, None, False),
-            ("Store", False, False, None, False),
-            ("Pass", False, False, None, True),
-            ("Other Approved Activity", False, False, None, False),
-        ],
-        "abba house": [
-            ("Employment", True, True, None, False),
-            ("Job Search", False, True, None, False),
-            ("AA or NA Meeting", False, True, None, False),
-            ("Church", False, True, None, False),
-            ("Doctor Appointment", False, True, None, False),
-            ("Counseling", False, True, None, False),
-            ("Step Work", False, True, 2.0, False),
-            ("Sponsor Meeting", False, True, 1.0, False),
-            ("Volunteer or Community Service", False, True, None, False),
-            ("School", False, True, None, False),
-            ("Daycare or School Drop Off", False, False, None, False),
-            ("Legal Obligation", False, True, None, False),
-            ("Store", False, False, None, False),
-            ("Pass", False, False, None, True),
-            ("Free Time", False, False, None, False),
-            ("Other Approved Activity", False, False, None, False),
-        ],
-    }
-
-    seed_rows = seed_map.get(shelter, [])
+    seed_rows = KIOSK_CATEGORY_SEEDS.get(shelter, [])
     if not seed_rows:
         return
 
     now = utcnow_iso()
+    is_pg = g.get("db_kind") == "pg"
+
     for sort_order, row in enumerate(seed_rows, start=1):
         label, counts_work, counts_productive, weekly_cap_hours, requires_pass = row
         db_execute(
@@ -168,7 +116,7 @@ def _ensure_default_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                 )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
-                if g.get("db_kind") == "pg"
+                if is_pg
                 else
                 """
                 INSERT INTO kiosk_activity_categories (
@@ -190,12 +138,12 @@ def _ensure_default_kiosk_activity_categories_for_shelter(shelter: str) -> None:
             (
                 shelter,
                 label,
-                True if g.get("db_kind") == "pg" else 1,
+                True if is_pg else 1,
                 sort_order,
-                counts_work if g.get("db_kind") == "pg" else int(bool(counts_work)),
-                counts_productive if g.get("db_kind") == "pg" else int(bool(counts_productive)),
+                counts_work if is_pg else int(bool(counts_work)),
+                counts_productive if is_pg else int(bool(counts_productive)),
                 weekly_cap_hours,
-                requires_pass if g.get("db_kind") == "pg" else int(bool(requires_pass)),
+                requires_pass if is_pg else int(bool(requires_pass)),
                 None,
                 now,
                 now,
@@ -252,6 +200,7 @@ def _save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
     _ensure_kiosk_activity_categories_table()
     ph = _placeholder()
     now = utcnow_iso()
+    is_pg = g.get("db_kind") == "pg"
 
     row_ids = request.form.getlist("category_id[]")
     labels = request.form.getlist("activity_label[]")
@@ -321,7 +270,7 @@ def _save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                     WHERE id = %s
                       AND LOWER(COALESCE(shelter, '')) = %s
                     """
-                    if g.get("db_kind") == "pg"
+                    if is_pg
                     else
                     """
                     UPDATE kiosk_activity_categories
@@ -340,12 +289,12 @@ def _save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                 ),
                 (
                     label,
-                    is_active if g.get("db_kind") == "pg" else int(is_active),
+                    is_active if is_pg else int(is_active),
                     sort_order,
-                    counts_work if g.get("db_kind") == "pg" else int(counts_work),
-                    counts_productive if g.get("db_kind") == "pg" else int(counts_productive),
+                    counts_work if is_pg else int(counts_work),
+                    counts_productive if is_pg else int(counts_productive),
                     weekly_cap_hours,
-                    requires_pass if g.get("db_kind") == "pg" else int(requires_pass),
+                    requires_pass if is_pg else int(requires_pass),
                     notes or None,
                     now,
                     category_id,
@@ -373,7 +322,7 @@ def _save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """
-                if g.get("db_kind") == "pg"
+                if is_pg
                 else
                 """
                 INSERT INTO kiosk_activity_categories (
@@ -396,12 +345,12 @@ def _save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
             (
                 shelter,
                 label,
-                is_active if g.get("db_kind") == "pg" else int(is_active),
+                is_active if is_pg else int(is_active),
                 sort_order,
-                counts_work if g.get("db_kind") == "pg" else int(counts_work),
-                counts_productive if g.get("db_kind") == "pg" else int(counts_productive),
+                counts_work if is_pg else int(counts_work),
+                counts_productive if is_pg else int(counts_productive),
                 weekly_cap_hours,
-                requires_pass if g.get("db_kind") == "pg" else int(requires_pass),
+                requires_pass if is_pg else int(requires_pass),
                 notes or None,
                 now,
                 now,
