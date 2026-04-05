@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from flask import flash, g, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
+from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
 from core.db import get_db
 from core.helpers import utcnow_iso
@@ -30,11 +31,22 @@ def resident_pass_request_view():
         init_db()
 
         shelter = (session.get("resident_shelter") or "").strip()
+        resident_id = session.get("resident_id")
+
+        hour_summary = None
+        if resident_id and shelter:
+            try:
+                hour_summary = calculate_prior_week_attendance_hours(int(resident_id), shelter)
+            except Exception:
+                hour_summary = None
 
         if request.method == "GET":
-            return render_template("resident_pass_request.html", shelter=shelter)
+            return render_template(
+                "resident_pass_request.html",
+                shelter=shelter,
+                hour_summary=hour_summary,
+            )
 
-        resident_id = session.get("resident_id")
         resident_identifier = (session.get("resident_identifier") or "").strip()
         first = (session.get("resident_first") or "").strip()
         last = (session.get("resident_last") or "").strip()
@@ -44,7 +56,11 @@ def resident_pass_request_view():
         rl_key = f"resident_pass_request:{ip}:{resident_identifier or 'unknown'}"
         if is_rate_limited(rl_key, limit=6, window_seconds=900):
             flash("Too many pass submissions. Please wait a few minutes and try again.", "error")
-            return render_template("resident_pass_request.html", shelter=shelter), 429
+            return render_template(
+                "resident_pass_request.html",
+                shelter=shelter,
+                hour_summary=hour_summary,
+            ), 429
 
         pass_type = _normalize_pass_type(request.form.get("pass_type"))
         destination = (request.form.get("destination") or "").strip()
@@ -133,7 +149,11 @@ def resident_pass_request_view():
         if errors:
             for e in errors:
                 flash(e, "error")
-            return render_template("resident_pass_request.html", shelter=shelter), 400
+            return render_template(
+                "resident_pass_request.html",
+                shelter=shelter,
+                hour_summary=hour_summary,
+            ), 400
 
         conn = get_db()
         kind = g.get("db_kind")
