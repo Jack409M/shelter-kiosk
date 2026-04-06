@@ -12,7 +12,27 @@
   {% set shelter_label = shelter %}
 {% endif %}
 
+{% set values = form_data or {} %}
+
 <style>
+  .rule-card {
+    margin-bottom: 16px;
+    border: 1px solid #d7dbe3;
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
+  }
+
+  .rule-card h2 {
+    margin: 0 0 10px 0;
+    font-size: 22px;
+  }
+
+  .rule-card ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
   .hours-card {
     margin-bottom: 16px;
     border: 1px solid #d7dbe3;
@@ -80,26 +100,6 @@
     font-weight: 700;
   }
 
-  .hours-breakdown {
-    margin-top: 14px;
-    font-size: 14px;
-    line-height: 1.45;
-  }
-
-  .hours-breakdown table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 8px;
-  }
-
-  .hours-breakdown th,
-  .hours-breakdown td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #e6e8ec;
-    text-align: left;
-    vertical-align: top;
-  }
-
   .hours-note {
     margin-top: 10px;
     font-size: 13px;
@@ -114,6 +114,15 @@
 </style>
 
 <h1>Pass Request</h1>
+
+<div class="rule-card">
+  <h2>{{ rule_box.title }}</h2>
+  <ul>
+    {% for line in rule_box.lines %}
+      <li>{{ line }}</li>
+    {% endfor %}
+  </ul>
+</div>
 
 {% if hour_summary %}
   <div class="hours-card">
@@ -143,47 +152,6 @@
         <div class="hours-pill-value">{{ hour_summary.work_hours }}</div>
       </div>
     </div>
-
-    {% if hour_summary.breakdown %}
-      <div class="hours-breakdown">
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Credited</th>
-              <th>Raw</th>
-              <th>Cap</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in hour_summary.breakdown %}
-              <tr>
-                <td>{{ item.label }}</td>
-                <td>{{ item.credited_hours }}</td>
-                <td>{{ item.raw_hours }}</td>
-                <td>
-                  {% if item.weekly_cap_hours is not none %}
-                    {{ item.weekly_cap_hours }}
-                  {% else %}
-                    —
-                  {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-
-        {% if hour_summary.uncategorized_hours %}
-          <div class="hours-note">
-            Uncategorized attendance hours found: {{ hour_summary.uncategorized_hours }}
-          </div>
-        {% endif %}
-      </div>
-    {% else %}
-      <div class="hours-note">
-        No completed attendance hours were found for the previous week.
-      </div>
-    {% endif %}
   </div>
 {% endif %}
 
@@ -196,124 +164,112 @@
   <div class="grid tight-row">
     <div>
       <label for="request_date">Request date</label>
-      <input id="request_date" type="date" name="request_date" class="w-date">
+      <input id="request_date" type="date" name="request_date" class="w-date" value="{{ values.get('request_date', '') }}">
     </div>
 
     <div>
       <label for="resident_phone">Cell phone</label>
-      <input id="resident_phone" name="resident_phone">
+      <input id="resident_phone" name="resident_phone" value="{{ values.get('resident_phone', resident_phone or '') }}">
     </div>
   </div>
 
   <div class="grid tight-row">
     <div>
       <label for="resident_level">Level</label>
-      <select id="resident_level" name="resident_level" required>
-        <option value="">Select</option>
-        <option value="Level 1">Level 1</option>
-        <option value="Level 2">Level 2</option>
-        <option value="Level 3">Level 3</option>
-        <option value="Level 4">Level 4</option>
-      </select>
+      <input id="resident_level" value="{{ resident_level or 'Not Set' }}" readonly>
     </div>
 
     <div>
       <label for="pass_type">Pass Type</label>
       <select id="pass_type" name="pass_type" required onchange="togglePassType()">
-        <option value="ordinary">Ordinary Pass (hours / overnight)</option>
-        <option value="extended_special">Extended Special Pass (multi day)</option>
+        {% for value, label in pass_type_options %}
+          <option value="{{ value }}" {% if values.get('pass_type', 'pass') == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
       </select>
     </div>
   </div>
 
   <label for="destination">Destination</label>
-  <input id="destination" name="destination" required>
+  <input id="destination" name="destination" required value="{{ values.get('destination', '') }}">
 
-  <div id="ordinary_fields">
+  <div id="standard_fields">
     <div class="grid tight-row">
       <div>
         <label for="start_at">Leave date and time</label>
-        <input id="start_at" type="datetime-local" name="start_at" class="w-dt">
+        <input id="start_at" type="datetime-local" name="start_at" class="w-dt" value="{{ values.get('start_at', '') }}">
       </div>
 
       <div>
         <label for="end_at">Return date and time</label>
-        <input id="end_at" type="datetime-local" name="end_at" class="w-dt">
+        <input id="end_at" type="datetime-local" name="end_at" class="w-dt" value="{{ values.get('end_at', '') }}">
       </div>
+    </div>
+
+    <label for="requirements_acknowledged">Will you meet all program requirements for this pass</label>
+    <select id="requirements_acknowledged" name="requirements_acknowledged" onchange="toggleRequirementsExplanation()">
+      <option value="">Select</option>
+      <option value="yes" {% if values.get('requirements_acknowledged') == 'yes' %}selected{% endif %}>Yes</option>
+      <option value="no" {% if values.get('requirements_acknowledged') == 'no' %}selected{% endif %}>No</option>
+    </select>
+
+    <div id="requirements_explanation_block" style="display:none;">
+      <label for="requirements_not_met_explanation">If no, explain</label>
+      <textarea id="requirements_not_met_explanation" name="requirements_not_met_explanation" rows="3">{{ values.get('requirements_not_met_explanation', '') }}</textarea>
     </div>
   </div>
 
-  <div id="extended_fields" style="display:none;">
+  <div id="special_fields" style="display:none;">
     <div class="grid tight-row">
       <div>
         <label for="start_date">Start date</label>
-        <input id="start_date" type="date" name="start_date" class="w-date">
+        <input id="start_date" type="date" name="start_date" class="w-date" value="{{ values.get('start_date', '') }}">
       </div>
 
       <div>
         <label for="end_date">End date</label>
-        <input id="end_date" type="date" name="end_date" class="w-date">
+        <input id="end_date" type="date" name="end_date" class="w-date" value="{{ values.get('end_date', '') }}">
       </div>
     </div>
-  </div>
 
-  <label for="requirements_acknowledged">Will you meet all program requirements for this pass</label>
-  <select id="requirements_acknowledged" name="requirements_acknowledged" required onchange="toggleRequirementsExplanation()">
-    <option value="">Select</option>
-    <option value="yes">Yes</option>
-    <option value="no">No</option>
-  </select>
-
-  <div id="requirements_explanation_block" style="display:none;">
-    <label for="requirements_not_met_explanation">If no, explain</label>
-    <textarea id="requirements_not_met_explanation" name="requirements_not_met_explanation" rows="3"></textarea>
+    <label for="special_reason">Special Pass reason</label>
+    <select id="special_reason" name="special_reason">
+      <option value="">Select</option>
+      <option value="Funeral" {% if values.get('special_reason') == 'Funeral' %}selected{% endif %}>Funeral</option>
+      <option value="Medical Emergency" {% if values.get('special_reason') == 'Medical Emergency' %}selected{% endif %}>Medical Emergency</option>
+      <option value="Family Emergency" {% if values.get('special_reason') == 'Family Emergency' %}selected{% endif %}>Family Emergency</option>
+      <option value="Other Serious Situation" {% if values.get('special_reason') == 'Other Serious Situation' %}selected{% endif %}>Other Serious Situation</option>
+    </select>
   </div>
 
   <label for="reason">Reason</label>
-  <select id="reason" name="reason">
-    <option value="">Select</option>
-    <option>Medical</option>
-    <option>Work</option>
-    <option>Family</option>
-    <option>Legal</option>
-    <option>Other</option>
-  </select>
+  <textarea id="reason" name="reason" rows="2">{{ values.get('reason', '') }}</textarea>
 
   <label for="who_with">Who will you be with</label>
-  <textarea id="who_with" name="who_with" rows="2"></textarea>
+  <textarea id="who_with" name="who_with" rows="2">{{ values.get('who_with', '') }}</textarea>
 
   <label for="destination_address">Address where you will be</label>
-  <textarea id="destination_address" name="destination_address" rows="2"></textarea>
+  <textarea id="destination_address" name="destination_address" rows="2">{{ values.get('destination_address', '') }}</textarea>
 
   <div class="grid tight-row">
     <div>
       <label for="destination_phone">Phone number there</label>
-      <input id="destination_phone" name="destination_phone">
+      <input id="destination_phone" name="destination_phone" value="{{ values.get('destination_phone', '') }}">
     </div>
 
     <div>
       <label for="budgeted_amount">Budgeted amount optional</label>
-      <input id="budgeted_amount" name="budgeted_amount">
+      <input id="budgeted_amount" name="budgeted_amount" value="{{ values.get('budgeted_amount', '') }}">
     </div>
   </div>
 
   <label for="companion_names">Names of people you will be with</label>
-  <textarea id="companion_names" name="companion_names" rows="2"></textarea>
+  <textarea id="companion_names" name="companion_names" rows="2">{{ values.get('companion_names', '') }}</textarea>
 
   <label for="companion_phone_numbers">Phone numbers of people you will be with</label>
-  <textarea id="companion_phone_numbers" name="companion_phone_numbers" rows="2"></textarea>
+  <textarea id="companion_phone_numbers" name="companion_phone_numbers" rows="2">{{ values.get('companion_phone_numbers', '') }}</textarea>
 
   <label for="resident_notes">Notes optional</label>
-  <textarea id="resident_notes" name="resident_notes" rows="3"></textarea>
-
-  <div class="check">
-    <label>
-      <input type="checkbox" name="agreed" required>
-      <span class="check-text">
-        I understand I must return and check back in when I come back to the shelter.
-      </span>
-    </label>
-  </div>
+  <textarea id="resident_notes" name="resident_notes" rows="3">{{ values.get('resident_notes', '') }}</textarea>
 
   <button type="submit">Submit Request</button>
 </form>
@@ -321,23 +277,26 @@
 <script>
 function togglePassType() {
   const type = document.getElementById("pass_type").value;
-  const ordinary = document.getElementById("ordinary_fields");
-  const extended = document.getElementById("extended_fields");
+  const standard = document.getElementById("standard_fields");
+  const special = document.getElementById("special_fields");
 
-  if (type === "extended_special") {
-    ordinary.style.display = "none";
-    extended.style.display = "block";
+  if (type === "special") {
+    standard.style.display = "none";
+    special.style.display = "block";
   } else {
-    ordinary.style.display = "block";
-    extended.style.display = "none";
+    standard.style.display = "block";
+    special.style.display = "none";
   }
+
+  toggleRequirementsExplanation();
 }
 
 function toggleRequirementsExplanation() {
+  const type = document.getElementById("pass_type").value;
   const value = document.getElementById("requirements_acknowledged").value;
   const block = document.getElementById("requirements_explanation_block");
 
-  if (value === "no") {
+  if (type !== "special" && value === "no") {
     block.style.display = "block";
   } else {
     block.style.display = "none";
@@ -345,7 +304,6 @@ function toggleRequirementsExplanation() {
 }
 
 togglePassType();
-toggleRequirementsExplanation();
 </script>
 
 {% endblock %}
