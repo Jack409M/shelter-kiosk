@@ -35,6 +35,17 @@ def _configuration_sections() -> list[dict]:
             ],
         },
         {
+            "key": "pass_settings",
+            "title": "Pass Settings",
+            "summary": "Deadlines, required hours, and resident pass rule text.",
+            "type": "group",
+            "children": [
+                "pass_general_rules",
+                "pass_shared_house_rules",
+                "pass_gratitude_house_rules",
+            ],
+        },
+        {
             "key": "kiosk_activity_categories",
             "title": "Kiosk Activity Categories",
             "summary": "Checkout categories and hour counting rules.",
@@ -99,6 +110,27 @@ def _configuration_leaf_sections() -> list[dict]:
             "summary": "Read only graduation guidance for this shelter.",
             "type": "read_only",
             "parent_key": "employment_income_settings",
+        },
+        {
+            "key": "pass_general_rules",
+            "title": "Pass General Rules",
+            "summary": "Deadline timing, required hours, and special pass handling.",
+            "type": "form",
+            "parent_key": "pass_settings",
+        },
+        {
+            "key": "pass_shared_house_rules",
+            "title": "Abba and Haven Pass Rules",
+            "summary": "Shared pass rule text for Abba House and Haven House.",
+            "type": "form",
+            "parent_key": "pass_settings",
+        },
+        {
+            "key": "pass_gratitude_house_rules",
+            "title": "Gratitude House Pass Rules",
+            "summary": "Gratitude House rule text by level.",
+            "type": "form",
+            "parent_key": "pass_settings",
         },
         {
             "key": "kiosk_activity_categories",
