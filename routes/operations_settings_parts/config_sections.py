@@ -1,152 +1,147 @@
-{% extends "layout.html" %}
+from __future__ import annotations
 
-{% block content %}
+from .settings_store import _currency, _default_labels_text
 
-<div class="resident-portal">
 
-  <h1 class="resident-portal-title">Resident Home</h1>
+def _configuration_sections() -> list[dict]:
+    return [
+        {
+            "key": "rent_rules",
+            "title": "Rent Rules",
+            "summary": "Late logic and rent scoring values.",
+            "type": "form",
+        },
+        {
+            "key": "inspection_settings",
+            "title": "Inspection Settings",
+            "summary": "Defaults, scoring behavior, and color bands.",
+            "type": "group",
+            "children": [
+                "inspection_defaults",
+                "inspection_stability_scoring",
+                "inspection_color_bands",
+            ],
+        },
+        {
+            "key": "employment_income_settings",
+            "title": "Employment and Income Settings",
+            "summary": "Graduation settings, color bands, weighting, and guidance.",
+            "type": "group",
+            "children": [
+                "employment_income_graduation_settings",
+                "employment_income_color_bands",
+                "income_stability_weighting",
+                "employment_income_guidance",
+            ],
+        },
+        {
+            "key": "kiosk_activity_categories",
+            "title": "Kiosk Activity Categories",
+            "summary": "Checkout categories and hour counting rules.",
+            "type": "form",
+        },
+    ]
 
-  {% if active_pass %}
-    {% set active_type = (active_pass.pass_type or "")|lower %}
-    <div class="active-pass-banner">
-      <strong>You are currently on an approved {{ active_pass.pass_type_label or "pass" }}.</strong>
-      {% if active_type in ["pass", "overnight"] %}
-        Until {{ active_pass.end_at_local.strftime("%m/%d %I:%M %p") if active_pass.end_at_local else "" }}
-      {% else %}
-        Through {{ active_pass.end_date }}
-      {% endif %}
-      {% if active_pass.destination %}
-        — Destination: {{ active_pass.destination }}
-      {% endif %}
-    </div>
-  {% endif %}
 
-  <div class="portal-actions">
-    <a class="portal-btn" href="{{ url_for('resident_requests.resident_pass_request') }}">
-      Request Pass
-    </a>
+def _configuration_leaf_sections() -> list[dict]:
+    return [
+        {
+            "key": "rent_rules",
+            "title": "Rent Rules",
+            "summary": "Late logic and rent scoring values.",
+            "type": "form",
+        },
+        {
+            "key": "inspection_defaults",
+            "title": "Inspection Defaults",
+            "summary": "Checklist defaults and standard item setup.",
+            "type": "form",
+            "parent_key": "inspection_settings",
+        },
+        {
+            "key": "inspection_stability_scoring",
+            "title": "Inspection Stability Scoring",
+            "summary": "Scoring behavior and lookback rules.",
+            "type": "form",
+            "parent_key": "inspection_settings",
+        },
+        {
+            "key": "inspection_color_bands",
+            "title": "Inspection Color Bands",
+            "summary": "Green, yellow, orange, and red thresholds.",
+            "type": "form",
+            "parent_key": "inspection_settings",
+        },
+        {
+            "key": "employment_income_graduation_settings",
+            "title": "Employment Income Graduation Settings",
+            "summary": "Module status and graduation minimum.",
+            "type": "form",
+            "parent_key": "employment_income_settings",
+        },
+        {
+            "key": "employment_income_color_bands",
+            "title": "Employment Income Color Bands",
+            "summary": "Income thresholds by color band.",
+            "type": "form",
+            "parent_key": "employment_income_settings",
+        },
+        {
+            "key": "income_stability_weighting",
+            "title": "Income Stability Weighting",
+            "summary": "Reliability weighting for income sources.",
+            "type": "form",
+            "parent_key": "employment_income_settings",
+        },
+        {
+            "key": "employment_income_guidance",
+            "title": "Employment Income Guidance",
+            "summary": "Read only graduation guidance for this shelter.",
+            "type": "read_only",
+            "parent_key": "employment_income_settings",
+        },
+        {
+            "key": "kiosk_activity_categories",
+            "title": "Kiosk Activity Categories",
+            "summary": "Checkout categories and hour counting rules.",
+            "type": "form",
+        },
+    ]
 
-    <a class="portal-btn" href="{{ url_for('resident_requests.resident_transport') }}">
-      Request Transportation
-    </a>
 
-    <span class="portal-btn portal-btn-light" aria-disabled="true">
-      JotForms Coming Soon
-    </span>
+def _configuration_section_map() -> dict[str, dict]:
+    section_map: dict[str, dict] = {}
 
-    <a class="portal-btn portal-btn-light" href="{{ url_for('resident_requests.resident_logout') }}">
-      Sign Out
-    </a>
-  </div>
+    for section in _configuration_sections():
+        section_map[section["key"]] = section
 
-  <div class="resident-home-sections">
+    for section in _configuration_leaf_sections():
+        section_map[section["key"]] = section
 
-    <section class="resident-home-card">
-      <h3>Today's Chores</h3>
+    return section_map
 
-      {% if chores %}
-        <ul class="resident-status-list">
-          {% for chore in chores %}
-            {% set chore_id = chore.id if chore.id is defined else chore[0] %}
-            {% set chore_status = chore.status if chore.status is defined else chore[1] %}
-            {% set chore_name = chore.chore_name if chore.chore_name is defined else chore[2] %}
 
-            <li class="resident-status-item">
-              <div class="resident-status-row">
-                <span class="status-badge status-{{ chore_status }}">{{ chore_status.replace('_', ' ') }}</span>
-              </div>
+def _child_sections_for_parent(parent_key: str) -> list[dict]:
+    return [
+        section
+        for section in _configuration_leaf_sections()
+        if section.get("parent_key") == parent_key
+    ]
 
-              <div class="resident-status-row resident-status-main">
-                {{ chore_name }}
-              </div>
 
-              {% if chore_status != 'completed' %}
-                <form method="post" action="{{ url_for('resident_portal.resident_chores') }}" style="margin-top:12px;">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="assignment_id" value="{{ chore_id }}">
-                  <button class="portal-btn" type="submit">Mark Completed</button>
-                </form>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>No chores assigned today.</p>
-      {% endif %}
-    </section>
+def _base_section_context(shelter: str, current_section: str) -> dict:
+    sections = _configuration_sections()
+    section_map = _configuration_section_map()
+    current_section_meta = section_map.get(current_section)
+    current_section_children = _child_sections_for_parent(current_section)
 
-    <section class="resident-home-card">
-      <h3>Recent Pass Requests</h3>
-
-      {% if pass_items %}
-        <ul class="resident-status-list">
-          {% for item in pass_items %}
-            {% set item_type = (item.pass_type or "")|lower %}
-            <li class="resident-status-item">
-              <div class="resident-status-row">
-                <span class="status-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
-                {% if item.is_active %}
-                  <span class="active-pill">active now</span>
-                {% endif %}
-              </div>
-
-              <div class="resident-status-row resident-status-main">
-                <strong>{{ item.pass_type_label or item.pass_type }}</strong>
-              </div>
-
-              <div class="resident-status-row resident-status-main">
-                {% if item_type in ["pass", "overnight"] %}
-                  {{ item.start_at_local.strftime("%m/%d %I:%M %p") if item.start_at_local else "" }}
-                  to
-                  {{ item.end_at_local.strftime("%m/%d %I:%M %p") if item.end_at_local else "" }}
-                {% else %}
-                  {{ item.start_date }} to {{ item.end_date }}
-                {% endif %}
-              </div>
-
-              {% if item.destination %}
-                <div class="resident-status-row resident-status-destination">
-                  {{ item.destination }}
-                </div>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>No pass requests yet.</p>
-      {% endif %}
-    </section>
-
-    <section class="resident-home-card">
-      <h3>Recent Transportation Requests</h3>
-
-      {% if transport_items %}
-        <ul class="resident-status-list">
-          {% for item in transport_items %}
-            <li class="resident-status-item">
-              <div class="resident-status-row">
-                <span class="status-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
-              </div>
-
-              <div class="resident-status-row resident-status-main">
-                {{ item.needed_at_local.strftime("%m/%d %I:%M %p") if item.needed_at_local else "" }}
-              </div>
-
-              {% if item.destination %}
-                <div class="resident-status-row resident-status-destination">
-                  {{ item.destination }}
-                </div>
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>No transportation scheduled.</p>
-      {% endif %}
-    </section>
-
-  </div>
-
-</div>
-
-{% endblock %}
+    return {
+        "shelter": shelter,
+        "default_inspection_items": _default_labels_text(),
+        "currency": _currency,
+        "sections": sections,
+        "section_map": section_map,
+        "current_section": current_section,
+        "current_section_meta": current_section_meta,
+        "current_section_children": current_section_children,
+    }
