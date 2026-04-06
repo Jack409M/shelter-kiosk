@@ -88,6 +88,16 @@
     color: var(--text-muted);
   }
 
+  .config-help {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-soft);
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
   @media (max-width: 980px) {
     .config-section-grid-4,
     .config-stats-grid,
@@ -416,6 +426,154 @@
 
         <div class="cmx-button-row">
           <button type="submit" class="cmx-btn">Save Income Stability Weighting</button>
+        </div>
+      </form>
+
+    {% elif current_section == "pass_general_rules" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-field">
+            <label>Deadline Weekday</label>
+            {% set _pass_deadline_weekday = settings['pass_deadline_weekday'] if settings else 0 %}
+            <select name="pass_deadline_weekday">
+              <option value="0" {% if _pass_deadline_weekday == 0 %}selected{% endif %}>Monday</option>
+              <option value="1" {% if _pass_deadline_weekday == 1 %}selected{% endif %}>Tuesday</option>
+              <option value="2" {% if _pass_deadline_weekday == 2 %}selected{% endif %}>Wednesday</option>
+              <option value="3" {% if _pass_deadline_weekday == 3 %}selected{% endif %}>Thursday</option>
+              <option value="4" {% if _pass_deadline_weekday == 4 %}selected{% endif %}>Friday</option>
+              <option value="5" {% if _pass_deadline_weekday == 5 %}selected{% endif %}>Saturday</option>
+              <option value="6" {% if _pass_deadline_weekday == 6 %}selected{% endif %}>Sunday</option>
+            </select>
+          </div>
+
+          <div class="cmx-field">
+            <label>Deadline Hour</label>
+            <input type="number" min="0" max="23" name="pass_deadline_hour" value="{{ settings['pass_deadline_hour'] if settings else 8 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Deadline Minute</label>
+            <input type="number" min="0" max="59" name="pass_deadline_minute" value="{{ settings['pass_deadline_minute'] if settings else 0 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-2" style="margin-top: 18px;">
+          <div class="cmx-field">
+            <label>Required Work Hours</label>
+            <input type="number" min="0" name="pass_work_required_hours" value="{{ settings['pass_work_required_hours'] if settings else 29 }}" required>
+          </div>
+
+          <div class="cmx-field">
+            <label>Required Productive Hours</label>
+            <input type="number" min="0" name="pass_productive_required_hours" value="{{ settings['pass_productive_required_hours'] if settings else 35 }}" required>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-2" style="margin-top: 18px;">
+          <div class="cmx-field">
+            <label>Block Late Standard Pass Requests</label>
+            <select name="pass_late_submission_block_enabled">
+              <option value="yes" {% if settings and settings['pass_late_submission_block_enabled'] %}selected{% endif %}>Yes</option>
+              <option value="no" {% if settings and not settings['pass_late_submission_block_enabled'] %}selected{% endif %}>No</option>
+            </select>
+          </div>
+
+          <div class="cmx-field">
+            <label>Special Pass Bypasses Hour Rules</label>
+            <select name="special_pass_bypass_hours_enabled">
+              <option value="yes" {% if settings and settings['special_pass_bypass_hours_enabled'] %}selected{% endif %}>Yes</option>
+              <option value="no" {% if settings and not settings['special_pass_bypass_hours_enabled'] %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="config-help">
+          These are the structured pass policy values used for deadlines and hour expectations. Pass types and form branching remain locked by project rules.
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Pass General Rules</button>
+        </div>
+      </form>
+
+    {% elif current_section == "pass_shared_house_rules" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="cmx-field" style="max-width: 100%;">
+          <label>Shared Pass Rule Box Intro</label>
+          <textarea name="pass_shared_rules_text" rows="8">{{ settings['pass_shared_rules_text'] if settings and settings['pass_shared_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Level 1 Rules</label>
+          <textarea name="pass_level_1_rules_text" rows="5">{{ settings['pass_level_1_rules_text'] if settings and settings['pass_level_1_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Level 2 Rules</label>
+          <textarea name="pass_level_2_rules_text" rows="5">{{ settings['pass_level_2_rules_text'] if settings and settings['pass_level_2_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Level 3 Rules</label>
+          <textarea name="pass_level_3_rules_text" rows="5">{{ settings['pass_level_3_rules_text'] if settings and settings['pass_level_3_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Level 4 Rules</label>
+          <textarea name="pass_level_4_rules_text" rows="5">{{ settings['pass_level_4_rules_text'] if settings and settings['pass_level_4_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="config-help">
+          This page controls the resident facing and staff reference rule text for Abba House and Haven House.
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Abba and Haven Pass Rules</button>
+        </div>
+      </form>
+
+    {% elif current_section == "pass_gratitude_house_rules" %}
+      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="section" value="{{ current_section }}">
+
+        <div class="cmx-field" style="max-width: 100%;">
+          <label>Gratitude House Rule Box Intro</label>
+          <textarea name="pass_gh_rules_text" rows="8">{{ settings['pass_gh_rules_text'] if settings and settings['pass_gh_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Level 5 Rules</label>
+          <textarea name="pass_gh_level_5_rules_text" rows="5">{{ settings['pass_gh_level_5_rules_text'] if settings and settings['pass_gh_level_5_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Level 6 Rules</label>
+          <textarea name="pass_gh_level_6_rules_text" rows="4">{{ settings['pass_gh_level_6_rules_text'] if settings and settings['pass_gh_level_6_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Level 7 Rules</label>
+          <textarea name="pass_gh_level_7_rules_text" rows="4">{{ settings['pass_gh_level_7_rules_text'] if settings and settings['pass_gh_level_7_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="cmx-field" style="margin-top: 18px; max-width: 100%;">
+          <label>Level 8 Rules</label>
+          <textarea name="pass_gh_level_8_rules_text" rows="4">{{ settings['pass_gh_level_8_rules_text'] if settings and settings['pass_gh_level_8_rules_text'] else '' }}</textarea>
+        </div>
+
+        <div class="config-help">
+          This page controls Gratitude House rule text by level. GH form usage and GH starting level remain locked by project direction.
+        </div>
+
+        <div class="cmx-button-row">
+          <button type="submit" class="cmx-btn">Save Gratitude House Pass Rules</button>
         </div>
       </form>
 
