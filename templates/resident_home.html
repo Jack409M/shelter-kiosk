@@ -7,9 +7,10 @@
   <h1 class="resident-portal-title">Resident Home</h1>
 
   {% if active_pass %}
+    {% set active_type = (active_pass.pass_type or "")|lower %}
     <div class="active-pass-banner">
-      <strong>You are currently on an approved pass.</strong>
-      {% if active_pass.pass_type == "ordinary" %}
+      <strong>You are currently on an approved {{ active_pass.pass_type_label or "pass" }}.</strong>
+      {% if active_type in ["pass", "overnight"] %}
         Until {{ active_pass.end_at_local.strftime("%m/%d %I:%M %p") if active_pass.end_at_local else "" }}
       {% else %}
         Through {{ active_pass.end_date }}
@@ -80,6 +81,7 @@
       {% if pass_items %}
         <ul class="resident-status-list">
           {% for item in pass_items %}
+            {% set item_type = (item.pass_type or "")|lower %}
             <li class="resident-status-item">
               <div class="resident-status-row">
                 <span class="status-badge status-{{ item.status }}">{{ item.status.replace('_', ' ') }}</span>
@@ -89,7 +91,11 @@
               </div>
 
               <div class="resident-status-row resident-status-main">
-                {% if item.pass_type == "ordinary" %}
+                <strong>{{ item.pass_type_label or item.pass_type }}</strong>
+              </div>
+
+              <div class="resident-status-row resident-status-main">
+                {% if item_type in ["pass", "overnight"] %}
                   {{ item.start_at_local.strftime("%m/%d %I:%M %p") if item.start_at_local else "" }}
                   to
                   {{ item.end_at_local.strftime("%m/%d %I:%M %p") if item.end_at_local else "" }}
