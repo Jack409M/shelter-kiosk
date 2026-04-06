@@ -14,6 +14,7 @@ from core.pass_rules import (
     CHICAGO_TZ,
     gh_pass_rule_box,
     is_late_standard_pass_request,
+    pass_late_submission_block_enabled,
     pass_type_options,
     shared_pass_rule_box,
     use_gh_pass_form,
@@ -73,7 +74,7 @@ def _render_pass_form(
 ):
     use_gh_form = use_gh_pass_form(shelter, resident_level)
     template_name = "resident_pass_request_gh.html" if use_gh_form else "resident_pass_request.html"
-    rule_box = gh_pass_rule_box(resident_level) if use_gh_form else shared_pass_rule_box(resident_level)
+    rule_box = gh_pass_rule_box(shelter, resident_level) if use_gh_form else shared_pass_rule_box(shelter, resident_level)
 
     return render_template(
         template_name,
@@ -210,8 +211,9 @@ def resident_pass_request_view():
                     if pass_type == "overnight" and local_end.date() <= local_start.date():
                         errors.append("An Overnight Pass must return on a later day.")
 
-                    if is_late_standard_pass_request(now_local, local_start):
-                        errors.append("This request was submitted after the Monday 8:00 a.m. deadline.")
+                    is_late = is_late_standard_pass_request(now_local, local_start, shelter=shelter)
+                    if is_late and pass_late_submission_block_enabled(shelter):
+                        errors.append("This request was submitted after the configured deadline.")
 
                     start_at_iso = (
                         local_start.astimezone(timezone.utc)
