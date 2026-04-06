@@ -171,6 +171,206 @@ def settings_section_page(section_key: str):
             True,
         )
 
+        hh_rent_amount = max(
+            _merge_float(
+                "hh_rent_amount",
+                form,
+                row.get("hh_rent_amount"),
+                150.00,
+            ),
+            0.0,
+        )
+        hh_rent_due_day = min(
+            max(
+                _merge_int(
+                    "hh_rent_due_day",
+                    form,
+                    row.get("hh_rent_due_day"),
+                    1,
+                ),
+                1,
+            ),
+            28,
+        )
+        hh_rent_late_day = min(
+            max(
+                _merge_int(
+                    "hh_rent_late_day",
+                    form,
+                    row.get("hh_rent_late_day"),
+                    5,
+                ),
+                1,
+            ),
+            28,
+        )
+        hh_rent_late_fee_per_day = max(
+            _merge_float(
+                "hh_rent_late_fee_per_day",
+                form,
+                row.get("hh_rent_late_fee_per_day"),
+                1.00,
+            ),
+            0.0,
+        )
+        hh_late_arrangement_required = _merge_bool(
+            "hh_late_arrangement_required",
+            form,
+            row.get("hh_late_arrangement_required"),
+            True,
+        )
+        hh_payment_methods_text = _merge_text(
+            "hh_payment_methods_text",
+            form,
+            row.get("hh_payment_methods_text"),
+            "Money order\nCashier check",
+        ) or "Money order\nCashier check"
+        hh_payment_accepted_by_roles_text = _merge_text(
+            "hh_payment_accepted_by_roles_text",
+            form,
+            row.get("hh_payment_accepted_by_roles_text"),
+            "Case managers only",
+        ) or "Case managers only"
+        hh_work_off_enabled = _merge_bool(
+            "hh_work_off_enabled",
+            form,
+            row.get("hh_work_off_enabled"),
+            True,
+        )
+        hh_work_off_hourly_rate = max(
+            _merge_float(
+                "hh_work_off_hourly_rate",
+                form,
+                row.get("hh_work_off_hourly_rate"),
+                10.00,
+            ),
+            0.0,
+        )
+        hh_work_off_required_hours = max(
+            _merge_int(
+                "hh_work_off_required_hours",
+                form,
+                row.get("hh_work_off_required_hours"),
+                15,
+            ),
+            0,
+        )
+        hh_work_off_deadline_day = min(
+            max(
+                _merge_int(
+                    "hh_work_off_deadline_day",
+                    form,
+                    row.get("hh_work_off_deadline_day"),
+                    10,
+                ),
+                1,
+            ),
+            28,
+        )
+        hh_work_off_location_text = _merge_text(
+            "hh_work_off_location_text",
+            form,
+            row.get("hh_work_off_location_text"),
+            "Thrift City",
+        ) or "Thrift City"
+        hh_work_off_notes_text = _merge_text(
+            "hh_work_off_notes_text",
+            form,
+            row.get("hh_work_off_notes_text"),
+            "If unemployed, resident may work off rent at 10 dollars per hour. Hours must be completed by the 10th unless arrangements are made in advance.",
+        ) or "If unemployed, resident may work off rent at 10 dollars per hour. Hours must be completed by the 10th unless arrangements are made in advance."
+
+        gh_rent_due_day = min(
+            max(
+                _merge_int(
+                    "gh_rent_due_day",
+                    form,
+                    row.get("gh_rent_due_day"),
+                    1,
+                ),
+                1,
+            ),
+            28,
+        )
+        gh_rent_late_fee_per_day = max(
+            _merge_float(
+                "gh_rent_late_fee_per_day",
+                form,
+                row.get("gh_rent_late_fee_per_day"),
+                1.00,
+            ),
+            0.0,
+        )
+        gh_late_arrangement_required = _merge_bool(
+            "gh_late_arrangement_required",
+            form,
+            row.get("gh_late_arrangement_required"),
+            True,
+        )
+        gh_level_5_one_bedroom_rent = max(
+            _merge_float(
+                "gh_level_5_one_bedroom_rent",
+                form,
+                row.get("gh_level_5_one_bedroom_rent"),
+                250.00,
+            ),
+            0.0,
+        )
+        gh_level_5_two_bedroom_rent = max(
+            _merge_float(
+                "gh_level_5_two_bedroom_rent",
+                form,
+                row.get("gh_level_5_two_bedroom_rent"),
+                300.00,
+            ),
+            0.0,
+        )
+        gh_level_5_townhome_rent = max(
+            _merge_float(
+                "gh_level_5_townhome_rent",
+                form,
+                row.get("gh_level_5_townhome_rent"),
+                300.00,
+            ),
+            0.0,
+        )
+        gh_level_8_sliding_scale_enabled = _merge_bool(
+            "gh_level_8_sliding_scale_enabled",
+            form,
+            row.get("gh_level_8_sliding_scale_enabled"),
+            True,
+        )
+        gh_level_8_sliding_scale_basis_text = _merge_text(
+            "gh_level_8_sliding_scale_basis_text",
+            form,
+            row.get("gh_level_8_sliding_scale_basis_text"),
+            "Sliding scale based on income, household size, and accepted expenses.",
+        ) or "Sliding scale based on income, household size, and accepted expenses."
+        gh_level_8_first_increase_amount = max(
+            _merge_float(
+                "gh_level_8_first_increase_amount",
+                form,
+                row.get("gh_level_8_first_increase_amount"),
+                50.00,
+            ),
+            0.0,
+        )
+        gh_level_8_second_increase_amount = max(
+            _merge_float(
+                "gh_level_8_second_increase_amount",
+                form,
+                row.get("gh_level_8_second_increase_amount"),
+                50.00,
+            ),
+            0.0,
+        )
+        gh_level_8_increase_schedule_text = _merge_text(
+            "gh_level_8_increase_schedule_text",
+            form,
+            row.get("gh_level_8_increase_schedule_text"),
+            "Increase a minimum of 50 the month after graduation, then another 50 one year later.",
+        ) or "Increase a minimum of 50 the month after graduation, then another 50 one year later."
+
         inspection_default_item_status = _merge_text(
             "inspection_default_item_status",
             form,
@@ -542,6 +742,30 @@ def settings_section_page(section_key: str):
                 rent_score_not_paid = %s,
                 rent_score_exempt = %s,
                 rent_carry_forward_enabled = %s,
+                hh_rent_amount = %s,
+                hh_rent_due_day = %s,
+                hh_rent_late_day = %s,
+                hh_rent_late_fee_per_day = %s,
+                hh_late_arrangement_required = %s,
+                hh_payment_methods_text = %s,
+                hh_payment_accepted_by_roles_text = %s,
+                hh_work_off_enabled = %s,
+                hh_work_off_hourly_rate = %s,
+                hh_work_off_required_hours = %s,
+                hh_work_off_deadline_day = %s,
+                hh_work_off_location_text = %s,
+                hh_work_off_notes_text = %s,
+                gh_rent_due_day = %s,
+                gh_rent_late_fee_per_day = %s,
+                gh_late_arrangement_required = %s,
+                gh_level_5_one_bedroom_rent = %s,
+                gh_level_5_two_bedroom_rent = %s,
+                gh_level_5_townhome_rent = %s,
+                gh_level_8_sliding_scale_enabled = %s,
+                gh_level_8_sliding_scale_basis_text = %s,
+                gh_level_8_first_increase_amount = %s,
+                gh_level_8_second_increase_amount = %s,
+                gh_level_8_increase_schedule_text = %s,
                 inspection_default_item_status = %s,
                 inspection_item_labels = %s,
                 inspection_scoring_enabled = %s,
@@ -599,6 +823,30 @@ def settings_section_page(section_key: str):
                 rent_score_not_paid = ?,
                 rent_score_exempt = ?,
                 rent_carry_forward_enabled = ?,
+                hh_rent_amount = ?,
+                hh_rent_due_day = ?,
+                hh_rent_late_day = ?,
+                hh_rent_late_fee_per_day = ?,
+                hh_late_arrangement_required = ?,
+                hh_payment_methods_text = ?,
+                hh_payment_accepted_by_roles_text = ?,
+                hh_work_off_enabled = ?,
+                hh_work_off_hourly_rate = ?,
+                hh_work_off_required_hours = ?,
+                hh_work_off_deadline_day = ?,
+                hh_work_off_location_text = ?,
+                hh_work_off_notes_text = ?,
+                gh_rent_due_day = ?,
+                gh_rent_late_fee_per_day = ?,
+                gh_late_arrangement_required = ?,
+                gh_level_5_one_bedroom_rent = ?,
+                gh_level_5_two_bedroom_rent = ?,
+                gh_level_5_townhome_rent = ?,
+                gh_level_8_sliding_scale_enabled = ?,
+                gh_level_8_sliding_scale_basis_text = ?,
+                gh_level_8_first_increase_amount = ?,
+                gh_level_8_second_increase_amount = ?,
+                gh_level_8_increase_schedule_text = ?,
                 inspection_default_item_status = ?,
                 inspection_item_labels = ?,
                 inspection_scoring_enabled = ?,
@@ -653,6 +901,30 @@ def settings_section_page(section_key: str):
                 rent_score_not_paid,
                 rent_score_exempt,
                 carry_forward_enabled if is_pg else (1 if carry_forward_enabled else 0),
+                hh_rent_amount,
+                hh_rent_due_day,
+                hh_rent_late_day,
+                hh_rent_late_fee_per_day,
+                hh_late_arrangement_required if is_pg else (1 if hh_late_arrangement_required else 0),
+                hh_payment_methods_text,
+                hh_payment_accepted_by_roles_text,
+                hh_work_off_enabled if is_pg else (1 if hh_work_off_enabled else 0),
+                hh_work_off_hourly_rate,
+                hh_work_off_required_hours,
+                hh_work_off_deadline_day,
+                hh_work_off_location_text,
+                hh_work_off_notes_text,
+                gh_rent_due_day,
+                gh_rent_late_fee_per_day,
+                gh_late_arrangement_required if is_pg else (1 if gh_late_arrangement_required else 0),
+                gh_level_5_one_bedroom_rent,
+                gh_level_5_two_bedroom_rent,
+                gh_level_5_townhome_rent,
+                gh_level_8_sliding_scale_enabled if is_pg else (1 if gh_level_8_sliding_scale_enabled else 0),
+                gh_level_8_sliding_scale_basis_text,
+                gh_level_8_first_increase_amount,
+                gh_level_8_second_increase_amount,
+                gh_level_8_increase_schedule_text,
                 inspection_default_item_status,
                 inspection_item_labels,
                 inspection_scoring_enabled if is_pg else (1 if inspection_scoring_enabled else 0),
