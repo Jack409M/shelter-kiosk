@@ -48,10 +48,51 @@
     gap: 14px;
   }
 
+  .config-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .config-menu-card {
+    display: block;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-soft);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  .config-menu-card:hover,
+  .config-menu-card:focus {
+    border-color: #6a88a8;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .config-menu-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    line-height: 1.2;
+  }
+
+  .config-menu-card p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--text-muted);
+  }
+
   @media (max-width: 980px) {
     .config-section-grid-4,
     .config-stats-grid,
-    .config-checkbox-grid {
+    .config-checkbox-grid,
+    .config-menu-grid {
       grid-template-columns: 1fr;
     }
   }
@@ -78,7 +119,28 @@
       </div>
     </div>
 
-    {% if current_section == "rent_rules" %}
+    {% if current_section_meta.type == "group" %}
+      <div class="cmx-card">
+        <div class="cmx-section-head">
+          <div>
+            <h2 class="cmx-section-title">Choose a {{ current_section_meta.title }} Area</h2>
+            <div class="cmx-section-subtitle">
+              Open one area at a time to keep this configuration clean and focused.
+            </div>
+          </div>
+        </div>
+
+        <div class="config-menu-grid">
+          {% for child in current_section_children %}
+            <a class="config-menu-card" href="{{ url_for('operations_settings.settings_section_page', section_key=child.key) }}">
+              <h3>{{ child.title }}</h3>
+              <p>{{ child.summary }}</p>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+
+    {% elif current_section == "rent_rules" %}
       <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="section" value="{{ current_section }}">
