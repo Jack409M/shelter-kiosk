@@ -8,6 +8,7 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from core.access import require_resident
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
+from core.pass_rules import pass_type_label
 from core.runtime import init_db
 
 
@@ -66,7 +67,8 @@ def home():
         LIMIT 10
         """
         if g.get("db_kind") == "pg"
-        else """
+        else
+        """
         SELECT
             pass_type,
             status,
@@ -99,7 +101,8 @@ def home():
         LIMIT 10
         """
         if g.get("db_kind") == "pg"
-        else """
+        else
+        """
         SELECT
             status,
             needed_at,
@@ -132,6 +135,7 @@ def home():
         row["start_at_local"] = _to_local(row.get("start_at"))
         row["end_at_local"] = _to_local(row.get("end_at"))
         row["created_at_local"] = _to_local(row.get("created_at"))
+        row["pass_type_label"] = pass_type_label(row.get("pass_type"))
 
         status = (row.get("status") or "").strip().lower()
         pass_type = (row.get("pass_type") or "").strip().lower()
@@ -139,9 +143,9 @@ def home():
         is_active = False
 
         if status == "approved":
-            if pass_type == "ordinary" and row["start_at_local"] and row["end_at_local"]:
+            if pass_type in {"pass", "overnight"} and row["start_at_local"] and row["end_at_local"]:
                 is_active = row["start_at_local"] <= now_local <= row["end_at_local"]
-            elif pass_type == "extended_special" and row.get("start_date") and row.get("end_date"):
+            elif pass_type == "special" and row.get("start_date") and row.get("end_date"):
                 try:
                     start_date = datetime.strptime(row["start_date"], "%Y-%m-%d").date()
                     end_date = datetime.strptime(row["end_date"], "%Y-%m-%d").date()
@@ -194,7 +198,8 @@ def home():
         ORDER BY ct.name
         """
         if g.get("db_kind") == "pg"
-        else """
+        else
+        """
         SELECT
             ca.id,
             ca.status,
@@ -236,7 +241,8 @@ def resident_chores():
                 WHERE id = %s AND resident_id = %s
                 """
                 if g.get("db_kind") == "pg"
-                else """
+                else
+                """
                 SELECT status
                 FROM chore_assignments
                 WHERE id = ? AND resident_id = ?
@@ -256,7 +262,8 @@ def resident_chores():
                     WHERE id = %s AND resident_id = %s
                     """
                     if g.get("db_kind") == "pg"
-                    else """
+                    else
+                    """
                     UPDATE chore_assignments
                     SET status = 'completed', updated_at = ?
                     WHERE id = ? AND resident_id = ?
@@ -283,7 +290,8 @@ def resident_chores():
         ORDER BY ct.name
         """
         if g.get("db_kind") == "pg"
-        else """
+        else
+        """
         SELECT
             ca.id,
             ca.status,
