@@ -16,12 +16,83 @@ DEFAULT_INSPECTION_ITEMS = [
 ]
 
 
+DEFAULT_PASS_SHARED_RULES_TEXT = "\n".join(
+    [
+        "Pass requests are due by Monday at 8:00 a.m.",
+        "Passes are not automatic.",
+        "Free time is handled as a normal Pass.",
+        "Special Pass is for funerals or similar serious situations.",
+        "Special Pass requests are reviewed as exceptions.",
+    ]
+)
+
+DEFAULT_PASS_GH_RULES_TEXT = "\n".join(
+    [
+        "Pass requests are due by Monday at 8:00 a.m.",
+        "Passes are not automatic.",
+        "Free time is handled as a normal Pass.",
+        "Special Pass is for funerals or similar serious situations.",
+        "Special Pass requests are reviewed as exceptions.",
+        "Special Pass does not depend on productive hours in the same way as a normal pass.",
+    ]
+)
+
+DEFAULT_PASS_LEVEL_RULES = {
+    "pass_level_1_rules_text": "\n".join(
+        [
+            "Level 1 residents do not get friend or family passes.",
+            "Passes are not given until completion of RAD unless special circumstances exist.",
+        ]
+    ),
+    "pass_level_2_rules_text": "\n".join(
+        [
+            "Level 2 residents may have one weekly pass up to 4 hours.",
+            "Normal passes require obligations to be met first.",
+            "Normal passes require 29 work hours and 35 productive hours before approval.",
+        ]
+    ),
+    "pass_level_3_rules_text": "\n".join(
+        [
+            "Level 3 residents may request normal passes within shelter rules.",
+            "Normal passes still depend on rules, behavior, and required hours.",
+        ]
+    ),
+    "pass_level_4_rules_text": "\n".join(
+        [
+            "Level 4 residents may request normal passes.",
+            "Level 4 residents may have one overnight pass per month with approval.",
+        ]
+    ),
+    "pass_gh_level_5_rules_text": "\n".join(
+        [
+            "No overnight passes during the first 30 days unless an exception is approved.",
+            "Level 5 may have one overnight pass per month after the first 30 days.",
+        ]
+    ),
+    "pass_gh_level_6_rules_text": "Level 6 may have two overnight passes per month.",
+    "pass_gh_level_7_rules_text": "Level 7 may have three overnight passes per month.",
+    "pass_gh_level_8_rules_text": "Level 8 may have three passes per month with permission.",
+}
+
+
 def _placeholder() -> str:
     return "%s" if g.get("db_kind") == "pg" else "?"
 
 
 def _default_labels_text() -> str:
     return "\n".join(DEFAULT_INSPECTION_ITEMS)
+
+
+def _default_pass_shared_rules_text() -> str:
+    return DEFAULT_PASS_SHARED_RULES_TEXT
+
+
+def _default_pass_gh_rules_text() -> str:
+    return DEFAULT_PASS_GH_RULES_TEXT
+
+
+def _default_pass_level_rules_text(key: str) -> str:
+    return DEFAULT_PASS_LEVEL_RULES.get(key, "")
 
 
 def _currency(value) -> str:
@@ -73,6 +144,23 @@ def _ensure_operations_settings_table() -> None:
                 income_weight_alimony DOUBLE PRECISION NOT NULL DEFAULT 0.50,
                 income_weight_other_income DOUBLE PRECISION NOT NULL DEFAULT 0.25,
                 income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
+                pass_deadline_weekday INTEGER NOT NULL DEFAULT 0,
+                pass_deadline_hour INTEGER NOT NULL DEFAULT 8,
+                pass_deadline_minute INTEGER NOT NULL DEFAULT 0,
+                pass_late_submission_block_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                pass_work_required_hours INTEGER NOT NULL DEFAULT 29,
+                pass_productive_required_hours INTEGER NOT NULL DEFAULT 35,
+                special_pass_bypass_hours_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                pass_shared_rules_text TEXT,
+                pass_gh_rules_text TEXT,
+                pass_level_1_rules_text TEXT,
+                pass_level_2_rules_text TEXT,
+                pass_level_3_rules_text TEXT,
+                pass_level_4_rules_text TEXT,
+                pass_gh_level_5_rules_text TEXT,
+                pass_gh_level_6_rules_text TEXT,
+                pass_gh_level_7_rules_text TEXT,
+                pass_gh_level_8_rules_text TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -117,6 +205,23 @@ def _ensure_operations_settings_table() -> None:
                 income_weight_alimony REAL NOT NULL DEFAULT 0.50,
                 income_weight_other_income REAL NOT NULL DEFAULT 0.25,
                 income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
+                pass_deadline_weekday INTEGER NOT NULL DEFAULT 0,
+                pass_deadline_hour INTEGER NOT NULL DEFAULT 8,
+                pass_deadline_minute INTEGER NOT NULL DEFAULT 0,
+                pass_late_submission_block_enabled INTEGER NOT NULL DEFAULT 1,
+                pass_work_required_hours INTEGER NOT NULL DEFAULT 29,
+                pass_productive_required_hours INTEGER NOT NULL DEFAULT 35,
+                special_pass_bypass_hours_enabled INTEGER NOT NULL DEFAULT 1,
+                pass_shared_rules_text TEXT,
+                pass_gh_rules_text TEXT,
+                pass_level_1_rules_text TEXT,
+                pass_level_2_rules_text TEXT,
+                pass_level_3_rules_text TEXT,
+                pass_level_4_rules_text TEXT,
+                pass_gh_level_5_rules_text TEXT,
+                pass_gh_level_6_rules_text TEXT,
+                pass_gh_level_7_rules_text TEXT,
+                pass_gh_level_8_rules_text TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
@@ -157,6 +262,23 @@ def _ensure_operations_settings_table() -> None:
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_alimony DOUBLE PRECISION DEFAULT 0.50",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_other_income DOUBLE PRECISION DEFAULT 0.25",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_survivor_cutoff_months INTEGER DEFAULT 18",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_deadline_weekday INTEGER DEFAULT 0",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_deadline_hour INTEGER DEFAULT 8",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_deadline_minute INTEGER DEFAULT 0",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_late_submission_block_enabled BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_work_required_hours INTEGER DEFAULT 29",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_productive_required_hours INTEGER DEFAULT 35",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS special_pass_bypass_hours_enabled BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_shared_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_level_1_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_level_2_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_level_3_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_level_4_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_level_5_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_level_6_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_level_7_rules_text TEXT",
+        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_level_8_rules_text TEXT",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS created_at TEXT",
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
@@ -216,9 +338,26 @@ def _settings_row_for_shelter(shelter: str):
                 income_weight_alimony,
                 income_weight_other_income,
                 income_weight_survivor_cutoff_months,
+                pass_deadline_weekday,
+                pass_deadline_hour,
+                pass_deadline_minute,
+                pass_late_submission_block_enabled,
+                pass_work_required_hours,
+                pass_productive_required_hours,
+                special_pass_bypass_hours_enabled,
+                pass_shared_rules_text,
+                pass_gh_rules_text,
+                pass_level_1_rules_text,
+                pass_level_2_rules_text,
+                pass_level_3_rules_text,
+                pass_level_4_rules_text,
+                pass_gh_level_5_rules_text,
+                pass_gh_level_6_rules_text,
+                pass_gh_level_7_rules_text,
+                pass_gh_level_8_rules_text,
                 created_at,
                 updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if g.get("db_kind") == "pg"
             else
@@ -258,9 +397,26 @@ def _settings_row_for_shelter(shelter: str):
                 income_weight_alimony,
                 income_weight_other_income,
                 income_weight_survivor_cutoff_months,
+                pass_deadline_weekday,
+                pass_deadline_hour,
+                pass_deadline_minute,
+                pass_late_submission_block_enabled,
+                pass_work_required_hours,
+                pass_productive_required_hours,
+                special_pass_bypass_hours_enabled,
+                pass_shared_rules_text,
+                pass_gh_rules_text,
+                pass_level_1_rules_text,
+                pass_level_2_rules_text,
+                pass_level_3_rules_text,
+                pass_level_4_rules_text,
+                pass_gh_level_5_rules_text,
+                pass_gh_level_6_rules_text,
+                pass_gh_level_7_rules_text,
+                pass_gh_level_8_rules_text,
                 created_at,
                 updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         ),
         (
@@ -298,6 +454,23 @@ def _settings_row_for_shelter(shelter: str):
             0.50,
             0.25,
             18,
+            0,
+            8,
+            0,
+            True if g.get("db_kind") == "pg" else 1,
+            29,
+            35,
+            True if g.get("db_kind") == "pg" else 1,
+            _default_pass_shared_rules_text(),
+            _default_pass_gh_rules_text(),
+            _default_pass_level_rules_text("pass_level_1_rules_text"),
+            _default_pass_level_rules_text("pass_level_2_rules_text"),
+            _default_pass_level_rules_text("pass_level_3_rules_text"),
+            _default_pass_level_rules_text("pass_level_4_rules_text"),
+            _default_pass_level_rules_text("pass_gh_level_5_rules_text"),
+            _default_pass_level_rules_text("pass_gh_level_6_rules_text"),
+            _default_pass_level_rules_text("pass_gh_level_7_rules_text"),
+            _default_pass_level_rules_text("pass_gh_level_8_rules_text"),
             now,
             now,
         ),
