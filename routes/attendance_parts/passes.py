@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
 from flask import abort, flash, g, redirect, render_template, session, url_for
 
 from core.attendance_hours import calculate_prior_week_attendance_hours
@@ -10,7 +7,6 @@ from core.audit import log_action
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_dt, utcnow_iso
 from core.pass_rules import (
-    CHICAGO_TZ,
     gh_pass_rule_box,
     pass_type_label,
     shared_pass_rule_box,
@@ -101,7 +97,7 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
                     "label": "Pass timing",
                     "value": "Same day" if same_day else "Not same day",
                     "status_class": "pass" if same_day else "fail",
-                    "detail": "Normal Pass should leave and return on the same day.",
+                    "detail": "Pass should leave and return on the same day.",
                 }
             )
 
