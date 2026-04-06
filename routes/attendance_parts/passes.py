@@ -8,6 +8,8 @@ from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_dt, utcnow_iso
 from core.pass_rules import (
     gh_pass_rule_box,
+    load_pass_settings_for_shelter,
+    pass_required_hours,
     pass_type_label,
     shared_pass_rule_box,
     standard_pass_deadline_for_leave,
@@ -51,6 +53,23 @@ def _load_resident_pass_profile(resident_id: int):
     )
 
 
+def _deadline_detail_text(deadline_local, settings: dict) -> str:
+    weekday_lookup = {
+        0: "Monday",
+        1: "Tuesday",
+        2: "Wednesday",
+        3: "Thursday",
+        4: "Friday",
+        5: "Saturday",
+        6: "Sunday",
+    }
+    weekday_name = weekday_lookup.get(settings.get("pass_deadline_weekday", 0), "Monday")
+    hour = int(settings.get("pass_deadline_hour", 8) or 8)
+    minute = int(settings.get("pass_deadline_minute", 0) or 0)
+    time_label = deadline_local.strftime("%I:%M %p").lstrip("0")
+    return f"Configured deadline is {weekday_name} at {time_label}. Actual deadline for this pass was {deadline_local.strftime('%B %d, %Y %I:%M %p')}."
+
+
 def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
     resident_id = int(pass_row.get("resident_id") or 0)
     resident_profile = _load_resident_pass_profile(resident_id) if resident_id else None
@@ -62,9 +81,11 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
         resident_level = str(_resident_value(resident_profile, "program_level", 2, "") or "").strip()
 
     shelter = str(pass_row.get("shelter") or "").strip()
+    settings = load_pass_settings_for_shelter(shelter)
+    required_hours = pass_required_hours(shelter)
     use_gh = use_gh_pass_form(shelter, resident_level)
 
-    rule_box = gh_pass_rule_box(resident_level) if use_gh else shared_pass_rule_box(resident_level)
+    rule_box = gh_pass_rule_box(shelter, resident_level) if use_gh else shared_pass_rule_box(shelter, resident_level)
     pass_type_key = str(pass_row.get("pass_type") or "").strip().lower()
     pass_type_text = pass_type_label(pass_type_key)
 
@@ -73,7 +94,7 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
     if pass_type_key in {"pass", "overnight"}:
         start_local = pass_row.get("start_at_local")
         if start_local:
-            deadline_local = standard_pass_deadline_for_leave(start_local)
+            deadline_local = standard_pass_deadline_for_leave(start_local, shelter=shelter)
             created_local = pass_row.get("created_at_local")
             submitted_on_time = bool(created_local and created_local <= deadline_local)
 
@@ -82,7 +103,7 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
                     "label": "Deadline",
                     "value": "On time" if submitted_on_time else "Late",
                     "status_class": "pass" if submitted_on_time else "fail",
-                    "detail": f"Deadline was {deadline_local.strftime('%B %d, %Y %I:%M %p')}",
+                    "detail": _deadline_detail_text(deadline_local, settings),
                 }
             )
 
@@ -128,14 +149,21 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
             )
 
         if hour_summary:
+            productive_required = required_hours.get("productive_required_hours", 35)
+            work_required = required_hours.get("work_required_hours", 29)
+            productive_hours = hour_summary.get("productive_hours", 0)
+            work_hours = hour_summary.get("work_hours", 0)
+
+            meets_hours = (productive_hours >= productive_required) and (work_hours >= work_required)
+
             checks.append(
                 {
                     "label": "Previous week hours",
-                    "value": hour_summary.get("status_label", ""),
-                    "status_class": hour_summary.get("status_class", "fail"),
+                    "value": "Meets configured hours" if meets_hours else "Below configured hours",
+                    "status_class": "pass" if meets_hours else "fail",
                     "detail": (
-                        f"Productive {hour_summary.get('productive_hours', 0)} / {hour_summary.get('productive_required_hours', 0)}"
-                        f" • Work {hour_summary.get('work_hours', 0)} / {hour_summary.get('work_required_hours', 0)}"
+                        f"Productive {productive_hours} / {productive_required}"
+                        f" • Work {work_hours} / {work_required}"
                     ),
                 }
             )
@@ -146,7 +174,7 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
                 "label": "Special pass handling",
                 "value": "Exception review",
                 "status_class": "pass",
-                "detail": "Special Pass is for funerals or similar serious situations.",
+                "detail": "Special Pass is reviewed under the configured special pass rules.",
             }
         )
 
