@@ -27,11 +27,17 @@
                 <tr>
                   <th>Resident Name</th>
                   <th>Level</th>
-                  <th>Rent</th>
+                  <th>Base Rent</th>
+                  <th>Occupied Dates</th>
+                  <th>Days</th>
+                  <th>Prorated</th>
                   <th>Prior Balance</th>
+                  <th>Manual Adjustment</th>
+                  <th>Late Fee</th>
                   <th>Total Due</th>
                   <th>Amount Paid</th>
                   <th>Date Paid</th>
+                  <th>Late Arrangement</th>
                   <th>Status</th>
                   <th>Remaining</th>
                   <th>Notes</th>
@@ -40,16 +46,40 @@
               <tbody>
                 {% for entry in entries %}
                   <tr>
-                    <td>{{ entry['resident_name_snapshot'] }}</td>
+                    <td>
+                      {{ entry['resident_name_snapshot'] }}
+                      {% if entry['calculation_notes'] %}
+                        <div class="cmx-muted" style="margin-top:6px; white-space:pre-line;">{{ entry['calculation_notes'] }}</div>
+                      {% endif %}
+                    </td>
                     <td>{{ entry['level_snapshot'] or '—' }}</td>
-                    <td>${{ '%.2f'|format(entry['current_charge'] or 0) }}</td>
+                    <td>${{ '%.2f'|format(entry['base_monthly_rent'] or 0) }}</td>
+                    <td>
+                      {% if entry['occupancy_start_date'] %}
+                        {{ entry['occupancy_start_date'] }}<br>to<br>{{ entry['occupancy_end_date'] or entry['occupancy_start_date'] }}
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+                    <td>{{ entry['occupied_days'] or 0 }}/{{ entry['month_day_count'] or 0 }}</td>
+                    <td>${{ '%.2f'|format(entry['prorated_charge'] or 0) }}</td>
                     <td>${{ '%.2f'|format(entry['prior_balance'] or 0) }}</td>
+                    <td>
+                      <input type="number" step="0.01" name="manual_adjustment_{{ entry['id'] }}" value="{{ entry['manual_adjustment'] or 0 }}">
+                    </td>
+                    <td>${{ '%.2f'|format(entry['late_fee_charge'] or 0) }}</td>
                     <td>${{ '%.2f'|format(entry['total_due'] or 0) }}</td>
                     <td>
                       <input type="number" step="0.01" min="0" name="amount_paid_{{ entry['id'] }}" value="{{ entry['amount_paid'] or 0 }}">
                     </td>
                     <td>
                       <input type="date" name="paid_date_{{ entry['id'] }}" value="{{ entry['paid_date'] or '' }}">
+                    </td>
+                    <td>
+                      <select name="approved_late_arrangement_{{ entry['id'] }}">
+                        <option value="no" {% if not entry['approved_late_arrangement'] %}selected{% endif %}>No</option>
+                        <option value="yes" {% if entry['approved_late_arrangement'] %}selected{% endif %}>Yes</option>
+                      </select>
                     </td>
                     <td>{{ entry['status'] }}</td>
                     <td>${{ '%.2f'|format(entry['remaining_balance'] or 0) }}</td>
