@@ -1,0 +1,216 @@
+from __future__ import annotations
+
+from .dates import _days_in_month, _month_start_end, _parse_iso_date
+from .utils import _bool_value, _float_value, _int_value
+
+
+def _rent_band_for_score(score: float | int | None) -> dict:
+    numeric_score = float(score or 0)
+
+    if numeric_score >= 95:
+        return {
+            "band_key": "green",
+            "band_label": "Green",
+            "card_style": "background:#eef8f0; border:1px solid #9bc8a6;",
+            "value_style": "color:#1f6b33; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#dcefe1; border:1px solid #9bc8a6; color:#1f6b33; font-weight:700;",
+        }
+
+    if numeric_score >= 79:
+        return {
+            "band_key": "yellow",
+            "band_label": "Yellow",
+            "card_style": "background:#fff8df; border:1px solid #e0cd7a;",
+            "value_style": "color:#7a6500; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#fff1b8; border:1px solid #e0cd7a; color:#7a6500; font-weight:700;",
+        }
+
+    if numeric_score >= 62:
+        return {
+            "band_key": "orange",
+            "band_label": "Orange",
+            "card_style": "background:#fff0e4; border:1px solid #e2b27d;",
+            "value_style": "color:#9a4f00; font-weight:700;",
+            "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd8b0; border:1px solid #e2b27d; color:#9a4f00; font-weight:700;",
+        }
+
+    return {
+        "band_key": "red",
+        "band_label": "Red",
+        "card_style": "background:#fff0f0; border:1px solid #e2a0a0;",
+        "value_style": "color:#9a1f1f; font-weight:700;",
+        "pill_style": "display:inline-block; padding:4px 10px; border-radius:999px; background:#ffd6d6; border:1px solid #e2a0a0; color:#9a1f1f; font-weight:700;",
+    }
+
+
+def _score_for_status(settings: dict, status: str) -> int:
+    mapping = {
+        "Paid": int(settings.get("rent_score_paid", 100) or 100),
+        "Partially Paid": int(settings.get("rent_score_partially_paid", 75) or 75),
+        "Paid Late": int(settings.get("rent_score_paid_late", 75) or 75),
+        "Not Paid": int(settings.get("rent_score_not_paid", 0) or 0),
+        "Exempt": int(settings.get("rent_score_exempt", 100) or 100),
+    }
+    return mapping.get(status, 0)
+
+
+def _derive_status(total_due: float, amount_paid: float, paid_date: str | None, is_exempt: bool, late_fee_charge: float) -> str:
+    if is_exempt:
+        return "Exempt"
+    if amount_paid <= 0:
+        return "Not Paid"
+    if amount_paid < total_due:
+        return "Partially Paid"
+    if late_fee_charge > 0:
+        return "Paid Late"
+    if paid_date:
+        return "Paid"
+    return "Paid"
+
+
+def _derive_base_monthly_rent(settings: dict, shelter: str, config: dict) -> tuple[float, str]:
+    manual_rent = _float_value(config.get("monthly_rent"))
+    if manual_rent > 0:
+        return manual_rent, "Manual override from resident rent setup"
+
+    if _bool_value(config.get("is_exempt")):
+        return 0.0, "Resident marked exempt"
+
+    level = str(config.get("level_snapshot") or "").strip()
+    apartment_size = str(config.get("apartment_size_snapshot") or "").strip().lower()
+
+    if shelter == "haven":
+        return _float_value(settings.get("hh_rent_amount", 150.00)), "Haven base rent from admin settings"
+
+    if shelter == "gratitude":
+        if level == "5":
+            if "one" in apartment_size:
+                return _float_value(settings.get("gh_level_5_one_bedroom_rent", 250.00)), "Gratitude level 5 one bedroom rate"
+            if "two" in apartment_size:
+                return _float_value(settings.get("gh_level_5_two_bedroom_rent", 300.00)), "Gratitude level 5 two bedroom rate"
+            if "town" in apartment_size:
+                return _float_value(settings.get("gh_level_5_townhome_rent", 300.00)), "Gratitude level 5 townhome rate"
+            return _float_value(settings.get("gh_level_5_one_bedroom_rent", 250.00)), "Gratitude level 5 defaulted to one bedroom rate"
+
+        if level == "8":
+            if manual_rent > 0:
+                return manual_rent, "Manual level 8 override"
+            return 0.0, "Level 8 sliding scale still needs a resident specific monthly override amount"
+
+    return manual_rent, "No matching automatic rent rule"
+
+
+def _calculate_proration(
+    base_monthly_rent: float,
+    config: dict,
+    enrollment: dict | None,
+    rent_year: int,
+    rent_month: int,
+) -> dict:
+    month_start, month_end = _month_start_end(rent_year, rent_month)
+    month_day_count = _days_in_month(rent_year, rent_month)
+
+    occupancy_start = month_start
+    occupancy_end = month_end
+    notes: list[str] = []
+
+    enrollment_entry = _parse_iso_date(enrollment.get("entry_date") if enrollment else None)
+    enrollment_exit = _parse_iso_date(enrollment.get("exit_date") if enrollment else None)
+    config_start = _parse_iso_date(config.get("effective_start_date"))
+
+    if enrollment_entry and enrollment_entry > occupancy_start:
+        occupancy_start = enrollment_entry
+        notes.append("Move in proration applied from program entry date")
+    elif config_start and config_start.year == rent_year and config_start.month == rent_month and config_start > occupancy_start:
+        occupancy_start = config_start
+        notes.append("Proration applied from rent setup effective start date")
+
+    if enrollment_exit and enrollment_exit < occupancy_end:
+        occupancy_end = enrollment_exit
+        notes.append("Move out proration applied through program exit date")
+
+    if occupancy_end < occupancy_start:
+        occupied_days = 0
+        prorated_charge = 0.0
+    else:
+        occupied_days = (occupancy_end - occupancy_start).days + 1
+        prorated_charge = round((base_monthly_rent * occupied_days) / month_day_count, 2)
+
+    if occupied_days == month_day_count and base_monthly_rent > 0:
+        notes.append("Full month charge")
+    elif occupied_days == 0:
+        notes.append("No occupied days in this month")
+
+    return {
+        "occupancy_start_date": occupancy_start.isoformat() if occupied_days > 0 else "",
+        "occupancy_end_date": occupancy_end.isoformat() if occupied_days > 0 else "",
+        "occupied_days": occupied_days,
+        "month_day_count": month_day_count,
+        "prorated_charge": prorated_charge,
+        "notes": notes,
+    }
+
+
+def _late_start_day(settings: dict, shelter: str) -> int:
+    if shelter == "haven":
+        return _int_value(settings.get("hh_rent_late_day"), 5)
+    return _int_value(settings.get("rent_late_day_of_month"), 6)
+
+
+def _late_fee_per_day(settings: dict, shelter: str) -> float:
+    if shelter == "haven":
+        return _float_value(settings.get("hh_rent_late_fee_per_day"))
+    if shelter == "gratitude":
+        return _float_value(settings.get("gh_rent_late_fee_per_day"))
+    return 0.0
+
+
+def _calculate_late_fee(
+    settings: dict,
+    shelter: str,
+    rent_year: int,
+    rent_month: int,
+    subtotal_due: float,
+    paid_date: str | None,
+    approved_late_arrangement: bool,
+    is_exempt: bool,
+    today_date,
+) -> tuple[float, str]:
+    if is_exempt or approved_late_arrangement or subtotal_due <= 0:
+        if approved_late_arrangement:
+            return 0.0, "Late fee waived by approved arrangement"
+        return 0.0, ""
+
+    _month_start, month_end = _month_start_end(rent_year, rent_month)
+    late_start_day = _late_start_day(settings, shelter)
+    fee_per_day = _late_fee_per_day(settings, shelter)
+
+    if fee_per_day <= 0:
+        return 0.0, ""
+
+    if late_start_day < 1:
+        late_start_day = 1
+    if late_start_day > month_end.day:
+        late_start_day = month_end.day
+
+    late_start_date = month_end.replace(day=late_start_day)
+    parsed_paid_date = _parse_iso_date(paid_date)
+
+    if parsed_paid_date:
+        window_end = min(parsed_paid_date, month_end)
+    else:
+        if today_date.year == rent_year and today_date.month == rent_month:
+            window_end = min(today_date, month_end)
+        elif (today_date.year, today_date.month) > (rent_year, rent_month):
+            window_end = month_end
+        else:
+            return 0.0, ""
+
+    if window_end < late_start_date:
+        return 0.0, ""
+
+    late_days = (window_end - late_start_date).days + 1
+    if late_days <= 0:
+        return 0.0, ""
+
+    return round(late_days * fee_per_day, 2), f"Late fee applied for {late_days} day(s)"
