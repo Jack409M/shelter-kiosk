@@ -1,5 +1,166 @@
 {% extends "layout.html" %}
 
+{% block extra_head %}
+<style>
+  .rent-entry-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .rent-entry-table th,
+  .rent-entry-table td {
+    vertical-align: top;
+  }
+
+  .rent-entry-table .resident-col {
+    min-width: 260px;
+  }
+
+  .rent-entry-table .money-col {
+    white-space: nowrap;
+    min-width: 90px;
+  }
+
+  .rent-entry-table .input-col {
+    min-width: 120px;
+  }
+
+  .rent-entry-table .status-col {
+    min-width: 110px;
+  }
+
+  .rent-entry-table .remaining-col {
+    min-width: 95px;
+  }
+
+  .rent-person-name {
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+
+  .rent-person-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .rent-meta-pill {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .rent-charge-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.28);
+    padding: 10px 12px;
+    margin-top: 8px;
+  }
+
+  .rent-charge-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    gap: 6px 12px;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .rent-charge-grid strong {
+    font-weight: 700;
+  }
+
+  .rent-calc-notes {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--text-muted);
+    white-space: pre-line;
+  }
+
+  .rent-input-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .rent-input-stack input,
+  .rent-input-stack select {
+    width: 100%;
+  }
+
+  .rent-status-badge {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .rent-status-paid {
+    background: #e7f6ea;
+    border-color: #9bc8a6;
+    color: #1f6b33;
+  }
+
+  .rent-status-partial {
+    background: #fff4d8;
+    border-color: #e0cd7a;
+    color: #7a6500;
+  }
+
+  .rent-status-late {
+    background: #ffe8d6;
+    border-color: #e2b27d;
+    color: #9a4f00;
+  }
+
+  .rent-status-unpaid {
+    background: #ffe0e0;
+    border-color: #d9a0a0;
+    color: #8d1f1f;
+  }
+
+  .rent-status-exempt {
+    background: #eef1f5;
+    border-color: #c8d0da;
+    color: #44546a;
+  }
+
+  .rent-total-due {
+    font-weight: 700;
+    font-size: 16px;
+  }
+
+  .rent-page-help {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-soft);
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+
+  @media (max-width: 1100px) {
+    .rent-entry-table {
+      min-width: 980px;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="cmx-page">
   <div class="cmx-shell">
@@ -22,74 +183,116 @@
 
         {% if entries %}
           <div style="overflow-x:auto;">
-            <table class="audit-table">
+            <table class="audit-table rent-entry-table">
               <thead>
                 <tr>
-                  <th>Resident Name</th>
-                  <th>Level</th>
-                  <th>Base Rent</th>
-                  <th>Occupied Dates</th>
-                  <th>Days</th>
-                  <th>Prorated</th>
-                  <th>Prior Balance</th>
-                  <th>Manual Adjustment</th>
-                  <th>Late Fee</th>
-                  <th>Total Due</th>
-                  <th>Amount Paid</th>
-                  <th>Date Paid</th>
-                  <th>Late Arrangement</th>
-                  <th>Status</th>
-                  <th>Remaining</th>
-                  <th>Notes</th>
+                  <th class="resident-col">Resident</th>
+                  <th class="money-col">Total Due</th>
+                  <th class="input-col">Amount Paid</th>
+                  <th class="input-col">Date Paid</th>
+                  <th class="input-col">Late Arrangement</th>
+                  <th class="input-col">Adjustment</th>
+                  <th class="status-col">Status</th>
+                  <th class="remaining-col">Remaining</th>
+                  <th class="input-col">Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {% for entry in entries %}
+                  {% set status_text = (entry['status'] or '') %}
+                  {% set status_class = 'rent-status-unpaid' %}
+                  {% if status_text == 'Paid' %}
+                    {% set status_class = 'rent-status-paid' %}
+                  {% elif status_text == 'Partially Paid' %}
+                    {% set status_class = 'rent-status-partial' %}
+                  {% elif status_text == 'Paid Late' %}
+                    {% set status_class = 'rent-status-late' %}
+                  {% elif status_text == 'Exempt' %}
+                    {% set status_class = 'rent-status-exempt' %}
+                  {% endif %}
+
                   <tr>
-                    <td>
-                      {{ entry['resident_name_snapshot'] }}
-                      {% if entry['calculation_notes'] %}
-                        <div class="cmx-muted" style="margin-top:6px; white-space:pre-line;">{{ entry['calculation_notes'] }}</div>
-                      {% endif %}
+                    <td class="resident-col">
+                      <div class="rent-person-name">{{ entry['resident_name_snapshot'] }}</div>
+
+                      <div class="rent-person-meta">
+                        <span class="rent-meta-pill">Level {{ entry['level_snapshot'] or '—' }}</span>
+                        <span class="rent-meta-pill">
+                          {{ entry['occupied_days'] or 0 }}/{{ entry['month_day_count'] or 0 }} days
+                        </span>
+                        {% if entry['occupancy_start_date'] %}
+                          <span class="rent-meta-pill">
+                            {{ entry['occupancy_start_date'] }} to {{ entry['occupancy_end_date'] or entry['occupancy_start_date'] }}
+                          </span>
+                        {% endif %}
+                      </div>
+
+                      <div class="rent-charge-box">
+                        <div class="rent-charge-grid">
+                          <div><strong>Base Rent:</strong> ${{ '%.2f'|format(entry['base_monthly_rent'] or 0) }}</div>
+                          <div><strong>Prorated:</strong> ${{ '%.2f'|format(entry['prorated_charge'] or 0) }}</div>
+                          <div><strong>Prior Balance:</strong> ${{ '%.2f'|format(entry['prior_balance'] or 0) }}</div>
+                          <div><strong>Late Fee:</strong> ${{ '%.2f'|format(entry['late_fee_charge'] or 0) }}</div>
+                        </div>
+
+                        {% if entry['calculation_notes'] %}
+                          <div class="rent-calc-notes">{{ entry['calculation_notes'] }}</div>
+                        {% endif %}
+                      </div>
                     </td>
-                    <td>{{ entry['level_snapshot'] or '—' }}</td>
-                    <td>${{ '%.2f'|format(entry['base_monthly_rent'] or 0) }}</td>
-                    <td>
-                      {% if entry['occupancy_start_date'] %}
-                        {{ entry['occupancy_start_date'] }}<br>to<br>{{ entry['occupancy_end_date'] or entry['occupancy_start_date'] }}
-                      {% else %}
-                        —
-                      {% endif %}
+
+                    <td class="money-col">
+                      <div class="rent-total-due">${{ '%.2f'|format(entry['total_due'] or 0) }}</div>
                     </td>
-                    <td>{{ entry['occupied_days'] or 0 }}/{{ entry['month_day_count'] or 0 }}</td>
-                    <td>${{ '%.2f'|format(entry['prorated_charge'] or 0) }}</td>
-                    <td>${{ '%.2f'|format(entry['prior_balance'] or 0) }}</td>
-                    <td>
-                      <input type="number" step="0.01" name="manual_adjustment_{{ entry['id'] }}" value="{{ entry['manual_adjustment'] or 0 }}">
+
+                    <td class="input-col">
+                      <div class="rent-input-stack">
+                        <input type="number" step="0.01" min="0" name="amount_paid_{{ entry['id'] }}" value="{{ entry['amount_paid'] or 0 }}">
+                      </div>
                     </td>
-                    <td>${{ '%.2f'|format(entry['late_fee_charge'] or 0) }}</td>
-                    <td>${{ '%.2f'|format(entry['total_due'] or 0) }}</td>
-                    <td>
-                      <input type="number" step="0.01" min="0" name="amount_paid_{{ entry['id'] }}" value="{{ entry['amount_paid'] or 0 }}">
+
+                    <td class="input-col">
+                      <div class="rent-input-stack">
+                        <input type="date" name="paid_date_{{ entry['id'] }}" value="{{ entry['paid_date'] or '' }}">
+                      </div>
                     </td>
-                    <td>
-                      <input type="date" name="paid_date_{{ entry['id'] }}" value="{{ entry['paid_date'] or '' }}">
+
+                    <td class="input-col">
+                      <div class="rent-input-stack">
+                        <select name="approved_late_arrangement_{{ entry['id'] }}">
+                          <option value="no" {% if not entry['approved_late_arrangement'] %}selected{% endif %}>No</option>
+                          <option value="yes" {% if entry['approved_late_arrangement'] %}selected{% endif %}>Yes</option>
+                        </select>
+                      </div>
                     </td>
-                    <td>
-                      <select name="approved_late_arrangement_{{ entry['id'] }}">
-                        <option value="no" {% if not entry['approved_late_arrangement'] %}selected{% endif %}>No</option>
-                        <option value="yes" {% if entry['approved_late_arrangement'] %}selected{% endif %}>Yes</option>
-                      </select>
+
+                    <td class="input-col">
+                      <div class="rent-input-stack">
+                        <input type="number" step="0.01" name="manual_adjustment_{{ entry['id'] }}" value="{{ entry['manual_adjustment'] or 0 }}">
+                      </div>
                     </td>
-                    <td>{{ entry['status'] }}</td>
-                    <td>${{ '%.2f'|format(entry['remaining_balance'] or 0) }}</td>
-                    <td>
-                      <input type="text" name="notes_{{ entry['id'] }}" value="{{ entry['notes'] or '' }}" placeholder="Optional">
+
+                    <td class="status-col">
+                      <span class="rent-status-badge {{ status_class }}">{{ status_text }}</span>
+                    </td>
+
+                    <td class="remaining-col">
+                      <strong>${{ '%.2f'|format(entry['remaining_balance'] or 0) }}</strong>
+                    </td>
+
+                    <td class="input-col">
+                      <div class="rent-input-stack">
+                        <input type="text" name="notes_{{ entry['id'] }}" value="{{ entry['notes'] or '' }}" placeholder="Optional">
+                      </div>
                     </td>
                   </tr>
                 {% endfor %}
               </tbody>
             </table>
+          </div>
+
+          <div class="rent-page-help">
+            This page is for entering payments. Rent math, proration, and late fee notes are shown in the resident column so the payment fields stay clean.
           </div>
 
           <div class="cmx-button-row" style="margin-top:16px;">
