@@ -18,11 +18,12 @@
   </thead>
   <tbody>
     {% for r in rows %}
+    {% set pass_type_key = (r.pass_type or "")|lower %}
     <tr>
       <td>{{ r.last_name }}, {{ r.first_name }}</td>
-      <td>{{ r.pass_type }}</td>
+      <td>{{ r.pass_type_label or r.pass_type }}</td>
       <td>
-        {% if r.pass_type == "ordinary" %}
+        {% if pass_type_key in ["pass", "overnight"] %}
           {{ fmt_dt(r.start_at_local) }} to {{ fmt_dt(r.end_at_local) }}
         {% else %}
           {{ r.start_date }} to {{ r.end_date }}
