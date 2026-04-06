@@ -24,7 +24,14 @@
         <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Current Rent Setup</h2>
-            <div class="cmx-section-subtitle">Update this when level or apartment changes happen.</div>
+            <div class="cmx-section-subtitle">Use a manual monthly rent only when this resident should not follow the automatic shelter rule.</div>
+          </div>
+        </div>
+
+        <div class="cmx-panel-soft" style="margin-bottom:16px;">
+          <div class="cmx-summary-text">
+            <strong>Automatic rule preview:</strong> ${{ '%.2f'|format(auto_monthly_rent or 0) }}<br>
+            {{ auto_rent_note or 'No automatic rule matched yet.' }}
           </div>
         </div>
 
@@ -41,6 +48,7 @@
               <option value="3" {% if current_level == '3' %}selected{% endif %}>3</option>
               <option value="4" {% if current_level == '4' %}selected{% endif %}>4</option>
               <option value="5" {% if current_level == '5' %}selected{% endif %}>5</option>
+              <option value="8" {% if current_level == '8' %}selected{% endif %}>8</option>
             </select>
           </div>
 
@@ -57,8 +65,9 @@
           </div>
 
           <div class="cmx-field" style="margin-top:12px;">
-            <label>Monthly Rent</label>
+            <label>Manual Monthly Rent Override</label>
             <input type="number" step="0.01" min="0" name="monthly_rent" value="{{ current_config['monthly_rent'] if current_config else 0 }}">
+            <div class="cmx-muted" style="margin-top:6px;">Leave at 0.00 to use the automatic shelter rent rule.</div>
           </div>
 
           <div class="cmx-field" style="margin-top:12px;">
@@ -99,7 +108,7 @@
                 <div class="cmx-summary-text">
                   Level: {{ row['level_snapshot'] or '—' }}<br>
                   Apartment Size: {{ row['apartment_size_snapshot'] or '—' }}<br>
-                  Monthly Rent: ${{ '%.2f'|format(row['monthly_rent'] or 0) }}<br>
+                  Manual Monthly Rent Override: ${{ '%.2f'|format(row['monthly_rent'] or 0) }}<br>
                   Exempt: {{ 'Yes' if row['is_exempt'] else 'No' }}
                 </div>
               </div>
