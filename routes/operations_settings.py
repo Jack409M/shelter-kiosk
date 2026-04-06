@@ -47,6 +47,16 @@ operations_settings = Blueprint(
 def _build_settings_section_context(shelter: str, row, current_section: str) -> dict:
     context = _base_section_context(shelter, current_section)
     context["settings"] = row
+    context["default_pass_shared_rules_text"] = _default_pass_shared_rules_text()
+    context["default_pass_gh_rules_text"] = _default_pass_gh_rules_text()
+    context["default_pass_level_1_rules_text"] = _default_pass_level_rules_text("pass_level_1_rules_text")
+    context["default_pass_level_2_rules_text"] = _default_pass_level_rules_text("pass_level_2_rules_text")
+    context["default_pass_level_3_rules_text"] = _default_pass_level_rules_text("pass_level_3_rules_text")
+    context["default_pass_level_4_rules_text"] = _default_pass_level_rules_text("pass_level_4_rules_text")
+    context["default_pass_gh_level_5_rules_text"] = _default_pass_level_rules_text("pass_gh_level_5_rules_text")
+    context["default_pass_gh_level_6_rules_text"] = _default_pass_level_rules_text("pass_gh_level_6_rules_text")
+    context["default_pass_gh_level_7_rules_text"] = _default_pass_level_rules_text("pass_gh_level_7_rules_text")
+    context["default_pass_gh_level_8_rules_text"] = _default_pass_level_rules_text("pass_gh_level_8_rules_text")
 
     if current_section == "employment_income_guidance":
         context["employment_guidance"] = _employment_income_guidance(shelter, _placeholder())
