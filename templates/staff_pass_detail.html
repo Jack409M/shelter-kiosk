@@ -1,6 +1,17 @@
 {% extends "layout.html" %}
 {% block content %}
 
+{% set pass_type_key = (p.pass_type or "")|lower %}
+{% if pass_type_key == "pass" %}
+  {% set pass_type_label = "Pass" %}
+{% elif pass_type_key == "overnight" %}
+  {% set pass_type_label = "Overnight Pass" %}
+{% elif pass_type_key == "special" %}
+  {% set pass_type_label = "Special Pass" %}
+{% else %}
+  {% set pass_type_label = p.pass_type %}
+{% endif %}
+
 <style>
   .pass-form-wrap {
     max-width: 1100px;
@@ -227,7 +238,7 @@
 
       <div class="paper-field">
         <span class="paper-label">Type</span>
-        <div class="paper-value">{{ p.pass_type }}</div>
+        <div class="paper-value">{{ pass_type_label }}</div>
       </div>
 
       <div class="paper-field">
@@ -323,7 +334,7 @@
     <div class="paper-field full">
       <span class="paper-label">When</span>
       <div class="paper-value">
-        {% if p.pass_type == "ordinary" %}
+        {% if pass_type_key in ["pass", "overnight"] %}
           {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
         {% else %}
           {{ p.start_date }} to {{ p.end_date }}
