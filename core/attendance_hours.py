@@ -9,11 +9,10 @@ from flask import g
 
 from core.db import db_fetchall
 from core.kiosk_activity_categories import load_kiosk_activity_categories_for_shelter
+from core.pass_rules import pass_required_hours
 
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
-PASS_REQUIRED_PRODUCTIVE_HOURS = 35.0
-PASS_REQUIRED_WORK_HOURS = 29.0
 ATTENDANCE_LOOKBACK_WEEKS = 39
 ATTENDANCE_WEIGHTED_PASS_PERCENT = 95.0
 
@@ -145,6 +144,8 @@ def previous_full_week_window(now_local: datetime | None = None) -> dict[str, An
 def _summarize_rows(
     rows: list[dict[str, Any]],
     category_map: dict[str, AttendanceHourCategory],
+    productive_required_hours: float,
+    work_required_hours: float,
 ) -> dict[str, Any]:
     by_category: dict[str, dict[str, Any]] = {}
     uncategorized_hours = 0.0
@@ -216,8 +217,8 @@ def _summarize_rows(
     productive_total = round(productive_total, 2)
     work_total = round(work_total, 2)
 
-    productive_short = round(max(0.0, PASS_REQUIRED_PRODUCTIVE_HOURS - productive_total), 2)
-    work_short = round(max(0.0, PASS_REQUIRED_WORK_HOURS - work_total), 2)
+    productive_short = round(max(0.0, float(productive_required_hours) - productive_total), 2)
+    work_short = round(max(0.0, float(work_required_hours) - work_total), 2)
     meets_productive = productive_short == 0
     meets_work = work_short == 0
     passes_requirement = meets_productive and meets_work
@@ -225,18 +226,18 @@ def _summarize_rows(
     productive_ratio = 0.0
     work_ratio = 0.0
 
-    if PASS_REQUIRED_PRODUCTIVE_HOURS > 0:
-        productive_ratio = min(productive_total / PASS_REQUIRED_PRODUCTIVE_HOURS, 1.0)
-    if PASS_REQUIRED_WORK_HOURS > 0:
-        work_ratio = min(work_total / PASS_REQUIRED_WORK_HOURS, 1.0)
+    if productive_required_hours > 0:
+        productive_ratio = min(productive_total / float(productive_required_hours), 1.0)
+    if work_required_hours > 0:
+        work_ratio = min(work_total / float(work_required_hours), 1.0)
 
     percent_grade = round(((productive_ratio * 0.5) + (work_ratio * 0.5)) * 100.0, 1)
 
     return {
         "productive_hours": productive_total,
         "work_hours": work_total,
-        "productive_required_hours": PASS_REQUIRED_PRODUCTIVE_HOURS,
-        "work_required_hours": PASS_REQUIRED_WORK_HOURS,
+        "productive_required_hours": round(float(productive_required_hours), 2),
+        "work_required_hours": round(float(work_required_hours), 2),
         "productive_short_hours": productive_short,
         "work_short_hours": work_short,
         "meets_productive_requirement": meets_productive,
@@ -329,6 +330,7 @@ def _fetch_attendance_rows_for_window(
 def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dict[str, Any]:
     window = previous_full_week_window()
     category_map = _category_map_for_shelter(shelter)
+    required_hours = pass_required_hours(shelter)
 
     rows = _fetch_attendance_rows_for_window(
         resident_id=resident_id,
@@ -337,7 +339,12 @@ def calculate_prior_week_attendance_hours(resident_id: int, shelter: str) -> dic
         end_utc_iso=window["end_utc_iso"],
     )
 
-    summary = _summarize_rows(rows, category_map)
+    summary = _summarize_rows(
+        rows,
+        category_map,
+        productive_required_hours=float(required_hours.get("productive_required_hours", 35)),
+        work_required_hours=float(required_hours.get("work_required_hours", 29)),
+    )
     summary["week_label"] = window["label"]
     summary["week_start_local"] = window["start_local"]
     summary["week_end_local"] = window["end_local"]
@@ -375,6 +382,10 @@ def build_attendance_hours_snapshot(
     overall_end_utc = _local_to_utc_iso(newest_week["week_end_local_exclusive"])
 
     category_map = _category_map_for_shelter(shelter)
+    required_hours = pass_required_hours(shelter)
+    productive_required_hours = float(required_hours.get("productive_required_hours", 35))
+    work_required_hours = float(required_hours.get("work_required_hours", 29))
+
     all_rows = _fetch_attendance_rows_for_window(
         resident_id=resident_id,
         shelter=shelter,
@@ -399,7 +410,12 @@ def build_attendance_hours_snapshot(
     for week in completed_weeks:
         week_key = week["week_key"]
         week_rows = rows_by_week.get(week_key, [])
-        week_summary = _summarize_rows(week_rows, category_map)
+        week_summary = _summarize_rows(
+            week_rows,
+            category_map,
+            productive_required_hours=productive_required_hours,
+            work_required_hours=work_required_hours,
+        )
 
         included_in_average = True
         if entry_date and week["week_start_local"].date() < entry_date:
