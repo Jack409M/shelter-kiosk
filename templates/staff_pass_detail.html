@@ -247,6 +247,43 @@
       </div>
     </div>
 
+    {% if policy_check %}
+      <div class="paper-section">
+        <div class="paper-section-title">{{ policy_check.title }}</div>
+
+        <div class="paper-grid-2">
+          <div class="paper-field">
+            <span class="paper-label">Resident Level</span>
+            <div class="paper-value">{{ policy_check.resident_level }}</div>
+          </div>
+
+          <div class="paper-field">
+            <span class="paper-label">Pass Type</span>
+            <div class="paper-value">{{ policy_check.pass_type_label }}</div>
+          </div>
+        </div>
+
+        {% if policy_check.checks %}
+          {% for item in policy_check.checks %}
+            <div class="hours-status-box {{ item.status_class }}">
+              <div class="hours-status-title">{{ item.label }}: {{ item.value }}</div>
+              {% if item.detail %}
+                <div class="hours-status-text">{{ item.detail }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if policy_check.rule_lines %}
+          <div class="paper-field full">
+            <span class="paper-label">Rule Notes</span>
+            <div class="paper-value">{% for line in policy_check.rule_lines %}• {{ line }}{% if not loop.last %}
+{% endif %}{% endfor %}</div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
     {% if hour_summary %}
       <div class="paper-section">
         <div class="paper-section-title">Previous Week Attendance Hours</div>
