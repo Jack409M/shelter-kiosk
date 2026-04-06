@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 from flask import flash, g, redirect, render_template, request, session, url_for
@@ -8,8 +8,16 @@ from flask import flash, g, redirect, render_template, request, session, url_for
 from core.access import require_resident
 from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
-from core.db import get_db
+from core.db import db_fetchone, get_db
 from core.helpers import utcnow_iso
+from core.pass_rules import (
+    CHICAGO_TZ,
+    gh_pass_rule_box,
+    is_late_standard_pass_request,
+    pass_type_options,
+    shared_pass_rule_box,
+    use_gh_pass_form,
+)
 from core.rate_limit import is_rate_limited
 from core.runtime import init_db
 
@@ -18,11 +26,65 @@ def _client_ip() -> str:
     return (request.remote_addr or "").strip() or "unknown"
 
 
-def _normalize_pass_type(value: str | None) -> str:
-    raw = (value or "").strip().lower()
-    if raw == "extended_special":
-        return "extended_special"
-    return "ordinary"
+def _load_resident_profile(resident_id: int):
+    return db_fetchone(
+        """
+        SELECT
+            id,
+            shelter,
+            program_level,
+            phone
+        FROM residents
+        WHERE id = %s
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT
+            id,
+            shelter,
+            program_level,
+            phone
+        FROM residents
+        WHERE id = ?
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+
+def _resident_value(row, key: str, index: int, default=""):
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        return row[index]
+    except Exception:
+        return default
+
+
+def _render_pass_form(
+    *,
+    shelter: str,
+    resident_level: str,
+    resident_phone: str,
+    hour_summary,
+    form_data: dict | None = None,
+):
+    use_gh_form = use_gh_pass_form(shelter, resident_level)
+    template_name = "resident_pass_request_gh.html" if use_gh_form else "resident_pass_request.html"
+    rule_box = gh_pass_rule_box(resident_level) if use_gh_form else shared_pass_rule_box(resident_level)
+
+    return render_template(
+        template_name,
+        shelter=shelter,
+        resident_level=resident_level,
+        resident_phone=resident_phone,
+        hour_summary=hour_summary,
+        pass_type_options=pass_type_options(),
+        rule_box=rule_box,
+        form_data=form_data or {},
+    )
 
 
 def resident_pass_request_view():
@@ -33,6 +95,14 @@ def resident_pass_request_view():
         shelter = (session.get("resident_shelter") or "").strip()
         resident_id = session.get("resident_id")
 
+        if not resident_id:
+            flash("Resident session is incomplete. Please sign in again.", "error")
+            return redirect(url_for("resident_requests.resident_signin"))
+
+        resident_row = _load_resident_profile(int(resident_id))
+        resident_level = (_resident_value(resident_row, "program_level", 2, "") or "").strip()
+        resident_phone_from_db = (_resident_value(resident_row, "phone", 3, "") or "").strip()
+
         hour_summary = None
         if resident_id and shelter:
             try:
@@ -41,34 +111,37 @@ def resident_pass_request_view():
                 hour_summary = None
 
         if request.method == "GET":
-            return render_template(
-                "resident_pass_request.html",
+            return _render_pass_form(
                 shelter=shelter,
+                resident_level=resident_level,
+                resident_phone=resident_phone_from_db,
                 hour_summary=hour_summary,
+                form_data={},
             )
 
         resident_identifier = (session.get("resident_identifier") or "").strip()
         first = (session.get("resident_first") or "").strip()
         last = (session.get("resident_last") or "").strip()
-        resident_phone = (request.form.get("resident_phone") or session.get("resident_phone") or "").strip()
+        resident_phone = (request.form.get("resident_phone") or resident_phone_from_db or "").strip()
 
         ip = _client_ip()
         rl_key = f"resident_pass_request:{ip}:{resident_identifier or 'unknown'}"
         if is_rate_limited(rl_key, limit=6, window_seconds=900):
             flash("Too many pass submissions. Please wait a few minutes and try again.", "error")
-            return render_template(
-                "resident_pass_request.html",
+            return _render_pass_form(
                 shelter=shelter,
+                resident_level=resident_level,
+                resident_phone=resident_phone,
                 hour_summary=hour_summary,
+                form_data=request.form.to_dict(),
             ), 429
 
-        pass_type = _normalize_pass_type(request.form.get("pass_type"))
+        pass_type = (request.form.get("pass_type") or "").strip().lower()
         destination = (request.form.get("destination") or "").strip()
         reason = (request.form.get("reason") or "").strip()
         resident_notes = (request.form.get("resident_notes") or "").strip()
 
         request_date = (request.form.get("request_date") or "").strip()
-        resident_level = (request.form.get("resident_level") or "").strip()
         requirements_acknowledged = (request.form.get("requirements_acknowledged") or "").strip().lower()
         requirements_not_met_explanation = (request.form.get("requirements_not_met_explanation") or "").strip()
         who_with = (request.form.get("who_with") or "").strip()
@@ -82,77 +155,101 @@ def resident_pass_request_view():
         end_at_raw = (request.form.get("end_at") or "").strip()
         start_date_raw = (request.form.get("start_date") or "").strip()
         end_date_raw = (request.form.get("end_date") or "").strip()
+        special_reason = (request.form.get("special_reason") or "").strip()
 
         errors: list[str] = []
 
         if not resident_id or not first or not last or not shelter:
             errors.append("Resident session is incomplete. Please sign in again.")
 
+        if pass_type not in {"pass", "overnight", "special"}:
+            errors.append("Select a valid pass type.")
+
         if not destination:
             errors.append("Destination is required.")
 
-        if resident_level not in {"Level 1", "Level 2", "Level 3", "Level 4"}:
-            errors.append("Resident level is required.")
+        if not resident_level:
+            errors.append("Resident level is missing. Please contact staff.")
 
-        if requirements_acknowledged not in {"yes", "no"}:
+        if not request_date:
+            errors.append("Request date is required.")
+
+        if pass_type in {"pass", "overnight"} and requirements_acknowledged not in {"yes", "no"}:
             errors.append("Please answer whether you will meet all requirements for this pass.")
 
-        if requirements_acknowledged == "no" and not requirements_not_met_explanation:
+        if pass_type in {"pass", "overnight"} and requirements_acknowledged == "no" and not requirements_not_met_explanation:
             errors.append("Please explain why requirements will not be met.")
 
-        ordinary_start_iso = None
-        ordinary_end_iso = None
-        extended_start_date = None
-        extended_end_date = None
+        if pass_type == "special" and not special_reason:
+            errors.append("Special pass reason is required.")
 
-        if pass_type == "ordinary":
+        start_at_iso = None
+        end_at_iso = None
+        start_date_iso = None
+        end_date_iso = None
+
+        now_local = datetime.now(CHICAGO_TZ)
+
+        if pass_type in {"pass", "overnight"}:
             if not start_at_raw or not end_at_raw:
-                errors.append("Start time and end time are required for an ordinary pass.")
+                errors.append("Leave date and time and return date and time are required.")
             else:
                 try:
-                    local_start = datetime.fromisoformat(start_at_raw).replace(
-                        tzinfo=ZoneInfo("America/Chicago")
+                    local_start = datetime.fromisoformat(start_at_raw).replace(tzinfo=CHICAGO_TZ)
+                    local_end = datetime.fromisoformat(end_at_raw).replace(tzinfo=CHICAGO_TZ)
+
+                    if local_end <= local_start:
+                        errors.append("Return time must be after leave time.")
+
+                    if local_start < now_local:
+                        errors.append("Leave time cannot be in the past.")
+
+                    if pass_type == "pass" and local_start.date() != local_end.date():
+                        errors.append("A normal Pass must begin and end on the same day.")
+
+                    if pass_type == "overnight" and local_end.date() <= local_start.date():
+                        errors.append("An Overnight Pass must return on a later day.")
+
+                    if is_late_standard_pass_request(now_local, local_start):
+                        errors.append("This request was submitted after the Monday 8:00 a.m. deadline.")
+
+                    start_at_iso = (
+                        local_start.astimezone(timezone.utc)
+                        .replace(tzinfo=None)
+                        .isoformat(timespec="seconds")
                     )
-                    local_end = datetime.fromisoformat(end_at_raw).replace(
-                        tzinfo=ZoneInfo("America/Chicago")
+                    end_at_iso = (
+                        local_end.astimezone(timezone.utc)
+                        .replace(tzinfo=None)
+                        .isoformat(timespec="seconds")
                     )
-
-                    utc_start = local_start.astimezone(timezone.utc).replace(tzinfo=None)
-                    utc_end = local_end.astimezone(timezone.utc).replace(tzinfo=None)
-
-                    if utc_end <= utc_start:
-                        errors.append("End time must be after start time.")
-
-                    if utc_start < datetime.utcnow() - timedelta(minutes=1):
-                        errors.append("Start time cannot be in the past.")
-
-                    ordinary_start_iso = utc_start.replace(microsecond=0).isoformat()
-                    ordinary_end_iso = utc_end.replace(microsecond=0).isoformat()
                 except Exception:
-                    errors.append("Invalid ordinary pass date or time.")
-        else:
+                    errors.append("Invalid leave or return date and time.")
+        elif pass_type == "special":
             if not start_date_raw or not end_date_raw:
-                errors.append("Start date and end date are required for an extended pass.")
+                errors.append("Start date and end date are required for a Special Pass.")
             else:
                 try:
-                    start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
-                    end_date = datetime.strptime(end_date_raw, "%Y-%m-%d").date()
+                    start_date_value = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
+                    end_date_value = datetime.strptime(end_date_raw, "%Y-%m-%d").date()
 
-                    if end_date < start_date:
+                    if end_date_value < start_date_value:
                         errors.append("End date cannot be earlier than start date.")
 
-                    extended_start_date = start_date.isoformat()
-                    extended_end_date = end_date.isoformat()
+                    start_date_iso = start_date_value.isoformat()
+                    end_date_iso = end_date_value.isoformat()
                 except Exception:
-                    errors.append("Invalid extended pass date.")
+                    errors.append("Invalid Special Pass dates.")
 
         if errors:
             for e in errors:
                 flash(e, "error")
-            return render_template(
-                "resident_pass_request.html",
+            return _render_pass_form(
                 shelter=shelter,
+                resident_level=resident_level,
+                resident_phone=resident_phone,
                 hour_summary=hour_summary,
+                form_data=request.form.to_dict(),
             ), 400
 
         conn = get_db()
@@ -183,7 +280,8 @@ def resident_pass_request_view():
             RETURNING id
             """
             if kind == "pg"
-            else """
+            else
+            """
             INSERT INTO resident_passes (
                 resident_id,
                 shelter,
@@ -206,16 +304,18 @@ def resident_pass_request_view():
             """
         )
 
+        final_reason = special_reason if pass_type == "special" else reason
+
         pass_params = (
             resident_id,
             shelter,
             pass_type,
-            ordinary_start_iso,
-            ordinary_end_iso,
-            extended_start_date,
-            extended_end_date,
+            start_at_iso,
+            end_at_iso,
+            start_date_iso,
+            end_date_iso,
             destination,
-            reason or None,
+            final_reason or None,
             resident_notes or None,
             None,
             None,
@@ -250,7 +350,8 @@ def resident_pass_request_view():
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if kind == "pg"
-            else """
+            else
+            """
             INSERT INTO resident_pass_request_details (
                 pass_id,
                 resident_phone,
@@ -292,7 +393,7 @@ def resident_pass_request_view():
                 resident_level or None,
                 requirements_acknowledged or None,
                 requirements_not_met_explanation or None,
-                reason or None,
+                final_reason or None,
                 who_with or None,
                 destination_address or None,
                 destination_phone or None,
