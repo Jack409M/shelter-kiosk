@@ -100,6 +100,19 @@ def settings_section_page(section_key: str):
         return redirect(url_for("operations_settings.settings_page"))
 
     current_section_meta = section_map[current_section]
+    current_section_type = (current_section_meta.get("type") or "form").strip().lower()
+
+    if current_section_type == "group":
+        if request.method == "POST":
+            flash("This page is a menu only.", "error")
+            return redirect(
+                url_for("operations_settings.settings_section_page", section_key=current_section)
+            )
+
+        return render_template(
+            "admin_operations_settings_section.html",
+            **_build_settings_section_context(shelter, row, current_section),
+        )
 
     if request.method == "POST":
         form = request.form
