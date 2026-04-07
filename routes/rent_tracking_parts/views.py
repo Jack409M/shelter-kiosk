@@ -306,6 +306,71 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
     return sheet, settings
 
 
+def _entry_sort_key(entry: dict):
+    apartment_number = (entry.get("apartment_number_snapshot") or "").strip()
+    resident_name = (entry.get("resident_name_snapshot") or "").strip().lower()
+
+    if apartment_number.isdigit():
+        return (0, int(apartment_number), resident_name)
+
+    if apartment_number:
+        return (1, apartment_number, resident_name)
+
+    return (2, resident_name, "")
+
+
+def _group_entries_for_payment_page(shelter: str, entries: list[dict]) -> list[dict]:
+    shelter_key = (shelter or "").strip().lower()
+
+    if shelter_key not in {"abba", "gratitude"}:
+        return [
+            {
+                "group_label": "Residents",
+                "entries": sorted(entries, key=lambda entry: (entry.get("resident_name_snapshot") or "").lower()),
+            }
+        ]
+
+    apartment_order = _apartment_options_for_shelter(shelter_key)
+    grouped_map: dict[str, list[dict]] = {apartment_number: [] for apartment_number in apartment_order}
+    unassigned_entries: list[dict] = []
+
+    for entry in entries:
+        apartment_number = (entry.get("apartment_number_snapshot") or "").strip()
+        if apartment_number in grouped_map:
+            grouped_map[apartment_number].append(entry)
+        else:
+            unassigned_entries.append(entry)
+
+    grouped_sections: list[dict] = []
+    for apartment_number in apartment_order:
+        apartment_entries = sorted(
+            grouped_map.get(apartment_number, []),
+            key=lambda entry: (entry.get("resident_name_snapshot") or "").lower(),
+        )
+        if apartment_entries:
+            grouped_sections.append(
+                {
+                    "group_label": f"Apartment {apartment_number}",
+                    "group_key": apartment_number,
+                    "entries": apartment_entries,
+                }
+            )
+
+    if unassigned_entries:
+        grouped_sections.append(
+            {
+                "group_label": "Unassigned",
+                "group_key": "unassigned",
+                "entries": sorted(
+                    unassigned_entries,
+                    key=lambda entry: (entry.get("resident_name_snapshot") or "").lower(),
+                ),
+            }
+        )
+
+    return grouped_sections
+
+
 def register_routes(rent_tracking):
     @rent_tracking.get("/roll")
     @require_login
@@ -467,11 +532,15 @@ def register_routes(rent_tracking):
             flash("Rent payment sheet saved.", "ok")
             return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
 
+        sorted_entries = sorted(entries, key=_entry_sort_key)
+        grouped_entry_sections = _group_entries_for_payment_page(shelter, sorted_entries)
+
         return render_template(
             "case_management/rent_entry.html",
             shelter=shelter,
             sheet=sheet,
-            entries=entries,
+            entries=sorted_entries,
+            grouped_entry_sections=grouped_entry_sections,
             month_label=_month_label(rent_year, rent_month),
         )
 
