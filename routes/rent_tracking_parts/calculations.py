@@ -4,6 +4,19 @@ from .dates import _days_in_month, _month_start_end, _parse_iso_date
 from .utils import _bool_value, _float_value, _int_value
 
 
+ABBA_APARTMENT_NUMBERS = [str(i) for i in range(1, 11)]
+
+GH_APARTMENT_NUMBERS = [
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+    "11", "12", "13", "14", "15", "16",
+    "20", "21", "22",
+    "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40",
+]
+
+GH_TWO_BEDROOM_NUMBERS = {"2", "5", "8", "11", "26", "29", "32", "35"}
+GH_TOWNHOME_NUMBERS = {"13", "14", "15", "16", "37", "38", "39", "40"}
+
+
 def _rent_band_for_score(score: float | int | None) -> dict:
     numeric_score = float(score or 0)
 
@@ -68,6 +81,47 @@ def _derive_status(total_due: float, amount_paid: float, paid_date: str | None, 
     return "Paid"
 
 
+def _apartment_options_for_shelter(shelter: str) -> list[str]:
+    shelter_key = (shelter or "").strip().lower()
+    if shelter_key == "abba":
+        return ABBA_APARTMENT_NUMBERS
+    if shelter_key == "gratitude":
+        return GH_APARTMENT_NUMBERS
+    return []
+
+
+def _normalize_apartment_number(shelter: str, apartment_number: str | None) -> str | None:
+    shelter_key = (shelter or "").strip().lower()
+    raw = (apartment_number or "").strip()
+    if not raw:
+        return None
+
+    if shelter_key == "haven":
+        return None
+
+    allowed = set(_apartment_options_for_shelter(shelter_key))
+    return raw if raw in allowed else None
+
+
+def _derive_apartment_size_from_assignment(shelter: str, apartment_number: str | None) -> str | None:
+    shelter_key = (shelter or "").strip().lower()
+    apartment_value = _normalize_apartment_number(shelter_key, apartment_number)
+
+    if shelter_key == "haven":
+        return "Bed"
+    if shelter_key == "abba":
+        return "One Bedroom" if apartment_value else None
+    if shelter_key == "gratitude":
+        if not apartment_value:
+            return None
+        if apartment_value in GH_TWO_BEDROOM_NUMBERS:
+            return "Two Bedroom"
+        if apartment_value in GH_TOWNHOME_NUMBERS:
+            return "Town Home"
+        return "One Bedroom"
+    return None
+
+
 def _derive_base_monthly_rent(settings: dict, shelter: str, config: dict) -> tuple[float, str]:
     manual_rent = _float_value(config.get("monthly_rent"))
     if manual_rent > 0:
@@ -77,18 +131,20 @@ def _derive_base_monthly_rent(settings: dict, shelter: str, config: dict) -> tup
         return 0.0, "Resident marked exempt"
 
     level = str(config.get("level_snapshot") or "").strip()
-    apartment_size = str(config.get("apartment_size_snapshot") or "").strip().lower()
+    apartment_number = config.get("apartment_number_snapshot")
+    apartment_size = _derive_apartment_size_from_assignment(shelter, apartment_number) or str(config.get("apartment_size_snapshot") or "").strip()
 
     if shelter == "haven":
         return _float_value(settings.get("hh_rent_amount", 150.00)), "Haven base rent from admin settings"
 
     if shelter == "gratitude":
         if level == "5":
-            if "one" in apartment_size:
+            apartment_size_lower = apartment_size.lower()
+            if "one" in apartment_size_lower:
                 return _float_value(settings.get("gh_level_5_one_bedroom_rent", 250.00)), "Gratitude level 5 one bedroom rate"
-            if "two" in apartment_size:
+            if "two" in apartment_size_lower:
                 return _float_value(settings.get("gh_level_5_two_bedroom_rent", 300.00)), "Gratitude level 5 two bedroom rate"
-            if "town" in apartment_size:
+            if "town" in apartment_size_lower:
                 return _float_value(settings.get("gh_level_5_townhome_rent", 300.00)), "Gratitude level 5 townhome rate"
             return _float_value(settings.get("gh_level_5_one_bedroom_rent", 250.00)), "Gratitude level 5 defaulted to one bedroom rate"
 
