@@ -635,6 +635,7 @@
                               {{ entry['occupancy_start_date'] }} to {{ entry['occupancy_end_date'] or entry['occupancy_start_date'] }}
                             {% else %}
                               —
+
                             {% endif %}
                           </div>
 
@@ -694,6 +695,9 @@
     if (!searchInput || !statusFilter || !balanceFilter || !groupCards.length) {
       return;
     }
+
+    let hasUnsavedChanges = false;
+    let suppressUnloadWarning = false;
 
     function applyFilters() {
       const searchValue = searchInput.value.trim().toLowerCase();
@@ -784,9 +788,19 @@
         }
       });
 
+      hasUnsavedChanges = anyDirty;
+
       if (dirtyPill) {
         dirtyPill.classList.toggle("is-visible", anyDirty);
       }
+    }
+
+    function beforeUnloadHandler(event) {
+      if (!hasUnsavedChanges || suppressUnloadWarning) {
+        return;
+      }
+      event.preventDefault();
+      event.returnValue = "";
     }
 
     searchInput.addEventListener("input", applyFilters);
@@ -808,11 +822,30 @@
 
     if (form) {
       form.addEventListener("submit", function () {
+        suppressUnloadWarning = true;
+        hasUnsavedChanges = false;
         if (dirtyPill) {
           dirtyPill.classList.remove("is-visible");
         }
       });
     }
+
+    window.addEventListener("beforeunload", beforeUnloadHandler);
+
+    document.addEventListener("click", function (event) {
+      const link = event.target.closest("a[href]");
+      if (!link) return;
+      if (!hasUnsavedChanges) return;
+      if (link.target === "_blank") return;
+      if (link.hasAttribute("download")) return;
+      const href = link.getAttribute("href") || "";
+      if (!href || href.startsWith("#") || href.startsWith("javascript:")) return;
+
+      const confirmed = window.confirm("You have unsaved rent changes. Leave this page without saving?");
+      if (!confirmed) {
+        event.preventDefault();
+      }
+    });
 
     applyFilters();
     refreshDirtyState();
