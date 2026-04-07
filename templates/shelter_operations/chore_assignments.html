@@ -1,0 +1,179 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<h1>Weekly Chore Assignment</h1>
+
+<p style="margin-top:0; margin-bottom:16px;">
+  Assign residents to preloaded chores for the selected week.
+  Residents with no chore this week are listed first.
+  A star means the resident already has a chore this week.
+</p>
+
+<div class="card" style="margin-bottom:20px;">
+  <form method="get" id="weekForm" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+    <div>
+      <label for="assigned_date">Week Anchor Date</label><br>
+      <input type="date" id="assigned_date" name="assigned_date" value="{{ assigned_date }}" required>
+    </div>
+    <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+      <button type="submit">Load</button>
+      <button type="button" onclick="shiftWeek(-7)">Past</button>
+      <button type="button" onclick="goToToday()">This Week</button>
+      <button type="button" onclick="shiftWeek(7)">Future</button>
+      <a class="btn" href="{{ url_for('shelter_operations.chore_board', assigned_date=assigned_date) }}">Open Completion Page</a>
+      <a class="btn" href="{{ url_for('shelter_operations.chore_management') }}">Configure Chores</a>
+    </div>
+  </form>
+
+  <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+    <form method="post" style="margin:0;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="clone_week">
+      <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+      <button type="submit">Clone Week</button>
+    </form>
+
+    <form method="post" style="margin:0;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="clone_week_random">
+      <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+      <button type="submit">Clone Week and Randomize Residents</button>
+    </form>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:20px;">
+  <p style="margin:0;">
+    <strong>Week:</strong> {{ week_start }} to {{ week_end }}
+    <br>
+    <strong>Assigned chore rows:</strong> {{ assigned_chore_count }} of {{ total_chore_count }}
+  </p>
+</div>
+
+<form method="post">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+
+  <div class="card">
+    {% if assignment_rows %}
+      <div class="table-wrap">
+        <table class="assignment-table">
+          <thead>
+            <tr>
+              <th>Chore</th>
+              <th>When</th>
+              <th>Schedule</th>
+              <th>Resident</th>
+              <th>Current</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in assignment_rows %}
+            <tr>
+              <td>{{ row.chore_name }}</td>
+              <td>{{ row.when_label or "" }}</td>
+              <td>{{ row.scope_label }}</td>
+              <td>
+                <select name="resident_for_chore_{{ row.chore_id }}" style="width:100%;">
+                  <option value="">Unassigned</option>
+                  {% for resident in residents %}
+                    <option
+                      value="{{ resident.id }}"
+                      {% if resident.id == row.selected_resident_id %}selected{% endif %}
+                    >
+                      {{ resident.last_name }}, {{ resident.first_name }}{% if resident.is_assigned_this_week %} *{% endif %} | {{ resident.completion_rate_text }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>
+                {% if row.has_mixed_assignments %}
+                  <strong>Mixed</strong>
+                  {% if row.resident_names %}
+                    <br>
+                    <span class="muted">{{ row.resident_names|join(", ") }}</span>
+                  {% endif %}
+                {% elif row.selected_resident_id %}
+                  Assigned
+                  {% if row.resident_names %}
+                    <br>
+                    <span class="muted">{{ row.resident_names[0] }}</span>
+                  {% endif %}
+                {% else %}
+                  <span class="muted">Unassigned</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:16px;">
+        <button type="submit">Save Weekly Assignments</button>
+      </div>
+    {% else %}
+      <p style="margin:0;">No active chores found for this shelter.</p>
+    {% endif %}
+  </div>
+</form>
+
+<style>
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.assignment-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.assignment-table th,
+.assignment-table td {
+  border: 1px solid #000;
+  padding: 8px;
+  vertical-align: middle;
+}
+
+.assignment-table th {
+  background: #f5f5f5;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.muted {
+  color: #555;
+  font-size: 0.95em;
+}
+</style>
+
+<script>
+function shiftWeek(days) {
+  const input = document.getElementById("assigned_date");
+  if (!input || !input.value) return;
+
+  const parts = input.value.split("-");
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  dt.setDate(dt.getDate() + days);
+
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  input.value = `${y}-${m}-${d}`;
+
+  document.getElementById("weekForm").submit();
+}
+
+function goToToday() {
+  const dt = new Date();
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  document.getElementById("assigned_date").value = `${y}-${m}-${d}`;
+  document.getElementById("weekForm").submit();
+}
+</script>
+
+{% endblock %}
