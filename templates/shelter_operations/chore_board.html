@@ -58,7 +58,7 @@
         </thead>
         <tbody>
           {% for row in weekly_rows %}
-          <tr>
+          <tr id="row-{{ row.assignment_id }}">
             <td>
               <form
                 id="edit-row-{{ row.assignment_id }}"
@@ -68,6 +68,7 @@
               >
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+                <input type="hidden" name="scroll_y" class="scroll-y-field" value="0">
               </form>
 
               <select
@@ -75,7 +76,7 @@
                 form="edit-row-{{ row.assignment_id }}"
                 required
                 style="width:100%;"
-                onchange="document.getElementById('edit-row-{{ row.assignment_id }}').submit()"
+                onchange="submitWithScroll('edit-row-{{ row.assignment_id }}')"
               >
                 {% for r in residents %}
                   <option value="{{ r.id }}" {% if r.id == row.resident_id %}selected{% endif %}>
@@ -95,7 +96,7 @@
                 form="edit-row-{{ row.assignment_id }}"
                 required
                 style="width:100%;"
-                onchange="document.getElementById('edit-row-{{ row.assignment_id }}').submit()"
+                onchange="submitWithScroll('edit-row-{{ row.assignment_id }}')"
               >
                 {% for c in chores %}
                   <option value="{{ c.id }}" {% if c.id == row.chore_id %}selected{% endif %}>
@@ -110,10 +111,10 @@
               {% set day = row.days[d] %}
               {% if day %}
                 <button
-                  type="submit"
-                  form="toggle-day-{{ day.id }}"
+                  type="button"
                   class="check-btn no-print"
                   title="Toggle completion"
+                  onclick="submitWithScroll('toggle-day-{{ day.id }}')"
                 >
                   {% if day.status == 'completed' %}
                     ☑
@@ -136,6 +137,7 @@
                 >
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+                  <input type="hidden" name="scroll_y" class="scroll-y-field" value="0">
                 </form>
               {% else %}
                 <span class="print-check">&nbsp;</span>
@@ -145,8 +147,8 @@
 
             <td class="no-print">
               <button
-                type="submit"
-                form="delete-row-{{ row.assignment_id }}"
+                type="button"
+                onclick="submitWithScroll('delete-row-{{ row.assignment_id }}')"
               >
                 Delete
               </button>
@@ -158,6 +160,7 @@
               >
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
+                <input type="hidden" name="scroll_y" class="scroll-y-field" value="0">
               </form>
             </td>
           </tr>
@@ -285,6 +288,27 @@ function goToToday() {
   document.getElementById("assigned_date").value = `${y}-${m}-${d}`;
   document.getElementById("weekForm").submit();
 }
+
+function submitWithScroll(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+
+  const scrollFields = form.querySelectorAll(".scroll-y-field");
+  scrollFields.forEach(function(field) {
+    field.value = String(window.scrollY || window.pageYOffset || 0);
+  });
+
+  form.submit();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  const savedScroll = {{ (request.values.get('scroll_y') or '0')|int }};
+  if (savedScroll > 0) {
+    window.requestAnimationFrame(function() {
+      window.scrollTo(0, savedScroll);
+    });
+  }
+});
 </script>
 
 {% endblock %}
