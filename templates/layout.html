@@ -52,6 +52,7 @@
       {% set intake_assessment_url = safe_url_for('case_management.intake_index') %}
       {% set case_management_url = safe_url_for('case_management.index') %}
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
+      {% set chore_assignment_url = safe_url_for('shelter_operations.chore_assignments') %}
       {% set chore_board_url = safe_url_for('shelter_operations.chore_board') %}
       {% set chore_config_url = safe_url_for('shelter_operations.chore_management') %}
       {% set calendar_url = safe_url_for('calendar.calendar_view') %}
@@ -109,8 +110,14 @@
             <div class="nav-dd">
               <button type="button">Shelter Operations ▾</button>
               <div class="menu">
+                {% if chore_assignment_url %}
+                  <a href="{{ chore_assignment_url }}">Weekly Chore Assignment</a>
+                {% endif %}
                 {% if chore_board_url %}
-                  <a href="{{ chore_board_url }}">Weekly Chore Board</a>
+                  <a href="{{ chore_board_url }}">Weekly Chore Completion Log</a>
+                {% endif %}
+                {% if chore_config_url %}
+                  <a href="{{ chore_config_url }}">Configure Chores</a>
                 {% endif %}
                 <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
                 <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
