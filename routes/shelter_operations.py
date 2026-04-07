@@ -867,7 +867,10 @@ def chore_board():
         SELECT id, name, when_time, default_day
         FROM chore_templates
         WHERE shelter = %s AND active = 1
-        ORDER BY sort_order ASC, name ASC
+        ORDER BY
+            CASE WHEN when_time IS NULL THEN 1 ELSE 0 END,
+            when_time ASC,
+            name ASC
         """,
         (shelter,),
     )
@@ -891,11 +894,12 @@ def chore_board():
         WHERE r.shelter = %s
           AND ca.assigned_date BETWEEN %s AND %s
         ORDER BY
-            r.last_name,
-            r.first_name,
-            ct.sort_order,
-            ct.name,
-            ca.assigned_date
+            CASE WHEN ct.when_time IS NULL THEN 1 ELSE 0 END,
+            ct.when_time ASC,
+            ct.name ASC,
+            r.last_name ASC,
+            r.first_name ASC,
+            ca.assigned_date ASC
         """,
         (shelter, week_start, week_end),
     )
@@ -1063,7 +1067,7 @@ def toggle_assignment_status(assignment_id: int):
     )
 
     flash("Chore status updated.", "success")
-    return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
+    return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date, scroll_y=request.form.get("scroll_y") or "0"))
 
 
 @shelter_operations.route("/chore-board/<int:assignment_id>/delete", methods=["POST"])
@@ -1075,6 +1079,7 @@ def delete_assignment(assignment_id: int):
 
     shelter = session.get("shelter")
     assigned_date = (request.form.get("assigned_date") or "").strip()
+    scroll_y = (request.form.get("scroll_y") or "0").strip()
 
     target = db_fetchone(
         """
@@ -1094,7 +1099,7 @@ def delete_assignment(assignment_id: int):
 
     if not target:
         flash("Assignment not found.", "error")
-        return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
+        return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date, scroll_y=scroll_y))
 
     week_start, week_end, _week_dates = _week_dates_from_anchor(assigned_date or target["assigned_date"])
 
@@ -1112,4 +1117,4 @@ def delete_assignment(assignment_id: int):
     )
 
     flash("Weekly assignment deleted.", "success")
-    return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
+    return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start, scroll_y=scroll_y))
