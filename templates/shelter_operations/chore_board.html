@@ -177,6 +177,8 @@
 .table-wrap {
   width: 100%;
   overflow-x: auto;
+  overflow-y: visible;
+  max-height: none;
 }
 
 .chore-board-table {
@@ -196,6 +198,9 @@
   background: #f5f5f5;
   text-align: center;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .chore-board-table td.day-cell {
@@ -205,10 +210,19 @@
 }
 
 .check-btn {
-  border: none;
-  background: none;
-  font-size: 18px;
+  border: 1px solid #777;
+  background: #fff;
+  font-size: 22px;
   line-height: 1;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.check-btn:hover {
+  background: #f5f5f5;
 }
 
 .print-check {
@@ -243,6 +257,7 @@
 
   .table-wrap {
     overflow: visible !important;
+    max-height: none !important;
   }
 
   .chore-board-table {
@@ -254,6 +269,10 @@
   .chore-board-table td {
     border: 1px solid #000;
     padding: 5px;
+  }
+
+  .chore-board-table th {
+    position: static !important;
   }
 
   @page {
