@@ -24,7 +24,7 @@
         <div class="cmx-section-head">
           <div>
             <h2 class="cmx-section-title">Current Rent Setup</h2>
-            <div class="cmx-section-subtitle">Use a manual monthly rent only when this resident should not follow the automatic shelter rule.</div>
+            <div class="cmx-section-subtitle">Assign apartment placement first. Unit type is auto derived for Abba and Gratitude.</div>
           </div>
         </div>
 
@@ -52,16 +52,31 @@
             </select>
           </div>
 
+          {% if shelter == 'gratitude' or shelter == 'abba' %}
+            <div class="cmx-field" style="margin-top:12px;">
+              <label>Apartment Number</label>
+              {% set current_apartment_number = current_config['apartment_number_snapshot'] if current_config else '' %}
+              <select name="apartment_number_snapshot">
+                <option value="">Select apartment</option>
+                {% for apartment_number in apartment_options %}
+                  <option value="{{ apartment_number }}" {% if current_apartment_number == apartment_number %}selected{% endif %}>{{ apartment_number }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          {% else %}
+            <div class="cmx-field" style="margin-top:12px;">
+              <label>Housing Placement</label>
+              <div class="cmx-panel-soft">
+                <div class="cmx-summary-text">
+                  Haven House uses unnumbered beds. No apartment number is assigned here.
+                </div>
+              </div>
+            </div>
+          {% endif %}
+
           <div class="cmx-field" style="margin-top:12px;">
-            <label>Apartment Size</label>
-            <select name="apartment_size_snapshot">
-              {% set current_apartment_size = current_config['apartment_size_snapshot'] if current_config else '' %}
-              <option value="">Select apartment size</option>
-              <option value="Bed" {% if current_apartment_size == 'Bed' %}selected{% endif %}>Bed</option>
-              <option value="One Bedroom" {% if current_apartment_size == 'One Bedroom' %}selected{% endif %}>One Bedroom</option>
-              <option value="Two Bedroom" {% if current_apartment_size == 'Two Bedroom' %}selected{% endif %}>Two Bedroom</option>
-              <option value="Town Home" {% if current_apartment_size == 'Town Home' %}selected{% endif %}>Town Home</option>
-            </select>
+            <label>Derived Unit Type</label>
+            <input type="text" value="{{ derived_apartment_size or 'Will derive after apartment assignment' }}" readonly>
           </div>
 
           <div class="cmx-field" style="margin-top:12px;">
@@ -107,6 +122,7 @@
                 </div>
                 <div class="cmx-summary-text">
                   Level: {{ row['level_snapshot'] or '—' }}<br>
+                  Apartment Number: {{ row['apartment_number_snapshot'] or '—' }}<br>
                   Apartment Size: {{ row['apartment_size_snapshot'] or '—' }}<br>
                   Manual Monthly Rent Override: ${{ '%.2f'|format(row['monthly_rent'] or 0) }}<br>
                   Exempt: {{ 'Yes' if row['is_exempt'] else 'No' }}
