@@ -93,6 +93,153 @@ def _parse_birth_year(value: str | None) -> int | None:
     return year
 
 
+def _move_supporting_shelters() -> set[str]:
+    return {"abba", "gratitude", "haven"}
+
+
+def _same_shelter_housing_update_allowed(shelter: str) -> bool:
+    return shelter in {"abba", "gratitude"}
+
+
+def _apartment_options_for_shelter_local(shelter: str) -> list[str]:
+    from routes.rent_tracking_parts.calculations import _apartment_options_for_shelter
+
+    return _apartment_options_for_shelter(shelter)
+
+
+def _normalize_apartment_number_local(shelter: str, apartment_number: str | None) -> str | None:
+    from routes.rent_tracking_parts.calculations import _normalize_apartment_number
+
+    return _normalize_apartment_number(shelter, apartment_number)
+
+
+def _derive_apartment_size_local(shelter: str, apartment_number: str | None) -> str | None:
+    from routes.rent_tracking_parts.calculations import _derive_apartment_size_from_assignment
+
+    return _derive_apartment_size_from_assignment(shelter, apartment_number)
+
+
+def _active_rent_config_for_resident(resident_id: int, shelter: str):
+    ph = "%s" if g.get("db_kind") == "pg" else "?"
+    row = db_fetchone(
+        f"""
+        SELECT *
+        FROM resident_rent_configs
+        WHERE resident_id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+          AND COALESCE(effective_end_date, '') = ''
+        ORDER BY effective_start_date DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
+    return dict(row) if row else None
+
+
+def _upsert_resident_housing_assignment(
+    resident_id: int,
+    destination_shelter: str,
+    apartment_number: str | None,
+) -> None:
+    destination_shelter = _normalize_shelter_name(destination_shelter)
+    apartment_number = _normalize_apartment_number_local(destination_shelter, apartment_number)
+    apartment_size = _derive_apartment_size_local(destination_shelter, apartment_number)
+
+    if destination_shelter == "haven":
+        apartment_number = None
+        apartment_size = "Bed"
+
+    now = utcnow_iso()
+    effective_start_date = now[:10]
+    active_config = _active_rent_config_for_resident(resident_id, destination_shelter)
+
+    if active_config:
+        current_apartment = (active_config.get("apartment_number_snapshot") or "").strip() or None
+        current_size = (active_config.get("apartment_size_snapshot") or "").strip() or None
+
+        if current_apartment == apartment_number and current_size == apartment_size:
+            return
+
+        db_execute(
+            """
+            UPDATE resident_rent_configs
+            SET effective_end_date = %s,
+                updated_at = %s
+            WHERE id = %s
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            UPDATE resident_rent_configs
+            SET effective_end_date = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (effective_start_date, now, active_config["id"]),
+        )
+
+        level_snapshot = active_config.get("level_snapshot")
+        monthly_rent = active_config.get("monthly_rent") or 0
+        is_exempt = active_config.get("is_exempt") or (False if g.get("db_kind") == "pg" else 0)
+    else:
+        level_snapshot = None
+        monthly_rent = 0
+        is_exempt = False if g.get("db_kind") == "pg" else 0
+
+    db_execute(
+        """
+        INSERT INTO resident_rent_configs (
+            resident_id,
+            shelter,
+            level_snapshot,
+            apartment_number_snapshot,
+            apartment_size_snapshot,
+            monthly_rent,
+            is_exempt,
+            effective_start_date,
+            effective_end_date,
+            created_by_staff_user_id,
+            created_at,
+            updated_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        INSERT INTO resident_rent_configs (
+            resident_id,
+            shelter,
+            level_snapshot,
+            apartment_number_snapshot,
+            apartment_size_snapshot,
+            monthly_rent,
+            is_exempt,
+            effective_start_date,
+            effective_end_date,
+            created_by_staff_user_id,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            resident_id,
+            destination_shelter,
+            level_snapshot,
+            apartment_number,
+            apartment_size,
+            monthly_rent,
+            is_exempt if g.get("db_kind") == "pg" else (1 if is_exempt else 0),
+            effective_start_date,
+            None,
+            session.get("staff_user_id"),
+            now,
+            now,
+        ),
+    )
+
+
 @residents.get("/staff/residents")
 @require_login
 @require_shelter
@@ -226,7 +373,8 @@ def staff_residents_post():
 @require_shelter
 def staff_resident_transfer(resident_id: int):
     from core.residents import record_resident_transfer
-    from routes.rent_tracking import _current_year_month, _ensure_sheet_for_month
+    from routes.rent_tracking_parts.dates import _current_year_month
+    from routes.rent_tracking_parts.views import _ensure_sheet_for_month
 
     if not _require_transfer_role():
         flash("Admin, shelter director, or case manager only.", "error")
@@ -249,18 +397,74 @@ def staff_resident_transfer(resident_id: int):
         return redirect(url_for("residents.staff_residents"))
 
     from_shelter = _normalize_shelter_name(resident["shelter"] if isinstance(resident, dict) else resident[1])
+    shelter_choices = [s for s in all_shelters if s in _move_supporting_shelters()]
+
+    if _same_shelter_housing_update_allowed(from_shelter) and from_shelter not in shelter_choices:
+        shelter_choices.append(from_shelter)
+
+    shelter_choices = sorted(set(shelter_choices))
+    active_config = _active_rent_config_for_resident(resident_id, from_shelter)
+    current_apartment_number = (active_config or {}).get("apartment_number_snapshot")
+    current_apartment_size = _derive_apartment_size_local(from_shelter, current_apartment_number) or (active_config or {}).get("apartment_size_snapshot")
+    destination_shelter_prefill = (request.form.get("to_shelter") or request.args.get("to_shelter") or "").strip().lower() or from_shelter
+    apartment_options = _apartment_options_for_shelter_local(destination_shelter_prefill)
 
     if request.method == "POST":
         to_shelter = _normalize_shelter_name(request.form.get("to_shelter"))
         note = (request.form.get("note") or "").strip()
+        apartment_number = _normalize_apartment_number_local(to_shelter, request.form.get("apartment_number"))
+        apartment_size = _derive_apartment_size_local(to_shelter, apartment_number)
 
-        if to_shelter not in all_shelters:
+        if to_shelter not in shelter_choices:
             flash("Select a valid shelter.", "error")
-            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url) if next_url else url_for("residents.staff_resident_transfer", resident_id=resident_id))
+            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url))
 
-        if to_shelter == from_shelter:
-            flash("Resident is already at that shelter.", "error")
-            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url) if next_url else url_for("residents.staff_resident_transfer", resident_id=resident_id))
+        same_shelter_move = to_shelter == from_shelter
+
+        if to_shelter in {"abba", "gratitude"} and not apartment_number:
+            flash("Apartment number is required for Abba and Gratitude moves.", "error")
+            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url, to_shelter=to_shelter))
+
+        if to_shelter == "haven":
+            apartment_number = None
+            apartment_size = "Bed"
+
+        if same_shelter_move and not _same_shelter_housing_update_allowed(from_shelter):
+            flash("This shelter does not use same shelter apartment reassignment here.", "error")
+            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url))
+
+        if same_shelter_move:
+            current_normalized_apartment = _normalize_apartment_number_local(from_shelter, current_apartment_number)
+            if current_normalized_apartment == apartment_number:
+                flash("No housing change detected.", "error")
+                return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url))
+
+            _upsert_resident_housing_assignment(
+                resident_id=resident_id,
+                destination_shelter=to_shelter,
+                apartment_number=apartment_number,
+            )
+
+            try:
+                rent_year, rent_month = _current_year_month()
+                _ensure_sheet_for_month(to_shelter, rent_year, rent_month)
+            except Exception:
+                pass
+
+            log_action(
+                "resident",
+                resident_id,
+                to_shelter,
+                session.get("staff_user_id"),
+                "housing_move",
+                f"shelter={to_shelter} apartment={apartment_number or ''} unit_type={apartment_size or ''} note={note}".strip(),
+            )
+
+            flash(
+                f"Housing updated for {to_shelter}. Apartment {apartment_number or 'cleared'} saved.",
+                "ok",
+            )
+            return _return_redirect()
 
         record_resident_transfer(
             resident_id=resident_id,
@@ -316,6 +520,12 @@ def staff_resident_transfer(resident_id: int):
             (to_shelter, resident_id),
         )
 
+        _upsert_resident_housing_assignment(
+            resident_id=resident_id,
+            destination_shelter=to_shelter,
+            apartment_number=apartment_number,
+        )
+
         try:
             rent_year, rent_month = _current_year_month()
             _ensure_sheet_for_month(to_shelter, rent_year, rent_month)
@@ -328,18 +538,27 @@ def staff_resident_transfer(resident_id: int):
             to_shelter,
             session.get("staff_user_id"),
             "transfer",
-            f"from={from_shelter} to={to_shelter} note={note}",
+            f"from={from_shelter} to={to_shelter} apartment={apartment_number or ''} unit_type={apartment_size or ''} note={note}",
         )
 
-        flash(f"Resident transferred from {from_shelter} to {to_shelter}.", "ok")
+        if to_shelter in {"abba", "gratitude"}:
+            flash(f"Resident transferred from {from_shelter} to {to_shelter} and assigned to apartment {apartment_number}.", "ok")
+        elif to_shelter == "haven":
+            flash(f"Resident transferred from {from_shelter} to {to_shelter}. Apartment assignment cleared for dorm style housing.", "ok")
+        else:
+            flash(f"Resident transferred from {from_shelter} to {to_shelter}.", "ok")
+
         return _return_redirect()
 
     return render_template(
         "staff_resident_transfer.html",
         resident=resident,
         from_shelter=from_shelter,
-        shelters=[s for s in all_shelters if s != from_shelter],
+        shelters=shelter_choices,
         next=next_url,
+        current_apartment_number=current_apartment_number,
+        current_apartment_size=current_apartment_size,
+        apartment_options=apartment_options,
     )
 
 
