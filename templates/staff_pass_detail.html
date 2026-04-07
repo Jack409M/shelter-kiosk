@@ -12,9 +12,38 @@
   {% set pass_type_label = p.pass_type %}
 {% endif %}
 
+{% if p.status == "pending" %}
+  {% set back_url = url_for('attendance.staff_passes_pending') %}
+  {% set back_label = "Back to pending passes" %}
+{% else %}
+  {% set back_url = url_for('attendance.staff_passes_approved') %}
+  {% set back_label = "Back to approved passes" %}
+{% endif %}
+
 <style>
   .pass-form-wrap {
     max-width: 1100px;
+  }
+
+  .pass-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .pass-toolbar-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .pass-toolbar-actions a,
+  .pass-toolbar-actions button {
+    margin: 0;
   }
 
   .pass-paper {
@@ -182,12 +211,22 @@
     line-height: 1.4;
   }
 
+  @media (max-width: 840px) {
+    .paper-grid-2,
+    .paper-grid-3,
+    .paper-check-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
   @media print {
     nav,
+    .top,
     .topbar,
     .flash,
     .paper-actions,
     .print-back-link,
+    .pass-toolbar,
     a[href],
     button {
       display: none !important;
@@ -214,6 +253,15 @@
 </style>
 
 <div class="pass-form-wrap">
+  <div class="pass-toolbar">
+    <div>
+      <a href="{{ back_url }}">{{ back_label }}</a>
+    </div>
+    <div class="pass-toolbar-actions">
+      <button type="button" onclick="window.print()">Print</button>
+    </div>
+  </div>
+
   <div class="pass-paper">
     <h1>Pass Request</h1>
     <p class="paper-note">Printable pass request detail form.</p>
@@ -332,7 +380,7 @@
                     {% if item.weekly_cap_hours is not none %}
                       {{ item.weekly_cap_hours }}
                     {% else %}
-                      —
+                      — 
                     {% endif %}
                   </td>
                 </tr>
@@ -497,7 +545,7 @@
   {% endif %}
 
   <div class="print-back-link">
-    <a href="{{ url_for('attendance.staff_passes_pending') }}">Back to pending passes</a>
+    <a href="{{ back_url }}">{{ back_label }}</a>
   </div>
 </div>
 
