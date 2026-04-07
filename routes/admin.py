@@ -4,21 +4,6 @@ from flask import Blueprint
 
 from core.auth import require_login, require_shelter
 
-# Admin blueprint shell
-#
-# This file should stay thin.
-# All substantive behavior now lives in routes.admin_parts.*
-#
-# Current delegated modules:
-# helpers.py
-# users.py
-# audit.py
-# dashboard.py
-# system.py
-#
-# Future goal:
-# keep this file limited to blueprint creation and decorated wrappers only.
-
 from routes.admin_parts.audit import (
     staff_audit_log_csv_view,
     staff_audit_log_view,
@@ -38,7 +23,10 @@ from routes.admin_parts.field_audit import (
 )
 
 from routes.admin_parts.system import (
+    admin_demo_data_view,
+    clear_demo_data_view,
     recreate_schema_view,
+    seed_demo_data_view,
     wipe_all_data_view,
 )
 
@@ -157,6 +145,27 @@ def staff_audit_log_csv():
 @require_shelter
 def admin_field_audit():
     return admin_field_audit_view()
+
+
+@admin.get("/staff/admin/demo-data")
+@require_login
+@require_shelter
+def admin_demo_data():
+    return admin_demo_data_view()
+
+
+@admin.post("/staff/admin/demo-data/seed")
+@require_login
+@require_shelter
+def admin_seed_demo_data():
+    return seed_demo_data_view()
+
+
+@admin.post("/staff/admin/demo-data/clear")
+@require_login
+@require_shelter
+def admin_clear_demo_data():
+    return clear_demo_data_view()
 
 
 @admin.route("/admin/wipe-all-data", methods=["POST"])
