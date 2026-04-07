@@ -55,6 +55,7 @@ def _ensure_default_rent_config(resident_id: int, shelter: str) -> dict:
                 resident_id,
                 shelter,
                 level_snapshot,
+                apartment_number_snapshot,
                 apartment_size_snapshot,
                 monthly_rent,
                 is_exempt,
@@ -64,7 +65,7 @@ def _ensure_default_rent_config(resident_id: int, shelter: str) -> dict:
                 created_at,
                 updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if g.get("db_kind") == "pg"
             else
@@ -73,6 +74,7 @@ def _ensure_default_rent_config(resident_id: int, shelter: str) -> dict:
                 resident_id,
                 shelter,
                 level_snapshot,
+                apartment_number_snapshot,
                 apartment_size_snapshot,
                 monthly_rent,
                 is_exempt,
@@ -82,12 +84,13 @@ def _ensure_default_rent_config(resident_id: int, shelter: str) -> dict:
                 created_at,
                 updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         ),
         (
             resident_id,
             shelter,
+            None,
             None,
             None,
             0.0,
