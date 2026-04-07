@@ -18,6 +18,7 @@ def _ensure_tables() -> None:
                 resident_id INTEGER NOT NULL REFERENCES residents(id),
                 shelter TEXT NOT NULL,
                 level_snapshot TEXT,
+                apartment_number_snapshot TEXT,
                 apartment_size_snapshot TEXT,
                 monthly_rent NUMERIC(10,2) NOT NULL DEFAULT 0,
                 is_exempt BOOLEAN NOT NULL DEFAULT FALSE,
@@ -53,6 +54,7 @@ def _ensure_tables() -> None:
                 shelter_snapshot TEXT NOT NULL,
                 resident_name_snapshot TEXT NOT NULL,
                 level_snapshot TEXT,
+                apartment_number_snapshot TEXT,
                 apartment_size_snapshot TEXT,
                 prior_balance NUMERIC(10,2) NOT NULL DEFAULT 0,
                 current_charge NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -88,6 +90,7 @@ def _ensure_tables() -> None:
                 resident_id INTEGER NOT NULL,
                 shelter TEXT NOT NULL,
                 level_snapshot TEXT,
+                apartment_number_snapshot TEXT,
                 apartment_size_snapshot TEXT,
                 monthly_rent REAL NOT NULL DEFAULT 0,
                 is_exempt INTEGER NOT NULL DEFAULT 0,
@@ -124,6 +127,7 @@ def _ensure_tables() -> None:
                 shelter_snapshot TEXT NOT NULL,
                 resident_name_snapshot TEXT NOT NULL,
                 level_snapshot TEXT,
+                apartment_number_snapshot TEXT,
                 apartment_size_snapshot TEXT,
                 prior_balance REAL NOT NULL DEFAULT 0,
                 current_charge REAL NOT NULL DEFAULT 0,
@@ -155,6 +159,10 @@ def _ensure_tables() -> None:
         )
 
     alter_statements = [
+        "ALTER TABLE resident_rent_configs ADD COLUMN IF NOT EXISTS apartment_number_snapshot TEXT",
+        "ALTER TABLE resident_rent_configs ADD COLUMN IF NOT EXISTS apartment_size_snapshot TEXT",
+        "ALTER TABLE resident_rent_sheet_entries ADD COLUMN IF NOT EXISTS apartment_number_snapshot TEXT",
+        "ALTER TABLE resident_rent_sheet_entries ADD COLUMN IF NOT EXISTS apartment_size_snapshot TEXT",
         "ALTER TABLE resident_rent_sheet_entries ADD COLUMN IF NOT EXISTS occupancy_start_date TEXT",
         "ALTER TABLE resident_rent_sheet_entries ADD COLUMN IF NOT EXISTS occupancy_end_date TEXT",
         "ALTER TABLE resident_rent_sheet_entries ADD COLUMN IF NOT EXISTS occupied_days INTEGER DEFAULT 0",
