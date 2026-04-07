@@ -45,11 +45,25 @@
     display: flex;
     gap: 8px;
     align-items: center;
+    flex-wrap: wrap;
   }
 
   .rent-toolbar-summary {
     margin-top: 10px;
     font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .rent-save-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-soft);
+    font-size: 13px;
+    font-weight: 700;
     color: var(--text-muted);
   }
 
@@ -298,6 +312,14 @@
     line-height: 1.4;
   }
 
+  .rent-group-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 14px 16px;
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.35);
+  }
+
   .rent-page-help {
     margin-top: 16px;
     padding: 14px 16px;
@@ -334,9 +356,17 @@
 
   @media (max-width: 760px) {
     .rent-entry-top,
-    .rent-detail-grid,
-    .rent-toolbar-top {
+    .rent-detail-grid {
       grid-template-columns: 1fr;
+    }
+
+    .rent-toolbar-top {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .rent-toolbar-actions {
+      justify-content: flex-start;
     }
 
     .rent-jump-links {
@@ -370,66 +400,68 @@
 
     {% set apartment_mode = shelter in ['abba', 'gratitude'] %}
 
-    <div class="rent-toolbar">
-      <div class="rent-toolbar-top">
-        <div class="rent-toolbar-field">
-          <label for="rent-search">Search resident or apartment</label>
-          <input id="rent-search" type="text" placeholder="Type resident name or apartment number">
+    <form method="post" action="{{ url_for('rent_tracking.payment_entry_sheet', year=sheet['rent_year'], month=sheet['rent_month']) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div class="rent-toolbar">
+        <div class="rent-toolbar-top">
+          <div class="rent-toolbar-field">
+            <label for="rent-search">Search resident or apartment</label>
+            <input id="rent-search" type="text" placeholder="Type resident name or apartment number">
+          </div>
+
+          <div class="rent-toolbar-field">
+            <label for="rent-status-filter">Status</label>
+            <select id="rent-status-filter">
+              <option value="all">All</option>
+              <option value="Not Paid">Not Paid</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Paid Late">Paid Late</option>
+              <option value="Paid">Paid</option>
+              <option value="Exempt">Exempt</option>
+            </select>
+          </div>
+
+          <div class="rent-toolbar-field">
+            <label for="rent-balance-filter">Balance</label>
+            <select id="rent-balance-filter">
+              <option value="all">All</option>
+              <option value="due_only">Only with balance due</option>
+              <option value="zero_only">Only zero balance</option>
+            </select>
+          </div>
+
+          <div class="rent-toolbar-actions">
+            <button type="button" class="cmx-btn-muted" id="rent-clear-filters">Clear</button>
+            <button type="submit" class="cmx-btn">Save Payment Sheet</button>
+            <span class="rent-save-pill">Changes save for the whole page</span>
+          </div>
         </div>
 
-        <div class="rent-toolbar-field">
-          <label for="rent-status-filter">Status</label>
-          <select id="rent-status-filter">
-            <option value="all">All</option>
-            <option value="Not Paid">Not Paid</option>
-            <option value="Partially Paid">Partially Paid</option>
-            <option value="Paid Late">Paid Late</option>
-            <option value="Paid">Paid</option>
-            <option value="Exempt">Exempt</option>
-          </select>
-        </div>
-
-        <div class="rent-toolbar-field">
-          <label for="rent-balance-filter">Balance</label>
-          <select id="rent-balance-filter">
-            <option value="all">All</option>
-            <option value="due_only">Only with balance due</option>
-            <option value="zero_only">Only zero balance</option>
-          </select>
-        </div>
-
-        <div class="rent-toolbar-actions">
-          <button type="button" class="cmx-btn-muted" id="rent-clear-filters">Clear</button>
-        </div>
-      </div>
-
-      <div class="rent-toolbar-summary">
-        <span id="rent-visible-count">Showing all residents.</span>
-      </div>
-    </div>
-
-    {% if apartment_mode and grouped_entry_sections %}
-      <div class="rent-jump-bar" id="rent-jump-bar">
-        <div class="rent-jump-title">Jump to apartment</div>
-        <div class="rent-jump-links">
-          {% for group in grouped_entry_sections %}
-            {% if group.group_key != 'unassigned' %}
-              <a class="rent-jump-link" href="#rent-group-{{ group.group_key }}">{{ group.group_key }}</a>
-            {% endif %}
-          {% endfor %}
-          {% for group in grouped_entry_sections %}
-            {% if group.group_key == 'unassigned' %}
-              <a class="rent-jump-link" href="#rent-group-unassigned">Unassigned</a>
-            {% endif %}
-          {% endfor %}
+        <div class="rent-toolbar-summary">
+          <span id="rent-visible-count">Showing all residents.</span>
         </div>
       </div>
-    {% endif %}
 
-    <div class="cmx-card">
-      <form method="post" action="{{ url_for('rent_tracking.payment_entry_sheet', year=sheet['rent_year'], month=sheet['rent_month']) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      {% if apartment_mode and grouped_entry_sections %}
+        <div class="rent-jump-bar" id="rent-jump-bar">
+          <div class="rent-jump-title">Jump to apartment</div>
+          <div class="rent-jump-links">
+            {% for group in grouped_entry_sections %}
+              {% if group.group_key != 'unassigned' %}
+                <a class="rent-jump-link" href="#rent-group-{{ group.group_key }}">{{ group.group_key }}</a>
+              {% endif %}
+            {% endfor %}
+            {% for group in grouped_entry_sections %}
+              {% if group.group_key == 'unassigned' %}
+                <a class="rent-jump-link" href="#rent-group-unassigned">Unassigned</a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
 
+      <div class="cmx-card">
         {% if grouped_entry_sections %}
           <div class="rent-groups" id="rent-groups">
             {% for group in grouped_entry_sections %}
@@ -575,6 +607,10 @@
                     </div>
                   {% endfor %}
                 </div>
+
+                <div class="rent-group-actions">
+                  <button type="submit" class="cmx-btn-muted">Save Through {{ group.group_label }}</button>
+                </div>
               </section>
             {% endfor %}
           </div>
@@ -593,8 +629,8 @@
         {% else %}
           <div class="cmx-muted">No rent entries found for this month.</div>
         {% endif %}
-      </form>
-    </div>
+      </div>
+    </form>
   </div>
 </div>
 
