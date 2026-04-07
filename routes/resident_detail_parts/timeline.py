@@ -158,21 +158,6 @@ def load_timeline(enrollment_id: int, sql_selector):
                 UNION ALL
 
                 SELECT
-                    wrs.submitted_at AS event_time,
-                    'compliance_submitted' AS event_type,
-                    'Weekly compliance submitted' AS title,
-                    CONCAT(
-                        'Productive Hours: ', COALESCE(wrs.productive_hours::text, '0'),
-                        ' | Work Hours: ', COALESCE(wrs.work_hours::text, '0'),
-                        ' | Meetings: ', COALESCE(wrs.meeting_count::text, '0')
-                    ) AS detail,
-                    5 AS sort_order
-                FROM weekly_resident_summary wrs
-                WHERE wrs.enrollment_id = %s
-
-                UNION ALL
-
-                SELECT
                     a.created_at AS event_time,
                     'appointment_scheduled' AS event_type,
                     'Appointment scheduled' AS title,
@@ -249,19 +234,6 @@ def load_timeline(enrollment_id: int, sql_selector):
                 UNION ALL
 
                 SELECT
-                    wrs.submitted_at AS event_time,
-                    'compliance_submitted' AS event_type,
-                    'Weekly compliance submitted' AS title,
-                    'Productive Hours: ' || COALESCE(CAST(wrs.productive_hours AS TEXT), '0') ||
-                    ' | Work Hours: ' || COALESCE(CAST(wrs.work_hours AS TEXT), '0') ||
-                    ' | Meetings: ' || COALESCE(CAST(wrs.meeting_count AS TEXT), '0') AS detail,
-                    5 AS sort_order
-                FROM weekly_resident_summary wrs
-                WHERE wrs.enrollment_id = ?
-
-                UNION ALL
-
-                SELECT
                     a.created_at AS event_time,
                     'appointment_scheduled' AS event_type,
                     'Appointment scheduled' AS title,
@@ -286,7 +258,6 @@ def load_timeline(enrollment_id: int, sql_selector):
             """,
         ),
         (
-            enrollment_id,
             enrollment_id,
             enrollment_id,
             enrollment_id,
@@ -343,10 +314,6 @@ def event_type_theme(event_type: str) -> dict[str, str]:
         "case_note": {
             "badge_class": "theme-slate",
             "label": "Case Note",
-        },
-        "compliance_submitted": {
-            "badge_class": "theme-amber",
-            "label": "Compliance",
         },
         "appointment_scheduled": {
             "badge_class": "theme-purple",
