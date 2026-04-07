@@ -2,6 +2,8 @@
 
 {% block content %}
 
+{% set row_count = weekly_rows|length if weekly_rows else 1 %}
+
 <h1 class="screen-title">Weekly Chore Assignment Sheet</h1>
 
 <p class="no-print" style="margin-bottom:16px;">
@@ -25,7 +27,7 @@
   </form>
 </div>
 
-<div class="card chore-print-sheet" style="margin-bottom:20px;">
+<div class="card chore-print-sheet" style="margin-bottom:20px; --row-count: {{ row_count }};">
   <div class="sheet-header">
     <div class="sheet-org">Downtown Women’s Center</div>
     <div class="sheet-shelter">{{ session.get("shelter") or "Shelter" }}</div>
@@ -93,7 +95,7 @@
                 {% endfor %}
               </select>
 
-              <span class="print-value">{{ row.last_name }}, {{ row.first_name }}</span>
+              <span class="print-value print-name">{{ row.last_name }}, {{ row.first_name }}</span>
             </td>
 
             <td class="when-cell">
@@ -115,7 +117,7 @@
                 {% endfor %}
               </select>
 
-              <span class="print-value">{{ row.chore_name }}</span>
+              <span class="print-value print-chore">{{ row.chore_name }}</span>
             </td>
 
             {% for d in week_dates %}
@@ -202,19 +204,18 @@
 
 .sheet-header {
   text-align: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .sheet-org {
   font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .sheet-shelter {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
   margin-top: 2px;
 }
 
@@ -237,11 +238,11 @@
 }
 
 .col-who {
-  width: 24%;
+  width: 26%;
 }
 
 .col-when {
-  width: 10%;
+  width: 8%;
 }
 
 .col-what {
@@ -249,11 +250,11 @@
 }
 
 .col-day {
-  width: 5.4%;
+  width: 5.2%;
 }
 
 .col-delete {
-  width: 9%;
+  width: 6%;
 }
 
 .chore-board-table th,
@@ -282,6 +283,7 @@
 
 .when-cell {
   white-space: nowrap;
+  text-align: center;
 }
 
 .chore-board-table td.day-cell {
@@ -331,6 +333,7 @@
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
+    height: 100%;
   }
 
   main,
@@ -348,41 +351,57 @@
   .chore-print-sheet {
     box-shadow: none !important;
     border: none !important;
-    padding: 0 !important;
     margin: 0 !important;
   }
 
-  .sheet-header {
-    margin-bottom: 8px;
+  .chore-print-sheet {
+    padding: 0 !important;
+    min-height: 7.75in;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
   }
 
-  .sheet-org,
+  .sheet-header {
+    margin: 0 0 0.12in 0;
+  }
+
+  .sheet-org {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    line-height: 1.05;
+  }
+
   .sheet-shelter {
-    font-size: 10px;
-    letter-spacing: 0.02em;
+    font-size: 12px;
+    margin-top: 2px;
+    line-height: 1.05;
   }
 
   .sheet-title {
-    font-size: 18px;
-    margin-top: 3px;
+    font-size: 24px;
+    margin-top: 4px;
+    line-height: 1.05;
   }
 
   .sheet-week {
-    font-size: 11px;
-    margin-top: 3px;
+    font-size: 13px;
+    margin-top: 4px;
+    line-height: 1.05;
   }
 
   .table-wrap {
     overflow: visible !important;
     max-height: none !important;
+    flex: 1 1 auto;
   }
 
   .chore-board-table {
     width: 100%;
     table-layout: fixed;
-    font-size: 9px;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    border-collapse: collapse;
   }
 
   .chore-board-table thead,
@@ -395,13 +414,16 @@
   .chore-board-table th,
   .chore-board-table td {
     border: 1px solid #000;
-    padding: 2px 3px;
-    line-height: 1.05;
+    padding: 0;
+    line-height: 1;
   }
 
   .chore-board-table th {
     position: static !important;
-    font-size: 9px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 4px;
+    height: 0.28in;
   }
 
   .screen-select {
@@ -409,31 +431,53 @@
   }
 
   .print-value {
-    display: block !important;
-    white-space: nowrap;
+    display: flex !important;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 2px 4px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 9px;
+    text-overflow: clip;
+    white-space: nowrap;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .print-name {
+    font-size: clamp(11px, calc(24px - (var(--row-count) * 0.35px)), 18px);
+  }
+
+  .print-chore {
+    font-size: clamp(11px, calc(23px - (var(--row-count) * 0.33px)), 17px);
   }
 
   .when-cell {
-    font-size: 9px;
+    font-size: clamp(10px, calc(20px - (var(--row-count) * 0.30px)), 15px);
     text-align: center;
+    white-space: nowrap;
+    font-weight: 600;
+    padding: 0 2px;
   }
 
   .chore-board-table td.day-cell {
-    padding: 1px 0;
-    font-size: 10px;
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
   }
 
   .print-check {
-    display: inline-block !important;
-    font-size: 10px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: clamp(11px, calc(21px - (var(--row-count) * 0.30px)), 15px);
     line-height: 1;
   }
 
   .col-who {
-    width: 26%;
+    width: 30%;
   }
 
   .col-when {
@@ -441,20 +485,24 @@
   }
 
   .col-what {
-    width: 24%;
+    width: 26%;
   }
 
   .col-day {
-    width: 5.2%;
+    width: 5%;
   }
 
   .col-delete {
     width: 0 !important;
   }
 
+  .chore-board-table tbody tr {
+    height: calc((7.75in - 0.95in) / var(--row-count));
+  }
+
   @page {
     size: letter landscape;
-    margin: 0.2in;
+    margin: 0.22in;
   }
 }
 </style>
