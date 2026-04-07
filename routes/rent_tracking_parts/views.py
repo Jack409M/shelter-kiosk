@@ -8,10 +8,13 @@ from core.helpers import utcnow_iso
 
 from .access import _allowed, _normalize_shelter_name
 from .calculations import (
+    _apartment_options_for_shelter,
     _calculate_late_fee,
     _calculate_proration,
+    _derive_apartment_size_from_assignment,
     _derive_base_monthly_rent,
     _derive_status,
+    _normalize_apartment_number,
     _score_for_status,
 )
 from .data_access import (
@@ -53,6 +56,12 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
         existing = dict(existing) if existing else None
 
         config = _ensure_default_rent_config(resident_id, shelter)
+        config["apartment_number_snapshot"] = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
+        config["apartment_size_snapshot"] = _derive_apartment_size_from_assignment(
+            shelter,
+            config.get("apartment_number_snapshot"),
+        ) or config.get("apartment_size_snapshot")
+
         enrollment = _program_enrollment_for_month(resident_id, shelter, rent_year, rent_month)
 
         carry_forward_enabled = _bool_value(settings.get("rent_carry_forward_enabled", True))
@@ -99,6 +108,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     SET shelter_snapshot = %s,
                         resident_name_snapshot = %s,
                         level_snapshot = %s,
+                        apartment_number_snapshot = %s,
                         apartment_size_snapshot = %s,
                         prior_balance = %s,
                         current_charge = %s,
@@ -130,6 +140,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     SET shelter_snapshot = ?,
                         resident_name_snapshot = ?,
                         level_snapshot = ?,
+                        apartment_number_snapshot = ?,
                         apartment_size_snapshot = ?,
                         prior_balance = ?,
                         current_charge = ?,
@@ -159,6 +170,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     shelter,
                     resident_name,
                     config.get("level_snapshot"),
+                    config.get("apartment_number_snapshot"),
                     config.get("apartment_size_snapshot"),
                     prior_balance,
                     current_charge,
@@ -194,6 +206,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                         shelter_snapshot,
                         resident_name_snapshot,
                         level_snapshot,
+                        apartment_number_snapshot,
                         apartment_size_snapshot,
                         prior_balance,
                         current_charge,
@@ -218,7 +231,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                         created_at,
                         updated_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     if g.get("db_kind") == "pg"
                     else
@@ -229,6 +242,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                         shelter_snapshot,
                         resident_name_snapshot,
                         level_snapshot,
+                        apartment_number_snapshot,
                         apartment_size_snapshot,
                         prior_balance,
                         current_charge,
@@ -253,7 +267,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                         created_at,
                         updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """
                 ),
                 (
@@ -262,6 +276,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     shelter,
                     resident_name,
                     config.get("level_snapshot"),
+                    config.get("apartment_number_snapshot"),
                     config.get("apartment_size_snapshot"),
                     prior_balance,
                     current_charge,
@@ -307,6 +322,11 @@ def register_routes(rent_tracking):
         rows = []
         for resident in _active_residents_for_shelter(shelter):
             config = _ensure_default_rent_config(resident["id"], shelter)
+            apartment_number_snapshot = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
+            apartment_size_snapshot = _derive_apartment_size_from_assignment(shelter, apartment_number_snapshot) or config.get("apartment_size_snapshot")
+            config["apartment_number_snapshot"] = apartment_number_snapshot
+            config["apartment_size_snapshot"] = apartment_size_snapshot
+
             auto_rent, auto_note = _derive_base_monthly_rent(settings, shelter, config)
             manual_override = _float_value(config.get("monthly_rent"))
             rows.append(
@@ -314,7 +334,8 @@ def register_routes(rent_tracking):
                     "resident_id": resident["id"],
                     "resident_name": f"{resident.get('first_name', '')} {resident.get('last_name', '')}".strip(),
                     "level_snapshot": config.get("level_snapshot"),
-                    "apartment_size_snapshot": config.get("apartment_size_snapshot"),
+                    "apartment_number_snapshot": apartment_number_snapshot,
+                    "apartment_size_snapshot": apartment_size_snapshot,
                     "monthly_rent": manual_override if manual_override > 0 else auto_rent,
                     "manual_monthly_rent": manual_override,
                     "auto_monthly_rent": auto_rent,
@@ -472,6 +493,12 @@ def register_routes(rent_tracking):
             return redirect(url_for("rent_tracking.rent_roll"))
 
         config = _ensure_default_rent_config(resident_id, shelter)
+        config["apartment_number_snapshot"] = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
+        config["apartment_size_snapshot"] = _derive_apartment_size_from_assignment(
+            shelter,
+            config.get("apartment_number_snapshot"),
+        ) or config.get("apartment_size_snapshot")
+
         auto_monthly_rent, auto_rent_note = _derive_base_monthly_rent(settings, shelter, config)
 
         ph = _placeholder()
@@ -486,9 +513,18 @@ def register_routes(rent_tracking):
             (resident_id, shelter),
         )
 
+        apartment_options = _apartment_options_for_shelter(shelter)
+
         if request.method == "POST":
             level_snapshot = (request.form.get("level_snapshot") or "").strip() or None
-            apartment_size_snapshot = (request.form.get("apartment_size_snapshot") or "").strip() or None
+            apartment_number_snapshot = _normalize_apartment_number(
+                shelter,
+                request.form.get("apartment_number_snapshot"),
+            )
+            apartment_size_snapshot = _derive_apartment_size_from_assignment(
+                shelter,
+                apartment_number_snapshot,
+            )
             monthly_rent = _float_value(request.form.get("monthly_rent"))
             is_exempt = (request.form.get("is_exempt") or "no").strip().lower() == "yes"
             from .dates import _today_chicago as _today_local
@@ -526,6 +562,7 @@ def register_routes(rent_tracking):
                         resident_id,
                         shelter,
                         level_snapshot,
+                        apartment_number_snapshot,
                         apartment_size_snapshot,
                         monthly_rent,
                         is_exempt,
@@ -535,7 +572,7 @@ def register_routes(rent_tracking):
                         created_at,
                         updated_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     if g.get("db_kind") == "pg"
                     else
@@ -544,6 +581,7 @@ def register_routes(rent_tracking):
                         resident_id,
                         shelter,
                         level_snapshot,
+                        apartment_number_snapshot,
                         apartment_size_snapshot,
                         monthly_rent,
                         is_exempt,
@@ -553,13 +591,14 @@ def register_routes(rent_tracking):
                         created_at,
                         updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """
                 ),
                 (
                     resident_id,
                     shelter,
                     level_snapshot,
+                    apartment_number_snapshot,
                     apartment_size_snapshot,
                     monthly_rent,
                     is_exempt if g.get("db_kind") == "pg" else (1 if is_exempt else 0),
@@ -577,10 +616,13 @@ def register_routes(rent_tracking):
         return render_template(
             "case_management/resident_rent_config.html",
             resident=resident,
+            shelter=shelter,
             current_config=config,
             history=history,
             auto_monthly_rent=auto_monthly_rent,
             auto_rent_note=auto_rent_note,
+            apartment_options=apartment_options,
+            derived_apartment_size=config.get("apartment_size_snapshot"),
         )
 
     @rent_tracking.get("/resident/<int:resident_id>/history")
