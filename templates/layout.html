@@ -51,8 +51,6 @@
       {% set residents_url = safe_url_for('residents.staff_residents') %}
       {% set intake_assessment_url = safe_url_for('case_management.intake_index') %}
       {% set case_management_url = safe_url_for('case_management.index') %}
-      {% set compliance_url = safe_url_for('compliance.compliance_dashboard') %}
-      {% set forms_url = safe_url_for('forms_admin.forms_index') %}
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
       {% set chore_board_url = safe_url_for('shelter_operations.chore_board') %}
       {% set chore_config_url = safe_url_for('shelter_operations.chore_management') %}
@@ -131,12 +129,6 @@
                 {% endif %}
                 {% if case_management_url %}
                   <a href="{{ case_management_url }}">Progress Reports</a>
-                {% endif %}
-                {% if compliance_url %}
-                  <a href="{{ compliance_url }}">Compliance</a>
-                {% endif %}
-                {% if forms_url %}
-                  <a href="{{ forms_url }}">Forms</a>
                 {% endif %}
                 {% if case_dashboard_url %}
                   <a href="{{ case_dashboard_url }}">Case Mgmt Dashboard</a>

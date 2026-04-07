@@ -98,7 +98,6 @@ def _register_csrf(app: Flask) -> None:
             "resident_requests.sms_consent",
             "twilio.twilio_inbound",
             "twilio.twilio_status",
-            "forms_ingest.jotform_webhook",
         }
 
         if request.endpoint in exempt_endpoints:
