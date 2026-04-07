@@ -2,16 +2,63 @@
 
 {% block extra_head %}
 <style>
-  .rent-jump-bar {
+  .rent-toolbar {
     position: sticky;
     top: 12px;
-    z-index: 20;
+    z-index: 25;
     margin-bottom: 18px;
     padding: 12px 14px;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--panel);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  }
+
+  .rent-toolbar-top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    align-items: end;
+  }
+
+  .rent-toolbar-field {
+    min-width: 180px;
+    flex: 1 1 220px;
+  }
+
+  .rent-toolbar-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .rent-toolbar-field input,
+  .rent-toolbar-field select {
+    width: 100%;
+  }
+
+  .rent-toolbar-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .rent-toolbar-summary {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .rent-jump-bar {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
   }
 
   .rent-jump-title {
@@ -63,7 +110,11 @@
     border-radius: 12px;
     background: var(--panel);
     overflow: hidden;
-    scroll-margin-top: 100px;
+    scroll-margin-top: 140px;
+  }
+
+  .rent-group-card.is-hidden {
+    display: none;
   }
 
   .rent-group-head {
@@ -99,6 +150,10 @@
 
   .rent-entry-row:last-child {
     border-bottom: 0;
+  }
+
+  .rent-entry-row.is-hidden {
+    display: none;
   }
 
   .rent-entry-top {
@@ -253,6 +308,20 @@
     line-height: 1.45;
   }
 
+  .rent-empty-state {
+    display: none;
+    margin-top: 16px;
+    padding: 18px 16px;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    background: var(--bg-soft);
+    color: var(--text-muted);
+  }
+
+  .rent-empty-state.is-visible {
+    display: block;
+  }
+
   @media (max-width: 1200px) {
     .rent-entry-top {
       grid-template-columns: 1fr 1fr;
@@ -265,7 +334,8 @@
 
   @media (max-width: 760px) {
     .rent-entry-top,
-    .rent-detail-grid {
+    .rent-detail-grid,
+    .rent-toolbar-top {
       grid-template-columns: 1fr;
     }
 
@@ -300,8 +370,46 @@
 
     {% set apartment_mode = shelter in ['abba', 'gratitude'] %}
 
+    <div class="rent-toolbar">
+      <div class="rent-toolbar-top">
+        <div class="rent-toolbar-field">
+          <label for="rent-search">Search resident or apartment</label>
+          <input id="rent-search" type="text" placeholder="Type resident name or apartment number">
+        </div>
+
+        <div class="rent-toolbar-field">
+          <label for="rent-status-filter">Status</label>
+          <select id="rent-status-filter">
+            <option value="all">All</option>
+            <option value="Not Paid">Not Paid</option>
+            <option value="Partially Paid">Partially Paid</option>
+            <option value="Paid Late">Paid Late</option>
+            <option value="Paid">Paid</option>
+            <option value="Exempt">Exempt</option>
+          </select>
+        </div>
+
+        <div class="rent-toolbar-field">
+          <label for="rent-balance-filter">Balance</label>
+          <select id="rent-balance-filter">
+            <option value="all">All</option>
+            <option value="due_only">Only with balance due</option>
+            <option value="zero_only">Only zero balance</option>
+          </select>
+        </div>
+
+        <div class="rent-toolbar-actions">
+          <button type="button" class="cmx-btn-muted" id="rent-clear-filters">Clear</button>
+        </div>
+      </div>
+
+      <div class="rent-toolbar-summary">
+        <span id="rent-visible-count">Showing all residents.</span>
+      </div>
+    </div>
+
     {% if apartment_mode and grouped_entry_sections %}
-      <div class="rent-jump-bar">
+      <div class="rent-jump-bar" id="rent-jump-bar">
         <div class="rent-jump-title">Jump to apartment</div>
         <div class="rent-jump-links">
           {% for group in grouped_entry_sections %}
@@ -323,13 +431,21 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
         {% if grouped_entry_sections %}
-          <div class="rent-groups">
+          <div class="rent-groups" id="rent-groups">
             {% for group in grouped_entry_sections %}
-              <section class="rent-group-card" id="rent-group-{{ group.group_key or loop.index }}">
+              <section
+                class="rent-group-card"
+                id="rent-group-{{ group.group_key or loop.index }}"
+                data-group-label="{{ (group.group_label or '')|lower }}"
+                data-group-key="{{ (group.group_key or '')|lower }}"
+              >
                 <div class="rent-group-head">
                   <div>
                     <h2 class="rent-group-title">{{ group.group_label }}</h2>
-                    <div class="rent-group-count">{{ group.entries|length }} resident{% if group.entries|length != 1 %}s{% endif %}</div>
+                    <div class="rent-group-count">
+                      <span class="rent-group-visible-count">{{ group.entries|length }}</span>
+                      resident{% if group.entries|length != 1 %}s{% endif %}
+                    </div>
                   </div>
                 </div>
 
@@ -347,7 +463,14 @@
                       {% set status_class = 'rent-status-exempt' %}
                     {% endif %}
 
-                    <div class="rent-entry-row">
+                    <div
+                      class="rent-entry-row"
+                      data-resident-name="{{ (entry['resident_name_snapshot'] or '')|lower }}"
+                      data-apartment-number="{{ (entry['apartment_number_snapshot'] or '')|lower }}"
+                      data-apartment-size="{{ (entry['apartment_size_snapshot'] or '')|lower }}"
+                      data-status="{{ status_text }}"
+                      data-remaining-balance="{{ entry['remaining_balance'] or 0 }}"
+                    >
                       <div class="rent-entry-top">
                         <div>
                           <div class="rent-resident-name">{{ entry['resident_name_snapshot'] }}</div>
@@ -456,8 +579,12 @@
             {% endfor %}
           </div>
 
+          <div class="rent-empty-state" id="rent-empty-state">
+            No residents match the current search or filter.
+          </div>
+
           <div class="rent-page-help">
-            Abba and Gratitude are grouped by apartment number with jump links at the top. Haven stays resident based. Rent details stay tucked under each resident so staff can move through payments faster.
+            Abba and Gratitude are grouped by apartment number with jump links at the top. Haven stays resident based. Search and filters work live on this page without reloading.
           </div>
 
           <div class="cmx-button-row" style="margin-top:16px;">
@@ -470,4 +597,95 @@
     </div>
   </div>
 </div>
+
+<script>
+  (function () {
+    const searchInput = document.getElementById("rent-search");
+    const statusFilter = document.getElementById("rent-status-filter");
+    const balanceFilter = document.getElementById("rent-balance-filter");
+    const clearButton = document.getElementById("rent-clear-filters");
+    const visibleCount = document.getElementById("rent-visible-count");
+    const emptyState = document.getElementById("rent-empty-state");
+    const groupCards = Array.from(document.querySelectorAll(".rent-group-card"));
+
+    if (!searchInput || !statusFilter || !balanceFilter || !groupCards.length) {
+      return;
+    }
+
+    function applyFilters() {
+      const searchValue = searchInput.value.trim().toLowerCase();
+      const statusValue = statusFilter.value;
+      const balanceValue = balanceFilter.value;
+
+      let totalVisible = 0;
+
+      groupCards.forEach((groupCard) => {
+        const rows = Array.from(groupCard.querySelectorAll(".rent-entry-row"));
+        let visibleInGroup = 0;
+
+        rows.forEach((row) => {
+          const residentName = row.dataset.residentName || "";
+          const apartmentNumber = row.dataset.apartmentNumber || "";
+          const apartmentSize = row.dataset.apartmentSize || "";
+          const status = row.dataset.status || "";
+          const remainingBalance = parseFloat(row.dataset.remainingBalance || "0");
+
+          const searchMatches =
+            !searchValue ||
+            residentName.includes(searchValue) ||
+            apartmentNumber.includes(searchValue) ||
+            apartmentSize.includes(searchValue);
+
+          const statusMatches =
+            statusValue === "all" || status === statusValue;
+
+          const balanceMatches =
+            balanceValue === "all" ||
+            (balanceValue === "due_only" && remainingBalance > 0) ||
+            (balanceValue === "zero_only" && remainingBalance <= 0);
+
+          const shouldShow = searchMatches && statusMatches && balanceMatches;
+          row.classList.toggle("is-hidden", !shouldShow);
+
+          if (shouldShow) {
+            visibleInGroup += 1;
+            totalVisible += 1;
+          }
+        });
+
+        const groupCountEl = groupCard.querySelector(".rent-group-visible-count");
+        if (groupCountEl) {
+          groupCountEl.textContent = visibleInGroup;
+        }
+
+        groupCard.classList.toggle("is-hidden", visibleInGroup === 0);
+      });
+
+      if (visibleCount) {
+        visibleCount.textContent =
+          totalVisible === 1
+            ? "Showing 1 resident."
+            : `Showing ${totalVisible} residents.`;
+      }
+
+      if (emptyState) {
+        emptyState.classList.toggle("is-visible", totalVisible === 0);
+      }
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+    statusFilter.addEventListener("change", applyFilters);
+    balanceFilter.addEventListener("change", applyFilters);
+
+    clearButton.addEventListener("click", function () {
+      searchInput.value = "";
+      statusFilter.value = "all";
+      balanceFilter.value = "all";
+      applyFilters();
+      searchInput.focus();
+    });
+
+    applyFilters();
+  })();
+</script>
 {% endblock %}
