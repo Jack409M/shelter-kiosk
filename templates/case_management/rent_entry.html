@@ -67,6 +67,23 @@
     color: var(--text-muted);
   }
 
+  .rent-dirty-pill {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    border: 1px solid #e0cd7a;
+    background: #fff4d8;
+    font-size: 13px;
+    font-weight: 700;
+    color: #7a6500;
+  }
+
+  .rent-dirty-pill.is-visible {
+    display: inline-flex;
+  }
+
   .rent-jump-bar {
     margin-bottom: 18px;
     padding: 12px 14px;
@@ -160,6 +177,7 @@
   .rent-entry-row {
     padding: 16px;
     border-bottom: 1px solid var(--border);
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
 
   .rent-entry-row:last-child {
@@ -168,6 +186,11 @@
 
   .rent-entry-row.is-hidden {
     display: none;
+  }
+
+  .rent-entry-row.is-dirty {
+    background: #fffaf0;
+    box-shadow: inset 4px 0 0 #e0cd7a;
   }
 
   .rent-entry-top {
@@ -198,6 +221,18 @@
     border: 1px solid var(--border);
     font-size: 12px;
     line-height: 1.2;
+  }
+
+  .rent-pill-dirty {
+    display: none;
+    background: #fff4d8;
+    border-color: #e0cd7a;
+    color: #7a6500;
+    font-weight: 700;
+  }
+
+  .rent-pill-dirty.is-visible {
+    display: inline-block;
   }
 
   .rent-field-label {
@@ -265,6 +300,13 @@
   .rent-entry-top input,
   .rent-entry-top select {
     width: 100%;
+  }
+
+  .rent-entry-top input.is-dirty,
+  .rent-entry-top select.is-dirty {
+    border-color: #e0cd7a;
+    background: #fffdf5;
+    box-shadow: 0 0 0 2px rgba(224, 205, 122, 0.18);
   }
 
   .rent-notes-input {
@@ -400,7 +442,7 @@
 
     {% set apartment_mode = shelter in ['abba', 'gratitude'] %}
 
-    <form method="post" action="{{ url_for('rent_tracking.payment_entry_sheet', year=sheet['rent_year'], month=sheet['rent_month']) }}">
+    <form method="post" action="{{ url_for('rent_tracking.payment_entry_sheet', year=sheet['rent_year'], month=sheet['rent_month']) }}" id="rent-payment-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
       <div class="rent-toolbar">
@@ -435,6 +477,7 @@
             <button type="button" class="cmx-btn-muted" id="rent-clear-filters">Clear</button>
             <button type="submit" class="cmx-btn">Save Payment Sheet</button>
             <span class="rent-save-pill">Changes save for the whole page</span>
+            <span class="rent-dirty-pill" id="rent-dirty-pill">Unsaved changes</span>
           </div>
         </div>
 
@@ -512,6 +555,7 @@
                               <span class="rent-pill">Apartment {{ entry['apartment_number_snapshot'] }}</span>
                             {% endif %}
                             <span class="rent-pill">{{ entry['apartment_size_snapshot'] or '—' }}</span>
+                            <span class="rent-pill rent-pill-dirty">Unsaved</span>
                           </div>
                         </div>
 
@@ -636,13 +680,16 @@
 
 <script>
   (function () {
+    const form = document.getElementById("rent-payment-form");
     const searchInput = document.getElementById("rent-search");
     const statusFilter = document.getElementById("rent-status-filter");
     const balanceFilter = document.getElementById("rent-balance-filter");
     const clearButton = document.getElementById("rent-clear-filters");
     const visibleCount = document.getElementById("rent-visible-count");
     const emptyState = document.getElementById("rent-empty-state");
+    const dirtyPill = document.getElementById("rent-dirty-pill");
     const groupCards = Array.from(document.querySelectorAll(".rent-group-card"));
+    const rowInputs = Array.from(document.querySelectorAll(".rent-entry-row input, .rent-entry-row select"));
 
     if (!searchInput || !statusFilter || !balanceFilter || !groupCards.length) {
       return;
@@ -709,6 +756,39 @@
       }
     }
 
+    function refreshDirtyState() {
+      let anyDirty = false;
+
+      rowInputs.forEach((field) => {
+        const row = field.closest(".rent-entry-row");
+        if (!row) return;
+
+        const originalValue = field.defaultValue ?? "";
+        const currentValue = field.value ?? "";
+        const isDirty = String(currentValue) !== String(originalValue);
+
+        field.classList.toggle("is-dirty", isDirty);
+
+        const dirtyFieldsInRow = row.querySelectorAll("input.is-dirty, select.is-dirty");
+        const rowIsDirty = dirtyFieldsInRow.length > 0;
+
+        row.classList.toggle("is-dirty", rowIsDirty);
+
+        const dirtyPillInRow = row.querySelector(".rent-pill-dirty");
+        if (dirtyPillInRow) {
+          dirtyPillInRow.classList.toggle("is-visible", rowIsDirty);
+        }
+
+        if (rowIsDirty) {
+          anyDirty = true;
+        }
+      });
+
+      if (dirtyPill) {
+        dirtyPill.classList.toggle("is-visible", anyDirty);
+      }
+    }
+
     searchInput.addEventListener("input", applyFilters);
     statusFilter.addEventListener("change", applyFilters);
     balanceFilter.addEventListener("change", applyFilters);
@@ -721,7 +801,21 @@
       searchInput.focus();
     });
 
+    rowInputs.forEach((field) => {
+      field.addEventListener("input", refreshDirtyState);
+      field.addEventListener("change", refreshDirtyState);
+    });
+
+    if (form) {
+      form.addEventListener("submit", function () {
+        if (dirtyPill) {
+          dirtyPill.classList.remove("is-visible");
+        }
+      });
+    }
+
     applyFilters();
+    refreshDirtyState();
   })();
 </script>
 {% endblock %}
