@@ -8,7 +8,7 @@
     padding: 22px;
     border: 1px solid var(--border);
     border-radius: 14px;
-    background: var(--panel);
+    background: var(--bg-soft);
   }
 
   .housing-transfer-subtitle {
@@ -161,16 +161,13 @@
     const apartmentHelp = document.getElementById("apartment-help");
     const summaryText = document.getElementById("housing-summary-text");
 
-    const apartmentMap = {
-      abba: ["1","2","3","4","5","6","7","8","9","10"],
-      gratitude: ["2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","20","21","22","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40"]
-    };
+    const availabilityMap = {{ availability_map | tojson }};
 
     function rebuildApartmentOptions(shelterValue) {
       const previousValue = apartmentField.value;
       apartmentField.innerHTML = '<option value="">Select apartment</option>';
 
-      const values = apartmentMap[shelterValue] || [];
+      const values = availabilityMap[shelterValue] || [];
       values.forEach(function (value) {
         const option = document.createElement("option");
         option.value = value;
@@ -189,8 +186,8 @@
         apartmentWrap.classList.remove("housing-transfer-hidden");
         apartmentField.required = true;
         rebuildApartmentOptions("abba");
-        apartmentHelp.textContent = "Required. All Abba apartments are one bedroom.";
-        summaryText.textContent = "Abba requires an apartment number at the time of move. All Abba apartments are one bedroom.";
+        apartmentHelp.textContent = "Required. Only unoccupied Abba apartments are shown.";
+        summaryText.textContent = "Abba requires an apartment number at the time of move. Only unoccupied units are available here.";
         return;
       }
 
@@ -198,8 +195,8 @@
         apartmentWrap.classList.remove("housing-transfer-hidden");
         apartmentField.required = true;
         rebuildApartmentOptions("gratitude");
-        apartmentHelp.textContent = "Required. Unit type will auto derive from the apartment number.";
-        summaryText.textContent = "Gratitude requires an apartment number at the time of move. The unit type will auto derive from the apartment number.";
+        apartmentHelp.textContent = "Required. Only unoccupied Gratitude units are shown. Unit type will auto derive from the apartment number.";
+        summaryText.textContent = "Gratitude requires an apartment number at the time of move. Only unoccupied units are available here, and the unit type will auto derive from the apartment number.";
         return;
       }
 
