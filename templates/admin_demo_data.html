@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-shell" style="max-width: 1100px; margin: 0 auto;">
+  <div class="card" style="padding: 24px; margin-bottom: 20px;">
+    <h1 style="margin-top: 0;">Demo Data Tools</h1>
+    <p style="margin-bottom: 0;">
+      This page creates and clears full fake resident workflow data for testing.
+      It is admin only and follows the dangerous admin route lock.
+    </p>
+  </div>
+
+  <div class="card" style="padding: 24px; margin-bottom: 20px;">
+    <h2 style="margin-top: 0;">Current Demo Data State</h2>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 12px;">
+      <div style="padding: 14px; border: 1px solid #ddd; border-radius: 10px;">
+        <div style="font-size: 12px; color: #666;">Residents</div>
+        <div style="font-size: 28px; font-weight: 700;">{{ demo_counts.resident_count }}</div>
+      </div>
+      <div style="padding: 14px; border: 1px solid #ddd; border-radius: 10px;">
+        <div style="font-size: 12px; color: #666;">Enrollments</div>
+        <div style="font-size: 28px; font-weight: 700;">{{ demo_counts.enrollment_count }}</div>
+      </div>
+      <div style="padding: 14px; border: 1px solid #ddd; border-radius: 10px;">
+        <div style="font-size: 12px; color: #666;">Passes</div>
+        <div style="font-size: 28px; font-weight: 700;">{{ demo_counts.pass_count }}</div>
+      </div>
+      <div style="padding: 14px; border: 1px solid #ddd; border-radius: 10px;">
+        <div style="font-size: 12px; color: #666;">Weekly Summaries</div>
+        <div style="font-size: 28px; font-weight: 700;">{{ demo_counts.weekly_summary_count }}</div>
+      </div>
+      <div style="padding: 14px; border: 1px solid #ddd; border-radius: 10px;">
+        <div style="font-size: 12px; color: #666;">Attendance Events</div>
+        <div style="font-size: 28px; font-weight: 700;">{{ demo_counts.attendance_count }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="padding: 24px; margin-bottom: 20px;">
+    <h2 style="margin-top: 0;">Seed Demo Data</h2>
+    <p>
+      This creates 10 fake residents in each shelter with enrollments, attendance history,
+      weekly summaries, passes, requests, goals, appointments, services, and related workflow data.
+    </p>
+
+    <form method="POST" action="{{ url_for('admin.admin_seed_demo_data') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <label for="seed-confirm-phrase" style="display: block; font-weight: 600; margin-bottom: 8px;">
+        Type <strong>SEED DEMO DATA</strong> to continue
+      </label>
+      <input
+        id="seed-confirm-phrase"
+        type="text"
+        name="confirm_phrase"
+        autocomplete="off"
+        required
+        style="width: 100%; max-width: 420px; padding: 10px; margin-bottom: 14px;"
+      >
+      <div>
+        <button type="submit" class="btn btn-primary">Seed Demo Data</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card" style="padding: 24px;">
+    <h2 style="margin-top: 0;">Clear Demo Data</h2>
+    <p>
+      This removes demo records created from the demo data tool by matching the locked demo prefix.
+      It does not wipe the whole database.
+    </p>
+
+    <form method="POST" action="{{ url_for('admin.admin_clear_demo_data') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <label for="clear-confirm-phrase" style="display: block; font-weight: 600; margin-bottom: 8px;">
+        Type <strong>CLEAR DEMO DATA</strong> to continue
+      </label>
+      <input
+        id="clear-confirm-phrase"
+        type="text"
+        name="confirm_phrase"
+        autocomplete="off"
+        required
+        style="width: 100%; max-width: 420px; padding: 10px; margin-bottom: 14px;"
+      >
+      <div>
+        <button type="submit" class="btn btn-danger">Clear Demo Data</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
