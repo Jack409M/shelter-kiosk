@@ -131,6 +131,38 @@ def _local_dt_input_value(dt_iso: str | None) -> str:
         return ""
 
 
+def _parse_stored_utc_naive(value: str | None) -> datetime | None:
+    text = (value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text)
+    except Exception:
+        return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.astimezone(timezone.utc)
+
+
+def _late_status(expected_back_time: str | None, is_out: bool) -> tuple[bool, int | None]:
+    if not is_out:
+        return False, None
+
+    expected_back_dt = _parse_stored_utc_naive(expected_back_time)
+    if not expected_back_dt:
+        return False, None
+
+    now_utc = datetime.now(timezone.utc)
+    if now_utc <= expected_back_dt:
+        return False, None
+
+    late_seconds = (now_utc - expected_back_dt).total_seconds()
+    late_minutes = max(1, int(late_seconds // 60))
+    return True, late_minutes
+
+
 def _latest_open_checkout_row(resident_id: int, shelter: str):
     row = db_fetchone(
         """
@@ -369,6 +401,7 @@ def _attendance_base_row(r, shelter: str) -> dict[str, Any]:
     is_out = last_event_type == "check_out"
     active_pass = has_active_pass(rid, shelter)
     last_completed_pair = None if is_out else _latest_completed_attendance_pair(rid, shelter)
+    is_late, late_minutes = _late_status(expected_back_time, is_out)
 
     return {
         "resident_id": rid,
@@ -378,6 +411,8 @@ def _attendance_base_row(r, shelter: str) -> dict[str, Any]:
         "checked_out_at": checkout_time,
         "expected_back_at": expected_back_time,
         "is_out": is_out,
+        "is_late": is_late,
+        "late_minutes": late_minutes,
         "note": checkout_note,
         "destination": destination,
         "obligation_start_at": obligation_start_time,
@@ -425,7 +460,13 @@ def staff_attendance_view():
         else:
             in_rows.append(row)
 
-    out_rows.sort(key=lambda x: (x["last_name"].lower(), x["first_name"].lower()))
+    out_rows.sort(
+        key=lambda x: (
+            0 if x["is_late"] else 1,
+            x["last_name"].lower(),
+            x["first_name"].lower(),
+        )
+    )
     in_rows.sort(key=lambda x: (x["last_name"].lower(), x["first_name"].lower()))
 
     return render_template(
