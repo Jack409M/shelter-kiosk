@@ -1,7 +1,87 @@
 {% extends "layout.html" %}
+
+{% block extra_head %}
+<style>
+  .housing-transfer-card {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--panel);
+  }
+
+  .housing-transfer-subtitle {
+    color: var(--text-muted);
+    margin-bottom: 18px;
+    line-height: 1.45;
+  }
+
+  .housing-transfer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .housing-transfer-grid .full {
+    grid-column: 1 / -1;
+  }
+
+  .housing-transfer-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .housing-transfer-field input,
+  .housing-transfer-field select,
+  .housing-transfer-field textarea {
+    width: 100%;
+  }
+
+  .housing-transfer-help {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .housing-transfer-panel {
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-soft);
+  }
+
+  .housing-transfer-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+
+  .housing-transfer-hidden {
+    display: none;
+  }
+
+  @media (max-width: 760px) {
+    .housing-transfer-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-  <h1>Transfer Resident</h1>
-  <p>
+<div class="housing-transfer-card">
+  <h1>Move Resident</h1>
+
+  <p class="housing-transfer-subtitle">
     Move
     <strong>
       {% if resident is mapping %}
@@ -11,30 +91,138 @@
       {% endif %}
     </strong>
     from <strong>{{ from_shelter|title }}</strong>.
+    {% if current_apartment_number %}
+      Current apartment assignment: <strong>{{ current_apartment_number }}</strong>{% if current_apartment_size %} ({{ current_apartment_size }}){% endif %}.
+    {% endif %}
   </p>
 
-  <form method="post">
+  <form method="post" id="resident-move-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="next" value="{{ next or '' }}">
 
-    <label for="to_shelter">New shelter</label>
-    <select id="to_shelter" name="to_shelter" required>
-      <option value="">Select shelter</option>
-      {% for s in shelters %}
-        <option value="{{ s }}">{{ s|title }}</option>
-      {% endfor %}
-    </select>
+    <div class="housing-transfer-grid">
+      <div class="housing-transfer-field">
+        <label for="to_shelter">Destination shelter</label>
+        <select id="to_shelter" name="to_shelter" required>
+          <option value="">Select shelter</option>
+          {% for s in shelters %}
+            <option value="{{ s }}" {% if request.args.get('to_shelter') == s %}selected{% endif %}>{{ s|title }}</option>
+          {% endfor %}
+        </select>
+        <div class="housing-transfer-help">
+          Choosing the same shelter for Abba or Gratitude updates the apartment assignment within that shelter.
+        </div>
+      </div>
 
-    <label for="note">Note</label>
-    <textarea id="note" name="note" rows="4" placeholder="Optional reason or note"></textarea>
+      <div class="housing-transfer-field" id="apartment-number-wrap">
+        <label for="apartment_number">Apartment number</label>
+        <select id="apartment_number" name="apartment_number">
+          <option value="">Select apartment</option>
+          {% for apartment_number in apartment_options %}
+            <option value="{{ apartment_number }}">{{ apartment_number }}</option>
+          {% endfor %}
+        </select>
+        <div class="housing-transfer-help" id="apartment-help">
+          Required when moving to Abba or Gratitude.
+        </div>
+      </div>
 
-    <div style="margin-top: 1rem;">
-      <button type="submit">Transfer Resident</button>
+      <div class="housing-transfer-field full">
+        <label for="note">Note</label>
+        <textarea id="note" name="note" rows="4" placeholder="Optional reason or note"></textarea>
+      </div>
+
+      <div class="housing-transfer-field full">
+        <div class="housing-transfer-panel" id="housing-summary-panel">
+          <strong>Housing rule</strong>
+          <div id="housing-summary-text" class="housing-transfer-help" style="margin-top:8px;">
+            Choose a destination shelter to see assignment rules.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="housing-transfer-actions">
+      <button type="submit" class="cmx-btn">Save Move</button>
       {% if next %}
-        <a href="{{ next }}">Cancel</a>
+        <a class="cmx-btn-muted" href="{{ next }}">Cancel</a>
       {% else %}
-        <a href="{{ url_for('residents.staff_residents') }}">Cancel</a>
+        <a class="cmx-btn-muted" href="{{ url_for('residents.staff_residents') }}">Cancel</a>
       {% endif %}
     </div>
   </form>
+</div>
+
+<script>
+  (function () {
+    const shelterField = document.getElementById("to_shelter");
+    const apartmentWrap = document.getElementById("apartment-number-wrap");
+    const apartmentField = document.getElementById("apartment_number");
+    const apartmentHelp = document.getElementById("apartment-help");
+    const summaryText = document.getElementById("housing-summary-text");
+
+    const apartmentMap = {
+      abba: ["1","2","3","4","5","6","7","8","9","10"],
+      gratitude: ["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","20","21","22","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40"]
+    };
+
+    function rebuildApartmentOptions(shelterValue) {
+      const previousValue = apartmentField.value;
+      apartmentField.innerHTML = '<option value="">Select apartment</option>';
+
+      const values = apartmentMap[shelterValue] || [];
+      values.forEach(function (value) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        if (value === previousValue) {
+          option.selected = true;
+        }
+        apartmentField.appendChild(option);
+      });
+    }
+
+    function refreshMoveUi() {
+      const shelterValue = (shelterField.value || "").trim().toLowerCase();
+
+      if (shelterValue === "abba") {
+        apartmentWrap.classList.remove("housing-transfer-hidden");
+        apartmentField.required = true;
+        rebuildApartmentOptions("abba");
+        apartmentHelp.textContent = "Required. All Abba apartments are one bedroom.";
+        summaryText.textContent = "Abba requires an apartment number at the time of move. All Abba apartments are one bedroom.";
+        return;
+      }
+
+      if (shelterValue === "gratitude") {
+        apartmentWrap.classList.remove("housing-transfer-hidden");
+        apartmentField.required = true;
+        rebuildApartmentOptions("gratitude");
+        apartmentHelp.textContent = "Required. Unit type will auto derive from the apartment number.";
+        summaryText.textContent = "Gratitude requires an apartment number at the time of move. The unit type will auto derive from the apartment number.";
+        return;
+      }
+
+      if (shelterValue === "haven") {
+        apartmentWrap.classList.add("housing-transfer-hidden");
+        apartmentField.required = false;
+        apartmentField.value = "";
+        apartmentField.innerHTML = '<option value="">Select apartment</option>';
+        summaryText.textContent = "Haven is dorm style housing. No apartment number will be stored.";
+        return;
+      }
+
+      apartmentWrap.classList.add("housing-transfer-hidden");
+      apartmentField.required = false;
+      apartmentField.value = "";
+      apartmentField.innerHTML = '<option value="">Select apartment</option>';
+      summaryText.textContent = "Choose a destination shelter to see assignment rules.";
+    }
+
+    if (shelterField) {
+      shelterField.addEventListener("change", refreshMoveUi);
+      refreshMoveUi();
+    }
+  })();
+</script>
 {% endblock %}
