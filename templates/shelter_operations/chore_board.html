@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<h1>Weekly Chore Completion Log</h1>
+<h1 class="screen-title">Weekly Chore Assignment Sheet</h1>
 
 <p class="no-print" style="margin-bottom:16px;">
   <a class="btn" href="{{ url_for('shelter_operations.chore_assignments', assigned_date=assigned_date) }}">Open Assignment Page</a>
@@ -25,27 +25,35 @@
   </form>
 </div>
 
-<div class="card" style="margin-bottom:20px;">
-  <h2 style="text-align:center; margin-bottom:16px;">Weekly Chore Completion</h2>
-  <p style="text-align:center; margin-top:0;">
-    <strong>Week:</strong> {{ week_start }} to {{ week_end }}
-  </p>
+<div class="card chore-print-sheet" style="margin-bottom:20px;">
+  <div class="sheet-header">
+    <div class="sheet-org">Downtown Women’s Center</div>
+    <div class="sheet-shelter">{{ session.get("shelter") or "Shelter" }}</div>
+    <div class="sheet-title">Weekly Chore Assignment Sheet</div>
+    <div class="sheet-week">Week of {{ week_start }} to {{ week_end }}</div>
+  </div>
 
   {% if weekly_rows %}
     <div class="table-wrap">
       <table class="chore-board-table">
         <colgroup>
-          <col style="width:24%;">
-          <col style="width:12%;">
-          <col style="width:24%;">
-          <col span="7" style="width:5.5%;">
-          <col style="width:8%;">
+          <col class="col-who">
+          <col class="col-when">
+          <col class="col-what">
+          <col class="col-day">
+          <col class="col-day">
+          <col class="col-day">
+          <col class="col-day">
+          <col class="col-day">
+          <col class="col-day">
+          <col class="col-day">
+          <col class="col-delete">
         </colgroup>
         <thead>
           <tr>
-            <th>Who</th>
-            <th>When</th>
-            <th>What</th>
+            <th>Resident</th>
+            <th>Time</th>
+            <th>Chore Area</th>
             <th>Tue</th>
             <th>Wed</th>
             <th>Thu</th>
@@ -75,7 +83,7 @@
                 name="resident_id"
                 form="edit-row-{{ row.assignment_id }}"
                 required
-                style="width:100%;"
+                class="screen-select"
                 onchange="submitWithScroll('edit-row-{{ row.assignment_id }}')"
               >
                 {% for r in residents %}
@@ -84,9 +92,11 @@
                   </option>
                 {% endfor %}
               </select>
+
+              <span class="print-value">{{ row.last_name }}, {{ row.first_name }}</span>
             </td>
 
-            <td style="white-space:nowrap;">
+            <td class="when-cell">
               {{ row.when_label or "" }}
             </td>
 
@@ -95,7 +105,7 @@
                 name="chore_id"
                 form="edit-row-{{ row.assignment_id }}"
                 required
-                style="width:100%;"
+                class="screen-select"
                 onchange="submitWithScroll('edit-row-{{ row.assignment_id }}')"
               >
                 {% for c in chores %}
@@ -104,6 +114,8 @@
                   </option>
                 {% endfor %}
               </select>
+
+              <span class="print-value">{{ row.chore_name }}</span>
             </td>
 
             {% for d in week_dates %}
@@ -122,6 +134,7 @@
                     ☐
                   {% endif %}
                 </button>
+
                 <span class="print-check">
                   {% if day.status == 'completed' %}
                     ☑
@@ -129,6 +142,7 @@
                     ☐
                   {% endif %}
                 </span>
+
                 <form
                   id="toggle-day-{{ day.id }}"
                   method="post"
@@ -145,13 +159,14 @@
             </td>
             {% endfor %}
 
-            <td class="no-print">
+            <td class="no-print delete-cell">
               <button
                 type="button"
                 onclick="submitWithScroll('delete-row-{{ row.assignment_id }}')"
               >
                 Delete
               </button>
+
               <form
                 id="delete-row-{{ row.assignment_id }}"
                 method="post"
@@ -181,10 +196,64 @@
   max-height: none;
 }
 
+.chore-print-sheet {
+  background: #fff;
+}
+
+.sheet-header {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.sheet-org {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.sheet-shelter {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.sheet-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.sheet-week {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
 .chore-board-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+}
+
+.col-who {
+  width: 24%;
+}
+
+.col-when {
+  width: 10%;
+}
+
+.col-what {
+  width: 24%;
+}
+
+.col-day {
+  width: 5.4%;
+}
+
+.col-delete {
+  width: 9%;
 }
 
 .chore-board-table th,
@@ -195,12 +264,24 @@
 }
 
 .chore-board-table th {
-  background: #f5f5f5;
+  background: #f3f4f6;
   text-align: center;
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 2;
+}
+
+.screen-select {
+  width: 100%;
+}
+
+.print-value {
+  display: none;
+}
+
+.when-cell {
+  white-space: nowrap;
 }
 
 .chore-board-table td.day-cell {
@@ -236,23 +317,59 @@
   nav,
   .sidebar,
   header,
-  footer {
+  footer,
+  .screen-title,
+  .flash,
+  .flashes,
+  .alert,
+  .messages {
     display: none !important;
   }
 
-  .print-check {
-    display: inline !important;
-  }
-
+  html,
   body {
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
   }
 
-  .card {
+  main,
+  .main-content,
+  .container,
+  .content,
+  .page-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+
+  .card,
+  .chore-print-sheet {
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .sheet-header {
+    margin-bottom: 8px;
+  }
+
+  .sheet-org,
+  .sheet-shelter {
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+
+  .sheet-title {
+    font-size: 18px;
+    margin-top: 3px;
+  }
+
+  .sheet-week {
+    font-size: 11px;
+    margin-top: 3px;
   }
 
   .table-wrap {
@@ -262,22 +379,82 @@
 
   .chore-board-table {
     width: 100%;
-    font-size: 12px;
+    table-layout: fixed;
+    font-size: 9px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .chore-board-table thead,
+  .chore-board-table tbody,
+  .chore-board-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
   .chore-board-table th,
   .chore-board-table td {
     border: 1px solid #000;
-    padding: 5px;
+    padding: 2px 3px;
+    line-height: 1.05;
   }
 
   .chore-board-table th {
     position: static !important;
+    font-size: 9px;
+  }
+
+  .screen-select {
+    display: none !important;
+  }
+
+  .print-value {
+    display: block !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 9px;
+  }
+
+  .when-cell {
+    font-size: 9px;
+    text-align: center;
+  }
+
+  .chore-board-table td.day-cell {
+    padding: 1px 0;
+    font-size: 10px;
+  }
+
+  .print-check {
+    display: inline-block !important;
+    font-size: 10px;
+    line-height: 1;
+  }
+
+  .col-who {
+    width: 26%;
+  }
+
+  .col-when {
+    width: 8%;
+  }
+
+  .col-what {
+    width: 24%;
+  }
+
+  .col-day {
+    width: 5.2%;
+  }
+
+  .col-delete {
+    width: 0 !important;
   }
 
   @page {
-    size: landscape;
-    margin: 0.5in;
+    size: letter landscape;
+    margin: 0.2in;
   }
 }
 </style>
