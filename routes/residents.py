@@ -119,6 +119,57 @@ def _derive_apartment_size_local(shelter: str, apartment_number: str | None) -> 
     return _derive_apartment_size_from_assignment(shelter, apartment_number)
 
 
+def _occupied_apartment_numbers_for_shelter(shelter: str) -> set[str]:
+    shelter = _normalize_shelter_name(shelter)
+    if shelter not in {"abba", "gratitude"}:
+        return set()
+
+    rows = db_fetchall(
+        """
+        SELECT apartment_number_snapshot
+        FROM resident_rent_configs
+        WHERE LOWER(COALESCE(shelter, '')) = %s
+          AND COALESCE(effective_end_date, '') = ''
+          AND COALESCE(apartment_number_snapshot, '') <> ''
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT apartment_number_snapshot
+        FROM resident_rent_configs
+        WHERE LOWER(COALESCE(shelter, '')) = ?
+          AND COALESCE(effective_end_date, '') = ''
+          AND COALESCE(apartment_number_snapshot, '') <> ''
+        """,
+        (shelter,),
+    )
+
+    occupied: set[str] = set()
+    for row in rows:
+        value = row["apartment_number_snapshot"] if isinstance(row, dict) else row[0]
+        normalized = _normalize_apartment_number_local(shelter, value)
+        if normalized:
+            occupied.add(normalized)
+    return occupied
+
+
+def _available_apartment_options_for_shelter(shelter: str) -> list[str]:
+    shelter = _normalize_shelter_name(shelter)
+    all_options = _apartment_options_for_shelter_local(shelter)
+    if shelter not in {"abba", "gratitude"}:
+        return all_options
+
+    occupied = _occupied_apartment_numbers_for_shelter(shelter)
+    return [unit for unit in all_options if unit not in occupied]
+
+
+def _availability_map_for_transfer() -> dict[str, list[str]]:
+    return {
+        "abba": _available_apartment_options_for_shelter("abba"),
+        "gratitude": _available_apartment_options_for_shelter("gratitude"),
+    }
+
+
 def _active_rent_config_for_resident(resident_id: int, shelter: str):
     ph = "%s" if g.get("db_kind") == "pg" else "?"
     row = db_fetchone(
@@ -406,14 +457,17 @@ def staff_resident_transfer(resident_id: int):
     active_config = _active_rent_config_for_resident(resident_id, from_shelter)
     current_apartment_number = (active_config or {}).get("apartment_number_snapshot")
     current_apartment_size = _derive_apartment_size_local(from_shelter, current_apartment_number) or (active_config or {}).get("apartment_size_snapshot")
+
     destination_shelter_prefill = (request.form.get("to_shelter") or request.args.get("to_shelter") or "").strip().lower() or from_shelter
-    apartment_options = _apartment_options_for_shelter_local(destination_shelter_prefill)
+    availability_map = _availability_map_for_transfer()
+    apartment_options = availability_map.get(destination_shelter_prefill, [])
 
     if request.method == "POST":
         to_shelter = _normalize_shelter_name(request.form.get("to_shelter"))
         note = (request.form.get("note") or "").strip()
         apartment_number = _normalize_apartment_number_local(to_shelter, request.form.get("apartment_number"))
         apartment_size = _derive_apartment_size_local(to_shelter, apartment_number)
+        available_apartments = availability_map.get(to_shelter, [])
 
         if to_shelter not in shelter_choices:
             flash("Select a valid shelter.", "error")
@@ -423,6 +477,10 @@ def staff_resident_transfer(resident_id: int):
 
         if to_shelter in {"abba", "gratitude"} and not apartment_number:
             flash("Apartment number is required for Abba and Gratitude moves.", "error")
+            return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url, to_shelter=to_shelter))
+
+        if to_shelter in {"abba", "gratitude"} and apartment_number not in available_apartments:
+            flash("That apartment is not available.", "error")
             return redirect(url_for("residents.staff_resident_transfer", resident_id=resident_id, next=next_url, to_shelter=to_shelter))
 
         if to_shelter == "haven":
@@ -559,6 +617,7 @@ def staff_resident_transfer(resident_id: int):
         current_apartment_number=current_apartment_number,
         current_apartment_size=current_apartment_size,
         apartment_options=apartment_options,
+        availability_map=availability_map,
     )
 
 
