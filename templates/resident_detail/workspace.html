@@ -1,5 +1,67 @@
 {% extends "layout.html" %}
 
+{% block extra_head %}
+  {{ super() }}
+  <style>
+    .resident-workspace-shell {
+      display: block;
+    }
+
+    .resident-workspace-header {
+      margin-bottom: 22px;
+    }
+
+    .resident-workspace-title {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1.1;
+      margin: 0 0 8px 0;
+    }
+
+    .resident-workspace-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 1rem;
+      line-height: 1.35;
+    }
+
+    .resident-workspace-meta span {
+      display: inline-block;
+    }
+
+    .resident-workspace-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .resident-workspace-tabs .btn {
+      margin: 0;
+    }
+
+    .resident-workspace-body {
+      display: block;
+      min-width: 0;
+    }
+
+    @media (max-width: 860px) {
+      .resident-workspace-title {
+        font-size: 1.6rem;
+      }
+
+      .resident-workspace-meta {
+        gap: 8px 12px;
+        font-size: 0.95rem;
+      }
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
 
 {% if resident %}
@@ -16,45 +78,40 @@
     {% set resident_id = resident[0] %}
     {% set first_name = resident[1] %}
     {% set last_name = resident[2] %}
-    {% set resident_shelter = resident[3] %}
     {% set resident_code = resident[10] if resident|length > 10 else "" %}
+    {% set resident_shelter = resident[3] %}
     {% set program_status = resident[7] if resident|length > 7 else "" %}
     {% set entry_date = resident[8] if resident|length > 8 else "" %}
   {% endif %}
 
-  <div class="resident-header">
-
-    <div class="resident-header-main">
-      <div class="resident-header-name">
+  <div class="resident-workspace-shell">
+    <div class="resident-workspace-header">
+      <div class="resident-workspace-title">
         {{ first_name }} {{ last_name }}
       </div>
 
-      <div class="resident-header-meta">
+      <div class="resident-workspace-meta">
         <span><strong>Resident Code:</strong> {{ resident_code or "—" }}</span>
         <span><strong>Shelter:</strong> {{ resident_shelter | shelter if resident_shelter else "—" }}</span>
         <span><strong>Status:</strong> {{ program_status or "—" }}</span>
       </div>
-    </div>
 
-    <div class="resident-header-nav">
-      <a class="btn"
-         href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">
-         Profile
-      </a>
-
-      <a class="btn"
-         href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id) }}">
-         Timeline
-      </a>
-
-      {% if session.get("role") in ["admin", "shelter_director", "case_manager"] %}
-        <a class="btn"
-           href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
-           Case Workspace
+      <div class="resident-workspace-tabs">
+        <a class="btn" href="{{ url_for('resident_detail.resident_profile', resident_id=resident_id) }}">
+          Profile
         </a>
-      {% endif %}
-    </div>
 
+        <a class="btn" href="{{ url_for('resident_detail.resident_timeline', resident_id=resident_id) }}">
+          Timeline
+        </a>
+
+        {% if session.get("role") in ["admin", "shelter_director", "case_manager"] %}
+          <a class="btn" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
+            Case Workspace
+          </a>
+        {% endif %}
+      </div>
+    </div>
   </div>
 
 {% endif %}
