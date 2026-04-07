@@ -7,7 +7,14 @@
       <div class="cmx-section-head">
         <div>
           <h1 class="cmx-section-title">Living Area Inspection Sheet</h1>
-          <div class="cmx-section-subtitle">{{ shelter|shelter }} residents</div>
+          <div class="cmx-section-subtitle">
+            {{ shelter|shelter }}
+            {% if apartment_mode %}
+              apartment based inspection entry
+            {% else %}
+              resident based inspection entry
+            {% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -66,6 +73,14 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+          }
+
+          .inspection-card-subtitle {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #395976;
+            line-height: 1.3;
+            min-height: 30px;
           }
 
           .inspection-toggle-row {
@@ -166,31 +181,42 @@
           </div>
         </div>
 
-        {% if residents %}
+        {% if inspection_targets %}
           <div class="inspection-summary">
-            <div>{{ residents|length }} resident{{ "" if residents|length == 1 else "s" }}</div>
+            <div>{{ inspection_targets|length }} inspection card{{ "" if inspection_targets|length == 1 else "s" }}</div>
             <div>Default is Passed. Change only the exceptions.</div>
           </div>
 
           <div class="inspection-grid">
-            {% for resident in residents %}
+            {% for target in inspection_targets %}
               <div class="inspection-card">
                 <div class="inspection-card-top">
-                  <div class="inspection-card-name" title="{{ resident['first_name'] }} {{ resident['last_name'] }}">
-                    {{ resident['first_name'] }} {{ resident['last_name'] }}
+                  <div class="inspection-card-name" title="{{ target.display_title }}">
+                    {{ target.display_title }}
                   </div>
 
                   <div class="inspection-toggle-row">
                     <label class="inspection-toggle pass">
-                      <input type="radio" name="status_{{ resident['id'] }}" value="passed" checked>
+                      <input type="radio" name="status_{{ target.resident_id }}" value="passed" checked>
                       <span class="inspection-toggle-label">Pass</span>
                     </label>
 
                     <label class="inspection-toggle fail">
-                      <input type="radio" name="status_{{ resident['id'] }}" value="failed">
+                      <input type="radio" name="status_{{ target.resident_id }}" value="failed">
                       <span class="inspection-toggle-label">Fail</span>
                     </label>
                   </div>
+                </div>
+
+                <div class="inspection-card-subtitle">
+                  {% if apartment_mode %}
+                    {{ target.resident_name }}
+                    {% if target.apartment_size_snapshot %}
+                      <br>{{ target.apartment_size_snapshot }}
+                    {% endif %}
+                  {% else %}
+                    {{ target.display_subtitle }}
+                  {% endif %}
                 </div>
               </div>
             {% endfor %}
@@ -200,7 +226,13 @@
             <button type="submit" class="cmx-btn">Save Inspection Sheet</button>
           </div>
         {% else %}
-          <div class="cmx-muted" style="margin-top:16px;">No active residents found.</div>
+          <div class="cmx-muted" style="margin-top:16px;">
+            {% if apartment_mode %}
+              No active residents with apartment assignments found.
+            {% else %}
+              No active residents found.
+            {% endif %}
+          </div>
         {% endif %}
       </form>
     </div>
