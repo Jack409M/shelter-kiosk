@@ -836,8 +836,8 @@ def chore_assignments():
     )
 
 
-@shelter_operations.route("/chores", methods=["GET", "POST"])
-@shelter_operations.route("/chore-board", methods=["GET", "POST"])
+@shelter_operations.route("/chores", methods=["GET"])
+@shelter_operations.route("/chore-board", methods=["GET"])
 @require_login
 @require_shelter
 def chore_board():
@@ -846,85 +846,11 @@ def chore_board():
 
     shelter = session.get("shelter")
 
-    assigned_date = (request.values.get("assigned_date") or "").strip()
+    assigned_date = (request.args.get("assigned_date") or "").strip()
     if not assigned_date:
         assigned_date = str(date.today())
 
     week_start, week_end, week_dates = _week_dates_from_anchor(assigned_date)
-
-    if request.method == "POST":
-        action = (request.form.get("action") or "").strip()
-
-        if action in {"clone_week", "clone_week_random", "build_from_last_week"}:
-            randomize_residents = action in {"clone_week_random", "build_from_last_week"}
-            ok, category, message = _clone_previous_week(
-                shelter=shelter,
-                target_week_start=week_start,
-                target_week_end=week_end,
-                randomize_residents=randomize_residents,
-            )
-            flash(message, category)
-            return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
-
-        if not action:
-            resident_id = (request.form.get("resident_id") or "").strip()
-            chore_id = (request.form.get("chore_id") or "").strip()
-            assign_mode = (request.form.get("assign_mode") or "day").strip()
-            target_date = (request.form.get("target_date") or assigned_date).strip()
-
-            if not resident_id or not chore_id:
-                flash("Resident and chore are required.", "error")
-                return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
-
-            if not target_date:
-                target_date = assigned_date
-
-            dates_to_insert = week_dates if assign_mode == "week" else [target_date]
-            now = utcnow_iso()
-            inserted_count = 0
-            skipped_count = 0
-
-            for d in dates_to_insert:
-                existing = db_fetchone(
-                    """
-                    SELECT id
-                    FROM chore_assignments
-                    WHERE resident_id = %s
-                      AND chore_id = %s
-                      AND assigned_date = %s
-                    LIMIT 1
-                    """,
-                    (resident_id, chore_id, d),
-                )
-
-                if existing:
-                    skipped_count += 1
-                    continue
-
-                db_execute(
-                    """
-                    INSERT INTO chore_assignments
-                    (resident_id, chore_id, assigned_date, status, created_at, updated_at)
-                    VALUES (%s, %s, %s, 'assigned', %s, %s)
-                    """,
-                    (resident_id, chore_id, d, now, now),
-                )
-                inserted_count += 1
-
-            if inserted_count and skipped_count:
-                flash(
-                    f"Added {inserted_count} assignment(s). Skipped {skipped_count} duplicate assignment(s).",
-                    "success",
-                )
-            elif inserted_count:
-                if assign_mode == "week":
-                    flash("Chore assigned for full week.", "success")
-                else:
-                    flash("Chore assigned for selected day.", "success")
-            else:
-                flash("No new assignments were added because matching assignments already exist.", "error")
-
-            return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
 
     residents = db_fetchall(
         """
