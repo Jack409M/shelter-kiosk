@@ -157,6 +157,9 @@ def _ensure_tables() -> None:
         "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS shelter_snapshot TEXT",
         "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS inspection_year INTEGER",
         "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS inspection_month INTEGER",
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS apartment_number_snapshot TEXT",
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS apartment_size_snapshot TEXT",
+        "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS resident_name_snapshot TEXT",
     ]
     for statement in statements:
         try:
@@ -177,6 +180,83 @@ def _active_residents_for_shelter(shelter: str):
         """,
         (shelter,),
     )
+
+
+def _active_inspection_targets_for_shelter(shelter: str) -> list[dict]:
+    from routes.rent_tracking_parts.calculations import (
+        _apartment_options_for_shelter,
+        _derive_apartment_size_from_assignment,
+        _normalize_apartment_number,
+    )
+
+    shelter_key = _normalize_shelter_name(shelter)
+    residents = _active_residents_for_shelter(shelter_key)
+
+    if shelter_key not in {"abba", "gratitude"}:
+        targets = []
+        for resident in residents:
+            targets.append(
+                {
+                    "resident_id": resident["id"],
+                    "resident_name": f"{resident['first_name']} {resident['last_name']}".strip(),
+                    "apartment_number_snapshot": None,
+                    "apartment_size_snapshot": "Bed" if shelter_key == "haven" else None,
+                    "display_title": f"{resident['first_name']} {resident['last_name']}".strip(),
+                    "display_subtitle": "Resident",
+                }
+            )
+        return targets
+
+    ph = _placeholder()
+    assigned_rows = db_fetchall(
+        f"""
+        SELECT
+            r.id AS resident_id,
+            r.first_name,
+            r.last_name,
+            c.apartment_number_snapshot,
+            c.apartment_size_snapshot
+        FROM residents r
+        JOIN resident_rent_configs c
+          ON c.resident_id = r.id
+        WHERE LOWER(COALESCE(r.shelter, '')) = {ph}
+          AND r.is_active = {('TRUE' if g.get('db_kind') == 'pg' else '1')}
+          AND LOWER(COALESCE(c.shelter, '')) = {ph}
+          AND COALESCE(c.effective_end_date, '') = ''
+        ORDER BY r.last_name ASC, r.first_name ASC, c.id DESC
+        """,
+        (shelter_key, shelter_key),
+    )
+
+    by_apartment: dict[str, dict] = {}
+    for row in assigned_rows:
+        apartment_number = _normalize_apartment_number(shelter_key, row.get("apartment_number_snapshot"))
+        if not apartment_number:
+            continue
+        if apartment_number in by_apartment:
+            continue
+
+        resident_name = f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
+        apartment_size = _derive_apartment_size_from_assignment(shelter_key, apartment_number) or row.get("apartment_size_snapshot")
+
+        by_apartment[apartment_number] = {
+            "resident_id": row["resident_id"],
+            "resident_name": resident_name,
+            "apartment_number_snapshot": apartment_number,
+            "apartment_size_snapshot": apartment_size,
+            "display_title": f"Apartment {apartment_number}",
+            "display_subtitle": resident_name,
+        }
+
+    apartment_order = _apartment_options_for_shelter(shelter_key)
+    targets: list[dict] = []
+
+    for apartment_number in apartment_order:
+        target = by_apartment.get(apartment_number)
+        if target:
+            targets.append(target)
+
+    return targets
 
 
 def _inspection_status_score(settings: dict, overall_status: str | None, passed_value) -> int:
@@ -263,6 +343,9 @@ def build_inspection_stability_snapshot(resident_id: int, shelter: str | None = 
             id,
             inspection_date,
             shelter_snapshot,
+            apartment_number_snapshot,
+            apartment_size_snapshot,
+            resident_name_snapshot,
             overall_status,
             passed,
             inspection_year,
@@ -346,7 +429,7 @@ def inspection_sheet():
     if not inspection_year or not inspection_month:
         inspection_year, inspection_month = _current_year_month()
 
-    residents = _active_residents_for_shelter(shelter)
+    inspection_targets = _active_inspection_targets_for_shelter(shelter)
 
     if request.method == "POST":
         inspection_date = (request.form.get("inspection_date") or "").strip()
@@ -358,8 +441,8 @@ def inspection_sheet():
 
         now = utcnow_iso()
 
-        for resident in residents:
-            resident_id = resident["id"]
+        for target in inspection_targets:
+            resident_id = target["resident_id"]
             status_raw = (request.form.get(f"status_{resident_id}") or "passed").strip().lower()
             if status_raw not in {"passed", "needs_attention", "failed"}:
                 status_raw = "passed"
@@ -377,6 +460,9 @@ def inspection_sheet():
                         passed,
                         overall_status,
                         shelter_snapshot,
+                        apartment_number_snapshot,
+                        apartment_size_snapshot,
+                        resident_name_snapshot,
                         inspection_year,
                         inspection_month,
                         inspected_by_staff_user_id,
@@ -384,7 +470,7 @@ def inspection_sheet():
                         created_at,
                         updated_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     if g.get("db_kind") == "pg"
                     else
@@ -396,6 +482,9 @@ def inspection_sheet():
                         passed,
                         overall_status,
                         shelter_snapshot,
+                        apartment_number_snapshot,
+                        apartment_size_snapshot,
+                        resident_name_snapshot,
                         inspection_year,
                         inspection_month,
                         inspected_by_staff_user_id,
@@ -403,7 +492,7 @@ def inspection_sheet():
                         created_at,
                         updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """
                 ),
                 (
@@ -413,6 +502,9 @@ def inspection_sheet():
                     passed if g.get("db_kind") == "pg" else (1 if passed else 0),
                     overall_status,
                     shelter,
+                    target.get("apartment_number_snapshot"),
+                    target.get("apartment_size_snapshot"),
+                    target.get("resident_name"),
                     inspection_year,
                     inspection_month,
                     session.get("staff_user_id"),
@@ -428,9 +520,10 @@ def inspection_sheet():
     return render_template(
         "case_management/inspection_sheet.html",
         shelter=shelter,
-        residents=residents,
+        inspection_targets=inspection_targets,
         inspection_year=inspection_year,
         inspection_month=inspection_month,
+        apartment_mode=shelter in {"abba", "gratitude"},
     )
 
 
