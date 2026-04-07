@@ -24,7 +24,8 @@
               <tr>
                 <th>Resident Name</th>
                 <th>Level</th>
-                <th>Apartment Size</th>
+                <th>Apartment Number</th>
+                <th>Unit Type</th>
                 <th>Effective Rent</th>
                 <th>Manual Override</th>
                 <th>Auto Rule Rate</th>
@@ -42,6 +43,7 @@
                     {% endif %}
                   </td>
                   <td>{{ row['level_snapshot'] or '—' }}</td>
+                  <td>{{ row['apartment_number_snapshot'] or '—' }}</td>
                   <td>{{ row['apartment_size_snapshot'] or '—' }}</td>
                   <td>${{ '%.2f'|format(row['monthly_rent'] or 0) }}</td>
                   <td>${{ '%.2f'|format(row['manual_monthly_rent'] or 0) }}</td>
