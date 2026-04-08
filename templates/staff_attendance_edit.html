@@ -36,6 +36,13 @@
     gap: 12px;
   }
 
+  .att_three_part_time {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr 0.8fr;
+    gap: 8px;
+    align-items: end;
+  }
+
   .att_actions {
     display: flex;
     gap: 10px;
@@ -72,6 +79,10 @@
     .att_two_col {
       grid-template-columns: 1fr;
     }
+
+    .att_three_part_time {
+      grid-template-columns: 1fr;
+    }
   }
 </style>
 
@@ -100,7 +111,27 @@
       {% if mode == "open" %}
         <div>
           <label>Checkout Time</label>
-          <input type="datetime-local" name="checkout_at" value="{{ resident.checkout_time_input }}" required>
+          <div class="att_three_part_time">
+            <input type="date" id="checkout_at_date">
+            <select id="checkout_at_hour">
+              <option value="">Hour</option>
+              {% for h in range(0, 24) %}
+                <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+              {% endfor %}
+            </select>
+            <select id="checkout_at_minute">
+              <option value="">Min</option>
+              <option value="00">00</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+              <option value="40">40</option>
+              <option value="45">45</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          <input type="hidden" name="checkout_at" id="checkout_at" value="{{ resident.checkout_time_input }}" required>
         </div>
       {% endif %}
 
@@ -108,11 +139,51 @@
         <div class="att_two_col">
           <div>
             <label>Checkout Time</label>
-            <input type="datetime-local" name="checkout_at" value="{{ resident.last_completed_checkout_time_input }}" required>
+            <div class="att_three_part_time">
+              <input type="date" id="checkout_at_date">
+              <select id="checkout_at_hour">
+                <option value="">Hour</option>
+                {% for h in range(0, 24) %}
+                  <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+                {% endfor %}
+              </select>
+              <select id="checkout_at_minute">
+                <option value="">Min</option>
+                <option value="00">00</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="40">40</option>
+                <option value="45">45</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+            <input type="hidden" name="checkout_at" id="checkout_at" value="{{ resident.last_completed_checkout_time_input }}" required>
           </div>
           <div>
             <label>Check In Time</label>
-            <input type="datetime-local" name="checkin_at" value="{{ resident.last_completed_checkin_time_input }}" required>
+            <div class="att_three_part_time">
+              <input type="date" id="checkin_at_date">
+              <select id="checkin_at_hour">
+                <option value="">Hour</option>
+                {% for h in range(0, 24) %}
+                  <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+                {% endfor %}
+              </select>
+              <select id="checkin_at_minute">
+                <option value="">Min</option>
+                <option value="00">00</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="40">40</option>
+                <option value="45">45</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+            <input type="hidden" name="checkin_at" id="checkin_at" value="{{ resident.last_completed_checkin_time_input }}" required>
           </div>
         </div>
       {% endif %}
@@ -140,8 +211,28 @@
       <div id="edit_schedule_block" class="att_two_col">
         <div>
           <label>Scheduled Start</label>
+          <div class="att_three_part_time">
+            <input type="date" id="obligation_start_at_date">
+            <select id="obligation_start_at_hour">
+              <option value="">Hour</option>
+              {% for h in range(0, 24) %}
+                <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+              {% endfor %}
+            </select>
+            <select id="obligation_start_at_minute">
+              <option value="">Min</option>
+              <option value="00">00</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+              <option value="40">40</option>
+              <option value="45">45</option>
+              <option value="50">50</option>
+            </select>
+          </div>
           <input
-            type="datetime-local"
+            type="hidden"
             name="obligation_start_at"
             id="obligation_start_at"
             value="{% if mode == 'open' %}{{ resident.obligation_start_input }}{% else %}{{ resident.last_completed_start_input }}{% endif %}"
@@ -149,8 +240,28 @@
         </div>
         <div>
           <label>Scheduled End</label>
+          <div class="att_three_part_time">
+            <input type="date" id="obligation_end_at_date">
+            <select id="obligation_end_at_hour">
+              <option value="">Hour</option>
+              {% for h in range(0, 24) %}
+                <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+              {% endfor %}
+            </select>
+            <select id="obligation_end_at_minute">
+              <option value="">Min</option>
+              <option value="00">00</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+              <option value="40">40</option>
+              <option value="45">45</option>
+              <option value="50">50</option>
+            </select>
+          </div>
           <input
-            type="datetime-local"
+            type="hidden"
             name="obligation_end_at"
             id="obligation_end_at"
             value="{% if mode == 'open' %}{{ resident.obligation_end_input }}{% else %}{{ resident.last_completed_end_input }}{% endif %}"
@@ -160,8 +271,28 @@
 
       <div id="edit_actual_end_block">
         <label>Actual Obligation End</label>
+        <div class="att_three_part_time">
+          <input type="date" id="actual_obligation_end_at_date">
+          <select id="actual_obligation_end_at_hour">
+            <option value="">Hour</option>
+            {% for h in range(0, 24) %}
+              <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+            {% endfor %}
+          </select>
+          <select id="actual_obligation_end_at_minute">
+            <option value="">Min</option>
+            <option value="00">00</option>
+            <option value="10">10</option>
+            <option value="15">15</option>
+            <option value="20">20</option>
+            <option value="30">30</option>
+            <option value="40">40</option>
+            <option value="45">45</option>
+            <option value="50">50</option>
+          </select>
+        </div>
         <input
-          type="datetime-local"
+          type="hidden"
           name="actual_obligation_end_at"
           id="actual_obligation_end_at"
           value="{% if mode == 'open' %}{{ resident.actual_obligation_end_input }}{% else %}{{ resident.last_completed_actual_end_input }}{% endif %}"
@@ -188,13 +319,110 @@
 </div>
 
 <script>
+  function buildAttendanceEditDateTime(prefix) {
+    const dateField = document.getElementById(`${prefix}_date`);
+    const hourField = document.getElementById(`${prefix}_hour`);
+    const minuteField = document.getElementById(`${prefix}_minute`);
+    const targetField = document.getElementById(prefix);
+
+    if (!targetField) {
+      return;
+    }
+
+    const dateValue = dateField ? dateField.value : "";
+    const hourValue = hourField ? hourField.value : "";
+    const minuteValue = minuteField ? minuteField.value : "";
+
+    if (!dateValue || !hourValue || !minuteValue) {
+      targetField.value = "";
+      return;
+    }
+
+    targetField.value = `${dateValue}T${hourValue}:${minuteValue}`;
+  }
+
+  function splitAttendanceEditDateTime(hiddenId) {
+    const hiddenField = document.getElementById(hiddenId);
+    if (!hiddenField || !hiddenField.value || !hiddenField.value.includes("T")) {
+      return;
+    }
+
+    const pieces = hiddenField.value.split("T");
+    if (pieces.length !== 2) {
+      return;
+    }
+
+    const datePart = pieces[0];
+    const timePart = pieces[1];
+    const hourMinute = timePart.slice(0, 5).split(":");
+
+    if (hourMinute.length !== 2) {
+      return;
+    }
+
+    const dateField = document.getElementById(`${hiddenId}_date`);
+    const hourField = document.getElementById(`${hiddenId}_hour`);
+    const minuteField = document.getElementById(`${hiddenId}_minute`);
+
+    if (dateField) {
+      dateField.value = datePart;
+    }
+    if (hourField) {
+      hourField.value = hourMinute[0];
+    }
+    if (minuteField) {
+      minuteField.value = hourMinute[1];
+    }
+  }
+
+  function syncAttendanceEditHiddenFields() {
+    buildAttendanceEditDateTime("checkout_at");
+    buildAttendanceEditDateTime("checkin_at");
+    buildAttendanceEditDateTime("obligation_start_at");
+    buildAttendanceEditDateTime("obligation_end_at");
+    buildAttendanceEditDateTime("actual_obligation_end_at");
+  }
+
+  function setAttendanceEditPartsRequired(prefix, isRequired) {
+    const dateField = document.getElementById(`${prefix}_date`);
+    const hourField = document.getElementById(`${prefix}_hour`);
+    const minuteField = document.getElementById(`${prefix}_minute`);
+
+    if (dateField) {
+      dateField.required = isRequired;
+    }
+    if (hourField) {
+      hourField.required = isRequired;
+    }
+    if (minuteField) {
+      minuteField.required = isRequired;
+    }
+  }
+
+  function clearAttendanceEditParts(prefix) {
+    const dateField = document.getElementById(`${prefix}_date`);
+    const hourField = document.getElementById(`${prefix}_hour`);
+    const minuteField = document.getElementById(`${prefix}_minute`);
+    const targetField = document.getElementById(prefix);
+
+    if (dateField) {
+      dateField.value = "";
+    }
+    if (hourField) {
+      hourField.value = "";
+    }
+    if (minuteField) {
+      minuteField.value = "";
+    }
+    if (targetField) {
+      targetField.value = "";
+    }
+  }
+
   function syncAttendanceEditForm() {
     const destination = document.getElementById("destination");
     const scheduleBlock = document.getElementById("edit_schedule_block");
     const actualEndBlock = document.getElementById("edit_actual_end_block");
-    const startField = document.getElementById("obligation_start_at");
-    const endField = document.getElementById("obligation_end_at");
-    const actualEndField = document.getElementById("actual_obligation_end_at");
     const passNote = document.getElementById("edit_pass_note");
 
     const selectedOption = destination && destination.selectedOptions.length
@@ -213,37 +441,67 @@
       actualEndBlock.style.display = requiresApprovedPass ? "none" : "block";
     }
 
-    if (startField) {
-      startField.required = !requiresApprovedPass;
-      if (requiresApprovedPass) {
-        startField.value = "";
-      }
-    }
+    setAttendanceEditPartsRequired("obligation_start_at", !requiresApprovedPass);
+    setAttendanceEditPartsRequired("obligation_end_at", !requiresApprovedPass);
+    setAttendanceEditPartsRequired("actual_obligation_end_at", !requiresApprovedPass);
 
-    if (endField) {
-      endField.required = !requiresApprovedPass;
-      if (requiresApprovedPass) {
-        endField.value = "";
-      }
-    }
-
-    if (actualEndField) {
-      actualEndField.required = !requiresApprovedPass;
-      if (requiresApprovedPass) {
-        actualEndField.value = "";
-      }
+    if (requiresApprovedPass) {
+      clearAttendanceEditParts("obligation_start_at");
+      clearAttendanceEditParts("obligation_end_at");
+      clearAttendanceEditParts("actual_obligation_end_at");
     }
 
     if (passNote) {
       passNote.style.display = requiresApprovedPass ? "block" : "none";
     }
+
+    syncAttendanceEditHiddenFields();
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     const destination = document.getElementById("destination");
+    const form = document.getElementById("attendance-edit-form");
+    const fieldIds = [
+      "checkout_at_date",
+      "checkout_at_hour",
+      "checkout_at_minute",
+      "checkin_at_date",
+      "checkin_at_hour",
+      "checkin_at_minute",
+      "obligation_start_at_date",
+      "obligation_start_at_hour",
+      "obligation_start_at_minute",
+      "obligation_end_at_date",
+      "obligation_end_at_hour",
+      "obligation_end_at_minute",
+      "actual_obligation_end_at_date",
+      "actual_obligation_end_at_hour",
+      "actual_obligation_end_at_minute"
+    ];
+
+    splitAttendanceEditDateTime("checkout_at");
+    splitAttendanceEditDateTime("checkin_at");
+    splitAttendanceEditDateTime("obligation_start_at");
+    splitAttendanceEditDateTime("obligation_end_at");
+    splitAttendanceEditDateTime("actual_obligation_end_at");
+
     if (destination) {
       destination.addEventListener("change", syncAttendanceEditForm);
     }
+
+    fieldIds.forEach(function (fieldId) {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.addEventListener("change", syncAttendanceEditHiddenFields);
+      }
+    });
+
+    if (form) {
+      form.addEventListener("submit", function () {
+        syncAttendanceEditHiddenFields();
+      });
+    }
+
     syncAttendanceEditForm();
   });
 </script>
