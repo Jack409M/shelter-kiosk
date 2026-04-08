@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -12,6 +12,8 @@ from core.helpers import fmt_time_only, utcnow_iso
 from core.kiosk_activity_categories import load_kiosk_activity_categories_for_shelter
 from core.residents import has_active_pass
 from routes.attendance_parts.helpers import complete_active_passes
+
+CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
 def _active_checkout_categories_for_shelter(shelter: str) -> list[dict]:
@@ -331,6 +333,87 @@ def _attendance_insert_sql() -> str:
         if g.get("db_kind") == "pg"
         else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+
+
+def _later_delete_after_from_values(expected_back_time: str | None, checkin_time: str) -> str:
+    checkin_dt = datetime.fromisoformat(checkin_time)
+    expected_dt = _parse_stored_utc_naive(expected_back_time)
+
+    if expected_dt is None:
+        later_dt = checkin_dt
+    else:
+        later_dt = checkin_dt if checkin_dt >= expected_dt.replace(tzinfo=None) else expected_dt.replace(tzinfo=None)
+
+    return (later_dt + timedelta(hours=48)).isoformat(timespec="seconds")
+
+
+def _update_related_pass_delete_after_at(
+    resident_id: int,
+    shelter: str,
+    checkout_time: str,
+    checkin_time: str,
+) -> None:
+    checkout_date_iso = checkout_time[:10]
+
+    pass_row = db_fetchone(
+        """
+        SELECT id, end_at, end_date
+        FROM resident_passes
+        WHERE resident_id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
+          AND status IN ('approved', 'completed')
+          AND (
+                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= %s AND end_at >= %s)
+             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= %s AND end_date >= %s)
+          )
+        ORDER BY
+            CASE WHEN status = 'completed' THEN 0 ELSE 1 END,
+            COALESCE(approved_at, updated_at, created_at) DESC,
+            id DESC
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        SELECT id, end_at, end_date
+        FROM resident_passes
+        WHERE resident_id = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
+          AND status IN ('approved', 'completed')
+          AND (
+                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= ? AND end_at >= ?)
+             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= ? AND end_date >= ?)
+          )
+        ORDER BY
+            CASE WHEN status = 'completed' THEN 0 ELSE 1 END,
+            COALESCE(approved_at, updated_at, created_at) DESC,
+            id DESC
+        LIMIT 1
+        """,
+        (resident_id, shelter, checkout_time, checkout_time, checkout_date_iso, checkout_date_iso),
+    )
+
+    if not pass_row:
+        return
+
+    expected_back_time = _pass_expected_back_value(pass_row)
+    delete_after_at = _later_delete_after_from_values(expected_back_time, checkin_time)
+
+    db_execute(
+        """
+        UPDATE resident_passes
+        SET delete_after_at = %s,
+            updated_at = %s
+        WHERE id = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE resident_passes
+        SET delete_after_at = ?,
+            updated_at = ?
+        WHERE id = ?
+        """,
+        (delete_after_at, utcnow_iso(), int(pass_row["id"])),
     )
 
 
@@ -1070,6 +1153,13 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
             resident_id,
             shelter,
         ),
+    )
+
+    _update_related_pass_delete_after_at(
+        resident_id=resident_id,
+        shelter=shelter,
+        checkout_time=updated_checkout_time,
+        checkin_time=updated_checkin_time,
     )
 
     log_action(
