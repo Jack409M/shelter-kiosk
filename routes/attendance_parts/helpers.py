@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from flask import g, session
+from flask import session
 
-from core.db import db_execute
+from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
 
 
@@ -17,34 +17,42 @@ def can_manage_passes() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 
-def _later_delete_after_at(
+def _expected_back_utc_for_pass(end_at: str | None, end_date: str | None) -> datetime | None:
+    raw_end_at = (end_at or "").strip()
+    if raw_end_at:
+        try:
+            return datetime.fromisoformat(raw_end_at)
+        except Exception:
+            return None
+
+    raw_end_date = (end_date or "").strip()
+    if raw_end_date:
+        try:
+            local_dt = datetime.combine(
+                datetime.fromisoformat(raw_end_date).date(),
+                time(hour=23, minute=59, second=59),
+                tzinfo=ZoneInfo("America/Chicago"),
+            )
+            return local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+        except Exception:
+            return None
+
+    return None
+
+
+def _delete_after_from_check_in(
     check_in_iso: str,
     end_at: str | None,
     end_date: str | None,
 ) -> str:
     check_in_dt = datetime.fromisoformat(check_in_iso)
+    expected_back_dt = _expected_back_utc_for_pass(end_at, end_date)
 
-    expected_dt = check_in_dt
-    if end_at:
-        try:
-            expected_dt = datetime.fromisoformat(end_at)
-        except Exception:
-            expected_dt = check_in_dt
-    elif end_date:
-        try:
-            local_end_of_day = datetime.combine(
-                datetime.fromisoformat(end_date).date(),
-                datetime.max.time().replace(microsecond=0),
-                tzinfo=ZoneInfo("America/Chicago"),
-            )
-            expected_dt = (
-                local_end_of_day.astimezone(timezone.utc)
-                .replace(tzinfo=None)
-            )
-        except Exception:
-            expected_dt = check_in_dt
+    if expected_back_dt is None:
+        later_dt = check_in_dt
+    else:
+        later_dt = check_in_dt if check_in_dt >= expected_back_dt else expected_back_dt
 
-    later_dt = check_in_dt if check_in_dt >= expected_dt else expected_dt
     return (later_dt + timedelta(hours=48)).isoformat(timespec="seconds")
 
 
@@ -52,7 +60,7 @@ def complete_active_passes(resident_id: int, shelter: str) -> None:
     now_iso = utcnow_iso()
     today_iso = now_iso[:10]
 
-    active_rows = db_execute(
+    active_rows = db_fetchall(
         """
         SELECT id, end_at, end_date
         FROM resident_passes
@@ -63,26 +71,12 @@ def complete_active_passes(resident_id: int, shelter: str) -> None:
                 (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= %s)
              OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= %s AND end_date >= %s)
           )
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        SELECT id, end_at, end_date
-        FROM resident_passes
-        WHERE resident_id = ?
-          AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
-          AND status = ?
-          AND (
-                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= ?)
-             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= ? AND end_date >= ?)
-          )
         """,
         (resident_id, shelter, "approved", now_iso, today_iso, today_iso),
-        fetchall=True,
-    ) or []
+    )
 
     for row in active_rows:
-        delete_after_at = _later_delete_after_at(
+        delete_after_at = _delete_after_from_check_in(
             check_in_iso=now_iso,
             end_at=row.get("end_at"),
             end_date=row.get("end_date"),
@@ -95,15 +89,6 @@ def complete_active_passes(resident_id: int, shelter: str) -> None:
                 updated_at = %s,
                 delete_after_at = %s
             WHERE id = %s
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            UPDATE resident_passes
-            SET status = ?,
-                updated_at = ?,
-                delete_after_at = ?
-            WHERE id = ?
             """,
             ("completed", now_iso, delete_after_at, row["id"]),
         )
