@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, time, timezone
 from zoneinfo import ZoneInfo
 
-from flask import abort, flash, g, redirect, render_template, session, url_for
+from flask import abort, flash, g, redirect, render_template, request, session, url_for
 
 from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
@@ -465,6 +465,408 @@ def _current_pass_rows(shelter: str) -> list[dict]:
     return processed
 
 
+def _legacy_leave_request_count_for_shelter(shelter: str) -> int:
+    row = db_fetchone(
+        """
+        SELECT COUNT(*) AS c
+        FROM leave_requests
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT COUNT(*) AS c
+        FROM leave_requests
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
+        """,
+        (shelter,),
+    )
+    return int((row or {}).get("c") or 0)
+
+
+def _find_resident_for_legacy_leave(resident_identifier: str, shelter: str):
+    return db_fetchone(
+        """
+        SELECT id
+        FROM residents
+        WHERE resident_identifier = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT id
+        FROM residents
+        WHERE resident_identifier = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
+        LIMIT 1
+        """,
+        (resident_identifier, shelter),
+    )
+
+
+def _find_existing_migrated_pass(
+    *,
+    resident_id: int,
+    shelter: str,
+    start_at: str | None,
+    end_at: str | None,
+    destination: str | None,
+):
+    return db_fetchone(
+        """
+        SELECT id
+        FROM resident_passes
+        WHERE resident_id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
+          AND pass_type = %s
+          AND COALESCE(start_at, '') = %s
+          AND COALESCE(end_at, '') = %s
+          AND COALESCE(destination, '') = %s
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT id
+        FROM resident_passes
+        WHERE resident_id = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
+          AND pass_type = ?
+          AND COALESCE(start_at, '') = ?
+          AND COALESCE(end_at, '') = ?
+          AND COALESCE(destination, '') = ?
+        LIMIT 1
+        """,
+        (
+            resident_id,
+            shelter,
+            "pass",
+            start_at or "",
+            end_at or "",
+            destination or "",
+        ),
+    )
+
+
+def _normalize_migrated_pass_status(leave_status: str | None, check_in_at: str | None) -> str:
+    raw = (leave_status or "").strip().lower()
+
+    if check_in_at:
+        return "completed"
+
+    if raw == "pending":
+        return "pending"
+
+    if raw == "approved":
+        return "approved"
+
+    if raw in {"checked_in", "returned", "complete", "completed"}:
+        return "completed"
+
+    if raw in {"denied", "rejected"}:
+        return "denied"
+
+    return "pending"
+
+
+def _run_legacy_leave_migration_for_shelter(shelter: str) -> dict[str, int]:
+    legacy_rows = db_fetchall(
+        """
+        SELECT
+            lr.id,
+            lr.shelter,
+            lr.resident_identifier,
+            lr.first_name,
+            lr.last_name,
+            lr.resident_phone,
+            lr.destination,
+            lr.reason,
+            lr.resident_notes,
+            lr.leave_at,
+            lr.return_at,
+            lr.status,
+            lr.submitted_at,
+            lr.decided_at,
+            lr.decided_by,
+            lr.decision_note,
+            lr.check_in_at,
+            lr.check_in_by
+        FROM leave_requests lr
+        WHERE LOWER(TRIM(COALESCE(lr.shelter, ''))) = LOWER(TRIM(%s))
+        ORDER BY lr.id ASC
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT
+            lr.id,
+            lr.shelter,
+            lr.resident_identifier,
+            lr.first_name,
+            lr.last_name,
+            lr.resident_phone,
+            lr.destination,
+            lr.reason,
+            lr.resident_notes,
+            lr.leave_at,
+            lr.return_at,
+            lr.status,
+            lr.submitted_at,
+            lr.decided_at,
+            lr.decided_by,
+            lr.decision_note,
+            lr.check_in_at,
+            lr.check_in_by
+        FROM leave_requests lr
+        WHERE LOWER(TRIM(COALESCE(lr.shelter, ''))) = LOWER(TRIM(?))
+        ORDER BY lr.id ASC
+        """,
+        (shelter,),
+    )
+
+    if not legacy_rows:
+        return {
+            "legacy_total": 0,
+            "migrated": 0,
+            "skipped_missing_resident": 0,
+            "skipped_existing": 0,
+        }
+
+    migrated = 0
+    skipped_missing_resident = 0
+    skipped_existing = 0
+
+    with db_transaction():
+        for raw_row in legacy_rows:
+            row = dict(raw_row)
+
+            resident_row = _find_resident_for_legacy_leave(
+                str(row.get("resident_identifier") or "").strip(),
+                str(row.get("shelter") or "").strip(),
+            )
+
+            if not resident_row:
+                skipped_missing_resident += 1
+                continue
+
+            resident_id = int(resident_row["id"])
+
+            existing = _find_existing_migrated_pass(
+                resident_id=resident_id,
+                shelter=str(row.get("shelter") or "").strip(),
+                start_at=row.get("leave_at"),
+                end_at=row.get("return_at"),
+                destination=row.get("destination"),
+            )
+
+            if existing:
+                skipped_existing += 1
+                continue
+
+            mapped_status = _normalize_migrated_pass_status(
+                str(row.get("status") or "").strip(),
+                row.get("check_in_at"),
+            )
+
+            created_at = row.get("submitted_at") or row.get("leave_at")
+            updated_at = (
+                row.get("check_in_at")
+                or row.get("decided_at")
+                or row.get("submitted_at")
+                or row.get("leave_at")
+            )
+
+            approved_by = row.get("decided_by") if mapped_status in {"approved", "completed"} else None
+            approved_at = row.get("decided_at") if mapped_status in {"approved", "completed"} else None
+
+            staff_notes_parts: list[str] = []
+
+            decision_note = (row.get("decision_note") or "").strip()
+            if decision_note:
+                staff_notes_parts.append(f"Legacy leave decision note: {decision_note}")
+
+            if row.get("check_in_at"):
+                staff_notes_parts.append(f"Legacy leave checked in at: {row.get('check_in_at')}")
+
+            legacy_status = (row.get("status") or "").strip()
+            if legacy_status:
+                staff_notes_parts.append(f"Legacy leave status: {legacy_status}")
+
+            staff_notes = " | ".join(staff_notes_parts) if staff_notes_parts else None
+
+            inserted_pass = db_fetchone(
+                """
+                INSERT INTO resident_passes
+                (
+                    resident_id,
+                    shelter,
+                    pass_type,
+                    status,
+                    start_at,
+                    end_at,
+                    start_date,
+                    end_date,
+                    destination,
+                    reason,
+                    resident_notes,
+                    staff_notes,
+                    approved_by,
+                    approved_at,
+                    created_at,
+                    updated_at
+                )
+                VALUES
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """
+                if g.get("db_kind") == "pg"
+                else
+                """
+                INSERT INTO resident_passes
+                (
+                    resident_id,
+                    shelter,
+                    pass_type,
+                    status,
+                    start_at,
+                    end_at,
+                    start_date,
+                    end_date,
+                    destination,
+                    reason,
+                    resident_notes,
+                    staff_notes,
+                    approved_by,
+                    approved_at,
+                    created_at,
+                    updated_at
+                )
+                VALUES
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    resident_id,
+                    row.get("shelter"),
+                    "pass",
+                    mapped_status,
+                    row.get("leave_at"),
+                    row.get("return_at"),
+                    None,
+                    None,
+                    row.get("destination"),
+                    row.get("reason"),
+                    row.get("resident_notes"),
+                    staff_notes,
+                    approved_by,
+                    approved_at,
+                    created_at,
+                    updated_at,
+                ),
+            )
+
+            if g.get("db_kind") == "pg":
+                if not inserted_pass or inserted_pass.get("id") is None:
+                    raise RuntimeError(f"Failed to migrate leave_request id={row.get('id')}")
+                pass_id = int(inserted_pass["id"])
+            else:
+                if inserted_pass and inserted_pass.get("id") is not None:
+                    pass_id = int(inserted_pass["id"])
+                else:
+                    last_row = db_fetchone("SELECT last_insert_rowid() AS id")
+                    pass_id = int((last_row or {}).get("id") or 0)
+                    if not pass_id:
+                        raise RuntimeError(f"Failed to migrate leave_request id={row.get('id')}")
+
+            db_execute(
+                """
+                INSERT INTO resident_pass_request_details
+                (
+                    pass_id,
+                    resident_phone,
+                    request_date,
+                    resident_level,
+                    requirements_acknowledged,
+                    requirements_not_met_explanation,
+                    reason_for_request,
+                    who_with,
+                    destination_address,
+                    destination_phone,
+                    companion_names,
+                    companion_phone_numbers,
+                    budgeted_amount,
+                    approved_amount,
+                    reviewed_by_user_id,
+                    reviewed_by_name,
+                    reviewed_at,
+                    created_at,
+                    updated_at
+                )
+                VALUES
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                if g.get("db_kind") == "pg"
+                else
+                """
+                INSERT INTO resident_pass_request_details
+                (
+                    pass_id,
+                    resident_phone,
+                    request_date,
+                    resident_level,
+                    requirements_acknowledged,
+                    requirements_not_met_explanation,
+                    reason_for_request,
+                    who_with,
+                    destination_address,
+                    destination_phone,
+                    companion_names,
+                    companion_phone_numbers,
+                    budgeted_amount,
+                    approved_amount,
+                    reviewed_by_user_id,
+                    reviewed_by_name,
+                    reviewed_at,
+                    created_at,
+                    updated_at
+                )
+                VALUES
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    pass_id,
+                    row.get("resident_phone"),
+                    (str(row.get("submitted_at") or "")[:10] or None),
+                    None,
+                    None,
+                    None,
+                    row.get("reason"),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    row.get("decided_by"),
+                    None,
+                    row.get("decided_at"),
+                    created_at,
+                    updated_at,
+                ),
+            )
+
+            migrated += 1
+
+    return {
+        "legacy_total": len(legacy_rows),
+        "migrated": migrated,
+        "skipped_missing_resident": skipped_missing_resident,
+        "skipped_existing": skipped_existing,
+    }
+
+
 def staff_passes_pending_view():
     shelter = session.get("shelter")
     role = session.get("role")
@@ -536,7 +938,51 @@ def staff_passes_pending_view():
         rows=processed,
         shelter=shelter,
         fmt_dt=fmt_dt,
+        legacy_leave_count=_legacy_leave_request_count_for_shelter(str(shelter or "").strip()),
     )
+
+
+def staff_passes_run_legacy_leave_migration_view():
+    shelter = (session.get("shelter") or "").strip()
+
+    if not can_manage_passes():
+        abort(403)
+
+    confirm_phrase = (request.form.get("confirm_phrase") or "").strip()
+    if confirm_phrase != "MIGRATE LEAVE TO PASSES":
+        flash("Confirmation phrase did not match.", "error")
+        return redirect(url_for("attendance.staff_passes_pending"))
+
+    try:
+        result = _run_legacy_leave_migration_for_shelter(shelter)
+    except Exception as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("attendance.staff_passes_pending"))
+
+    log_action(
+        "pass",
+        None,
+        shelter,
+        session.get("staff_user_id"),
+        "migrate_legacy_leave_to_passes",
+        (
+            f"legacy_total={result.get('legacy_total', 0)} "
+            f"migrated={result.get('migrated', 0)} "
+            f"skipped_missing_resident={result.get('skipped_missing_resident', 0)} "
+            f"skipped_existing={result.get('skipped_existing', 0)}"
+        ),
+    )
+
+    flash(
+        (
+            "Legacy leave migration complete. "
+            f"Migrated {result.get('migrated', 0)}. "
+            f"Skipped missing resident {result.get('skipped_missing_resident', 0)}. "
+            f"Skipped existing {result.get('skipped_existing', 0)}."
+        ),
+        "ok",
+    )
+    return redirect(url_for("attendance.staff_passes_pending"))
 
 
 def staff_passes_approved_view():
