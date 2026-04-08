@@ -920,7 +920,7 @@ def staff_pass_approve_view(pass_id: int):
 
     pass_row = db_fetchone(
         """
-        SELECT id, resident_id, shelter, status, pass_type
+        SELECT id, resident_id, shelter, status, pass_type, end_at, end_date
         FROM resident_passes
         WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
         LIMIT 1
@@ -928,7 +928,7 @@ def staff_pass_approve_view(pass_id: int):
         if g.get("db_kind") == "pg"
         else
         """
-        SELECT id, resident_id, shelter, status, pass_type
+        SELECT id, resident_id, shelter, status, pass_type, end_at, end_date
         FROM resident_passes
         WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
         LIMIT 1
@@ -949,6 +949,10 @@ def staff_pass_approve_view(pass_id: int):
         return redirect(url_for("attendance.staff_passes_pending"))
 
     now_iso = utcnow_iso()
+    delete_after_at = _cleanup_deadline_from_expected_back(
+        pass_row.get("end_at"),
+        pass_row.get("end_date"),
+    )
 
     with db_transaction():
         db_execute(
@@ -957,10 +961,11 @@ def staff_pass_approve_view(pass_id: int):
             SET status = %s,
                 approved_by = %s,
                 approved_at = %s,
+                delete_after_at = %s,
                 updated_at = %s
             WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
             """,
-            ("approved", staff_id, now_iso, now_iso, pass_id, shelter),
+            ("approved", staff_id, now_iso, delete_after_at, now_iso, pass_id, shelter),
         )
 
         db_execute(
