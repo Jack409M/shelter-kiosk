@@ -1,0 +1,169 @@
+from __future__ import annotations
+
+from datetime import datetime, time, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+from flask import g
+
+from core.db import db_execute, db_fetchall
+from core.helpers import utcnow_iso
+
+CHICAGO_TZ = ZoneInfo("America/Chicago")
+
+
+def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None) -> str | None:
+    raw_end_at = (end_at or "").strip()
+    if raw_end_at:
+        try:
+            return (
+                datetime.fromisoformat(raw_end_at) + timedelta(hours=48)
+            ).isoformat(timespec="seconds")
+        except Exception:
+            return None
+
+    raw_end_date = (end_date or "").strip()
+    if raw_end_date:
+        try:
+            local_dt = datetime.combine(
+                datetime.fromisoformat(raw_end_date).date(),
+                time(hour=23, minute=59, second=59),
+                tzinfo=CHICAGO_TZ,
+            )
+            utc_dt = local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return (utc_dt + timedelta(hours=48)).isoformat(timespec="seconds")
+        except Exception:
+            return None
+
+    return None
+
+
+def backfill_missing_delete_after_at_for_shelter(shelter: str) -> None:
+    rows = db_fetchall(
+        """
+        SELECT id, end_at, end_date
+        FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+          AND delete_after_at IS NULL
+          AND (
+                end_at IS NOT NULL
+             OR end_date IS NOT NULL
+          )
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT id, end_at, end_date
+        FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+          AND delete_after_at IS NULL
+          AND (
+                end_at IS NOT NULL
+             OR end_date IS NOT NULL
+          )
+        """,
+        (shelter,),
+    )
+
+    for row in rows:
+        delete_after_at = cleanup_deadline_from_expected_back(
+            row.get("end_at"),
+            row.get("end_date"),
+        )
+        if not delete_after_at:
+            continue
+
+        db_execute(
+            """
+            UPDATE resident_passes
+            SET delete_after_at = %s,
+                updated_at = %s
+            WHERE id = %s
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            UPDATE resident_passes
+            SET delete_after_at = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (delete_after_at, utcnow_iso(), row["id"]),
+        )
+
+
+def delete_expired_passes_for_shelter(shelter: str) -> None:
+    now_iso = utcnow_iso()
+
+    expired_rows = db_fetchall(
+        """
+        SELECT id
+        FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+          AND delete_after_at IS NOT NULL
+          AND delete_after_at <= %s
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT id
+        FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+          AND delete_after_at IS NOT NULL
+          AND delete_after_at <= ?
+        """,
+        (shelter, now_iso),
+    )
+
+    for row in expired_rows:
+        pass_id = int(row["id"])
+
+        db_execute(
+            """
+            DELETE FROM resident_notifications
+            WHERE related_pass_id = %s
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            DELETE FROM resident_notifications
+            WHERE related_pass_id = ?
+            """,
+            (pass_id,),
+        )
+
+        db_execute(
+            """
+            DELETE FROM resident_pass_request_details
+            WHERE pass_id = %s
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            DELETE FROM resident_pass_request_details
+            WHERE pass_id = ?
+            """,
+            (pass_id,),
+        )
+
+        db_execute(
+            """
+            DELETE FROM resident_passes
+            WHERE id = %s
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            DELETE FROM resident_passes
+            WHERE id = ?
+            """,
+            (pass_id,),
+        )
+
+
+def run_pass_retention_cleanup_for_shelter(shelter: str) -> None:
+    normalized = str(shelter or "").strip()
+    if not normalized:
+        return
+
+    backfill_missing_delete_after_at_for_shelter(normalized)
+    delete_expired_passes_for_shelter(normalized)
