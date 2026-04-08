@@ -330,6 +330,42 @@ def ensure_resident_pass_request_details_table(kind: str) -> None:
     )
 
 
+def ensure_resident_notifications_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS resident_notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            shelter TEXT NOT NULL,
+            notification_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            related_pass_id INTEGER,
+            is_read INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            read_at TEXT,
+            FOREIGN KEY(resident_id) REFERENCES residents(id),
+            FOREIGN KEY(related_pass_id) REFERENCES resident_passes(id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_notifications (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            shelter TEXT NOT NULL,
+            notification_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            related_pass_id INTEGER REFERENCES resident_passes(id),
+            is_read INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            read_at TEXT
+        )
+        """,
+    )
+
+
 def ensure_resident_pass_request_details_columns(kind: str) -> None:
     columns = [
         "resident_phone TEXT",
@@ -364,6 +400,23 @@ def ensure_resident_pass_request_details_columns(kind: str) -> None:
                 )
         except Exception:
             pass
+
+
+def ensure_tables(kind: str) -> None:
+    ensure_leave_requests_table(kind)
+    ensure_transport_requests_table(kind)
+    ensure_resident_transfers_table(kind)
+    ensure_attendance_events_table(kind)
+    ensure_resident_passes_table(kind)
+    ensure_resident_pass_request_details_table(kind)
+    ensure_resident_notifications_table(kind)
+
+
+def ensure_columns_and_constraints(kind: str) -> None:
+    ensure_leave_request_phone_column(kind)
+    drop_transport_dob_column_if_present(kind)
+    ensure_attendance_event_columns(kind)
+    ensure_resident_pass_request_details_columns(kind)
 
 
 def ensure_indexes() -> None:
@@ -431,18 +484,18 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_notifications_resident_created_idx "
+            "ON resident_notifications (resident_id, created_at)"
+        )
+    except Exception:
+        pass
 
-def ensure_tables(kind: str) -> None:
-    ensure_leave_requests_table(kind)
-    ensure_transport_requests_table(kind)
-    ensure_resident_transfers_table(kind)
-    ensure_attendance_events_table(kind)
-    ensure_resident_passes_table(kind)
-    ensure_resident_pass_request_details_table(kind)
-
-
-def ensure_columns_and_constraints(kind: str) -> None:
-    ensure_leave_request_phone_column(kind)
-    drop_transport_dob_column_if_present(kind)
-    ensure_attendance_event_columns(kind)
-    ensure_resident_pass_request_details_columns(kind)
+    try:
+        db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_notifications_resident_read_created_idx "
+            "ON resident_notifications (resident_id, is_read, created_at)"
+        )
+    except Exception:
+        pass
