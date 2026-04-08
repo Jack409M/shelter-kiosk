@@ -42,6 +42,40 @@
   <div class="resident-home-sections">
 
     <section class="resident-home-card">
+      <h3>Notifications</h3>
+
+      {% if notification_items %}
+        <ul class="resident-status-list">
+          {% for item in notification_items %}
+            <li class="resident-status-item">
+              <div class="resident-status-row">
+                {% if item.is_unread %}
+                  <span class="active-pill">new</span>
+                {% endif %}
+              </div>
+
+              <div class="resident-status-row resident-status-main">
+                <strong>{{ item.title }}</strong>
+              </div>
+
+              <div class="resident-status-row resident-status-main">
+                {{ item.message }}
+              </div>
+
+              {% if item.created_at_local %}
+                <div class="resident-status-row resident-status-destination">
+                  {{ item.created_at_local.strftime("%m/%d %I:%M %p") }}
+                </div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No notifications yet.</p>
+      {% endif %}
+    </section>
+
+    <section class="resident-home-card">
       <h3>Today's Chores</h3>
 
       {% if chores %}
