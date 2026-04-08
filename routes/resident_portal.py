@@ -87,6 +87,44 @@ def home():
         (resident_id, shelter),
     )
 
+    notification_items = db_fetchall(
+        """
+        SELECT
+            id,
+            notification_type,
+            title,
+            message,
+            related_pass_id,
+            is_read,
+            created_at,
+            read_at
+        FROM resident_notifications
+        WHERE resident_id = %s
+          AND shelter = %s
+        ORDER BY is_read ASC, created_at DESC
+        LIMIT 10
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT
+            id,
+            notification_type,
+            title,
+            message,
+            related_pass_id,
+            is_read,
+            created_at,
+            read_at
+        FROM resident_notifications
+        WHERE resident_id = ?
+          AND shelter = ?
+        ORDER BY is_read ASC, created_at DESC
+        LIMIT 10
+        """,
+        (resident_id, shelter),
+    )
+
     transport_items = db_fetchall(
         """
         SELECT
@@ -169,6 +207,57 @@ def home():
         )
     )
 
+    processed_notification_items = []
+    unread_notification_ids: list[int] = []
+
+    for r in notification_items:
+        row = dict(r) if isinstance(r, dict) else {
+            "id": r[0],
+            "notification_type": r[1],
+            "title": r[2],
+            "message": r[3],
+            "related_pass_id": r[4],
+            "is_read": r[5],
+            "created_at": r[6],
+            "read_at": r[7],
+        }
+
+        row["created_at_local"] = _to_local(row.get("created_at"))
+        row["read_at_local"] = _to_local(row.get("read_at"))
+        row["is_unread"] = not bool(row.get("is_read"))
+
+        if row["is_unread"]:
+            unread_notification_ids.append(int(row["id"]))
+
+        processed_notification_items.append(row)
+
+    if unread_notification_ids:
+        db_execute(
+            """
+            UPDATE resident_notifications
+            SET is_read = 1,
+                read_at = %s
+            WHERE resident_id = %s
+              AND shelter = %s
+              AND id = ANY(%s)
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            UPDATE resident_notifications
+            SET is_read = 1,
+                read_at = ?
+            WHERE resident_id = ?
+              AND shelter = ?
+              AND id IN ({})
+            """.format(",".join("?" for _ in unread_notification_ids)),
+            (
+                (utcnow_iso(), resident_id, shelter, unread_notification_ids)
+                if g.get("db_kind") == "pg"
+                else (utcnow_iso(), resident_id, shelter, *unread_notification_ids)
+            ),
+        )
+
     processed_transport_items = []
     for r in transport_items:
         row = dict(r) if isinstance(r, dict) else {
@@ -216,6 +305,7 @@ def home():
     return render_template(
         "resident_home.html",
         pass_items=processed_pass_items,
+        notification_items=processed_notification_items,
         transport_items=processed_transport_items,
         active_pass=active_pass,
         chores=chores,
