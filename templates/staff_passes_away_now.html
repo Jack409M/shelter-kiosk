@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<h1>Residents Out on Passes</h1>
+
+{% if rows %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>When</th>
+      <th>Expected Back</th>
+      <th>Destination</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    {% set pass_type_key = (r.pass_type or "")|lower %}
+    <tr>
+      <td>{{ r.last_name }}, {{ r.first_name }}</td>
+      <td>{{ r.pass_type_label or r.pass_type }}</td>
+      <td>
+        {% if pass_type_key in ["pass", "overnight"] %}
+          {{ fmt_dt(r.start_at_local) }} to {{ fmt_dt(r.end_at_local) }}
+        {% else %}
+          {{ r.start_date }} to {{ r.end_date }}
+        {% endif %}
+      </td>
+      <td>
+        {% if r.expected_back_local %}
+          {{ fmt_dt(r.expected_back_local) }}
+        {% endif %}
+      </td>
+      <td>{{ r.destination or "" }}</td>
+      <td>
+        <a href="{{ url_for('attendance.staff_pass_detail', pass_id=r.id) }}">Open</a>
+        <form method="post" action="{{ url_for('attendance.staff_pass_check_in', pass_id=r.id) }}" style="display:inline-block; margin-left:8px;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button type="submit">Check In</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No residents are currently out on approved passes.</p>
+{% endif %}
+
+{% endblock %}
