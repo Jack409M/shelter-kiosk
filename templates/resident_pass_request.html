@@ -291,6 +291,13 @@ function todayChicagoDateValue() {
   return `${year}-${month}-${day}`;
 }
 
+function defaultRequestDate() {
+  const field = document.getElementById("request_date");
+  if (field && !field.value) {
+    field.value = todayChicagoDateValue();
+  }
+}
+
 function togglePassType() {
   const type = document.getElementById("pass_type").value;
   const standard = document.getElementById("standard_fields");
@@ -316,13 +323,6 @@ function toggleRequirementsExplanation() {
     block.style.display = "block";
   } else {
     block.style.display = "none";
-  }
-}
-
-function defaultRequestDate() {
-  const field = document.getElementById("request_date");
-  if (field && !field.value) {
-    field.value = todayChicagoDateValue();
   }
 }
 
