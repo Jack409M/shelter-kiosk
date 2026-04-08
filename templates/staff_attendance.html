@@ -132,6 +132,13 @@
     align-items: end;
   }
 
+  .att_three_part_time {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr 0.8fr;
+    gap: 8px;
+    align-items: end;
+  }
+
   .att_note_input {
     width: 100%;
   }
@@ -232,6 +239,10 @@
     }
 
     .att_two_col {
+      grid-template-columns: 1fr;
+    }
+
+    .att_three_part_time {
       grid-template-columns: 1fr;
     }
   }
@@ -463,7 +474,7 @@
   </div>
 
   <div class="att_right">
-    <form method="post" action="{{ url_for('attendance.staff_attendance_check_out_global') }}" class="card">
+    <form method="post" action="{{ url_for('attendance.staff_attendance_check_out_global') }}" class="card" id="staff-attendance-checkout-form">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
       <h3 style="margin-top: 0;">Check out resident</h3>
@@ -496,19 +507,79 @@
         <div id="staff_schedule_block">
           <div class="att_two_col">
             <div>
-              <label for="obligation_start_at">Scheduled Start</label>
-              <input type="datetime-local" name="obligation_start_at" id="obligation_start_at">
+              <label>Scheduled Start</label>
+              <div class="att_three_part_time">
+                <input type="date" id="obligation_start_date">
+                <select id="obligation_start_hour">
+                  <option value="">Hour</option>
+                  {% for h in range(0, 24) %}
+                    <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+                  {% endfor %}
+                </select>
+                <select id="obligation_start_minute">
+                  <option value="">Min</option>
+                  <option value="00">00</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="30">30</option>
+                  <option value="40">40</option>
+                  <option value="45">45</option>
+                  <option value="50">50</option>
+                </select>
+              </div>
+              <input type="hidden" name="obligation_start_at" id="obligation_start_at">
             </div>
             <div>
-              <label for="obligation_end_at">Scheduled End</label>
-              <input type="datetime-local" name="obligation_end_at" id="obligation_end_at">
+              <label>Scheduled End</label>
+              <div class="att_three_part_time">
+                <input type="date" id="obligation_end_date">
+                <select id="obligation_end_hour">
+                  <option value="">Hour</option>
+                  {% for h in range(0, 24) %}
+                    <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+                  {% endfor %}
+                </select>
+                <select id="obligation_end_minute">
+                  <option value="">Min</option>
+                  <option value="00">00</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="30">30</option>
+                  <option value="40">40</option>
+                  <option value="45">45</option>
+                  <option value="50">50</option>
+                </select>
+              </div>
+              <input type="hidden" name="obligation_end_at" id="obligation_end_at">
             </div>
           </div>
         </div>
 
         <div id="staff_expected_back_block">
-          <label for="expected_back_at">Expected Back</label>
-          <input type="datetime-local" name="expected_back_at" id="expected_back_at">
+          <label>Expected Back</label>
+          <div class="att_three_part_time">
+            <input type="date" id="expected_back_date">
+            <select id="expected_back_hour">
+              <option value="">Hour</option>
+              {% for h in range(0, 24) %}
+                <option value="{{ "%02d"|format(h) }}">{{ "%02d"|format(h) }}</option>
+              {% endfor %}
+            </select>
+            <select id="expected_back_minute">
+              <option value="">Min</option>
+              <option value="00">00</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+              <option value="40">40</option>
+              <option value="45">45</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          <input type="hidden" name="expected_back_at" id="expected_back_at">
           <div id="staff_pass_note" class="att_pass_note" style="display:none;">
             Pass based activity categories pull expected back from the approved pass.
           </div>
@@ -530,12 +601,73 @@
 </div>
 
 <script>
+  function buildAttendanceDateTime(dateId, hourId, minuteId, targetId) {
+    const dateField = document.getElementById(dateId);
+    const hourField = document.getElementById(hourId);
+    const minuteField = document.getElementById(minuteId);
+    const targetField = document.getElementById(targetId);
+
+    if (!targetField) {
+      return;
+    }
+
+    const dateValue = dateField ? dateField.value : "";
+    const hourValue = hourField ? hourField.value : "";
+    const minuteValue = minuteField ? minuteField.value : "";
+
+    if (!dateValue || !hourValue || !minuteValue) {
+      targetField.value = "";
+      return;
+    }
+
+    targetField.value = `${dateValue}T${hourValue}:${minuteValue}`;
+  }
+
+  function syncAttendanceHiddenFields() {
+    buildAttendanceDateTime("obligation_start_date", "obligation_start_hour", "obligation_start_minute", "obligation_start_at");
+    buildAttendanceDateTime("obligation_end_date", "obligation_end_hour", "obligation_end_minute", "obligation_end_at");
+    buildAttendanceDateTime("expected_back_date", "expected_back_hour", "expected_back_minute", "expected_back_at");
+  }
+
+  function setAttendancePartsRequired(prefix, isRequired) {
+    const dateField = document.getElementById(`${prefix}_date`);
+    const hourField = document.getElementById(`${prefix}_hour`);
+    const minuteField = document.getElementById(`${prefix}_minute`);
+
+    if (dateField) {
+      dateField.required = isRequired;
+    }
+    if (hourField) {
+      hourField.required = isRequired;
+    }
+    if (minuteField) {
+      minuteField.required = isRequired;
+    }
+  }
+
+  function clearAttendanceParts(prefix) {
+    const dateField = document.getElementById(`${prefix}_date`);
+    const hourField = document.getElementById(`${prefix}_hour`);
+    const minuteField = document.getElementById(`${prefix}_minute`);
+    const targetField = document.getElementById(prefix);
+
+    if (dateField) {
+      dateField.value = "";
+    }
+    if (hourField) {
+      hourField.value = "";
+    }
+    if (minuteField) {
+      minuteField.value = "";
+    }
+    if (targetField) {
+      targetField.value = "";
+    }
+  }
+
   function syncStaffCheckoutForm() {
     const destination = document.getElementById("destination");
     const scheduleBlock = document.getElementById("staff_schedule_block");
-    const startField = document.getElementById("obligation_start_at");
-    const endField = document.getElementById("obligation_end_at");
-    const expectedBackField = document.getElementById("expected_back_at");
     const expectedBackBlock = document.getElementById("staff_expected_back_block");
     const passNote = document.getElementById("staff_pass_note");
 
@@ -551,41 +683,59 @@
       scheduleBlock.style.display = requiresApprovedPass ? "none" : "block";
     }
 
-    if (startField) {
-      startField.required = !requiresApprovedPass;
-      if (requiresApprovedPass) {
-        startField.value = "";
-      }
-    }
-
-    if (endField) {
-      endField.required = !requiresApprovedPass;
-      if (requiresApprovedPass) {
-        endField.value = "";
-      }
-    }
-
-    if (expectedBackField) {
-      expectedBackField.required = !requiresApprovedPass;
-      if (requiresApprovedPass) {
-        expectedBackField.value = "";
-      }
-    }
-
     if (expectedBackBlock) {
       expectedBackBlock.style.display = "block";
+    }
+
+    setAttendancePartsRequired("obligation_start", !requiresApprovedPass);
+    setAttendancePartsRequired("obligation_end", !requiresApprovedPass);
+    setAttendancePartsRequired("expected_back", !requiresApprovedPass);
+
+    if (requiresApprovedPass) {
+      clearAttendanceParts("obligation_start_at");
+      clearAttendanceParts("obligation_end_at");
+      clearAttendanceParts("expected_back_at");
     }
 
     if (passNote) {
       passNote.style.display = requiresApprovedPass ? "block" : "none";
     }
+
+    syncAttendanceHiddenFields();
   }
 
   document.addEventListener("DOMContentLoaded", function () {
     const destination = document.getElementById("destination");
+    const form = document.getElementById("staff-attendance-checkout-form");
+    const fieldIds = [
+      "obligation_start_date",
+      "obligation_start_hour",
+      "obligation_start_minute",
+      "obligation_end_date",
+      "obligation_end_hour",
+      "obligation_end_minute",
+      "expected_back_date",
+      "expected_back_hour",
+      "expected_back_minute"
+    ];
+
     if (destination) {
       destination.addEventListener("change", syncStaffCheckoutForm);
     }
+
+    fieldIds.forEach(function (fieldId) {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.addEventListener("change", syncAttendanceHiddenFields);
+      }
+    });
+
+    if (form) {
+      form.addEventListener("submit", function () {
+        syncAttendanceHiddenFields();
+      });
+    }
+
     syncStaffCheckoutForm();
   });
 </script>
