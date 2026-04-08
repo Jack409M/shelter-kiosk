@@ -8,6 +8,8 @@ from flask import session
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
 
+CHICAGO_TZ = ZoneInfo("America/Chicago")
+
 
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)
@@ -31,7 +33,7 @@ def _expected_back_utc_for_pass(end_at: str | None, end_date: str | None) -> dat
             local_dt = datetime.combine(
                 datetime.fromisoformat(raw_end_date).date(),
                 time(hour=23, minute=59, second=59),
-                tzinfo=ZoneInfo("America/Chicago"),
+                tzinfo=CHICAGO_TZ,
             )
             return local_dt.astimezone(timezone.utc).replace(tzinfo=None)
         except Exception:
@@ -99,6 +101,6 @@ def to_local(dt_iso):
         return None
     try:
         dt = datetime.fromisoformat(dt_iso).replace(tzinfo=timezone.utc)
-        return dt.astimezone(ZoneInfo("America/Chicago"))
+        return dt.astimezone(CHICAGO_TZ)
     except Exception:
         return None
