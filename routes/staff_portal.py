@@ -1,462 +1,110 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
+from flask import Blueprint, flash, redirect, session, url_for
 
-from flask import (
-    Blueprint,
-    abort,
-    current_app,
-    flash,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
-
-from core.audit import log_action
 from core.auth import can_manage_requests, require_login, require_shelter
-from core.db import db_execute, db_fetchall, db_fetchone
-from core.helpers import fmt_date, fmt_dt, fmt_pretty_date, utcnow_iso
-from core.sms_sender import send_sms
-
 
 staff_portal = Blueprint("staff_portal", __name__)
-
-
-def _is_pg() -> bool:
-    return bool(current_app.config.get("DATABASE_URL"))
 
 
 def _can_manage_leave() -> bool:
     return can_manage_requests()
 
 
-def _cleanup_pending_leave_requests(shelter: str) -> None:
-    cutoff_iso = (datetime.utcnow() - timedelta(hours=48)).replace(microsecond=0).isoformat()
+def _deny_if_needed():
+    if not _can_manage_leave():
+        flash("Staff only.", "error")
+        return redirect(url_for("auth.staff_home"))
+    return None
 
-    db_execute(
-        """
-        DELETE FROM leave_requests
-        WHERE shelter = %s
-          AND status = %s
-          AND leave_at < %s
-        """
-        if _is_pg()
-        else """
-        DELETE FROM leave_requests
-        WHERE shelter = ?
-          AND status = ?
-          AND leave_at < ?
-        """,
-        (shelter, "pending", cutoff_iso),
-    )
-
-
-# -----------------------------------------------------
-# Leave dashboards
-# -----------------------------------------------------
 
 @staff_portal.route("/staff/leave/pending")
 @require_login
 @require_shelter
 def staff_leave_pending():
-    if not _can_manage_leave():
-        flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    denied = _deny_if_needed()
+    if denied is not None:
+        return denied
 
-    shelter = session["shelter"]
-    _cleanup_pending_leave_requests(shelter)
-
-    rows = db_fetchall(
-        "SELECT * FROM leave_requests WHERE status = %s AND shelter = %s ORDER BY submitted_at DESC"
-        if _is_pg()
-        else "SELECT * FROM leave_requests WHERE status = ? AND shelter = ? ORDER BY submitted_at DESC",
-        ("pending", shelter),
-    )
-
-    return render_template(
-        "staff_leave_pending.html",
-        rows=rows,
-        fmt_dt=fmt_dt,
-        fmt_date=fmt_date,
-        shelter=shelter,
-    )
+    return redirect(url_for("attendance.staff_passes_pending"))
 
 
 @staff_portal.route("/staff/leave/upcoming")
 @require_login
 @require_shelter
 def staff_leave_upcoming():
-    if not _can_manage_leave():
-        flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    denied = _deny_if_needed()
+    if denied is not None:
+        return denied
 
-    shelter = session["shelter"]
-    _cleanup_pending_leave_requests(shelter)
-    now = utcnow_iso()
-
-    rows = db_fetchall(
-        """
-        SELECT *
-        FROM leave_requests
-        WHERE status = %s AND shelter = %s AND check_in_at IS NULL AND leave_at > %s
-        ORDER BY leave_at ASC
-        """
-        if _is_pg()
-        else
-        """
-        SELECT *
-        FROM leave_requests
-        WHERE status = ? AND shelter = ? AND check_in_at IS NULL AND leave_at > ?
-        ORDER BY leave_at ASC
-        """,
-        ("approved", shelter, now),
-    )
-
-    return render_template(
-        "staff_leave_upcoming.html",
-        rows=rows,
-        fmt_dt=fmt_dt,
-        fmt_date=fmt_date,
-        shelter=shelter,
-    )
+    return redirect(url_for("attendance.staff_passes_approved"))
 
 
 @staff_portal.route("/staff/leave/away-now")
 @require_login
 @require_shelter
 def staff_leave_away_now():
-    if not _can_manage_leave():
-        flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    denied = _deny_if_needed()
+    if denied is not None:
+        return denied
 
-    shelter = session["shelter"]
-    _cleanup_pending_leave_requests(shelter)
-    now = utcnow_iso()
-
-    rows = db_fetchall(
-        """
-        SELECT *
-        FROM leave_requests
-        WHERE status = %s AND shelter = %s AND leave_at <= %s AND check_in_at IS NULL
-        ORDER BY return_at ASC
-        """
-        if _is_pg()
-        else
-        """
-        SELECT *
-        FROM leave_requests
-        WHERE status = ? AND shelter = ? AND leave_at <= ? AND check_in_at IS NULL
-        ORDER BY return_at ASC
-        """,
-        ("approved", shelter, now),
-    )
-
-    return render_template(
-        "staff_leave_away_now.html",
-        rows=rows,
-        fmt_dt=fmt_dt,
-        shelter=shelter,
-    )
+    return redirect(url_for("attendance.staff_attendance"))
 
 
 @staff_portal.route("/staff/leave/overdue")
 @require_login
 @require_shelter
 def staff_leave_overdue():
-    if not _can_manage_leave():
-        flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    denied = _deny_if_needed()
+    if denied is not None:
+        return denied
 
-    shelter = session["shelter"]
-    _cleanup_pending_leave_requests(shelter)
+    return redirect(url_for("attendance.staff_attendance"))
 
-    rows = db_fetchall(
-        """
-        SELECT *
-        FROM leave_requests
-        WHERE status = %s AND shelter = %s AND check_in_at IS NULL
-        ORDER BY return_at ASC
-        """
-        if _is_pg()
-        else
-        """
-        SELECT *
-        FROM leave_requests
-        WHERE status = ? AND shelter = ? AND check_in_at IS NULL
-        ORDER BY return_at ASC
-        """,
-        ("approved", shelter),
-    )
-
-    now_local = datetime.now(ZoneInfo("America/Chicago"))
-    overdue_rows = []
-
-    for row in rows:
-        return_iso = row["return_at"] if isinstance(row, dict) else row[10]
-        if not return_iso:
-            continue
-
-        try:
-            rt_utc = datetime.fromisoformat(return_iso).replace(tzinfo=timezone.utc)
-            rt_local = rt_utc.astimezone(ZoneInfo("America/Chicago"))
-            cutoff_local = rt_local.replace(hour=22, minute=0, second=0, microsecond=0)
-
-            if now_local > cutoff_local:
-                overdue_rows.append(row)
-        except Exception:
-            continue
-
-    return render_template(
-        "staff_leave_overdue.html",
-        rows=overdue_rows,
-        fmt_dt=fmt_dt,
-        fmt_date=fmt_date,
-        shelter=shelter,
-    )
-
-
-# -----------------------------------------------------
-# Leave actions
-# -----------------------------------------------------
 
 @staff_portal.route("/staff/leave/<int:req_id>/approve", methods=["POST"])
 @require_login
 @require_shelter
 def staff_leave_approve(req_id: int):
-    if not _can_manage_leave():
-        flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    denied = _deny_if_needed()
+    if denied is not None:
+        return denied
 
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-    note = (request.form.get("note") or "").strip()
-
-    _cleanup_pending_leave_requests(shelter)
-
-    row = db_fetchone(
-        "SELECT * FROM leave_requests WHERE id = %s AND shelter = %s"
-        if _is_pg()
-        else "SELECT * FROM leave_requests WHERE id = ? AND shelter = ?",
-        (req_id, shelter),
-    )
-
-    if not row or (row["status"] if isinstance(row, dict) else row[10]) != "pending":
-        flash("Not pending.", "error")
-        return redirect(url_for("staff_portal.staff_leave_pending"))
-
-    db_execute(
-        """
-        UPDATE leave_requests
-        SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
-        WHERE id = %s AND shelter = %s
-        """
-        if _is_pg()
-        else
-        """
-        UPDATE leave_requests
-        SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
-        WHERE id = ? AND shelter = ?
-        """,
-        ("approved", utcnow_iso(), staff_id, note or None, req_id, shelter),
-    )
-
-    log_action("leave", req_id, shelter, staff_id, "approve", note or "")
-
-    req = db_fetchone(
-        "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = %s AND shelter = %s"
-        if _is_pg()
-        else "SELECT first_name, last_name, leave_at, return_at, resident_phone FROM leave_requests WHERE id = ? AND shelter = ?",
-        (req_id, shelter),
-    )
-
-    if req:
-        first_name = req["first_name"] if isinstance(req, dict) else req[0]
-        last_name = req["last_name"] if isinstance(req, dict) else req[1]
-        leave_at = req["leave_at"] if isinstance(req, dict) else req[2]
-        return_at = req["return_at"] if isinstance(req, dict) else req[3]
-        phone = req["resident_phone"] if isinstance(req, dict) else req[4]
-
-        msg = (
-            f"Leave approved for {first_name} {last_name}. "
-            f"Leave {fmt_pretty_date(leave_at)}. "
-            f"Return {fmt_pretty_date(return_at)} by 10 PM."
-        )
-
-        try:
-            if phone:
-                send_sms(phone, msg)
-        except Exception as e:
-            log_action("leave", req_id, shelter, staff_id, "sms_failed", str(e))
-
-    flash("Approved.", "ok")
-    return redirect(url_for("staff_portal.staff_leave_pending"))
+    flash("Legacy leave approval is retired. Use Pending Pass Requests.", "error")
+    return redirect(url_for("attendance.staff_passes_pending"))
 
 
 @staff_portal.route("/staff/leave/<int:req_id>/deny", methods=["POST"])
 @require_login
 @require_shelter
 def staff_leave_deny(req_id: int):
-    if not _can_manage_leave():
-        flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    denied = _deny_if_needed()
+    if denied is not None:
+        return denied
 
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-    note = (request.form.get("note") or "").strip()
-
-    _cleanup_pending_leave_requests(shelter)
-
-    if not note:
-        flash("Denial note required.", "error")
-        return redirect(url_for("staff_portal.staff_leave_pending"))
-
-    row = db_fetchone(
-        "SELECT id, status FROM leave_requests WHERE id = %s AND shelter = %s"
-        if _is_pg()
-        else "SELECT id, status FROM leave_requests WHERE id = ? AND shelter = ?",
-        (req_id, shelter),
-    )
-
-    if not row or ((row["status"] if isinstance(row, dict) else row[1]) != "pending"):
-        flash("Not pending.", "error")
-        return redirect(url_for("staff_portal.staff_leave_pending"))
-
-    db_execute(
-        """
-        UPDATE leave_requests
-        SET status = %s, decided_at = %s, decided_by = %s, decision_note = %s
-        WHERE id = %s AND shelter = %s AND status = %s
-        """
-        if _is_pg()
-        else
-        """
-        UPDATE leave_requests
-        SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
-        WHERE id = ? AND shelter = ? AND status = ?
-        """,
-        ("denied", utcnow_iso(), staff_id, note, req_id, shelter, "pending"),
-    )
-
-    log_action("leave", req_id, shelter, staff_id, "deny", note)
-    flash("Denied.", "ok")
-    return redirect(url_for("staff_portal.staff_leave_pending"))
+    flash("Legacy leave denial is retired. Use Pending Pass Requests.", "error")
+    return redirect(url_for("attendance.staff_passes_pending"))
 
 
 @staff_portal.route("/staff/leave/<int:req_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
 def staff_leave_check_in(req_id: int):
-    if not _can_manage_leave():
-        flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    denied = _deny_if_needed()
+    if denied is not None:
+        return denied
 
-    shelter = session["shelter"]
-    staff_id = session["staff_user_id"]
-    note = (request.form.get("note") or "").strip()
+    flash("Legacy leave check in is retired. Use Attendance or the pass workflow.", "error")
+    return redirect(url_for("attendance.staff_attendance"))
 
-    _cleanup_pending_leave_requests(shelter)
-
-    row = db_fetchone(
-        "SELECT id, status, check_in_at FROM leave_requests WHERE id = %s AND shelter = %s"
-        if _is_pg()
-        else "SELECT id, status, check_in_at FROM leave_requests WHERE id = ? AND shelter = ?",
-        (req_id, shelter),
-    )
-
-    if not row:
-        flash("Request not found.", "error")
-        return redirect(url_for("staff_portal.staff_leave_away_now"))
-
-    row_status = row["status"] if isinstance(row, dict) else row[1]
-    row_check_in_at = row["check_in_at"] if isinstance(row, dict) else row[2]
-
-    if row_status != "approved" or row_check_in_at is not None:
-        flash("Leave request cannot be checked in.", "error")
-        return redirect(url_for("staff_portal.staff_leave_away_now"))
-
-    db_execute(
-        """
-        UPDATE leave_requests
-        SET status = %s, check_in_at = %s, check_in_by = %s
-        WHERE id = %s AND shelter = %s AND status = %s AND check_in_at IS NULL
-        """
-        if _is_pg()
-        else
-        """
-        UPDATE leave_requests
-        SET status = ?, check_in_at = ?, check_in_by = ?
-        WHERE id = ? AND shelter = ? AND status = ? AND check_in_at IS NULL
-        """,
-        ("checked_in", utcnow_iso(), staff_id, req_id, shelter, "approved"),
-    )
-
-    log_action("leave", req_id, shelter, staff_id, "check_in", note or "")
-    flash("Checked in.", "ok")
-    return redirect(url_for("staff_portal.staff_leave_away_now"))
-
-
-# -----------------------------------------------------
-# Leave print
-# -----------------------------------------------------
 
 @staff_portal.get("/staff/leave/<int:req_id>/print")
 @require_login
 @require_shelter
 def staff_leave_print(req_id: int):
-    if not _can_manage_leave():
-        flash("Staff only.", "error")
-        return redirect(url_for("auth.staff_home"))
+    denied = _deny_if_needed()
+    if denied is not None:
+        return denied
 
-    shelter = session["shelter"]
-    _cleanup_pending_leave_requests(shelter)
-
-    row = db_fetchone(
-        """
-        SELECT
-            lr.*,
-            r.first_name,
-            r.last_name,
-            COALESCE(su.username, '') AS decided_by_name,
-            COALESCE(su.role, '') AS decided_by_role
-        FROM leave_requests lr
-        LEFT JOIN residents r
-            ON r.resident_identifier = lr.resident_identifier
-            AND r.shelter = lr.shelter
-        LEFT JOIN staff_users su
-            ON su.id = lr.decided_by
-        WHERE lr.id = %s AND lr.shelter = %s
-        """
-        if _is_pg()
-        else
-        """
-        SELECT
-            lr.*,
-            r.first_name,
-            r.last_name,
-            COALESCE(su.username, '') AS decided_by_name,
-            COALESCE(su.role, '') AS decided_by_role
-        FROM leave_requests lr
-        LEFT JOIN residents r
-            ON r.resident_identifier = lr.resident_identifier
-            AND r.shelter = lr.shelter
-        LEFT JOIN staff_users su
-            ON su.id = lr.decided_by
-        WHERE lr.id = ? AND lr.shelter = ?
-        """,
-        (req_id, shelter),
-    )
-
-    if not row:
-        abort(404)
-
-    return render_template(
-        "staff_leave_print.html",
-        row=row,
-        shelter=shelter,
-        printed_on=fmt_dt(utcnow_iso()),
-        fmt_dt=fmt_dt,
-        fmt_date=fmt_date,
-    )
+    flash("Legacy leave print is retired. Open the migrated record in the pass workflow.", "error")
+    return redirect(url_for("attendance.staff_passes_pending"))
