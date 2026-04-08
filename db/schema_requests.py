@@ -9,66 +9,6 @@ from core.db import db_execute
 from .schema_helpers import create_table
 
 
-def ensure_leave_requests_table(kind: str) -> None:
-    create_table(
-        kind,
-        """
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            resident_phone TEXT,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            leave_at TEXT NOT NULL,
-            return_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            decided_at TEXT,
-            decided_by INTEGER,
-            decision_note TEXT,
-            check_in_at TEXT,
-            check_in_by INTEGER
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id SERIAL PRIMARY KEY,
-            shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            resident_phone TEXT,
-            destination TEXT NOT NULL,
-            reason TEXT,
-            resident_notes TEXT,
-            leave_at TEXT NOT NULL,
-            return_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            submitted_at TEXT NOT NULL,
-            decided_at TEXT,
-            decided_by INTEGER,
-            decision_note TEXT,
-            check_in_at TEXT,
-            check_in_by INTEGER
-        )
-        """,
-    )
-
-
-def ensure_leave_request_phone_column(kind: str) -> None:
-    try:
-        if kind == "pg":
-            db_execute("ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS resident_phone TEXT")
-        else:
-            db_execute("ALTER TABLE leave_requests ADD COLUMN resident_phone TEXT")
-    except Exception:
-        pass
-
-
 def ensure_transport_requests_table(kind: str) -> None:
     create_table(
         kind,
@@ -403,7 +343,6 @@ def ensure_resident_pass_request_details_columns(kind: str) -> None:
 
 
 def ensure_tables(kind: str) -> None:
-    ensure_leave_requests_table(kind)
     ensure_transport_requests_table(kind)
     ensure_resident_transfers_table(kind)
     ensure_attendance_events_table(kind)
@@ -413,21 +352,12 @@ def ensure_tables(kind: str) -> None:
 
 
 def ensure_columns_and_constraints(kind: str) -> None:
-    ensure_leave_request_phone_column(kind)
     drop_transport_dob_column_if_present(kind)
     ensure_attendance_event_columns(kind)
     ensure_resident_pass_request_details_columns(kind)
 
 
 def ensure_indexes() -> None:
-    try:
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS leave_requests_shelter_status_return_idx "
-            "ON leave_requests (shelter, status, return_at)"
-        )
-    except Exception:
-        pass
-
     try:
         db_execute(
             "CREATE INDEX IF NOT EXISTS transport_requests_shelter_status_pickup_idx "
