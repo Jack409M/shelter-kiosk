@@ -137,13 +137,7 @@
                   {% endif %}
                 </button>
 
-                <span class="print-check">
-                  {% if day.status == 'completed' %}
-                    ☑
-                  {% else %}
-                    ☐
-                  {% endif %}
-                </span>
+                <span class="print-check">&nbsp;</span>
 
                 <form
                   id="toggle-day-{{ day.id }}"
