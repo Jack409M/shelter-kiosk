@@ -109,11 +109,6 @@ def resident_logout():
     return redirect(url_for("public.public_home"))
 
 
-@resident_requests.route("/leave", methods=["GET", "POST"])
-def resident_leave():
-    return redirect(url_for("resident_requests.resident_pass_request"))
-
-
 @resident_requests.route("/pass-request", methods=["GET", "POST"])
 def resident_pass_request():
     return resident_pass_request_view()
