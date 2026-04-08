@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from flask import abort, flash, g, redirect, render_template, session, url_for
@@ -22,6 +22,117 @@ from core.sms_sender import send_sms
 from routes.attendance_parts.helpers import can_manage_passes, complete_active_passes, to_local
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
+
+
+def _cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None) -> str | None:
+    raw_end_at = (end_at or "").strip()
+    if raw_end_at:
+        try:
+            return (
+                datetime.fromisoformat(raw_end_at) + timedelta(hours=48)
+            ).isoformat(timespec="seconds")
+        except Exception:
+            return None
+
+    raw_end_date = (end_date or "").strip()
+    if raw_end_date:
+        try:
+            local_dt = datetime.combine(
+                datetime.fromisoformat(raw_end_date).date(),
+                time(hour=23, minute=59, second=59),
+                tzinfo=CHICAGO_TZ,
+            )
+            utc_dt = local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return (utc_dt + timedelta(hours=48)).isoformat(timespec="seconds")
+        except Exception:
+            return None
+
+    return None
+
+
+def _backfill_missing_delete_after_at_for_shelter(shelter: str) -> None:
+    rows = db_fetchall(
+        """
+        SELECT id, end_at, end_date
+        FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+          AND delete_after_at IS NULL
+          AND (
+                end_at IS NOT NULL
+             OR end_date IS NOT NULL
+          )
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT id, end_at, end_date
+        FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+          AND delete_after_at IS NULL
+          AND (
+                end_at IS NOT NULL
+             OR end_date IS NOT NULL
+          )
+        """,
+        (shelter,),
+    )
+
+    for row in rows:
+        delete_after_at = _cleanup_deadline_from_expected_back(
+            row.get("end_at"),
+            row.get("end_date"),
+        )
+        if not delete_after_at:
+            continue
+
+        db_execute(
+            """
+            UPDATE resident_passes
+            SET delete_after_at = %s,
+                updated_at = %s
+            WHERE id = %s
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            UPDATE resident_passes
+            SET delete_after_at = ?,
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (delete_after_at, utcnow_iso(), row["id"]),
+        )
+
+
+def _delete_expired_passes_for_shelter(shelter: str) -> None:
+    now_iso = utcnow_iso()
+
+    db_execute(
+        """
+        DELETE FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+          AND delete_after_at IS NOT NULL
+          AND delete_after_at <= %s
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        DELETE FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+          AND delete_after_at IS NOT NULL
+          AND delete_after_at <= ?
+        """,
+        (shelter, now_iso),
+    )
+
+
+def _run_pass_retention_cleanup_for_shelter(shelter: str) -> None:
+    normalized = str(shelter or "").strip()
+    if not normalized:
+        return
+
+    _backfill_missing_delete_after_at_for_shelter(normalized)
+    _delete_expired_passes_for_shelter(normalized)
 
 
 def _resident_value(row, key: str, index: int, default=""):
@@ -467,6 +578,7 @@ def _current_pass_rows(shelter: str) -> list[dict]:
 
 def staff_passes_pending_view():
     shelter = session.get("shelter")
+    _run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
     role = session.get("role")
 
     if role not in {"admin", "shelter_director", "case_manager"}:
@@ -541,6 +653,7 @@ def staff_passes_pending_view():
 
 def staff_passes_approved_view():
     shelter = session.get("shelter")
+    _run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
     role = session.get("role")
 
     if role not in {"admin", "shelter_director", "case_manager"}:
@@ -618,6 +731,7 @@ def staff_passes_approved_view():
 
 def staff_passes_away_now_view():
     shelter = session.get("shelter")
+    _run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
     role = session.get("role")
 
     if role not in {"admin", "shelter_director", "case_manager"}:
@@ -635,6 +749,7 @@ def staff_passes_away_now_view():
 
 def staff_passes_overdue_view():
     shelter = session.get("shelter")
+    _run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
     role = session.get("role")
 
     if role not in {"admin", "shelter_director", "case_manager"}:
