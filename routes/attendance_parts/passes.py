@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime, time, timezone
+from zoneinfo import ZoneInfo
+
 from flask import abort, flash, g, redirect, render_template, session, url_for
 
 from core.attendance_hours import calculate_prior_week_attendance_hours
@@ -16,7 +19,9 @@ from core.pass_rules import (
     use_gh_pass_form,
 )
 from core.sms_sender import send_sms
-from routes.attendance_parts.helpers import can_manage_passes, to_local
+from routes.attendance_parts.helpers import can_manage_passes, complete_active_passes, to_local
+
+CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
 def _resident_value(row, key: str, index: int, default=""):
@@ -65,11 +70,27 @@ def _deadline_detail_text(deadline_local, settings: dict) -> str:
         6: "Sunday",
     }
     weekday_name = weekday_lookup.get(settings.get("pass_deadline_weekday", 0), "Monday")
-    hour = int(settings.get("pass_deadline_hour", 8) or 8)
-    minute = int(settings.get("pass_deadline_minute", 0) or 0)
-    _ = hour, minute
     time_label = deadline_local.strftime("%I:%M %p").lstrip("0")
     return f"Configured deadline is {weekday_name} at {time_label}. Actual deadline for this pass was {deadline_local.strftime('%B %d, %Y %I:%M %p')}."
+
+
+def _end_of_day_utc_naive(date_text: str | None) -> str | None:
+    raw = (date_text or "").strip()
+    if not raw:
+        return None
+    try:
+        local_dt = datetime.combine(
+            datetime.fromisoformat(raw).date(),
+            time(hour=23, minute=59, second=59),
+            tzinfo=CHICAGO_TZ,
+        )
+        return (
+            local_dt.astimezone(timezone.utc)
+            .replace(tzinfo=None)
+            .isoformat(timespec="seconds")
+        )
+    except Exception:
+        return None
 
 
 def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
@@ -249,6 +270,7 @@ def _load_pass_sms_context(pass_id: int, shelter: str):
         """
         SELECT
             rp.id,
+            rp.resident_id,
             rp.pass_type,
             rp.start_at,
             rp.end_at,
@@ -269,6 +291,7 @@ def _load_pass_sms_context(pass_id: int, shelter: str):
         """
         SELECT
             rp.id,
+            rp.resident_id,
             rp.pass_type,
             rp.start_at,
             rp.end_at,
@@ -300,6 +323,146 @@ def _build_approval_sms(pass_row: dict) -> str:
     start_date = str(pass_row.get("start_date") or "").strip()
     end_date = str(pass_row.get("end_date") or "").strip()
     return f"{pass_type_text} approved for {first_name}. Dates: {start_date} to {end_date}."
+
+
+def _latest_checkout_type_map_for_shelter(shelter: str) -> dict[int, str]:
+    rows = db_fetchall(
+        """
+        SELECT resident_id, event_type
+        FROM (
+            SELECT
+                resident_id,
+                event_type,
+                ROW_NUMBER() OVER (
+                    PARTITION BY resident_id
+                    ORDER BY event_time DESC, id DESC
+                ) AS rn
+            FROM attendance_events
+            WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
+        ) x
+        WHERE rn = 1
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT resident_id, event_type
+        FROM (
+            SELECT
+                resident_id,
+                event_type,
+                ROW_NUMBER() OVER (
+                    PARTITION BY resident_id
+                    ORDER BY event_time DESC, id DESC
+                ) AS rn
+            FROM attendance_events
+            WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
+        ) x
+        WHERE rn = 1
+        """,
+        (shelter,),
+    )
+    result: dict[int, str] = {}
+    for row in rows:
+        result[int(row["resident_id"])] = str(row["event_type"] or "")
+    return result
+
+
+def _current_pass_rows(shelter: str) -> list[dict]:
+    now_iso = utcnow_iso()
+    today_iso = now_iso[:10]
+
+    rows = db_fetchall(
+        """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            rp.shelter,
+            rp.pass_type,
+            rp.status,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            rp.reason,
+            rp.created_at,
+            rp.approved_at,
+            r.first_name,
+            r.last_name
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.status = 'approved'
+          AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
+          AND (
+                (rp.start_at IS NOT NULL AND rp.end_at IS NOT NULL AND rp.start_at <= %s AND rp.end_at >= %s)
+             OR (rp.start_date IS NOT NULL AND rp.end_date IS NOT NULL AND rp.start_date <= %s AND rp.end_date >= %s)
+          )
+        ORDER BY
+            COALESCE(rp.end_at, %s) ASC,
+            COALESCE(rp.end_date, %s) ASC,
+            rp.created_at ASC
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            rp.shelter,
+            rp.pass_type,
+            rp.status,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            rp.reason,
+            rp.created_at,
+            rp.approved_at,
+            r.first_name,
+            r.last_name
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.status = 'approved'
+          AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
+          AND (
+                (rp.start_at IS NOT NULL AND rp.end_at IS NOT NULL AND rp.start_at <= ? AND rp.end_at >= ?)
+             OR (rp.start_date IS NOT NULL AND rp.end_date IS NOT NULL AND rp.start_date <= ? AND rp.end_date >= ?)
+          )
+        ORDER BY
+            COALESCE(rp.end_at, ?) ASC,
+            COALESCE(rp.end_date, ?) ASC,
+            rp.created_at ASC
+        """,
+        (shelter, now_iso, now_iso, today_iso, today_iso, now_iso, today_iso),
+    )
+
+    latest_event_map = _latest_checkout_type_map_for_shelter(shelter)
+    processed: list[dict] = []
+
+    for row in rows:
+        item = dict(row)
+        latest_event_type = (latest_event_map.get(int(item["resident_id"])) or "").strip().lower()
+        if latest_event_type != "check_out":
+            continue
+
+        item["start_at_local"] = to_local(item.get("start_at"))
+        item["end_at_local"] = to_local(item.get("end_at"))
+        item["created_at_local"] = to_local(item.get("created_at"))
+        item["approved_at_local"] = to_local(item.get("approved_at"))
+        item["pass_type_label"] = pass_type_label(item.get("pass_type"))
+
+        if item.get("end_at"):
+            expected_back_iso = str(item.get("end_at") or "").strip()
+        else:
+            expected_back_iso = _end_of_day_utc_naive(item.get("end_date"))
+
+        item["expected_back_at"] = expected_back_iso
+        item["expected_back_local"] = to_local(expected_back_iso)
+
+        processed.append(item)
+
+    return processed
 
 
 def staff_passes_pending_view():
@@ -361,27 +524,11 @@ def staff_passes_pending_view():
     processed = []
 
     for r in rows:
-        row = dict(r) if isinstance(r, dict) else {
-            "id": r[0],
-            "resident_id": r[1],
-            "first_name": r[2],
-            "last_name": r[3],
-            "shelter": r[4],
-            "pass_type": r[5],
-            "start_at": r[6],
-            "end_at": r[7],
-            "start_date": r[8],
-            "end_date": r[9],
-            "destination": r[10],
-            "reason": r[11],
-            "created_at": r[12],
-        }
-
+        row = dict(r)
         row["start_at_local"] = to_local(row.get("start_at"))
         row["end_at_local"] = to_local(row.get("end_at"))
         row["created_at_local"] = to_local(row.get("created_at"))
         row["pass_type_label"] = pass_type_label(row.get("pass_type"))
-
         processed.append(row)
 
     return render_template(
@@ -453,34 +600,57 @@ def staff_passes_approved_view():
     processed = []
 
     for r in rows:
-        row = dict(r) if isinstance(r, dict) else {
-            "id": r[0],
-            "resident_id": r[1],
-            "first_name": r[2],
-            "last_name": r[3],
-            "shelter": r[4],
-            "pass_type": r[5],
-            "start_at": r[6],
-            "end_at": r[7],
-            "start_date": r[8],
-            "end_date": r[9],
-            "destination": r[10],
-            "reason": r[11],
-            "created_at": r[12],
-            "approved_at": r[13],
-        }
-
+        row = dict(r)
         row["start_at_local"] = to_local(row.get("start_at"))
         row["end_at_local"] = to_local(row.get("end_at"))
         row["created_at_local"] = to_local(row.get("created_at"))
         row["approved_at_local"] = to_local(row.get("approved_at"))
         row["pass_type_label"] = pass_type_label(row.get("pass_type"))
-
         processed.append(row)
 
     return render_template(
         "staff_passes_approved.html",
         rows=processed,
+        shelter=shelter,
+        fmt_dt=fmt_dt,
+    )
+
+
+def staff_passes_away_now_view():
+    shelter = session.get("shelter")
+    role = session.get("role")
+
+    if role not in {"admin", "shelter_director", "case_manager"}:
+        abort(403)
+
+    rows = _current_pass_rows(str(shelter or "").strip())
+
+    return render_template(
+        "staff_passes_away_now.html",
+        rows=rows,
+        shelter=shelter,
+        fmt_dt=fmt_dt,
+    )
+
+
+def staff_passes_overdue_view():
+    shelter = session.get("shelter")
+    role = session.get("role")
+
+    if role not in {"admin", "shelter_director", "case_manager"}:
+        abort(403)
+
+    now_local = datetime.now(CHICAGO_TZ)
+    overdue_rows: list[dict] = []
+
+    for row in _current_pass_rows(str(shelter or "").strip()):
+        expected_back_local = row.get("expected_back_local")
+        if expected_back_local and expected_back_local < now_local:
+            overdue_rows.append(row)
+
+    return render_template(
+        "staff_passes_overdue.html",
+        rows=overdue_rows,
         shelter=shelter,
         fmt_dt=fmt_dt,
     )
@@ -545,24 +715,7 @@ def staff_pass_detail_view(pass_id: int):
     if not row:
         abort(404)
 
-    p = dict(row) if isinstance(row, dict) else {
-        "id": row[0],
-        "resident_id": row[1],
-        "first_name": row[2],
-        "last_name": row[3],
-        "shelter": row[4],
-        "pass_type": row[5],
-        "start_at": row[6],
-        "end_at": row[7],
-        "start_date": row[8],
-        "end_date": row[9],
-        "destination": row[10],
-        "reason": row[11],
-        "resident_notes": row[12],
-        "staff_notes": row[13],
-        "created_at": row[14],
-        "status": row[15],
-    }
+    p = dict(row)
 
     detail_row = db_fetchone(
         """
@@ -614,27 +767,7 @@ def staff_pass_detail_view(pass_id: int):
         (pass_id,),
     )
 
-    pass_detail = (
-        dict(detail_row) if isinstance(detail_row, dict) else {
-            "resident_phone": detail_row[0],
-            "request_date": detail_row[1],
-            "resident_level": detail_row[2],
-            "requirements_acknowledged": detail_row[3],
-            "requirements_not_met_explanation": detail_row[4],
-            "reason_for_request": detail_row[5],
-            "who_with": detail_row[6],
-            "destination_address": detail_row[7],
-            "destination_phone": detail_row[8],
-            "companion_names": detail_row[9],
-            "companion_phone_numbers": detail_row[10],
-            "budgeted_amount": detail_row[11],
-            "approved_amount": detail_row[12],
-            "reviewed_by_user_id": detail_row[13],
-            "reviewed_by_name": detail_row[14],
-            "reviewed_at": detail_row[15],
-        }
-        if detail_row else None
-    )
+    pass_detail = dict(detail_row) if detail_row else None
 
     p["start_at_local"] = to_local(p.get("start_at"))
     p["end_at_local"] = to_local(p.get("end_at"))
@@ -692,9 +825,9 @@ def staff_pass_approve_view(pass_id: int):
         flash("Pass request not found.", "error")
         return redirect(url_for("attendance.staff_passes_pending"))
 
-    status = pass_row["status"] if isinstance(pass_row, dict) else pass_row[3]
-    resident_id = pass_row["resident_id"] if isinstance(pass_row, dict) else pass_row[1]
-    pass_type_key = pass_row["pass_type"] if isinstance(pass_row, dict) else pass_row[4]
+    status = str(pass_row.get("status") or "").strip().lower()
+    resident_id = int(pass_row.get("resident_id"))
+    pass_type_key = str(pass_row.get("pass_type") or "").strip().lower()
 
     if status != "pending":
         flash("That pass request is no longer pending.", "error")
@@ -711,16 +844,6 @@ def staff_pass_approve_view(pass_id: int):
                 approved_at = %s,
                 updated_at = %s
             WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            UPDATE resident_passes
-            SET status = ?,
-                approved_by = ?,
-                approved_at = ?,
-                updated_at = ?
-            WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
             """,
             ("approved", staff_id, now_iso, now_iso, pass_id, shelter),
         )
@@ -733,22 +856,12 @@ def staff_pass_approve_view(pass_id: int):
                 reviewed_at = %s,
                 updated_at = %s
             WHERE pass_id = %s
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            UPDATE resident_pass_request_details
-            SET reviewed_by_user_id = ?,
-                reviewed_by_name = ?,
-                reviewed_at = ?,
-                updated_at = ?
-            WHERE pass_id = ?
             """,
             (staff_id, staff_name or None, now_iso, now_iso, pass_id),
         )
 
         _insert_resident_notification(
-            resident_id=int(resident_id),
+            resident_id=resident_id,
             shelter=str(shelter or "").strip(),
             notification_type="pass_approved",
             title=f"{pass_type_label(pass_type_key)} Approved",
@@ -756,7 +869,7 @@ def staff_pass_approve_view(pass_id: int):
             related_pass_id=int(pass_id),
         )
 
-    sms_context = _load_pass_sms_context(pass_id, shelter)
+    sms_context = _load_pass_sms_context(pass_id, str(shelter or "").strip())
     if sms_context:
         phone = str(sms_context.get("resident_phone") or "").strip()
         if phone:
@@ -800,9 +913,9 @@ def staff_pass_deny_view(pass_id: int):
         flash("Pass request not found.", "error")
         return redirect(url_for("attendance.staff_passes_pending"))
 
-    status = pass_row["status"] if isinstance(pass_row, dict) else pass_row[3]
-    resident_id = pass_row["resident_id"] if isinstance(pass_row, dict) else pass_row[1]
-    pass_type_key = pass_row["pass_type"] if isinstance(pass_row, dict) else pass_row[4]
+    status = str(pass_row.get("status") or "").strip().lower()
+    resident_id = int(pass_row.get("resident_id"))
+    pass_type_key = str(pass_row.get("pass_type") or "").strip().lower()
 
     if status != "pending":
         flash("That pass request is no longer pending.", "error")
@@ -819,16 +932,6 @@ def staff_pass_deny_view(pass_id: int):
                 approved_at = %s,
                 updated_at = %s
             WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            UPDATE resident_passes
-            SET status = ?,
-                approved_by = ?,
-                approved_at = ?,
-                updated_at = ?
-            WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
             """,
             ("denied", staff_id, now_iso, now_iso, pass_id, shelter),
         )
@@ -841,22 +944,12 @@ def staff_pass_deny_view(pass_id: int):
                 reviewed_at = %s,
                 updated_at = %s
             WHERE pass_id = %s
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            UPDATE resident_pass_request_details
-            SET reviewed_by_user_id = ?,
-                reviewed_by_name = ?,
-                reviewed_at = ?,
-                updated_at = ?
-            WHERE pass_id = ?
             """,
             (staff_id, staff_name or None, now_iso, now_iso, pass_id),
         )
 
         _insert_resident_notification(
-            resident_id=int(resident_id),
+            resident_id=resident_id,
             shelter=str(shelter or "").strip(),
             notification_type="pass_denied",
             title=f"{pass_type_label(pass_type_key)} Denied",
@@ -867,3 +960,104 @@ def staff_pass_deny_view(pass_id: int):
     log_action("pass", resident_id, shelter, staff_id, "deny", f"pass_id={pass_id}")
     flash("Pass request denied.", "ok")
     return redirect(url_for("attendance.staff_passes_pending"))
+
+
+def staff_pass_check_in_view(pass_id: int):
+    shelter = session.get("shelter")
+    staff_id = session.get("staff_user_id")
+
+    if not can_manage_passes():
+        abort(403)
+
+    pass_row = db_fetchone(
+        """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            rp.shelter,
+            rp.status,
+            rp.pass_type,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            r.first_name,
+            r.last_name
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.id = %s
+          AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
+        LIMIT 1
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT
+            rp.id,
+            rp.resident_id,
+            rp.shelter,
+            rp.status,
+            rp.pass_type,
+            rp.start_at,
+            rp.end_at,
+            rp.start_date,
+            rp.end_date,
+            rp.destination,
+            r.first_name,
+            r.last_name
+        FROM resident_passes rp
+        JOIN residents r ON r.id = rp.resident_id
+        WHERE rp.id = ?
+          AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
+        LIMIT 1
+        """,
+        (pass_id, shelter),
+    )
+
+    if not pass_row:
+        flash("Pass not found.", "error")
+        return redirect(url_for("attendance.staff_passes_away_now"))
+
+    resident_id = int(pass_row["resident_id"])
+    status = str(pass_row.get("status") or "").strip().lower()
+
+    if status != "approved":
+        flash("Only approved passes can be checked back in.", "error")
+        return redirect(url_for("attendance.staff_passes_away_now"))
+
+    db_execute(
+        """
+        INSERT INTO attendance_events (
+            resident_id,
+            shelter,
+            event_type,
+            event_time,
+            staff_user_id,
+            note,
+            expected_back_time,
+            destination,
+            obligation_start_time,
+            obligation_end_time
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (
+            resident_id,
+            shelter,
+            "check_in",
+            utcnow_iso(),
+            staff_id,
+            "Pass return check in",
+            None,
+            None,
+            None,
+            None,
+        ),
+    )
+
+    complete_active_passes(resident_id, str(shelter or "").strip())
+
+    log_action("pass", resident_id, shelter, staff_id, "check_in", f"pass_id={pass_id}")
+    flash("Resident checked in from pass.", "ok")
+    return redirect(url_for("attendance.staff_passes_away_now"))
