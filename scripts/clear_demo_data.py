@@ -13,14 +13,6 @@ def fetch_ids(sql: str, params: tuple = ()) -> list[int]:
     return [int(row["id"]) for row in rows or []]
 
 
-def fetch_text_values(sql: str, params: tuple = (), key: str = "value") -> list[str]:
-    rows = db_fetchall(sql, params)
-    values: list[str] = []
-    for row in rows or []:
-        values.append(str(row[key]))
-    return values
-
-
 def delete_by_id(table_name: str, row_id: int) -> None:
     db_execute(f"DELETE FROM {table_name} WHERE id = %s", (row_id,))
 
@@ -118,16 +110,6 @@ def run_clear() -> None:
         (f"{DEMO_PREFIX}%",),
     )
 
-    resident_identifiers = fetch_text_values(
-        """
-        SELECT resident_identifier AS value
-        FROM residents
-        WHERE resident_identifier LIKE %s
-        ORDER BY id ASC
-        """,
-        (f"{DEMO_PREFIX}%",),
-    )
-
     with db_transaction():
         for pass_id in pass_ids:
             delete_where_value("resident_pass_request_details", "pass_id", pass_id)
@@ -156,11 +138,8 @@ def run_clear() -> None:
             delete_where_value("appointments", "enrollment_id", enrollment_id)
             delete_where_value("child_services", "enrollment_id", enrollment_id)
 
-        for resident_identifier in resident_identifiers:
-            delete_where_value("leave_requests", "resident_identifier", resident_identifier)
-            delete_where_value("transport_requests", "resident_identifier", resident_identifier)
-
         for resident_id in resident_ids:
+            delete_where_value("resident_notifications", "resident_id", resident_id)
             delete_where_value("resident_passes", "resident_id", resident_id)
             delete_where_value("attendance_events", "resident_id", resident_id)
             delete_where_value("resident_transfers", "resident_id", resident_id)
