@@ -261,6 +261,29 @@
 </form>
 
 <script>
+function todayChicagoDateValue() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(now);
+
+  const year = parts.find(p => p.type === "year")?.value || "";
+  const month = parts.find(p => p.type === "month")?.value || "";
+  const day = parts.find(p => p.type === "day")?.value || "";
+
+  return `${year}-${month}-${day}`;
+}
+
+function defaultRequestDate() {
+  const field = document.getElementById("request_date");
+  if (field && !field.value) {
+    field.value = todayChicagoDateValue();
+  }
+}
+
 function togglePassType() {
   const type = document.getElementById("pass_type").value;
   const standard = document.getElementById("standard_fields");
@@ -289,6 +312,7 @@ function toggleRequirementsExplanation() {
   }
 }
 
+defaultRequestDate();
 togglePassType();
 </script>
 
