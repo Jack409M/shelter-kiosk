@@ -1,558 +1,392 @@
 {% extends "layout.html" %}
 
 {% block content %}
-
-{% set row_count = weekly_rows|length if weekly_rows else 1 %}
-
-<h1 class="screen-title">Weekly Chore Assignment Sheet</h1>
-
-<p class="no-print" style="margin-bottom:16px;">
-  <a class="btn" href="{{ url_for('shelter_operations.chore_assignments', assigned_date=assigned_date) }}">Open Assignment Page</a>
-  <a class="btn" href="{{ url_for('shelter_operations.chore_management') }}">Configure Chores</a>
-</p>
-
-<div class="card no-print" style="margin-bottom:20px;">
-  <form method="get" id="weekForm" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-    <div>
-      <label for="assigned_date">Week Anchor Date</label><br>
-      <input type="date" id="assigned_date" name="assigned_date" value="{{ assigned_date }}" required>
-    </div>
-    <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-      <button type="submit">Load</button>
-      <button type="button" onclick="shiftWeek(-7)">Past</button>
-      <button type="button" onclick="goToToday()">This Week</button>
-      <button type="button" onclick="shiftWeek(7)">Future</button>
-      <button type="button" onclick="window.print()">Print</button>
-    </div>
-  </form>
-</div>
-
-<div class="card chore-print-sheet" style="margin-bottom:20px; --row-count: {{ row_count }};">
-  <div class="sheet-header">
-    <div class="sheet-org">Downtown Women’s Center</div>
-    <div class="sheet-shelter">{{ session.get("shelter") or "Shelter" }}</div>
-    <div class="sheet-title">Weekly Chore Assignment Sheet</div>
-    <div class="sheet-week">Week of {{ week_start }} to {{ week_end }}</div>
-  </div>
-
-  {% if weekly_rows %}
-    <div class="table-wrap">
-      <table class="chore-board-table">
-        <colgroup>
-          <col class="col-who">
-          <col class="col-when">
-          <col class="col-what">
-          <col class="col-day">
-          <col class="col-day">
-          <col class="col-day">
-          <col class="col-day">
-          <col class="col-day">
-          <col class="col-day">
-          <col class="col-day">
-          <col class="col-delete">
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Resident</th>
-            <th>Time</th>
-            <th>Chore Area</th>
-            <th>Tue</th>
-            <th>Wed</th>
-            <th>Thu</th>
-            <th>Fri</th>
-            <th>Sat</th>
-            <th>Sun</th>
-            <th>Mon</th>
-            <th class="no-print">Delete</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in weekly_rows %}
-          <tr id="row-{{ row.assignment_id }}">
-            <td>
-              <form
-                id="edit-row-{{ row.assignment_id }}"
-                method="post"
-                action="{{ url_for('shelter_operations.edit_assignment', assignment_id=row.assignment_id) }}"
-                style="display:none;"
-              >
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                <input type="hidden" name="scroll_y" class="scroll-y-field" value="0">
-              </form>
-
-              <select
-                name="resident_id"
-                form="edit-row-{{ row.assignment_id }}"
-                required
-                class="screen-select"
-                onchange="submitWithScroll('edit-row-{{ row.assignment_id }}')"
-              >
-                {% for r in residents %}
-                  <option value="{{ r.id }}" {% if r.id == row.resident_id %}selected{% endif %}>
-                    {{ r.last_name }}, {{ r.first_name }}
-                  </option>
-                {% endfor %}
-              </select>
-
-              <span class="print-value print-name">{{ row.last_name }}, {{ row.first_name }}</span>
-            </td>
-
-            <td class="when-cell">
-              {{ row.when_label or "" }}
-            </td>
-
-            <td>
-              <select
-                name="chore_id"
-                form="edit-row-{{ row.assignment_id }}"
-                required
-                class="screen-select"
-                onchange="submitWithScroll('edit-row-{{ row.assignment_id }}')"
-              >
-                {% for c in chores %}
-                  <option value="{{ c.id }}" {% if c.id == row.chore_id %}selected{% endif %}>
-                    {{ c.name }}
-                  </option>
-                {% endfor %}
-              </select>
-
-              <span class="print-value print-chore">{{ row.chore_name }}</span>
-            </td>
-
-            {% for d in week_dates %}
-            <td class="day-cell">
-              {% set day = row.days[d] %}
-              {% if day %}
-                <button
-                  type="button"
-                  class="check-btn no-print"
-                  title="Toggle completion"
-                  onclick="submitWithScroll('toggle-day-{{ day.id }}')"
-                >
-                  {% if day.status == 'completed' %}
-                    ☑
-                  {% else %}
-                    ☐
-                  {% endif %}
-                </button>
-
-                <span class="print-check">
-                  {% if day.status == 'completed' %}
-                    ☑
-                  {% else %}
-                    ☐
-                  {% endif %}
-                </span>
-
-                <form
-                  id="toggle-day-{{ day.id }}"
-                  method="post"
-                  action="{{ url_for('shelter_operations.toggle_assignment_status', assignment_id=day.id) }}"
-                  style="display:none;"
-                >
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                  <input type="hidden" name="scroll_y" class="scroll-y-field" value="0">
-                </form>
-              {% else %}
-                <span class="print-check">&nbsp;</span>
-              {% endif %}
-            </td>
-            {% endfor %}
-
-            <td class="no-print delete-cell">
-              <button
-                type="button"
-                onclick="submitWithScroll('delete-row-{{ row.assignment_id }}')"
-              >
-                Delete
-              </button>
-
-              <form
-                id="delete-row-{{ row.assignment_id }}"
-                method="post"
-                action="{{ url_for('shelter_operations.delete_assignment', assignment_id=row.assignment_id) }}"
-                style="display:none;"
-              >
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="assigned_date" value="{{ assigned_date }}">
-                <input type="hidden" name="scroll_y" class="scroll-y-field" value="0">
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <p>No chores assigned for this week.</p>
-  {% endif %}
-</div>
-
 <style>
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  overflow-y: visible;
-  max-height: none;
-}
-
-.chore-print-sheet {
-  background: #fff;
-}
-
-.sheet-header {
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.sheet-org {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.sheet-shelter {
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: capitalize;
-  margin-top: 2px;
-}
-
-.sheet-title {
-  font-size: 28px;
-  font-weight: 800;
-  margin-top: 8px;
-}
-
-.sheet-week {
-  font-size: 16px;
-  font-weight: 600;
-  margin-top: 8px;
-}
-
-.chore-board-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.col-who {
-  width: 26%;
-}
-
-.col-when {
-  width: 8%;
-}
-
-.col-what {
-  width: 24%;
-}
-
-.col-day {
-  width: 5.2%;
-}
-
-.col-delete {
-  width: 6%;
-}
-
-.chore-board-table th,
-.chore-board-table td {
-  border: 1px solid #000;
-  padding: 6px;
-  vertical-align: middle;
-}
-
-.chore-board-table th {
-  background: #f3f4f6;
-  text-align: center;
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-.screen-select {
-  width: 100%;
-}
-
-.print-value {
-  display: none;
-}
-
-.when-cell {
-  white-space: nowrap;
-  text-align: center;
-}
-
-.chore-board-table td.day-cell {
-  text-align: center;
-  font-size: 18px;
-  padding: 4px;
-}
-
-.check-btn {
-  border: 1px solid #777;
-  background: #fff;
-  font-size: 22px;
-  line-height: 1;
-  min-width: 42px;
-  min-height: 42px;
-  padding: 6px;
-  cursor: pointer;
-  border-radius: 6px;
-}
-
-.check-btn:hover {
-  background: #f5f5f5;
-}
-
-.print-check {
-  display: none;
-  font-size: 18px;
-  line-height: 1;
-}
-
-@media print {
-  .no-print,
-  nav,
-  .sidebar,
-  header,
-  footer,
-  .screen-title,
-  .flash,
-  .flashes,
-  .alert,
-  .messages {
-    display: none !important;
-  }
-
-  html,
-  body {
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #fff !important;
-    height: 100%;
-  }
-
-  main,
-  .main-content,
-  .container,
-  .content,
-  .page-content {
-    margin: 0 !important;
-    padding: 0 !important;
-    max-width: none !important;
-    width: 100% !important;
-  }
-
-  .card,
-  .chore-print-sheet {
-    box-shadow: none !important;
-    border: none !important;
-    margin: 0 !important;
-  }
-
-  .chore-print-sheet {
-    padding: 0 !important;
-    min-height: 7.75in;
+  .chore-board-page {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
+    gap: 18px;
   }
 
-  .sheet-header {
-    margin: 0 0 0.12in 0;
+  .chore-board-card {
+    background: #fff;
+    border: 1px solid #d7d7d7;
+    border-radius: 10px;
+    padding: 16px;
   }
 
-  .sheet-org {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0;
-    text-transform: none;
-    line-height: 1.05;
+  .chore-board-title {
+    margin: 0 0 6px 0;
   }
 
-  .sheet-shelter {
-    font-size: 12px;
-    margin-top: 2px;
-    line-height: 1.05;
+  .chore-board-subtitle {
+    margin: 0;
+    color: #555;
+    font-size: 14px;
   }
 
-  .sheet-title {
-    font-size: 24px;
-    margin-top: 4px;
-    line-height: 1.05;
+  .chore-board-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: end;
   }
 
-  .sheet-week {
-    font-size: 13px;
-    margin-top: 4px;
-    line-height: 1.05;
+  .chore-board-actions form {
+    margin: 0;
   }
 
-  .table-wrap {
-    overflow: visible !important;
-    max-height: none !important;
-    flex: 1 1 auto;
+  .chore-board-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+
+  .chore-board-grid label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .chore-board-grid input,
+  .chore-board-grid select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .chore-board-table-wrap {
+    overflow-x: auto;
   }
 
   .chore-board-table {
     width: 100%;
-    table-layout: fixed;
     border-collapse: collapse;
-  }
-
-  .chore-board-table thead,
-  .chore-board-table tbody,
-  .chore-board-table tr {
-    page-break-inside: avoid;
-    break-inside: avoid;
+    background: #fff;
   }
 
   .chore-board-table th,
   .chore-board-table td {
-    border: 1px solid #000;
-    padding: 0;
-    line-height: 1;
-  }
-
-  .chore-board-table th {
-    position: static !important;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 5px 4px;
-    height: 0.28in;
-  }
-
-  .screen-select {
-    display: none !important;
-  }
-
-  .print-value {
-    display: flex !important;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    padding: 2px 4px;
-    overflow: hidden;
-    text-overflow: clip;
-    white-space: nowrap;
-    font-weight: 600;
-    line-height: 1;
-  }
-
-  .print-name {
-    font-size: clamp(11px, calc(24px - (var(--row-count) * 0.35px)), 18px);
-  }
-
-  .print-chore {
-    font-size: clamp(11px, calc(23px - (var(--row-count) * 0.33px)), 17px);
-  }
-
-  .when-cell {
-    font-size: clamp(10px, calc(20px - (var(--row-count) * 0.30px)), 15px);
-    text-align: center;
-    white-space: nowrap;
-    font-weight: 600;
-    padding: 0 2px;
-  }
-
-  .chore-board-table td.day-cell {
-    padding: 0;
-    text-align: center;
+    border: 1px solid #cfcfcf;
+    padding: 8px 10px;
     vertical-align: middle;
+    text-align: left;
   }
 
-  .print-check {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    font-size: clamp(11px, calc(21px - (var(--row-count) * 0.30px)), 15px);
-    line-height: 1;
+  .chore-board-table thead th {
+    background: #f3f3f3;
+    white-space: nowrap;
   }
 
-  .col-who {
-    width: 30%;
+  .chore-board-name {
+    min-width: 180px;
   }
 
-  .col-when {
-    width: 8%;
+  .chore-board-when {
+    min-width: 110px;
+    white-space: nowrap;
   }
 
-  .col-what {
-    width: 26%;
+  .chore-board-what {
+    min-width: 220px;
   }
 
-  .col-day {
-    width: 5%;
+  .day-col {
+    width: 64px;
+    min-width: 64px;
+    text-align: center !important;
   }
 
-  .col-delete {
-    width: 0 !important;
+  .day-cell {
+    text-align: center !important;
   }
 
-  .chore-board-table tbody tr {
-    height: calc((7.75in - 0.95in) / var(--row-count));
+  .muted {
+    color: #666;
+    font-size: 13px;
   }
 
-  @page {
-    size: letter landscape;
-    margin: 0.22in;
+  .empty-state {
+    padding: 18px;
+    border: 1px dashed #bbb;
+    border-radius: 8px;
+    background: #fafafa;
   }
-}
+
+  .print-only {
+    display: none;
+  }
+
+  .screen-only {
+    display: block;
+  }
+
+  @media print {
+    .screen-only,
+    nav,
+    header,
+    .top,
+    .flash,
+    .btn,
+    button,
+    form[action],
+    .chore-board-actions,
+    .chore-board-card.controls-card {
+      display: none !important;
+    }
+
+    .print-only {
+      display: block !important;
+    }
+
+    .container,
+    .chore-board-page,
+    .chore-board-card {
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      background: #fff !important;
+    }
+
+    .chore-board-print-header {
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .chore-board-print-title {
+      margin: 0 0 4px 0;
+      font-size: 20px;
+    }
+
+    .chore-board-print-subtitle {
+      margin: 0;
+      font-size: 12px;
+      color: #000;
+    }
+
+    .chore-board-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 11px;
+    }
+
+    .chore-board-table th,
+    .chore-board-table td {
+      border: 1px solid #000;
+      padding: 6px 6px;
+      color: #000;
+      background: #fff !important;
+    }
+
+    .chore-board-name {
+      width: 22%;
+      min-width: 0;
+    }
+
+    .chore-board-when {
+      width: 10%;
+      min-width: 0;
+    }
+
+    .chore-board-what {
+      width: 24%;
+      min-width: 0;
+    }
+
+    .day-col {
+      width: 6.3%;
+      min-width: 0;
+      text-align: center !important;
+    }
+
+    .day-cell {
+      text-align: center !important;
+      height: 34px;
+      padding: 0 !important;
+      background: #fff !important;
+    }
+
+    .day-cell * {
+      display: none !important;
+    }
+
+    .day-cell::before,
+    .day-cell::after {
+      content: none !important;
+      display: none !important;
+    }
+
+    .page-break-avoid {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  }
 </style>
 
-<script>
-function shiftWeek(days) {
-  const input = document.getElementById("assigned_date");
-  if (!input || !input.value) return;
+<div class="chore-board-page">
+  <div class="chore-board-card controls-card screen-only">
+    <h1 class="chore-board-title">Weekly Chore Board</h1>
+    <p class="chore-board-subtitle">
+      Week of {{ week_start }} through {{ week_end }}
+    </p>
+  </div>
 
-  const parts = input.value.split("-");
-  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
-  dt.setDate(dt.getDate() + days);
+  <div class="chore-board-card controls-card screen-only">
+    <form method="get" action="{{ url_for('shelter_operations.chore_board') }}">
+      <div class="chore-board-actions">
+        <div>
+          <label for="assigned_date"><strong>Week Anchor Date</strong></label>
+          <input
+            id="assigned_date"
+            class="date-box"
+            type="date"
+            name="assigned_date"
+            value="{{ assigned_date }}"
+          >
+        </div>
+        <div>
+          <button class="btn" type="submit">Load Week</button>
+        </div>
+        <div>
+          <button class="btn" type="button" onclick="window.print()">Print Chore Board</button>
+        </div>
+      </div>
+    </form>
+  </div>
 
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, "0");
-  const d = String(dt.getDate()).padStart(2, "0");
-  input.value = `${y}-${m}-${d}`;
+  <div class="chore-board-card controls-card screen-only">
+    <form method="post" action="{{ url_for('shelter_operations.chore_board', assigned_date=week_start) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="assigned_date" value="{{ week_start }}">
 
-  document.getElementById("weekForm").submit();
-}
+      <div class="chore-board-grid">
+        <div>
+          <label for="resident_id">Resident</label>
+          <select id="resident_id" name="resident_id" required>
+            <option value="">Select resident</option>
+            {% for resident in residents %}
+              <option value="{{ resident.id }}">
+                {{ resident.last_name }}, {{ resident.first_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
 
-function goToToday() {
-  const dt = new Date();
-  const y = dt.getFullYear();
-  const m = String(dt.getMonth() + 1).padStart(2, "0");
-  const d = String(dt.getDate()).padStart(2, "0");
-  document.getElementById("assigned_date").value = `${y}-${m}-${d}`;
-  document.getElementById("weekForm").submit();
-}
+        <div>
+          <label for="chore_id">Chore</label>
+          <select id="chore_id" name="chore_id" required>
+            <option value="">Select chore</option>
+            {% for chore in chores %}
+              <option value="{{ chore.id }}">
+                {{ chore.name }}
+                {% if chore.when_time %}
+                  | {{ chore.when_time }}
+                {% endif %}
+                {% if chore.default_day %}
+                  | {{ chore.default_day|upper }}
+                {% endif %}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
 
-function submitWithScroll(formId) {
-  const form = document.getElementById(formId);
-  if (!form) return;
+        <div>
+          <label for="target_date">Assign Date</label>
+          <input
+            id="target_date"
+            type="date"
+            name="target_date"
+            value="{{ week_start }}"
+          >
+        </div>
 
-  const scrollFields = form.querySelectorAll(".scroll-y-field");
-  scrollFields.forEach(function(field) {
-    field.value = String(window.scrollY || window.pageYOffset || 0);
-  });
+        <div>
+          <label for="assign_mode">Assign Mode</label>
+          <select id="assign_mode" name="assign_mode">
+            <option value="day">Selected day only</option>
+            <option value="week">Full week</option>
+          </select>
+        </div>
+      </div>
 
-  form.submit();
-}
+      <div style="margin-top: 12px;">
+        <button class="btn" type="submit">Add Assignment</button>
+      </div>
+    </form>
+  </div>
 
-document.addEventListener("DOMContentLoaded", function() {
-  const savedScroll = {{ (request.values.get('scroll_y') or '0')|int }};
-  if (savedScroll > 0) {
-    window.requestAnimationFrame(function() {
-      window.scrollTo(0, savedScroll);
-    });
-  }
-});
-</script>
+  <div class="chore-board-card controls-card screen-only">
+    <div class="chore-board-actions">
+      <form method="post" action="{{ url_for('shelter_operations.chore_board', assigned_date=week_start) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="assigned_date" value="{{ week_start }}">
+        <input type="hidden" name="action" value="clone_week">
+        <button class="btn" type="submit">Clone Last Week</button>
+      </form>
 
+      <form method="post" action="{{ url_for('shelter_operations.chore_board', assigned_date=week_start) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="assigned_date" value="{{ week_start }}">
+        <input type="hidden" name="action" value="clone_week_random">
+        <button class="btn" type="submit">Clone Last Week and Randomize</button>
+      </form>
+    </div>
+    <div class="muted" style="margin-top: 8px;">
+      Printed board uses empty day boxes for handwritten initials.
+    </div>
+  </div>
+
+  <div class="chore-board-card page-break-avoid">
+    <div class="print-only chore-board-print-header">
+      <div style="font-weight: 700;">Downtown Women's Center</div>
+      <div>{{ shelter_display(session.get('shelter', '')) }}</div>
+      <h1 class="chore-board-print-title">Weekly Chore Assignment Sheet</h1>
+      <p class="chore-board-print-subtitle">Week of {{ week_start }} to {{ week_end }}</p>
+    </div>
+
+    {% if weekly_rows %}
+      <div class="chore-board-table-wrap">
+        <table class="chore-board-table">
+          <thead>
+            <tr>
+              <th class="chore-board-name">Resident</th>
+              <th class="chore-board-when">Time</th>
+              <th class="chore-board-what">Chore Area</th>
+              {% for d in week_dates %}
+                <th class="day-col">
+                  {% set day_name = ['Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon'][loop.index0] %}
+                  {{ day_name }}
+                </th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in weekly_rows %}
+              <tr>
+                <td class="chore-board-name">
+                  {{ row.last_name }}, {{ row.first_name }}
+                </td>
+                <td class="chore-board-when">
+                  {{ row.when_label or '' }}
+                </td>
+                <td class="chore-board-what">
+                  {{ row.chore_name }}
+                </td>
+                {% for d in week_dates %}
+                  <td class="day-cell"></td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        No chore assignments found for this week.
+      </div>
+    {% endif %}
+  </div>
+</div>
 {% endblock %}
