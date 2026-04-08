@@ -14,6 +14,7 @@ from core.residents import has_active_pass
 from routes.attendance_parts.helpers import complete_active_passes
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
+ALLOWED_ATTENDANCE_MINUTES = {"00", "10", "15", "20", "30", "40", "45", "50"}
 
 
 def _active_checkout_categories_for_shelter(shelter: str) -> list[dict]:
@@ -112,8 +113,22 @@ def _pass_expected_back_value(pass_row) -> str | None:
     )
 
 
+def _validate_allowed_attendance_minute(local_dt: datetime) -> None:
+    minute_value = f"{local_dt.minute:02d}"
+    if minute_value not in ALLOWED_ATTENDANCE_MINUTES:
+        raise ValueError("Minute must be one of the allowed attendance minute values.")
+
+    if local_dt.second != 0 or local_dt.microsecond != 0:
+        raise ValueError("Seconds are not allowed for attendance datetime values.")
+
+
 def _parse_datetime_local_to_utc_naive(value: str) -> str:
-    local_dt = datetime.fromisoformat((value or "").strip())
+    raw_value = (value or "").strip()
+    if not raw_value:
+        raise ValueError("Datetime value is required.")
+
+    local_dt = datetime.fromisoformat(raw_value)
+    _validate_allowed_attendance_minute(local_dt)
     local_dt = local_dt.replace(tzinfo=ZoneInfo("America/Chicago"))
     return (
         local_dt.astimezone(timezone.utc)
@@ -713,19 +728,19 @@ def staff_attendance_check_out_global_view():
         try:
             obligation_start_value = _parse_datetime_local_to_utc_naive(obligation_start_raw)
         except Exception:
-            flash("Invalid scheduled start time.", "error")
+            flash("Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance"))
 
         try:
             obligation_end_value = _parse_datetime_local_to_utc_naive(obligation_end_raw)
         except Exception:
-            flash("Invalid scheduled end time.", "error")
+            flash("Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance"))
 
         try:
             expected_back_value = _parse_datetime_local_to_utc_naive(expected_back_raw)
         except Exception:
-            flash("Invalid expected back time.", "error")
+            flash("Invalid expected back time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance"))
 
         if obligation_end_value < obligation_start_value:
@@ -831,7 +846,7 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
     try:
         updated_checkout_time = _parse_datetime_local_to_utc_naive(checkout_time_raw)
     except Exception:
-        flash("Invalid checkout time.", "error")
+        flash("Invalid checkout time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
         return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
     if not destination_raw:
@@ -878,19 +893,19 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
         try:
             updated_start = _parse_datetime_local_to_utc_naive(start_raw)
         except Exception:
-            flash("Invalid scheduled start time.", "error")
+            flash("Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
         try:
             updated_end = _parse_datetime_local_to_utc_naive(end_raw)
         except Exception:
-            flash("Invalid scheduled end time.", "error")
+            flash("Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
         try:
             updated_actual_end = _parse_datetime_local_to_utc_naive(actual_end_raw)
         except Exception:
-            flash("Invalid actual obligation end time.", "error")
+            flash("Invalid actual obligation end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
         if updated_end < updated_start:
@@ -1016,13 +1031,13 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
     try:
         updated_checkout_time = _parse_datetime_local_to_utc_naive(checkout_time_raw)
     except Exception:
-        flash("Invalid checkout time.", "error")
+        flash("Invalid checkout time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
         return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
     try:
         updated_checkin_time = _parse_datetime_local_to_utc_naive(checkin_time_raw)
     except Exception:
-        flash("Invalid check in time.", "error")
+        flash("Invalid check in time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
         return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
     if updated_checkin_time < updated_checkout_time:
@@ -1065,19 +1080,19 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
         try:
             updated_start = _parse_datetime_local_to_utc_naive(start_raw)
         except Exception:
-            flash("Invalid scheduled start time.", "error")
+            flash("Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
         try:
             updated_end = _parse_datetime_local_to_utc_naive(end_raw)
         except Exception:
-            flash("Invalid scheduled end time.", "error")
+            flash("Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
         try:
             updated_actual_end = _parse_datetime_local_to_utc_naive(actual_end_raw)
         except Exception:
-            flash("Invalid actual obligation end time.", "error")
+            flash("Invalid actual obligation end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
             return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
         if updated_end < updated_start:
