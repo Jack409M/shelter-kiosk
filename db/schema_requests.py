@@ -187,6 +187,7 @@ def ensure_resident_passes_table(kind: str) -> None:
             staff_notes TEXT,
             approved_by INTEGER,
             approved_at TEXT,
+            delete_after_at TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -208,11 +209,31 @@ def ensure_resident_passes_table(kind: str) -> None:
             staff_notes TEXT,
             approved_by INTEGER,
             approved_at TEXT,
+            delete_after_at TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """,
     )
+
+
+def ensure_resident_passes_columns(kind: str) -> None:
+    columns = [
+        "delete_after_at TEXT",
+    ]
+
+    for column_def in columns:
+        try:
+            if kind == "pg":
+                db_execute(
+                    f"ALTER TABLE resident_passes ADD COLUMN IF NOT EXISTS {column_def}"
+                )
+            else:
+                db_execute(
+                    f"ALTER TABLE resident_passes ADD COLUMN {column_def}"
+                )
+        except Exception:
+            pass
 
 
 def ensure_resident_pass_request_details_table(kind: str) -> None:
@@ -354,6 +375,7 @@ def ensure_tables(kind: str) -> None:
 def ensure_columns_and_constraints(kind: str) -> None:
     drop_transport_dob_column_if_present(kind)
     ensure_attendance_event_columns(kind)
+    ensure_resident_passes_columns(kind)
     ensure_resident_pass_request_details_columns(kind)
 
 
