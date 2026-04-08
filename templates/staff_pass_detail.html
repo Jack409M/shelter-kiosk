@@ -311,6 +311,13 @@
           </div>
         </div>
 
+        {% if p.staff_notes %}
+          <div class="hours-status-box fail">
+            <div class="hours-status-title">Status: Late submission</div>
+            <div class="hours-status-text">{{ p.staff_notes }}</div>
+          </div>
+        {% endif %}
+
         {% if policy_check.checks %}
           {% for item in policy_check.checks %}
             <div class="hours-status-box {{ item.status_class }}">
@@ -380,7 +387,7 @@
                     {% if item.weekly_cap_hours is not none %}
                       {{ item.weekly_cap_hours }}
                     {% else %}
-                      — 
+                      —
                     {% endif %}
                   </td>
                 </tr>
