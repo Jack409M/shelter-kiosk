@@ -107,9 +107,10 @@ def _backfill_missing_delete_after_at_for_shelter(shelter: str) -> None:
 def _delete_expired_passes_for_shelter(shelter: str) -> None:
     now_iso = utcnow_iso()
 
-    db_execute(
+    expired_rows = db_fetchall(
         """
-        DELETE FROM resident_passes
+        SELECT id
+        FROM resident_passes
         WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
           AND delete_after_at IS NOT NULL
           AND delete_after_at <= %s
@@ -117,13 +118,63 @@ def _delete_expired_passes_for_shelter(shelter: str) -> None:
         if g.get("db_kind") == "pg"
         else
         """
-        DELETE FROM resident_passes
+        SELECT id
+        FROM resident_passes
         WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(?))
           AND delete_after_at IS NOT NULL
           AND delete_after_at <= ?
         """,
         (shelter, now_iso),
     )
+
+    if not expired_rows:
+        return
+
+    with db_transaction():
+        for row in expired_rows:
+            pass_id = int(row["id"])
+
+            db_execute(
+                """
+                DELETE FROM resident_notifications
+                WHERE related_pass_id = %s
+                """
+                if g.get("db_kind") == "pg"
+                else
+                """
+                DELETE FROM resident_notifications
+                WHERE related_pass_id = ?
+                """,
+                (pass_id,),
+            )
+
+            db_execute(
+                """
+                DELETE FROM resident_pass_request_details
+                WHERE pass_id = %s
+                """
+                if g.get("db_kind") == "pg"
+                else
+                """
+                DELETE FROM resident_pass_request_details
+                WHERE pass_id = ?
+                """,
+                (pass_id,),
+            )
+
+            db_execute(
+                """
+                DELETE FROM resident_passes
+                WHERE id = %s
+                """
+                if g.get("db_kind") == "pg"
+                else
+                """
+                DELETE FROM resident_passes
+                WHERE id = ?
+                """,
+                (pass_id,),
+            )
 
 
 def _run_pass_retention_cleanup_for_shelter(shelter: str) -> None:
