@@ -18,7 +18,6 @@ from routes.resident_parts.consent import (
     sms_consent_view,
 )
 from routes.resident_parts.helpers import parse_dt as _parse_dt
-from routes.resident_parts.leave import resident_leave_view
 from routes.resident_parts.pass_request import resident_pass_request_view
 
 resident_requests = Blueprint("resident_requests", __name__)
@@ -112,7 +111,7 @@ def resident_logout():
 
 @resident_requests.route("/leave", methods=["GET", "POST"])
 def resident_leave():
-    return resident_leave_view()
+    return redirect(url_for("resident_requests.resident_pass_request"))
 
 
 @resident_requests.route("/pass-request", methods=["GET", "POST"])
