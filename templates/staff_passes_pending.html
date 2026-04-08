@@ -1,7 +1,82 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<h1>Pending Pass Requests</h1>
+<style>
+  .pass-pending-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+
+  .legacy-migration-box {
+    max-width: 460px;
+    border: 1px solid #d9c7a2;
+    background: #fff9ec;
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+
+  .legacy-migration-box h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+  }
+
+  .legacy-migration-box p {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .legacy-migration-box input[type="text"] {
+    width: 100%;
+    max-width: 280px;
+    margin-bottom: 10px;
+  }
+
+  .legacy-migration-box button {
+    margin-top: 0;
+  }
+</style>
+
+<div class="pass-pending-top">
+  <div>
+    <h1 style="margin:0;">Pending Pass Requests</h1>
+    {% if legacy_leave_count %}
+      <p style="margin:8px 0 0 0; color:#7a4e00;">
+        Legacy leave rows still in this shelter: <strong>{{ legacy_leave_count }}</strong>
+      </p>
+    {% endif %}
+  </div>
+
+  {% if legacy_leave_count %}
+    <div class="legacy-migration-box">
+      <h3>Legacy Leave Migration</h3>
+      <p>
+        This copies old leave requests for the current shelter into the pass system.
+        It does not delete the old leave rows yet.
+      </p>
+      <form method="post" action="{{ url_for('attendance.staff_passes_run_legacy_leave_migration') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label for="confirm_phrase" style="display:block; font-weight:600; margin-bottom:6px;">
+          Type <strong>MIGRATE LEAVE TO PASSES</strong>
+        </label>
+        <input
+          id="confirm_phrase"
+          type="text"
+          name="confirm_phrase"
+          autocomplete="off"
+          required
+        >
+        <div>
+          <button type="submit">Run Migration</button>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+</div>
 
 {% if rows %}
 <table class="table">
