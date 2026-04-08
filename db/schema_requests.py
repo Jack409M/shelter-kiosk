@@ -430,6 +430,14 @@ def ensure_indexes() -> None:
 
     try:
         db_execute(
+            "CREATE INDEX IF NOT EXISTS resident_passes_shelter_delete_after_idx "
+            "ON resident_passes (shelter, delete_after_at)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
             "CREATE INDEX IF NOT EXISTS resident_pass_request_details_pass_idx "
             "ON resident_pass_request_details (pass_id)"
         )
