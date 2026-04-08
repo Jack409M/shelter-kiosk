@@ -143,9 +143,21 @@ def wipe_all_data_view():
     )
 
     db_execute(
-        "TRUNCATE TABLE leave_requests RESTART IDENTITY CASCADE"
+        "TRUNCATE TABLE resident_pass_request_details RESTART IDENTITY CASCADE"
         if g.get("db_kind") == "pg"
-        else "DELETE FROM leave_requests"
+        else "DELETE FROM resident_pass_request_details"
+    )
+
+    db_execute(
+        "TRUNCATE TABLE resident_notifications RESTART IDENTITY CASCADE"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM resident_notifications"
+    )
+
+    db_execute(
+        "TRUNCATE TABLE resident_passes RESTART IDENTITY CASCADE"
+        if g.get("db_kind") == "pg"
+        else "DELETE FROM resident_passes"
     )
 
     db_execute(
@@ -178,7 +190,7 @@ def wipe_all_data_view():
         None,
         session.get("staff_user_id"),
         "wipe_all_data",
-        "Wiped attendance, leave, transport, residents, audit_log, security_incidents",
+        "Wiped attendance, resident passes, resident notifications, transport, residents, audit_log, security_incidents",
     )
 
     return "All non staff data wiped."
@@ -199,8 +211,10 @@ def recreate_schema_view():
     init_db()
 
     if g.get("db_kind") == "pg":
+        db_execute("DROP TABLE IF EXISTS resident_notifications CASCADE")
+        db_execute("DROP TABLE IF EXISTS resident_pass_request_details CASCADE")
+        db_execute("DROP TABLE IF EXISTS resident_passes CASCADE")
         db_execute("DROP TABLE IF EXISTS attendance_events CASCADE")
-        db_execute("DROP TABLE IF EXISTS leave_requests CASCADE")
         db_execute("DROP TABLE IF EXISTS transport_requests CASCADE")
         db_execute("DROP TABLE IF EXISTS residents CASCADE")
         db_execute("DROP TABLE IF EXISTS audit_log CASCADE")
@@ -209,8 +223,10 @@ def recreate_schema_view():
         db_execute("DROP TABLE IF EXISTS security_incidents CASCADE")
         db_execute("DROP TABLE IF EXISTS security_settings CASCADE")
     else:
+        db_execute("DROP TABLE IF EXISTS resident_notifications")
+        db_execute("DROP TABLE IF EXISTS resident_pass_request_details")
+        db_execute("DROP TABLE IF EXISTS resident_passes")
         db_execute("DROP TABLE IF EXISTS attendance_events")
-        db_execute("DROP TABLE IF EXISTS leave_requests")
         db_execute("DROP TABLE IF EXISTS transport_requests")
         db_execute("DROP TABLE IF EXISTS residents")
         db_execute("DROP TABLE IF EXISTS audit_log")
