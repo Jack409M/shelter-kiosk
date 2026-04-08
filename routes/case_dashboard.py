@@ -71,7 +71,7 @@ def _to_chicago(value):
 
 
 def _scope_filter_and_params(shelter: str | None):
-    filter_sql = "AND r.shelter = %s" if g.get("db_kind") == "pg" else "AND r.shelter = ?"
+    filter_sql = "AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(%s))" if g.get("db_kind") == "pg" else "AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(?))"
     return filter_sql, (shelter,)
 
 
@@ -100,7 +100,7 @@ def dashboard():
         SELECT COUNT(*)
         FROM resident_passes
         WHERE status = {placeholder}
-          AND shelter = {placeholder}
+          AND LOWER(TRIM(shelter)) = LOWER(TRIM({placeholder}))
         """,
         ("pending", shelter),
     )
@@ -115,9 +115,9 @@ def dashboard():
             FROM resident_passes rp
             JOIN residents r
               ON r.id = rp.resident_id
-             AND r.shelter = rp.shelter
+             AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(rp.shelter))
             WHERE rp.status = {placeholder}
-              AND rp.shelter = {placeholder}
+              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM({placeholder}))
               AND r.is_active = TRUE
               AND (
                     (rp.start_at IS NOT NULL AND rp.end_at IS NOT NULL AND rp.start_at <= {placeholder} AND rp.end_at >= {placeholder})
@@ -130,7 +130,7 @@ def dashboard():
                         SELECT ae2.id
                         FROM attendance_events ae2
                         WHERE ae2.resident_id = rp.resident_id
-                          AND ae2.shelter = rp.shelter
+                          AND LOWER(TRIM(ae2.shelter)) = LOWER(TRIM(rp.shelter))
                         ORDER BY ae2.event_time DESC, ae2.id DESC
                         LIMIT 1
                     )
@@ -142,9 +142,9 @@ def dashboard():
             FROM resident_passes rp
             JOIN residents r
               ON r.id = rp.resident_id
-             AND r.shelter = rp.shelter
+             AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(rp.shelter))
             WHERE rp.status = {placeholder}
-              AND rp.shelter = {placeholder}
+              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM({placeholder}))
               AND r.is_active = 1
               AND (
                     (rp.start_at IS NOT NULL AND rp.end_at IS NOT NULL AND rp.start_at <= {placeholder} AND rp.end_at >= {placeholder})
@@ -157,7 +157,7 @@ def dashboard():
                         SELECT ae2.id
                         FROM attendance_events ae2
                         WHERE ae2.resident_id = rp.resident_id
-                          AND ae2.shelter = rp.shelter
+                          AND LOWER(TRIM(ae2.shelter)) = LOWER(TRIM(rp.shelter))
                         ORDER BY ae2.event_time DESC, ae2.id DESC
                         LIMIT 1
                     )
@@ -173,7 +173,7 @@ def dashboard():
         SELECT COUNT(*)
         FROM transport_requests
         WHERE status = {placeholder}
-          AND shelter = {placeholder}
+          AND LOWER(TRIM(shelter)) = LOWER(TRIM({placeholder}))
         """,
         ("pending", shelter),
     )
@@ -182,7 +182,7 @@ def dashboard():
         f"""
         SELECT COUNT(*)
         FROM intake_drafts
-        WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+        WHERE LOWER(COALESCE(TRIM(shelter), '')) = LOWER(TRIM({placeholder}))
           AND status = 'draft'
         """,
         (shelter,),
@@ -218,7 +218,7 @@ def dashboard():
               ON rc.resident_id = r.id
              AND rc.is_active = TRUE
             WHERE r.is_active = TRUE
-              AND r.shelter = %s
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(%s))
             GROUP BY
                 r.id,
                 r.first_name,
@@ -256,7 +256,7 @@ def dashboard():
               ON rc.resident_id = r.id
              AND rc.is_active = 1
             WHERE r.is_active = 1
-              AND r.shelter = ?
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(?))
             GROUP BY
                 r.id,
                 r.first_name,
@@ -310,7 +310,7 @@ def dashboard():
                 SELECT ae2.id
                 FROM attendance_events ae2
                 WHERE ae2.resident_id = r.id
-                  AND ae2.shelter = r.shelter
+                  AND LOWER(TRIM(ae2.shelter)) = LOWER(TRIM(r.shelter))
                 ORDER BY ae2.event_time DESC, ae2.id DESC
                 LIMIT 1
               )
@@ -334,7 +334,7 @@ def dashboard():
                 SELECT ae2.id
                 FROM attendance_events ae2
                 WHERE ae2.resident_id = r.id
-                  AND ae2.shelter = r.shelter
+                  AND LOWER(TRIM(ae2.shelter)) = LOWER(TRIM(r.shelter))
                 ORDER BY ae2.event_time DESC, ae2.id DESC
                 LIMIT 1
               )
@@ -380,13 +380,13 @@ def dashboard():
             FROM attendance_events ci
             JOIN residents r
               ON r.id = ci.resident_id
-             AND r.shelter = ci.shelter
+             AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(ci.shelter))
             JOIN attendance_events co
               ON co.id = (
                 SELECT co2.id
                 FROM attendance_events co2
                 WHERE co2.resident_id = ci.resident_id
-                  AND co2.shelter = ci.shelter
+                  AND LOWER(TRIM(co2.shelter)) = LOWER(TRIM(ci.shelter))
                   AND co2.event_type = 'check_out'
                   AND co2.event_time < ci.event_time
                 ORDER BY co2.event_time DESC, co2.id DESC
@@ -394,7 +394,7 @@ def dashboard():
               )
             WHERE ci.event_type = 'check_in'
               AND r.is_active = TRUE
-              AND r.shelter = %s
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(%s))
             ORDER BY ci.event_time DESC
             """,
             """
@@ -407,13 +407,13 @@ def dashboard():
             FROM attendance_events ci
             JOIN residents r
               ON r.id = ci.resident_id
-             AND r.shelter = ci.shelter
+             AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(ci.shelter))
             JOIN attendance_events co
               ON co.id = (
                 SELECT co2.id
                 FROM attendance_events co2
                 WHERE co2.resident_id = ci.resident_id
-                  AND co2.shelter = ci.shelter
+                  AND LOWER(TRIM(co2.shelter)) = LOWER(TRIM(ci.shelter))
                   AND co2.event_type = 'check_out'
                   AND co2.event_time < ci.event_time
                 ORDER BY co2.event_time DESC, co2.id DESC
@@ -421,7 +421,7 @@ def dashboard():
               )
             WHERE ci.event_type = 'check_in'
               AND r.is_active = 1
-              AND r.shelter = ?
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(?))
             ORDER BY ci.event_time DESC
             """,
         ),
@@ -472,7 +472,7 @@ def dashboard():
             JOIN appointments a
               ON a.enrollment_id = pe.id
             WHERE r.is_active = TRUE
-              AND r.shelter = %s
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(%s))
               AND a.appointment_date = %s
             ORDER BY r.last_name, r.first_name, a.id
             """,
@@ -496,7 +496,7 @@ def dashboard():
             JOIN appointments a
               ON a.enrollment_id = pe.id
             WHERE r.is_active = 1
-              AND r.shelter = ?
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(?))
               AND a.appointment_date = ?
             ORDER BY r.last_name, r.first_name, a.id
             """,
@@ -531,7 +531,7 @@ def dashboard():
             JOIN residents r ON r.id = ca.resident_id
             JOIN chore_templates ct ON ct.id = ca.chore_id
             WHERE r.is_active = TRUE
-              AND r.shelter = %s
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(%s))
               AND ca.assigned_date = %s
               AND ca.status <> 'completed'
             ORDER BY r.last_name, r.first_name
@@ -546,7 +546,7 @@ def dashboard():
             JOIN residents r ON r.id = ca.resident_id
             JOIN chore_templates ct ON ct.id = ca.chore_id
             WHERE r.is_active = 1
-              AND r.shelter = ?
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(?))
               AND ca.assigned_date = ?
               AND ca.status <> 'completed'
             ORDER BY r.last_name, r.first_name
@@ -570,7 +570,7 @@ def dashboard():
             FROM chore_assignments ca
             JOIN residents r ON r.id = ca.resident_id
             WHERE r.is_active = TRUE
-              AND r.shelter = %s
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(%s))
               AND ca.assigned_date BETWEEN %s AND %s
               AND ca.status <> 'completed'
             GROUP BY r.id, r.first_name, r.last_name
@@ -586,7 +586,7 @@ def dashboard():
             FROM chore_assignments ca
             JOIN residents r ON r.id = ca.resident_id
             WHERE r.is_active = 1
-              AND r.shelter = ?
+              AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(?))
               AND ca.assigned_date BETWEEN ? AND ?
               AND ca.status <> 'completed'
             GROUP BY r.id, r.first_name, r.last_name
