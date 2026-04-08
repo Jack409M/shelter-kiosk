@@ -14,7 +14,6 @@ from core.pass_rules import (
     CHICAGO_TZ,
     gh_pass_rule_box,
     is_late_standard_pass_request,
-    pass_late_submission_block_enabled,
     pass_type_options,
     shared_pass_rule_box,
     use_gh_pass_form,
@@ -194,6 +193,7 @@ def resident_pass_request_view():
         end_date_iso = None
 
         now_local = datetime.now(CHICAGO_TZ)
+        late_submission_flag = False
 
         if pass_type in {"pass", "overnight"}:
             if not start_at_raw or not end_at_raw:
@@ -215,9 +215,7 @@ def resident_pass_request_view():
                     if pass_type == "overnight" and local_end.date() <= local_start.date():
                         errors.append("An Overnight Pass must return on a later day.")
 
-                    is_late = is_late_standard_pass_request(now_local, local_start, shelter=shelter)
-                    if is_late and pass_late_submission_block_enabled(shelter):
-                        errors.append("This request was submitted after the configured deadline.")
+                    late_submission_flag = is_late_standard_pass_request(now_local, local_start, shelter=shelter)
 
                     start_at_iso = (
                         local_start.astimezone(timezone.utc)
@@ -314,6 +312,7 @@ def resident_pass_request_view():
         )
 
         final_reason = special_reason if pass_type == "special" else reason
+        staff_notes = "Submitted after configured deadline." if late_submission_flag else None
 
         pass_params = (
             resident_id,
@@ -326,7 +325,7 @@ def resident_pass_request_view():
             destination,
             final_reason or None,
             resident_notes or None,
-            None,
+            staff_notes,
             None,
             None,
             now_iso,
