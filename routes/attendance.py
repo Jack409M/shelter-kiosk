@@ -21,6 +21,7 @@ from routes.attendance_parts.passes import (
     staff_passes_away_now_view,
     staff_passes_overdue_view,
     staff_passes_pending_view,
+    staff_passes_run_legacy_leave_migration_view,
 )
 from routes.attendance_parts.print_views import (
     staff_attendance_print_today_view,
@@ -98,6 +99,13 @@ def staff_attendance_print_today():
 @require_shelter
 def staff_passes_pending():
     return staff_passes_pending_view()
+
+
+@attendance.route("/staff/passes/pending/migrate-legacy-leave", methods=["POST"])
+@require_login
+@require_shelter
+def staff_passes_run_legacy_leave_migration():
+    return staff_passes_run_legacy_leave_migration_view()
 
 
 @attendance.route("/staff/passes/approved")
