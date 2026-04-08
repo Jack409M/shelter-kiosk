@@ -64,6 +64,10 @@ def _resident_value(row, key: str, index: int, default=""):
         return default
 
 
+def _today_chicago_iso() -> str:
+    return datetime.now(CHICAGO_TZ).date().isoformat()
+
+
 def _render_pass_form(
     *,
     shelter: str,
@@ -117,7 +121,7 @@ def resident_pass_request_view():
                 resident_level=resident_level,
                 resident_phone=resident_phone_from_db,
                 hour_summary=hour_summary,
-                form_data={},
+                form_data={"request_date": _today_chicago_iso()},
             )
 
         resident_identifier = (session.get("resident_identifier") or "").strip()
@@ -129,12 +133,15 @@ def resident_pass_request_view():
         rl_key = f"resident_pass_request:{ip}:{resident_identifier or 'unknown'}"
         if is_rate_limited(rl_key, limit=6, window_seconds=900):
             flash("Too many pass submissions. Please wait a few minutes and try again.", "error")
+            form_data = request.form.to_dict()
+            if not (form_data.get("request_date") or "").strip():
+                form_data["request_date"] = _today_chicago_iso()
             return _render_pass_form(
                 shelter=shelter,
                 resident_level=resident_level,
                 resident_phone=resident_phone,
                 hour_summary=hour_summary,
-                form_data=request.form.to_dict(),
+                form_data=form_data,
             ), 429
 
         pass_type = (request.form.get("pass_type") or "").strip().lower()
@@ -142,7 +149,7 @@ def resident_pass_request_view():
         reason = (request.form.get("reason") or "").strip()
         resident_notes = (request.form.get("resident_notes") or "").strip()
 
-        request_date = (request.form.get("request_date") or "").strip()
+        request_date = (request.form.get("request_date") or "").strip() or _today_chicago_iso()
         requirements_acknowledged = (request.form.get("requirements_acknowledged") or "").strip().lower()
         requirements_not_met_explanation = (request.form.get("requirements_not_met_explanation") or "").strip()
         who_with = (request.form.get("who_with") or "").strip()
@@ -171,9 +178,6 @@ def resident_pass_request_view():
 
         if not resident_level:
             errors.append("Resident level is missing. Please contact staff.")
-
-        if not request_date:
-            errors.append("Request date is required.")
 
         if pass_type in {"pass", "overnight"} and requirements_acknowledged not in {"yes", "no"}:
             errors.append("Please answer whether you will meet all requirements for this pass.")
@@ -246,12 +250,15 @@ def resident_pass_request_view():
         if errors:
             for e in errors:
                 flash(e, "error")
+            form_data = request.form.to_dict()
+            if not (form_data.get("request_date") or "").strip():
+                form_data["request_date"] = _today_chicago_iso()
             return _render_pass_form(
                 shelter=shelter,
                 resident_level=resident_level,
                 resident_phone=resident_phone,
                 hour_summary=hour_summary,
-                form_data=request.form.to_dict(),
+                form_data=form_data,
             ), 400
 
         conn = get_db()
