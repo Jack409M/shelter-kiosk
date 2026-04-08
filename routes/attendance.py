@@ -14,9 +14,12 @@ from routes.attendance_parts.board import (
 )
 from routes.attendance_parts.passes import (
     staff_pass_approve_view,
-    staff_pass_deny_view,
+    staff_pass_check_in_view,
     staff_pass_detail_view,
+    staff_pass_deny_view,
     staff_passes_approved_view,
+    staff_passes_away_now_view,
+    staff_passes_overdue_view,
     staff_passes_pending_view,
 )
 from routes.attendance_parts.print_views import (
@@ -104,6 +107,20 @@ def staff_passes_approved():
     return staff_passes_approved_view()
 
 
+@attendance.route("/staff/passes/away-now")
+@require_login
+@require_shelter
+def staff_passes_away_now():
+    return staff_passes_away_now_view()
+
+
+@attendance.route("/staff/passes/overdue")
+@require_login
+@require_shelter
+def staff_passes_overdue():
+    return staff_passes_overdue_view()
+
+
 @attendance.route("/staff/passes/<int:pass_id>")
 @require_login
 @require_shelter
@@ -123,3 +140,10 @@ def staff_pass_approve(pass_id: int):
 @require_shelter
 def staff_pass_deny(pass_id: int):
     return staff_pass_deny_view(pass_id)
+
+
+@attendance.route("/staff/passes/<int:pass_id>/check-in", methods=["POST"])
+@require_login
+@require_shelter
+def staff_pass_check_in(pass_id: int):
+    return staff_pass_check_in_view(pass_id)
