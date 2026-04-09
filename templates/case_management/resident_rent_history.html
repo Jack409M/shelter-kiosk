@@ -94,12 +94,26 @@
                     <tr>
                       <td>{{ row['rent_month'] }}/{{ row['rent_year'] }}</td>
                       <td>{{ row['shelter_snapshot']|shelter }}</td>
-                      <td>${{ '%.2f'|format(row['total_due'] or 0) }}</td>
+                      <td>
+                        {% set total_due = row['total_due'] or 0 %}
+                        {% if total_due < 0 %}
+                          <span style="color:#1f6b33; font-weight:700;">Credit ${{ '%.2f'|format((total_due * -1)) }}</span>
+                        {% else %}
+                          ${{ '%.2f'|format(total_due) }}
+                        {% endif %}
+                      </td>
                       <td>${{ '%.2f'|format(row['amount_paid'] or 0) }}</td>
                       <td>{{ row['paid_date'] or '—' }}</td>
                       <td>{{ row['status'] }}</td>
                       <td>{{ row['compliance_score'] }}</td>
-                      <td>${{ '%.2f'|format(row['remaining_balance'] or 0) }}</td>
+                      <td>
+                        {% set remaining_balance = row['remaining_balance'] or 0 %}
+                        {% if remaining_balance < 0 %}
+                          <span style="color:#1f6b33; font-weight:700;">Credit ${{ '%.2f'|format((remaining_balance * -1)) }}</span>
+                        {% else %}
+                          ${{ '%.2f'|format(remaining_balance) }}
+                        {% endif %}
+                      </td>
                     </tr>
 
           {% if loop.last %}
