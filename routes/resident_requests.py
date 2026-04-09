@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
 from core.audit import log_action
-from core.db import db_execute, db_fetchone, get_db
+from core.db import db_fetchone, get_db
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
 from core.runtime import init_db
@@ -163,9 +163,7 @@ def resident_transport():
                 flash(e, "error")
             return render_template("resident_transport.html", shelter=shelter), 400
 
-        kind = g.get("db_kind")
-        needed_iso = needed_dt.replace(microsecond=0).isoformat()
-        submitted = utcnow_iso()
+        is_pg = bool(current_app.config.get("DATABASE_URL"))
 
         sql = (
             """
@@ -186,7 +184,7 @@ def resident_transport():
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """
-            if kind == "pg"
+            if is_pg
             else
             """
             INSERT INTO transport_requests (
@@ -207,6 +205,9 @@ def resident_transport():
             """
         )
 
+        needed_iso = needed_dt.replace(microsecond=0).isoformat()
+        submitted = utcnow_iso()
+
         params = (
             shelter,
             resident_identifier,
@@ -226,7 +227,7 @@ def resident_transport():
         cur = conn.cursor()
         try:
             cur.execute(sql, params)
-            if kind == "pg":
+            if is_pg:
                 req_id = cur.fetchone()[0]
             else:
                 conn.commit()
