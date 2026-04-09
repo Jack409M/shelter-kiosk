@@ -427,11 +427,32 @@ def _ledger_entries_for_resident(resident_id: int):
         FROM resident_rent_ledger_entries l
         JOIN residents r ON r.id = l.resident_id
         WHERE l.resident_id = {ph}
-        ORDER BY l.entry_date DESC, l.created_at DESC, l.id DESC
+        ORDER BY l.entry_date ASC, l.created_at ASC, l.id ASC
         """,
         (resident_id,),
     )
-    return [dict(row) for row in rows]
+
+    chronological_entries = [dict(row) for row in rows]
+    running_balance = 0.0
+
+    for entry in chronological_entries:
+        running_balance = round(
+            running_balance
+            + _float_value(entry.get("debit_amount"))
+            - _float_value(entry.get("credit_amount")),
+            2,
+        )
+        entry["balance_after"] = running_balance
+
+    return sorted(
+        chronological_entries,
+        key=lambda row: (
+            row.get("entry_date") or "",
+            row.get("created_at") or "",
+            row.get("id") or 0,
+        ),
+        reverse=True,
+    )
 
 
 def _ledger_summary_for_resident(resident_id: int) -> dict:
@@ -439,14 +460,13 @@ def _ledger_summary_for_resident(resident_id: int) -> dict:
 
     total_debits = round(sum(_float_value(row.get("debit_amount")) for row in entries), 2)
     total_credits = round(sum(_float_value(row.get("credit_amount")) for row in entries), 2)
-
-    latest_balance = _float_value(entries[0].get("balance_after")) if entries else 0.0
+    net_balance = round(total_debits - total_credits, 2)
 
     return {
         "entry_count": len(entries),
         "total_debits": total_debits,
         "total_credits": total_credits,
-        "current_balance": latest_balance,
-        "current_credit": round(abs(latest_balance), 2) if latest_balance < 0 else 0.0,
-        "current_due": round(latest_balance, 2) if latest_balance > 0 else 0.0,
+        "current_balance": net_balance,
+        "current_credit": round(abs(net_balance), 2) if net_balance < 0 else 0.0,
+        "current_due": round(net_balance, 2) if net_balance > 0 else 0.0,
     }
