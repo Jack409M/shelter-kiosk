@@ -558,13 +558,22 @@
                         <div>
                           <div class="rent-resident-name">{{ entry['resident_name_snapshot'] }}</div>
                           <div class="rent-resident-meta">
-                            <span class="rent-pill">Level {{ entry['level_snapshot'] or '—' }}</span>
-                            {% if entry['apartment_number_snapshot'] %}
-                              <span class="rent-pill">Apartment {{ entry['apartment_number_snapshot'] }}</span>
-                            {% endif %}
-                            <span class="rent-pill">{{ entry['apartment_size_snapshot'] or '—' }}</span>
-                            <span class="rent-pill rent-pill-dirty">Unsaved</span>
-                          </div>
+  <span class="rent-pill">Level {{ entry['level_snapshot'] or '—' }}</span>
+  {% if entry['apartment_number_snapshot'] %}
+    <span class="rent-pill">Apartment {{ entry['apartment_number_snapshot'] }}</span>
+  {% endif %}
+  <span class="rent-pill">{{ entry['apartment_size_snapshot'] or '—' }}</span>
+  <span class="rent-pill rent-pill-dirty">Unsaved</span>
+</div>
+
+<div class="cmx-button-row" style="margin-top:10px;">
+  <a
+    class="cmx-btn-muted"
+    href="{{ url_for('rent_tracking.resident_rent_history', resident_id=entry['resident_id']) }}"
+  >
+    Rent Ledger
+  </a>
+</div>
                         </div>
 
                         <div>
