@@ -6,9 +6,13 @@ from core.auth import require_login, require_shelter
 from core.db import db_execute
 from core.helpers import utcnow_iso
 from core.kiosk_activity_categories import (
+    AA_NA_PARENT_ACTIVITY_LABEL,
     load_kiosk_activity_categories_for_shelter,
+    load_kiosk_activity_child_options_for_shelter,
     reset_kiosk_activity_categories_for_shelter,
+    reset_kiosk_activity_child_options_for_shelter,
     save_kiosk_activity_categories_for_shelter,
+    save_kiosk_activity_child_options_for_shelter,
 )
 from routes.operations_settings_parts.access import (
     _director_allowed,
@@ -57,6 +61,7 @@ def _build_settings_section_context(shelter: str, row, current_section: str) -> 
     context["default_pass_gh_level_6_rules_text"] = _default_pass_level_rules_text("pass_gh_level_6_rules_text")
     context["default_pass_gh_level_7_rules_text"] = _default_pass_level_rules_text("pass_gh_level_7_rules_text")
     context["default_pass_gh_level_8_rules_text"] = _default_pass_level_rules_text("pass_gh_level_8_rules_text")
+    context["aa_na_parent_activity_label"] = AA_NA_PARENT_ACTIVITY_LABEL
 
     if current_section == "employment_income_guidance":
         context["employment_guidance"] = _employment_income_guidance(shelter, _placeholder())
@@ -67,6 +72,14 @@ def _build_settings_section_context(shelter: str, row, current_section: str) -> 
         context["kiosk_activity_categories"] = load_kiosk_activity_categories_for_shelter(shelter)
     else:
         context["kiosk_activity_categories"] = None
+
+    if current_section == "kiosk_aa_na_meeting_options":
+        context["kiosk_activity_child_options"] = load_kiosk_activity_child_options_for_shelter(
+            shelter,
+            AA_NA_PARENT_ACTIVITY_LABEL,
+        )
+    else:
+        context["kiosk_activity_child_options"] = None
 
     return context
 
@@ -143,6 +156,25 @@ def settings_section_page(section_key: str):
             else:
                 save_kiosk_activity_categories_for_shelter(shelter)
                 flash("Kiosk Activity Categories updated.", "ok")
+
+            return redirect(
+                url_for("operations_settings.settings_section_page", section_key=current_section)
+            )
+
+        if current_section == "kiosk_aa_na_meeting_options":
+            action = (form.get("kiosk_child_action") or "save").strip().lower()
+            if action == "reset_defaults":
+                reset_kiosk_activity_child_options_for_shelter(
+                    shelter,
+                    AA_NA_PARENT_ACTIVITY_LABEL,
+                )
+                flash("AA or NA Meeting Options reset to shelter defaults.", "ok")
+            else:
+                save_kiosk_activity_child_options_for_shelter(
+                    shelter,
+                    AA_NA_PARENT_ACTIVITY_LABEL,
+                )
+                flash("AA or NA Meeting Options updated.", "ok")
 
             return redirect(
                 url_for("operations_settings.settings_section_page", section_key=current_section)
