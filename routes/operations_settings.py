@@ -7,6 +7,7 @@ from core.db import db_execute
 from core.helpers import utcnow_iso
 from core.kiosk_activity_categories import (
     AA_NA_PARENT_ACTIVITY_LABEL,
+    VOLUNTEER_PARENT_ACTIVITY_LABEL,
     load_kiosk_activity_categories_for_shelter,
     load_kiosk_activity_child_options_for_shelter,
     reset_kiosk_activity_categories_for_shelter,
@@ -62,6 +63,7 @@ def _build_settings_section_context(shelter: str, row, current_section: str) -> 
     context["default_pass_gh_level_7_rules_text"] = _default_pass_level_rules_text("pass_gh_level_7_rules_text")
     context["default_pass_gh_level_8_rules_text"] = _default_pass_level_rules_text("pass_gh_level_8_rules_text")
     context["aa_na_parent_activity_label"] = AA_NA_PARENT_ACTIVITY_LABEL
+    context["volunteer_parent_activity_label"] = VOLUNTEER_PARENT_ACTIVITY_LABEL
 
     if current_section == "employment_income_guidance":
         context["employment_guidance"] = _employment_income_guidance(shelter, _placeholder())
@@ -77,6 +79,11 @@ def _build_settings_section_context(shelter: str, row, current_section: str) -> 
         context["kiosk_activity_child_options"] = load_kiosk_activity_child_options_for_shelter(
             shelter,
             AA_NA_PARENT_ACTIVITY_LABEL,
+        )
+    elif current_section == "kiosk_volunteer_community_service_options":
+        context["kiosk_activity_child_options"] = load_kiosk_activity_child_options_for_shelter(
+            shelter,
+            VOLUNTEER_PARENT_ACTIVITY_LABEL,
         )
     else:
         context["kiosk_activity_child_options"] = None
@@ -175,6 +182,25 @@ def settings_section_page(section_key: str):
                     AA_NA_PARENT_ACTIVITY_LABEL,
                 )
                 flash("AA or NA Meeting Options updated.", "ok")
+
+            return redirect(
+                url_for("operations_settings.settings_section_page", section_key=current_section)
+            )
+
+        if current_section == "kiosk_volunteer_community_service_options":
+            action = (form.get("kiosk_child_action") or "save").strip().lower()
+            if action == "reset_defaults":
+                reset_kiosk_activity_child_options_for_shelter(
+                    shelter,
+                    VOLUNTEER_PARENT_ACTIVITY_LABEL,
+                )
+                flash("Volunteer or Community Service Options reset to shelter defaults.", "ok")
+            else:
+                save_kiosk_activity_child_options_for_shelter(
+                    shelter,
+                    VOLUNTEER_PARENT_ACTIVITY_LABEL,
+                )
+                flash("Volunteer or Community Service Options updated.", "ok")
 
             return redirect(
                 url_for("operations_settings.settings_section_page", section_key=current_section)
