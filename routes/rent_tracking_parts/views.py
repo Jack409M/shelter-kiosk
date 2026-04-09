@@ -621,6 +621,69 @@ def _post_monthly_charge_ledger_entries(
                 )
 
 
+def _ledger_payment_total_for_sheet_entry(resident_id: int, sheet_entry_id: int) -> float:
+    row = db_fetchone(
+        (
+            """
+            SELECT COALESCE(SUM(credit_amount), 0) AS total_paid
+            FROM resident_rent_ledger_entries
+            WHERE resident_id = %s
+              AND related_sheet_entry_id = %s
+              AND source_code IN (%s, %s)
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            SELECT COALESCE(SUM(credit_amount), 0) AS total_paid
+            FROM resident_rent_ledger_entries
+            WHERE resident_id = ?
+              AND related_sheet_entry_id = ?
+              AND source_code IN (?, ?)
+            """
+        ),
+        (resident_id, sheet_entry_id, "rent_payment", "rent_payment_reconcile"),
+    )
+    return round(_float_value(row.get("total_paid") if row else 0), 2)
+
+
+def _reconcile_payment_ledger_entry(
+    *,
+    resident_id: int,
+    shelter: str,
+    sheet: dict,
+    entry: dict,
+    rent_year: int,
+    rent_month: int,
+) -> None:
+    sheet_entry_id = entry["id"]
+    amount_paid_total = round(_float_value(entry.get("amount_paid")), 2)
+    already_posted = _ledger_payment_total_for_sheet_entry(resident_id, sheet_entry_id)
+    missing_payment = round(amount_paid_total - already_posted, 2)
+
+    if missing_payment <= 0:
+        return
+
+    payment_entry_date = (entry.get("paid_date") or "").strip() or _today_chicago().date().isoformat()
+    stamp = utcnow_iso()
+
+    _insert_rent_ledger_entry(
+        resident_id=resident_id,
+        shelter=shelter,
+        entry_date=payment_entry_date,
+        entry_type="payment",
+        description="Rent payment received",
+        debit_amount=0.0,
+        credit_amount=missing_payment,
+        related_sheet_id=sheet["id"],
+        related_sheet_entry_id=sheet_entry_id,
+        related_month_year=rent_year,
+        related_month_month=rent_month,
+        source_code="rent_payment_reconcile",
+        source_reference=f"{rent_year:04d}-{rent_month:02d}:{sheet_entry_id}:{stamp}",
+        notes=None,
+    )
+
+
 def register_routes(rent_tracking):
     @rent_tracking.get("/roll")
     @require_login
@@ -694,11 +757,13 @@ def register_routes(rent_tracking):
         )
 
         if request.method == "POST":
-            fresh_entries = {entry["id"]: entry for entry in _load_sheet_entries(sheet["id"])}
             today_iso = _today_chicago().date().isoformat()
 
             with db_transaction():
-                for entry_id, entry in fresh_entries.items():
+                fresh_entries = _load_sheet_entries(sheet["id"])
+
+                for entry in fresh_entries:
+                    entry_id = entry["id"]
                     resident_id = entry["resident_id"]
 
                     payment_received = round(
@@ -709,10 +774,7 @@ def register_routes(rent_tracking):
                     amount_paid = round(existing_amount_paid + payment_received, 2)
 
                     paid_date = (request.form.get(f"paid_date_{entry_id}") or "").strip() or None
-                    manual_adjustment = round(
-                        _float_value(request.form.get(f"manual_adjustment_{entry_id}")),
-                        2,
-                    )
+                    manual_adjustment = round(_float_value(request.form.get(f"manual_adjustment_{entry_id}")), 2)
                     approved_late_arrangement = (request.form.get(f"approved_late_arrangement_{entry_id}") or "").strip().lower() == "yes"
 
                     subtotal_due = round(
@@ -801,6 +863,17 @@ def register_routes(rent_tracking):
                         ),
                     )
 
+                    updated_entry = dict(entry)
+                    updated_entry["amount_paid"] = amount_paid
+                    updated_entry["paid_date"] = paid_date
+                    updated_entry["manual_adjustment"] = manual_adjustment
+                    updated_entry["late_fee_charge"] = late_fee_charge
+                    updated_entry["current_charge"] = current_charge
+                    updated_entry["total_due"] = total_due
+                    updated_entry["remaining_balance"] = remaining_balance
+                    updated_entry["status"] = status
+                    updated_entry["approved_late_arrangement"] = approved_late_arrangement
+
                     if payment_received > 0:
                         payment_entry_date = paid_date or today_iso
                         _insert_rent_ledger_entry(
@@ -820,10 +893,32 @@ def register_routes(rent_tracking):
                             notes=None,
                         )
 
+                    _reconcile_payment_ledger_entry(
+                        resident_id=resident_id,
+                        shelter=shelter,
+                        sheet=sheet,
+                        entry=updated_entry,
+                        rent_year=rent_year,
+                        rent_month=rent_month,
+                    )
+
             flash("Rent payment sheet saved.", "ok")
             return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
 
-        sorted_entries = sorted(entries, key=_entry_sort_key)
+        repaired_entries = _load_sheet_entries(sheet["id"])
+        with db_transaction():
+            for entry in repaired_entries:
+                if round(_float_value(entry.get("amount_paid")), 2) > 0:
+                    _reconcile_payment_ledger_entry(
+                        resident_id=entry["resident_id"],
+                        shelter=shelter,
+                        sheet=sheet,
+                        entry=entry,
+                        rent_year=rent_year,
+                        rent_month=rent_month,
+                    )
+
+        sorted_entries = sorted(_load_sheet_entries(sheet["id"]), key=_entry_sort_key)
         grouped_entry_sections = _group_entries_for_payment_page(shelter, sorted_entries)
 
         return render_template(
