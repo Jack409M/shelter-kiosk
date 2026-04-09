@@ -9,6 +9,7 @@ from .kiosk_activity_category_defaults import KIOSK_ACTIVITY_CATEGORY_SEEDS
 
 
 AA_NA_PARENT_ACTIVITY_LABEL = "AA or NA Meeting"
+VOLUNTEER_PARENT_ACTIVITY_LABEL = "Volunteer or Community Service"
 
 AA_NA_MEETING_OPTION_SEEDS = [
     "Touch of Soul",
@@ -25,6 +26,26 @@ AA_NA_MEETING_OPTION_SEEDS = [
     "Other",
     "None",
 ]
+
+VOLUNTEER_COMMUNITY_SERVICE_OPTION_SEEDS = [
+    "Thrift City",
+    "Thrift City Too",
+    "Office",
+    "Gratitude House",
+    "Food Bank",
+    "Other",
+    "None",
+]
+
+
+def _child_option_seeds_for_parent(parent_activity_label: str) -> list[str]:
+    if parent_activity_label == AA_NA_PARENT_ACTIVITY_LABEL:
+        return AA_NA_MEETING_OPTION_SEEDS
+
+    if parent_activity_label == VOLUNTEER_PARENT_ACTIVITY_LABEL:
+        return VOLUNTEER_COMMUNITY_SERVICE_OPTION_SEEDS
+
+    return []
 
 
 def _placeholder() -> str:
@@ -213,8 +234,9 @@ def _insert_child_seed_rows_for_shelter(
 ) -> None:
     now = utcnow_iso()
     is_pg = g.get("db_kind") == "pg"
+    seed_rows = _child_option_seeds_for_parent(parent_activity_label)
 
-    for sort_order, option_label in enumerate(AA_NA_MEETING_OPTION_SEEDS, start=1):
+    for sort_order, option_label in enumerate(seed_rows, start=1):
         db_execute(
             (
                 """
