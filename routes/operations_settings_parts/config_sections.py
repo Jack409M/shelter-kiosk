@@ -46,10 +46,14 @@ def _configuration_sections() -> list[dict]:
             ],
         },
         {
-            "key": "kiosk_activity_categories",
-            "title": "Kiosk Activity Categories",
-            "summary": "Checkout categories and hour counting rules.",
-            "type": "form",
+            "key": "kiosk_settings",
+            "title": "Kiosk Settings",
+            "summary": "Checkout categories and AA or NA meeting child options.",
+            "type": "group",
+            "children": [
+                "kiosk_activity_categories",
+                "kiosk_aa_na_meeting_options",
+            ],
         },
     ]
 
@@ -135,8 +139,16 @@ def _configuration_leaf_sections() -> list[dict]:
         {
             "key": "kiosk_activity_categories",
             "title": "Kiosk Activity Categories",
-            "summary": "Checkout categories and hour counting rules.",
+            "summary": "Top level checkout categories and hour counting rules.",
             "type": "form",
+            "parent_key": "kiosk_settings",
+        },
+        {
+            "key": "kiosk_aa_na_meeting_options",
+            "title": "AA or NA Meeting Options",
+            "summary": "Child dropdown choices shown only when AA or NA Meeting is selected.",
+            "type": "form",
+            "parent_key": "kiosk_settings",
         },
     ]
 
