@@ -162,11 +162,13 @@
             {% set selected_destination = request.form.get('destination', '') %}
             {% for item in checkout_categories %}
               {% set item_label = item.get('activity_label', '') %}
+              {% set item_key = item.get('activity_key', '') %}
               <option
                 value="{{ item_label }}"
+                data-activity-key="{{ item_key }}"
                 data-requires-approved-pass="{{ '1' if item.get('requires_approved_pass') else '0' }}"
-                data-is-aa-na-meeting="{{ '1' if item_label == aa_na_parent_activity_label else '0' }}"
-                data-is-volunteer-community-service="{{ '1' if item_label == volunteer_parent_activity_label else '0' }}"
+                data-is-aa-na-meeting="{{ '1' if item_key == aa_na_parent_activity_key else '0' }}"
+                data-is-volunteer-community-service="{{ '1' if item_key == volunteer_parent_activity_key else '0' }}"
                 {% if selected_destination == item_label %}selected{% endif %}
               >
                 {{ item_label }}
