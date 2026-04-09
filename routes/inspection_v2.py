@@ -439,6 +439,14 @@ def inspection_sheet():
             flash("Inspection date is required.", "error")
             return redirect(url_for("inspection_v2.inspection_sheet", year=inspection_year, month=inspection_month))
 
+        try:
+            inspection_dt = datetime.fromisoformat(inspection_date)
+            submitted_inspection_year = inspection_dt.year
+            submitted_inspection_month = inspection_dt.month
+        except ValueError:
+            flash("Inspection date is invalid.", "error")
+            return redirect(url_for("inspection_v2.inspection_sheet", year=inspection_year, month=inspection_month))
+
         now = utcnow_iso()
 
         for target in inspection_targets:
@@ -505,8 +513,8 @@ def inspection_sheet():
                     target.get("apartment_number_snapshot"),
                     target.get("apartment_size_snapshot"),
                     target.get("resident_name"),
-                    inspection_year,
-                    inspection_month,
+                    submitted_inspection_year,
+                    submitted_inspection_month,
                     session.get("staff_user_id"),
                     notes,
                     now,
@@ -515,7 +523,13 @@ def inspection_sheet():
             )
 
         flash("Inspection sheet saved.", "ok")
-        return redirect(url_for("inspection_v2.inspection_sheet", year=inspection_year, month=inspection_month))
+        return redirect(
+            url_for(
+                "inspection_v2.inspection_sheet",
+                year=submitted_inspection_year,
+                month=submitted_inspection_month,
+            )
+        )
 
     return render_template(
         "case_management/inspection_sheet.html",
