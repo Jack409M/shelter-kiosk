@@ -234,17 +234,66 @@ def _calculate_late_fee(
     is_exempt: bool,
     today_date,
 ) -> tuple[float, str]:
+    late_fee_info = _calculate_late_fee_info(
+        settings=settings,
+        shelter=shelter,
+        rent_year=rent_year,
+        rent_month=rent_month,
+        subtotal_due=subtotal_due,
+        paid_date=paid_date,
+        approved_late_arrangement=approved_late_arrangement,
+        is_exempt=is_exempt,
+        today_date=today_date,
+    )
+    return late_fee_info["amount"], late_fee_info["note"]
+
+
+def _calculate_late_fee_info(
+    settings: dict,
+    shelter: str,
+    rent_year: int,
+    rent_month: int,
+    subtotal_due: float,
+    paid_date: str | None,
+    approved_late_arrangement: bool,
+    is_exempt: bool,
+    today_date,
+) -> dict:
     if is_exempt or approved_late_arrangement or subtotal_due <= 0:
         if approved_late_arrangement:
-            return 0.0, "Late fee waived by approved arrangement"
-        return 0.0, ""
+            return {
+                "amount": 0.0,
+                "note": "Late fee waived by approved arrangement",
+                "late_start_date": None,
+                "posting_date": None,
+                "late_days": 0,
+                "daily_rate": 0.0,
+                "is_postable": False,
+            }
+        return {
+            "amount": 0.0,
+            "note": "",
+            "late_start_date": None,
+            "posting_date": None,
+            "late_days": 0,
+            "daily_rate": 0.0,
+            "is_postable": False,
+        }
 
     _month_start, month_end = _month_start_end(rent_year, rent_month)
     late_start_day = _late_start_day(settings, shelter)
     fee_per_day = _late_fee_per_day(settings, shelter)
 
     if fee_per_day <= 0:
-        return 0.0, ""
+        return {
+            "amount": 0.0,
+            "note": "",
+            "late_start_date": None,
+            "posting_date": None,
+            "late_days": 0,
+            "daily_rate": 0.0,
+            "is_postable": False,
+        }
 
     if late_start_day < 1:
         late_start_day = 1
@@ -262,13 +311,47 @@ def _calculate_late_fee(
         elif (today_date.year, today_date.month) > (rent_year, rent_month):
             window_end = month_end
         else:
-            return 0.0, ""
+            return {
+                "amount": 0.0,
+                "note": "",
+                "late_start_date": late_start_date.isoformat(),
+                "posting_date": None,
+                "late_days": 0,
+                "daily_rate": fee_per_day,
+                "is_postable": False,
+            }
 
     if window_end < late_start_date:
-        return 0.0, ""
+        return {
+            "amount": 0.0,
+            "note": "",
+            "late_start_date": late_start_date.isoformat(),
+            "posting_date": None,
+            "late_days": 0,
+            "daily_rate": fee_per_day,
+            "is_postable": False,
+        }
 
     late_days = (window_end - late_start_date).days + 1
     if late_days <= 0:
-        return 0.0, ""
+        return {
+            "amount": 0.0,
+            "note": "",
+            "late_start_date": late_start_date.isoformat(),
+            "posting_date": None,
+            "late_days": 0,
+            "daily_rate": fee_per_day,
+            "is_postable": False,
+        }
 
-    return round(late_days * fee_per_day, 2), f"Late fee applied for {late_days} day(s)"
+    amount = round(late_days * fee_per_day, 2)
+
+    return {
+        "amount": amount,
+        "note": f"Late fee applied for {late_days} day(s)",
+        "late_start_date": late_start_date.isoformat(),
+        "posting_date": late_start_date.isoformat(),
+        "late_days": late_days,
+        "daily_rate": fee_per_day,
+        "is_postable": amount > 0,
+    }
