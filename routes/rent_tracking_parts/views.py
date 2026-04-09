@@ -996,14 +996,34 @@ def register_routes(rent_tracking):
 
         rows = _history_rows_for_resident(resident_id)
         rent_snapshot = build_rent_stability_snapshot(resident_id)
-        ledger_entries = _ledger_entries_for_resident(resident_id)
-        ledger_summary = _ledger_summary_for_resident(resident_id)
 
         return render_template(
             "case_management/resident_rent_history.html",
             resident=resident,
             rows=rows,
             rent_snapshot=rent_snapshot,
+        )
+
+    @rent_tracking.get("/resident/<int:resident_id>/ledger")
+    @require_login
+    @require_shelter
+    def resident_rent_ledger(resident_id: int):
+        if not _allowed(session):
+            flash("Case manager, shelter director, or admin access required.", "error")
+            return redirect(url_for("attendance.staff_attendance"))
+
+        _ensure_tables()
+        resident = _resident_any_shelter(resident_id)
+        if not resident:
+            flash("Resident not found.", "error")
+            return redirect(url_for("case_management.index"))
+
+        ledger_entries = _ledger_entries_for_resident(resident_id)
+        ledger_summary = _ledger_summary_for_resident(resident_id)
+
+        return render_template(
+            "case_management/resident_rent_ledger.html",
+            resident=resident,
             ledger_entries=ledger_entries,
             ledger_summary=ledger_summary,
         )
