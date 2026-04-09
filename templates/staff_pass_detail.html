@@ -21,232 +21,211 @@
 {% endif %}
 
 <style>
-  .screen-only {
-    display: block;
+  .pass-form-wrap {
+    max-width: 1060px;
   }
 
-  .print-only {
-    display: none;
-  }
-
-  .screen-wrap {
-    max-width: 980px;
-  }
-
-  .screen-toolbar {
+  .pass-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     flex-wrap: wrap;
   }
 
-  .screen-card {
+  .pass-toolbar-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .pass-toolbar-actions a,
+  .pass-toolbar-actions button {
+    margin: 0;
+  }
+
+  .pass-paper {
     background: #fff;
-    border: 1px solid #d8d8d8;
-    padding: 16px;
+    color: #111;
+    border: 1px solid #222;
+    padding: 12px;
+    box-sizing: border-box;
   }
 
-  .screen-grid {
+  .pass-paper h1 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    line-height: 1.05;
+  }
+
+  .paper-note {
+    margin: 0 0 8px 0;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .paper-grid-2,
+  .paper-grid-3,
+  .paper-grid-4 {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 6px 8px;
+    margin-bottom: 6px;
   }
 
-  .screen-field {
-    border: 1px solid #ddd;
-    padding: 10px;
-    min-height: 56px;
+  .paper-grid-2 {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .screen-label {
+  .paper-grid-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .paper-grid-4 {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+
+  .paper-field {
+    border: 1px solid #222;
+    min-height: 36px;
+    padding: 4px 6px;
+    background: #fff;
+  }
+
+  .paper-field.full {
+    margin-bottom: 6px;
+  }
+
+  .paper-label {
     display: block;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
-    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+    margin-bottom: 2px;
+    line-height: 1.05;
   }
 
-  .screen-value {
-    font-size: 14px;
-    line-height: 1.3;
+  .paper-value {
+    font-size: 12px;
+    line-height: 1.2;
     white-space: pre-wrap;
     word-break: break-word;
   }
 
-  .print-doc {
-    font-family: Arial, sans-serif;
-    color: #000;
+  .paper-check-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 8px;
+    margin-bottom: 6px;
   }
 
-  .print-page {
+  .paper-check {
+    border: 1px solid #222;
+    min-height: 34px;
+    padding: 5px 7px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    line-height: 1.15;
+  }
+
+  .paper-box {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 1px solid #111;
+    margin-right: 7px;
+    text-align: center;
+    line-height: 11px;
+    font-size: 10px;
+    font-weight: 700;
+    flex: 0 0 13px;
+  }
+
+  .paper-section {
+    border: 1px solid #222;
+    padding: 8px;
+    margin-top: 8px;
+  }
+
+  .paper-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    text-transform: uppercase;
+    line-height: 1.15;
+  }
+
+  .hours-table {
     width: 100%;
-    box-sizing: border-box;
+    border-collapse: collapse;
+    margin-top: 6px;
+  }
+
+  .hours-table th,
+  .hours-table td {
+    padding: 3px 5px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .hours-status-box {
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    border: 1px solid transparent;
+  }
+
+  .hours-status-box.pass {
+    background: #e8f6ec;
+    border-color: #7fbe8f;
+    color: #1f5f2f;
+  }
+
+  .hours-status-box.fail {
+    background: #fdecec;
+    border-color: #d38a8a;
+    color: #8a1f1f;
+  }
+
+  .hours-status-title {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    line-height: 1.15;
+  }
+
+  .hours-status-text {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .compact-list {
+    margin: 0;
+    padding-left: 14px;
+    columns: 2;
+    column-gap: 22px;
+  }
+
+  .compact-list li {
+    margin: 0 0 2px 0;
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .resident-page {
     page-break-after: always;
     break-after: page;
   }
 
-  .print-page:last-child {
-    page-break-after: auto;
-    break-after: auto;
-  }
-
-  .print-title {
-    font-size: 16px;
-    font-weight: 700;
-    margin: 0 0 6px 0;
-  }
-
-  .print-subtitle {
-    font-size: 10px;
-    margin: 0 0 8px 0;
-  }
-
-  .print-grid-2,
-  .print-grid-3,
-  .print-grid-4 {
-    display: grid;
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-
-  .print-grid-2 {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .print-grid-3 {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-
-  .print-grid-4 {
-    grid-template-columns: 1fr 1fr 1fr 1fr;
-  }
-
-  .print-field {
-    border: 1px solid #000;
-    padding: 4px 6px;
-    min-height: 34px;
-    box-sizing: border-box;
-  }
-
-  .print-field.tall {
-    min-height: 52px;
-  }
-
-  .print-label {
-    display: block;
-    font-size: 9px;
-    line-height: 1.05;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-  }
-
-  .print-value {
-    font-size: 11px;
-    line-height: 1.15;
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-
-  .print-check-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 6px;
-  }
-
-  .print-check {
-    border: 1px solid #000;
-    padding: 5px 6px;
-    min-height: 28px;
-    display: flex;
-    align-items: center;
-    font-size: 11px;
-    line-height: 1.1;
-  }
-
-  .print-box {
-    width: 12px;
-    height: 12px;
-    border: 1px solid #000;
-    margin-right: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    line-height: 1;
-    flex: 0 0 12px;
-  }
-
-  .print-section {
-    border: 1px solid #000;
-    padding: 6px;
-    margin-bottom: 6px;
-    box-sizing: border-box;
-  }
-
-  .print-section-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    margin: 0 0 5px 0;
-    line-height: 1.1;
-  }
-
-  .print-two-col-page {
-    display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
-    gap: 8px;
-    align-items: start;
-  }
-
-  .print-status-box {
-    border: 1px solid #000;
-    padding: 5px 6px;
-    margin-bottom: 5px;
-  }
-
-  .print-status-title {
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1.1;
-    margin-bottom: 2px;
-  }
-
-  .print-status-text {
-    font-size: 10px;
-    line-height: 1.15;
-  }
-
-  .print-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 4px;
-  }
-
-  .print-table th,
-  .print-table td {
-    border: 1px solid #000;
-    padding: 3px 4px;
-    text-align: left;
-    vertical-align: top;
-    font-size: 10px;
-    line-height: 1.1;
-  }
-
-  .print-rule-list {
-    margin: 0;
-    padding-left: 14px;
-    columns: 2;
-    column-gap: 18px;
-  }
-
-  .print-rule-list li {
-    margin: 0 0 2px 0;
-    font-size: 10px;
-    line-height: 1.1;
+  .staff-page {
+    page-break-before: always;
+    break-before: page;
   }
 
   .no-break {
@@ -254,17 +233,39 @@
     break-inside: avoid;
   }
 
+  .paper-split-2 {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 8px;
+  }
+
+  .tight-stack > * + * {
+    margin-top: 6px;
+  }
+
+  .paper-actions {
+    margin-top: 12px;
+  }
+
+  .paper-actions .card {
+    background: transparent;
+    border: 1px solid #222;
+  }
+
+  .print-back-link {
+    margin-top: 10px;
+  }
+
   @media (max-width: 900px) {
-    .screen-grid,
-    .print-grid-2,
-    .print-grid-3,
-    .print-grid-4,
-    .print-check-row,
-    .print-two-col-page {
+    .paper-grid-2,
+    .paper-grid-3,
+    .paper-grid-4,
+    .paper-check-row,
+    .paper-split-2 {
       grid-template-columns: 1fr;
     }
 
-    .print-rule-list {
+    .compact-list {
       columns: 1;
     }
   }
@@ -272,138 +273,117 @@
   @media print {
     @page {
       size: letter portrait;
-      margin: 0.28in;
+      margin: 0.3in;
     }
 
     nav,
     .top,
     .topbar,
     .flash,
-    .screen-only,
     .paper-actions,
     .print-back-link,
-    .card,
+    .pass-toolbar,
     a[href],
     button {
       display: none !important;
-    }
-
-    .print-only {
-      display: block !important;
     }
 
     html,
     body,
     main,
     .container,
-    .page {
+    .page,
+    .pass-form-wrap {
+      background: #fff !important;
       margin: 0 !important;
       padding: 0 !important;
-      background: #fff !important;
-      width: 100% !important;
       max-width: none !important;
+      width: 100% !important;
     }
 
-    .print-doc {
-      display: block !important;
+    body {
+      font-size: 11px;
     }
 
-    .print-page {
-      min-height: 10.35in;
+    .pass-paper {
+      border: 1px solid #000;
+      padding: 8px;
+      box-shadow: none !important;
+    }
+
+    .resident-page,
+    .staff-page {
+      min-height: 10.1in;
+    }
+
+    .paper-field,
+    .paper-section,
+    .hours-status-box,
+    .no-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
   }
 </style>
 
-<div class="screen-only screen-wrap">
-  <div class="screen-toolbar">
+<div class="pass-form-wrap">
+  <div class="pass-toolbar">
     <div>
       <a href="{{ back_url }}">{{ back_label }}</a>
     </div>
-    <div>
+    <div class="pass-toolbar-actions">
       <button type="button" onclick="window.print()">Print</button>
     </div>
   </div>
 
-  <div class="screen-card">
-    <h2 style="margin-top:0;">Pass Request</h2>
-    <p>This screen view is only for browsing. The printer uses a separate two page print layout.</p>
+  <div class="pass-paper">
 
-    <div class="screen-grid">
-      <div class="screen-field">
-        <span class="screen-label">Resident</span>
-        <div class="screen-value">{{ p.last_name }}, {{ p.first_name }}</div>
-      </div>
-      <div class="screen-field">
-        <span class="screen-label">Type</span>
-        <div class="screen-value">{{ pass_type_label }}</div>
-      </div>
-      <div class="screen-field">
-        <span class="screen-label">When</span>
-        <div class="screen-value">
-          {% if pass_type_key in ["pass", "overnight"] %}
-            {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
-          {% else %}
-            {{ p.start_date }} to {{ p.end_date }}
-          {% endif %}
-        </div>
-      </div>
-      <div class="screen-field">
-        <span class="screen-label">Destination</span>
-        <div class="screen-value">{{ p.destination or "" }}</div>
-      </div>
-    </div>
-  </div>
-</div>
+    <div class="resident-page">
+      <h1>Pass Request</h1>
+      <p class="paper-note">Print page 1 for resident. Print both pages for staff.</p>
 
-<div class="print-only">
-  <div class="print-doc">
-
-    <div class="print-page">
-      <div class="print-title">Pass Request</div>
-      <div class="print-subtitle">Resident copy on page 1. Staff copy continues on page 2.</div>
-
-      <div class="print-grid-4">
-        <div class="print-field">
-          <span class="print-label">Resident</span>
-          <div class="print-value">{{ p.last_name }}, {{ p.first_name }}</div>
+      <div class="paper-grid-4">
+        <div class="paper-field">
+          <span class="paper-label">Resident</span>
+          <div class="paper-value">{{ p.last_name }}, {{ p.first_name }}</div>
         </div>
-        <div class="print-field">
-          <span class="print-label">Shelter</span>
-          <div class="print-value">{{ p.shelter }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Shelter</span>
+          <div class="paper-value">{{ p.shelter }}</div>
         </div>
-        <div class="print-field">
-          <span class="print-label">Type</span>
-          <div class="print-value">{{ pass_type_label }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Type</span>
+          <div class="paper-value">{{ pass_type_label }}</div>
         </div>
-        <div class="print-field">
-          <span class="print-label">Status</span>
-          <div class="print-value">{{ p.status }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Status</span>
+          <div class="paper-value">{{ p.status }}</div>
         </div>
       </div>
 
-      <div class="print-grid-4">
-        <div class="print-field">
-          <span class="print-label">Submitted</span>
-          <div class="print-value">{{ fmt_dt(p.created_at_local) }}</div>
+      <div class="paper-grid-4">
+        <div class="paper-field">
+          <span class="paper-label">Submitted</span>
+          <div class="paper-value">{{ fmt_dt(p.created_at_local) }}</div>
         </div>
-        <div class="print-field">
-          <span class="print-label">Request Date</span>
-          <div class="print-value">{{ pass_detail.request_date if pass_detail else "" }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Request Date</span>
+          <div class="paper-value">{{ pass_detail.request_date if pass_detail else "" }}</div>
         </div>
-        <div class="print-field">
-          <span class="print-label">Resident Phone</span>
-          <div class="print-value">{{ pass_detail.resident_phone if pass_detail else "" }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Resident Phone</span>
+          <div class="paper-value">{{ pass_detail.resident_phone if pass_detail else "" }}</div>
         </div>
-        <div class="print-field">
-          <span class="print-label">Resident Level</span>
-          <div class="print-value">{{ pass_detail.resident_level if pass_detail else "" }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Resident Level</span>
+          <div class="paper-value">{{ pass_detail.resident_level if pass_detail else "" }}</div>
         </div>
       </div>
 
-      <div class="print-grid-2">
-        <div class="print-field tall">
-          <span class="print-label">When</span>
-          <div class="print-value">
+      <div class="paper-grid-2">
+        <div class="paper-field">
+          <span class="paper-label">When</span>
+          <div class="paper-value">
             {% if pass_type_key in ["pass", "overnight"] %}
               {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
             {% else %}
@@ -411,127 +391,133 @@
             {% endif %}
           </div>
         </div>
-        <div class="print-field tall">
-          <span class="print-label">Destination</span>
-          <div class="print-value">{{ p.destination or "" }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Destination</span>
+          <div class="paper-value">{{ p.destination or "" }}</div>
         </div>
       </div>
 
-      <div class="print-grid-2">
-        <div class="print-field">
-          <span class="print-label">Reason</span>
-          <div class="print-value">{{ p.reason or "" }}</div>
+      <div class="paper-grid-2">
+        <div class="paper-field">
+          <span class="paper-label">Reason</span>
+          <div class="paper-value">{{ p.reason or "" }}</div>
         </div>
-        <div class="print-field">
-          <span class="print-label">Who Resident Will Be With</span>
-          <div class="print-value">{{ pass_detail.who_with if pass_detail else "" }}</div>
-        </div>
-      </div>
-
-      <div class="print-grid-2">
-        <div class="print-field tall">
-          <span class="print-label">Address Where Resident Will Be</span>
-          <div class="print-value">{{ pass_detail.destination_address if pass_detail else "" }}</div>
-        </div>
-        <div class="print-grid-2" style="margin-bottom:0;">
-          <div class="print-field">
-            <span class="print-label">Phone Number There</span>
-            <div class="print-value">{{ pass_detail.destination_phone if pass_detail else "" }}</div>
-          </div>
-          <div class="print-field">
-            <span class="print-label">Budgeted Amount</span>
-            <div class="print-value">{{ pass_detail.budgeted_amount if pass_detail else "" }}</div>
-          </div>
-          <div class="print-field">
-            <span class="print-label">Approved Amount</span>
-            <div class="print-value">{{ pass_detail.approved_amount if pass_detail and pass_detail.approved_amount else "" }}</div>
-          </div>
-          <div class="print-field">
-            <span class="print-label">Reviewed By</span>
-            <div class="print-value">{{ pass_detail.reviewed_by_name if pass_detail and pass_detail.reviewed_by_name else "" }}</div>
-          </div>
+        <div class="paper-field">
+          <span class="paper-label">Who Resident Will Be With</span>
+          <div class="paper-value">{{ pass_detail.who_with if pass_detail else "" }}</div>
         </div>
       </div>
 
-      <div class="print-field full">
-        <span class="print-label">Reviewed At</span>
-        <div class="print-value">
-          {% if pass_detail and pass_detail.reviewed_at_local %}
-            {{ fmt_dt(pass_detail.reviewed_at_local) }}
-          {% endif %}
+      <div class="paper-grid-2">
+        <div class="paper-field">
+          <span class="paper-label">Address Where Resident Will Be</span>
+          <div class="paper-value">{{ pass_detail.destination_address if pass_detail else "" }}</div>
+        </div>
+        <div class="paper-field">
+          <span class="paper-label">Phone Number There</span>
+          <div class="paper-value">{{ pass_detail.destination_phone if pass_detail else "" }}</div>
         </div>
       </div>
 
-      <div class="print-check-row">
-        <div class="print-check">
-          <span class="print-box">{% if pass_detail and pass_detail.requirements_acknowledged == "yes" %}X{% endif %}</span>
+      <div class="paper-grid-4">
+        <div class="paper-field">
+          <span class="paper-label">Budgeted Amount</span>
+          <div class="paper-value">{{ pass_detail.budgeted_amount if pass_detail else "" }}</div>
+        </div>
+        <div class="paper-field">
+          <span class="paper-label">Approved Amount</span>
+          <div class="paper-value">
+            {% if pass_detail and pass_detail.approved_amount %}
+              {{ pass_detail.approved_amount }}
+            {% endif %}
+          </div>
+        </div>
+        <div class="paper-field">
+          <span class="paper-label">Reviewed By</span>
+          <div class="paper-value">
+            {% if pass_detail and pass_detail.reviewed_by_name %}
+              {{ pass_detail.reviewed_by_name }}
+            {% endif %}
+          </div>
+        </div>
+        <div class="paper-field">
+          <span class="paper-label">Reviewed At</span>
+          <div class="paper-value">
+            {% if pass_detail and pass_detail.reviewed_at_local %}
+              {{ fmt_dt(pass_detail.reviewed_at_local) }}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="paper-check-row">
+        <div class="paper-check">
+          <span class="paper-box">{% if pass_detail and pass_detail.requirements_acknowledged == "yes" %}X{% endif %}</span>
           Will meet requirements
         </div>
-        <div class="print-check">
-          <span class="print-box">{% if pass_detail and pass_detail.requirements_acknowledged == "no" %}X{% endif %}</span>
+        <div class="paper-check">
+          <span class="paper-box">{% if pass_detail and pass_detail.requirements_acknowledged == "no" %}X{% endif %}</span>
           Will not meet requirements
         </div>
       </div>
 
-      <div class="print-field">
-        <span class="print-label">If Requirements Will Not Be Met</span>
-        <div class="print-value">{{ pass_detail.requirements_not_met_explanation if pass_detail else "" }}</div>
+      <div class="paper-field full">
+        <span class="paper-label">If Requirements Will Not Be Met</span>
+        <div class="paper-value">{{ pass_detail.requirements_not_met_explanation if pass_detail else "" }}</div>
       </div>
 
-      <div class="print-grid-2" style="margin-top:6px;">
-        <div class="print-field">
-          <span class="print-label">Companion Names</span>
-          <div class="print-value">{{ pass_detail.companion_names if pass_detail else "" }}</div>
+      <div class="paper-grid-2">
+        <div class="paper-field">
+          <span class="paper-label">Companion Names</span>
+          <div class="paper-value">{{ pass_detail.companion_names if pass_detail else "" }}</div>
         </div>
-        <div class="print-field">
-          <span class="print-label">Companion Phone Numbers</span>
-          <div class="print-value">{{ pass_detail.companion_phone_numbers if pass_detail else "" }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Companion Phone Numbers</span>
+          <div class="paper-value">{{ pass_detail.companion_phone_numbers if pass_detail else "" }}</div>
         </div>
       </div>
 
-      <div class="print-grid-2">
-        <div class="print-field tall">
-          <span class="print-label">Resident Notes</span>
-          <div class="print-value">{{ p.resident_notes or "" }}</div>
+      <div class="paper-grid-2">
+        <div class="paper-field">
+          <span class="paper-label">Resident Notes</span>
+          <div class="paper-value">{{ p.resident_notes or "" }}</div>
         </div>
-        <div class="print-field tall">
-          <span class="print-label">Staff Notes</span>
-          <div class="print-value">{{ p.staff_notes or "" }}</div>
+        <div class="paper-field">
+          <span class="paper-label">Staff Notes</span>
+          <div class="paper-value">{{ p.staff_notes or "" }}</div>
         </div>
       </div>
     </div>
 
-    <div class="print-page">
-      <div class="print-title">Staff Review</div>
+    <div class="staff-page">
+      <div class="paper-split-2 no-break">
+        <div class="tight-stack">
+          <div class="paper-section">
+            <div class="paper-section-title">Staff Review</div>
 
-      <div class="print-two-col-page">
-        <div>
-          <div class="print-section no-break">
-            <div class="print-section-title">Request Summary</div>
-
-            <div class="print-grid-4">
-              <div class="print-field">
-                <span class="print-label">Resident</span>
-                <div class="print-value">{{ p.last_name }}, {{ p.first_name }}</div>
+            <div class="paper-grid-4">
+              <div class="paper-field">
+                <span class="paper-label">Resident</span>
+                <div class="paper-value">{{ p.last_name }}, {{ p.first_name }}</div>
               </div>
-              <div class="print-field">
-                <span class="print-label">Type</span>
-                <div class="print-value">{{ pass_type_label }}</div>
+              <div class="paper-field">
+                <span class="paper-label">Type</span>
+                <div class="paper-value">{{ pass_type_label }}</div>
               </div>
-              <div class="print-field">
-                <span class="print-label">Status</span>
-                <div class="print-value">{{ p.status }}</div>
+              <div class="paper-field">
+                <span class="paper-label">Status</span>
+                <div class="paper-value">{{ p.status }}</div>
               </div>
-              <div class="print-field">
-                <span class="print-label">Shelter</span>
-                <div class="print-value">{{ p.shelter }}</div>
+              <div class="paper-field">
+                <span class="paper-label">Shelter</span>
+                <div class="paper-value">{{ p.shelter }}</div>
               </div>
             </div>
 
-            <div class="print-grid-2">
-              <div class="print-field">
-                <span class="print-label">When</span>
-                <div class="print-value">
+            <div class="paper-grid-2">
+              <div class="paper-field">
+                <span class="paper-label">When</span>
+                <div class="paper-value">
                   {% if pass_type_key in ["pass", "overnight"] %}
                     {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
                   {% else %}
@@ -539,20 +525,62 @@
                   {% endif %}
                 </div>
               </div>
-              <div class="print-field">
-                <span class="print-label">Destination</span>
-                <div class="print-value">{{ p.destination or "" }}</div>
+              <div class="paper-field">
+                <span class="paper-label">Destination</span>
+                <div class="paper-value">{{ p.destination or "" }}</div>
+              </div>
+            </div>
+
+            <div class="paper-grid-4">
+              <div class="paper-field">
+                <span class="paper-label">Resident Level</span>
+                <div class="paper-value">{{ policy_check.resident_level if policy_check else "" }}</div>
+              </div>
+              <div class="paper-field">
+                <span class="paper-label">Approved Amount</span>
+                <div class="paper-value">
+                  {% if pass_detail and pass_detail.approved_amount %}
+                    {{ pass_detail.approved_amount }}
+                  {% endif %}
+                </div>
+              </div>
+              <div class="paper-field">
+                <span class="paper-label">Reviewed By</span>
+                <div class="paper-value">
+                  {% if pass_detail and pass_detail.reviewed_by_name %}
+                    {{ pass_detail.reviewed_by_name }}
+                  {% endif %}
+                </div>
+              </div>
+              <div class="paper-field">
+                <span class="paper-label">Reviewed At</span>
+                <div class="paper-value">
+                  {% if pass_detail and pass_detail.reviewed_at_local %}
+                    {{ fmt_dt(pass_detail.reviewed_at_local) }}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="paper-grid-2">
+              <div class="paper-field">
+                <span class="paper-label">Resident Notes</span>
+                <div class="paper-value">{{ p.resident_notes or "" }}</div>
+              </div>
+              <div class="paper-field">
+                <span class="paper-label">Staff Notes</span>
+                <div class="paper-value">{{ p.staff_notes or "" }}</div>
               </div>
             </div>
           </div>
 
           {% if hour_summary %}
-            <div class="print-section no-break">
-              <div class="print-section-title">Previous Week Attendance Hours</div>
+            <div class="paper-section">
+              <div class="paper-section-title">Previous Week Attendance Hours</div>
 
-              <div class="print-status-box">
-                <div class="print-status-title">{{ hour_summary.status_label }}</div>
-                <div class="print-status-text">
+              <div class="hours-status-box {{ hour_summary.status_class }}">
+                <div class="hours-status-title">{{ hour_summary.status_label }}</div>
+                <div class="hours-status-text">
                   Productive: {{ hour_summary.productive_hours }} / {{ hour_summary.productive_required_hours }}
                   | Work: {{ hour_summary.work_hours }} / {{ hour_summary.work_required_hours }}
                   {% if not hour_summary.passes_requirement %}
@@ -562,19 +590,19 @@
                 </div>
               </div>
 
-              <div class="print-grid-2">
-                <div class="print-field">
-                  <span class="print-label">Week</span>
-                  <div class="print-value">{{ hour_summary.week_label }}</div>
+              <div class="paper-grid-2">
+                <div class="paper-field">
+                  <span class="paper-label">Week</span>
+                  <div class="paper-value">{{ hour_summary.week_label }}</div>
                 </div>
-                <div class="print-field">
-                  <span class="print-label">Productive / Work</span>
-                  <div class="print-value">{{ hour_summary.productive_hours }} / {{ hour_summary.work_hours }}</div>
+                <div class="paper-field">
+                  <span class="paper-label">Productive / Work</span>
+                  <div class="paper-value">{{ hour_summary.productive_hours }} / {{ hour_summary.work_hours }}</div>
                 </div>
               </div>
 
               {% if hour_summary.breakdown %}
-                <table class="print-table">
+                <table class="hours-table">
                   <thead>
                     <tr>
                       <th>Category</th>
@@ -589,39 +617,49 @@
                         <td>{{ item.label }}</td>
                         <td>{{ item.credited_hours }}</td>
                         <td>{{ item.raw_hours }}</td>
-                        <td>{% if item.weekly_cap_hours is not none %}{{ item.weekly_cap_hours }}{% else %}N/A{% endif %}</td>
+                        <td>
+                          {% if item.weekly_cap_hours is not none %}
+                            {{ item.weekly_cap_hours }}
+                          {% else %}
+                            N/A
+                          {% endif %}
+                        </td>
                       </tr>
                     {% endfor %}
                   </tbody>
                 </table>
               {% else %}
-                <div class="print-value">No completed attendance hours found for the previous week.</div>
+                <div class="paper-value">No completed attendance hours found for the previous week.</div>
+              {% endif %}
+
+              {% if hour_summary.uncategorized_hours %}
+                <div class="paper-note">Uncategorized attendance hours found: {{ hour_summary.uncategorized_hours }}</div>
               {% endif %}
             </div>
           {% endif %}
         </div>
 
-        <div>
+        <div class="tight-stack">
           {% if policy_check %}
-            <div class="print-section no-break">
-              <div class="print-section-title">{{ policy_check.title }}</div>
+            <div class="paper-section">
+              <div class="paper-section-title">{{ policy_check.title }}</div>
 
               {% if policy_check.checks %}
                 {% for item in policy_check.checks %}
-                  <div class="print-status-box">
-                    <div class="print-status-title">{{ item.label }}: {{ item.value }}</div>
+                  <div class="hours-status-box {{ item.status_class }}">
+                    <div class="hours-status-title">{{ item.label }}: {{ item.value }}</div>
                     {% if item.detail %}
-                      <div class="print-status-text">{{ item.detail }}</div>
+                      <div class="hours-status-text">{{ item.detail }}</div>
                     {% endif %}
                   </div>
                 {% endfor %}
               {% endif %}
 
               {% if policy_check.rule_lines %}
-                <div class="print-field">
-                  <span class="print-label">Rule Notes</span>
-                  <div class="print-value">
-                    <ul class="print-rule-list">
+                <div class="paper-field full">
+                  <span class="paper-label">Rule Notes</span>
+                  <div class="paper-value">
+                    <ul class="compact-list">
                       {% for line in policy_check.rule_lines %}
                         <li>{{ line }}</li>
                       {% endfor %}
@@ -636,30 +674,30 @@
     </div>
 
   </div>
-</div>
 
-{% if p.status == "pending" %}
-  <div class="paper-actions screen-only">
-    <div class="card" style="margin-top:14px;">
-      <form method="post" action="{{ url_for('attendance.staff_pass_approve', pass_id=p.id) }}" style="margin-top:12px;">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" style="background:#2e7d32; color:white;">
-          Approve Pass
-        </button>
-      </form>
+  {% if p.status == "pending" %}
+    <div class="paper-actions">
+      <div class="card" style="margin-top:12px;">
+        <form method="post" action="{{ url_for('attendance.staff_pass_approve', pass_id=p.id) }}" style="margin-top:10px;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" style="background:#2e7d32; color:white;">
+            Approve Pass
+          </button>
+        </form>
 
-      <form method="post" action="{{ url_for('attendance.staff_pass_deny', pass_id=p.id) }}" style="margin-top:8px;">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" style="background:#c62828; color:white;">
-          Deny Pass
-        </button>
-      </form>
+        <form method="post" action="{{ url_for('attendance.staff_pass_deny', pass_id=p.id) }}" style="margin-top:8px;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" style="background:#c62828; color:white;">
+            Deny Pass
+          </button>
+        </form>
+      </div>
     </div>
-  </div>
-{% endif %}
+  {% endif %}
 
-<div class="print-back-link screen-only">
-  <a href="{{ back_url }}">{{ back_label }}</a>
+  <div class="print-back-link">
+    <a href="{{ back_url }}">{{ back_label }}</a>
+  </div>
 </div>
 
 {% endblock %}
