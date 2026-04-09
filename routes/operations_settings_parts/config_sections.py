@@ -48,11 +48,12 @@ def _configuration_sections() -> list[dict]:
         {
             "key": "kiosk_settings",
             "title": "Kiosk Settings",
-            "summary": "Checkout categories and AA or NA meeting child options.",
+            "summary": "Checkout categories and kiosk child options.",
             "type": "group",
             "children": [
                 "kiosk_activity_categories",
                 "kiosk_aa_na_meeting_options",
+                "kiosk_volunteer_community_service_options",
             ],
         },
     ]
@@ -147,6 +148,13 @@ def _configuration_leaf_sections() -> list[dict]:
             "key": "kiosk_aa_na_meeting_options",
             "title": "AA or NA Meeting Options",
             "summary": "Child dropdown choices shown only when AA or NA Meeting is selected.",
+            "type": "form",
+            "parent_key": "kiosk_settings",
+        },
+        {
+            "key": "kiosk_volunteer_community_service_options",
+            "title": "Volunteer or Community Service Options",
+            "summary": "Child dropdown choices shown only when Volunteer or Community Service is selected.",
             "type": "form",
             "parent_key": "kiosk_settings",
         },
