@@ -437,7 +437,11 @@ def register_routes(rent_tracking):
         if request.method == "POST":
             for entry in entries:
                 entry_id = entry["id"]
-                amount_paid = _float_value(request.form.get(f"amount_paid_{entry_id}"))
+
+                payment_received = _float_value(request.form.get(f"payment_received_{entry_id}"))
+                existing_amount_paid = _float_value(entry.get("amount_paid"))
+                amount_paid = round(existing_amount_paid + payment_received, 2)
+
                 paid_date = (request.form.get(f"paid_date_{entry_id}") or "").strip() or None
                 notes = (request.form.get(f"notes_{entry_id}") or "").strip() or None
                 manual_adjustment = _float_value(request.form.get(f"manual_adjustment_{entry_id}"))
