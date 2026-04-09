@@ -165,9 +165,38 @@
               <option
                 value="{{ item_label }}"
                 data-requires-approved-pass="{{ '1' if item.get('requires_approved_pass') else '0' }}"
+                data-is-aa-na-meeting="{{ '1' if item_label == aa_na_parent_activity_label else '0' }}"
                 {% if selected_destination == item_label %}selected{% endif %}
               >
                 {{ item_label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="aa_na_meeting_1_wrap" class="hidden">
+          <label for="aa_na_meeting_1">Meeting 1</label>
+          <select id="aa_na_meeting_1" name="aa_na_meeting_1" autocomplete="off">
+            <option value="">Select first meeting</option>
+            {% set selected_meeting_1 = request.form.get('aa_na_meeting_1', '') %}
+            {% for item in aa_na_child_options %}
+              {% set option_label = item.get('option_label', '') %}
+              <option value="{{ option_label }}" {% if selected_meeting_1 == option_label %}selected{% endif %}>
+                {{ option_label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="aa_na_meeting_2_wrap" class="hidden">
+          <label for="aa_na_meeting_2">Meeting 2</label>
+          <select id="aa_na_meeting_2" name="aa_na_meeting_2" autocomplete="off">
+            <option value="">Optional second meeting</option>
+            {% set selected_meeting_2 = request.form.get('aa_na_meeting_2', '') %}
+            {% for item in aa_na_child_options %}
+              {% set option_label = item.get('option_label', '') %}
+              <option value="{{ option_label }}" {% if selected_meeting_2 == option_label %}selected{% endif %}>
+                {{ option_label }}
               </option>
             {% endfor %}
           </select>
@@ -296,6 +325,11 @@
     function toggleExpectedBackTime() {
       const destination = document.getElementById("destination");
 
+      const aaNaMeeting1Wrap = document.getElementById("aa_na_meeting_1_wrap");
+      const aaNaMeeting2Wrap = document.getElementById("aa_na_meeting_2_wrap");
+      const aaNaMeeting1 = document.getElementById("aa_na_meeting_1");
+      const aaNaMeeting2 = document.getElementById("aa_na_meeting_2");
+
       const startWrap = document.getElementById("start_time_wrap");
       const endWrap = document.getElementById("end_time_wrap");
       const expectedBackWrap = document.getElementById("expected_back_wrap");
@@ -320,6 +354,29 @@
       const requiresApprovedPass = selectedOption
         && selectedOption.dataset
         && selectedOption.dataset.requiresApprovedPass === "1";
+
+      const isAaNaMeeting = selectedOption
+        && selectedOption.dataset
+        && selectedOption.dataset.isAaNaMeeting === "1";
+
+      if (aaNaMeeting1Wrap) {
+        aaNaMeeting1Wrap.classList.toggle("hidden", !isAaNaMeeting);
+      }
+
+      if (aaNaMeeting2Wrap) {
+        aaNaMeeting2Wrap.classList.toggle("hidden", !isAaNaMeeting);
+      }
+
+      if (aaNaMeeting1) {
+        aaNaMeeting1.required = isAaNaMeeting;
+        if (!isAaNaMeeting) {
+          aaNaMeeting1.value = "";
+        }
+      }
+
+      if (aaNaMeeting2 && !isAaNaMeeting) {
+        aaNaMeeting2.value = "";
+      }
 
       if (startWrap) {
         startWrap.classList.toggle("hidden", requiresApprovedPass);
@@ -403,11 +460,36 @@
       }
     }
 
+    function preventDuplicateMeetingChoice() {
+      const meeting1 = document.getElementById("aa_na_meeting_1");
+      const meeting2 = document.getElementById("aa_na_meeting_2");
+
+      if (!meeting1 || !meeting2) {
+        return;
+      }
+
+      if (meeting1.value && meeting2.value && meeting1.value === meeting2.value) {
+        meeting2.value = "";
+      }
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
       const destination = document.getElementById("destination");
+      const meeting1 = document.getElementById("aa_na_meeting_1");
+      const meeting2 = document.getElementById("aa_na_meeting_2");
+
       if (destination) {
         destination.addEventListener("change", toggleExpectedBackTime);
       }
+
+      if (meeting1) {
+        meeting1.addEventListener("change", preventDuplicateMeetingChoice);
+      }
+
+      if (meeting2) {
+        meeting2.addEventListener("change", preventDuplicateMeetingChoice);
+      }
+
       toggleExpectedBackTime();
     });
   </script>
