@@ -520,7 +520,7 @@
         </div>
         <div class="paper-field">
           <span class="paper-label">Shelter</span>
-          <div class="paper-value">{{ p.shelter }}</div>
+          <div class="paper-value">{{ shelter_display(p.shelter) if p.shelter else "" }}</div>
         </div>
         <div class="paper-field">
           <span class="paper-label">Type</span>
@@ -528,7 +528,7 @@
         </div>
         <div class="paper-field">
           <span class="paper-label">Status</span>
-          <div class="paper-value">{{ p.status }}</div>
+          <div class="paper-value">{{ (p.status or "")|capitalize }}</div>
         </div>
       </div>
 
@@ -677,11 +677,11 @@
               </div>
               <div class="paper-field">
                 <span class="paper-label">Status</span>
-                <div class="paper-value">{{ p.status }}</div>
+                <div class="paper-value">{{ (p.status or "")|capitalize }}</div>
               </div>
               <div class="paper-field">
                 <span class="paper-label">Shelter</span>
-                <div class="paper-value">{{ p.shelter }}</div>
+                <div class="paper-value">{{ shelter_display(p.shelter) if p.shelter else "" }}</div>
               </div>
             </div>
 
@@ -858,7 +858,7 @@
         </div>
         <div class="po-field">
           <span class="po-label">Shelter</span>
-          <div class="po-value">{{ p.shelter }}</div>
+          <div class="po-value">{{ shelter_display(p.shelter) if p.shelter else "" }}</div>
         </div>
         <div class="po-field">
           <span class="po-label">Type</span>
@@ -866,7 +866,7 @@
         </div>
         <div class="po-field">
           <span class="po-label">Status</span>
-          <div class="po-value">{{ p.status }}</div>
+          <div class="po-value">{{ (p.status or "")|capitalize }}</div>
         </div>
       </div>
 
@@ -1014,11 +1014,11 @@
               </div>
               <div class="po-field">
                 <span class="po-label">Status</span>
-                <div class="po-value">{{ p.status }}</div>
+                <div class="po-value">{{ (p.status or "")|capitalize }}</div>
               </div>
               <div class="po-field">
                 <span class="po-label">Shelter</span>
-                <div class="po-value">{{ p.shelter }}</div>
+                <div class="po-value">{{ shelter_display(p.shelter) if p.shelter else "" }}</div>
               </div>
             </div>
 
