@@ -195,7 +195,7 @@
 
   .rent-entry-top {
     display: grid;
-    grid-template-columns: minmax(220px, 1.3fr) repeat(6, minmax(110px, 1fr));
+    grid-template-columns: minmax(220px, 1.3fr) repeat(7, minmax(110px, 1fr));
     gap: 14px;
     align-items: start;
   }
@@ -480,7 +480,7 @@
           <div class="rent-toolbar-actions">
             <button type="button" class="cmx-btn-muted" id="rent-clear-filters">Clear</button>
             <button type="submit" class="cmx-btn">Save Payment Sheet</button>
-            <span class="rent-save-pill">Changes save for the whole page</span>
+            <span class="rent-save-pill">Enter new payment amounts only. Paid so far is shown separately.</span>
             <span class="rent-dirty-pill" id="rent-dirty-pill">Unsaved changes</span>
           </div>
         </div>
@@ -552,28 +552,26 @@
                       data-prior-balance="{{ entry['prior_balance'] or 0 }}"
                       data-prorated-charge="{{ entry['prorated_charge'] or 0 }}"
                       data-late-fee-charge="{{ entry['late_fee_charge'] or 0 }}"
+                      data-amount-paid-so-far="{{ entry['amount_paid'] or 0 }}"
                       data-is-exempt="{% if entry['status'] == 'Exempt' %}true{% else %}false{% endif %}"
                     >
                       <div class="rent-entry-top">
                         <div>
                           <div class="rent-resident-name">{{ entry['resident_name_snapshot'] }}</div>
                           <div class="rent-resident-meta">
-  <span class="rent-pill">Level {{ entry['level_snapshot'] or '—' }}</span>
-  {% if entry['apartment_number_snapshot'] %}
-    <span class="rent-pill">Apartment {{ entry['apartment_number_snapshot'] }}</span>
-  {% endif %}
-  <span class="rent-pill">{{ entry['apartment_size_snapshot'] or '—' }}</span>
-  <span class="rent-pill rent-pill-dirty">Unsaved</span>
-</div>
+                            <span class="rent-pill">Level {{ entry['level_snapshot'] or '—' }}</span>
+                            {% if entry['apartment_number_snapshot'] %}
+                              <span class="rent-pill">Apartment {{ entry['apartment_number_snapshot'] }}</span>
+                            {% endif %}
+                            <span class="rent-pill">{{ entry['apartment_size_snapshot'] or '—' }}</span>
+                            <span class="rent-pill rent-pill-dirty">Unsaved</span>
+                          </div>
 
-<div class="cmx-button-row" style="margin-top:10px;">
-  <a
-    class="cmx-btn-muted"
-    href="{{ url_for('rent_tracking.resident_rent_history', resident_id=entry['resident_id']) }}"
-  >
-    Rent Ledger
-  </a>
-</div>
+                          <div class="cmx-button-row" style="margin-top:10px;">
+                            <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=entry['resident_id']) }}">
+                              Rent Ledger
+                            </a>
+                          </div>
                         </div>
 
                         <div>
@@ -582,8 +580,13 @@
                         </div>
 
                         <div>
-                          <label class="rent-field-label">Amount Paid</label>
-                          <input type="number" step="0.01" min="0" name="amount_paid_{{ entry['id'] }}" value="{{ entry['amount_paid'] or 0 }}">
+                          <label class="rent-field-label">Paid So Far</label>
+                          <div class="rent-money js-paid-so-far">${{ '%.2f'|format(entry['amount_paid'] or 0) }}</div>
+                        </div>
+
+                        <div>
+                          <label class="rent-field-label">Payment Received Now</label>
+                          <input type="number" step="0.01" min="0" name="payment_received_{{ entry['id'] }}" value="">
                         </div>
 
                         <div>
@@ -686,7 +689,7 @@
           </div>
 
           <div class="rent-page-help">
-            Abba and Gratitude are grouped by apartment number with jump links at the top. Haven stays resident based. Search and filters work live on this page without reloading.
+            Enter new payment amounts only. The page keeps a running monthly paid total and applies each new payment against the remaining balance.
           </div>
 
           <div class="cmx-button-row" style="margin-top:16px;">
@@ -744,6 +747,9 @@
       if (isExempt) {
         return "Exempt";
       }
+      if (totalDue <= 0) {
+        return "Paid";
+      }
       if (amountPaid <= 0) {
         return "Not Paid";
       }
@@ -763,20 +769,22 @@
       const priorBalance = asNumber(row.dataset.priorBalance);
       const proratedCharge = asNumber(row.dataset.proratedCharge);
       const storedLateFeeCharge = asNumber(row.dataset.lateFeeCharge);
+      const amountPaidSoFar = asNumber(row.dataset.amountPaidSoFar);
       const isExempt = String(row.dataset.isExempt || "").toLowerCase() === "true";
 
-      const amountPaidInput = row.querySelector('input[name^="amount_paid_"]');
+      const paymentReceivedInput = row.querySelector('input[name^="payment_received_"]');
       const paidDateInput = row.querySelector('input[name^="paid_date_"]');
       const adjustmentInput = row.querySelector('input[name^="manual_adjustment_"]');
       const lateArrangementInput = row.querySelector('select[name^="approved_late_arrangement_"]');
 
       const totalDueEl = row.querySelector(".js-total-due");
+      const paidSoFarEl = row.querySelector(".js-paid-so-far");
       const remainingEl = row.querySelector(".js-remaining-balance");
       const lateFeeEl = row.querySelector(".js-late-fee");
       const currentChargeEl = row.querySelector(".js-current-charge");
       const statusBadgeEl = row.querySelector(".js-status-badge");
 
-      const amountPaid = asNumber(amountPaidInput ? amountPaidInput.value : 0);
+      const paymentReceivedNow = asNumber(paymentReceivedInput ? paymentReceivedInput.value : 0);
       const manualAdjustment = asNumber(adjustmentInput ? adjustmentInput.value : 0);
       const paidDate = paidDateInput ? (paidDateInput.value || "").trim() : "";
       const approvedLateArrangement = lateArrangementInput ? lateArrangementInput.value === "yes" : false;
@@ -784,14 +792,19 @@
       const lateFeeCharge = approvedLateArrangement || isExempt ? 0 : storedLateFeeCharge;
       const currentCharge = isExempt ? 0 : +(proratedCharge + manualAdjustment).toFixed(2);
       const totalDue = isExempt ? 0 : +(priorBalance + proratedCharge + manualAdjustment + lateFeeCharge).toFixed(2);
-      const remainingBalance = isExempt ? 0 : +(totalDue - amountPaid).toFixed(2);
-      const statusText = deriveStatus(totalDue, amountPaid, paidDate, isExempt, lateFeeCharge);
+      const projectedAmountPaid = +(amountPaidSoFar + paymentReceivedNow).toFixed(2);
+      const remainingBalance = isExempt ? 0 : +(totalDue - projectedAmountPaid).toFixed(2);
+      const statusText = deriveStatus(totalDue, projectedAmountPaid, paidDate, isExempt, lateFeeCharge);
 
       row.dataset.remainingBalance = String(remainingBalance);
       row.dataset.status = statusText;
 
       if (totalDueEl) {
         totalDueEl.textContent = formatMoney(totalDue);
+      }
+
+      if (paidSoFarEl) {
+        paidSoFarEl.textContent = formatMoney(projectedAmountPaid);
       }
 
       if (lateFeeEl) {
