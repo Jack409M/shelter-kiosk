@@ -256,6 +256,10 @@
     margin-top: 10px;
   }
 
+  .print-only-doc {
+    display: none;
+  }
+
   @media (max-width: 900px) {
     .paper-grid-2,
     .paper-grid-3,
@@ -273,7 +277,7 @@
   @media print {
     @page {
       size: letter portrait;
-      margin: 0.3in;
+      margin: 0.28in;
     }
 
     nav,
@@ -306,20 +310,187 @@
     }
 
     .pass-paper {
+      display: none !important;
+    }
+
+    .print-only-doc {
+      display: block !important;
+      font-family: Arial, sans-serif;
+      color: #000;
+    }
+
+    .print-sheet {
+      page-break-after: always;
+      break-after: page;
+      min-height: 10.35in;
+      box-sizing: border-box;
+    }
+
+    .print-sheet:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    .po-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+      line-height: 1.1;
+    }
+
+    .po-subtitle {
+      font-size: 10px;
+      margin: 0 0 6px 0;
+      line-height: 1.15;
+    }
+
+    .po-grid-2,
+    .po-grid-3,
+    .po-grid-4 {
+      display: grid;
+      gap: 5px 6px;
+      margin-bottom: 5px;
+    }
+
+    .po-grid-2 {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .po-grid-3 {
+      grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .po-grid-4 {
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+    }
+
+    .po-field {
       border: 1px solid #000;
-      padding: 8px;
-      box-shadow: none !important;
+      padding: 4px 5px;
+      min-height: 30px;
+      box-sizing: border-box;
     }
 
-    .resident-page,
-    .staff-page {
-      min-height: 10.1in;
+    .po-field.tall {
+      min-height: 42px;
     }
 
-    .paper-field,
-    .paper-section,
-    .hours-status-box,
-    .no-break {
+    .po-label {
+      display: block;
+      font-size: 8px;
+      line-height: 1.05;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .po-value {
+      font-size: 10px;
+      line-height: 1.12;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .po-check-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px 6px;
+      margin-bottom: 5px;
+    }
+
+    .po-check {
+      border: 1px solid #000;
+      padding: 4px 5px;
+      min-height: 24px;
+      display: flex;
+      align-items: center;
+      font-size: 10px;
+      line-height: 1.05;
+    }
+
+    .po-box {
+      width: 11px;
+      height: 11px;
+      border: 1px solid #000;
+      margin-right: 5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      line-height: 1;
+      flex: 0 0 11px;
+    }
+
+    .po-section {
+      border: 1px solid #000;
+      padding: 5px;
+      margin-bottom: 5px;
+      box-sizing: border-box;
+    }
+
+    .po-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin: 0 0 4px 0;
+      line-height: 1.08;
+    }
+
+    .po-split {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 6px;
+      align-items: start;
+    }
+
+    .po-status {
+      border: 1px solid #000;
+      padding: 4px 5px;
+      margin-bottom: 4px;
+    }
+
+    .po-status-title {
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.08;
+      margin-bottom: 2px;
+    }
+
+    .po-status-text {
+      font-size: 9px;
+      line-height: 1.12;
+    }
+
+    .po-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+    }
+
+    .po-table th,
+    .po-table td {
+      border: 1px solid #000;
+      padding: 2px 4px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 9px;
+      line-height: 1.08;
+    }
+
+    .po-rule-list {
+      margin: 0;
+      padding-left: 12px;
+      columns: 2;
+      column-gap: 16px;
+    }
+
+    .po-rule-list li {
+      margin: 0 0 2px 0;
+      font-size: 9px;
+      line-height: 1.08;
+    }
+
+    .po-no-break {
       page-break-inside: avoid;
       break-inside: avoid;
     }
@@ -673,6 +844,290 @@
       </div>
     </div>
 
+  </div>
+
+  <div class="print-only-doc">
+    <div class="print-sheet">
+      <div class="po-title">Pass Request</div>
+      <div class="po-subtitle">Page 1 resident copy</div>
+
+      <div class="po-grid-4">
+        <div class="po-field">
+          <span class="po-label">Resident</span>
+          <div class="po-value">{{ p.last_name }}, {{ p.first_name }}</div>
+        </div>
+        <div class="po-field">
+          <span class="po-label">Shelter</span>
+          <div class="po-value">{{ p.shelter }}</div>
+        </div>
+        <div class="po-field">
+          <span class="po-label">Type</span>
+          <div class="po-value">{{ pass_type_label }}</div>
+        </div>
+        <div class="po-field">
+          <span class="po-label">Status</span>
+          <div class="po-value">{{ p.status }}</div>
+        </div>
+      </div>
+
+      <div class="po-grid-4">
+        <div class="po-field">
+          <span class="po-label">Submitted</span>
+          <div class="po-value">{{ fmt_dt(p.created_at_local) }}</div>
+        </div>
+        <div class="po-field">
+          <span class="po-label">Request Date</span>
+          <div class="po-value">{{ pass_detail.request_date if pass_detail else "" }}</div>
+        </div>
+        <div class="po-field">
+          <span class="po-label">Resident Phone</span>
+          <div class="po-value">{{ pass_detail.resident_phone if pass_detail else "" }}</div>
+        </div>
+        <div class="po-field">
+          <span class="po-label">Resident Level</span>
+          <div class="po-value">{{ pass_detail.resident_level if pass_detail else "" }}</div>
+        </div>
+      </div>
+
+      <div class="po-grid-2">
+        <div class="po-field tall">
+          <span class="po-label">When</span>
+          <div class="po-value">
+            {% if pass_type_key in ["pass", "overnight"] %}
+              {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
+            {% else %}
+              {{ p.start_date }} to {{ p.end_date }}
+            {% endif %}
+          </div>
+        </div>
+        <div class="po-field tall">
+          <span class="po-label">Destination</span>
+          <div class="po-value">{{ p.destination or "" }}</div>
+        </div>
+      </div>
+
+      <div class="po-grid-2">
+        <div class="po-field">
+          <span class="po-label">Reason</span>
+          <div class="po-value">{{ p.reason or "" }}</div>
+        </div>
+        <div class="po-field">
+          <span class="po-label">Who Resident Will Be With</span>
+          <div class="po-value">{{ pass_detail.who_with if pass_detail else "" }}</div>
+        </div>
+      </div>
+
+      <div class="po-grid-2">
+        <div class="po-field tall">
+          <span class="po-label">Address Where Resident Will Be</span>
+          <div class="po-value">{{ pass_detail.destination_address if pass_detail else "" }}</div>
+        </div>
+        <div class="po-grid-2" style="margin-bottom:0;">
+          <div class="po-field">
+            <span class="po-label">Phone Number There</span>
+            <div class="po-value">{{ pass_detail.destination_phone if pass_detail else "" }}</div>
+          </div>
+          <div class="po-field">
+            <span class="po-label">Budgeted Amount</span>
+            <div class="po-value">{{ pass_detail.budgeted_amount if pass_detail else "" }}</div>
+          </div>
+          <div class="po-field">
+            <span class="po-label">Approved Amount</span>
+            <div class="po-value">{{ pass_detail.approved_amount if pass_detail and pass_detail.approved_amount else "" }}</div>
+          </div>
+          <div class="po-field">
+            <span class="po-label">Reviewed By</span>
+            <div class="po-value">{{ pass_detail.reviewed_by_name if pass_detail and pass_detail.reviewed_by_name else "" }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="po-field">
+        <span class="po-label">Reviewed At</span>
+        <div class="po-value">
+          {% if pass_detail and pass_detail.reviewed_at_local %}
+            {{ fmt_dt(pass_detail.reviewed_at_local) }}
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="height:5px;"></div>
+
+      <div class="po-check-row">
+        <div class="po-check">
+          <span class="po-box">{% if pass_detail and pass_detail.requirements_acknowledged == "yes" %}X{% endif %}</span>
+          Will meet requirements
+        </div>
+        <div class="po-check">
+          <span class="po-box">{% if pass_detail and pass_detail.requirements_acknowledged == "no" %}X{% endif %}</span>
+          Will not meet requirements
+        </div>
+      </div>
+
+      <div class="po-field">
+        <span class="po-label">If Requirements Will Not Be Met</span>
+        <div class="po-value">{{ pass_detail.requirements_not_met_explanation if pass_detail else "" }}</div>
+      </div>
+
+      <div style="height:5px;"></div>
+
+      <div class="po-grid-2">
+        <div class="po-field">
+          <span class="po-label">Companion Names</span>
+          <div class="po-value">{{ pass_detail.companion_names if pass_detail else "" }}</div>
+        </div>
+        <div class="po-field">
+          <span class="po-label">Companion Phone Numbers</span>
+          <div class="po-value">{{ pass_detail.companion_phone_numbers if pass_detail else "" }}</div>
+        </div>
+      </div>
+
+      <div class="po-grid-2">
+        <div class="po-field tall">
+          <span class="po-label">Resident Notes</span>
+          <div class="po-value">{{ p.resident_notes or "" }}</div>
+        </div>
+        <div class="po-field tall">
+          <span class="po-label">Staff Notes</span>
+          <div class="po-value">{{ p.staff_notes or "" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="print-sheet">
+      <div class="po-title">Staff Review</div>
+      <div class="po-subtitle">Page 2 staff copy</div>
+
+      <div class="po-split">
+        <div>
+          <div class="po-section po-no-break">
+            <div class="po-section-title">Request Summary</div>
+
+            <div class="po-grid-4">
+              <div class="po-field">
+                <span class="po-label">Resident</span>
+                <div class="po-value">{{ p.last_name }}, {{ p.first_name }}</div>
+              </div>
+              <div class="po-field">
+                <span class="po-label">Type</span>
+                <div class="po-value">{{ pass_type_label }}</div>
+              </div>
+              <div class="po-field">
+                <span class="po-label">Status</span>
+                <div class="po-value">{{ p.status }}</div>
+              </div>
+              <div class="po-field">
+                <span class="po-label">Shelter</span>
+                <div class="po-value">{{ p.shelter }}</div>
+              </div>
+            </div>
+
+            <div class="po-grid-2">
+              <div class="po-field">
+                <span class="po-label">When</span>
+                <div class="po-value">
+                  {% if pass_type_key in ["pass", "overnight"] %}
+                    {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
+                  {% else %}
+                    {{ p.start_date }} to {{ p.end_date }}
+                  {% endif %}
+                </div>
+              </div>
+              <div class="po-field">
+                <span class="po-label">Destination</span>
+                <div class="po-value">{{ p.destination or "" }}</div>
+              </div>
+            </div>
+          </div>
+
+          {% if hour_summary %}
+            <div class="po-section po-no-break">
+              <div class="po-section-title">Previous Week Attendance Hours</div>
+
+              <div class="po-status">
+                <div class="po-status-title">{{ hour_summary.status_label }}</div>
+                <div class="po-status-text">
+                  Productive: {{ hour_summary.productive_hours }} / {{ hour_summary.productive_required_hours }}
+                  | Work: {{ hour_summary.work_hours }} / {{ hour_summary.work_required_hours }}
+                  {% if not hour_summary.passes_requirement %}
+                    <br>
+                    Short by {{ hour_summary.productive_short_hours }} productive hours and {{ hour_summary.work_short_hours }} work hours.
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="po-grid-2">
+                <div class="po-field">
+                  <span class="po-label">Week</span>
+                  <div class="po-value">{{ hour_summary.week_label }}</div>
+                </div>
+                <div class="po-field">
+                  <span class="po-label">Productive / Work</span>
+                  <div class="po-value">{{ hour_summary.productive_hours }} / {{ hour_summary.work_hours }}</div>
+                </div>
+              </div>
+
+              {% if hour_summary.breakdown %}
+                <table class="po-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Credited</th>
+                      <th>Raw</th>
+                      <th>Cap</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in hour_summary.breakdown %}
+                      <tr>
+                        <td>{{ item.label }}</td>
+                        <td>{{ item.credited_hours }}</td>
+                        <td>{{ item.raw_hours }}</td>
+                        <td>{% if item.weekly_cap_hours is not none %}{{ item.weekly_cap_hours }}{% else %}N/A{% endif %}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <div class="po-value">No completed attendance hours found for the previous week.</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div>
+          {% if policy_check %}
+            <div class="po-section po-no-break">
+              <div class="po-section-title">{{ policy_check.title }}</div>
+
+              {% if policy_check.checks %}
+                {% for item in policy_check.checks %}
+                  <div class="po-status">
+                    <div class="po-status-title">{{ item.label }}: {{ item.value }}</div>
+                    {% if item.detail %}
+                      <div class="po-status-text">{{ item.detail }}</div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% endif %}
+
+              {% if policy_check.rule_lines %}
+                <div class="po-field">
+                  <span class="po-label">Rule Notes</span>
+                  <div class="po-value">
+                    <ul class="po-rule-list">
+                      {% for line in policy_check.rule_lines %}
+                        <li>{{ line }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
   </div>
 
   {% if p.status == "pending" %}
