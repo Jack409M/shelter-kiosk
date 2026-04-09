@@ -8,6 +8,7 @@ from flask import Blueprint, g, render_template, session
 from core.auth import require_login, require_shelter
 from core.db import db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
+from core.pass_retention import run_pass_retention_cleanup_for_shelter
 from routes.case_management_parts.helpers import current_enrollment_order_sql
 
 case_dashboard = Blueprint(
@@ -92,12 +93,14 @@ def dashboard():
     shelter = session.get("shelter")
     role = session.get("role")
 
+    run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
+
     shelter_filter, params = _scope_filter_and_params(shelter)
     placeholder = _request_placeholder()
 
     pending_pass_count_row = db_fetchone(
         f"""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS count
         FROM resident_passes
         WHERE status = {placeholder}
           AND LOWER(TRIM(shelter)) = LOWER(TRIM({placeholder}))
@@ -170,7 +173,7 @@ def dashboard():
 
     pending_transport_count_row = db_fetchone(
         f"""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS count
         FROM transport_requests
         WHERE status = {placeholder}
           AND LOWER(TRIM(shelter)) = LOWER(TRIM({placeholder}))
@@ -180,7 +183,7 @@ def dashboard():
 
     intake_drafts_count_row = db_fetchone(
         f"""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS count
         FROM intake_drafts
         WHERE LOWER(COALESCE(TRIM(shelter), '')) = LOWER(TRIM({placeholder}))
           AND status = 'draft'
