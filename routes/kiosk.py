@@ -11,6 +11,7 @@ from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from core.kiosk_activity_categories import (
     AA_NA_PARENT_ACTIVITY_LABEL,
+    VOLUNTEER_PARENT_ACTIVITY_LABEL,
     load_active_kiosk_activity_child_options_for_shelter,
     load_kiosk_activity_categories_for_shelter,
 )
@@ -206,6 +207,23 @@ def _active_aa_na_child_options_for_shelter(shelter: str) -> list[dict]:
     rows = load_active_kiosk_activity_child_options_for_shelter(
         shelter_key,
         AA_NA_PARENT_ACTIVITY_LABEL,
+    )
+
+    options: list[dict] = []
+    for row in rows or []:
+        option_label = (row.get("option_label") or "").strip()
+        if not option_label:
+            continue
+        options.append(dict(row))
+
+    return options
+
+
+def _active_volunteer_child_options_for_shelter(shelter: str) -> list[dict]:
+    shelter_key = (shelter or "").strip().lower()
+    rows = load_active_kiosk_activity_child_options_for_shelter(
+        shelter_key,
+        VOLUNTEER_PARENT_ACTIVITY_LABEL,
     )
 
     options: list[dict] = []
@@ -584,6 +602,7 @@ def kiosk_checkout(shelter: str):
     ip = get_client_ip()
     checkout_categories = _active_checkout_categories_for_shelter(shelter_key)
     aa_na_child_options = _active_aa_na_child_options_for_shelter(shelter_key)
+    volunteer_child_options = _active_volunteer_child_options_for_shelter(shelter_key)
 
     if not _kiosk_enabled():
         log_action(
@@ -603,12 +622,17 @@ def kiosk_checkout(shelter: str):
             checkout_categories=checkout_categories,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
+            volunteer_child_options=volunteer_child_options,
         )
 
     resident_code = (request.form.get("resident_code") or "").strip()
     destination = (request.form.get("destination") or "").strip()
     aa_na_meeting_1 = (request.form.get("aa_na_meeting_1") or "").strip()
     aa_na_meeting_2 = (request.form.get("aa_na_meeting_2") or "").strip()
+    volunteer_community_service_option = (
+        request.form.get("volunteer_community_service_option") or ""
+    ).strip()
 
     start_time_hour = (request.form.get("start_time_hour") or "").strip()
     start_time_minute = (request.form.get("start_time_minute") or "").strip()
@@ -645,6 +669,8 @@ def kiosk_checkout(shelter: str):
             checkout_categories=checkout_categories,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
+            volunteer_child_options=volunteer_child_options,
         ), 429
 
     if is_key_locked(resident_code_lock_key):
@@ -664,6 +690,8 @@ def kiosk_checkout(shelter: str):
             checkout_categories=checkout_categories,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
+            volunteer_child_options=volunteer_child_options,
         ), 429
 
     if is_rate_limited(
@@ -687,6 +715,8 @@ def kiosk_checkout(shelter: str):
             checkout_categories=checkout_categories,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
+            volunteer_child_options=volunteer_child_options,
         ), 429
 
     if is_rate_limited(f"kiosk_checkout_ip:{shelter_key}:{ip}", limit=15, window_seconds=60):
@@ -705,6 +735,8 @@ def kiosk_checkout(shelter: str):
             checkout_categories=checkout_categories,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
+            volunteer_child_options=volunteer_child_options,
         ), 429
 
     errors = []
@@ -750,7 +782,14 @@ def kiosk_checkout(shelter: str):
         if (item.get("option_label") or "").strip()
     }
 
+    volunteer_option_labels = {
+        (item.get("option_label") or "").strip()
+        for item in volunteer_child_options
+        if (item.get("option_label") or "").strip()
+    }
+
     is_aa_na_meeting = destination == AA_NA_PARENT_ACTIVITY_LABEL
+    is_volunteer_community_service = destination == VOLUNTEER_PARENT_ACTIVITY_LABEL
 
     if is_aa_na_meeting:
         if not aa_na_meeting_1:
@@ -763,6 +802,12 @@ def kiosk_checkout(shelter: str):
 
         if aa_na_meeting_1 and aa_na_meeting_2 and aa_na_meeting_1 == aa_na_meeting_2:
             errors.append("Meeting 1 and Meeting 2 cannot be the same.")
+
+    if is_volunteer_community_service:
+        if not volunteer_community_service_option:
+            errors.append("Volunteer or Community Service selection is required.")
+        elif volunteer_community_service_option not in volunteer_option_labels:
+            errors.append("Please select a valid Volunteer or Community Service option.")
 
     expected_back_value = None
     obligation_start_value = None
@@ -833,6 +878,8 @@ def kiosk_checkout(shelter: str):
             checkout_categories=checkout_categories,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
+            volunteer_child_options=volunteer_child_options,
         ), 400
 
     note_parts = []
@@ -845,6 +892,11 @@ def kiosk_checkout(shelter: str):
 
     if is_aa_na_meeting and aa_na_meeting_2:
         note_parts.append(f"Meeting 2: {aa_na_meeting_2}")
+
+    if is_volunteer_community_service and volunteer_community_service_option:
+        note_parts.append(
+            f"Volunteer or Community Service: {volunteer_community_service_option}"
+        )
 
     if requires_approved_pass and active_pass:
         pass_id = _row_get(active_pass, "id", 0, "")
@@ -889,6 +941,7 @@ def kiosk_checkout(shelter: str):
             f"destination={destination_value or ''} "
             f"meeting_1={aa_na_meeting_1 or ''} "
             f"meeting_2={aa_na_meeting_2 or ''} "
+            f"volunteer_option={volunteer_community_service_option or ''} "
             f"start={obligation_start_value or ''} "
             f"end={obligation_end_value or ''} "
             f"expected_back={expected_back_value or ''}"
