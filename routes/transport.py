@@ -62,14 +62,14 @@ def _cleanup_transport_requests(shelter: str) -> None:
     db_execute(
         """
         DELETE FROM transport_requests
-        WHERE shelter = %s
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
           AND status = %s
           AND needed_at < %s
         """
         if g.get("db_kind") == "pg"
         else """
         DELETE FROM transport_requests
-        WHERE shelter = ?
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
           AND status = ?
           AND needed_at < ?
         """,
@@ -79,14 +79,14 @@ def _cleanup_transport_requests(shelter: str) -> None:
     db_execute(
         """
         DELETE FROM transport_requests
-        WHERE shelter = %s
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
           AND status = %s
           AND needed_at < %s
         """
         if g.get("db_kind") == "pg"
         else """
         DELETE FROM transport_requests
-        WHERE shelter = ?
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
           AND status = ?
           AND needed_at < ?
         """,
@@ -110,7 +110,7 @@ def staff_transport_pending():
         SELECT *
         FROM transport_requests
         WHERE status = %s
-          AND shelter = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
         ORDER BY needed_at ASC, id ASC
         """
         if current_app.config.get("DATABASE_URL")
@@ -118,7 +118,7 @@ def staff_transport_pending():
         SELECT *
         FROM transport_requests
         WHERE status = ?
-          AND shelter = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
         ORDER BY needed_at ASC, id ASC
         """,
         ("pending", shelter),
@@ -146,7 +146,7 @@ def staff_transport_board():
         """
         SELECT *
         FROM transport_requests
-        WHERE shelter = %s
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
           AND status IN (%s, %s)
         ORDER BY needed_at ASC, id ASC
         """
@@ -154,7 +154,7 @@ def staff_transport_board():
         else """
         SELECT *
         FROM transport_requests
-        WHERE shelter = ?
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
           AND status IN (?, ?)
         ORDER BY needed_at ASC, id ASC
         """,
@@ -195,7 +195,7 @@ def staff_transport_print():
         """
         SELECT *
         FROM transport_requests
-        WHERE shelter = %s
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
           AND status IN (%s, %s)
         ORDER BY needed_at ASC, id ASC
         """
@@ -203,7 +203,7 @@ def staff_transport_print():
         else """
         SELECT *
         FROM transport_requests
-        WHERE shelter = ?
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
           AND status IN (?, ?)
         ORDER BY needed_at ASC, id ASC
         """,
@@ -317,13 +317,17 @@ def staff_transport_schedule(req_id: int):
         """
         UPDATE transport_requests
         SET status = %s, scheduled_at = %s, scheduled_by = %s, staff_notes = %s
-        WHERE id = %s AND shelter = %s AND status = %s
+        WHERE id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
+          AND status = %s
         """
         if g.get("db_kind") == "pg"
         else """
         UPDATE transport_requests
         SET status = ?, scheduled_at = ?, scheduled_by = ?, staff_notes = ?
-        WHERE id = ? AND shelter = ? AND status = ?
+        WHERE id = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
+          AND status = ?
         """,
         ("scheduled", utcnow_iso(), staff_id, staff_notes or None, req_id, shelter, "pending"),
     )
