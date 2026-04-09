@@ -171,6 +171,7 @@ def _register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(500)
     def internal_server_error(e):
+        app.logger.exception("Internal server error", exc_info=e)
         resident_response = _resident_safe_response()
         if resident_response is not None:
             return resident_response
@@ -178,10 +179,10 @@ def _register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(Exception)
     def unhandled_exception(e):
+        app.logger.exception("Unhandled exception", exc_info=e)
         resident_response = _resident_safe_response()
         if resident_response is not None:
             return resident_response
-        app.logger.exception("Unhandled exception", exc_info=e)
         return "Internal Server Error", 500
 
 
