@@ -8,7 +8,7 @@ from flask import flash, g, redirect, render_template, request, session, url_for
 from core.access import require_resident
 from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
-from core.db import db_fetchone, get_db
+from core.db import db_fetchone, db_transaction, get_db
 from core.helpers import utcnow_iso
 from core.pass_rules import (
     CHICAGO_TZ,
@@ -103,14 +103,24 @@ def resident_pass_request_view():
             flash("Resident session is incomplete. Please sign in again.", "error")
             return redirect(url_for("resident_requests.resident_signin"))
 
-        resident_row = _load_resident_profile(int(resident_id))
+        try:
+            resident_id_int = int(resident_id)
+        except Exception:
+            flash("Resident session is invalid. Please sign in again.", "error")
+            return redirect(url_for("resident_requests.resident_signin"))
+
+        resident_row = _load_resident_profile(resident_id_int)
+        if not resident_row:
+            flash("Resident record was not found. Please sign in again.", "error")
+            return redirect(url_for("resident_requests.resident_signin"))
+
         resident_level = (_resident_value(resident_row, "program_level", 2, "") or "").strip()
         resident_phone_from_db = (_resident_value(resident_row, "phone", 3, "") or "").strip()
 
         hour_summary = None
-        if resident_id and shelter:
+        if shelter:
             try:
-                hour_summary = calculate_prior_week_attendance_hours(int(resident_id), shelter)
+                hour_summary = calculate_prior_week_attendance_hours(resident_id_int, shelter)
             except Exception:
                 hour_summary = None
 
@@ -166,7 +176,7 @@ def resident_pass_request_view():
 
         errors: list[str] = []
 
-        if not resident_id or not first or not last or not shelter:
+        if not first or not last or not shelter:
             errors.append("Resident session is incomplete. Please sign in again.")
 
         if pass_type not in {"pass", "overnight", "special"}:
@@ -259,7 +269,6 @@ def resident_pass_request_view():
                 form_data=form_data,
             ), 400
 
-        conn = get_db()
         kind = g.get("db_kind")
         now_iso = utcnow_iso()
 
@@ -315,7 +324,7 @@ def resident_pass_request_view():
         staff_notes = "Submitted after configured deadline." if late_submission_flag else None
 
         pass_params = (
-            resident_id,
+            resident_id_int,
             shelter,
             pass_type,
             start_at_iso,
@@ -385,42 +394,53 @@ def resident_pass_request_view():
             """
         )
 
-        cur = conn.cursor()
         try:
-            cur.execute(pass_sql, pass_params)
-            if kind == "pg":
-                req_id = cur.fetchone()[0]
-            else:
-                conn.commit()
-                req_id = cur.lastrowid
+            with db_transaction():
+                conn = get_db()
+                cur = conn.cursor()
+                try:
+                    cur.execute(pass_sql, pass_params)
+                    if kind == "pg":
+                        req_id = cur.fetchone()[0]
+                    else:
+                        req_id = cur.lastrowid
 
-            detail_params = (
-                req_id,
-                resident_phone or None,
-                request_date or None,
-                resident_level or None,
-                requirements_acknowledged or None,
-                requirements_not_met_explanation or None,
-                final_reason or None,
-                who_with or None,
-                destination_address or None,
-                destination_phone or None,
-                companion_names or None,
-                companion_phone_numbers or None,
-                budgeted_amount or None,
-                None,
-                None,
-                None,
-                None,
-                now_iso,
-                now_iso,
-            )
-            cur.execute(detail_sql, detail_params)
-
-            if kind != "pg":
-                conn.commit()
-        finally:
-            cur.close()
+                    detail_params = (
+                        req_id,
+                        resident_phone or None,
+                        request_date or None,
+                        resident_level or None,
+                        requirements_acknowledged or None,
+                        requirements_not_met_explanation or None,
+                        final_reason or None,
+                        who_with or None,
+                        destination_address or None,
+                        destination_phone or None,
+                        companion_names or None,
+                        companion_phone_numbers or None,
+                        budgeted_amount or None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        now_iso,
+                        now_iso,
+                    )
+                    cur.execute(detail_sql, detail_params)
+                finally:
+                    cur.close()
+        except Exception:
+            flash("Your pass request could not be submitted. Please try again.", "error")
+            form_data = request.form.to_dict()
+            if not (form_data.get("request_date") or "").strip():
+                form_data["request_date"] = _today_chicago_iso()
+            return _render_pass_form(
+                shelter=shelter,
+                resident_level=resident_level,
+                resident_phone=resident_phone,
+                hour_summary=hour_summary,
+                form_data=form_data,
+            ), 500
 
         log_action(
             "pass",
