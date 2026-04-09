@@ -302,7 +302,6 @@
                 <th>Charge</th>
                 <th>Payment</th>
                 <th>Balance</th>
-                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -345,7 +344,6 @@
                       <span class="ledger-neutral">$0.00</span>
                     {% endif %}
                   </td>
-                  <td>{{ entry['notes'] or '—' }}</td>
                 </tr>
               {% endfor %}
             </tbody>
