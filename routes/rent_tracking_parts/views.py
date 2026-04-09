@@ -397,10 +397,7 @@ def _post_monthly_charge_ledger_entries(
         approved_late_arrangement = _bool_value(entry.get("approved_late_arrangement"))
         is_exempt = str(entry.get("status") or "").strip() == "Exempt"
 
-        subtotal_due = round(
-            prior_balance + prorated_charge + manual_adjustment,
-            2,
-        )
+        subtotal_due = round(prior_balance + prorated_charge + manual_adjustment, 2)
 
         late_fee_info = _calculate_late_fee_info(
             settings=settings,
