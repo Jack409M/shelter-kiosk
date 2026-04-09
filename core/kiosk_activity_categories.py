@@ -8,7 +8,10 @@ from core.helpers import utcnow_iso
 from .kiosk_activity_category_defaults import KIOSK_ACTIVITY_CATEGORY_SEEDS
 
 
+AA_NA_PARENT_ACTIVITY_KEY = "aa_na_meeting"
 AA_NA_PARENT_ACTIVITY_LABEL = "AA or NA Meeting"
+
+VOLUNTEER_PARENT_ACTIVITY_KEY = "volunteer_community_service"
 VOLUNTEER_PARENT_ACTIVITY_LABEL = "Volunteer or Community Service"
 
 AA_NA_MEETING_OPTION_SEEDS = [
@@ -37,15 +40,56 @@ VOLUNTEER_COMMUNITY_SERVICE_OPTION_SEEDS = [
     "None",
 ]
 
+LOCKED_PARENT_ACTIVITY_DEFINITIONS = {
+    AA_NA_PARENT_ACTIVITY_KEY: AA_NA_PARENT_ACTIVITY_LABEL,
+    VOLUNTEER_PARENT_ACTIVITY_KEY: VOLUNTEER_PARENT_ACTIVITY_LABEL,
+}
 
-def _child_option_seeds_for_parent(parent_activity_label: str) -> list[str]:
-    if parent_activity_label == AA_NA_PARENT_ACTIVITY_LABEL:
+
+def _normalized_text(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+def _child_option_seeds_for_parent(parent_activity_key: str) -> list[str]:
+    if parent_activity_key == AA_NA_PARENT_ACTIVITY_KEY:
         return AA_NA_MEETING_OPTION_SEEDS
 
-    if parent_activity_label == VOLUNTEER_PARENT_ACTIVITY_LABEL:
+    if parent_activity_key == VOLUNTEER_PARENT_ACTIVITY_KEY:
         return VOLUNTEER_COMMUNITY_SERVICE_OPTION_SEEDS
 
     return []
+
+
+def _canonical_activity_key_for_label(activity_label: str | None) -> str:
+    label = _normalized_text(activity_label)
+
+    if label == _normalized_text(AA_NA_PARENT_ACTIVITY_LABEL):
+        return AA_NA_PARENT_ACTIVITY_KEY
+
+    if label == _normalized_text(VOLUNTEER_PARENT_ACTIVITY_LABEL):
+        return VOLUNTEER_PARENT_ACTIVITY_KEY
+
+    return ""
+
+
+def _locked_parent_label_for_key(activity_key: str | None) -> str:
+    return LOCKED_PARENT_ACTIVITY_DEFINITIONS.get((activity_key or "").strip(), "")
+
+
+def _resolve_parent_definition(parent_activity_key_or_label: str | None) -> tuple[str, str]:
+    raw_value = (parent_activity_key_or_label or "").strip()
+
+    if not raw_value:
+        return AA_NA_PARENT_ACTIVITY_KEY, AA_NA_PARENT_ACTIVITY_LABEL
+
+    if raw_value in LOCKED_PARENT_ACTIVITY_DEFINITIONS:
+        return raw_value, LOCKED_PARENT_ACTIVITY_DEFINITIONS[raw_value]
+
+    inferred_key = _canonical_activity_key_for_label(raw_value)
+    if inferred_key:
+        return inferred_key, LOCKED_PARENT_ACTIVITY_DEFINITIONS[inferred_key]
+
+    return "", raw_value
 
 
 def _placeholder() -> str:
@@ -59,6 +103,27 @@ def _to_int(value: str | None, default: int) -> int:
         return default
 
 
+def _existing_activity_key_for_category_id(category_id: int, shelter: str) -> str:
+    ph = _placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT activity_key, activity_label
+        FROM kiosk_activity_categories
+        WHERE id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+        """,
+        (category_id, shelter),
+    )
+    if not row:
+        return ""
+
+    existing_key = (row.get("activity_key") or "").strip()
+    if existing_key:
+        return existing_key
+
+    return _canonical_activity_key_for_label(row.get("activity_label"))
+
+
 def ensure_kiosk_activity_categories_table() -> None:
     if g.get("db_kind") == "pg":
         db_execute(
@@ -66,6 +131,7 @@ def ensure_kiosk_activity_categories_table() -> None:
             CREATE TABLE IF NOT EXISTS kiosk_activity_categories (
                 id SERIAL PRIMARY KEY,
                 shelter TEXT NOT NULL,
+                activity_key TEXT,
                 activity_label TEXT NOT NULL,
                 active BOOLEAN NOT NULL DEFAULT TRUE,
                 sort_order INTEGER NOT NULL DEFAULT 0,
@@ -85,6 +151,7 @@ def ensure_kiosk_activity_categories_table() -> None:
             CREATE TABLE IF NOT EXISTS kiosk_activity_categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 shelter TEXT NOT NULL,
+                activity_key TEXT,
                 activity_label TEXT NOT NULL,
                 active INTEGER NOT NULL DEFAULT 1,
                 sort_order INTEGER NOT NULL DEFAULT 0,
@@ -100,6 +167,7 @@ def ensure_kiosk_activity_categories_table() -> None:
         )
 
     statements = [
+        "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS activity_key TEXT",
         "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS activity_label TEXT",
         "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0",
@@ -125,6 +193,7 @@ def ensure_kiosk_activity_child_options_table() -> None:
             CREATE TABLE IF NOT EXISTS kiosk_activity_child_options (
                 id SERIAL PRIMARY KEY,
                 shelter TEXT NOT NULL,
+                parent_activity_key TEXT,
                 parent_activity_label TEXT NOT NULL,
                 option_label TEXT NOT NULL,
                 active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -140,6 +209,7 @@ def ensure_kiosk_activity_child_options_table() -> None:
             CREATE TABLE IF NOT EXISTS kiosk_activity_child_options (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 shelter TEXT NOT NULL,
+                parent_activity_key TEXT,
                 parent_activity_label TEXT NOT NULL,
                 option_label TEXT NOT NULL,
                 active INTEGER NOT NULL DEFAULT 1,
@@ -151,6 +221,7 @@ def ensure_kiosk_activity_child_options_table() -> None:
         )
 
     statements = [
+        "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS parent_activity_key TEXT",
         "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS parent_activity_label TEXT",
         "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS option_label TEXT",
         "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1",
@@ -165,6 +236,56 @@ def ensure_kiosk_activity_child_options_table() -> None:
             pass
 
 
+def _backfill_locked_activity_keys_for_shelter(shelter: str) -> None:
+    ensure_kiosk_activity_categories_table()
+    now = utcnow_iso()
+    ph = _placeholder()
+
+    for activity_key, activity_label in LOCKED_PARENT_ACTIVITY_DEFINITIONS.items():
+        db_execute(
+            f"""
+            UPDATE kiosk_activity_categories
+            SET activity_key = {ph},
+                updated_at = {ph}
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND LOWER(COALESCE(activity_label, '')) = {ph}
+              AND COALESCE(activity_key, '') = ''
+            """,
+            (
+                activity_key,
+                now,
+                shelter,
+                activity_label.lower(),
+            ),
+        )
+
+
+def _backfill_locked_parent_keys_for_shelter(shelter: str) -> None:
+    ensure_kiosk_activity_child_options_table()
+    now = utcnow_iso()
+    ph = _placeholder()
+
+    for parent_activity_key, parent_activity_label in LOCKED_PARENT_ACTIVITY_DEFINITIONS.items():
+        db_execute(
+            f"""
+            UPDATE kiosk_activity_child_options
+            SET parent_activity_key = {ph},
+                parent_activity_label = {ph},
+                updated_at = {ph}
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
+              AND COALESCE(parent_activity_key, '') = ''
+            """,
+            (
+                parent_activity_key,
+                parent_activity_label,
+                now,
+                shelter,
+                parent_activity_label.lower(),
+            ),
+        )
+
+
 def _insert_seed_rows_for_shelter(shelter: str) -> None:
     seed_rows = KIOSK_ACTIVITY_CATEGORY_SEEDS.get(shelter, [])
     if not seed_rows:
@@ -175,11 +296,14 @@ def _insert_seed_rows_for_shelter(shelter: str) -> None:
 
     for sort_order, row in enumerate(seed_rows, start=1):
         label, counts_work, counts_productive, weekly_cap_hours, requires_pass = row
+        activity_key = _canonical_activity_key_for_label(label) or None
+
         db_execute(
             (
                 """
                 INSERT INTO kiosk_activity_categories (
                     shelter,
+                    activity_key,
                     activity_label,
                     active,
                     sort_order,
@@ -191,13 +315,14 @@ def _insert_seed_rows_for_shelter(shelter: str) -> None:
                     created_at,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 if is_pg
                 else
                 """
                 INSERT INTO kiosk_activity_categories (
                     shelter,
+                    activity_key,
                     activity_label,
                     active,
                     sort_order,
@@ -209,11 +334,12 @@ def _insert_seed_rows_for_shelter(shelter: str) -> None:
                     created_at,
                     updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
             ),
             (
                 shelter,
+                activity_key,
                 label,
                 True if is_pg else 1,
                 sort_order,
@@ -230,11 +356,12 @@ def _insert_seed_rows_for_shelter(shelter: str) -> None:
 
 def _insert_child_seed_rows_for_shelter(
     shelter: str,
-    parent_activity_label: str = AA_NA_PARENT_ACTIVITY_LABEL,
+    parent_activity_key_or_label: str = AA_NA_PARENT_ACTIVITY_KEY,
 ) -> None:
     now = utcnow_iso()
     is_pg = g.get("db_kind") == "pg"
-    seed_rows = _child_option_seeds_for_parent(parent_activity_label)
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+    seed_rows = _child_option_seeds_for_parent(parent_activity_key)
 
     for sort_order, option_label in enumerate(seed_rows, start=1):
         db_execute(
@@ -242,6 +369,7 @@ def _insert_child_seed_rows_for_shelter(
                 """
                 INSERT INTO kiosk_activity_child_options (
                     shelter,
+                    parent_activity_key,
                     parent_activity_label,
                     option_label,
                     active,
@@ -249,13 +377,14 @@ def _insert_child_seed_rows_for_shelter(
                     created_at,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 if is_pg
                 else
                 """
                 INSERT INTO kiosk_activity_child_options (
                     shelter,
+                    parent_activity_key,
                     parent_activity_label,
                     option_label,
                     active,
@@ -263,11 +392,12 @@ def _insert_child_seed_rows_for_shelter(
                     created_at,
                     updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """
             ),
             (
                 shelter,
+                parent_activity_key or None,
                 parent_activity_label,
                 option_label,
                 True if is_pg else 1,
@@ -290,6 +420,7 @@ def ensure_default_kiosk_activity_categories_for_shelter(shelter: str) -> None:
     )
     row_count = int((count_row or {}).get("row_count") or 0)
     if row_count > 0:
+        _backfill_locked_activity_keys_for_shelter(shelter)
         return
 
     _insert_seed_rows_for_shelter(shelter)
@@ -297,25 +428,43 @@ def ensure_default_kiosk_activity_categories_for_shelter(shelter: str) -> None:
 
 def ensure_default_kiosk_activity_child_options_for_shelter(
     shelter: str,
-    parent_activity_label: str = AA_NA_PARENT_ACTIVITY_LABEL,
+    parent_activity_key_or_label: str = AA_NA_PARENT_ACTIVITY_KEY,
 ) -> None:
     ensure_kiosk_activity_child_options_table()
-    ph = _placeholder()
+    _backfill_locked_parent_keys_for_shelter(shelter)
 
-    count_row = db_fetchone(
-        f"""
-        SELECT COUNT(*) AS row_count
-        FROM kiosk_activity_child_options
-        WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
-        """,
-        (shelter, parent_activity_label.lower()),
-    )
+    ph = _placeholder()
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+
+    if parent_activity_key:
+        count_row = db_fetchone(
+            f"""
+            SELECT COUNT(*) AS row_count
+            FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND (
+                    LOWER(COALESCE(parent_activity_key, '')) = {ph}
+                 OR LOWER(COALESCE(parent_activity_label, '')) = {ph}
+              )
+            """,
+            (shelter, parent_activity_key.lower(), parent_activity_label.lower()),
+        )
+    else:
+        count_row = db_fetchone(
+            f"""
+            SELECT COUNT(*) AS row_count
+            FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
+            """,
+            (shelter, parent_activity_label.lower()),
+        )
+
     row_count = int((count_row or {}).get("row_count") or 0)
     if row_count > 0:
         return
 
-    _insert_child_seed_rows_for_shelter(shelter, parent_activity_label)
+    _insert_child_seed_rows_for_shelter(shelter, parent_activity_key or parent_activity_label)
 
 
 def reset_kiosk_activity_categories_for_shelter(shelter: str) -> None:
@@ -335,21 +484,35 @@ def reset_kiosk_activity_categories_for_shelter(shelter: str) -> None:
 
 def reset_kiosk_activity_child_options_for_shelter(
     shelter: str,
-    parent_activity_label: str = AA_NA_PARENT_ACTIVITY_LABEL,
+    parent_activity_key_or_label: str = AA_NA_PARENT_ACTIVITY_KEY,
 ) -> None:
     ensure_kiosk_activity_child_options_table()
     ph = _placeholder()
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
 
-    db_execute(
-        f"""
-        DELETE FROM kiosk_activity_child_options
-        WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
-        """,
-        (shelter, parent_activity_label.lower()),
-    )
+    if parent_activity_key:
+        db_execute(
+            f"""
+            DELETE FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND (
+                    LOWER(COALESCE(parent_activity_key, '')) = {ph}
+                 OR LOWER(COALESCE(parent_activity_label, '')) = {ph}
+              )
+            """,
+            (shelter, parent_activity_key.lower(), parent_activity_label.lower()),
+        )
+    else:
+        db_execute(
+            f"""
+            DELETE FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
+            """,
+            (shelter, parent_activity_label.lower()),
+        )
 
-    _insert_child_seed_rows_for_shelter(shelter, parent_activity_label)
+    _insert_child_seed_rows_for_shelter(shelter, parent_activity_key or parent_activity_label)
 
 
 def load_kiosk_activity_categories_for_shelter(shelter: str) -> list[dict]:
@@ -362,6 +525,7 @@ def load_kiosk_activity_categories_for_shelter(shelter: str) -> list[dict]:
         SELECT
             id,
             shelter,
+            activity_key,
             activity_label,
             active,
             sort_order,
@@ -383,6 +547,7 @@ def load_kiosk_activity_categories_for_shelter(shelter: str) -> list[dict]:
         categories.append(
             {
                 "id": "",
+                "activity_key": "",
                 "activity_label": "",
                 "active": True,
                 "sort_order": "",
@@ -399,28 +564,52 @@ def load_kiosk_activity_categories_for_shelter(shelter: str) -> list[dict]:
 
 def load_kiosk_activity_child_options_for_shelter(
     shelter: str,
-    parent_activity_label: str = AA_NA_PARENT_ACTIVITY_LABEL,
+    parent_activity_key_or_label: str = AA_NA_PARENT_ACTIVITY_KEY,
 ) -> list[dict]:
     ensure_kiosk_activity_child_options_table()
-    ensure_default_kiosk_activity_child_options_for_shelter(shelter, parent_activity_label)
+    ensure_default_kiosk_activity_child_options_for_shelter(shelter, parent_activity_key_or_label)
     ph = _placeholder()
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
 
-    rows = db_fetchall(
-        f"""
-        SELECT
-            id,
-            shelter,
-            parent_activity_label,
-            option_label,
-            active,
-            sort_order
-        FROM kiosk_activity_child_options
-        WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
-        ORDER BY sort_order ASC, id ASC
-        """,
-        (shelter, parent_activity_label.lower()),
-    )
+    if parent_activity_key:
+        rows = db_fetchall(
+            f"""
+            SELECT
+                id,
+                shelter,
+                parent_activity_key,
+                parent_activity_label,
+                option_label,
+                active,
+                sort_order
+            FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND (
+                    LOWER(COALESCE(parent_activity_key, '')) = {ph}
+                 OR LOWER(COALESCE(parent_activity_label, '')) = {ph}
+              )
+            ORDER BY sort_order ASC, id ASC
+            """,
+            (shelter, parent_activity_key.lower(), parent_activity_label.lower()),
+        )
+    else:
+        rows = db_fetchall(
+            f"""
+            SELECT
+                id,
+                shelter,
+                parent_activity_key,
+                parent_activity_label,
+                option_label,
+                active,
+                sort_order
+            FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
+            ORDER BY sort_order ASC, id ASC
+            """,
+            (shelter, parent_activity_label.lower()),
+        )
 
     options = [dict(row) for row in (rows or [])]
     blank_rows_needed = max(0, 8 - len(options))
@@ -428,6 +617,7 @@ def load_kiosk_activity_child_options_for_shelter(
         options.append(
             {
                 "id": "",
+                "parent_activity_key": parent_activity_key,
                 "parent_activity_label": parent_activity_label,
                 "option_label": "",
                 "active": True,
@@ -440,33 +630,64 @@ def load_kiosk_activity_child_options_for_shelter(
 
 def load_active_kiosk_activity_child_options_for_shelter(
     shelter: str,
-    parent_activity_label: str = AA_NA_PARENT_ACTIVITY_LABEL,
+    parent_activity_key_or_label: str = AA_NA_PARENT_ACTIVITY_KEY,
 ) -> list[dict]:
     ensure_kiosk_activity_child_options_table()
-    ensure_default_kiosk_activity_child_options_for_shelter(shelter, parent_activity_label)
+    ensure_default_kiosk_activity_child_options_for_shelter(shelter, parent_activity_key_or_label)
     ph = _placeholder()
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+    active_value = True if g.get("db_kind") == "pg" else 1
 
-    rows = db_fetchall(
-        f"""
-        SELECT
-            id,
-            shelter,
-            parent_activity_label,
-            option_label,
-            active,
-            sort_order
-        FROM kiosk_activity_child_options
-        WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
-          AND active = {ph}
-        ORDER BY sort_order ASC, id ASC
-        """,
-        (
-            shelter,
-            parent_activity_label.lower(),
-            True if g.get("db_kind") == "pg" else 1,
-        ),
-    )
+    if parent_activity_key:
+        rows = db_fetchall(
+            f"""
+            SELECT
+                id,
+                shelter,
+                parent_activity_key,
+                parent_activity_label,
+                option_label,
+                active,
+                sort_order
+            FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND (
+                    LOWER(COALESCE(parent_activity_key, '')) = {ph}
+                 OR LOWER(COALESCE(parent_activity_label, '')) = {ph}
+              )
+              AND active = {ph}
+            ORDER BY sort_order ASC, id ASC
+            """,
+            (
+                shelter,
+                parent_activity_key.lower(),
+                parent_activity_label.lower(),
+                active_value,
+            ),
+        )
+    else:
+        rows = db_fetchall(
+            f"""
+            SELECT
+                id,
+                shelter,
+                parent_activity_key,
+                parent_activity_label,
+                option_label,
+                active,
+                sort_order
+            FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+              AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
+              AND active = {ph}
+            ORDER BY sort_order ASC, id ASC
+            """,
+            (
+                shelter,
+                parent_activity_label.lower(),
+                active_value,
+            ),
+        )
 
     return [dict(row) for row in (rows or [])]
 
@@ -478,6 +699,7 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
     is_pg = g.get("db_kind") == "pg"
 
     row_ids = request.form.getlist("category_id[]")
+    row_keys = request.form.getlist("activity_key[]")
     labels = request.form.getlist("activity_label[]")
     active_values = request.form.getlist("active[]")
     sort_orders = request.form.getlist("sort_order[]")
@@ -498,6 +720,7 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
 
     total_rows = max(
         len(row_ids),
+        len(row_keys),
         len(labels),
         len(sort_orders),
         len(cap_values),
@@ -506,6 +729,7 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
 
     for idx in range(total_rows):
         raw_id = row_ids[idx].strip() if idx < len(row_ids) and row_ids[idx] else ""
+        posted_key = row_keys[idx].strip() if idx < len(row_keys) and row_keys[idx] else ""
         label = labels[idx].strip() if idx < len(labels) and labels[idx] else ""
         sort_order = _to_int(sort_orders[idx] if idx < len(sort_orders) else "", idx + 1)
         weekly_cap_raw = cap_values[idx].strip() if idx < len(cap_values) and cap_values[idx] else ""
@@ -528,12 +752,16 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
 
         if raw_id.isdigit():
             category_id = int(raw_id)
+            existing_key = _existing_activity_key_for_category_id(category_id, shelter)
+            activity_key = existing_key or posted_key or _canonical_activity_key_for_label(label) or None
+
             keep_ids.append(category_id)
             db_execute(
                 (
                     """
                     UPDATE kiosk_activity_categories
-                    SET activity_label = %s,
+                    SET activity_key = %s,
+                        activity_label = %s,
                         active = %s,
                         sort_order = %s,
                         counts_as_work_hours = %s,
@@ -549,7 +777,8 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                     else
                     """
                     UPDATE kiosk_activity_categories
-                    SET activity_label = ?,
+                    SET activity_key = ?,
+                        activity_label = ?,
                         active = ?,
                         sort_order = ?,
                         counts_as_work_hours = ?,
@@ -563,6 +792,7 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                     """
                 ),
                 (
+                    activity_key,
                     label,
                     is_active if is_pg else int(is_active),
                     sort_order,
@@ -578,11 +808,14 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
             )
             continue
 
+        activity_key = posted_key or _canonical_activity_key_for_label(label) or None
+
         inserted = db_fetchone(
             (
                 """
                 INSERT INTO kiosk_activity_categories (
                     shelter,
+                    activity_key,
                     activity_label,
                     active,
                     sort_order,
@@ -594,7 +827,7 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                     created_at,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """
                 if is_pg
@@ -602,6 +835,7 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                 """
                 INSERT INTO kiosk_activity_categories (
                     shelter,
+                    activity_key,
                     activity_label,
                     active,
                     sort_order,
@@ -613,12 +847,13 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                     created_at,
                     updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING id
                 """
             ),
             (
                 shelter,
+                activity_key,
                 label,
                 is_active if is_pg else int(is_active),
                 sort_order,
@@ -656,12 +891,13 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
 
 def save_kiosk_activity_child_options_for_shelter(
     shelter: str,
-    parent_activity_label: str = AA_NA_PARENT_ACTIVITY_LABEL,
+    parent_activity_key_or_label: str = AA_NA_PARENT_ACTIVITY_KEY,
 ) -> None:
     ensure_kiosk_activity_child_options_table()
     ph = _placeholder()
     now = utcnow_iso()
     is_pg = g.get("db_kind") == "pg"
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
 
     row_ids = request.form.getlist("child_option_id[]")
     option_labels = request.form.getlist("child_option_label[]")
@@ -697,35 +933,38 @@ def save_kiosk_activity_child_options_for_shelter(
                 (
                     """
                     UPDATE kiosk_activity_child_options
-                    SET option_label = %s,
+                    SET parent_activity_key = %s,
+                        parent_activity_label = %s,
+                        option_label = %s,
                         active = %s,
                         sort_order = %s,
                         updated_at = %s
                     WHERE id = %s
                       AND LOWER(COALESCE(shelter, '')) = %s
-                      AND LOWER(COALESCE(parent_activity_label, '')) = %s
                     """
                     if is_pg
                     else
                     """
                     UPDATE kiosk_activity_child_options
-                    SET option_label = ?,
+                    SET parent_activity_key = ?,
+                        parent_activity_label = ?,
+                        option_label = ?,
                         active = ?,
                         sort_order = ?,
                         updated_at = ?
                     WHERE id = ?
                       AND LOWER(COALESCE(shelter, '')) = ?
-                      AND LOWER(COALESCE(parent_activity_label, '')) = ?
                     """
                 ),
                 (
+                    parent_activity_key or None,
+                    parent_activity_label,
                     option_label,
                     is_active if is_pg else int(is_active),
                     sort_order,
                     now,
                     option_id,
                     shelter,
-                    parent_activity_label.lower(),
                 ),
             )
             continue
@@ -735,6 +974,7 @@ def save_kiosk_activity_child_options_for_shelter(
                 """
                 INSERT INTO kiosk_activity_child_options (
                     shelter,
+                    parent_activity_key,
                     parent_activity_label,
                     option_label,
                     active,
@@ -742,7 +982,7 @@ def save_kiosk_activity_child_options_for_shelter(
                     created_at,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """
                 if is_pg
@@ -750,6 +990,7 @@ def save_kiosk_activity_child_options_for_shelter(
                 """
                 INSERT INTO kiosk_activity_child_options (
                     shelter,
+                    parent_activity_key,
                     parent_activity_label,
                     option_label,
                     active,
@@ -757,12 +998,13 @@ def save_kiosk_activity_child_options_for_shelter(
                     created_at,
                     updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 RETURNING id
                 """
             ),
             (
                 shelter,
+                parent_activity_key or None,
                 parent_activity_label,
                 option_label,
                 is_active if is_pg else int(is_active),
@@ -780,17 +1022,29 @@ def save_kiosk_activity_child_options_for_shelter(
             f"""
             DELETE FROM kiosk_activity_child_options
             WHERE LOWER(COALESCE(shelter, '')) = {ph}
-              AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
               AND id NOT IN ({keep_placeholders})
             """,
-            tuple([shelter, parent_activity_label.lower()] + keep_ids),
+            tuple([shelter] + keep_ids),
         )
     else:
-        db_execute(
-            f"""
-            DELETE FROM kiosk_activity_child_options
-            WHERE LOWER(COALESCE(shelter, '')) = {ph}
-              AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
-            """,
-            (shelter, parent_activity_label.lower()),
-        )
+        if parent_activity_key:
+            db_execute(
+                f"""
+                DELETE FROM kiosk_activity_child_options
+                WHERE LOWER(COALESCE(shelter, '')) = {ph}
+                  AND (
+                        LOWER(COALESCE(parent_activity_key, '')) = {ph}
+                     OR LOWER(COALESCE(parent_activity_label, '')) = {ph}
+                  )
+                """,
+                (shelter, parent_activity_key.lower(), parent_activity_label.lower()),
+            )
+        else:
+            db_execute(
+                f"""
+                DELETE FROM kiosk_activity_child_options
+                WHERE LOWER(COALESCE(shelter, '')) = {ph}
+                  AND LOWER(COALESCE(parent_activity_label, '')) = {ph}
+                """,
+                (shelter, parent_activity_label.lower()),
+            )
