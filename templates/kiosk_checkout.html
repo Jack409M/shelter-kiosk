@@ -166,6 +166,7 @@
                 value="{{ item_label }}"
                 data-requires-approved-pass="{{ '1' if item.get('requires_approved_pass') else '0' }}"
                 data-is-aa-na-meeting="{{ '1' if item_label == aa_na_parent_activity_label else '0' }}"
+                data-is-volunteer-community-service="{{ '1' if item_label == volunteer_parent_activity_label else '0' }}"
                 {% if selected_destination == item_label %}selected{% endif %}
               >
                 {{ item_label }}
@@ -196,6 +197,20 @@
             {% for item in aa_na_child_options %}
               {% set option_label = item.get('option_label', '') %}
               <option value="{{ option_label }}" {% if selected_meeting_2 == option_label %}selected{% endif %}>
+                {{ option_label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div id="volunteer_community_service_wrap" class="hidden">
+          <label for="volunteer_community_service_option">Volunteer or Community Service</label>
+          <select id="volunteer_community_service_option" name="volunteer_community_service_option" autocomplete="off">
+            <option value="">Select location</option>
+            {% set selected_volunteer_option = request.form.get('volunteer_community_service_option', '') %}
+            {% for item in volunteer_child_options %}
+              {% set option_label = item.get('option_label', '') %}
+              <option value="{{ option_label }}" {% if selected_volunteer_option == option_label %}selected{% endif %}>
                 {{ option_label }}
               </option>
             {% endfor %}
@@ -330,6 +345,9 @@
       const aaNaMeeting1 = document.getElementById("aa_na_meeting_1");
       const aaNaMeeting2 = document.getElementById("aa_na_meeting_2");
 
+      const volunteerWrap = document.getElementById("volunteer_community_service_wrap");
+      const volunteerSelect = document.getElementById("volunteer_community_service_option");
+
       const startWrap = document.getElementById("start_time_wrap");
       const endWrap = document.getElementById("end_time_wrap");
       const expectedBackWrap = document.getElementById("expected_back_wrap");
@@ -359,6 +377,10 @@
         && selectedOption.dataset
         && selectedOption.dataset.isAaNaMeeting === "1";
 
+      const isVolunteerCommunityService = selectedOption
+        && selectedOption.dataset
+        && selectedOption.dataset.isVolunteerCommunityService === "1";
+
       if (aaNaMeeting1Wrap) {
         aaNaMeeting1Wrap.classList.toggle("hidden", !isAaNaMeeting);
       }
@@ -376,6 +398,17 @@
 
       if (aaNaMeeting2 && !isAaNaMeeting) {
         aaNaMeeting2.value = "";
+      }
+
+      if (volunteerWrap) {
+        volunteerWrap.classList.toggle("hidden", !isVolunteerCommunityService);
+      }
+
+      if (volunteerSelect) {
+        volunteerSelect.required = isVolunteerCommunityService;
+        if (!isVolunteerCommunityService) {
+          volunteerSelect.value = "";
+        }
       }
 
       if (startWrap) {
