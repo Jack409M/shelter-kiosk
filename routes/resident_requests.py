@@ -116,7 +116,6 @@ def resident_pass_request():
 
 @resident_requests.route("/transport", methods=["GET", "POST"])
 def resident_transport():
-
     @require_resident
     def _inner():
         init_db()
@@ -165,23 +164,48 @@ def resident_transport():
             return render_template("resident_transport.html", shelter=shelter), 400
 
         kind = g.get("db_kind")
+        needed_iso = needed_dt.replace(microsecond=0).isoformat()
+        submitted = utcnow_iso()
+
         sql = (
             """
-            INSERT INTO transport_requests
-            (shelter, resident_identifier, first_name, last_name, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'pending', %s)
+            INSERT INTO transport_requests (
+                shelter,
+                resident_identifier,
+                first_name,
+                last_name,
+                needed_at,
+                pickup_location,
+                destination,
+                reason,
+                resident_notes,
+                callback_phone,
+                status,
+                submitted_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """
             if kind == "pg"
-            else """
-            INSERT INTO transport_requests
-            (shelter, resident_identifier, first_name, last_name, needed_at, pickup_location, destination, reason, resident_notes, callback_phone, status, submitted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+            else
+            """
+            INSERT INTO transport_requests (
+                shelter,
+                resident_identifier,
+                first_name,
+                last_name,
+                needed_at,
+                pickup_location,
+                destination,
+                reason,
+                resident_notes,
+                callback_phone,
+                status,
+                submitted_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         )
-
-        needed_iso = needed_dt.replace(microsecond=0).isoformat()
-        submitted = utcnow_iso()
 
         params = (
             shelter,
@@ -194,6 +218,7 @@ def resident_transport():
             reason or None,
             resident_notes or None,
             callback_phone or None,
+            "pending",
             submitted,
         )
 
