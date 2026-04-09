@@ -313,10 +313,6 @@
     box-shadow: 0 0 0 2px rgba(224, 205, 122, 0.18);
   }
 
-  .rent-notes-input {
-    min-width: 180px;
-  }
-
   .rent-entry-details {
     margin-top: 14px;
     border-top: 1px dashed var(--border);
@@ -568,13 +564,13 @@
                           </div>
 
                           <div class="cmx-button-row" style="margin-top:10px;">
-  <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_ledger', resident_id=entry['resident_id']) }}">
-    Rent Ledger
-  </a>
-  <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=entry['resident_id']) }}">
-    Rent Summary
-  </a>
-</div>
+                            <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_ledger', resident_id=entry['resident_id']) }}">
+                              Rent Ledger
+                            </a>
+                            <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=entry['resident_id']) }}">
+                              Rent Summary
+                            </a>
+                          </div>
                         </div>
 
                         <div>
@@ -621,11 +617,6 @@
                           <label class="rent-field-label">Remaining</label>
                           <div class="rent-money rent-remaining js-remaining-balance">${{ '%.2f'|format(entry['remaining_balance'] or 0) }}</div>
                         </div>
-
-                        <div class="rent-notes-input" style="grid-column: span 3;">
-                          <label class="rent-field-label">Notes</label>
-                          <input type="text" name="notes_{{ entry['id'] }}" value="{{ entry['notes'] or '' }}" placeholder="Optional">
-                        </div>
                       </div>
 
                       <details class="rent-entry-details">
@@ -658,7 +649,6 @@
                               {{ entry['occupancy_start_date'] }} to {{ entry['occupancy_end_date'] or entry['occupancy_start_date'] }}
                             {% else %}
                               —
-
                             {% endif %}
                           </div>
 
