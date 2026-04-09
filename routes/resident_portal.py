@@ -8,9 +8,9 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from core.access import require_resident
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
+from core.pass_retention import run_pass_retention_cleanup_for_shelter
 from core.pass_rules import pass_type_label
 from core.runtime import init_db
-from routes.attendance_parts.passes import _run_pass_retention_cleanup_for_shelter
 
 
 resident_portal = Blueprint(
@@ -50,7 +50,7 @@ def home():
     resident_identifier = (session.get("resident_identifier") or "").strip()
     now_local = datetime.now(ZoneInfo("America/Chicago"))
 
-    _run_pass_retention_cleanup_for_shelter(shelter)
+    run_pass_retention_cleanup_for_shelter(shelter)
 
     pass_items = db_fetchall(
         """
