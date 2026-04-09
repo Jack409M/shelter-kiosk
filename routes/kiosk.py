@@ -11,6 +11,7 @@ from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from core.kiosk_activity_categories import load_kiosk_activity_categories_for_shelter
 from core.runtime import get_all_shelters, get_client_ip, init_db
+from routes.attendance_parts.helpers import complete_active_passes
 
 kiosk = Blueprint("kiosk", __name__)
 
@@ -121,50 +122,6 @@ def _active_pass_row(resident_id: int, shelter: str):
         LIMIT 1
         """,
         (resident_id, normalized_shelter, "approved", now_iso, now_iso, today_iso, today_iso),
-    )
-
-
-def _complete_active_passes(resident_id: int, shelter: str) -> None:
-    now_iso = utcnow_iso()
-    today_iso = now_iso[:10]
-
-    db_execute(
-        """
-        UPDATE resident_passes
-        SET status = %s,
-            updated_at = %s
-        WHERE resident_id = %s
-          AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
-          AND status = %s
-          AND (
-                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= %s AND end_at >= %s)
-             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= %s AND end_date >= %s)
-          )
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        UPDATE resident_passes
-        SET status = ?,
-            updated_at = ?
-        WHERE resident_id = ?
-          AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
-          AND status = ?
-          AND (
-                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= ? AND end_at >= ?)
-             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= ? AND end_date >= ?)
-          )
-        """,
-        (
-            "completed",
-            now_iso,
-            resident_id,
-            (shelter or "").strip().lower(),
-            "approved",
-            now_iso,
-            now_iso,
-            today_iso,
-            today_iso,
-        ),
     )
 
 
@@ -567,7 +524,7 @@ def kiosk_checkin(shelter: str):
         (resident_id, shelter_key, "check_in", checkin_time_value, None, None, None, None, None, None),
     )
 
-    _complete_active_passes(resident_id, shelter_key)
+    complete_active_passes(resident_id, shelter_key)
 
     log_note = ""
     if actual_end_required and actual_obligation_end_value:
