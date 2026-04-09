@@ -70,6 +70,8 @@ def _score_for_status(settings: dict, status: str) -> int:
 def _derive_status(total_due: float, amount_paid: float, paid_date: str | None, is_exempt: bool, late_fee_charge: float) -> str:
     if is_exempt:
         return "Exempt"
+    if total_due <= 0:
+        return "Paid"
     if amount_paid <= 0:
         return "Not Paid"
     if amount_paid < total_due:
