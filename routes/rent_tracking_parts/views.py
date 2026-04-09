@@ -21,8 +21,11 @@ from .data_access import (
     _active_residents_for_shelter,
     _ensure_default_rent_config,
     _history_rows_for_resident,
-    _load_sheet_entries,
+    _insert_rent_ledger_entry,
     _latest_prior_balance,
+    _ledger_entries_for_resident,
+    _ledger_summary_for_resident,
+    _load_sheet_entries,
     _program_enrollment_for_month,
     _resident_any_shelter,
     _resident_for_shelter,
@@ -371,6 +374,140 @@ def _group_entries_for_payment_page(shelter: str, entries: list[dict]) -> list[d
     return grouped_sections
 
 
+def _post_monthly_charge_ledger_entries(
+    shelter: str,
+    rent_year: int,
+    rent_month: int,
+    sheet: dict,
+    entries: list[dict],
+) -> None:
+    charge_date = f"{rent_year:04d}-{rent_month:02d}-01"
+
+    for entry in entries:
+        resident_id = entry["resident_id"]
+        sheet_entry_id = entry["id"]
+
+        existing_charge = db_fetchone(
+            (
+                """
+                SELECT id
+                FROM resident_rent_ledger_entries
+                WHERE resident_id = %s
+                  AND related_sheet_entry_id = %s
+                  AND source_code = %s
+                LIMIT 1
+                """
+                if g.get("db_kind") == "pg"
+                else
+                """
+                SELECT id
+                FROM resident_rent_ledger_entries
+                WHERE resident_id = ?
+                  AND related_sheet_entry_id = ?
+                  AND source_code = ?
+                LIMIT 1
+                """
+            ),
+            (resident_id, sheet_entry_id, "monthly_rent_charge"),
+        )
+        if existing_charge:
+            continue
+
+        prior_balance = round(_float_value(entry.get("prior_balance")), 2)
+        prorated_charge = round(_float_value(entry.get("prorated_charge")), 2)
+        late_fee_charge = round(_float_value(entry.get("late_fee_charge")), 2)
+        manual_adjustment = round(_float_value(entry.get("manual_adjustment")), 2)
+
+        if prior_balance > 0:
+            _insert_rent_ledger_entry(
+                resident_id=resident_id,
+                shelter=shelter,
+                entry_date=charge_date,
+                entry_type="charge",
+                description="Prior balance brought forward",
+                debit_amount=prior_balance,
+                credit_amount=0.0,
+                related_sheet_id=sheet["id"],
+                related_sheet_entry_id=sheet_entry_id,
+                related_month_year=rent_year,
+                related_month_month=rent_month,
+                source_code="prior_balance_brought_forward",
+                source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                notes=None,
+            )
+
+        if prorated_charge > 0:
+            _insert_rent_ledger_entry(
+                resident_id=resident_id,
+                shelter=shelter,
+                entry_date=charge_date,
+                entry_type="charge",
+                description="Monthly rent charge",
+                debit_amount=prorated_charge,
+                credit_amount=0.0,
+                related_sheet_id=sheet["id"],
+                related_sheet_entry_id=sheet_entry_id,
+                related_month_year=rent_year,
+                related_month_month=rent_month,
+                source_code="monthly_rent_charge",
+                source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                notes=entry.get("calculation_notes"),
+            )
+
+        if manual_adjustment > 0:
+            _insert_rent_ledger_entry(
+                resident_id=resident_id,
+                shelter=shelter,
+                entry_date=charge_date,
+                entry_type="adjustment",
+                description="Manual rent adjustment charge",
+                debit_amount=manual_adjustment,
+                credit_amount=0.0,
+                related_sheet_id=sheet["id"],
+                related_sheet_entry_id=sheet_entry_id,
+                related_month_year=rent_year,
+                related_month_month=rent_month,
+                source_code="manual_adjustment_charge",
+                source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                notes=entry.get("notes"),
+            )
+        elif manual_adjustment < 0:
+            _insert_rent_ledger_entry(
+                resident_id=resident_id,
+                shelter=shelter,
+                entry_date=charge_date,
+                entry_type="credit",
+                description="Manual rent adjustment credit",
+                debit_amount=0.0,
+                credit_amount=abs(manual_adjustment),
+                related_sheet_id=sheet["id"],
+                related_sheet_entry_id=sheet_entry_id,
+                related_month_year=rent_year,
+                related_month_month=rent_month,
+                source_code="manual_adjustment_credit",
+                source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                notes=entry.get("notes"),
+            )
+
+        if late_fee_charge > 0:
+            _insert_rent_ledger_entry(
+                resident_id=resident_id,
+                shelter=shelter,
+                entry_date=charge_date,
+                entry_type="late_fee",
+                description="Late fee posted",
+                debit_amount=late_fee_charge,
+                credit_amount=0.0,
+                related_sheet_id=sheet["id"],
+                related_sheet_entry_id=sheet_entry_id,
+                related_month_year=rent_year,
+                related_month_month=rent_month,
+                source_code="late_fee_charge",
+                source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                notes="Calculated monthly late fee",
+            )
+
+
 def register_routes(rent_tracking):
     @rent_tracking.get("/roll")
     @require_login
@@ -434,9 +571,18 @@ def register_routes(rent_tracking):
         sheet, settings = _ensure_sheet_for_month(shelter, rent_year, rent_month)
         entries = _load_sheet_entries(sheet["id"])
 
+        _post_monthly_charge_ledger_entries(
+            shelter=shelter,
+            rent_year=rent_year,
+            rent_month=rent_month,
+            sheet=sheet,
+            entries=entries,
+        )
+
         if request.method == "POST":
             for entry in entries:
                 entry_id = entry["id"]
+                resident_id = entry["resident_id"]
 
                 payment_received = _float_value(request.form.get(f"payment_received_{entry_id}"))
                 existing_amount_paid = _float_value(entry.get("amount_paid"))
@@ -532,6 +678,25 @@ def register_routes(rent_tracking):
                         entry_id,
                     ),
                 )
+
+                if payment_received > 0:
+                    payment_entry_date = paid_date or _today_chicago().date().isoformat()
+                    _insert_rent_ledger_entry(
+                        resident_id=resident_id,
+                        shelter=shelter,
+                        entry_date=payment_entry_date,
+                        entry_type="payment",
+                        description="Rent payment received",
+                        debit_amount=0.0,
+                        credit_amount=payment_received,
+                        related_sheet_id=sheet["id"],
+                        related_sheet_entry_id=entry_id,
+                        related_month_year=rent_year,
+                        related_month_month=rent_month,
+                        source_code="rent_payment",
+                        source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                        notes=notes,
+                    )
 
             flash("Rent payment sheet saved.", "ok")
             return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
@@ -714,10 +879,14 @@ def register_routes(rent_tracking):
 
         rows = _history_rows_for_resident(resident_id)
         rent_snapshot = build_rent_stability_snapshot(resident_id)
+        ledger_entries = _ledger_entries_for_resident(resident_id)
+        ledger_summary = _ledger_summary_for_resident(resident_id)
 
         return render_template(
             "case_management/resident_rent_history.html",
             resident=resident,
             rows=rows,
             rent_snapshot=rent_snapshot,
+            ledger_entries=ledger_entries,
+            ledger_summary=ledger_summary,
         )
