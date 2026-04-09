@@ -10,6 +10,7 @@ from .access import _allowed, _normalize_shelter_name
 from .calculations import (
     _apartment_options_for_shelter,
     _calculate_late_fee,
+    _calculate_late_fee_info,
     _calculate_proration,
     _derive_apartment_size_from_assignment,
     _derive_base_monthly_rent,
@@ -380,132 +381,247 @@ def _post_monthly_charge_ledger_entries(
     rent_month: int,
     sheet: dict,
     entries: list[dict],
+    settings: dict,
 ) -> None:
     charge_date = f"{rent_year:04d}-{rent_month:02d}-01"
+    today_date = _today_chicago().date()
 
     for entry in entries:
         resident_id = entry["resident_id"]
         sheet_entry_id = entry["id"]
 
-        existing_charge = db_fetchone(
-            (
-                """
-                SELECT id
-                FROM resident_rent_ledger_entries
-                WHERE resident_id = %s
-                  AND related_sheet_entry_id = %s
-                  AND source_code = %s
-                LIMIT 1
-                """
-                if g.get("db_kind") == "pg"
-                else
-                """
-                SELECT id
-                FROM resident_rent_ledger_entries
-                WHERE resident_id = ?
-                  AND related_sheet_entry_id = ?
-                  AND source_code = ?
-                LIMIT 1
-                """
-            ),
-            (resident_id, sheet_entry_id, "monthly_rent_charge"),
-        )
-        if existing_charge:
-            continue
-
         prior_balance = round(_float_value(entry.get("prior_balance")), 2)
         prorated_charge = round(_float_value(entry.get("prorated_charge")), 2)
-        late_fee_charge = round(_float_value(entry.get("late_fee_charge")), 2)
         manual_adjustment = round(_float_value(entry.get("manual_adjustment")), 2)
+        paid_date = (entry.get("paid_date") or "").strip() or None
+        approved_late_arrangement = _bool_value(entry.get("approved_late_arrangement"))
+        is_exempt = str(entry.get("status") or "").strip() == "Exempt"
+
+        subtotal_due = round(
+            prior_balance + prorated_charge + manual_adjustment,
+            2,
+        )
+
+        late_fee_info = _calculate_late_fee_info(
+            settings=settings,
+            shelter=shelter,
+            rent_year=rent_year,
+            rent_month=rent_month,
+            subtotal_due=subtotal_due,
+            paid_date=paid_date,
+            approved_late_arrangement=approved_late_arrangement,
+            is_exempt=is_exempt,
+            today_date=today_date,
+        )
 
         if prior_balance > 0:
-            _insert_rent_ledger_entry(
-                resident_id=resident_id,
-                shelter=shelter,
-                entry_date=charge_date,
-                entry_type="charge",
-                description="Prior balance brought forward",
-                debit_amount=prior_balance,
-                credit_amount=0.0,
-                related_sheet_id=sheet["id"],
-                related_sheet_entry_id=sheet_entry_id,
-                related_month_year=rent_year,
-                related_month_month=rent_month,
-                source_code="prior_balance_brought_forward",
-                source_reference=f"{rent_year:04d}-{rent_month:02d}",
-                notes=None,
+            existing_prior = db_fetchone(
+                (
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = %s
+                      AND related_sheet_entry_id = %s
+                      AND source_code = %s
+                    LIMIT 1
+                    """
+                    if g.get("db_kind") == "pg"
+                    else
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = ?
+                      AND related_sheet_entry_id = ?
+                      AND source_code = ?
+                    LIMIT 1
+                    """
+                ),
+                (resident_id, sheet_entry_id, "prior_balance_brought_forward"),
             )
+            if not existing_prior:
+                _insert_rent_ledger_entry(
+                    resident_id=resident_id,
+                    shelter=shelter,
+                    entry_date=charge_date,
+                    entry_type="charge",
+                    description="Prior balance brought forward",
+                    debit_amount=prior_balance,
+                    credit_amount=0.0,
+                    related_sheet_id=sheet["id"],
+                    related_sheet_entry_id=sheet_entry_id,
+                    related_month_year=rent_year,
+                    related_month_month=rent_month,
+                    source_code="prior_balance_brought_forward",
+                    source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                    notes=None,
+                )
 
         if prorated_charge > 0:
-            _insert_rent_ledger_entry(
-                resident_id=resident_id,
-                shelter=shelter,
-                entry_date=charge_date,
-                entry_type="charge",
-                description="Monthly rent charge",
-                debit_amount=prorated_charge,
-                credit_amount=0.0,
-                related_sheet_id=sheet["id"],
-                related_sheet_entry_id=sheet_entry_id,
-                related_month_year=rent_year,
-                related_month_month=rent_month,
-                source_code="monthly_rent_charge",
-                source_reference=f"{rent_year:04d}-{rent_month:02d}",
-                notes=entry.get("calculation_notes"),
+            existing_charge = db_fetchone(
+                (
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = %s
+                      AND related_sheet_entry_id = %s
+                      AND source_code = %s
+                    LIMIT 1
+                    """
+                    if g.get("db_kind") == "pg"
+                    else
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = ?
+                      AND related_sheet_entry_id = ?
+                      AND source_code = ?
+                    LIMIT 1
+                    """
+                ),
+                (resident_id, sheet_entry_id, "monthly_rent_charge"),
             )
+            if not existing_charge:
+                _insert_rent_ledger_entry(
+                    resident_id=resident_id,
+                    shelter=shelter,
+                    entry_date=charge_date,
+                    entry_type="charge",
+                    description="Monthly rent charge",
+                    debit_amount=prorated_charge,
+                    credit_amount=0.0,
+                    related_sheet_id=sheet["id"],
+                    related_sheet_entry_id=sheet_entry_id,
+                    related_month_year=rent_year,
+                    related_month_month=rent_month,
+                    source_code="monthly_rent_charge",
+                    source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                    notes=entry.get("calculation_notes"),
+                )
 
         if manual_adjustment > 0:
-            _insert_rent_ledger_entry(
-                resident_id=resident_id,
-                shelter=shelter,
-                entry_date=charge_date,
-                entry_type="adjustment",
-                description="Manual rent adjustment charge",
-                debit_amount=manual_adjustment,
-                credit_amount=0.0,
-                related_sheet_id=sheet["id"],
-                related_sheet_entry_id=sheet_entry_id,
-                related_month_year=rent_year,
-                related_month_month=rent_month,
-                source_code="manual_adjustment_charge",
-                source_reference=f"{rent_year:04d}-{rent_month:02d}",
-                notes=entry.get("notes"),
+            existing_adjustment_charge = db_fetchone(
+                (
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = %s
+                      AND related_sheet_entry_id = %s
+                      AND source_code = %s
+                    LIMIT 1
+                    """
+                    if g.get("db_kind") == "pg"
+                    else
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = ?
+                      AND related_sheet_entry_id = ?
+                      AND source_code = ?
+                    LIMIT 1
+                    """
+                ),
+                (resident_id, sheet_entry_id, "manual_adjustment_charge"),
             )
+            if not existing_adjustment_charge:
+                _insert_rent_ledger_entry(
+                    resident_id=resident_id,
+                    shelter=shelter,
+                    entry_date=charge_date,
+                    entry_type="adjustment",
+                    description="Manual rent adjustment charge",
+                    debit_amount=manual_adjustment,
+                    credit_amount=0.0,
+                    related_sheet_id=sheet["id"],
+                    related_sheet_entry_id=sheet_entry_id,
+                    related_month_year=rent_year,
+                    related_month_month=rent_month,
+                    source_code="manual_adjustment_charge",
+                    source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                    notes=entry.get("notes"),
+                )
         elif manual_adjustment < 0:
-            _insert_rent_ledger_entry(
-                resident_id=resident_id,
-                shelter=shelter,
-                entry_date=charge_date,
-                entry_type="credit",
-                description="Manual rent adjustment credit",
-                debit_amount=0.0,
-                credit_amount=abs(manual_adjustment),
-                related_sheet_id=sheet["id"],
-                related_sheet_entry_id=sheet_entry_id,
-                related_month_year=rent_year,
-                related_month_month=rent_month,
-                source_code="manual_adjustment_credit",
-                source_reference=f"{rent_year:04d}-{rent_month:02d}",
-                notes=entry.get("notes"),
+            existing_adjustment_credit = db_fetchone(
+                (
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = %s
+                      AND related_sheet_entry_id = %s
+                      AND source_code = %s
+                    LIMIT 1
+                    """
+                    if g.get("db_kind") == "pg"
+                    else
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = ?
+                      AND related_sheet_entry_id = ?
+                      AND source_code = ?
+                    LIMIT 1
+                    """
+                ),
+                (resident_id, sheet_entry_id, "manual_adjustment_credit"),
             )
+            if not existing_adjustment_credit:
+                _insert_rent_ledger_entry(
+                    resident_id=resident_id,
+                    shelter=shelter,
+                    entry_date=charge_date,
+                    entry_type="credit",
+                    description="Manual rent adjustment credit",
+                    debit_amount=0.0,
+                    credit_amount=abs(manual_adjustment),
+                    related_sheet_id=sheet["id"],
+                    related_sheet_entry_id=sheet_entry_id,
+                    related_month_year=rent_year,
+                    related_month_month=rent_month,
+                    source_code="manual_adjustment_credit",
+                    source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                    notes=entry.get("notes"),
+                )
 
-        if late_fee_charge > 0:
-            _insert_rent_ledger_entry(
-                resident_id=resident_id,
-                shelter=shelter,
-                entry_date=charge_date,
-                entry_type="late_fee",
-                description="Late fee posted",
-                debit_amount=late_fee_charge,
-                credit_amount=0.0,
-                related_sheet_id=sheet["id"],
-                related_sheet_entry_id=sheet_entry_id,
-                related_month_year=rent_year,
-                related_month_month=rent_month,
-                source_code="late_fee_charge",
-                source_reference=f"{rent_year:04d}-{rent_month:02d}",
-                notes="Calculated monthly late fee",
+        if late_fee_info["is_postable"] and late_fee_info["amount"] > 0 and late_fee_info["posting_date"]:
+            existing_late_fee = db_fetchone(
+                (
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = %s
+                      AND related_sheet_entry_id = %s
+                      AND source_code = %s
+                    LIMIT 1
+                    """
+                    if g.get("db_kind") == "pg"
+                    else
+                    """
+                    SELECT id
+                    FROM resident_rent_ledger_entries
+                    WHERE resident_id = ?
+                      AND related_sheet_entry_id = ?
+                      AND source_code = ?
+                    LIMIT 1
+                    """
+                ),
+                (resident_id, sheet_entry_id, "late_fee_charge"),
             )
+            if not existing_late_fee:
+                _insert_rent_ledger_entry(
+                    resident_id=resident_id,
+                    shelter=shelter,
+                    entry_date=late_fee_info["posting_date"],
+                    entry_type="late_fee",
+                    description="Late fee posted",
+                    debit_amount=late_fee_info["amount"],
+                    credit_amount=0.0,
+                    related_sheet_id=sheet["id"],
+                    related_sheet_entry_id=sheet_entry_id,
+                    related_month_year=rent_year,
+                    related_month_month=rent_month,
+                    source_code="late_fee_charge",
+                    source_reference=f"{rent_year:04d}-{rent_month:02d}",
+                    notes=late_fee_info["note"],
+                )
 
 
 def register_routes(rent_tracking):
@@ -577,6 +693,7 @@ def register_routes(rent_tracking):
             rent_month=rent_month,
             sheet=sheet,
             entries=entries,
+            settings=settings,
         )
 
         if request.method == "POST":
