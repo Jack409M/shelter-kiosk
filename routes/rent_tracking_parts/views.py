@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_execute, db_fetchall, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 
 from .access import _allowed, _normalize_shelter_name
@@ -79,7 +79,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
         manual_adjustment = _float_value(existing.get("manual_adjustment") if existing else 0)
         amount_paid = _float_value(existing.get("amount_paid") if existing else 0)
         paid_date = (existing.get("paid_date") if existing else None) or None
-        notes = (existing.get("notes") if existing else None) or None
+        notes = None
 
         subtotal_due = round(prior_balance + proration["prorated_charge"] + manual_adjustment, 2)
         late_fee_charge, late_fee_note = _calculate_late_fee(
@@ -534,7 +534,7 @@ def _post_monthly_charge_ledger_entries(
                     related_month_month=rent_month,
                     source_code="manual_adjustment_charge",
                     source_reference=f"{rent_year:04d}-{rent_month:02d}",
-                    notes=entry.get("notes"),
+                    notes=None,
                 )
         elif manual_adjustment < 0:
             existing_adjustment_credit = db_fetchone(
@@ -575,7 +575,7 @@ def _post_monthly_charge_ledger_entries(
                     related_month_month=rent_month,
                     source_code="manual_adjustment_credit",
                     source_reference=f"{rent_year:04d}-{rent_month:02d}",
-                    notes=entry.get("notes"),
+                    notes=None,
                 )
 
         if late_fee_info["is_postable"] and late_fee_info["amount"] > 0 and late_fee_info["posting_date"]:
@@ -694,123 +694,131 @@ def register_routes(rent_tracking):
         )
 
         if request.method == "POST":
-            for entry in entries:
-                entry_id = entry["id"]
-                resident_id = entry["resident_id"]
+            fresh_entries = {entry["id"]: entry for entry in _load_sheet_entries(sheet["id"])}
+            today_iso = _today_chicago().date().isoformat()
 
-                payment_received = _float_value(request.form.get(f"payment_received_{entry_id}"))
-                existing_amount_paid = _float_value(entry.get("amount_paid"))
-                amount_paid = round(existing_amount_paid + payment_received, 2)
+            with db_transaction():
+                for entry_id, entry in fresh_entries.items():
+                    resident_id = entry["resident_id"]
 
-                paid_date = (request.form.get(f"paid_date_{entry_id}") or "").strip() or None
-                notes = (request.form.get(f"notes_{entry_id}") or "").strip() or None
-                manual_adjustment = _float_value(request.form.get(f"manual_adjustment_{entry_id}"))
-                approved_late_arrangement = (request.form.get(f"approved_late_arrangement_{entry_id}") or "").strip().lower() == "yes"
-
-                subtotal_due = round(
-                    _float_value(entry.get("prior_balance"))
-                    + _float_value(entry.get("prorated_charge"))
-                    + manual_adjustment,
-                    2,
-                )
-                is_exempt = str(entry.get("status") or "").strip() == "Exempt"
-                late_fee_charge, _late_fee_note = _calculate_late_fee(
-                    settings=settings,
-                    shelter=shelter,
-                    rent_year=rent_year,
-                    rent_month=rent_month,
-                    subtotal_due=subtotal_due,
-                    paid_date=paid_date,
-                    approved_late_arrangement=approved_late_arrangement,
-                    is_exempt=is_exempt,
-                    today_date=_today_chicago().date(),
-                )
-                total_due = 0.0 if is_exempt else round(subtotal_due + late_fee_charge, 2)
-                current_charge = 0.0 if is_exempt else round(_float_value(entry.get("prorated_charge")) + manual_adjustment, 2)
-                remaining_balance = 0.0 if is_exempt else round(total_due - amount_paid, 2)
-                status = _derive_status(total_due, amount_paid, paid_date, is_exempt, late_fee_charge)
-                compliance_score = _score_for_status(settings, status)
-                calculation_notes = (entry.get("calculation_notes") or "").strip()
-                now = utcnow_iso()
-
-                db_execute(
-                    (
-                        """
-                        UPDATE resident_rent_sheet_entries
-                        SET current_charge = %s,
-                            total_due = %s,
-                            amount_paid = %s,
-                            remaining_balance = %s,
-                            status = %s,
-                            compliance_score = %s,
-                            paid_date = %s,
-                            notes = %s,
-                            late_fee_charge = %s,
-                            manual_adjustment = %s,
-                            approved_late_arrangement = %s,
-                            calculation_notes = %s,
-                            updated_by_staff_user_id = %s,
-                            updated_at = %s
-                        WHERE id = %s
-                        """
-                        if g.get("db_kind") == "pg"
-                        else
-                        """
-                        UPDATE resident_rent_sheet_entries
-                        SET current_charge = ?,
-                            total_due = ?,
-                            amount_paid = ?,
-                            remaining_balance = ?,
-                            status = ?,
-                            compliance_score = ?,
-                            paid_date = ?,
-                            notes = ?,
-                            late_fee_charge = ?,
-                            manual_adjustment = ?,
-                            approved_late_arrangement = ?,
-                            calculation_notes = ?,
-                            updated_by_staff_user_id = ?,
-                            updated_at = ?
-                        WHERE id = ?
-                        """
-                    ),
-                    (
-                        current_charge,
-                        total_due,
-                        amount_paid,
-                        remaining_balance,
-                        status,
-                        compliance_score,
-                        paid_date,
-                        notes,
-                        late_fee_charge,
-                        manual_adjustment,
-                        approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
-                        calculation_notes,
-                        session.get("staff_user_id"),
-                        now,
-                        entry_id,
-                    ),
-                )
-
-                if payment_received > 0:
-                    payment_entry_date = paid_date or _today_chicago().date().isoformat()
-                    _insert_rent_ledger_entry(
-                        resident_id=resident_id,
-                        shelter=shelter,
-                        entry_date=payment_entry_date,
-                        entry_type="payment",
-                        description="Rent payment received",
-                        debit_amount=0.0,
-                        credit_amount=payment_received,
-                        related_sheet_id=sheet["id"],
-                        related_sheet_entry_id=entry_id,
-                        related_month_year=rent_year,
-                        related_month_month=rent_month,
-                        source_code="rent_payment",
-                        source_reference=f"{rent_year:04d}-{rent_month:02d}",
-                        notes=notes,
+                    payment_received = round(
+                        max(0.0, _float_value(request.form.get(f"payment_received_{entry_id}"))),
+                        2,
                     )
+                    existing_amount_paid = round(_float_value(entry.get("amount_paid")), 2)
+                    amount_paid = round(existing_amount_paid + payment_received, 2)
+
+                    paid_date = (request.form.get(f"paid_date_{entry_id}") or "").strip() or None
+                    manual_adjustment = round(
+                        _float_value(request.form.get(f"manual_adjustment_{entry_id}")),
+                        2,
+                    )
+                    approved_late_arrangement = (request.form.get(f"approved_late_arrangement_{entry_id}") or "").strip().lower() == "yes"
+
+                    subtotal_due = round(
+                        _float_value(entry.get("prior_balance"))
+                        + _float_value(entry.get("prorated_charge"))
+                        + manual_adjustment,
+                        2,
+                    )
+                    is_exempt = str(entry.get("status") or "").strip() == "Exempt"
+                    late_fee_charge, _late_fee_note = _calculate_late_fee(
+                        settings=settings,
+                        shelter=shelter,
+                        rent_year=rent_year,
+                        rent_month=rent_month,
+                        subtotal_due=subtotal_due,
+                        paid_date=paid_date,
+                        approved_late_arrangement=approved_late_arrangement,
+                        is_exempt=is_exempt,
+                        today_date=_today_chicago().date(),
+                    )
+                    total_due = 0.0 if is_exempt else round(subtotal_due + late_fee_charge, 2)
+                    current_charge = 0.0 if is_exempt else round(_float_value(entry.get("prorated_charge")) + manual_adjustment, 2)
+                    remaining_balance = 0.0 if is_exempt else round(total_due - amount_paid, 2)
+                    status = _derive_status(total_due, amount_paid, paid_date, is_exempt, late_fee_charge)
+                    compliance_score = _score_for_status(settings, status)
+                    calculation_notes = (entry.get("calculation_notes") or "").strip()
+                    now = utcnow_iso()
+
+                    db_execute(
+                        (
+                            """
+                            UPDATE resident_rent_sheet_entries
+                            SET current_charge = %s,
+                                total_due = %s,
+                                amount_paid = %s,
+                                remaining_balance = %s,
+                                status = %s,
+                                compliance_score = %s,
+                                paid_date = %s,
+                                notes = %s,
+                                late_fee_charge = %s,
+                                manual_adjustment = %s,
+                                approved_late_arrangement = %s,
+                                calculation_notes = %s,
+                                updated_by_staff_user_id = %s,
+                                updated_at = %s
+                            WHERE id = %s
+                            """
+                            if g.get("db_kind") == "pg"
+                            else
+                            """
+                            UPDATE resident_rent_sheet_entries
+                            SET current_charge = ?,
+                                total_due = ?,
+                                amount_paid = ?,
+                                remaining_balance = ?,
+                                status = ?,
+                                compliance_score = ?,
+                                paid_date = ?,
+                                notes = ?,
+                                late_fee_charge = ?,
+                                manual_adjustment = ?,
+                                approved_late_arrangement = ?,
+                                calculation_notes = ?,
+                                updated_by_staff_user_id = ?,
+                                updated_at = ?
+                            WHERE id = ?
+                            """
+                        ),
+                        (
+                            current_charge,
+                            total_due,
+                            amount_paid,
+                            remaining_balance,
+                            status,
+                            compliance_score,
+                            paid_date,
+                            None,
+                            late_fee_charge,
+                            manual_adjustment,
+                            approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
+                            calculation_notes,
+                            session.get("staff_user_id"),
+                            now,
+                            entry_id,
+                        ),
+                    )
+
+                    if payment_received > 0:
+                        payment_entry_date = paid_date or today_iso
+                        _insert_rent_ledger_entry(
+                            resident_id=resident_id,
+                            shelter=shelter,
+                            entry_date=payment_entry_date,
+                            entry_type="payment",
+                            description="Rent payment received",
+                            debit_amount=0.0,
+                            credit_amount=payment_received,
+                            related_sheet_id=sheet["id"],
+                            related_sheet_entry_id=entry_id,
+                            related_month_year=rent_year,
+                            related_month_month=rent_month,
+                            source_code="rent_payment",
+                            source_reference=f"{rent_year:04d}-{rent_month:02d}:{entry_id}:{now}",
+                            notes=None,
+                        )
 
             flash("Rent payment sheet saved.", "ok")
             return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
