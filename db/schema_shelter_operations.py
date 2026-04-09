@@ -117,6 +117,40 @@ def ensure_kiosk_activity_category_tables(kind: str) -> None:
     )
 
 
+def ensure_kiosk_activity_child_option_tables(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS kiosk_activity_child_options (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            shelter TEXT NOT NULL,
+            parent_activity_label TEXT NOT NULL,
+            option_label TEXT NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS kiosk_activity_child_options (
+            id SERIAL PRIMARY KEY,
+            shelter TEXT NOT NULL,
+            parent_activity_label TEXT NOT NULL,
+            option_label TEXT NOT NULL,
+            active BOOLEAN NOT NULL DEFAULT TRUE,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_chore_template_columns() -> None:
     statements = [
         "ALTER TABLE chore_templates ADD COLUMN IF NOT EXISTS when_time TEXT",
@@ -161,6 +195,23 @@ def ensure_kiosk_activity_category_columns() -> None:
         "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS notes TEXT",
         "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS created_at TEXT",
         "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS updated_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_kiosk_activity_child_option_columns() -> None:
+    statements = [
+        "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS parent_activity_label TEXT",
+        "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS option_label TEXT",
+        "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS active INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
 
     for statement in statements:
@@ -315,6 +366,119 @@ def ensure_default_kiosk_activity_categories(kind: str) -> None:
             )
 
 
+def ensure_default_kiosk_activity_child_options(kind: str) -> None:
+    seed_map = {
+        "haven house": [
+            "Touch of Soul",
+            "Clean Air",
+            "12 Steps",
+            "Moss",
+            "Hobbs",
+            "Serenity",
+            "Nothing to Fear",
+            "No Matter What",
+            "Top of Texas",
+            "DWC House Meting",
+            "Online",
+            "Other",
+            "None",
+        ],
+        "gratitude house": [
+            "Touch of Soul",
+            "Clean Air",
+            "12 Steps",
+            "Moss",
+            "Hobbs",
+            "Serenity",
+            "Nothing to Fear",
+            "No Matter What",
+            "Top of Texas",
+            "DWC House Meting",
+            "Online",
+            "Other",
+            "None",
+        ],
+        "abba house": [
+            "Touch of Soul",
+            "Clean Air",
+            "12 Steps",
+            "Moss",
+            "Hobbs",
+            "Serenity",
+            "Nothing to Fear",
+            "No Matter What",
+            "Top of Texas",
+            "DWC House Meting",
+            "Online",
+            "Other",
+            "None",
+        ],
+    }
+
+    now = "1970-01-01T00:00:00"
+    parent_label = "AA or NA Meeting"
+
+    from core.db import db_fetchone
+
+    placeholder = "%s" if kind == "pg" else "?"
+
+    for shelter, rows in seed_map.items():
+        count_row = db_fetchone(
+            f"""
+            SELECT COUNT(*) AS row_count
+            FROM kiosk_activity_child_options
+            WHERE LOWER(COALESCE(shelter, '')) = {placeholder}
+              AND LOWER(COALESCE(parent_activity_label, '')) = {placeholder}
+            """,
+            (shelter, parent_label.lower()),
+        )
+        row_count = int((count_row or {}).get("row_count") or 0)
+
+        if row_count > 0:
+            continue
+
+        for sort_order, option_label in enumerate(rows, start=1):
+            db_execute(
+                (
+                    """
+                    INSERT INTO kiosk_activity_child_options (
+                        shelter,
+                        parent_activity_label,
+                        option_label,
+                        active,
+                        sort_order,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """
+                    if kind == "pg"
+                    else
+                    """
+                    INSERT INTO kiosk_activity_child_options (
+                        shelter,
+                        parent_activity_label,
+                        option_label,
+                        active,
+                        sort_order,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """
+                ),
+                (
+                    shelter,
+                    parent_label,
+                    option_label,
+                    True if kind == "pg" else 1,
+                    sort_order,
+                    now,
+                    now,
+                ),
+            )
+
+
 def ensure_indexes() -> None:
     try:
         db_execute(
@@ -436,12 +600,35 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS kiosk_activity_child_options_shelter_parent_idx
+            ON kiosk_activity_child_options (shelter, parent_activity_label)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS kiosk_activity_child_options_shelter_parent_active_sort_idx
+            ON kiosk_activity_child_options (shelter, parent_activity_label, active, sort_order)
+            """
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_chore_tables(kind)
     ensure_kiosk_activity_category_tables(kind)
+    ensure_kiosk_activity_child_option_tables(kind)
     ensure_chore_template_columns()
     ensure_chore_assignment_columns()
     ensure_kiosk_activity_category_columns()
+    ensure_kiosk_activity_child_option_columns()
     ensure_default_kiosk_activity_categories(kind)
+    ensure_default_kiosk_activity_child_options(kind)
     ensure_indexes()
