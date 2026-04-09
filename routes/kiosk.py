@@ -10,7 +10,9 @@ from core.audit import log_action
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from core.kiosk_activity_categories import (
+    AA_NA_PARENT_ACTIVITY_KEY,
     AA_NA_PARENT_ACTIVITY_LABEL,
+    VOLUNTEER_PARENT_ACTIVITY_KEY,
     VOLUNTEER_PARENT_ACTIVITY_LABEL,
     load_active_kiosk_activity_child_options_for_shelter,
     load_kiosk_activity_categories_for_shelter,
@@ -206,7 +208,7 @@ def _active_aa_na_child_options_for_shelter(shelter: str) -> list[dict]:
     shelter_key = (shelter or "").strip().lower()
     rows = load_active_kiosk_activity_child_options_for_shelter(
         shelter_key,
-        AA_NA_PARENT_ACTIVITY_LABEL,
+        AA_NA_PARENT_ACTIVITY_KEY,
     )
 
     options: list[dict] = []
@@ -223,7 +225,7 @@ def _active_volunteer_child_options_for_shelter(shelter: str) -> list[dict]:
     shelter_key = (shelter or "").strip().lower()
     rows = load_active_kiosk_activity_child_options_for_shelter(
         shelter_key,
-        VOLUNTEER_PARENT_ACTIVITY_LABEL,
+        VOLUNTEER_PARENT_ACTIVITY_KEY,
     )
 
     options: list[dict] = []
@@ -620,8 +622,10 @@ def kiosk_checkout(shelter: str):
             "kiosk_checkout.html",
             shelter=display_shelter,
             checkout_categories=checkout_categories,
+            aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
             volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
             volunteer_child_options=volunteer_child_options,
         )
@@ -667,8 +671,10 @@ def kiosk_checkout(shelter: str):
             "kiosk_checkout.html",
             shelter=display_shelter,
             checkout_categories=checkout_categories,
+            aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
             volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
             volunteer_child_options=volunteer_child_options,
         ), 429
@@ -688,8 +694,10 @@ def kiosk_checkout(shelter: str):
             "kiosk_checkout.html",
             shelter=display_shelter,
             checkout_categories=checkout_categories,
+            aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
             volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
             volunteer_child_options=volunteer_child_options,
         ), 429
@@ -713,8 +721,10 @@ def kiosk_checkout(shelter: str):
             "kiosk_checkout.html",
             shelter=display_shelter,
             checkout_categories=checkout_categories,
+            aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
             volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
             volunteer_child_options=volunteer_child_options,
         ), 429
@@ -733,8 +743,10 @@ def kiosk_checkout(shelter: str):
             "kiosk_checkout.html",
             shelter=display_shelter,
             checkout_categories=checkout_categories,
+            aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
             volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
             volunteer_child_options=volunteer_child_options,
         ), 429
@@ -776,6 +788,8 @@ def kiosk_checkout(shelter: str):
     if destination and not selected_category:
         errors.append("Please select a valid Activity Category.")
 
+    selected_activity_key = (selected_category.get("activity_key") or "").strip() if selected_category else ""
+
     child_option_labels = {
         (item.get("option_label") or "").strip()
         for item in aa_na_child_options
@@ -788,8 +802,8 @@ def kiosk_checkout(shelter: str):
         if (item.get("option_label") or "").strip()
     }
 
-    is_aa_na_meeting = destination == AA_NA_PARENT_ACTIVITY_LABEL
-    is_volunteer_community_service = destination == VOLUNTEER_PARENT_ACTIVITY_LABEL
+    is_aa_na_meeting = selected_activity_key == AA_NA_PARENT_ACTIVITY_KEY
+    is_volunteer_community_service = selected_activity_key == VOLUNTEER_PARENT_ACTIVITY_KEY
 
     if is_aa_na_meeting:
         if not aa_na_meeting_1:
@@ -876,8 +890,10 @@ def kiosk_checkout(shelter: str):
             "kiosk_checkout.html",
             shelter=display_shelter,
             checkout_categories=checkout_categories,
+            aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
             aa_na_parent_activity_label=AA_NA_PARENT_ACTIVITY_LABEL,
             aa_na_child_options=aa_na_child_options,
+            volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
             volunteer_parent_activity_label=VOLUNTEER_PARENT_ACTIVITY_LABEL,
             volunteer_child_options=volunteer_child_options,
         ), 400
@@ -939,6 +955,7 @@ def kiosk_checkout(shelter: str):
         "kiosk_check_out",
         (
             f"destination={destination_value or ''} "
+            f"activity_key={selected_activity_key or ''} "
             f"meeting_1={aa_na_meeting_1 or ''} "
             f"meeting_2={aa_na_meeting_2 or ''} "
             f"volunteer_option={volunteer_community_service_option or ''} "
