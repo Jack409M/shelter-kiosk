@@ -29,13 +29,7 @@ def ensure_transport_requests_table(kind: str) -> None:
             submitted_at TEXT NOT NULL,
             scheduled_at TEXT,
             scheduled_by INTEGER,
-            driver_name TEXT,
-            staff_notes TEXT,
-            completed_at TEXT,
-            completed_by INTEGER,
-            cancelled_at TEXT,
-            cancelled_by INTEGER,
-            cancel_reason TEXT
+            staff_notes TEXT
         )
         """,
         """
@@ -55,13 +49,7 @@ def ensure_transport_requests_table(kind: str) -> None:
             submitted_at TEXT NOT NULL,
             scheduled_at TEXT,
             scheduled_by INTEGER,
-            driver_name TEXT,
-            staff_notes TEXT,
-            completed_at TEXT,
-            completed_by INTEGER,
-            cancelled_at TEXT,
-            cancelled_by INTEGER,
-            cancel_reason TEXT
+            staff_notes TEXT
         )
         """,
     )
@@ -75,6 +63,26 @@ def drop_transport_dob_column_if_present(kind: str) -> None:
         db_execute("ALTER TABLE transport_requests DROP COLUMN IF EXISTS dob")
     except Exception:
         pass
+
+
+def drop_unused_transport_columns_if_present(kind: str) -> None:
+    if kind != "pg":
+        return
+
+    statements = [
+        "ALTER TABLE transport_requests DROP COLUMN IF EXISTS driver_name",
+        "ALTER TABLE transport_requests DROP COLUMN IF EXISTS completed_at",
+        "ALTER TABLE transport_requests DROP COLUMN IF EXISTS completed_by",
+        "ALTER TABLE transport_requests DROP COLUMN IF EXISTS cancelled_at",
+        "ALTER TABLE transport_requests DROP COLUMN IF EXISTS cancelled_by",
+        "ALTER TABLE transport_requests DROP COLUMN IF EXISTS cancel_reason",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
 
 
 def ensure_resident_transfers_table(kind: str) -> None:
@@ -374,6 +382,7 @@ def ensure_tables(kind: str) -> None:
 
 def ensure_columns_and_constraints(kind: str) -> None:
     drop_transport_dob_column_if_present(kind)
+    drop_unused_transport_columns_if_present(kind)
     ensure_attendance_event_columns(kind)
     ensure_resident_passes_columns(kind)
     ensure_resident_pass_request_details_columns(kind)
