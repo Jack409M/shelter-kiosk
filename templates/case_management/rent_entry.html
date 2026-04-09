@@ -568,10 +568,13 @@
                           </div>
 
                           <div class="cmx-button-row" style="margin-top:10px;">
-                            <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=entry['resident_id']) }}">
-                              Rent Ledger
-                            </a>
-                          </div>
+  <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_ledger', resident_id=entry['resident_id']) }}">
+    Rent Ledger
+  </a>
+  <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=entry['resident_id']) }}">
+    Rent Summary
+  </a>
+</div>
                         </div>
 
                         <div>
