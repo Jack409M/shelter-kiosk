@@ -952,6 +952,8 @@ def wipe_test_residents():
         db_execute("DELETE FROM intake_drafts")
         db_execute("DELETE FROM resident_transfers")
         db_execute("DELETE FROM attendance_events")
+        db_execute("DELETE FROM resident_pass_request_details")
+        db_execute("DELETE FROM resident_notifications")
         db_execute("DELETE FROM resident_passes")
         db_execute("DELETE FROM resident_children")
         db_execute("DELETE FROM resident_substances")
