@@ -82,6 +82,31 @@ def _ensure_tables() -> None:
             )
             """
         )
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS resident_rent_ledger_entries (
+                id SERIAL PRIMARY KEY,
+                resident_id INTEGER NOT NULL REFERENCES residents(id),
+                shelter TEXT NOT NULL,
+                entry_date TEXT NOT NULL,
+                entry_type TEXT NOT NULL,
+                description TEXT,
+                debit_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+                credit_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+                balance_after NUMERIC(10,2) NOT NULL DEFAULT 0,
+                related_sheet_id INTEGER REFERENCES resident_rent_sheets(id),
+                related_sheet_entry_id INTEGER REFERENCES resident_rent_sheet_entries(id),
+                related_month_year INTEGER,
+                related_month_month INTEGER,
+                source_code TEXT,
+                source_reference TEXT,
+                notes TEXT,
+                created_by_staff_user_id INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
     else:
         db_execute(
             """
@@ -157,6 +182,34 @@ def _ensure_tables() -> None:
             )
             """
         )
+        db_execute(
+            """
+            CREATE TABLE IF NOT EXISTS resident_rent_ledger_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                resident_id INTEGER NOT NULL,
+                shelter TEXT NOT NULL,
+                entry_date TEXT NOT NULL,
+                entry_type TEXT NOT NULL,
+                description TEXT,
+                debit_amount REAL NOT NULL DEFAULT 0,
+                credit_amount REAL NOT NULL DEFAULT 0,
+                balance_after REAL NOT NULL DEFAULT 0,
+                related_sheet_id INTEGER,
+                related_sheet_entry_id INTEGER,
+                related_month_year INTEGER,
+                related_month_month INTEGER,
+                source_code TEXT,
+                source_reference TEXT,
+                notes TEXT,
+                created_by_staff_user_id INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (resident_id) REFERENCES residents(id),
+                FOREIGN KEY (related_sheet_id) REFERENCES resident_rent_sheets(id),
+                FOREIGN KEY (related_sheet_entry_id) REFERENCES resident_rent_sheet_entries(id)
+            )
+            """
+        )
 
     alter_statements = [
         "ALTER TABLE resident_rent_configs ADD COLUMN IF NOT EXISTS apartment_number_snapshot TEXT",
@@ -175,6 +228,23 @@ def _ensure_tables() -> None:
         "ALTER TABLE resident_rent_sheet_entries ADD COLUMN IF NOT EXISTS calculation_notes TEXT",
     ]
     for statement in alter_statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+    ledger_alter_statements = [
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS description TEXT",
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS related_sheet_id INTEGER",
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS related_sheet_entry_id INTEGER",
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS related_month_year INTEGER",
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS related_month_month INTEGER",
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS source_code TEXT",
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS source_reference TEXT",
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS notes TEXT",
+        "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS balance_after DOUBLE PRECISION DEFAULT 0",
+    ]
+    for statement in ledger_alter_statements:
         try:
             db_execute(statement)
         except Exception:
