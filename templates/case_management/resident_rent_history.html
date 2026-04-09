@@ -1,350 +1,19 @@
 {% extends "layout.html" %}
 
-{% block extra_head %}
-<style>
-  .ledger-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .ledger-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(180px, 1fr));
-    gap: 12px;
-    margin-top: 14px;
-  }
-
-  .ledger-summary-card {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--bg-soft);
-    padding: 12px 14px;
-  }
-
-  .ledger-summary-label {
-    display: block;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    margin-bottom: 6px;
-  }
-
-  .ledger-summary-value {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  .ledger-credit {
-    color: #1f6b33;
-    font-weight: 700;
-  }
-
-  .ledger-debit {
-    color: #8d1f1f;
-    font-weight: 700;
-  }
-
-  .ledger-neutral {
-    font-weight: 700;
-  }
-
-  .ledger-print-header {
-    display: none;
-  }
-
-  .ledger-transactions-card {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: var(--panel);
-    overflow: hidden;
-  }
-
-  .ledger-transactions-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
-    background: var(--bg-soft);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .ledger-transactions-title {
-    margin: 0;
-    font-size: 20px;
-    line-height: 1.2;
-  }
-
-  .ledger-transactions-subtitle {
-    margin-top: 4px;
-    color: var(--text-muted);
-    font-size: 13px;
-  }
-
-  .ledger-table-wrap {
-    overflow-x: auto;
-  }
-
-  .ledger-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .ledger-table th,
-  .ledger-table td {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-    text-align: left;
-  }
-
-  .ledger-table th {
-    background: var(--bg-soft);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-    color: var(--text-muted);
-  }
-
-  .ledger-table tr:last-child td {
-    border-bottom: 0;
-  }
-
-  .ledger-type-pill {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: var(--bg-soft);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1.2;
-    white-space: nowrap;
-  }
-
-  .ledger-type-charge {
-    background: #ffe8d6;
-    border-color: #e2b27d;
-    color: #9a4f00;
-  }
-
-  .ledger-type-payment,
-  .ledger-type-credit {
-    background: #e7f6ea;
-    border-color: #9bc8a6;
-    color: #1f6b33;
-  }
-
-  .ledger-type-late-fee {
-    background: #ffe0e0;
-    border-color: #d9a0a0;
-    color: #8d1f1f;
-  }
-
-  .ledger-type-adjustment {
-    background: #eef1f5;
-    border-color: #c8d0da;
-    color: #44546a;
-  }
-
-  .ledger-empty {
-    padding: 18px 16px;
-    color: var(--text-muted);
-  }
-
-  .ledger-old-summary details {
-    margin-bottom: 14px;
-    border: 1px solid #9ab7cf;
-    border-radius: 14px;
-    background: #d9e8f4;
-  }
-
-  .ledger-old-summary summary {
-    cursor: pointer;
-    list-style: none;
-    padding: 14px 16px;
-    font-weight: 700;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .ledger-old-summary-wrap {
-    overflow-x: auto;
-    padding: 0 18px 18px 18px;
-  }
-
-  .ledger-old-summary-table th,
-  .ledger-old-summary-table td {
-    vertical-align: top;
-  }
-
-  @media (max-width: 900px) {
-    .ledger-summary-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .ledger-summary-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media print {
-    header,
-    nav,
-    .flash,
-    .cmx-button-row,
-    .ledger-screen-only,
-    .ledger-old-summary {
-      display: none !important;
-    }
-
-    body,
-    main,
-    .container,
-    .cmx-page,
-    .cmx-shell {
-      background: #fff !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 100% !important;
-      max-width: none !important;
-    }
-
-    .cmx-card,
-    .ledger-transactions-card {
-      border: 1px solid #999 !important;
-      box-shadow: none !important;
-      background: #fff !important;
-      break-inside: avoid;
-      page-break-inside: avoid;
-    }
-
-    .ledger-print-header {
-      display: block !important;
-      margin-bottom: 16px;
-      padding: 0 0 12px 0;
-      border-bottom: 2px solid #000;
-    }
-
-    .ledger-print-header h1 {
-      margin: 0 0 6px 0;
-      font-size: 24px;
-      line-height: 1.2;
-    }
-
-    .ledger-print-header .subtitle {
-      margin: 0;
-      font-size: 14px;
-      color: #000;
-    }
-
-    .ledger-summary-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 12px;
-      margin-bottom: 16px;
-    }
-
-    .ledger-summary-card {
-      background: #fff !important;
-      border: 1px solid #999 !important;
-    }
-
-    .ledger-table-wrap {
-      overflow: visible !important;
-    }
-
-    .ledger-table {
-      width: 100% !important;
-      border-collapse: collapse !important;
-      font-size: 11px !important;
-    }
-
-    .ledger-table th,
-    .ledger-table td {
-      border: 1px solid #999 !important;
-      padding: 6px 8px !important;
-      background: #fff !important;
-      color: #000 !important;
-    }
-
-    .ledger-type-pill,
-    .ledger-credit,
-    .ledger-debit,
-    .ledger-neutral {
-      color: #000 !important;
-      font-weight: 700 !important;
-      background: #fff !important;
-      border-color: #999 !important;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 {% set stability_card_style = "background:#f3dede; border:1px solid #d88484;" if rent_snapshot['band_key'] == 'red' else rent_snapshot['card_style'] %}
-
 <div class="cmx-page">
   <div class="cmx-shell">
-    <div class="ledger-print-header">
-      <h1>Resident Rent Ledger</h1>
-      <p class="subtitle">{{ resident['first_name'] }} {{ resident['last_name'] }}</p>
-      <p class="subtitle">Transactions shown in descending date order with most recent first.</p>
-    </div>
-
-    <div class="cmx-card ledger-screen-only">
+    <div class="cmx-card">
       <div class="cmx-section-head">
         <div>
-          <h1 class="cmx-section-title">Resident Rent Ledger</h1>
+          <h1 class="cmx-section-title">Resident Rent Summary</h1>
           <div class="cmx-section-subtitle">{{ resident['first_name'] }} {{ resident['last_name'] }}</div>
         </div>
 
-        <div class="cmx-button-row ledger-toolbar">
-          <button type="button" class="cmx-btn" onclick="window.print()">Print Ledger</button>
+        <div class="cmx-button-row">
+          <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_ledger', resident_id=resident['id']) }}">Open Rent Ledger</a>
           <a class="cmx-btn-muted" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">Back to Resident</a>
-        </div>
-      </div>
-    </div>
-
-    <div class="cmx-card">
-      <div class="cmx-section-head" style="margin-bottom: 0;">
-        <div>
-          <h2 class="cmx-section-title">Ledger Summary</h2>
-          <div class="cmx-section-subtitle">Accounting style debit and credit totals from recorded rent ledger transactions.</div>
-        </div>
-      </div>
-
-      <div class="ledger-summary-grid">
-        <div class="ledger-summary-card">
-          <span class="ledger-summary-label">Total Charges</span>
-          <div class="ledger-summary-value">${{ '%.2f'|format(ledger_summary['total_debits'] or 0) }}</div>
-        </div>
-
-        <div class="ledger-summary-card">
-          <span class="ledger-summary-label">Total Payments And Credits</span>
-          <div class="ledger-summary-value">${{ '%.2f'|format(ledger_summary['total_credits'] or 0) }}</div>
-        </div>
-
-        <div class="ledger-summary-card">
-          <span class="ledger-summary-label">Current Balance Due</span>
-          <div class="ledger-summary-value {% if (ledger_summary['current_due'] or 0) > 0 %}ledger-debit{% else %}ledger-neutral{% endif %}">
-            ${{ '%.2f'|format(ledger_summary['current_due'] or 0) }}
-          </div>
-        </div>
-
-        <div class="ledger-summary-card">
-          <span class="ledger-summary-label">Current Credit</span>
-          <div class="ledger-summary-value {% if (ledger_summary['current_credit'] or 0) > 0 %}ledger-credit{% else %}ledger-neutral{% endif %}">
-            ${{ '%.2f'|format(ledger_summary['current_credit'] or 0) }}
-          </div>
         </div>
       </div>
     </div>
@@ -388,87 +57,11 @@
       </div>
     </div>
 
-    <div class="ledger-transactions-card">
-      <div class="ledger-transactions-head">
-        <div>
-          <h2 class="ledger-transactions-title">Ledger Transactions</h2>
-          <div class="ledger-transactions-subtitle">Most recent transactions first.</div>
-        </div>
-        <div class="ledger-screen-only" style="font-size:13px; color:var(--text-muted);">
-          {{ ledger_summary['entry_count'] or 0 }} transaction{% if (ledger_summary['entry_count'] or 0) != 1 %}s{% endif %}
-        </div>
-      </div>
-
-      {% if ledger_entries %}
-        <div class="ledger-table-wrap">
-          <table class="ledger-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Description</th>
-                <th>Charge</th>
-                <th>Payment</th>
-                <th>Balance</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for entry in ledger_entries %}
-                {% set type_class = 'ledger-type-adjustment' %}
-                {% if entry['entry_type'] == 'charge' %}
-                  {% set type_class = 'ledger-type-charge' %}
-                {% elif entry['entry_type'] == 'payment' %}
-                  {% set type_class = 'ledger-type-payment' %}
-                {% elif entry['entry_type'] == 'credit' %}
-                  {% set type_class = 'ledger-type-credit' %}
-                {% elif entry['entry_type'] == 'late_fee' %}
-                  {% set type_class = 'ledger-type-late-fee' %}
-                {% endif %}
-                <tr>
-                  <td>{{ entry['entry_date'] or '—' }}</td>
-                  <td><span class="ledger-type-pill {{ type_class }}">{{ entry['entry_type']|replace('_', ' ')|title }}</span></td>
-                  <td>{{ entry['description'] or '—' }}</td>
-                  <td>
-                    {% if (entry['debit_amount'] or 0) > 0 %}
-                      <span class="ledger-debit">${{ '%.2f'|format(entry['debit_amount'] or 0) }}</span>
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% if (entry['credit_amount'] or 0) > 0 %}
-                      <span class="ledger-credit">${{ '%.2f'|format(entry['credit_amount'] or 0) }}</span>
-                    {% else %}
-                      —
-                    {% endif %}
-                  </td>
-                  <td>
-                    {% set balance_after = entry['balance_after'] or 0 %}
-                    {% if balance_after < 0 %}
-                      <span class="ledger-credit">Credit ${{ '%.2f'|format(balance_after * -1) }}</span>
-                    {% elif balance_after > 0 %}
-                      <span class="ledger-debit">${{ '%.2f'|format(balance_after) }}</span>
-                    {% else %}
-                      <span class="ledger-neutral">$0.00</span>
-                    {% endif %}
-                  </td>
-                  <td>{{ entry['notes'] or '—' }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      {% else %}
-        <div class="ledger-empty">No ledger transactions recorded yet.</div>
-      {% endif %}
-    </div>
-
-    <div class="cmx-card ledger-old-summary">
+    <div class="cmx-card">
       <div class="cmx-section-head">
         <div>
           <h2 class="cmx-section-title">Monthly Summary History</h2>
-          <div class="cmx-section-subtitle">Legacy monthly rollup view kept for reference while the true ledger layer is being used.</div>
+          <div class="cmx-section-subtitle">This summary view is used for payment status tracking, scoring, and graduation readiness. It is not the accounting ledger.</div>
         </div>
       </div>
 
@@ -484,13 +77,13 @@
             {% endif %}
 
             {% set year_month_count = rows | selectattr('rent_year', 'equalto', row['rent_year']) | list | length %}
-            <details {% if row['rent_year'] == current_year %}open{% endif %}>
-              <summary>
+            <details {% if row['rent_year'] == current_year %}open{% endif %} style="margin-bottom:14px; border:1px solid #9ab7cf; border-radius:14px; background:#d9e8f4;">
+              <summary style="cursor:pointer; list-style:none; padding:14px 16px; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
                 <span>{{ row['rent_year'] }}</span>
                 <span style="font-weight:400; color:#486173;">{{ year_month_count }} month{{ "" if year_month_count == 1 else "s" }}</span>
               </summary>
-              <div class="ledger-old-summary-wrap">
-                <table class="audit-table ledger-old-summary-table">
+              <div style="overflow-x:auto; padding:0 18px 18px 18px;">
+                <table class="audit-table">
                   <thead>
                     <tr>
                       <th>Month</th>
@@ -517,11 +110,9 @@
                       <td>
                         {% set remaining_balance = row['remaining_balance'] or 0 %}
                         {% if remaining_balance < 0 %}
-                          <span class="ledger-credit">Credit ${{ '%.2f'|format((remaining_balance * -1)) }}</span>
-                        {% elif remaining_balance > 0 %}
-                          <span class="ledger-debit">${{ '%.2f'|format(remaining_balance) }}</span>
+                          <span style="color:#1f6b33; font-weight:700;">Credit ${{ '%.2f'|format((remaining_balance * -1)) }}</span>
                         {% else %}
-                          $0.00
+                          ${{ '%.2f'|format(remaining_balance) }}
                         {% endif %}
                       </td>
                     </tr>
@@ -534,7 +125,7 @@
           {% endif %}
         {% endfor %}
       {% else %}
-        <div class="ledger-empty">No monthly rent history yet.</div>
+        <div class="cmx-muted">No rent history yet.</div>
       {% endif %}
     </div>
   </div>
