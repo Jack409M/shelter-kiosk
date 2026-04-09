@@ -96,8 +96,9 @@
         </div>
 
         <div class="cmx-button-row" style="margin-top:0;">
-          <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}" style="padding:9px 12px; font-size:0.88rem;">View Rent History</a>
-        </div>
+  <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}" style="padding:9px 12px; font-size:0.88rem;">View Rent Summary</a>
+  <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_ledger', resident_id=resident_id) }}" style="padding:9px 12px; font-size:0.88rem;">View Rent Ledger</a>
+</div>
       </div>
 
       <div style="{{ inspection_card_style }} border-radius:14px; padding:12px; min-width:0;">
