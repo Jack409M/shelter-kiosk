@@ -255,6 +255,10 @@
     color: #8d1f1f;
   }
 
+  .rent-remaining-credit {
+    color: #1f6b33;
+  }
+
   .rent-status-badge {
     display: inline-block;
     padding: 6px 10px;
@@ -469,7 +473,7 @@
             <select id="rent-balance-filter">
               <option value="all">All</option>
               <option value="due_only">Only with balance due</option>
-              <option value="zero_only">Only zero balance</option>
+              <option value="zero_only">Only zero or credit balance</option>
             </select>
           </div>
 
@@ -545,6 +549,10 @@
                       data-apartment-size="{{ (entry['apartment_size_snapshot'] or '')|lower }}"
                       data-status="{{ status_text }}"
                       data-remaining-balance="{{ entry['remaining_balance'] or 0 }}"
+                      data-prior-balance="{{ entry['prior_balance'] or 0 }}"
+                      data-prorated-charge="{{ entry['prorated_charge'] or 0 }}"
+                      data-late-fee-charge="{{ entry['late_fee_charge'] or 0 }}"
+                      data-is-exempt="{% if entry['status'] == 'Exempt' %}true{% else %}false{% endif %}"
                     >
                       <div class="rent-entry-top">
                         <div>
@@ -561,7 +569,7 @@
 
                         <div>
                           <label class="rent-field-label">Total Due</label>
-                          <div class="rent-money">${{ '%.2f'|format(entry['total_due'] or 0) }}</div>
+                          <div class="rent-money js-total-due">${{ '%.2f'|format(entry['total_due'] or 0) }}</div>
                         </div>
 
                         <div>
@@ -589,14 +597,14 @@
 
                         <div>
                           <label class="rent-field-label">Status</label>
-                          <span class="rent-status-badge {{ status_class }}">{{ status_text }}</span>
+                          <span class="rent-status-badge {{ status_class }} js-status-badge">{{ status_text }}</span>
                         </div>
                       </div>
 
                       <div class="rent-entry-top" style="margin-top:12px;">
                         <div>
                           <label class="rent-field-label">Remaining</label>
-                          <div class="rent-money rent-remaining">${{ '%.2f'|format(entry['remaining_balance'] or 0) }}</div>
+                          <div class="rent-money rent-remaining js-remaining-balance">${{ '%.2f'|format(entry['remaining_balance'] or 0) }}</div>
                         </div>
 
                         <div class="rent-notes-input" style="grid-column: span 3;">
@@ -616,17 +624,17 @@
 
                           <div class="rent-detail-box">
                             <strong>Prorated</strong>
-                            ${{ '%.2f'|format(entry['prorated_charge'] or 0) }}
+                            <span class="js-prorated-charge">${{ '%.2f'|format(entry['prorated_charge'] or 0) }}</span>
                           </div>
 
                           <div class="rent-detail-box">
                             <strong>Prior Balance</strong>
-                            ${{ '%.2f'|format(entry['prior_balance'] or 0) }}
+                            <span class="js-prior-balance">${{ '%.2f'|format(entry['prior_balance'] or 0) }}</span>
                           </div>
 
                           <div class="rent-detail-box">
                             <strong>Late Fee</strong>
-                            ${{ '%.2f'|format(entry['late_fee_charge'] or 0) }}
+                            <span class="js-late-fee">${{ '%.2f'|format(entry['late_fee_charge'] or 0) }}</span>
                           </div>
 
                           <div class="rent-detail-box">
@@ -635,13 +643,17 @@
                               {{ entry['occupancy_start_date'] }} to {{ entry['occupancy_end_date'] or entry['occupancy_start_date'] }}
                             {% else %}
                               —
-
                             {% endif %}
                           </div>
 
                           <div class="rent-detail-box">
                             <strong>Days</strong>
                             {{ entry['occupied_days'] or 0 }}/{{ entry['month_day_count'] or 0 }}
+                          </div>
+
+                          <div class="rent-detail-box">
+                            <strong>Current Charge</strong>
+                            <span class="js-current-charge">${{ '%.2f'|format(entry['current_charge'] or 0) }}</span>
                           </div>
                         </div>
 
@@ -691,6 +703,7 @@
     const dirtyPill = document.getElementById("rent-dirty-pill");
     const groupCards = Array.from(document.querySelectorAll(".rent-group-card"));
     const rowInputs = Array.from(document.querySelectorAll(".rent-entry-row input, .rent-entry-row select"));
+    const entryRows = Array.from(document.querySelectorAll(".rent-entry-row"));
 
     if (!searchInput || !statusFilter || !balanceFilter || !groupCards.length) {
       return;
@@ -698,6 +711,103 @@
 
     let hasUnsavedChanges = false;
     let suppressUnloadWarning = false;
+
+    function asNumber(value) {
+      const parsed = parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function formatMoney(value) {
+      const numeric = asNumber(value);
+      const absoluteValue = Math.abs(numeric).toFixed(2);
+      return numeric < 0 ? `-$${absoluteValue}` : `$${absoluteValue}`;
+    }
+
+    function statusClassName(statusText) {
+      if (statusText === "Paid") return "rent-status-paid";
+      if (statusText === "Partially Paid") return "rent-status-partial";
+      if (statusText === "Paid Late") return "rent-status-late";
+      if (statusText === "Exempt") return "rent-status-exempt";
+      return "rent-status-unpaid";
+    }
+
+    function deriveStatus(totalDue, amountPaid, paidDate, isExempt, lateFeeCharge) {
+      if (isExempt) {
+        return "Exempt";
+      }
+      if (amountPaid <= 0) {
+        return "Not Paid";
+      }
+      if (amountPaid < totalDue) {
+        return "Partially Paid";
+      }
+      if (lateFeeCharge > 0) {
+        return "Paid Late";
+      }
+      if (paidDate) {
+        return "Paid";
+      }
+      return "Paid";
+    }
+
+    function recalculateRow(row) {
+      const priorBalance = asNumber(row.dataset.priorBalance);
+      const proratedCharge = asNumber(row.dataset.proratedCharge);
+      const storedLateFeeCharge = asNumber(row.dataset.lateFeeCharge);
+      const isExempt = String(row.dataset.isExempt || "").toLowerCase() === "true";
+
+      const amountPaidInput = row.querySelector('input[name^="amount_paid_"]');
+      const paidDateInput = row.querySelector('input[name^="paid_date_"]');
+      const adjustmentInput = row.querySelector('input[name^="manual_adjustment_"]');
+      const lateArrangementInput = row.querySelector('select[name^="approved_late_arrangement_"]');
+
+      const totalDueEl = row.querySelector(".js-total-due");
+      const remainingEl = row.querySelector(".js-remaining-balance");
+      const lateFeeEl = row.querySelector(".js-late-fee");
+      const currentChargeEl = row.querySelector(".js-current-charge");
+      const statusBadgeEl = row.querySelector(".js-status-badge");
+
+      const amountPaid = asNumber(amountPaidInput ? amountPaidInput.value : 0);
+      const manualAdjustment = asNumber(adjustmentInput ? adjustmentInput.value : 0);
+      const paidDate = paidDateInput ? (paidDateInput.value || "").trim() : "";
+      const approvedLateArrangement = lateArrangementInput ? lateArrangementInput.value === "yes" : false;
+
+      const lateFeeCharge = approvedLateArrangement || isExempt ? 0 : storedLateFeeCharge;
+      const currentCharge = isExempt ? 0 : +(proratedCharge + manualAdjustment).toFixed(2);
+      const totalDue = isExempt ? 0 : +(priorBalance + proratedCharge + manualAdjustment + lateFeeCharge).toFixed(2);
+      const remainingBalance = isExempt ? 0 : +(totalDue - amountPaid).toFixed(2);
+      const statusText = deriveStatus(totalDue, amountPaid, paidDate, isExempt, lateFeeCharge);
+
+      row.dataset.remainingBalance = String(remainingBalance);
+      row.dataset.status = statusText;
+
+      if (totalDueEl) {
+        totalDueEl.textContent = formatMoney(totalDue);
+      }
+
+      if (lateFeeEl) {
+        lateFeeEl.textContent = formatMoney(lateFeeCharge);
+      }
+
+      if (currentChargeEl) {
+        currentChargeEl.textContent = formatMoney(currentCharge);
+      }
+
+      if (remainingEl) {
+        remainingEl.textContent = formatMoney(remainingBalance);
+        remainingEl.classList.toggle("rent-remaining-credit", remainingBalance < 0);
+        remainingEl.classList.toggle("rent-remaining", remainingBalance >= 0);
+      }
+
+      if (statusBadgeEl) {
+        statusBadgeEl.textContent = statusText;
+        statusBadgeEl.className = `rent-status-badge js-status-badge ${statusClassName(statusText)}`;
+      }
+    }
+
+    function recalculateAllRows() {
+      entryRows.forEach(recalculateRow);
+    }
 
     function applyFilters() {
       const searchValue = searchInput.value.trim().toLowerCase();
@@ -795,6 +905,16 @@
       }
     }
 
+    function handleRowInputEvent(event) {
+      const row = event.target.closest(".rent-entry-row");
+      if (!row) {
+        return;
+      }
+      recalculateRow(row);
+      applyFilters();
+      refreshDirtyState();
+    }
+
     function beforeUnloadHandler(event) {
       if (!hasUnsavedChanges || suppressUnloadWarning) {
         return;
@@ -816,8 +936,8 @@
     });
 
     rowInputs.forEach((field) => {
-      field.addEventListener("input", refreshDirtyState);
-      field.addEventListener("change", refreshDirtyState);
+      field.addEventListener("input", handleRowInputEvent);
+      field.addEventListener("change", handleRowInputEvent);
     });
 
     if (form) {
@@ -847,6 +967,7 @@
       }
     });
 
+    recalculateAllRows();
     applyFilters();
     refreshDirtyState();
   })();
