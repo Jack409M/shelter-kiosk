@@ -61,7 +61,7 @@ def ensure_resident_writeups_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -180,4 +180,3 @@ def ensure_writeups_indexes() -> None:
 def ensure_tables(kind: str) -> None:
     ensure_resident_writeups_table(kind)
     ensure_resident_writeups_columns()
-    ensure_writeups_indexes()
