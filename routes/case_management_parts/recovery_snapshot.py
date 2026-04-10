@@ -188,7 +188,10 @@ def _load_resident_profile(resident_id: int):
             step_changed_at,
             sobriety_date,
             drug_of_choice,
-            treatment_graduation_date
+            treatment_graduation_date,
+            rad_classes_attended,
+            rad_completed,
+            rad_completed_at
         FROM residents
         WHERE id = {ph}
         LIMIT 1
@@ -458,6 +461,7 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             "sponsor_active": resident.get("sponsor_active"),
             "step_work_active": resident.get("step_work_active"),
             "monthly_income": resident.get("monthly_income"),
+            "rad_complete": resident.get("rad_completed"),
         }
     )
 
@@ -500,6 +504,10 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "days_sober_at_entry": None,
         "drug_of_choice": resident.get("drug_of_choice"),
         "treatment_graduation_date": treatment_graduation_date,
+        "rad_classes_attended": resident.get("rad_classes_attended") or 0,
+        "rad_completed": resident.get("rad_completed"),
+        "rad_completed_display": _bool_display(resident.get("rad_completed")),
+        "rad_completed_at": resident.get("rad_completed_at"),
         "medications": medication_items,
         "medication_count": len(medication_items),
         "ua_rows": ua_items,
