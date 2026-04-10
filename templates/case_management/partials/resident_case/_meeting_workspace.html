@@ -187,6 +187,9 @@
         </div>
 
         {% set pr = recovery_snapshot.get("promotion_readiness", {}) %}
+        {% set rad_classes_attended = recovery_snapshot.get("rad_classes_attended", 0) %}
+        {% set rad_completed = recovery_snapshot.get("rad_completed") %}
+        {% set rad_completed_at = recovery_snapshot.get("rad_completed_at") %}
 
         <div style="margin:0 0 14px 0; padding:12px; border-radius:12px; border:1px solid #d8e3f4; background:#f8fbff;">
           <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
@@ -229,6 +232,36 @@
               Blockers: {{ pr.blockers | join(", ") }}
             </div>
           {% endif %}
+        </div>
+
+        <div style="margin:0 0 14px 0; padding:12px; border-radius:12px; border:1px solid #d8e3f4; background:#f8fbff;">
+          <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+            <div style="font-weight:700; color:#31465f;">RAD Progress</div>
+            {% if rad_completed %}
+              <span style="background:#dcefe1; border:1px solid #9bc8a6; padding:4px 10px; border-radius:999px; font-weight:700; color:#1f6b33;">
+                COMPLETE
+              </span>
+            {% else %}
+              <span style="background:#fff3c7; border:1px solid #ddc56d; padding:4px 10px; border-radius:999px; font-weight:700; color:#7a6500;">
+                IN PROGRESS
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="cmx-stack">
+            <div class="cmx-row-block">
+              <span>RAD Classes Or Days</span>
+              <span>{{ rad_classes_attended }} / 30</span>
+            </div>
+            <div class="cmx-row-block">
+              <span>RAD Complete</span>
+              <span>{{ "Yes" if rad_completed else "No" }}</span>
+            </div>
+            <div class="cmx-row-block">
+              <span>Completed At</span>
+              <span>{{ rad_completed_at or "—" }}</span>
+            </div>
+          </div>
         </div>
 
         <div class="cmx-grid cmx-grid-2">
