@@ -130,7 +130,11 @@ def ensure_attendance_events_table(kind: str) -> None:
             destination TEXT,
             obligation_start_time TEXT,
             obligation_end_time TEXT,
-            actual_obligation_end_time TEXT
+            actual_obligation_end_time TEXT,
+            meeting_count INTEGER NOT NULL DEFAULT 0,
+            meeting_1 TEXT,
+            meeting_2 TEXT,
+            is_recovery_meeting INTEGER NOT NULL DEFAULT 0
         )
         """,
         """
@@ -146,7 +150,11 @@ def ensure_attendance_events_table(kind: str) -> None:
             destination TEXT,
             obligation_start_time TEXT,
             obligation_end_time TEXT,
-            actual_obligation_end_time TEXT
+            actual_obligation_end_time TEXT,
+            meeting_count INTEGER NOT NULL DEFAULT 0,
+            meeting_1 TEXT,
+            meeting_2 TEXT,
+            is_recovery_meeting INTEGER NOT NULL DEFAULT 0
         )
         """,
     )
@@ -159,6 +167,10 @@ def ensure_attendance_event_columns(kind: str) -> None:
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS obligation_start_time TEXT",
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS obligation_end_time TEXT",
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS actual_obligation_end_time TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS meeting_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS meeting_1 TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS meeting_2 TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS is_recovery_meeting INTEGER NOT NULL DEFAULT 0",
         ]
     else:
         statements = [
@@ -166,6 +178,10 @@ def ensure_attendance_event_columns(kind: str) -> None:
             "ALTER TABLE attendance_events ADD COLUMN obligation_start_time TEXT",
             "ALTER TABLE attendance_events ADD COLUMN obligation_end_time TEXT",
             "ALTER TABLE attendance_events ADD COLUMN actual_obligation_end_time TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN meeting_count INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE attendance_events ADD COLUMN meeting_1 TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN meeting_2 TEXT",
+            "ALTER TABLE attendance_events ADD COLUMN is_recovery_meeting INTEGER NOT NULL DEFAULT 0",
         ]
 
     for statement in statements:
