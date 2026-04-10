@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
 from flask import flash, g, redirect, render_template, request, session, url_for
@@ -8,7 +8,7 @@ from flask import flash, g, redirect, render_template, request, session, url_for
 from core.access import require_resident
 from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
-from core.db import db_fetchone, db_transaction, get_db
+from core.db import db_fetchall, db_fetchone, db_transaction, get_db
 from core.helpers import utcnow_iso
 from core.pass_rules import (
     CHICAGO_TZ,
@@ -65,6 +65,100 @@ def _resident_value(row, key: str, index: int, default=""):
 
 def _today_chicago_iso() -> str:
     return datetime.now(CHICAGO_TZ).date().isoformat()
+
+
+def _parse_date_only(value: str | None) -> date | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text[:10]).date()
+    except Exception:
+        return None
+
+
+def _status_is_open_for_discipline(value: str | None) -> bool:
+    return str(value or "").strip().lower() == "open"
+
+
+def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
+    rows = db_fetchall(
+        """
+        SELECT
+            id,
+            incident_date,
+            category,
+            severity,
+            summary,
+            status,
+            disciplinary_outcome,
+            probation_start_date,
+            probation_end_date,
+            pre_termination_date,
+            blocks_passes
+        FROM resident_writeups
+        WHERE resident_id = %s
+          AND COALESCE(blocks_passes, 0) IN (1, TRUE)
+        ORDER BY incident_date DESC, id DESC
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT
+            id,
+            incident_date,
+            category,
+            severity,
+            summary,
+            status,
+            disciplinary_outcome,
+            probation_start_date,
+            probation_end_date,
+            pre_termination_date,
+            blocks_passes
+        FROM resident_writeups
+        WHERE resident_id = ?
+          AND COALESCE(blocks_passes, 0) = 1
+        ORDER BY incident_date DESC, id DESC
+        """,
+        (resident_id,),
+    )
+
+    today = datetime.now(CHICAGO_TZ).date()
+    active: list[dict] = []
+
+    for row in rows:
+        item = dict(row)
+        outcome = str(item.get("disciplinary_outcome") or "").strip().lower()
+        is_open = _status_is_open_for_discipline(item.get("status"))
+
+        if outcome == "program_probation":
+            start_date = _parse_date_only(item.get("probation_start_date"))
+            end_date = _parse_date_only(item.get("probation_end_date"))
+            is_active = bool(
+                is_open
+                and start_date
+                and end_date
+                and start_date <= today <= end_date
+            )
+            if is_active:
+                item["restriction_label"] = "Program Probation"
+                item["restriction_detail"] = f"{item.get('probation_start_date') or '—'} to {item.get('probation_end_date') or '—'}"
+                active.append(item)
+
+        elif outcome == "pre_termination":
+            scheduled_date = _parse_date_only(item.get("pre_termination_date"))
+            is_active = bool(
+                is_open
+                and scheduled_date
+                and today <= scheduled_date
+            )
+            if is_active:
+                item["restriction_label"] = "Pre Termination Scheduled"
+                item["restriction_detail"] = f"Scheduled for {item.get('pre_termination_date') or '—'}"
+                active.append(item)
+
+    return active
 
 
 def _render_pass_form(
@@ -124,6 +218,15 @@ def resident_pass_request_view():
             except Exception:
                 hour_summary = None
 
+        active_restrictions = _load_active_writeup_restrictions(resident_id_int)
+        if active_restrictions:
+            first_block = active_restrictions[0]
+            flash(
+                f"Pass requests are disabled because you are under {first_block.get('restriction_label')}. {first_block.get('restriction_detail')}".strip(),
+                "error",
+            )
+            return redirect(url_for("resident_portal.home"))
+
         if request.method == "GET":
             return _render_pass_form(
                 shelter=shelter,
@@ -152,6 +255,15 @@ def resident_pass_request_view():
                 hour_summary=hour_summary,
                 form_data=form_data,
             ), 429
+
+        active_restrictions = _load_active_writeup_restrictions(resident_id_int)
+        if active_restrictions:
+            first_block = active_restrictions[0]
+            flash(
+                f"Pass requests are disabled because you are under {first_block.get('restriction_label')}. {first_block.get('restriction_detail')}".strip(),
+                "error",
+            )
+            return redirect(url_for("resident_portal.home"))
 
         pass_type = (request.form.get("pass_type") or "").strip().lower()
         destination = (request.form.get("destination") or "").strip()
