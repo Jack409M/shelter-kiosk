@@ -15,3 +15,7 @@ def ensure_tables(kind: str) -> None:
     schema_case_children.ensure_tables(kind)
     schema_case_intake_drafts.ensure_tables(kind)
     schema_writeups.ensure_tables(kind)
+
+
+def ensure_indexes() -> None:
+    return None
