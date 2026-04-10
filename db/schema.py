@@ -283,6 +283,7 @@ def init_db() -> None:
     schema_program.ensure_indexes()
     schema_outcomes.ensure_indexes()
     schema_goals.ensure_indexes()
+    schema_case.ensure_indexes()
     schema_shelter_operations.ensure_indexes()
     schema_forms.ensure_indexes()
     schema_requests.ensure_indexes()
