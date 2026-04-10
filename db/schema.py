@@ -7,7 +7,6 @@ from . import schema_bootstrap
 from . import schema_case_calendar
 from . import schema_case_children
 from . import schema_case_intake_drafts
-from . import schema_case_management
 from . import schema_case_notes
 from . import schema_case_support
 from . import schema_comms
@@ -262,9 +261,6 @@ def init_db() -> None:
     # Goals and appointments
     schema_goals.ensure_tables(kind)
 
-    # Remaining case management tables
-    schema_case_management.ensure_tables(kind)
-
     # Case notes
     schema_case_notes.ensure_tables(kind)
 
@@ -307,7 +303,6 @@ def init_db() -> None:
     schema_program.ensure_indexes()
     schema_outcomes.ensure_indexes()
     schema_goals.ensure_indexes()
-    schema_case_management.ensure_indexes()
     schema_shelter_operations.ensure_indexes()
     schema_forms.ensure_indexes()
     schema_requests.ensure_indexes()
