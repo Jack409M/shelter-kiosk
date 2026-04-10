@@ -1,4 +1,38 @@
 <aside class="cmx-side">
+  {% if has_disciplinary_block %}
+    <div class="cmx-card" style="background:#fff2f2; border:1px solid #d38a8a;">
+      <div class="cmx-side-card-head">
+        <h3 style="color:#8a1f1f;">Disciplinary Status</h3>
+        <a class="cmx-side-action" href="{{ url_for('writeups.resident_writeups', resident_id=resident_id) }}">Open Write Ups</a>
+      </div>
+
+      <div class="cmx-stack">
+        {% for item in disciplinary_flags %}
+          <div
+            class="cmx-chip-block"
+            style="border:1px solid #d38a8a; background:#fff7f7;"
+          >
+            <div style="font-weight:700; color:#8a1f1f;">
+              {{ item.label }}
+            </div>
+            <div style="margin-top:4px; font-size:13px; color:#6f1c1c;">
+              {{ item.detail }}
+            </div>
+            {% if item.summary %}
+              <div style="margin-top:6px; font-size:12px; color:#6b5560;">
+                {{ item.summary }}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:10px; font-size:12px; color:#8a1f1f; font-weight:700;">
+        Passes are currently restricted.
+      </div>
+    </div>
+  {% endif %}
+
   <div class="cmx-card">
     <div class="cmx-side-card-head">
       <h3>Case Snapshot</h3>
