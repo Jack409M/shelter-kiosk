@@ -37,7 +37,7 @@ def ensure_chore_tables(kind: str) -> None:
             sort_order INTEGER DEFAULT 0,
             created_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
     create_table(
@@ -71,7 +71,7 @@ def ensure_chore_tables(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -113,7 +113,7 @@ def ensure_kiosk_activity_category_tables(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -147,7 +147,7 @@ def ensure_kiosk_activity_child_option_tables(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -631,4 +631,3 @@ def ensure_tables(kind: str) -> None:
     ensure_kiosk_activity_child_option_columns()
     ensure_default_kiosk_activity_categories(kind)
     ensure_default_kiosk_activity_child_options(kind)
-    ensure_indexes()
