@@ -45,7 +45,7 @@ def ensure_intake_drafts_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -171,4 +171,3 @@ def ensure_case_intake_drafts_indexes() -> None:
 def ensure_tables(kind: str) -> None:
     ensure_intake_drafts_table(kind)
     ensure_intake_drafts_columns()
-    ensure_case_intake_drafts_indexes()
