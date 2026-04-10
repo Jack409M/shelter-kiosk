@@ -49,7 +49,7 @@ def ensure_resident_form_submissions_table(kind: str) -> None:
             raw_payload_json TEXT NOT NULL,
             created_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -89,7 +89,7 @@ def ensure_weekly_resident_summary_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
