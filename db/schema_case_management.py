@@ -488,6 +488,57 @@ def ensure_resident_budget_sessions_table(kind: str) -> None:
     )
 
 
+def ensure_resident_writeups_table(kind: str) -> None:
+    create_table(
+        kind,
+
+        # SQLite
+        """
+        CREATE TABLE IF NOT EXISTS resident_writeups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            shelter_snapshot TEXT NOT NULL,
+            incident_date TEXT NOT NULL,
+            category TEXT NOT NULL,
+            severity TEXT NOT NULL DEFAULT 'Low',
+            summary TEXT NOT NULL,
+            full_notes TEXT,
+            action_taken TEXT,
+            status TEXT NOT NULL DEFAULT 'Open',
+            resolution_notes TEXT,
+            resolved_at TEXT,
+            created_by_staff_user_id INTEGER,
+            updated_by_staff_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (resident_id) REFERENCES residents(id)
+        )
+        """,
+
+        # PostgreSQL
+        """
+        CREATE TABLE IF NOT EXISTS resident_writeups (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            shelter_snapshot TEXT NOT NULL,
+            incident_date TEXT NOT NULL,
+            category TEXT NOT NULL,
+            severity TEXT NOT NULL DEFAULT 'Low',
+            summary TEXT NOT NULL,
+            full_notes TEXT,
+            action_taken TEXT,
+            status TEXT NOT NULL DEFAULT 'Open',
+            resolution_notes TEXT,
+            resolved_at TEXT,
+            created_by_staff_user_id INTEGER,
+            updated_by_staff_user_id INTEGER,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
 def ensure_case_manager_updates_columns() -> None:
     statements = [
         "ALTER TABLE case_manager_updates ADD COLUMN IF NOT EXISTS next_appointment TEXT",
@@ -704,6 +755,31 @@ def ensure_resident_budget_sessions_columns() -> None:
         "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS notes TEXT",
         "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS created_at TEXT",
         "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS updated_at TEXT",
+    ]
+
+    for statement in statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
+
+
+def ensure_resident_writeups_columns() -> None:
+    statements = [
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS shelter_snapshot TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS incident_date TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS category TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS severity TEXT DEFAULT 'Low'",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS summary TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS full_notes TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS action_taken TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Open'",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS resolution_notes TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS resolved_at TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS created_by_staff_user_id INTEGER",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS updated_by_staff_user_id INTEGER",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS created_at TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
 
     for statement in statements:
@@ -1214,6 +1290,46 @@ def ensure_indexes() -> None:
     except Exception:
         pass
 
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_writeups_resident_idx
+            ON resident_writeups (resident_id)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_writeups_incident_date_idx
+            ON resident_writeups (incident_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_writeups_resident_incident_date_idx
+            ON resident_writeups (resident_id, incident_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_writeups_status_idx
+            ON resident_writeups (status)
+            """
+        )
+    except Exception:
+        pass
+
 
 def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_table(kind)
@@ -1227,6 +1343,7 @@ def ensure_tables(kind: str) -> None:
     ensure_resident_ua_log_table(kind)
     ensure_resident_living_area_inspections_table(kind)
     ensure_resident_budget_sessions_table(kind)
+    ensure_resident_writeups_table(kind)
     ensure_case_manager_updates_columns()
     ensure_case_manager_update_summary_columns()
     ensure_intake_drafts_columns()
@@ -1237,4 +1354,5 @@ def ensure_tables(kind: str) -> None:
     ensure_resident_ua_log_columns()
     ensure_resident_living_area_inspections_columns()
     ensure_resident_budget_sessions_columns()
+    ensure_resident_writeups_columns()
     ensure_indexes()
