@@ -25,6 +25,11 @@ VALID_WRITEUP_CATEGORIES = [
     "Other",
 ]
 VALID_WRITEUP_SEVERITIES = ["Low", "Moderate", "High"]
+VALID_DISCIPLINARY_OUTCOMES = [
+    "none",
+    "program_probation",
+    "pre_termination",
+]
 
 
 def _placeholder() -> str:
@@ -37,56 +42,6 @@ def _normalize_shelter_name(value: str | None) -> str:
 
 def _allowed() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
-
-
-def _ensure_tables() -> None:
-    if g.get("db_kind") == "pg":
-        db_execute(
-            """
-            CREATE TABLE IF NOT EXISTS resident_writeups (
-                id SERIAL PRIMARY KEY,
-                resident_id INTEGER NOT NULL REFERENCES residents(id),
-                shelter_snapshot TEXT NOT NULL,
-                incident_date TEXT NOT NULL,
-                category TEXT NOT NULL,
-                severity TEXT NOT NULL DEFAULT 'Low',
-                summary TEXT NOT NULL,
-                full_notes TEXT,
-                action_taken TEXT,
-                status TEXT NOT NULL DEFAULT 'Open',
-                resolution_notes TEXT,
-                resolved_at TEXT,
-                created_by_staff_user_id INTEGER,
-                updated_by_staff_user_id INTEGER,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            """
-        )
-    else:
-        db_execute(
-            """
-            CREATE TABLE IF NOT EXISTS resident_writeups (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                resident_id INTEGER NOT NULL,
-                shelter_snapshot TEXT NOT NULL,
-                incident_date TEXT NOT NULL,
-                category TEXT NOT NULL,
-                severity TEXT NOT NULL DEFAULT 'Low',
-                summary TEXT NOT NULL,
-                full_notes TEXT,
-                action_taken TEXT,
-                status TEXT NOT NULL DEFAULT 'Open',
-                resolution_notes TEXT,
-                resolved_at TEXT,
-                created_by_staff_user_id INTEGER,
-                updated_by_staff_user_id INTEGER,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                FOREIGN KEY (resident_id) REFERENCES residents(id)
-            )
-            """
-        )
 
 
 def _resident_context(resident_id: int, shelter: str):
@@ -104,6 +59,58 @@ def _resident_context(resident_id: int, shelter: str):
     return dict(row) if row else None
 
 
+def _insert_resident_notification(
+    *,
+    resident_id: int,
+    shelter: str,
+    notification_type: str,
+    title: str,
+    message: str,
+) -> None:
+    db_execute(
+        """
+        INSERT INTO resident_notifications (
+            resident_id,
+            shelter,
+            notification_type,
+            title,
+            message,
+            related_pass_id,
+            is_read,
+            created_at,
+            read_at
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, 0, %s, %s)
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        INSERT INTO resident_notifications (
+            resident_id,
+            shelter,
+            notification_type,
+            title,
+            message,
+            related_pass_id,
+            is_read,
+            created_at,
+            read_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
+        """,
+        (
+            resident_id,
+            shelter,
+            notification_type,
+            title,
+            message,
+            None,
+            utcnow_iso(),
+            None,
+        ),
+    )
+
+
 @writeups.route("/resident/<int:resident_id>", methods=["GET", "POST"])
 @require_login
 @require_shelter
@@ -111,8 +118,6 @@ def resident_writeups(resident_id: int):
     if not _allowed():
         flash("Case manager, shelter director, or admin access required.", "error")
         return redirect(url_for("attendance.staff_attendance"))
-
-    _ensure_tables()
 
     shelter = _normalize_shelter_name(session.get("shelter"))
     resident = _resident_context(resident_id, shelter)
@@ -130,15 +135,53 @@ def resident_writeups(resident_id: int):
         status = (request.form.get("status") or "Open").strip()
         resolution_notes = (request.form.get("resolution_notes") or "").strip() or None
 
+        disciplinary_outcome = (request.form.get("disciplinary_outcome") or "none").strip().lower()
+        probation_start_date = (request.form.get("probation_start_date") or "").strip() or None
+        probation_end_date = (request.form.get("probation_end_date") or "").strip() or None
+        pre_termination_date = (request.form.get("pre_termination_date") or "").strip() or None
+        blocks_passes_raw = (request.form.get("blocks_passes") or "").strip().lower()
+
         if category not in VALID_WRITEUP_CATEGORIES:
             category = "Other"
         if severity not in VALID_WRITEUP_SEVERITIES:
             severity = "Low"
         if status not in VALID_WRITEUP_STATUSES:
             status = "Open"
+        if disciplinary_outcome not in VALID_DISCIPLINARY_OUTCOMES:
+            disciplinary_outcome = "none"
+
+        blocks_passes = blocks_passes_raw in {"1", "true", "yes", "on"}
+
+        errors: list[str] = []
 
         if not incident_date or not summary:
-            flash("Incident date and summary are required.", "error")
+            errors.append("Incident date and summary are required.")
+
+        if disciplinary_outcome == "program_probation":
+            if not probation_start_date or not probation_end_date:
+                errors.append("Program Probation requires a begin date and end date.")
+            if pre_termination_date:
+                errors.append("Pre Termination date should not be set when Program Probation is selected.")
+            blocks_passes = True
+
+        if disciplinary_outcome == "pre_termination":
+            if not pre_termination_date:
+                errors.append("Pre Termination requires a scheduled date.")
+            if probation_start_date or probation_end_date:
+                errors.append("Probation dates should not be set when Pre Termination is selected.")
+            blocks_passes = True
+
+        if disciplinary_outcome == "none":
+            probation_start_date = None
+            probation_end_date = None
+            pre_termination_date = None
+
+        if status in {"Resolved", "Dismissed"}:
+            blocks_passes = False
+
+        if errors:
+            for err in errors:
+                flash(err, "error")
             return redirect(url_for("writeups.resident_writeups", resident_id=resident_id))
 
         now = utcnow_iso()
@@ -159,12 +202,17 @@ def resident_writeups(resident_id: int):
                     status,
                     resolution_notes,
                     resolved_at,
+                    disciplinary_outcome,
+                    probation_start_date,
+                    probation_end_date,
+                    pre_termination_date,
+                    blocks_passes,
                     created_by_staff_user_id,
                     updated_by_staff_user_id,
                     created_at,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 if g.get("db_kind") == "pg"
                 else
@@ -181,12 +229,17 @@ def resident_writeups(resident_id: int):
                     status,
                     resolution_notes,
                     resolved_at,
+                    disciplinary_outcome,
+                    probation_start_date,
+                    probation_end_date,
+                    pre_termination_date,
+                    blocks_passes,
                     created_by_staff_user_id,
                     updated_by_staff_user_id,
                     created_at,
                     updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """
             ),
             (
@@ -201,12 +254,35 @@ def resident_writeups(resident_id: int):
                 status,
                 resolution_notes,
                 resolved_at,
+                disciplinary_outcome,
+                probation_start_date,
+                probation_end_date,
+                pre_termination_date,
+                1 if blocks_passes else 0,
                 session.get("staff_user_id"),
                 session.get("staff_user_id"),
                 now,
                 now,
             ),
         )
+
+        if disciplinary_outcome == "pre_termination" and pre_termination_date and status == "Open":
+            _insert_resident_notification(
+                resident_id=resident_id,
+                shelter=shelter,
+                notification_type="pre_termination_scheduled",
+                title="Pre Termination Scheduled",
+                message=f"You are scheduled for Pre Termination on {pre_termination_date}. Please contact staff immediately.",
+            )
+
+        if disciplinary_outcome == "program_probation" and probation_start_date and probation_end_date and status == "Open":
+            _insert_resident_notification(
+                resident_id=resident_id,
+                shelter=shelter,
+                notification_type="program_probation_assigned",
+                title="Program Probation Assigned",
+                message=f"You are on Program Probation from {probation_start_date} through {probation_end_date}. Passes are denied during this period.",
+            )
 
         flash("Write up saved.", "ok")
         return redirect(url_for("writeups.resident_writeups", resident_id=resident_id))
@@ -229,4 +305,5 @@ def resident_writeups(resident_id: int):
         statuses=VALID_WRITEUP_STATUSES,
         categories=VALID_WRITEUP_CATEGORIES,
         severities=VALID_WRITEUP_SEVERITIES,
+        disciplinary_outcomes=VALID_DISCIPLINARY_OUTCOMES,
     )
