@@ -99,4 +99,3 @@ def ensure_calendar_indexes() -> None:
 
 def ensure_tables(kind: str) -> None:
     ensure_case_manager_calendar_events_table(kind)
-    ensure_calendar_indexes()
