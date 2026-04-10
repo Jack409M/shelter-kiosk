@@ -329,4 +329,3 @@ def ensure_tables(kind: str) -> None:
     ensure_case_manager_updates_columns()
     ensure_case_manager_update_summary_columns()
     ensure_client_services_columns()
-    ensure_case_notes_indexes()
