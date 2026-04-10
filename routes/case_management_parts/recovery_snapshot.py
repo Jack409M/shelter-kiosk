@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import Any
 
 from core.db import db_fetchall, db_fetchone
+from core.meeting_progress import calculate_meeting_progress
 from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
 from routes.case_management_parts.helpers import placeholder
 
@@ -162,6 +163,7 @@ def _load_resident_profile(resident_id: int):
     return db_fetchone(
         f"""
         SELECT
+            shelter,
             program_level,
             level_start_date,
             sponsor_name,
@@ -440,6 +442,13 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     inspection_items = _inspection_items(inspection_rows_raw)
     budget_items = _budget_items(budget_rows_raw)
 
+    meeting_progress = calculate_meeting_progress(
+        resident_id=resident_id,
+        shelter=resident.get("shelter") or "",
+        program_start_date=enrollment_baseline.get("entry_date"),
+        level_value=resident.get("program_level"),
+    )
+
     return {
         "program_level": resident.get("program_level") or "1",
         "level_start_date": level_start_date,
@@ -487,4 +496,23 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "latest_ua": ua_items[0] if ua_items else None,
         "latest_inspection": inspection_items[0] if inspection_items else None,
         "latest_budget_session": budget_items[0] if budget_items else None,
+        "meeting_progress": meeting_progress,
+        "total_meetings": meeting_progress.get("total_meetings", 0),
+        "meetings_this_week": meeting_progress.get("meetings_this_week", 0),
+        "meetings_last_30_days": meeting_progress.get("meetings_last_30_days", 0),
+        "meetings_last_90_days": meeting_progress.get("meetings_last_90_days", 0),
+        "days_in_program": meeting_progress.get("days_in_program", 0),
+        "expected_meetings_so_far": meeting_progress.get("expected_meetings_so_far", 0),
+        "pace_percent": meeting_progress.get("pace_percent", 0.0),
+        "pace_percent_display": meeting_progress.get("pace_percent_display", "0.0%"),
+        "projected_90_day_total": meeting_progress.get("projected_90_day_total", 0),
+        "meetings_remaining_to_90": meeting_progress.get("meetings_remaining_to_90", 0),
+        "completed_90_in_90": meeting_progress.get("completed_90_in_90", False),
+        "completed_116_meetings": meeting_progress.get("completed_116_meetings", False),
+        "completed_168_meetings": meeting_progress.get("completed_168_meetings", False),
+        "required_weekly_meetings": meeting_progress.get("required_weekly_meetings"),
+        "weekly_requirement_met": meeting_progress.get("weekly_requirement_met"),
+        "meeting_status_label": meeting_progress.get("status_label", "Not Started"),
+        "meeting_weekly_rows": meeting_progress.get("weekly_rows", []),
+        "has_meeting_data": meeting_progress.get("has_meeting_data", False),
     }
