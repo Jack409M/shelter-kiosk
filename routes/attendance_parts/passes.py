@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
+from datetime import date, datetime, time, timezone
 from zoneinfo import ZoneInfo
 
 from flask import abort, flash, g, redirect, render_template, session, url_for
@@ -130,6 +130,110 @@ def _meeting_status_class_for_summary(meeting_summary: dict | None) -> str:
     return "fail"
 
 
+def _today_chicago_date() -> date:
+    return datetime.now(CHICAGO_TZ).date()
+
+
+def _parse_date_only(value: str | None) -> date | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text[:10]).date()
+    except Exception:
+        return None
+
+
+def _status_is_open_for_discipline(value: str | None) -> bool:
+    return str(value or "").strip().lower() == "open"
+
+
+def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
+    rows = db_fetchall(
+        """
+        SELECT
+            id,
+            incident_date,
+            category,
+            severity,
+            summary,
+            status,
+            disciplinary_outcome,
+            probation_start_date,
+            probation_end_date,
+            pre_termination_date,
+            blocks_passes
+        FROM resident_writeups
+        WHERE resident_id = %s
+          AND COALESCE(blocks_passes, 0) IN (1, TRUE)
+        ORDER BY incident_date DESC, id DESC
+        """
+        if g.get("db_kind") == "pg"
+        else
+        """
+        SELECT
+            id,
+            incident_date,
+            category,
+            severity,
+            summary,
+            status,
+            disciplinary_outcome,
+            probation_start_date,
+            probation_end_date,
+            pre_termination_date,
+            blocks_passes
+        FROM resident_writeups
+        WHERE resident_id = ?
+          AND COALESCE(blocks_passes, 0) = 1
+        ORDER BY incident_date DESC, id DESC
+        """,
+        (resident_id,),
+    )
+
+    today = _today_chicago_date()
+    active: list[dict] = []
+
+    for row in rows:
+        item = dict(row)
+        outcome = str(item.get("disciplinary_outcome") or "").strip().lower()
+        status = str(item.get("status") or "").strip()
+        is_open = _status_is_open_for_discipline(status)
+
+        if outcome == "program_probation":
+            start_date = _parse_date_only(item.get("probation_start_date"))
+            end_date = _parse_date_only(item.get("probation_end_date"))
+            is_active = bool(
+                is_open
+                and start_date
+                and end_date
+                and start_date <= today <= end_date
+            )
+            if is_active:
+                item["restriction_label"] = "Program Probation"
+                item["restriction_detail"] = f"{item.get('probation_start_date') or '—'} to {item.get('probation_end_date') or '—'}"
+                active.append(item)
+
+        elif outcome == "pre_termination":
+            scheduled_date = _parse_date_only(item.get("pre_termination_date"))
+            is_active = bool(
+                is_open
+                and scheduled_date
+                and today <= scheduled_date
+            )
+            if is_active:
+                item["restriction_label"] = "Pre Termination Scheduled"
+                item["restriction_detail"] = f"Scheduled for {item.get('pre_termination_date') or '—'}"
+                active.append(item)
+
+    return active
+
+
+def _has_active_pass_block(resident_id: int) -> tuple[bool, list[dict]]:
+    restrictions = _load_active_writeup_restrictions(resident_id)
+    return (len(restrictions) > 0, restrictions)
+
+
 def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, meeting_summary=None):
     resident_id = int(pass_row.get("resident_id") or 0)
     resident_profile = _load_resident_pass_profile(resident_id) if resident_id else None
@@ -150,6 +254,18 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, 
     pass_type_text = pass_type_label(pass_type_key)
 
     checks: list[dict] = []
+
+    has_block, restriction_rows = _has_active_pass_block(resident_id)
+    if has_block:
+        for restriction in restriction_rows:
+            checks.append(
+                {
+                    "label": restriction.get("restriction_label") or "Disciplinary Restriction",
+                    "value": "Passes denied",
+                    "status_class": "fail",
+                    "detail": restriction.get("restriction_detail") or restriction.get("summary") or "",
+                }
+            )
 
     if pass_type_key in {"pass", "overnight"}:
         start_local = pass_row.get("start_at_local")
@@ -302,6 +418,8 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, 
         "pass_type_label": pass_type_text,
         "rule_lines": rule_box.get("lines", []),
         "checks": checks,
+        "has_disciplinary_block": has_block,
+        "disciplinary_restrictions": restriction_rows,
     }
 
 
@@ -623,6 +741,11 @@ def staff_passes_pending_view():
         row["end_at_local"] = to_local(row.get("end_at"))
         row["created_at_local"] = to_local(row.get("created_at"))
         row["pass_type_label"] = pass_type_label(row.get("pass_type"))
+
+        blocked, restriction_rows = _has_active_pass_block(int(row.get("resident_id") or 0))
+        row["has_disciplinary_block"] = blocked
+        row["disciplinary_restrictions"] = restriction_rows
+
         processed.append(row)
 
     return render_template(
@@ -968,6 +1091,13 @@ def staff_pass_approve_view(pass_id: int):
     if status != "pending":
         flash("That pass request is no longer pending.", "error")
         return redirect(url_for("attendance.staff_passes_pending"))
+
+    blocked, restriction_rows = _has_active_pass_block(resident_id)
+    if blocked:
+        label = restriction_rows[0].get("restriction_label") or "disciplinary restriction"
+        detail = restriction_rows[0].get("restriction_detail") or ""
+        flash(f"Pass cannot be approved because resident is under {label}. {detail}".strip(), "error")
+        return redirect(url_for("attendance.staff_pass_detail", pass_id=pass_id))
 
     now_iso = utcnow_iso()
     delete_after_at = cleanup_deadline_from_expected_back(
