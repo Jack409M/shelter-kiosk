@@ -4,11 +4,7 @@ from flask import g
 
 from core.db import db_execute
 from . import schema_bootstrap
-from . import schema_case_calendar
-from . import schema_case_children
-from . import schema_case_intake_drafts
-from . import schema_case_notes
-from . import schema_case_support
+from . import schema_case
 from . import schema_comms
 from . import schema_core
 from . import schema_forms
@@ -19,7 +15,6 @@ from . import schema_program
 from . import schema_requests
 from . import schema_shelter_operations
 from . import schema_shelters
-from . import schema_writeups
 
 
 _SCHEMA_INITIALIZED = False
@@ -261,23 +256,8 @@ def init_db() -> None:
     # Goals and appointments
     schema_goals.ensure_tables(kind)
 
-    # Case notes
-    schema_case_notes.ensure_tables(kind)
-
-    # Case support
-    schema_case_support.ensure_tables(kind)
-
-    # Case manager calendar
-    schema_case_calendar.ensure_tables(kind)
-
-    # Case children
-    schema_case_children.ensure_tables(kind)
-
-    # Case intake drafts
-    schema_case_intake_drafts.ensure_tables(kind)
-
-    # Resident writeups
-    schema_writeups.ensure_tables(kind)
+    # Case domain
+    schema_case.ensure_tables(kind)
 
     # Shelter operations
     schema_shelter_operations.ensure_tables(kind)
