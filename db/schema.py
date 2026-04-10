@@ -7,6 +7,7 @@ from . import schema_bootstrap
 from . import schema_case_calendar
 from . import schema_case_management
 from . import schema_case_notes
+from . import schema_case_support
 from . import schema_comms
 from . import schema_core
 from . import schema_forms
@@ -259,11 +260,14 @@ def init_db() -> None:
     # Goals and appointments
     schema_goals.ensure_tables(kind)
 
-    # Case manager updates
+    # Remaining case management tables
     schema_case_management.ensure_tables(kind)
 
     # Case notes
     schema_case_notes.ensure_tables(kind)
+
+    # Case support
+    schema_case_support.ensure_tables(kind)
 
     # Case manager calendar
     schema_case_calendar.ensure_tables(kind)
