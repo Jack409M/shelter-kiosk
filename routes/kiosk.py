@@ -79,11 +79,11 @@ def _active_resident_row(shelter: str, resident_code: str):
 
 def _attendance_insert_sql() -> str:
     return (
-        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time) "
-        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+        "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time, meeting_count, meeting_1, meeting_2, is_recovery_meeting) "
+        "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
         if g.get("db_kind") == "pg"
-        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        else "INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note, expected_back_time, destination, obligation_start_time, obligation_end_time, meeting_count, meeting_1, meeting_2, is_recovery_meeting) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
 
 
@@ -562,7 +562,22 @@ def kiosk_checkin(shelter: str):
 
     db_execute(
         _attendance_insert_sql(),
-        (resident_id, shelter_key, "check_in", checkin_time_value, None, None, None, None, None, None),
+        (
+            resident_id,
+            shelter_key,
+            "check_in",
+            checkin_time_value,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            0,
+            None,
+            None,
+            0,
+        ),
     )
 
     complete_active_passes(resident_id, shelter_key)
@@ -898,6 +913,21 @@ def kiosk_checkout(shelter: str):
             volunteer_child_options=volunteer_child_options,
         ), 400
 
+    meeting_count = 0
+    meeting_1_value = None
+    meeting_2_value = None
+    is_recovery_meeting_value = 0
+
+    if is_aa_na_meeting:
+        meeting_1_value = aa_na_meeting_1 or None
+        meeting_2_value = aa_na_meeting_2 or None
+        meeting_count = 0
+        if meeting_1_value:
+            meeting_count += 1
+        if meeting_2_value:
+            meeting_count += 1
+        is_recovery_meeting_value = 1
+
     note_parts = []
 
     if destination:
@@ -944,6 +974,10 @@ def kiosk_checkout(shelter: str):
             destination_value,
             obligation_start_value,
             obligation_end_value,
+            meeting_count,
+            meeting_1_value,
+            meeting_2_value,
+            is_recovery_meeting_value,
         ),
     )
 
@@ -958,6 +992,8 @@ def kiosk_checkout(shelter: str):
             f"activity_key={selected_activity_key or ''} "
             f"meeting_1={aa_na_meeting_1 or ''} "
             f"meeting_2={aa_na_meeting_2 or ''} "
+            f"meeting_count={meeting_count} "
+            f"is_recovery_meeting={is_recovery_meeting_value} "
             f"volunteer_option={volunteer_community_service_option or ''} "
             f"start={obligation_start_value or ''} "
             f"end={obligation_end_value or ''} "
