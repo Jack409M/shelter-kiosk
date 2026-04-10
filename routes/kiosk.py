@@ -87,6 +87,65 @@ def _attendance_insert_sql() -> str:
     )
 
 
+def _is_rad_activity_label(activity_label: str | None) -> bool:
+    return (activity_label or "").strip().lower() == "rad"
+
+
+def _update_resident_rad_progress(resident_id: int, shelter: str, destination_label: str | None) -> None:
+    if not resident_id:
+        return
+
+    if not _is_rad_activity_label(destination_label):
+        return
+
+    completed_at_value = utcnow_iso()
+
+    db_execute(
+        """
+        UPDATE residents
+        SET
+            rad_classes_attended = COALESCE(rad_classes_attended, 0) + 1,
+            rad_completed = CASE
+                WHEN COALESCE(rad_classes_attended, 0) + 1 >= 30 THEN %s
+                ELSE COALESCE(rad_completed, %s)
+            END,
+            rad_completed_at = CASE
+                WHEN COALESCE(rad_classes_attended, 0) + 1 >= 30
+                     AND (rad_completed_at IS NULL OR rad_completed_at = '')
+                THEN %s
+                ELSE rad_completed_at
+            END
+        WHERE id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
+        """
+        if g.get("db_kind") == "pg"
+        else """
+        UPDATE residents
+        SET
+            rad_classes_attended = COALESCE(rad_classes_attended, 0) + 1,
+            rad_completed = CASE
+                WHEN COALESCE(rad_classes_attended, 0) + 1 >= 30 THEN ?
+                ELSE COALESCE(rad_completed, ?)
+            END,
+            rad_completed_at = CASE
+                WHEN COALESCE(rad_classes_attended, 0) + 1 >= 30
+                     AND (rad_completed_at IS NULL OR rad_completed_at = '')
+                THEN ?
+                ELSE rad_completed_at
+            END
+        WHERE id = ?
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
+        """,
+        (
+            True if g.get("db_kind") == "pg" else 1,
+            False if g.get("db_kind") == "pg" else 0,
+            completed_at_value,
+            resident_id,
+            shelter,
+        ),
+    )
+
+
 def _active_pass_row(resident_id: int, shelter: str):
     normalized_shelter = (shelter or "").strip().lower()
     now_iso = utcnow_iso()
@@ -979,6 +1038,12 @@ def kiosk_checkout(shelter: str):
             meeting_2_value,
             is_recovery_meeting_value,
         ),
+    )
+
+    _update_resident_rad_progress(
+        resident_id=resident_id,
+        shelter=shelter_key,
+        destination_label=destination_value,
     )
 
     log_action(
