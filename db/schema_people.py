@@ -91,6 +91,9 @@ def ensure_residents_table(kind: str) -> None:
             step_current INTEGER,
             step_work_active INTEGER,
             step_changed_at TEXT,
+            rad_classes_attended INTEGER,
+            rad_completed INTEGER,
+            rad_completed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
@@ -135,6 +138,9 @@ def ensure_residents_table(kind: str) -> None:
             step_current INTEGER,
             step_work_active BOOLEAN,
             step_changed_at TEXT,
+            rad_classes_attended INTEGER,
+            rad_completed BOOLEAN,
+            rad_completed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
@@ -322,6 +328,9 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_current INTEGER",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_work_active BOOLEAN",
             "ALTER TABLE residents ADD COLUMN IF NOT EXISTS step_changed_at TEXT",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS rad_classes_attended INTEGER",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS rad_completed BOOLEAN",
+            "ALTER TABLE residents ADD COLUMN IF NOT EXISTS rad_completed_at TEXT",
         ]
         child_statements = [
             "ALTER TABLE resident_children ADD COLUMN IF NOT EXISTS receives_survivor_benefit BOOLEAN NOT NULL DEFAULT FALSE",
@@ -354,6 +363,9 @@ def ensure_recovery_profile_columns(kind: str) -> None:
             "ALTER TABLE residents ADD COLUMN step_current INTEGER",
             "ALTER TABLE residents ADD COLUMN step_work_active INTEGER",
             "ALTER TABLE residents ADD COLUMN step_changed_at TEXT",
+            "ALTER TABLE residents ADD COLUMN rad_classes_attended INTEGER",
+            "ALTER TABLE residents ADD COLUMN rad_completed INTEGER",
+            "ALTER TABLE residents ADD COLUMN rad_completed_at TEXT",
         ]
         child_statements = [
             "ALTER TABLE resident_children ADD COLUMN receives_survivor_benefit INTEGER NOT NULL DEFAULT 0",
@@ -641,3 +653,43 @@ def ensure_columns_and_constraints(kind: str) -> None:
     ensure_resident_code_schema(kind)
     backfill_birth_year_from_legacy_dob(kind)
     backfill_resident_codes(kind)
+
+
+def ensure_indexes() -> None:
+    index_statements = [
+        "CREATE INDEX IF NOT EXISTS residents_shelter_active_name_idx ON residents (shelter, is_active, last_name, first_name)",
+        "CREATE INDEX IF NOT EXISTS residents_resident_identifier_idx ON residents (resident_identifier)",
+        "CREATE INDEX IF NOT EXISTS residents_status_idx ON residents (status)",
+        "CREATE INDEX IF NOT EXISTS residents_date_entered_idx ON residents (date_entered)",
+        "CREATE INDEX IF NOT EXISTS residents_date_exit_dwc_idx ON residents (date_exit_dwc)",
+        "CREATE INDEX IF NOT EXISTS residents_birth_year_idx ON residents (birth_year)",
+        "CREATE INDEX IF NOT EXISTS residents_program_level_idx ON residents (program_level)",
+        "CREATE INDEX IF NOT EXISTS residents_step_current_idx ON residents (step_current)",
+        "CREATE INDEX IF NOT EXISTS residents_current_job_start_date_idx ON residents (current_job_start_date)",
+        "CREATE INDEX IF NOT EXISTS residents_continuous_employment_start_date_idx ON residents (continuous_employment_start_date)",
+        "CREATE INDEX IF NOT EXISTS residents_rad_completed_idx ON residents (rad_completed)",
+        "CREATE INDEX IF NOT EXISTS residents_rad_completed_at_idx ON residents (rad_completed_at)",
+        "CREATE INDEX IF NOT EXISTS resident_children_resident_idx ON resident_children (resident_id)",
+        "CREATE INDEX IF NOT EXISTS resident_children_resident_active_idx ON resident_children (resident_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS resident_children_living_status_idx ON resident_children (living_status)",
+        "CREATE INDEX IF NOT EXISTS resident_children_survivor_benefit_idx ON resident_children (receives_survivor_benefit)",
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS resident_children_active_dedupe_uidx
+        ON resident_children (
+            resident_id,
+            LOWER(COALESCE(child_name, '')),
+            COALESCE(birth_year, -1),
+            is_active
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS resident_child_income_supports_child_idx ON resident_child_income_supports (child_id)",
+        "CREATE INDEX IF NOT EXISTS resident_child_income_supports_active_idx ON resident_child_income_supports (child_id, is_active)",
+        "CREATE INDEX IF NOT EXISTS resident_child_income_supports_type_idx ON resident_child_income_supports (support_type)",
+        "CREATE INDEX IF NOT EXISTS resident_substances_resident_idx ON resident_substances (resident_id)",
+        "CREATE INDEX IF NOT EXISTS resident_substances_primary_idx ON resident_substances (is_primary)",
+    ]
+    for statement in index_statements:
+        try:
+            db_execute(statement)
+        except Exception:
+            pass
