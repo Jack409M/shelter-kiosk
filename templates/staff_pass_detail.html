@@ -547,7 +547,7 @@
         </div>
         <div class="paper-field">
           <span class="paper-label">Resident Level</span>
-          <div class="paper-value">{{ pass_detail.resident_level if pass_detail else "" }}</div>
+          <div class="paper-value">{{ pass_detail.resident_level if pass_detail else resident_level }}</div>
         </div>
       </div>
 
@@ -705,29 +705,33 @@
             <div class="paper-grid-4">
               <div class="paper-field">
                 <span class="paper-label">Resident Level</span>
-                <div class="paper-value">{{ policy_check.resident_level if policy_check else "" }}</div>
+                <div class="paper-value">{{ resident_level or (policy_check.resident_level if policy_check else "") }}</div>
               </div>
               <div class="paper-field">
-                <span class="paper-label">Approved Amount</span>
+                <span class="paper-label">Sponsor</span>
                 <div class="paper-value">
-                  {% if pass_detail and pass_detail.approved_amount %}
-                    {{ pass_detail.approved_amount }}
+                  {{ sponsor_name or "—" }}
+                  {% if sponsor_active is not none %}
+                    • {{ "Active" if sponsor_active else "Inactive" }}
                   {% endif %}
                 </div>
               </div>
               <div class="paper-field">
-                <span class="paper-label">Reviewed By</span>
+                <span class="paper-label">Step Work</span>
                 <div class="paper-value">
-                  {% if pass_detail and pass_detail.reviewed_by_name %}
-                    {{ pass_detail.reviewed_by_name }}
+                  Step {{ step_current if step_current is not none and step_current != "" else "—" }}
+                  {% if step_work_active is not none %}
+                    • {{ "Active" if step_work_active else "Inactive" }}
                   {% endif %}
                 </div>
               </div>
               <div class="paper-field">
-                <span class="paper-label">Reviewed At</span>
+                <span class="paper-label">Monthly Income</span>
                 <div class="paper-value">
-                  {% if pass_detail and pass_detail.reviewed_at_local %}
-                    {{ fmt_dt(pass_detail.reviewed_at_local) }}
+                  {% if monthly_income not in (None, "") %}
+                    ${{ "{:,.2f}".format(monthly_income|float) }}
+                  {% else %}
+                    —
                   {% endif %}
                 </div>
               </div>
@@ -744,6 +748,105 @@
               </div>
             </div>
           </div>
+
+          {% if meeting_summary %}
+            <div class="paper-section">
+              <div class="paper-section-title">Meeting Progress</div>
+
+              <div class="hours-status-box {{ 'pass' if meeting_summary.completed_90_in_90 or meeting_summary.status_label == 'On Pace for 90 in 90' else 'fail' }}">
+                <div class="hours-status-title">{{ meeting_summary.status_label }}</div>
+                <div class="hours-status-text">
+                  Total meetings: {{ meeting_summary.total_meetings }}
+                  | This week: {{ meeting_summary.meetings_this_week }}
+                  | Pace: {{ meeting_summary.pace_percent_display }}
+                  {% if not meeting_summary.completed_90_in_90 %}
+                    <br>
+                    Remaining to 90: {{ meeting_summary.meetings_remaining_to_90 }}
+                    | Projected 90 day total: {{ meeting_summary.projected_90_day_total }}
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="paper-grid-2">
+                <div class="paper-field">
+                  <span class="paper-label">90 In 90</span>
+                  <div class="paper-value">
+                    {{ meeting_summary.total_meetings }} / 90
+                    {% if meeting_summary.completed_90_in_90 %}
+                      • Complete
+                    {% else %}
+                      • {{ meeting_summary.status_label }}
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="paper-field">
+                  <span class="paper-label">Days In Program</span>
+                  <div class="paper-value">{{ meeting_summary.days_in_program }}</div>
+                </div>
+              </div>
+
+              <div class="paper-grid-4">
+                <div class="paper-field">
+                  <span class="paper-label">Expected So Far</span>
+                  <div class="paper-value">{{ meeting_summary.expected_meetings_so_far }}</div>
+                </div>
+                <div class="paper-field">
+                  <span class="paper-label">This Week</span>
+                  <div class="paper-value">{{ meeting_summary.meetings_this_week }}</div>
+                </div>
+                <div class="paper-field">
+                  <span class="paper-label">116 Complete</span>
+                  <div class="paper-value">{{ "Yes" if meeting_summary.completed_116_meetings else "No" }}</div>
+                </div>
+                <div class="paper-field">
+                  <span class="paper-label">168 Complete</span>
+                  <div class="paper-value">{{ "Yes" if meeting_summary.completed_168_meetings else "No" }}</div>
+                </div>
+              </div>
+
+              {% if meeting_summary.required_weekly_meetings %}
+                <div class="paper-grid-2">
+                  <div class="paper-field">
+                    <span class="paper-label">Weekly Requirement</span>
+                    <div class="paper-value">{{ meeting_summary.meetings_this_week }} / {{ meeting_summary.required_weekly_meetings }}</div>
+                  </div>
+                  <div class="paper-field">
+                    <span class="paper-label">Weekly Requirement Met</span>
+                    <div class="paper-value">
+                      {% if meeting_summary.weekly_requirement_met is sameas true %}
+                        Yes
+                      {% elif meeting_summary.weekly_requirement_met is sameas false %}
+                        No
+                      {% else %}
+                        —
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              {% endif %}
+
+              {% if meeting_summary.weekly_rows %}
+                <table class="hours-table">
+                  <thead>
+                    <tr>
+                      <th>Week Start</th>
+                      <th>Meetings</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in meeting_summary.weekly_rows[:8] %}
+                      <tr>
+                        <td>{{ item.week_start }}</td>
+                        <td>{{ item.meeting_count }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              {% else %}
+                <div class="paper-value">No structured recovery meeting entries found yet.</div>
+              {% endif %}
+            </div>
+          {% endif %}
 
           {% if hour_summary %}
             <div class="paper-section">
@@ -844,290 +947,6 @@
       </div>
     </div>
 
-  </div>
-
-  <div class="print-only-doc">
-    <div class="print-sheet">
-      <div class="po-title">Pass Request</div>
-      <div class="po-subtitle">Page 1 resident copy</div>
-
-      <div class="po-grid-4">
-        <div class="po-field">
-          <span class="po-label">Resident</span>
-          <div class="po-value">{{ p.last_name }}, {{ p.first_name }}</div>
-        </div>
-        <div class="po-field">
-          <span class="po-label">Shelter</span>
-          <div class="po-value">{{ shelter_display(p.shelter) if p.shelter else "" }}</div>
-        </div>
-        <div class="po-field">
-          <span class="po-label">Type</span>
-          <div class="po-value">{{ pass_type_label }}</div>
-        </div>
-        <div class="po-field">
-          <span class="po-label">Status</span>
-          <div class="po-value">{{ (p.status or "")|capitalize }}</div>
-        </div>
-      </div>
-
-      <div class="po-grid-4">
-        <div class="po-field">
-          <span class="po-label">Submitted</span>
-          <div class="po-value">{{ fmt_dt(p.created_at_local) }}</div>
-        </div>
-        <div class="po-field">
-          <span class="po-label">Request Date</span>
-          <div class="po-value">{{ pass_detail.request_date if pass_detail else "" }}</div>
-        </div>
-        <div class="po-field">
-          <span class="po-label">Resident Phone</span>
-          <div class="po-value">{{ pass_detail.resident_phone if pass_detail else "" }}</div>
-        </div>
-        <div class="po-field">
-          <span class="po-label">Resident Level</span>
-          <div class="po-value">{{ pass_detail.resident_level if pass_detail else "" }}</div>
-        </div>
-      </div>
-
-      <div class="po-grid-2">
-        <div class="po-field tall">
-          <span class="po-label">When</span>
-          <div class="po-value">
-            {% if pass_type_key in ["pass", "overnight"] %}
-              {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
-            {% else %}
-              {{ p.start_date }} to {{ p.end_date }}
-            {% endif %}
-          </div>
-        </div>
-        <div class="po-field tall">
-          <span class="po-label">Destination</span>
-          <div class="po-value">{{ p.destination or "" }}</div>
-        </div>
-      </div>
-
-      <div class="po-grid-2">
-        <div class="po-field">
-          <span class="po-label">Reason</span>
-          <div class="po-value">{{ p.reason or "" }}</div>
-        </div>
-        <div class="po-field">
-          <span class="po-label">Who Resident Will Be With</span>
-          <div class="po-value">{{ pass_detail.who_with if pass_detail else "" }}</div>
-        </div>
-      </div>
-
-      <div class="po-grid-2">
-        <div class="po-field tall">
-          <span class="po-label">Address Where Resident Will Be</span>
-          <div class="po-value">{{ pass_detail.destination_address if pass_detail else "" }}</div>
-        </div>
-        <div class="po-grid-2" style="margin-bottom:0;">
-          <div class="po-field">
-            <span class="po-label">Phone Number There</span>
-            <div class="po-value">{{ pass_detail.destination_phone if pass_detail else "" }}</div>
-          </div>
-          <div class="po-field">
-            <span class="po-label">Budgeted Amount</span>
-            <div class="po-value">{{ pass_detail.budgeted_amount if pass_detail else "" }}</div>
-          </div>
-          <div class="po-field">
-            <span class="po-label">Approved Amount</span>
-            <div class="po-value">{{ pass_detail.approved_amount if pass_detail and pass_detail.approved_amount else "" }}</div>
-          </div>
-          <div class="po-field">
-            <span class="po-label">Reviewed By</span>
-            <div class="po-value">{{ pass_detail.reviewed_by_name if pass_detail and pass_detail.reviewed_by_name else "" }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="po-field">
-        <span class="po-label">Reviewed At</span>
-        <div class="po-value">
-          {% if pass_detail and pass_detail.reviewed_at_local %}
-            {{ fmt_dt(pass_detail.reviewed_at_local) }}
-          {% endif %}
-        </div>
-      </div>
-
-      <div style="height:5px;"></div>
-
-      <div class="po-check-row">
-        <div class="po-check">
-          <span class="po-box">{% if pass_detail and pass_detail.requirements_acknowledged == "yes" %}X{% endif %}</span>
-          Will meet requirements
-        </div>
-        <div class="po-check">
-          <span class="po-box">{% if pass_detail and pass_detail.requirements_acknowledged == "no" %}X{% endif %}</span>
-          Will not meet requirements
-        </div>
-      </div>
-
-      <div class="po-field">
-        <span class="po-label">If Requirements Will Not Be Met</span>
-        <div class="po-value">{{ pass_detail.requirements_not_met_explanation if pass_detail else "" }}</div>
-      </div>
-
-      <div style="height:5px;"></div>
-
-      <div class="po-grid-2">
-        <div class="po-field">
-          <span class="po-label">Companion Names</span>
-          <div class="po-value">{{ pass_detail.companion_names if pass_detail else "" }}</div>
-        </div>
-        <div class="po-field">
-          <span class="po-label">Companion Phone Numbers</span>
-          <div class="po-value">{{ pass_detail.companion_phone_numbers if pass_detail else "" }}</div>
-        </div>
-      </div>
-
-      <div class="po-grid-2">
-        <div class="po-field tall">
-          <span class="po-label">Resident Notes</span>
-          <div class="po-value">{{ p.resident_notes or "" }}</div>
-        </div>
-        <div class="po-field tall">
-          <span class="po-label">Staff Notes</span>
-          <div class="po-value">{{ p.staff_notes or "" }}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="print-sheet">
-      <div class="po-title">Staff Review</div>
-      <div class="po-subtitle">Page 2 staff copy</div>
-
-      <div class="po-split">
-        <div>
-          <div class="po-section po-no-break">
-            <div class="po-section-title">Request Summary</div>
-
-            <div class="po-grid-4">
-              <div class="po-field">
-                <span class="po-label">Resident</span>
-                <div class="po-value">{{ p.last_name }}, {{ p.first_name }}</div>
-              </div>
-              <div class="po-field">
-                <span class="po-label">Type</span>
-                <div class="po-value">{{ pass_type_label }}</div>
-              </div>
-              <div class="po-field">
-                <span class="po-label">Status</span>
-                <div class="po-value">{{ (p.status or "")|capitalize }}</div>
-              </div>
-              <div class="po-field">
-                <span class="po-label">Shelter</span>
-                <div class="po-value">{{ shelter_display(p.shelter) if p.shelter else "" }}</div>
-              </div>
-            </div>
-
-            <div class="po-grid-2">
-              <div class="po-field">
-                <span class="po-label">When</span>
-                <div class="po-value">
-                  {% if pass_type_key in ["pass", "overnight"] %}
-                    {{ fmt_dt(p.start_at_local) }} to {{ fmt_dt(p.end_at_local) }}
-                  {% else %}
-                    {{ p.start_date }} to {{ p.end_date }}
-                  {% endif %}
-                </div>
-              </div>
-              <div class="po-field">
-                <span class="po-label">Destination</span>
-                <div class="po-value">{{ p.destination or "" }}</div>
-              </div>
-            </div>
-          </div>
-
-          {% if hour_summary %}
-            <div class="po-section po-no-break">
-              <div class="po-section-title">Previous Week Attendance Hours</div>
-
-              <div class="po-status">
-                <div class="po-status-title">{{ hour_summary.status_label }}</div>
-                <div class="po-status-text">
-                  Productive: {{ hour_summary.productive_hours }} / {{ hour_summary.productive_required_hours }}
-                  | Work: {{ hour_summary.work_hours }} / {{ hour_summary.work_required_hours }}
-                  {% if not hour_summary.passes_requirement %}
-                    <br>
-                    Short by {{ hour_summary.productive_short_hours }} productive hours and {{ hour_summary.work_short_hours }} work hours.
-                  {% endif %}
-                </div>
-              </div>
-
-              <div class="po-grid-2">
-                <div class="po-field">
-                  <span class="po-label">Week</span>
-                  <div class="po-value">{{ hour_summary.week_label }}</div>
-                </div>
-                <div class="po-field">
-                  <span class="po-label">Productive / Work</span>
-                  <div class="po-value">{{ hour_summary.productive_hours }} / {{ hour_summary.work_hours }}</div>
-                </div>
-              </div>
-
-              {% if hour_summary.breakdown %}
-                <table class="po-table">
-                  <thead>
-                    <tr>
-                      <th>Category</th>
-                      <th>Credited</th>
-                      <th>Raw</th>
-                      <th>Cap</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {% for item in hour_summary.breakdown %}
-                      <tr>
-                        <td>{{ item.label }}</td>
-                        <td>{{ item.credited_hours }}</td>
-                        <td>{{ item.raw_hours }}</td>
-                        <td>{% if item.weekly_cap_hours is not none %}{{ item.weekly_cap_hours }}{% else %}N/A{% endif %}</td>
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-              {% else %}
-                <div class="po-value">No completed attendance hours found for the previous week.</div>
-              {% endif %}
-            </div>
-          {% endif %}
-        </div>
-
-        <div>
-          {% if policy_check %}
-            <div class="po-section po-no-break">
-              <div class="po-section-title">{{ policy_check.title }}</div>
-
-              {% if policy_check.checks %}
-                {% for item in policy_check.checks %}
-                  <div class="po-status">
-                    <div class="po-status-title">{{ item.label }}: {{ item.value }}</div>
-                    {% if item.detail %}
-                      <div class="po-status-text">{{ item.detail }}</div>
-                    {% endif %}
-                  </div>
-                {% endfor %}
-              {% endif %}
-
-              {% if policy_check.rule_lines %}
-                <div class="po-field">
-                  <span class="po-label">Rule Notes</span>
-                  <div class="po-value">
-                    <ul class="po-rule-list">
-                      {% for line in policy_check.rule_lines %}
-                        <li>{{ line }}</li>
-                      {% endfor %}
-                    </ul>
-                  </div>
-                </div>
-              {% endif %}
-            </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
   </div>
 
   {% if p.status == "pending" %}
