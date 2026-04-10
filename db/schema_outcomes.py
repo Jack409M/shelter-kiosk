@@ -423,4 +423,3 @@ def ensure_tables(kind: str) -> None:
     ensure_exit_assessments_table(kind)
     ensure_exit_assessment_columns(kind)
     ensure_followups_table(kind)
-    ensure_indexes()
