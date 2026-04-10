@@ -83,6 +83,59 @@
           <textarea name="resolution_notes" rows="3" placeholder="Optional"></textarea>
         </div>
 
+        <div class="cmx-card" style="margin-top:16px; border:1px solid #d38a8a; background:#fff7f7;">
+          <div class="cmx-section-head" style="margin-bottom:8px;">
+            <div>
+              <h3 class="cmx-section-title" style="font-size:18px;">Severe Disciplinary Outcome</h3>
+              <div class="cmx-section-subtitle">Use this only when the write up results in Program Probation or a scheduled Pre Termination.</div>
+            </div>
+          </div>
+
+          <div class="cmx-grid cmx-grid-2">
+            <div class="cmx-field">
+              <label>Disciplinary Outcome</label>
+              <select name="disciplinary_outcome" id="disciplinary_outcome">
+                <option value="none">None</option>
+                <option value="program_probation">Program Probation</option>
+                <option value="pre_termination">Pre Termination</option>
+              </select>
+            </div>
+
+            <div class="cmx-field" style="display:flex; align-items:end;">
+              <label style="display:flex; align-items:center; gap:8px; margin:0;">
+                <input type="checkbox" name="blocks_passes" value="1">
+                <span>Blocks Passes</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="cmx-grid cmx-grid-2" style="margin-top:12px;">
+            <div class="cmx-field">
+              <label>Program Probation Begin Date</label>
+              <input type="date" name="probation_start_date">
+            </div>
+
+            <div class="cmx-field">
+              <label>Program Probation End Date</label>
+              <input type="date" name="probation_end_date">
+            </div>
+          </div>
+
+          <div class="cmx-grid cmx-grid-2" style="margin-top:12px;">
+            <div class="cmx-field">
+              <label>Pre Termination Scheduled Date</label>
+              <input type="date" name="pre_termination_date">
+            </div>
+
+            <div class="cmx-field">
+              <label>Severe Outcome Guidance</label>
+              <div class="cmx-panel-soft" style="min-height:44px; display:flex; align-items:center;">
+                Program Probation requires a begin date and end date. Pre Termination requires one scheduled date.
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="cmx-button-row">
           <button type="submit" class="cmx-btn">Save Write Up</button>
         </div>
@@ -120,6 +173,53 @@
 
               {% if row['resolution_notes'] %}
                 <div class="cmx-muted">Resolution: {{ row['resolution_notes'] }}</div>
+              {% endif %}
+
+              {% if row['disciplinary_outcome'] and row['disciplinary_outcome'] != 'none' %}
+                <div
+                  style="
+                    margin-top:10px;
+                    padding:10px 12px;
+                    border:1px solid #d38a8a;
+                    background:#fff2f2;
+                    border-radius:10px;
+                  "
+                >
+                  <div style="font-weight:700; color:#8a1f1f;">
+                    Severe Outcome:
+                    {% if row['disciplinary_outcome'] == 'program_probation' %}
+                      Program Probation
+                    {% elif row['disciplinary_outcome'] == 'pre_termination' %}
+                      Pre Termination
+                    {% else %}
+                      {{ row['disciplinary_outcome'] }}
+                    {% endif %}
+                  </div>
+
+                  {% if row['disciplinary_outcome'] == 'program_probation' %}
+                    <div class="cmx-muted" style="margin-top:4px;">
+                      Probation Window:
+                      {{ row['probation_start_date'] or '—' }}
+                      to
+                      {{ row['probation_end_date'] or '—' }}
+                    </div>
+                  {% endif %}
+
+                  {% if row['disciplinary_outcome'] == 'pre_termination' %}
+                    <div class="cmx-muted" style="margin-top:4px;">
+                      Scheduled Date: {{ row['pre_termination_date'] or '—' }}
+                    </div>
+                  {% endif %}
+
+                  <div class="cmx-muted" style="margin-top:4px;">
+                    Passes Blocked:
+                    {% if row['blocks_passes'] %}
+                      Yes
+                    {% else %}
+                      No
+                    {% endif %}
+                  </div>
+                </div>
               {% endif %}
             </div>
           {% endfor %}
