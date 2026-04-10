@@ -15,6 +15,7 @@ from . import schema_program
 from . import schema_requests
 from . import schema_shelter_operations
 from . import schema_shelters
+from . import schema_writeups
 
 
 _SCHEMA_INITIALIZED = False
@@ -259,6 +260,9 @@ def init_db() -> None:
     # Case manager updates
     schema_case_management.ensure_tables(kind)
 
+    # Resident writeups
+    schema_writeups.ensure_tables(kind)
+
     # Shelter operations
     schema_shelter_operations.ensure_tables(kind)
 
@@ -284,6 +288,7 @@ def init_db() -> None:
     schema_outcomes.ensure_indexes()
     schema_goals.ensure_indexes()
     schema_case_management.ensure_indexes()
+    schema_writeups.ensure_writeups_indexes()
     schema_shelter_operations.ensure_indexes()
     schema_forms.ensure_indexes()
     schema_requests.ensure_indexes()
