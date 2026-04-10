@@ -393,6 +393,31 @@ def _load_budget_rows(resident_id: int, enrollment_id: int | None):
     )
 
 
+def _load_writeup_rows(resident_id: int):
+    ph = placeholder()
+
+    try:
+        return db_fetchall(
+            f"""
+            SELECT
+                id,
+                incident_date,
+                category,
+                severity,
+                status,
+                summary,
+                created_at,
+                updated_at
+            FROM resident_writeups
+            WHERE resident_id = {ph}
+            ORDER BY incident_date DESC, id DESC
+            """,
+            (resident_id,),
+        )
+    except Exception:
+        return []
+
+
 def _normalize_level_start_date(resident: dict, enrollment_baseline: dict) -> Any:
     return resident.get("level_start_date") or enrollment_baseline.get("entry_date")
 
@@ -440,11 +465,20 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
     ua_rows_raw = _load_ua_rows(resident_id, current_enrollment_id)
     inspection_rows_raw = _load_inspection_rows(resident_id, current_enrollment_id)
     budget_rows_raw = _load_budget_rows(resident_id, current_enrollment_id)
+    writeup_rows_raw = _load_writeup_rows(resident_id)
 
     medication_items = _medication_items(medications_raw)
     ua_items = _ua_items(ua_rows_raw)
     inspection_items = _inspection_items(inspection_rows_raw)
     budget_items = _budget_items(budget_rows_raw)
+
+    writeups_last_30_days = 0
+    latest_writeup = writeup_rows_raw[0] if writeup_rows_raw else None
+
+    for row in writeup_rows_raw:
+        days_since_incident = _days_since(row.get("incident_date"))
+        if days_since_incident is not None and days_since_incident <= 30:
+            writeups_last_30_days += 1
 
     meeting_progress = calculate_meeting_progress(
         resident_id=resident_id,
@@ -462,6 +496,8 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
             "step_work_active": resident.get("step_work_active"),
             "monthly_income": resident.get("monthly_income"),
             "rad_complete": resident.get("rad_completed"),
+            "writeups_last_30_days": writeups_last_30_days,
+            "no_writeups_last_30_days": writeups_last_30_days == 0,
         }
     )
 
@@ -516,6 +552,9 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "latest_ua": ua_items[0] if ua_items else None,
         "latest_inspection": inspection_items[0] if inspection_items else None,
         "latest_budget_session": budget_items[0] if budget_items else None,
+        "latest_writeup": latest_writeup,
+        "writeups_last_30_days": writeups_last_30_days,
+        "no_writeups_last_30_days": writeups_last_30_days == 0,
         "meeting_progress": meeting_progress,
         "total_meetings": meeting_progress.get("total_meetings", 0),
         "meetings_this_week": meeting_progress.get("meetings_this_week", 0),
