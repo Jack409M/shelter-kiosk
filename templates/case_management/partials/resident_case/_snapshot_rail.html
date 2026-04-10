@@ -42,6 +42,158 @@
     {% endif %}
   </div>
 
+  {% set mp = recovery_snapshot.get("meeting_progress", {}) if recovery_snapshot else {} %}
+  {% set meeting_status = recovery_snapshot.get("meeting_status_label", "Not Started") %}
+  {% set completed_90 = recovery_snapshot.get("completed_90_in_90") %}
+  {% set completed_116 = recovery_snapshot.get("completed_116_meetings") %}
+  {% set completed_168 = recovery_snapshot.get("completed_168_meetings") %}
+  {% set weekly_required = recovery_snapshot.get("required_weekly_meetings") %}
+  {% set weekly_met = recovery_snapshot.get("weekly_requirement_met") %}
+  {% set pace_display = recovery_snapshot.get("pace_percent_display", "0.0%") %}
+  {% set total_meetings = recovery_snapshot.get("total_meetings", 0) %}
+  {% set meetings_this_week = recovery_snapshot.get("meetings_this_week", 0) %}
+  {% set meetings_last_30_days = recovery_snapshot.get("meetings_last_30_days", 0) %}
+  {% set days_in_program = recovery_snapshot.get("days_in_program", 0) %}
+  {% set expected_meetings_so_far = recovery_snapshot.get("expected_meetings_so_far", 0) %}
+  {% set projected_90_day_total = recovery_snapshot.get("projected_90_day_total", 0) %}
+  {% set meetings_remaining_to_90 = recovery_snapshot.get("meetings_remaining_to_90", 0) %}
+  {% set meeting_weekly_rows = recovery_snapshot.get("meeting_weekly_rows", []) %}
+  {% set has_meeting_data = recovery_snapshot.get("has_meeting_data", False) %}
+
+  {% if completed_90 %}
+    {% set meeting_card_style = "background:#eef8f0; border:1px solid #9bc8a6;" %}
+    {% set meeting_pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#dcefe1; border:1px solid #9bc8a6; color:#1f6b33; font-weight:700; font-size:12px; line-height:1;" %}
+    {% set meeting_value_style = "color:#1f6b33; font-weight:700;" %}
+  {% elif has_meeting_data %}
+    {% set meeting_card_style = "background:#fff3c7; border:1px solid #ddc56d;" %}
+    {% set meeting_pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#fff3c7; border:1px solid #ddc56d; color:#7a6500; font-weight:700; font-size:12px; line-height:1;" %}
+    {% set meeting_value_style = "color:#7a6500; font-weight:700;" %}
+  {% else %}
+    {% set meeting_card_style = "background:#eef2f6; border:1px solid #c7d2de;" %}
+    {% set meeting_pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#eef2f6; border:1px solid #c7d2de; color:#46607a; font-weight:700; font-size:12px; line-height:1;" %}
+    {% set meeting_value_style = "color:#46607a; font-weight:700;" %}
+  {% endif %}
+
+  <div class="cmx-card" style="{{ meeting_card_style }}">
+    <div class="cmx-side-card-head">
+      <h3>Meeting Progress</h3>
+      <a class="cmx-side-action" href="#meeting-progress-weekly-detail">Weekly Detail</a>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      <span style="{{ meeting_pill_style }}">{{ meeting_status }}</span>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block">
+        <span>Total Meetings</span>
+        <span style="{{ meeting_value_style }}">{{ total_meetings }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>This Week</span>
+        <span>{{ meetings_this_week }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>Last 30 Days</span>
+        <span>{{ meetings_last_30_days }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>Days In Program</span>
+        <span>{{ days_in_program }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>Expected So Far</span>
+        <span>{{ expected_meetings_so_far }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>90 In 90 Pace</span>
+        <span style="{{ meeting_value_style }}">{{ pace_display }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>Projected 90 Day Total</span>
+        <span>{{ projected_90_day_total }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>Remaining To 90</span>
+        <span>{{ meetings_remaining_to_90 }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>90 Meetings Complete</span>
+        <span>{{ "Yes" if completed_90 else "No" }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>116 Meetings Complete</span>
+        <span>{{ "Yes" if completed_116 else "No" }}</span>
+      </div>
+
+      <div class="cmx-row-block">
+        <span>168 Meetings Complete</span>
+        <span>{{ "Yes" if completed_168 else "No" }}</span>
+      </div>
+
+      {% if weekly_required %}
+        <div class="cmx-row-block">
+          <span>Weekly Requirement</span>
+          <span>{{ meetings_this_week }} / {{ weekly_required }}</span>
+        </div>
+        <div class="cmx-row-block">
+          <span>Weekly Requirement Met</span>
+          <span>
+            {% if weekly_met is sameas true %}
+              Yes
+            {% elif weekly_met is sameas false %}
+              No
+            {% else %}
+              —
+            {% endif %}
+          </span>
+        </div>
+      {% endif %}
+    </div>
+
+    <div style="margin-top:10px; font-size:12px; color:#666;">
+      Haven promotion and pass review can now use real meeting counts instead of note text.
+    </div>
+
+    <div id="meeting-progress-weekly-detail" style="margin-top:12px;">
+      <details>
+        <summary style="cursor:pointer; font-weight:700;">Show weekly meeting totals</summary>
+
+        {% if meeting_weekly_rows %}
+          <div style="margin-top:10px; display:grid; gap:8px;">
+            {% for week in meeting_weekly_rows[:12] %}
+              <div
+                class="cmx-chip-block"
+                style="border:1px solid #d9dee7; background:#fff;"
+              >
+                <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+                  <div>
+                    <strong>Week starting {{ week.get("week_start") or "—" }}</strong>
+                  </div>
+                  <div style="text-align:right;">
+                    <strong>{{ week.get("meeting_count", 0) }}</strong><br>
+                    <span style="font-size:12px;">meetings</span>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="cmx-muted" style="margin-top:10px;">No recovery meeting entries are available yet.</p>
+        {% endif %}
+      </details>
+    </div>
+  </div>
+
   <div class="cmx-card" style="{{ attendance_hours_snapshot['card_style'] }}">
     <div class="cmx-side-card-head">
       <h3>Attendance Hours</h3>
