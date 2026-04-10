@@ -194,6 +194,50 @@
     </div>
   </div>
 
+  {% set pr = recovery_snapshot.get("promotion_readiness", {}) %}
+
+  <div class="cmx-card" style="background:#f5f7fb; border:1px solid #cfd8e3;">
+    <div class="cmx-side-card-head">
+      <h3>Promotion Readiness</h3>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      {% if pr.ready %}
+        <span style="background:#dcefe1; border:1px solid #9bc8a6; padding:4px 10px; border-radius:999px; font-weight:700; color:#1f6b33;">
+          READY FOR PROMOTION
+        </span>
+      {% else %}
+        <span style="background:#fdecec; border:1px solid #d38a8a; padding:4px 10px; border-radius:999px; font-weight:700; color:#8a1f1f;">
+          NOT READY
+        </span>
+      {% endif %}
+    </div>
+
+    <div class="cmx-stack">
+      {% for c in pr.checks %}
+        <div class="cmx-row-block">
+          <span>{{ c.label }}</span>
+          <span>
+            {% if c.ok %}
+              ✔
+            {% else %}
+              ✖
+            {% endif %}
+            {% if c.detail %}
+              ({{ c.detail }})
+            {% endif %}
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if not pr.ready and pr.blockers %}
+      <div style="margin-top:10px; font-size:12px; color:#8a1f1f;">
+        Blockers: {{ pr.blockers | join(", ") }}
+      </div>
+    {% endif %}
+  </div>
+
   <div class="cmx-card" style="{{ attendance_hours_snapshot['card_style'] }}">
     <div class="cmx-side-card-head">
       <h3>Attendance Hours</h3>
