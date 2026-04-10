@@ -6,6 +6,7 @@ from core.db import db_execute
 from . import schema_bootstrap
 from . import schema_case_calendar
 from . import schema_case_management
+from . import schema_case_notes
 from . import schema_comms
 from . import schema_core
 from . import schema_forms
@@ -260,6 +261,9 @@ def init_db() -> None:
 
     # Case manager updates
     schema_case_management.ensure_tables(kind)
+
+    # Case notes
+    schema_case_notes.ensure_tables(kind)
 
     # Case manager calendar
     schema_case_calendar.ensure_tables(kind)
