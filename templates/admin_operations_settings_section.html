@@ -899,63 +899,6 @@
         </div>
       </form>
 
-    {% elif current_section == "kiosk_volunteer_community_service_options" %}
-      <form method="post" action="{{ url_for('operations_settings.settings_section_page', section_key=current_section) }}" class="cmx-card">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="section" value="{{ current_section }}">
-
-        <div class="config-help" style="margin-top: 0;">
-          These are the child options shown only when a resident chooses <strong>{{ volunteer_parent_activity_label }}</strong> on kiosk check out.
-        </div>
-
-        {% for option in kiosk_activity_child_options %}
-          <div class="config-kiosk-row">
-            <input type="hidden" name="child_option_id[]" value="{{ option.get('id', '') }}">
-
-            <div class="config-section-grid-4">
-              <div class="cmx-field">
-                <label>Option Label</label>
-                <input type="text" name="child_option_label[]" value="{{ option.get('option_label', '') }}">
-              </div>
-
-              <div class="cmx-field">
-                <label>Sort Order</label>
-                <input type="number" name="child_option_sort_order[]" value="{{ option.get('sort_order', loop.index) }}">
-              </div>
-
-              <div class="cmx-field">
-                <label>Parent Activity</label>
-                <input type="text" value="{{ volunteer_parent_activity_label }}" readonly>
-              </div>
-
-              <div class="cmx-field">
-                <label>Status</label>
-                <input type="text" value="{{ 'Active' if option.get('active') else 'Inactive' }}" readonly>
-              </div>
-            </div>
-
-            <div class="config-checkbox-grid">
-              <label class="config-checkline">
-                <input type="checkbox" name="child_option_active[]" value="{{ loop.index0 }}" {% if option.get('active') %}checked{% endif %}>
-                <span>Active</span>
-              </label>
-            </div>
-
-            <div style="margin-top: 12px;">
-              <label class="config-checkline" style="color: #8b1e1e;">
-                <input type="checkbox" name="remove_child_option[]" value="{{ loop.index0 }}">
-                <span>Remove This Option</span>
-              </label>
-            </div>
-          </div>
-        {% endfor %}
-
-        <div class="cmx-button-row">
-          <button type="submit" name="kiosk_child_action" value="save" class="cmx-btn">Save Volunteer or Community Service Options</button>
-          <button type="submit" name="kiosk_child_action" value="reset_defaults" class="cmx-btn-muted">Reset to Shelter Defaults</button>
-        </div>
-      </form>
-
     {% elif current_section == "employment_income_guidance" %}
       <div class="cmx-card">
         <div class="config-stats-grid">
