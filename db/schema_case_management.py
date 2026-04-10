@@ -507,6 +507,11 @@ def ensure_resident_writeups_table(kind: str) -> None:
             status TEXT NOT NULL DEFAULT 'Open',
             resolution_notes TEXT,
             resolved_at TEXT,
+            disciplinary_outcome TEXT,
+            probation_start_date TEXT,
+            probation_end_date TEXT,
+            pre_termination_date TEXT,
+            blocks_passes BOOLEAN NOT NULL DEFAULT FALSE,
             created_by_staff_user_id INTEGER,
             updated_by_staff_user_id INTEGER,
             created_at TEXT NOT NULL,
@@ -530,6 +535,11 @@ def ensure_resident_writeups_table(kind: str) -> None:
             status TEXT NOT NULL DEFAULT 'Open',
             resolution_notes TEXT,
             resolved_at TEXT,
+            disciplinary_outcome TEXT,
+            probation_start_date TEXT,
+            probation_end_date TEXT,
+            pre_termination_date TEXT,
+            blocks_passes BOOLEAN NOT NULL DEFAULT FALSE,
             created_by_staff_user_id INTEGER,
             updated_by_staff_user_id INTEGER,
             created_at TEXT NOT NULL,
@@ -776,6 +786,11 @@ def ensure_resident_writeups_columns() -> None:
         "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'Open'",
         "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS resolution_notes TEXT",
         "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS resolved_at TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS disciplinary_outcome TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS probation_start_date TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS probation_end_date TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS pre_termination_date TEXT",
+        "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS blocks_passes BOOLEAN DEFAULT FALSE",
         "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS created_by_staff_user_id INTEGER",
         "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS updated_by_staff_user_id INTEGER",
         "ALTER TABLE resident_writeups ADD COLUMN IF NOT EXISTS created_at TEXT",
@@ -1325,6 +1340,46 @@ def ensure_indexes() -> None:
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_status_idx
             ON resident_writeups (status)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_writeups_outcome_idx
+            ON resident_writeups (disciplinary_outcome)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_writeups_blocks_passes_idx
+            ON resident_writeups (resident_id, blocks_passes, status)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_writeups_probation_window_idx
+            ON resident_writeups (resident_id, probation_start_date, probation_end_date)
+            """
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_writeups_pre_term_date_idx
+            ON resident_writeups (resident_id, pre_termination_date)
             """
         )
     except Exception:
