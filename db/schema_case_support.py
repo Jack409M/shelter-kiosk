@@ -513,4 +513,3 @@ def ensure_tables(kind: str) -> None:
     ensure_resident_ua_log_columns()
     ensure_resident_living_area_inspections_columns()
     ensure_resident_budget_sessions_columns()
-    ensure_case_support_indexes()
