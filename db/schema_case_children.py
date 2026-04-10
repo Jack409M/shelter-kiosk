@@ -157,4 +157,3 @@ def ensure_case_children_indexes() -> None:
 def ensure_tables(kind: str) -> None:
     ensure_child_services_table(kind)
     ensure_child_services_columns()
-    ensure_case_children_indexes()
