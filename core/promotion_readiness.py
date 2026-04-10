@@ -29,13 +29,12 @@ def build_promotion_readiness(snapshot: Dict[str, Any]) -> Dict[str, Any]:
     completed_116 = snapshot.get("completed_116_meetings")
     completed_168 = snapshot.get("completed_168_meetings")
 
-    weekly_required = snapshot.get("required_weekly_meetings")
-    weekly_met = snapshot.get("weekly_requirement_met")
-
     sponsor_active = _bool(snapshot.get("sponsor_active"))
     step_active = _bool(snapshot.get("step_work_active"))
 
     monthly_income = snapshot.get("monthly_income")
+    no_writeups_last_30_days = snapshot.get("no_writeups_last_30_days")
+    writeups_last_30_days = snapshot.get("writeups_last_30_days", 0)
 
     # --- RAD placeholder ---
     rad_complete = snapshot.get("rad_complete")  # you will wire later
@@ -60,6 +59,7 @@ def build_promotion_readiness(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         add("RAD Complete", rad_complete is True, "")
         add("Sponsor Active", sponsor_active is True, "")
         add("Step Work Active", step_active is True, "")
+        add("No Write Ups in 30 Days", no_writeups_last_30_days is True, f"{writeups_last_30_days} in last 30 days")
 
         ready = all(c["ok"] for c in checks)
 
@@ -67,23 +67,26 @@ def build_promotion_readiness(snapshot: Dict[str, Any]) -> Dict[str, Any]:
         add("90 Meetings", completed_90 is True, f"{total_meetings}/90")
         add("Sponsor Active", sponsor_active is True, "")
         add("Step Work Active", step_active is True, "")
+        add("No Write Ups in 30 Days", no_writeups_last_30_days is True, f"{writeups_last_30_days} in last 30 days")
 
         ready = all(c["ok"] for c in checks)
 
     elif level == 3:
         add("116 Meetings", completed_116 is True, f"{total_meetings}/116")
-        add("Weekly Meetings (6)", weekly_met is True, f"{meetings_this_week}/6")
+        add("Weekly Meetings (6)", snapshot.get("weekly_requirement_met") is True, f"{meetings_this_week}/6")
         add("Sponsor Active", sponsor_active is True, "")
         add("Step Work Active", step_active is True, "")
+        add("No Write Ups in 30 Days", no_writeups_last_30_days is True, f"{writeups_last_30_days} in last 30 days")
 
         ready = all(c["ok"] for c in checks)
 
     elif level == 4:
         add("168 Meetings", completed_168 is True, f"{total_meetings}/168")
-        add("Weekly Meetings (5)", weekly_met is True, f"{meetings_this_week}/5")
+        add("Weekly Meetings (5)", snapshot.get("weekly_requirement_met") is True, f"{meetings_this_week}/5")
         add("Sponsor Active", sponsor_active is True, "")
         add("Step Work Active", step_active is True, "")
         add("Income Established", monthly_income not in (None, "", 0), "")
+        add("No Write Ups in 30 Days", no_writeups_last_30_days is True, f"{writeups_last_30_days} in last 30 days")
 
         ready = all(c["ok"] for c in checks)
 
