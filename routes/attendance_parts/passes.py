@@ -9,6 +9,7 @@ from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import fmt_dt, fmt_pretty_date, utcnow_iso
+from core.meeting_progress import calculate_meeting_progress
 from core.pass_retention import cleanup_deadline_from_expected_back, run_pass_retention_cleanup_for_shelter
 from core.pass_rules import (
     gh_pass_rule_box,
@@ -40,7 +41,13 @@ def _load_resident_pass_profile(resident_id: int):
         SELECT
             id,
             shelter,
-            program_level
+            program_level,
+            sponsor_name,
+            sponsor_active,
+            step_current,
+            step_work_active,
+            monthly_income,
+            date_entered
         FROM residents
         WHERE id = %s
         LIMIT 1
@@ -51,7 +58,13 @@ def _load_resident_pass_profile(resident_id: int):
         SELECT
             id,
             shelter,
-            program_level
+            program_level,
+            sponsor_name,
+            sponsor_active,
+            step_current,
+            step_work_active,
+            monthly_income,
+            date_entered
         FROM residents
         WHERE id = ?
         LIMIT 1
@@ -94,7 +107,30 @@ def _end_of_day_utc_naive(date_text: str | None) -> str | None:
         return None
 
 
-def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
+def _parse_level_number(value: str | None) -> int | None:
+    text = str(value or "").strip().lower()
+    if not text:
+        return None
+    digits = "".join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return None
+    try:
+        return int(digits)
+    except Exception:
+        return None
+
+
+def _meeting_status_class_for_summary(meeting_summary: dict | None) -> str:
+    if not meeting_summary:
+        return "fail"
+    if meeting_summary.get("completed_90_in_90"):
+        return "pass"
+    if meeting_summary.get("status_label") == "On Pace for 90 in 90":
+        return "pass"
+    return "fail"
+
+
+def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, meeting_summary=None):
     resident_id = int(pass_row.get("resident_id") or 0)
     resident_profile = _load_resident_pass_profile(resident_id) if resident_id else None
 
@@ -191,6 +227,62 @@ def _build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary):
                     ),
                 }
             )
+
+        if meeting_summary:
+            level_num = _parse_level_number(resident_level)
+            shelter_key = shelter.strip().lower()
+
+            if shelter_key == "haven":
+                if not meeting_summary.get("completed_90_in_90"):
+                    checks.append(
+                        {
+                            "label": "90 in 90",
+                            "value": meeting_summary.get("status_label") or "Not Started",
+                            "status_class": _meeting_status_class_for_summary(meeting_summary),
+                            "detail": (
+                                f"Meetings {meeting_summary.get('total_meetings', 0)} / 90"
+                                f" • Days in program {meeting_summary.get('days_in_program', 0)}"
+                                f" • Pace {meeting_summary.get('pace_percent_display', '0.0%')}"
+                            ),
+                        }
+                    )
+                else:
+                    checks.append(
+                        {
+                            "label": "90 in 90",
+                            "value": "Complete",
+                            "status_class": "pass",
+                            "detail": (
+                                f"Meetings completed: {meeting_summary.get('total_meetings', 0)}"
+                            ),
+                        }
+                    )
+
+                if level_num == 3:
+                    weekly_met = meeting_summary.get("weekly_requirement_met")
+                    checks.append(
+                        {
+                            "label": "Weekly meeting requirement",
+                            "value": "Meets Level 3 weekly requirement" if weekly_met else "Below Level 3 weekly requirement",
+                            "status_class": "pass" if weekly_met else "fail",
+                            "detail": (
+                                f"This week {meeting_summary.get('meetings_this_week', 0)} / 6 meetings"
+                            ),
+                        }
+                    )
+
+                if level_num == 4:
+                    weekly_met = meeting_summary.get("weekly_requirement_met")
+                    checks.append(
+                        {
+                            "label": "Weekly meeting requirement",
+                            "value": "Meets Level 4 weekly requirement" if weekly_met else "Below Level 4 weekly requirement",
+                            "status_class": "pass" if weekly_met else "fail",
+                            "detail": (
+                                f"This week {meeting_summary.get('meetings_this_week', 0)} / 5 meetings"
+                            ),
+                        }
+                    )
 
     if pass_type_key == "special":
         checks.append(
@@ -788,13 +880,52 @@ def staff_pass_detail_view(pass_id: int):
     except Exception:
         hour_summary = None
 
-    policy_check = _build_policy_check(p, pass_detail, hour_summary)
+    resident_profile = _load_resident_pass_profile(int(p["resident_id"]))
+    resident_level = ""
+    sponsor_name = ""
+    sponsor_active = None
+    step_current = None
+    step_work_active = None
+    monthly_income = None
+    program_start_date = None
+
+    if resident_profile:
+        resident_level = str(_resident_value(resident_profile, "program_level", 2, "") or "").strip()
+        sponsor_name = str(_resident_value(resident_profile, "sponsor_name", 3, "") or "").strip()
+        sponsor_active = _resident_value(resident_profile, "sponsor_active", 4, None)
+        step_current = _resident_value(resident_profile, "step_current", 5, None)
+        step_work_active = _resident_value(resident_profile, "step_work_active", 6, None)
+        monthly_income = _resident_value(resident_profile, "monthly_income", 7, None)
+        program_start_date = _resident_value(resident_profile, "date_entered", 8, None)
+
+    if pass_detail and pass_detail.get("resident_level"):
+        resident_level = str(pass_detail.get("resident_level") or "").strip() or resident_level
+
+    meeting_summary = None
+    try:
+        meeting_summary = calculate_meeting_progress(
+            resident_id=int(p["resident_id"]),
+            shelter=str(p["shelter"]),
+            program_start_date=program_start_date,
+            level_value=resident_level,
+        )
+    except Exception:
+        meeting_summary = None
+
+    policy_check = _build_policy_check(p, pass_detail, hour_summary, meeting_summary)
 
     return render_template(
         "staff_pass_detail.html",
         p=p,
         pass_detail=pass_detail,
         hour_summary=hour_summary,
+        meeting_summary=meeting_summary,
+        resident_level=resident_level,
+        sponsor_name=sponsor_name,
+        sponsor_active=sponsor_active,
+        step_current=step_current,
+        step_work_active=step_work_active,
+        monthly_income=monthly_income,
         policy_check=policy_check,
         fmt_dt=fmt_dt,
     )
@@ -1048,9 +1179,13 @@ def staff_pass_check_in_view(pass_id: int):
             expected_back_time,
             destination,
             obligation_start_time,
-            obligation_end_time
+            obligation_end_time,
+            meeting_count,
+            meeting_1,
+            meeting_2,
+            is_recovery_meeting
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             resident_id,
@@ -1063,6 +1198,10 @@ def staff_pass_check_in_view(pass_id: int):
             None,
             None,
             None,
+            0,
+            None,
+            None,
+            0,
         ),
     )
 
