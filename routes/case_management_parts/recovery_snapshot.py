@@ -5,6 +5,7 @@ from typing import Any
 
 from core.db import db_fetchall, db_fetchone
 from core.meeting_progress import calculate_meeting_progress
+from core.promotion_readiness import build_promotion_readiness
 from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
 from routes.case_management_parts.helpers import placeholder
 
@@ -449,6 +450,17 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         level_value=resident.get("program_level"),
     )
 
+    promotion_readiness = build_promotion_readiness(
+        {
+            **meeting_progress,
+            "program_level": resident.get("program_level"),
+            "days_on_level": _days_since(level_start_date),
+            "sponsor_active": resident.get("sponsor_active"),
+            "step_work_active": resident.get("step_work_active"),
+            "monthly_income": resident.get("monthly_income"),
+        }
+    )
+
     return {
         "program_level": resident.get("program_level") or "1",
         "level_start_date": level_start_date,
@@ -515,4 +527,5 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "meeting_status_label": meeting_progress.get("status_label", "Not Started"),
         "meeting_weekly_rows": meeting_progress.get("weekly_rows", []),
         "has_meeting_data": meeting_progress.get("has_meeting_data", False),
+        "promotion_readiness": promotion_readiness,
     }
