@@ -6,6 +6,7 @@ from core.db import db_execute
 from . import schema_bootstrap
 from . import schema_case_calendar
 from . import schema_case_children
+from . import schema_case_intake_drafts
 from . import schema_case_management
 from . import schema_case_notes
 from . import schema_case_support
@@ -275,6 +276,9 @@ def init_db() -> None:
 
     # Case children
     schema_case_children.ensure_tables(kind)
+
+    # Case intake drafts
+    schema_case_intake_drafts.ensure_tables(kind)
 
     # Resident writeups
     schema_writeups.ensure_tables(kind)
