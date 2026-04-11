@@ -27,6 +27,17 @@ from routes.rent_tracking import build_rent_stability_snapshot
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
+def _require_case_manager_access():
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+    return None
+
+
+def _current_shelter() -> str:
+    return normalize_shelter_name(session.get("shelter"))
+
+
 def _parse_date_only(value: str | None):
     text = str(value or "").strip()
     if not text:
@@ -39,99 +50,6 @@ def _parse_date_only(value: str | None):
 
 def _status_is_open_for_discipline(value: str | None) -> bool:
     return str(value or "").strip().lower() == "open"
-
-
-def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
-    ph = placeholder()
-
-    rows = db_fetchall(
-        f"""
-        SELECT
-            id,
-            incident_date,
-            category,
-            severity,
-            summary,
-            status,
-            disciplinary_outcome,
-            probation_start_date,
-            probation_end_date,
-            pre_termination_date,
-            blocks_passes
-        FROM resident_writeups
-        WHERE resident_id = {ph}
-          AND COALESCE(blocks_passes, {('FALSE' if ph == '%s' else '0')}) = {('TRUE' if ph == '%s' else '1')}
-        ORDER BY incident_date DESC, id DESC
-        """,
-        (resident_id,),
-    )
-
-    today = datetime.now(CHICAGO_TZ).date()
-    active: list[dict] = []
-
-    for row in rows or []:
-        item = dict(row)
-        outcome = str(item.get("disciplinary_outcome") or "").strip().lower()
-        is_open = _status_is_open_for_discipline(item.get("status"))
-
-        if outcome == "program_probation":
-            start_date = _parse_date_only(item.get("probation_start_date"))
-            end_date = _parse_date_only(item.get("probation_end_date"))
-
-            is_active = bool(
-                is_open
-                and start_date
-                and end_date
-                and start_date <= today <= end_date
-            )
-            if is_active:
-                item["label"] = "Program Probation"
-                item["detail"] = f"{item.get('probation_start_date') or '—'} to {item.get('probation_end_date') or '—'}"
-                active.append(item)
-
-        elif outcome == "pre_termination":
-            scheduled_date = _parse_date_only(item.get("pre_termination_date"))
-
-            is_active = bool(
-                is_open
-                and scheduled_date
-                and today <= scheduled_date
-            )
-            if is_active:
-                item["label"] = "Pre Termination Scheduled"
-                item["detail"] = f"{item.get('pre_termination_date') or '—'}"
-                active.append(item)
-
-    return active
-
-
-def _normalize_exit_assessment(row):
-    if not row:
-        return None
-
-    leave_ama = row.get("leave_ama")
-    leave_amarillo_city = row.get("leave_amarillo_city")
-    leave_amarillo_unknown = row.get("leave_amarillo_unknown")
-
-    destination = None
-    if leave_ama:
-        if leave_amarillo_city:
-            destination = leave_amarillo_city
-        elif leave_amarillo_unknown:
-            destination = "Unknown"
-
-    normalized = dict(row)
-    normalized["leave_ama_destination"] = destination
-    return normalized
-
-
-def _is_deceased_exit(exit_assessment) -> bool:
-    if not exit_assessment:
-        return False
-    return (
-        str(exit_assessment.get("exit_category") or "").strip() == "Administrative Exit"
-        and str(exit_assessment.get("exit_reason") or "").strip() == "Deceased"
-    )
 
 
 def _load_current_enrollment(resident_id: int):
@@ -265,10 +183,39 @@ def _load_case_history(enrollment_id: int):
     return build_note_objects(notes_raw, services_raw, summary_rows_raw)
 
 
-def _load_enrollment_context(enrollment_id: int):
-    ph = placeholder()
+def _normalize_exit_assessment(row):
+    if not row:
+        return None
 
-    family_snapshot = db_fetchone(
+    leave_ama = row.get("leave_ama")
+    leave_amarillo_city = row.get("leave_amarillo_city")
+    leave_amarillo_unknown = row.get("leave_amarillo_unknown")
+
+    destination = None
+    if leave_ama:
+        if leave_amarillo_city:
+            destination = leave_amarillo_city
+        elif leave_amarillo_unknown:
+            destination = "Unknown"
+
+    normalized = dict(row)
+    normalized["leave_ama_destination"] = destination
+    return normalized
+
+
+def _is_deceased_exit(exit_assessment) -> bool:
+    if not exit_assessment:
+        return False
+
+    return (
+        str(exit_assessment.get("exit_category") or "").strip() == "Administrative Exit"
+        and str(exit_assessment.get("exit_reason") or "").strip() == "Deceased"
+    )
+
+
+def _load_family_snapshot(enrollment_id: int):
+    ph = placeholder()
+    return db_fetchone(
         f"""
         SELECT
             id,
@@ -290,7 +237,10 @@ def _load_enrollment_context(enrollment_id: int):
         (enrollment_id,),
     )
 
-    intake_assessment = db_fetchone(
+
+def _load_intake_assessment(enrollment_id: int):
+    ph = placeholder()
+    return db_fetchone(
         f"""
         SELECT
             grit_score,
@@ -314,8 +264,9 @@ def _load_enrollment_context(enrollment_id: int):
         (enrollment_id,),
     )
 
-    intake_income_support = load_intake_income_support(enrollment_id)
 
+def _load_exit_assessment(enrollment_id: int):
+    ph = placeholder()
     raw_exit_assessment = db_fetchone(
         f"""
         SELECT
@@ -343,8 +294,12 @@ def _load_enrollment_context(enrollment_id: int):
         """,
         (enrollment_id,),
     )
+    return _normalize_exit_assessment(raw_exit_assessment)
 
-    goals = db_fetchall(
+
+def _load_goals(enrollment_id: int):
+    ph = placeholder()
+    return db_fetchall(
         f"""
         SELECT
             goal_text,
@@ -358,7 +313,10 @@ def _load_enrollment_context(enrollment_id: int):
         (enrollment_id,),
     )
 
-    appointments = db_fetchall(
+
+def _load_appointments(enrollment_id: int):
+    ph = placeholder()
+    return db_fetchall(
         f"""
         SELECT
             appointment_date,
@@ -371,8 +329,16 @@ def _load_enrollment_context(enrollment_id: int):
         (enrollment_id,),
     )
 
+
+def _load_enrollment_context(enrollment_id: int):
+    family_snapshot = _load_family_snapshot(enrollment_id)
+    intake_assessment = _load_intake_assessment(enrollment_id)
+    intake_income_support = load_intake_income_support(enrollment_id)
+    exit_assessment = _load_exit_assessment(enrollment_id)
+    goals = _load_goals(enrollment_id)
+    appointments = _load_appointments(enrollment_id)
     notes, services = _load_case_history(enrollment_id)
-    exit_assessment = _normalize_exit_assessment(raw_exit_assessment)
+
     is_deceased_case = _is_deceased_exit(exit_assessment)
 
     return {
@@ -399,6 +365,70 @@ def _calculate_grit_difference(intake_assessment, exit_assessment):
         return None
 
     return exit_grit - intake_grit
+
+
+def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
+    ph = placeholder()
+
+    rows = db_fetchall(
+        f"""
+        SELECT
+            id,
+            incident_date,
+            category,
+            severity,
+            summary,
+            status,
+            disciplinary_outcome,
+            probation_start_date,
+            probation_end_date,
+            pre_termination_date,
+            blocks_passes
+        FROM resident_writeups
+        WHERE resident_id = {ph}
+          AND COALESCE(blocks_passes, {('FALSE' if ph == '%s' else '0')}) = {('TRUE' if ph == '%s' else '1')}
+        ORDER BY incident_date DESC, id DESC
+        """,
+        (resident_id,),
+    )
+
+    today = datetime.now(CHICAGO_TZ).date()
+    active: list[dict] = []
+
+    for row in rows or []:
+        item = dict(row)
+        outcome = str(item.get("disciplinary_outcome") or "").strip().lower()
+        is_open = _status_is_open_for_discipline(item.get("status"))
+
+        if outcome == "program_probation":
+            start_date = _parse_date_only(item.get("probation_start_date"))
+            end_date = _parse_date_only(item.get("probation_end_date"))
+
+            is_active = bool(
+                is_open
+                and start_date
+                and end_date
+                and start_date <= today <= end_date
+            )
+            if is_active:
+                item["label"] = "Program Probation"
+                item["detail"] = f"{item.get('probation_start_date') or '—'} to {item.get('probation_end_date') or '—'}"
+                active.append(item)
+
+        elif outcome == "pre_termination":
+            scheduled_date = _parse_date_only(item.get("pre_termination_date"))
+
+            is_active = bool(
+                is_open
+                and scheduled_date
+                and today <= scheduled_date
+            )
+            if is_active:
+                item["label"] = "Pre Termination Scheduled"
+                item["detail"] = f"{item.get('pre_termination_date') or '—'}"
+                active.append(item)
+
+    return active
 
 
 def _load_employment_income_settings(shelter: str) -> dict:
@@ -561,29 +591,8 @@ def _build_employment_stability_snapshot(
     }
 
 
-def resident_case_view(resident_id: int):
-    if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    init_db()
-
-    shelter = normalize_shelter_name(session.get("shelter"))
-    resident = _load_resident_in_scope(resident_id, shelter)
-
-    if not resident:
-        flash("Resident not found.", "error")
-        return redirect(url_for("case_management.index"))
-
-    enrollment = _load_current_enrollment(resident_id)
-    enrollment_id = enrollment["id"] if enrollment else None
-
-    children = load_children_with_services(resident_id)
-    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
-    disciplinary_flags = _load_active_writeup_restrictions(resident_id)
-    has_disciplinary_block = len(disciplinary_flags) > 0
-
-    enrollment_context = {
+def _base_empty_enrollment_context() -> dict:
+    return {
         "family_snapshot": None,
         "intake_assessment": None,
         "intake_income_support": None,
@@ -598,6 +607,30 @@ def resident_case_view(resident_id: int):
         "is_deceased_case": False,
     }
 
+
+def resident_case_view(resident_id: int):
+    denied = _require_case_manager_access()
+    if denied is not None:
+        return denied
+
+    init_db()
+
+    shelter = _current_shelter()
+    resident = _load_resident_in_scope(resident_id, shelter)
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    enrollment = _load_current_enrollment(resident_id)
+    enrollment_id = enrollment["id"] if enrollment else None
+
+    children = load_children_with_services(resident_id)
+    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
+    disciplinary_flags = _load_active_writeup_restrictions(resident_id)
+    has_disciplinary_block = len(disciplinary_flags) > 0
+
+    enrollment_context = _base_empty_enrollment_context()
     if enrollment_id:
         enrollment_context = _load_enrollment_context(enrollment_id)
 
@@ -632,7 +665,6 @@ def resident_case_view(resident_id: int):
     )
 
     employment_income_settings = _load_employment_income_settings(shelter)
-
     intake_income_support = enrollment_context.get("intake_income_support") or {}
 
     monthly_income_for_display = intake_income_support.get("weighted_stable_income")
