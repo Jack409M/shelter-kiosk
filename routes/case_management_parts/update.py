@@ -13,11 +13,11 @@ from routes.case_management_parts.helpers import shelter_equals_sql
 from routes.case_management_parts.update_needs import apply_need_updates
 from routes.case_management_parts.update_needs import collect_need_updates
 from routes.case_management_parts.update_summary import build_note_summary
-from routes.case_management_parts.update_summary import delete_summary_rows_by_group
-from routes.case_management_parts.update_summary import get_next_summary_sort_order
 from routes.case_management_parts.update_summary import get_previous_note_id
-from routes.case_management_parts.update_summary import record_service_summary
-from routes.case_management_parts.update_summary import record_snapshot_change_group
+from routes.case_management_parts.update_summary_recorders import record_service_summary
+from routes.case_management_parts.update_summary_recorders import record_snapshot_change_group
+from routes.case_management_parts.update_summary_rows import delete_summary_rows_by_group
+from routes.case_management_parts.update_summary_rows import get_next_summary_sort_order
 from routes.case_management_parts.update_snapshots import load_previous_snapshot_map
 from routes.case_management_parts.update_utils import ADVANCEMENT_BOOL_FIELD_LABELS
 from routes.case_management_parts.update_utils import ADVANCEMENT_TEXT_FIELD_LABELS
@@ -536,7 +536,9 @@ def edit_case_note_view(resident_id: int, update_id: int):
                 ),
                 current_snapshot={
                     "setbacks_or_incidents": values["setbacks_or_incidents"],
-                    "ready_for_next_level": display_label("yes" if values["ready_for_next_level"] == 1 else "no") if values["ready_for_next_level"] is not None else "",
+                    "ready_for_next_level": display_label("yes" if values["ready_for_next_level"] == 1 else "no")
+                    if values["ready_for_next_level"] is not None
+                    else "",
                     "recommended_next_level": values["recommended_next_level"],
                     "blocker_reason": values["blocker_reason"],
                     "override_or_exception": values["override_or_exception"],
