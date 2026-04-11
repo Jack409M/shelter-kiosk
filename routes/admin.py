@@ -25,9 +25,7 @@ from routes.admin_parts.field_audit import (
 from routes.admin_parts.system import (
     admin_demo_data_view,
     clear_demo_data_view,
-    recreate_schema_view,
     seed_demo_data_view,
-    wipe_all_data_view,
 )
 
 from routes.admin_parts.users import (
@@ -166,17 +164,3 @@ def admin_seed_demo_data():
 @require_shelter
 def admin_clear_demo_data():
     return clear_demo_data_view()
-
-
-@admin.route("/admin/wipe-all-data", methods=["POST"])
-@require_login
-@require_shelter
-def wipe_all_data():
-    return wipe_all_data_view()
-
-
-@admin.route("/admin/recreate-schema", methods=["POST"])
-@require_login
-@require_shelter
-def recreate_schema():
-    return recreate_schema_view()
