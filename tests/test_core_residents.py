@@ -4,8 +4,11 @@ from core.runtime import init_db
 def test_generate_resident_code_and_identifier(app):
     from core.residents import generate_resident_code, generate_resident_identifier
 
-    code = generate_resident_code()
-    identifier = generate_resident_identifier()
+    with app.app_context():
+        init_db()
+
+        code = generate_resident_code()
+        identifier = generate_resident_identifier()
 
     assert isinstance(code, str)
     assert isinstance(identifier, str)
