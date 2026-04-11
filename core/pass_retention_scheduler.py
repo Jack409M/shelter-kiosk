@@ -5,48 +5,50 @@ import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from flask import current_app
-
 from core.pass_retention import run_pass_retention_cleanup_for_shelter
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
+RUN_SLOTS = {(6, 0), (15, 0), (23, 0)}
+SHELTERS = ("abba", "haven", "gratitude")
 
-RUN_HOURS = {6, 15, 23}  # 6am, 3pm, 11pm
 
-
-def _run_cleanup_cycle(app):
+def _run_cleanup_cycle(app) -> None:
     with app.app_context():
-        try:
-            shelters = app.config.get("ACTIVE_SHELTERS", [])
-            for shelter in shelters:
+        for shelter in SHELTERS:
+            try:
                 run_pass_retention_cleanup_for_shelter(shelter)
-        except Exception as e:
-            app.logger.error("pass retention cleanup failed", exc_info=e)
+            except Exception:
+                app.logger.exception(
+                    "pass retention cleanup failed for shelter=%s",
+                    shelter,
+                )
 
 
-def _scheduler_loop(app):
-    last_run_hour = None
+def _scheduler_loop(app) -> None:
+    last_run_key: tuple[int, int, int] | None = None
 
     while True:
         try:
             now = datetime.now(CHICAGO_TZ)
-            current_hour = now.hour
+            run_key = (now.year, now.timetuple().tm_yday, now.hour)
 
-            if current_hour in RUN_HOURS and current_hour != last_run_hour:
+            if (now.hour, now.minute) in RUN_SLOTS and run_key != last_run_key:
                 _run_cleanup_cycle(app)
-                last_run_hour = current_hour
+                last_run_key = run_key
+        except Exception:
+            app.logger.exception("pass retention scheduler loop failure")
 
-            # reset guard after hour passes
-            if current_hour != last_run_hour:
-                last_run_hour = None
-
-        except Exception as e:
-            app.logger.error("scheduler loop failure", exc_info=e)
-
-        time.sleep(60)  # check once per minute
+        time.sleep(30)
 
 
-def start_pass_retention_scheduler(app):
+def start_pass_retention_scheduler(app) -> None:
+    if app.config.get("TESTING"):
+        app.logger.info("pass retention scheduler skipped in testing")
+        return
+
+    if app.extensions.get("pass_retention_scheduler_started"):
+        return
+
     thread = threading.Thread(
         target=_scheduler_loop,
         args=(app,),
@@ -54,3 +56,6 @@ def start_pass_retention_scheduler(app):
         name="pass-retention-scheduler",
     )
     thread.start()
+
+    app.extensions["pass_retention_scheduler_started"] = True
+    app.logger.info("pass retention scheduler started")
