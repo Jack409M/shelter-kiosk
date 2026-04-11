@@ -15,9 +15,12 @@ def test_pass_review_endpoint_returns_200(client, monkeypatch):
 
     _login_staff(client)
 
-    monkeypatch.setattr(passes_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
     monkeypatch.setattr(passes_module, "fetch_pending_pass_rows", lambda shelter: [])
-    monkeypatch.setattr(passes_module, "has_active_pass_block", lambda resident_id: (False, []))
+    monkeypatch.setattr(
+        passes_module,
+        "has_active_pass_block",
+        lambda resident_id: (False, []),
+    )
 
     response = client.get("/staff/passes/pending", follow_redirects=True)
 
@@ -29,13 +32,12 @@ def test_pass_review_page_contains_expected_text(client, monkeypatch):
 
     _login_staff(client)
 
-    monkeypatch.setattr(passes_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
     monkeypatch.setattr(
         passes_module,
         "fetch_pending_pass_rows",
         lambda shelter: [
             {
-                "id": 1,  # 🔥 THIS WAS MISSING
+                "id": 1,
                 "resident_id": 123,
                 "resident_name": "Test Resident",
                 "pass_type": "pass",
@@ -43,7 +45,11 @@ def test_pass_review_page_contains_expected_text(client, monkeypatch):
             }
         ],
     )
-    monkeypatch.setattr(passes_module, "has_active_pass_block", lambda resident_id: (False, []))
+    monkeypatch.setattr(
+        passes_module,
+        "has_active_pass_block",
+        lambda resident_id: (False, []),
+    )
 
     response = client.get("/staff/passes/pending", follow_redirects=True)
 
