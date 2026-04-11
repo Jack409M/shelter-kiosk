@@ -13,6 +13,21 @@ jobs:
   quality:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     env:
       FLASK_SECRET_KEY: test-secret-key
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
@@ -42,6 +57,15 @@ jobs:
       - name: Install dev dependencies
         run: |
           pip install -r requirements-dev.txt
+
+      - name: Wait for Postgres
+        env:
+          PGPASSWORD: postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
 
       - name: Ruff
         run: |
