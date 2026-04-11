@@ -6,6 +6,7 @@ import os
 import pkgutil
 import secrets
 from datetime import timedelta
+from typing import Any
 
 from flask import Blueprint, Flask, flash, redirect, render_template, request, session, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -97,7 +98,8 @@ def _configure_app(app: Flask) -> None:
 
 
 def _configure_proxy(app: Flask) -> None:
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+    proxy_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+    app.wsgi_app = proxy_app  # type: ignore[method-assign]
 
 
 def _configure_logging(app: Flask) -> str:
@@ -172,6 +174,7 @@ def _register_csrf(app: Flask) -> None:
         response = _csrf_protect()
         if response is not None:
             return response
+        return None
 
 
 def _is_resident_context() -> bool:
@@ -248,9 +251,13 @@ def _register_security(app: Flask) -> None:
     )
 
 
+def _close_db_teardown(exc: BaseException | None = None) -> None:
+    close_db(exc if isinstance(exc, Exception) else None)
+
+
 def _register_core_services(app: Flask) -> None:
     _register_template_helpers(app)
-    app.teardown_appcontext(close_db)
+    app.teardown_appcontext(_close_db_teardown)
     _register_security(app)
     _register_csrf(app)
     _register_error_handlers(app)
