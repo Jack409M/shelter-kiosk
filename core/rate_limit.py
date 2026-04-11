@@ -4,9 +4,15 @@ import time
 from collections import deque
 from threading import RLock
 
-from flask import current_app, g, has_app_context
+from flask import has_app_context, g
 
-from core.db import db_execute, db_fetchall
+from core.rate_limit_store import count_rate_limit_events
+from core.rate_limit_store import ensure_tables as ensure_rate_limit_store_tables
+from core.rate_limit_store import get_rate_limit_snapshot_rows
+from core.rate_limit_store import insert_lock_history
+from core.rate_limit_store import insert_rate_limit_event
+from core.rate_limit_store import prune_if_needed as prune_rate_limit_store_if_needed
+from core.rate_limit_store import recent_lock_count
 from core.security_state_store import ensure_tables as ensure_security_state_tables
 from core.security_state_store import get_active_state_until
 from core.security_state_store import upsert_state
@@ -72,220 +78,53 @@ def _use_db_backend() -> bool:
     return _db_kind() in {"pg", "sqlite"}
 
 
-def _is_pg() -> bool:
-    return _db_kind() == "pg"
-
-
-def _sql(pg_sql: str, sqlite_sql: str) -> str:
-    return pg_sql if _is_pg() else sqlite_sql
-
-
 def _ensure_db_tables() -> None:
     if not has_app_context():
         return
 
     ensure_security_state_tables()
-
-    if current_app.config.get("_RATE_LIMIT_DB_READY") is True:
-        return
-
-    kind = _db_kind()
-    if kind not in {"pg", "sqlite"}:
-        return
-
-    db_execute(
-        _sql(
-            """
-            CREATE TABLE IF NOT EXISTS security_lock_history (
-                state_key TEXT NOT NULL,
-                created_at_epoch DOUBLE PRECISION NOT NULL
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS security_lock_history (
-                state_key TEXT NOT NULL,
-                created_at_epoch REAL NOT NULL
-            )
-            """,
-        )
-    )
-
-    db_execute(
-        _sql(
-            """
-            CREATE TABLE IF NOT EXISTS rate_limit_events (
-                id SERIAL PRIMARY KEY,
-                k TEXT NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS rate_limit_events (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                k TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """,
-        )
-    )
-
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS security_lock_history_key_created_idx
-        ON security_lock_history (state_key, created_at_epoch)
-        """
-    )
-
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS rate_limit_events_k_created_idx
-        ON rate_limit_events (k, created_at)
-        """
-    )
-
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS rate_limit_events_created_idx
-        ON rate_limit_events (created_at)
-        """
-    )
-
-    current_app.config["_RATE_LIMIT_DB_READY"] = True
+    ensure_rate_limit_store_tables()
 
 
-def _db_prune_if_needed(now: float) -> None:
+def _prune_db_if_needed(now: float) -> None:
     if not has_app_context():
         return
-
-    last_prune = float(current_app.config.get("_RATE_LIMIT_DB_LAST_PRUNE_TS", 0.0) or 0.0)
-    if now - last_prune < 600:
-        return
-
-    current_app.config["_RATE_LIMIT_DB_LAST_PRUNE_TS"] = now
-
-    try:
-        db_execute(
-            _sql(
-                """
-                DELETE FROM security_runtime_state
-                WHERE expires_at_epoch <= %s
-                """,
-                """
-                DELETE FROM security_runtime_state
-                WHERE expires_at_epoch <= ?
-                """,
-            ),
-            (now,),
-        )
-
-        db_execute(
-            _sql(
-                """
-                DELETE FROM security_lock_history
-                WHERE created_at_epoch < %s
-                """,
-                """
-                DELETE FROM security_lock_history
-                WHERE created_at_epoch < ?
-                """,
-            ),
-            (now - 86400,),
-        )
-
-        db_execute(
-            _sql(
-                """
-                DELETE FROM rate_limit_events
-                WHERE created_at < NOW() - INTERVAL '2 days'
-                """,
-                """
-                DELETE FROM rate_limit_events
-                WHERE created_at < datetime('now', '-2 days')
-                """,
-            )
-        )
-    except Exception:
-        pass
-
-
-def _db_insert_lock_history(state_key: str) -> None:
-    _ensure_db_tables()
-    now = _now()
-
-    db_execute(
-        _sql(
-            """
-            INSERT INTO security_lock_history (state_key, created_at_epoch)
-            VALUES (%s, %s)
-            """,
-            """
-            INSERT INTO security_lock_history (state_key, created_at_epoch)
-            VALUES (?, ?)
-            """,
-        ),
-        (state_key, now),
-    )
-
-
-def _db_recent_lock_count(state_key: str, window_seconds: int) -> int:
-    _ensure_db_tables()
-    cutoff = _now() - window_seconds
-
-    rows = db_fetchall(
-        _sql(
-            """
-            SELECT COUNT(1) AS c
-            FROM security_lock_history
-            WHERE state_key = %s
-              AND created_at_epoch >= %s
-            """,
-            """
-            SELECT COUNT(1) AS c
-            FROM security_lock_history
-            WHERE state_key = ?
-              AND created_at_epoch >= ?
-            """,
-        ),
-        (state_key, cutoff),
-    )
-
-    if not rows:
-        return 0
-
-    row = rows[0]
-    return int(row.get("c", 0) if isinstance(row, dict) else row[0] or 0)
+    prune_rate_limit_store_if_needed(now)
 
 
 def _db_fetch_active_state_rows(state_type: str) -> list[dict[str, int | str]]:
-    _ensure_db_tables()
     now = _now()
-    _db_prune_if_needed(now)
+    rows: list[dict[str, int | str]] = []
 
-    rows = db_fetchall(
-        _sql(
-            """
-            SELECT state_key, expires_at_epoch
-            FROM security_runtime_state
-            WHERE state_type = %s
-              AND expires_at_epoch > %s
-            ORDER BY expires_at_epoch DESC
-            """,
-            """
-            SELECT state_key, expires_at_epoch
-            FROM security_runtime_state
-            WHERE state_type = ?
-              AND expires_at_epoch > ?
-            ORDER BY expires_at_epoch DESC
-            """,
-        ),
+    for state_key, until in []:
+        pass
+
+    from core.db import db_fetchall
+
+    rows_raw = db_fetchall(
+        """
+        SELECT state_key, expires_at_epoch
+        FROM security_runtime_state
+        WHERE state_type = ?
+          AND expires_at_epoch > ?
+        ORDER BY expires_at_epoch DESC
+        """
+        if _db_kind() == "sqlite"
+        else """
+        SELECT state_key, expires_at_epoch
+        FROM security_runtime_state
+        WHERE state_type = %s
+          AND expires_at_epoch > %s
+        ORDER BY expires_at_epoch DESC
+        """,
         (state_type, now),
     )
 
-    out: list[dict[str, int | str]] = []
-    for row in rows or []:
+    output: list[dict[str, int | str]] = []
+    for row in rows_raw or []:
         key = row.get("state_key") if isinstance(row, dict) else row[0]
         until = float(row.get("expires_at_epoch") if isinstance(row, dict) else row[1])
-        out.append(
+        output.append(
             {
                 "key": str(key),
                 "seconds_remaining": max(0, int(until - now)),
@@ -293,7 +132,7 @@ def _db_fetch_active_state_rows(state_type: str) -> list[dict[str, int | str]]:
             }
         )
 
-    return out
+    return output
 
 
 def _memory_ban_ip(ip: str, seconds: int) -> None:
@@ -394,7 +233,7 @@ def _memory_is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
 def ban_ip(ip: str, seconds: int) -> None:
     if _use_db_backend():
         upsert_state("banned_ip", ip, _now() + seconds)
-        _db_prune_if_needed(_now())
+        _prune_db_if_needed(_now())
         return
 
     _memory_ban_ip(ip, seconds)
@@ -412,8 +251,8 @@ def lock_key(key: str, seconds: int) -> None:
     if _use_db_backend():
         now = _now()
         upsert_state("locked_key", key, now + seconds)
-        _db_insert_lock_history(key)
-        _db_prune_if_needed(now)
+        insert_lock_history(key)
+        _prune_db_if_needed(now)
         return
 
     _memory_lock_key(key, seconds)
@@ -439,12 +278,12 @@ def get_key_lock_seconds_remaining(key: str) -> int:
 
 def get_progressive_lock_seconds(key: str) -> int:
     if _use_db_backend():
-        recent_lock_count_30m = _db_recent_lock_count(key, 1800)
+        count = recent_lock_count(key, 1800)
 
-        if recent_lock_count_30m >= 2:
+        if count >= 2:
             return 10800
 
-        if recent_lock_count_30m >= 1:
+        if count >= 1:
             return 1800
 
         return 600
@@ -460,38 +299,10 @@ def is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
         _ensure_db_tables()
         now = _now()
 
-        db_execute(
-            _sql(
-                "INSERT INTO rate_limit_events (k) VALUES (%s)",
-                "INSERT INTO rate_limit_events (k) VALUES (?)",
-            ),
-            (key,),
-        )
+        insert_rate_limit_event(key)
+        count = count_rate_limit_events(key, window_seconds)
 
-        rows = db_fetchall(
-            _sql(
-                """
-                SELECT COUNT(1) AS c
-                FROM rate_limit_events
-                WHERE k = %s
-                  AND created_at >= NOW() - (%s * INTERVAL '1 second')
-                """,
-                """
-                SELECT COUNT(1) AS c
-                FROM rate_limit_events
-                WHERE k = ?
-                  AND created_at >= datetime('now', '-' || ? || ' seconds')
-                """,
-            ),
-            (key, window_seconds),
-        )
-
-        count = 0
-        if rows:
-            row = rows[0]
-            count = int(row.get("c") if isinstance(row, dict) else row[0])
-
-        _db_prune_if_needed(now)
+        _prune_db_if_needed(now)
         return count > limit
 
     return _memory_is_rate_limited(key, limit, window_seconds)
@@ -529,48 +340,8 @@ def get_banned_ips_snapshot() -> list[dict[str, int | str]]:
 def get_rate_limit_snapshot(window_seconds: int = 3600) -> list[dict[str, int | str]]:
     if _use_db_backend():
         _ensure_db_tables()
-        _db_prune_if_needed(_now())
-
-        rows = db_fetchall(
-            _sql(
-                """
-                SELECT
-                    k AS key,
-                    COUNT(1) AS hits,
-                    MIN(EXTRACT(EPOCH FROM created_at))::bigint AS oldest_epoch,
-                    MAX(EXTRACT(EPOCH FROM created_at))::bigint AS newest_epoch
-                FROM rate_limit_events
-                WHERE created_at >= NOW() - (%s * INTERVAL '1 second')
-                GROUP BY k
-                ORDER BY COUNT(1) DESC, k ASC
-                """,
-                """
-                SELECT
-                    k AS key,
-                    COUNT(1) AS hits,
-                    CAST(MIN(strftime('%s', created_at)) AS INTEGER) AS oldest_epoch,
-                    CAST(MAX(strftime('%s', created_at)) AS INTEGER) AS newest_epoch
-                FROM rate_limit_events
-                WHERE created_at >= datetime('now', '-' || ? || ' seconds')
-                GROUP BY k
-                ORDER BY COUNT(1) DESC, k ASC
-                """,
-            ),
-            (window_seconds,),
-        )
-
-        out: list[dict[str, int | str]] = []
-        for row in rows or []:
-            out.append(
-                {
-                    "key": row.get("key") if isinstance(row, dict) else row[0],
-                    "hits": int(row.get("hits") if isinstance(row, dict) else row[1]),
-                    "oldest_epoch": int(row.get("oldest_epoch") if isinstance(row, dict) else row[2]),
-                    "newest_epoch": int(row.get("newest_epoch") if isinstance(row, dict) else row[3]),
-                }
-            )
-
-        return out
+        _prune_db_if_needed(_now())
+        return get_rate_limit_snapshot_rows(window_seconds)
 
     with _STATE_LOCK:
         now = _now()
