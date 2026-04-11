@@ -68,6 +68,12 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
         lambda **kwargs: None,
     )
 
+    monkeypatch.setattr(
+        residents_module,
+        "_active_rent_config_for_resident",
+        lambda *args, **kwargs: None,
+    )
+
     response = client.post(
         "/staff/residents/1/transfer",
         data={
