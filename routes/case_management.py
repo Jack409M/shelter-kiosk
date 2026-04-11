@@ -6,7 +6,7 @@ from __future__ import annotations
 # This file is now the transition shell for case management.
 #
 # Current responsibilities still living here:
-# 1. Temporary admin utilities during build and testing
+# 1. Progress report print assembly helpers
 #
 # Extracted:
 # - routes.case_management_parts.assessment
@@ -39,6 +39,7 @@ from __future__ import annotations
 # Future extraction plan:
 # - routes.case_management_parts.helpers
 #   shared parsing, shelter, permission, and SQL helpers
+# - progress report helper extraction
 #
 # Goal:
 # keep shrinking this file until it becomes a thin blueprint shell like admin.py
@@ -47,7 +48,7 @@ from __future__ import annotations
 from flask import Blueprint, flash, redirect, render_template, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_execute, db_fetchall, db_fetchone
+from core.db import db_fetchall, db_fetchone
 from core.helpers import fmt_pretty_dt, utcnow_iso
 from core.runtime import init_db
 from routes.case_management_parts.actions import add_appointment_view
@@ -444,8 +445,6 @@ def _build_progress_report_context(
 
 # ============================================================================
 # Index and Intake Landing Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.index
 # ============================================================================
 
 @case_management.get("/")
@@ -464,8 +463,6 @@ def intake_index():
 
 # ============================================================================
 # Assessment Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.assessment
 # ============================================================================
 
 @case_management.get("/assessment/new")
@@ -484,8 +481,6 @@ def submit_assessment():
 
 # ============================================================================
 # Intake Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.intake
 # ============================================================================
 
 @case_management.get("/intake-assessment/new")
@@ -553,8 +548,6 @@ def delete_child_service(service_id: int):
 
 # ============================================================================
 # Intake Duplicate Review Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.intake_duplicates
 # ============================================================================
 
 @case_management.get("/intake-assessment/duplicate-review/<int:draft_id>")
@@ -594,8 +587,6 @@ def intake_duplicate_return_to_edit(draft_id: int):
 
 # ============================================================================
 # Exit Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.exit
 # ============================================================================
 
 @case_management.get("/<int:resident_id>/exit-assessment")
@@ -614,8 +605,6 @@ def submit_exit_assessment(resident_id: int):
 
 # ============================================================================
 # Follow Up Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.followups
 # ============================================================================
 
 @case_management.get("/<int:resident_id>/followup/<string:followup_type>")
@@ -634,8 +623,6 @@ def submit_followup(resident_id: int, followup_type: str):
 
 # ============================================================================
 # Case Management Actions
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.actions
 # ============================================================================
 
 @case_management.post("/case/<int:resident_id>/enroll")
@@ -661,8 +648,6 @@ def add_appointment(resident_id: int):
 
 # ============================================================================
 # Recovery Profile Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.recovery_profile
 # ============================================================================
 
 @case_management.post("/<int:resident_id>/recovery-profile")
@@ -681,8 +666,6 @@ def income_support(resident_id: int):
 
 # ============================================================================
 # Medication Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.medications
 # ============================================================================
 
 @case_management.get("/<int:resident_id>/medications")
@@ -708,8 +691,6 @@ def edit_medication(resident_id: int, medication_id: int):
 
 # ============================================================================
 # UA Log Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.ua_log
 # ============================================================================
 
 @case_management.get("/<int:resident_id>/ua-log")
@@ -735,8 +716,6 @@ def edit_ua_log(resident_id: int, ua_id: int):
 
 # ============================================================================
 # Inspection Log Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.inspection_log
 # ============================================================================
 
 @case_management.get("/<int:resident_id>/inspection-log")
@@ -762,8 +741,6 @@ def edit_inspection_log(resident_id: int, inspection_id: int):
 
 # ============================================================================
 # Budget Session Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.budget_sessions
 # ============================================================================
 
 @case_management.get("/<int:resident_id>/budget-sessions")
@@ -789,8 +766,6 @@ def edit_budget_session(resident_id: int, budget_id: int):
 
 # ============================================================================
 # Case Manager Update Routes
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.update
 # ============================================================================
 
 @case_management.post("/<int:resident_id>/case-notes")
@@ -885,98 +860,7 @@ def progress_report_print(resident_id: int, update_id: int):
 
 
 # ============================================================================
-# TEMPORARY TEST DATA WIPE ROUTE - START
-# ----------------------------------------------------------------------------
-# PURPOSE:
-# This temporary admin only route wipes resident related test data so intake
-# can be retested from a clean state during development.
-#
-# IMPORTANT:
-# Delete everything from the START comment above to the END comment below after
-# testing is complete. Do not leave this route in production long term.
-#
-# WHAT IT DELETES:
-# - weekly_resident_summary
-# - exit_assessments
-# - followups
-# - family_snapshots
-# - intake_assessments
-# - assessment_drafts
-# - intake_drafts
-# - case_manager_updates
-# - appointments
-# - goals
-# - resident_form_submissions
-# - resident_transfers
-# - attendance_events
-# - resident_passes
-# - child_services
-# - resident_children
-# - resident_substances
-# - client_services
-# - resident_budget_sessions
-# - resident_living_area_inspections
-# - resident_ua_log
-# - resident_medications
-# - program_enrollments
-# - residents
-# ============================================================================
-@case_management.route("/admin/wipe-test-residents", methods=["GET", "POST"])
-@require_login
-@require_shelter
-def wipe_test_residents():
-    if session.get("role") != "admin":
-        flash("Admin access required.", "error")
-        return redirect(url_for("case_management.index"))
-
-    init_db()
-
-    try:
-        db_execute("DELETE FROM weekly_resident_summary")
-        db_execute("DELETE FROM exit_assessments")
-        db_execute("DELETE FROM followups")
-        db_execute("DELETE FROM family_snapshots")
-        db_execute("DELETE FROM intake_assessments")
-        db_execute("DELETE FROM case_manager_updates")
-        db_execute("DELETE FROM goals")
-        db_execute("DELETE FROM appointments")
-        db_execute("DELETE FROM resident_form_submissions")
-        db_execute("DELETE FROM child_services")
-        db_execute("DELETE FROM client_services")
-        db_execute("DELETE FROM resident_budget_sessions")
-        db_execute("DELETE FROM resident_living_area_inspections")
-        db_execute("DELETE FROM resident_ua_log")
-        db_execute("DELETE FROM resident_medications")
-
-        db_execute("DELETE FROM assessment_drafts")
-        db_execute("DELETE FROM intake_drafts")
-        db_execute("DELETE FROM resident_transfers")
-        db_execute("DELETE FROM attendance_events")
-        db_execute("DELETE FROM resident_pass_request_details")
-        db_execute("DELETE FROM resident_notifications")
-        db_execute("DELETE FROM resident_passes")
-        db_execute("DELETE FROM resident_children")
-        db_execute("DELETE FROM resident_substances")
-
-        db_execute("DELETE FROM program_enrollments")
-        db_execute("DELETE FROM residents")
-
-        flash("All residents and resident related data were wiped.", "success")
-    except Exception as e:
-        flash(f"Wipe failed: {e}", "error")
-
-    return redirect(url_for("case_management.index"))
-
-
-# ============================================================================
-# TEMPORARY TEST DATA WIPE ROUTE - END
-# ============================================================================
-
-
-# ============================================================================
 # Resident Case Page
-# ----------------------------------------------------------------------------
-# Extracted to routes.case_management_parts.resident_case
 # ============================================================================
 
 @case_management.get("/<int:resident_id>")
