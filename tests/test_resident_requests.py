@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 
 def _login_resident(client):
     with client.session_transaction() as session:
@@ -23,8 +25,12 @@ def test_resident_transport_requires_login(client):
     assert response.status_code in (301, 302)
 
 
-def test_resident_transport_page_loads_when_logged_in(client):
+def test_resident_transport_page_loads_when_logged_in(client, monkeypatch):
+    import routes.resident_requests as module
+
     _login_resident(client)
+
+    monkeypatch.setattr(module, "init_db", lambda: None)
 
     response = client.get("/transport", follow_redirects=True)
 
@@ -39,7 +45,7 @@ def test_resident_can_submit_transport_request(client, monkeypatch):
     monkeypatch.setattr(module, "init_db", lambda: None)
     monkeypatch.setattr(module, "is_rate_limited", lambda key, limit, window_seconds: False)
     monkeypatch.setattr(module, "_client_ip", lambda: "127.0.0.1")
-    monkeypatch.setattr(module, "_parse_transport_needed_at", lambda value: (__import__("datetime").datetime.utcnow(), None))
+    monkeypatch.setattr(module, "_parse_transport_needed_at", lambda value: (datetime.utcnow(), None))
     monkeypatch.setattr(module, "_insert_transport_request", lambda **kwargs: 1)
     monkeypatch.setattr(module, "log_action", lambda *args, **kwargs: None)
 
@@ -57,4 +63,4 @@ def test_resident_can_submit_transport_request(client, monkeypatch):
     )
 
     assert response.status_code in (301, 302)
-    assert "/" in response.headers["Location"]
+    assert response.headers["Location"].endswith("/")
