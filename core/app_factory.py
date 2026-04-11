@@ -6,7 +6,6 @@ import os
 import pkgutil
 import secrets
 from datetime import timedelta
-from typing import Any
 
 from flask import Blueprint, Flask, flash, redirect, render_template, request, session, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
