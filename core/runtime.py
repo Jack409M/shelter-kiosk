@@ -4,10 +4,10 @@ import os
 from datetime import datetime
 from threading import Lock
 
-from db import schema
 from core.db import get_db
 from core.request_utils import client_ip
 from core.shelters import get_all_shelters as load_all_shelters
+from db import schema
 
 
 # ------------------------------------------------------------
