@@ -11,14 +11,13 @@ def _login_staff(client):
 
 
 def test_pass_review_endpoint_returns_200(client, monkeypatch):
-    import core.pass_retention as retention_module
     import routes.attendance_parts.passes as passes_module
 
     _login_staff(client)
 
-    monkeypatch.setattr(retention_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
-    monkeypatch.setattr(passes_module, "db_fetchall", lambda *args, **kwargs: [])
-    monkeypatch.setattr(passes_module, "db_execute", lambda *args, **kwargs: None)
+    monkeypatch.setattr(passes_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
+    monkeypatch.setattr(passes_module, "fetch_pending_pass_rows", lambda shelter: [])
+    monkeypatch.setattr(passes_module, "has_active_pass_block", lambda resident_id: (False, []))
 
     response = client.get("/staff/passes/pending", follow_redirects=True)
 
@@ -26,14 +25,24 @@ def test_pass_review_endpoint_returns_200(client, monkeypatch):
 
 
 def test_pass_review_page_contains_expected_text(client, monkeypatch):
-    import core.pass_retention as retention_module
     import routes.attendance_parts.passes as passes_module
 
     _login_staff(client)
 
-    monkeypatch.setattr(retention_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
-    monkeypatch.setattr(passes_module, "db_fetchall", lambda *args, **kwargs: [])
-    monkeypatch.setattr(passes_module, "db_execute", lambda *args, **kwargs: None)
+    monkeypatch.setattr(passes_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
+    monkeypatch.setattr(
+        passes_module,
+        "fetch_pending_pass_rows",
+        lambda shelter: [
+            {
+                "resident_id": 123,
+                "resident_name": "Test Resident",
+                "pass_type": "pass",
+                "status": "pending",
+            }
+        ],
+    )
+    monkeypatch.setattr(passes_module, "has_active_pass_block", lambda resident_id: (False, []))
 
     response = client.get("/staff/passes/pending", follow_redirects=True)
 
