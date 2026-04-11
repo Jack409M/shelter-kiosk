@@ -22,30 +22,27 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
     _login_staff(client)
     csrf = _set_csrf_token(client)
 
-    # Create resident
-    db_execute(
-        """
-        INSERT INTO residents (id, resident_identifier, first_name, last_name, shelter, is_active, created_at)
-        VALUES (1, 'abc123', 'Test', 'Resident', 'abba', 1, '2026-01-01')
-        """
-    )
+    with app.app_context():
+        db_execute(
+            """
+            INSERT INTO residents (id, resident_identifier, first_name, last_name, shelter, is_active, created_at)
+            VALUES (1, 'abc123', 'Test', 'Resident', 'abba', 1, '2026-01-01')
+            """
+        )
 
-    # Create passes: pending, approved, completed
-    db_execute(
-        """
-        INSERT INTO resident_passes (id, resident_id, shelter, status, created_at)
-        VALUES
-            (1, 1, 'abba', 'pending', '2026-01-01'),
-            (2, 1, 'abba', 'approved', '2026-01-01'),
-            (3, 1, 'abba', 'completed', '2026-01-01')
-        """
-    )
+        db_execute(
+            """
+            INSERT INTO resident_passes (id, resident_id, shelter, status, created_at, updated_at, pass_type)
+            VALUES
+                (1, 1, 'abba', 'pending', '2026-01-01', '2026-01-01', 'pass'),
+                (2, 1, 'abba', 'approved', '2026-01-01', '2026-01-01', 'pass'),
+                (3, 1, 'abba', 'completed', '2026-01-01', '2026-01-01', 'pass')
+            """
+        )
 
-    # Monkeypatch housing + rent stuff to avoid side effects
     import routes.residents as residents_module
     monkeypatch.setattr(residents_module, "_upsert_resident_housing_assignment", lambda **kwargs: None)
 
-    # Execute transfer
     response = client.post(
         "/staff/residents/1/transfer",
         data={
@@ -58,17 +55,13 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
 
     assert response.status_code in (301, 302)
 
-    rows = db_fetchall(
-        "SELECT id, shelter, status FROM resident_passes WHERE resident_id = 1 ORDER BY id"
-    )
+    with app.app_context():
+        rows = db_fetchall(
+            "SELECT id, shelter, status FROM resident_passes WHERE resident_id = 1 ORDER BY id"
+        )
 
     results = {row[0]: (row[1], row[2]) for row in rows}
 
-    # Pending moved
     assert results[1][0] == "haven"
-
-    # Approved moved
     assert results[2][0] == "haven"
-
-    # Completed stayed
     assert results[3][0] == "abba"
