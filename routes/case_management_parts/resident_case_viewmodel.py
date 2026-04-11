@@ -6,9 +6,27 @@ from zoneinfo import ZoneInfo
 
 CHI = ZoneInfo("America/Chicago")
 
+APPOINTMENT_PARSE_FORMATS = [
+    "%Y-%m-%dT%H:%M",
+    "%Y-%m-%d %H:%M",
+    "%Y-%m-%d",
+    "%m/%d/%Y",
+    "%m/%d/%y",
+    "%m/%d/%Y %I:%M %p",
+    "%m/%d/%y %I:%M %p",
+    "%m/%d/%Y %H:%M",
+    "%m/%d/%y %H:%M",
+]
+
 
 def chicago_today() -> date:
     return datetime.now(CHI).date()
+
+
+def _clean_text(value) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def safe_days_since(date_text: str | None):
@@ -26,12 +44,6 @@ def safe_days_since(date_text: str | None):
     return days
 
 
-def _clean_text(value):
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
 def _yes_no_from_need_state(is_need_present):
     if is_need_present is None:
         return ""
@@ -42,17 +54,19 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     rs = recovery_snapshot or {}
     fs = family_snapshot or {}
 
-    parts = []
+    parts: list[str] = []
 
     level = _clean_text(rs.get("program_level"))
     if level:
         parts.append(f"Level {level}")
 
     days_sober = rs.get("days_sober_today")
-    if days_sober is not None and str(days_sober).strip() != "":
+    if days_sober is not None and _clean_text(days_sober) != "":
         parts.append(f"{days_sober} days sober")
 
-    employment_status = _clean_text(rs.get("employment_status_display") or rs.get("employment_status_current"))
+    employment_status = _clean_text(
+        rs.get("employment_status_display") or rs.get("employment_status_current")
+    )
     if employment_status and employment_status != "—":
         parts.append(f"employment status {employment_status.lower()}")
 
@@ -72,19 +86,7 @@ def _parse_future_date_from_text(value: str | None) -> datetime | None:
     if not text:
         return None
 
-    candidates = [
-        "%Y-%m-%dT%H:%M",
-        "%Y-%m-%d %H:%M",
-        "%Y-%m-%d",
-        "%m/%d/%Y",
-        "%m/%d/%y",
-        "%m/%d/%Y %I:%M %p",
-        "%m/%d/%y %I:%M %p",
-        "%m/%d/%Y %H:%M",
-        "%m/%d/%y %H:%M",
-    ]
-
-    for fmt in candidates:
+    for fmt in APPOINTMENT_PARSE_FORMATS:
         try:
             return datetime.strptime(text, fmt)
         except ValueError:
@@ -116,11 +118,23 @@ def _is_current_or_future_appointment(value: str | None) -> bool:
 
 
 def _resolve_meeting_default_next_appointment(latest_appointment) -> str:
-    latest_appointment_date = _clean_text(latest_appointment.get("appointment_date")) if latest_appointment else ""
+    latest_appointment_date = (
+        _clean_text(latest_appointment.get("appointment_date"))
+        if latest_appointment
+        else ""
+    )
 
     if latest_appointment_date and _is_current_or_future_appointment(latest_appointment_date):
         return _normalize_appointment_display(latest_appointment_date)
 
+    return ""
+
+
+def _resolve_ready_for_next_level(value) -> str:
+    if value == 1:
+        return "yes"
+    if value == 0:
+        return "no"
     return ""
 
 
@@ -143,28 +157,20 @@ def build_meeting_defaults(
     last_note = notes[-1] if notes else {}
     latest_appointment = appointments[0] if appointments else {}
 
-    next_appointment = _resolve_meeting_default_next_appointment(latest_appointment)
-
-    summary_hint = _build_summary_hint(
-        recovery_snapshot=recovery_snapshot,
-        family_snapshot=family_snapshot,
-        open_needs=open_needs,
-    )
-
     return {
         "meeting_date": chicago_today().isoformat(),
         "notes": "",
         "progress_notes": "",
         "setbacks_or_incidents": "",
         "action_items": "",
-        "next_appointment": next_appointment or "",
-        "overall_summary": summary_hint or "",
-        "ready_for_next_level": (
-            "yes"
-            if last_note.get("ready_for_next_level") == 1
-            else "no"
-            if last_note.get("ready_for_next_level") == 0
-            else ""
+        "next_appointment": _resolve_meeting_default_next_appointment(latest_appointment),
+        "overall_summary": _build_summary_hint(
+            recovery_snapshot=recovery_snapshot,
+            family_snapshot=family_snapshot,
+            open_needs=open_needs,
+        ),
+        "ready_for_next_level": _resolve_ready_for_next_level(
+            last_note.get("ready_for_next_level")
         ),
         "recommended_next_level": _clean_text(last_note.get("recommended_next_level")),
         "blocker_reason": "",
@@ -180,18 +186,27 @@ def build_meeting_defaults(
     }
 
 
+def _resolve_days_sober(recovery_snapshot: dict) -> object:
+    sobriety_date = recovery_snapshot.get("sobriety_date")
+    days_sober = recovery_snapshot.get("days_sober_today")
+    if days_sober is None:
+        days_sober = safe_days_since(sobriety_date)
+    return days_sober
+
+
+def _resolve_days_on_level(recovery_snapshot: dict) -> tuple[object, object]:
+    level_start_date = recovery_snapshot.get("level_start_date")
+    days_on_level = recovery_snapshot.get("days_on_level")
+    if days_on_level is None:
+        days_on_level = safe_days_since(level_start_date)
+    return level_start_date, days_on_level
+
+
 def build_workspace_header(*, resident, enrollment, recovery_snapshot, open_needs):
     rs = recovery_snapshot or {}
 
-    sobriety_date = rs.get("sobriety_date")
-    days_sober = rs.get("days_sober_today")
-    if days_sober is None:
-        days_sober = safe_days_since(sobriety_date)
-
-    level_start_date = rs.get("level_start_date")
-    days_on_level = rs.get("days_on_level")
-    if days_on_level is None:
-        days_on_level = safe_days_since(level_start_date)
+    level_start_date, days_on_level = _resolve_days_on_level(rs)
+    days_sober = _resolve_days_sober(rs)
 
     return {
         "resident_name": f"{resident.get('first_name', '')} {resident.get('last_name', '')}".strip(),
