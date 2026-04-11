@@ -151,7 +151,7 @@ def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
             blocks_passes
         FROM resident_writeups
         WHERE resident_id = %s
-          AND COALESCE(blocks_passes, 0) IN (1, TRUE)
+          AND blocks_passes IS TRUE
         ORDER BY incident_date DESC, id DESC
         """
         if g.get("db_kind") == "pg"
