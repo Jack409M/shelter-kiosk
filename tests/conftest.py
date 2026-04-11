@@ -23,6 +23,7 @@ def app():
     app = create_app()
     app.config.update(
         TESTING=True,
+        DEBUG=True,
     )
     return app
 
