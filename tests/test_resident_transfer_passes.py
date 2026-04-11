@@ -81,16 +81,6 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
         lambda: {"abba": [], "haven": [], "gratitude": []},
     )
 
-    monkeypatch.setattr(
-        "routes.residents.log_action",
-        lambda *args, **kwargs: None,
-    )
-
-    monkeypatch.setattr(
-        "core.residents.log_action",
-        lambda *args, **kwargs: None,
-    )
-
     response = client.post(
         "/staff/residents/1/transfer",
         data={
