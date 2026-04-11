@@ -1,24 +1,37 @@
 [tool.pytest.ini_options]
+minversion = "8.0"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+addopts = "-q --maxfail=1"
+
+[tool.coverage.run]
+branch = true
+source = ["core", "db", "routes"]
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true
+omit = [
+  "tests/*",
+]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
 exclude = [
-    ".git",
-    ".venv",
-    "venv",
-    "__pycache__",
+  ".git",
+  ".venv",
+  "venv",
+  "__pycache__",
 ]
 
 [tool.ruff.lint]
 select = [
-    "E",
-    "F",
-    "I",
-    "B",
+  "E",
+  "F",
+  "I",
+  "B",
 ]
 ignore = [
-    "E501",
+  "E501",
 ]
