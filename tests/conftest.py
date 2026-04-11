@@ -17,7 +17,12 @@ def _test_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def app():
+def app(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(
+        "core.app_factory.start_pass_retention_scheduler",
+        lambda app: None,
+    )
+
     from core.app_factory import create_app
 
     app = create_app()
