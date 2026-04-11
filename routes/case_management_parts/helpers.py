@@ -8,6 +8,13 @@ from flask import g, session
 from core.db import db_fetchone
 
 
+CASE_MANAGER_ROLES = {
+    "admin",
+    "shelter_director",
+    "case_manager",
+}
+
+
 def _db_placeholder() -> str:
     return "%s" if g.get("db_kind") == "pg" else "?"
 
@@ -17,8 +24,12 @@ def _clean_text(value: str | None) -> str | None:
     return cleaned or None
 
 
+def placeholder() -> str:
+    return _db_placeholder()
+
+
 def case_manager_allowed() -> bool:
-    return session.get("role") in {"admin", "shelter_director", "case_manager"}
+    return session.get("role") in CASE_MANAGER_ROLES
 
 
 def normalize_shelter_name(value: str | None) -> str:
@@ -26,11 +37,7 @@ def normalize_shelter_name(value: str | None) -> str:
 
 
 def shelter_equals_sql(column_name: str) -> str:
-    return f"LOWER(COALESCE({column_name}, '')) = {_db_placeholder()}"
-
-
-def placeholder() -> str:
-    return _db_placeholder()
+    return f"LOWER(COALESCE({column_name}, '')) = {placeholder()}"
 
 
 def current_enrollment_order_sql(alias: str = "") -> str:
@@ -43,7 +50,8 @@ def current_enrollment_order_sql(alias: str = "") -> str:
 
 
 def fetch_current_enrollment_for_resident(resident_id: int, columns: str = "*"):
-    ph = _db_placeholder()
+    ph = placeholder()
+
     return db_fetchone(
         f"""
         SELECT {columns}
@@ -60,13 +68,16 @@ def fetch_current_enrollment_id_for_resident(resident_id: int) -> int | None:
     row = fetch_current_enrollment_for_resident(resident_id, columns="id")
     if not row:
         return None
+
     if isinstance(row, dict):
         return row.get("id")
+
     return row[0]
 
 
 def resident_has_active_enrollment(resident_id: int) -> bool:
-    ph = _db_placeholder()
+    ph = placeholder()
+
     row = db_fetchone(
         f"""
         SELECT id
