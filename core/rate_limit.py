@@ -14,6 +14,7 @@ from core.rate_limit_store import insert_rate_limit_event
 from core.rate_limit_store import prune_if_needed as prune_rate_limit_store_if_needed
 from core.rate_limit_store import recent_lock_count
 from core.security_state_store import ensure_tables as ensure_security_state_tables
+from core.security_state_store import get_active_state_rows
 from core.security_state_store import get_active_state_until
 from core.security_state_store import upsert_state
 
@@ -90,49 +91,6 @@ def _prune_db_if_needed(now: float) -> None:
     if not has_app_context():
         return
     prune_rate_limit_store_if_needed(now)
-
-
-def _db_fetch_active_state_rows(state_type: str) -> list[dict[str, int | str]]:
-    now = _now()
-    rows: list[dict[str, int | str]] = []
-
-    for state_key, until in []:
-        pass
-
-    from core.db import db_fetchall
-
-    rows_raw = db_fetchall(
-        """
-        SELECT state_key, expires_at_epoch
-        FROM security_runtime_state
-        WHERE state_type = ?
-          AND expires_at_epoch > ?
-        ORDER BY expires_at_epoch DESC
-        """
-        if _db_kind() == "sqlite"
-        else """
-        SELECT state_key, expires_at_epoch
-        FROM security_runtime_state
-        WHERE state_type = %s
-          AND expires_at_epoch > %s
-        ORDER BY expires_at_epoch DESC
-        """,
-        (state_type, now),
-    )
-
-    output: list[dict[str, int | str]] = []
-    for row in rows_raw or []:
-        key = row.get("state_key") if isinstance(row, dict) else row[0]
-        until = float(row.get("expires_at_epoch") if isinstance(row, dict) else row[1])
-        output.append(
-            {
-                "key": str(key),
-                "seconds_remaining": max(0, int(until - now)),
-                "until_epoch": int(until),
-            }
-        )
-
-    return output
 
 
 def _memory_ban_ip(ip: str, seconds: int) -> None:
@@ -310,7 +268,7 @@ def is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
 
 def get_banned_ips_snapshot() -> list[dict[str, int | str]]:
     if _use_db_backend():
-        rows = _db_fetch_active_state_rows("banned_ip")
+        rows = get_active_state_rows("banned_ip")
         return [
             {
                 "ip": row["key"],
@@ -373,7 +331,7 @@ def get_rate_limit_snapshot(window_seconds: int = 3600) -> list[dict[str, int | 
 
 def get_locked_keys_snapshot() -> list[dict[str, int | str]]:
     if _use_db_backend():
-        rows = _db_fetch_active_state_rows("locked_key")
+        rows = get_active_state_rows("locked_key")
         return [
             {
                 "key": row["key"],
