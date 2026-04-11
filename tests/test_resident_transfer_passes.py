@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from core.runtime import init_db
 
-import core.residents as core_residents_module
-import routes.residents as residents_module
-
 
 def _login_staff(client):
     with client.session_transaction() as session:
@@ -64,32 +61,27 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
         )
 
     monkeypatch.setattr(
-        residents_module,
-        "_upsert_resident_housing_assignment",
+        "routes.residents._upsert_resident_housing_assignment",
         lambda **kwargs: None,
     )
 
     monkeypatch.setattr(
-        residents_module,
-        "_active_rent_config_for_resident",
+        "routes.residents._active_rent_config_for_resident",
         lambda *args, **kwargs: None,
     )
 
     monkeypatch.setattr(
-        residents_module,
-        "_availability_map_for_transfer",
+        "routes.residents._availability_map_for_transfer",
         lambda: {"abba": [], "haven": [], "gratitude": []},
     )
 
     monkeypatch.setattr(
-        residents_module,
-        "log_action",
+        "routes.residents.log_action",
         lambda *args, **kwargs: None,
     )
 
     monkeypatch.setattr(
-        core_residents_module,
-        "log_action",
+        "core.residents.log_action",
         lambda *args, **kwargs: None,
     )
 
