@@ -19,6 +19,16 @@ def test_create_and_fetch_resident(app):
 
         db_execute(
             """
+            SELECT setval(
+                pg_get_serial_sequence('residents', 'id'),
+                COALESCE((SELECT MAX(id) FROM residents), 1),
+                true
+            )
+            """
+        )
+
+        db_execute(
+            """
             INSERT INTO residents (
                 resident_identifier,
                 first_name,
