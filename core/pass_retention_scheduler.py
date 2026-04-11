@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import threading
 import time
 from datetime import datetime
@@ -44,6 +45,9 @@ def _scheduler_loop(app) -> None:
 def start_pass_retention_scheduler(app) -> None:
     if app.config.get("TESTING"):
         app.logger.info("pass retention scheduler skipped in testing")
+        return
+
+    if os.environ.get("RUN_MAIN") == "true":
         return
 
     if app.extensions.get("pass_retention_scheduler_started"):
