@@ -4,8 +4,7 @@ Core low churn schema objects.
 
 from __future__ import annotations
 
-from core.db import db_execute
-from .schema_helpers import create_table
+from .schema_helpers import create_table, safe_add_column
 
 
 def ensure_staff_users_table(kind: str) -> None:
@@ -121,45 +120,21 @@ def ensure_columns_and_security_upgrades(kind: str) -> None:
     Safe schema evolution for existing deployments.
     """
 
-    try:
-        db_execute("ALTER TABLE staff_users ADD COLUMN first_name TEXT")
-    except Exception:
-        pass
+    del kind
 
-    try:
-        db_execute("ALTER TABLE staff_users ADD COLUMN last_name TEXT")
-    except Exception:
-        pass
+    upgrades = (
+        ("staff_users", "first_name TEXT"),
+        ("staff_users", "last_name TEXT"),
+        ("staff_users", "mobile_phone TEXT"),
+        ("staff_users", "calendar_color TEXT"),
+        ("security_settings", "sms_system_expires_at TEXT"),
+        ("security_settings", "kiosk_intake_expires_at TEXT"),
+        ("security_settings", "admin_login_only_expires_at TEXT"),
+        ("security_settings", "security_alerts_expires_at TEXT"),
+    )
 
-    try:
-        db_execute("ALTER TABLE staff_users ADD COLUMN mobile_phone TEXT")
-    except Exception:
-        pass
-
-    try:
-        db_execute("ALTER TABLE staff_users ADD COLUMN calendar_color TEXT")
-    except Exception:
-        pass
-
-    try:
-        db_execute("ALTER TABLE security_settings ADD COLUMN sms_system_expires_at TEXT")
-    except Exception:
-        pass
-
-    try:
-        db_execute("ALTER TABLE security_settings ADD COLUMN kiosk_intake_expires_at TEXT")
-    except Exception:
-        pass
-
-    try:
-        db_execute("ALTER TABLE security_settings ADD COLUMN admin_login_only_expires_at TEXT")
-    except Exception:
-        pass
-
-    try:
-        db_execute("ALTER TABLE security_settings ADD COLUMN security_alerts_expires_at TEXT")
-    except Exception:
-        pass
+    for table_name, column_sql in upgrades:
+        safe_add_column(table_name, column_sql)
 
 
 def ensure_organizations_table(kind: str) -> None:
