@@ -37,7 +37,7 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
     return None
 
 
-def backfill_missing_delete_after_at_for_shelter(shelter: str) -> None:
+def backfill_missing_delete_after_at_for_shelter(shelter: str) -> int:
     rows = db_fetchall(
         """
         SELECT id, end_at, end_date
@@ -64,6 +64,8 @@ def backfill_missing_delete_after_at_for_shelter(shelter: str) -> None:
         (shelter,),
     )
 
+    updated_count = 0
+
     for row in rows:
         delete_after_at = cleanup_deadline_from_expected_back(
             row.get("end_at"),
@@ -89,9 +91,12 @@ def backfill_missing_delete_after_at_for_shelter(shelter: str) -> None:
             """,
             (delete_after_at, utcnow_iso(), row["id"]),
         )
+        updated_count += 1
+
+    return updated_count
 
 
-def delete_expired_passes_for_shelter(shelter: str) -> None:
+def delete_expired_passes_for_shelter(shelter: str) -> int:
     now_iso = utcnow_iso()
 
     expired_rows = db_fetchall(
@@ -113,6 +118,8 @@ def delete_expired_passes_for_shelter(shelter: str) -> None:
         """,
         (shelter, now_iso),
     )
+
+    deleted_count = 0
 
     for row in expired_rows:
         pass_id = int(row["id"])
@@ -158,12 +165,25 @@ def delete_expired_passes_for_shelter(shelter: str) -> None:
             """,
             (pass_id,),
         )
+        deleted_count += 1
+
+    return deleted_count
 
 
-def run_pass_retention_cleanup_for_shelter(shelter: str) -> None:
+def run_pass_retention_cleanup_for_shelter(shelter: str) -> dict[str, int | str]:
     normalized = str(shelter or "").strip()
     if not normalized:
-        return
+        return {
+            "shelter": "",
+            "backfilled": 0,
+            "deleted": 0,
+        }
 
-    backfill_missing_delete_after_at_for_shelter(normalized)
-    delete_expired_passes_for_shelter(normalized)
+    backfilled = backfill_missing_delete_after_at_for_shelter(normalized)
+    deleted = delete_expired_passes_for_shelter(normalized)
+
+    return {
+        "shelter": normalized,
+        "backfilled": backfilled,
+        "deleted": deleted,
+    }
