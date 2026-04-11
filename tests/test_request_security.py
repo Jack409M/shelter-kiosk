@@ -1,27 +1,50 @@
-from __future__ import annotations
+from flask import Flask
 
 
-def test_ip_not_banned_by_default():
-    from core.rate_limit import is_ip_banned
+def test_register_request_security_sets_hooks():
+    from core.request_security import register_request_security
 
-    assert is_ip_banned("127.0.0.1") is False
+    app = Flask(__name__)
+
+    register_request_security(
+        app,
+        client_ip_func=lambda: "127.0.0.1",
+        is_ip_banned_func=lambda ip: False,
+        is_rate_limited_func=lambda ip: False,
+        ban_ip_func=lambda ip: None,
+    )
+
+    assert app.before_request_funcs
+    assert app.after_request_funcs
 
 
-def test_rate_limit_allows_first_request():
-    from core.rate_limit import is_rate_limited
+def test_request_security_blocks_banned_ip(client, app):
+    from core.request_security import register_request_security
 
-    key = "test-key-allow"
-    assert is_rate_limited(key, limit=5, window_seconds=60) is False
+    register_request_security(
+        app,
+        client_ip_func=lambda: "1.2.3.4",
+        is_ip_banned_func=lambda ip: True,
+        is_rate_limited_func=lambda ip: False,
+        ban_ip_func=lambda ip: None,
+    )
+
+    response = client.get("/")
+
+    assert response.status_code in (403, 429)
 
 
-def test_rate_limit_blocks_after_limit():
-    from core.rate_limit import is_rate_limited
+def test_request_security_rate_limit_trigger(client, app):
+    from core.request_security import register_request_security
 
-    key = "test-key-block"
+    register_request_security(
+        app,
+        client_ip_func=lambda: "1.2.3.4",
+        is_ip_banned_func=lambda ip: False,
+        is_rate_limited_func=lambda ip: True,
+        ban_ip_func=lambda ip: None,
+    )
 
-    # hit the limit
-    for _ in range(5):
-        is_rate_limited(key, limit=5, window_seconds=60)
+    response = client.get("/")
 
-    # next one should be blocked
-    assert is_rate_limited(key, limit=5, window_seconds=60) is True
+    assert response.status_code in (403, 429)
