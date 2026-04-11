@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import core.residents as core_residents_module
+import routes.residents as residents_module
+
 from core.runtime import init_db
 
 
@@ -20,8 +23,6 @@ def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
 
 def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
     from core.db import db_execute, db_fetchall
-    import core.residents as core_residents_module
-    import routes.residents as residents_module
 
     _login_staff(client)
     csrf = _set_csrf_token(client)
