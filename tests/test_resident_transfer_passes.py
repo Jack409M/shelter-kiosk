@@ -25,23 +25,44 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
     with app.app_context():
         db_execute(
             """
-            INSERT INTO residents (id, resident_identifier, first_name, last_name, shelter, is_active, created_at)
-            VALUES (1, 'abc123', 'Test', 'Resident', 'abba', 1, '2026-01-01')
+            INSERT INTO residents (
+                id,
+                resident_identifier,
+                first_name,
+                last_name,
+                shelter,
+                is_active,
+                created_at
+            )
+            VALUES (1, 'abc123', 'Test', 'Resident', 'abba', TRUE, '2026-01-01')
             """
         )
 
         db_execute(
             """
-            INSERT INTO resident_passes (id, resident_id, shelter, status, created_at, updated_at, pass_type)
+            INSERT INTO resident_passes (
+                id,
+                resident_id,
+                shelter,
+                pass_type,
+                status,
+                created_at,
+                updated_at
+            )
             VALUES
-                (1, 1, 'abba', 'pending', '2026-01-01', '2026-01-01', 'pass'),
-                (2, 1, 'abba', 'approved', '2026-01-01', '2026-01-01', 'pass'),
-                (3, 1, 'abba', 'completed', '2026-01-01', '2026-01-01', 'pass')
+                (1, 1, 'abba', 'pass', 'pending', '2026-01-01', '2026-01-01'),
+                (2, 1, 'abba', 'pass', 'approved', '2026-01-01', '2026-01-01'),
+                (3, 1, 'abba', 'pass', 'completed', '2026-01-01', '2026-01-01')
             """
         )
 
     import routes.residents as residents_module
-    monkeypatch.setattr(residents_module, "_upsert_resident_housing_assignment", lambda **kwargs: None)
+
+    monkeypatch.setattr(
+        residents_module,
+        "_upsert_resident_housing_assignment",
+        lambda **kwargs: None,
+    )
 
     response = client.post(
         "/staff/residents/1/transfer",
