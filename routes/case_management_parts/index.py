@@ -35,6 +35,32 @@ def _to_bool_or_none(value):
     return bool(value)
 
 
+def _require_case_manager_access():
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+    return None
+
+
+def _current_shelter() -> str:
+    return normalize_shelter_name(session.get("shelter"))
+
+
+def _current_show_mode() -> str:
+    show = (request.args.get("show") or "active").strip().lower()
+    if show not in {"active", "all"}:
+        return "active"
+    return show
+
+
+def _active_sql_literal() -> str:
+    return "TRUE" if g.get("db_kind") == "pg" else "1"
+
+
+def _db_placeholder() -> str:
+    return "%s" if g.get("db_kind") == "pg" else "?"
+
+
 def _build_engagement_score(recovery_snapshot: dict | None) -> float | None:
     snapshot = recovery_snapshot or {}
 
@@ -77,6 +103,24 @@ def _build_engagement_score(recovery_snapshot: dict | None) -> float | None:
         return None
 
     return round(min(score, 100.0), 1)
+
+
+def _build_pending_readiness() -> dict:
+    return {
+        "score": None,
+        "score_display": "—",
+        "label": "Pending",
+        "tone": "pending",
+        "detail": "Waiting for enough scoring data to calculate a readiness score.",
+    }
+
+
+def _build_readiness_band(score: int) -> tuple[str, str]:
+    if score >= 80:
+        return "Doing Great", "great"
+    if score >= 50:
+        return "Struggling", "struggling"
+    return "Failing", "failing"
 
 
 def _build_readiness_score(resident_id: int, shelter: str) -> dict:
@@ -135,25 +179,10 @@ def _build_readiness_score(resident_id: int, shelter: str) -> dict:
         detail_parts.append(f"Recovery Engagement {engagement_score:.1f}")
 
     if weight_used == 0:
-        return {
-            "score": None,
-            "score_display": "—",
-            "label": "Pending",
-            "tone": "pending",
-            "detail": "Waiting for enough scoring data to calculate a readiness score.",
-        }
+        return _build_pending_readiness()
 
     score = int(round(weighted_total / weight_used))
-
-    if score >= 80:
-        label = "Doing Great"
-        tone = "great"
-    elif score >= 50:
-        label = "Struggling"
-        tone = "struggling"
-    else:
-        label = "Failing"
-        tone = "failing"
+    label, tone = _build_readiness_band(score)
 
     return {
         "score": score,
@@ -164,20 +193,9 @@ def _build_readiness_score(resident_id: int, shelter: str) -> dict:
     }
 
 
-def index_view():
-    if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    init_db()
-
-    shelter = normalize_shelter_name(session.get("shelter"))
-    show = (request.args.get("show") or "active").strip().lower()
-    if show not in {"active", "all"}:
-        show = "active"
-
+def _load_resident_rows_for_index(shelter: str, show: str):
     if show == "all":
-        resident_rows = db_fetchall(
+        return db_fetchall(
             f"""
             SELECT
                 id,
@@ -191,48 +209,38 @@ def index_view():
             """,
             (shelter,),
         )
-    else:
-        active_sql = "TRUE" if g.get("db_kind") == "pg" else "1"
-        resident_rows = db_fetchall(
-            f"""
-            SELECT
-                id,
-                first_name,
-                last_name,
-                resident_code,
-                is_active
-            FROM residents
-            WHERE {shelter_equals_sql("shelter")}
-              AND is_active = {active_sql}
-            ORDER BY last_name ASC, first_name ASC
-            """,
-            (shelter,),
-        )
 
+    active_sql = _active_sql_literal()
+    return db_fetchall(
+        f"""
+        SELECT
+            id,
+            first_name,
+            last_name,
+            resident_code,
+            is_active
+        FROM residents
+        WHERE {shelter_equals_sql("shelter")}
+          AND is_active = {active_sql}
+        ORDER BY last_name ASC, first_name ASC
+        """,
+        (shelter,),
+    )
+
+
+def _build_index_residents(shelter: str, show: str) -> list[dict]:
+    resident_rows = _load_resident_rows_for_index(shelter, show)
     residents = [dict(row) for row in resident_rows]
 
     for resident in residents:
         resident["readiness"] = _build_readiness_score(resident["id"], shelter)
 
-    return render_template(
-        "case_management/index.html",
-        residents=residents,
-        shelter=shelter,
-        show=show,
-    )
+    return residents
 
 
-def intake_index_view():
-    if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    init_db()
-
-    shelter = normalize_shelter_name(session.get("shelter"))
-    shelter_param = "%s" if g.get("db_kind") == "pg" else "?"
-
-    drafts = db_fetchall(
+def _load_intake_drafts(shelter: str):
+    shelter_param = _db_placeholder()
+    return db_fetchall(
         f"""
         SELECT
             id,
@@ -247,7 +255,10 @@ def intake_index_view():
         (shelter,),
     )
 
-    duplicate_review_drafts = db_fetchall(
+
+def _load_duplicate_review_drafts(shelter: str):
+    shelter_param = _db_placeholder()
+    return db_fetchall(
         f"""
         SELECT
             id,
@@ -262,7 +273,10 @@ def intake_index_view():
         (shelter,),
     )
 
-    assessment_drafts = db_fetchall(
+
+def _load_assessment_drafts(shelter: str):
+    shelter_param = _db_placeholder()
+    return db_fetchall(
         f"""
         SELECT
             id,
@@ -276,7 +290,9 @@ def intake_index_view():
         (shelter,),
     )
 
-    residents = db_fetchall(
+
+def _load_residents_for_intake(shelter: str):
+    return db_fetchall(
         f"""
         SELECT
             id,
@@ -288,6 +304,40 @@ def intake_index_view():
         """,
         (shelter,),
     )
+
+
+def index_view():
+    denied = _require_case_manager_access()
+    if denied is not None:
+        return denied
+
+    init_db()
+
+    shelter = _current_shelter()
+    show = _current_show_mode()
+    residents = _build_index_residents(shelter, show)
+
+    return render_template(
+        "case_management/index.html",
+        residents=residents,
+        shelter=shelter,
+        show=show,
+    )
+
+
+def intake_index_view():
+    denied = _require_case_manager_access()
+    if denied is not None:
+        return denied
+
+    init_db()
+
+    shelter = _current_shelter()
+
+    drafts = _load_intake_drafts(shelter)
+    duplicate_review_drafts = _load_duplicate_review_drafts(shelter)
+    assessment_drafts = _load_assessment_drafts(shelter)
+    residents = _load_residents_for_intake(shelter)
 
     return render_template(
         "intake_assessment/index.html",
