@@ -1,0 +1,90 @@
+from __future__ import annotations
+
+from flask import request
+
+from routes.case_management_parts.update_needs import collect_need_updates
+from routes.case_management_parts.update_utils import clean_service_types
+from routes.case_management_parts.update_utils import parse_grit
+from routes.case_management_parts.update_utils import parse_quantity
+from routes.case_management_parts.update_utils import yes_no_to_int
+
+
+def clean_text(value):
+    return (value or "").strip()
+
+
+def collect_note_form_values():
+    meeting_date = clean_text(request.form.get("meeting_date"))
+    notes = clean_text(request.form.get("notes"))
+    progress_notes = clean_text(request.form.get("progress_notes"))
+    setbacks_or_incidents = clean_text(request.form.get("setbacks_or_incidents"))
+    action_items = clean_text(request.form.get("action_items"))
+    overall_summary = clean_text(request.form.get("overall_summary"))
+    ready_for_next_level = yes_no_to_int(request.form.get("ready_for_next_level"))
+    recommended_next_level = clean_text(request.form.get("recommended_next_level"))
+    blocker_reason = clean_text(request.form.get("blocker_reason"))
+    override_or_exception = clean_text(request.form.get("override_or_exception"))
+    staff_review_note = clean_text(request.form.get("staff_review_note"))
+
+    updated_grit_raw = clean_text(request.form.get("updated_grit"))
+    updated_grit = parse_grit(updated_grit_raw)
+    parenting_class_completed = yes_no_to_int(request.form.get("parenting_class_completed"))
+    warrants_or_fines_paid = yes_no_to_int(request.form.get("warrants_or_fines_paid"))
+
+    service_types = clean_service_types(request.form.getlist("service_type"))
+    need_updates = collect_need_updates(request.form)
+
+    return {
+        "meeting_date": meeting_date,
+        "notes": notes,
+        "progress_notes": progress_notes,
+        "setbacks_or_incidents": setbacks_or_incidents,
+        "action_items": action_items,
+        "overall_summary": overall_summary,
+        "ready_for_next_level": ready_for_next_level,
+        "recommended_next_level": recommended_next_level,
+        "blocker_reason": blocker_reason,
+        "override_or_exception": override_or_exception,
+        "staff_review_note": staff_review_note,
+        "updated_grit_raw": updated_grit_raw,
+        "updated_grit": updated_grit,
+        "parenting_class_completed": parenting_class_completed,
+        "warrants_or_fines_paid": warrants_or_fines_paid,
+        "service_types": service_types,
+        "need_updates": need_updates,
+    }
+
+
+def has_structured_progress(values, *, include_needs: bool):
+    return (
+        values["updated_grit"] is not None
+        or values["parenting_class_completed"] is not None
+        or values["warrants_or_fines_paid"] is not None
+        or values["ready_for_next_level"] is not None
+        or bool(values["recommended_next_level"])
+        or bool(values["blocker_reason"])
+        or bool(values["override_or_exception"])
+        or bool(values["staff_review_note"])
+        or bool(values["service_types"])
+        or (include_needs and bool(values["need_updates"]))
+    )
+
+
+def service_form_payloads(service_types: list[str]) -> list[dict]:
+    items: list[dict] = []
+
+    for service_type in service_types:
+        service_note = clean_text(request.form.get(f"service_notes_{service_type}"))
+        quantity = parse_quantity(request.form.get(f"quantity_{service_type}"))
+        unit = clean_text(request.form.get(f"unit_{service_type}"))
+
+        items.append(
+            {
+                "service_type": service_type,
+                "service_note": service_note or None,
+                "quantity": quantity,
+                "unit": unit or None,
+            }
+        )
+
+    return items
