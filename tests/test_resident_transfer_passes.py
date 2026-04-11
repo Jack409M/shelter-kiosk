@@ -62,7 +62,6 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
 
     import routes.residents as residents_module
 
-    # PATCH NON-RELEVANT SYSTEMS
     monkeypatch.setattr(
         residents_module,
         "_upsert_resident_housing_assignment",
@@ -82,7 +81,7 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "core.audit.log_action",
+        "core.residents.log_action",
         lambda *args, **kwargs: None,
     )
 
