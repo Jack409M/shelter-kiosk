@@ -487,6 +487,15 @@
           </div>
         </div>
 
+        <div class="security-control-card">
+          <div class="security-control-title">Pass Retention Cleanup</div>
+          <div class="security-control-copy">Manually run pass cleanup across all shelters. This removes expired passes and backfills missing retention windows.</div>
+          <div class="security-control-actions" style="flex-direction: column; align-items: flex-start;">
+            <button type="button" id="run-pass-cleanup-btn" class="control-btn warn">Run Cleanup Now</button>
+            <div id="pass-cleanup-result" class="subtle-note" style="margin-top: 8px;"></div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -688,5 +697,42 @@
 </div>
 
 <script src="{{ url_for('static', filename='js/admin_dashboard_live.js') }}"></script>
+<script>
+(function () {
+  const runButton = document.getElementById("run-pass-cleanup-btn");
+  const resultEl = document.getElementById("pass-cleanup-result");
+
+  if (!runButton || !resultEl) {
+    return;
+  }
+
+  runButton.addEventListener("click", async () => {
+    runButton.disabled = true;
+    resultEl.textContent = "Running cleanup...";
+
+    try {
+      const response = await fetch("{{ url_for('admin.admin_run_pass_cleanup') }}", {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": "{{ csrf_token() }}"
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data || data.status !== "ok") {
+        resultEl.textContent = "Cleanup failed.";
+        return;
+      }
+
+      resultEl.textContent = `Done. Backfilled: ${data.total_backfilled}, Deleted: ${data.total_deleted}`;
+    } catch (error) {
+      resultEl.textContent = "Error running cleanup.";
+    } finally {
+      runButton.disabled = false;
+    }
+  });
+})();
+</script>
 
 {% endblock %}
