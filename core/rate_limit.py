@@ -7,6 +7,9 @@ from threading import RLock
 from flask import current_app, g, has_app_context
 
 from core.db import db_execute, db_fetchall
+from core.security_state_store import ensure_tables as ensure_security_state_tables
+from core.security_state_store import get_active_state_until
+from core.security_state_store import upsert_state
 
 
 _BUCKETS: dict[str, deque[float]] = {}
@@ -81,37 +84,14 @@ def _ensure_db_tables() -> None:
     if not has_app_context():
         return
 
+    ensure_security_state_tables()
+
     if current_app.config.get("_RATE_LIMIT_DB_READY") is True:
         return
 
     kind = _db_kind()
     if kind not in {"pg", "sqlite"}:
         return
-
-    db_execute(
-        _sql(
-            """
-            CREATE TABLE IF NOT EXISTS security_runtime_state (
-                state_type TEXT NOT NULL,
-                state_key TEXT NOT NULL,
-                expires_at_epoch DOUBLE PRECISION NOT NULL,
-                created_at_epoch DOUBLE PRECISION NOT NULL,
-                updated_at_epoch DOUBLE PRECISION NOT NULL,
-                PRIMARY KEY (state_type, state_key)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS security_runtime_state (
-                state_type TEXT NOT NULL,
-                state_key TEXT NOT NULL,
-                expires_at_epoch REAL NOT NULL,
-                created_at_epoch REAL NOT NULL,
-                updated_at_epoch REAL NOT NULL,
-                PRIMARY KEY (state_type, state_key)
-            )
-            """,
-        )
-    )
 
     db_execute(
         _sql(
@@ -147,13 +127,6 @@ def _ensure_db_tables() -> None:
             )
             """,
         )
-    )
-
-    db_execute(
-        """
-        CREATE INDEX IF NOT EXISTS security_runtime_state_type_exp_idx
-        ON security_runtime_state (state_type, expires_at_epoch)
-        """
     )
 
     db_execute(
@@ -233,79 +206,6 @@ def _db_prune_if_needed(now: float) -> None:
         )
     except Exception:
         pass
-
-
-def _db_upsert_state(state_type: str, state_key: str, expires_at_epoch: float) -> None:
-    _ensure_db_tables()
-    now = _now()
-
-    db_execute(
-        _sql(
-            """
-            INSERT INTO security_runtime_state (
-                state_type,
-                state_key,
-                expires_at_epoch,
-                created_at_epoch,
-                updated_at_epoch
-            )
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (state_type, state_key)
-            DO UPDATE SET
-                expires_at_epoch = EXCLUDED.expires_at_epoch,
-                updated_at_epoch = EXCLUDED.updated_at_epoch
-            """,
-            """
-            INSERT INTO security_runtime_state (
-                state_type,
-                state_key,
-                expires_at_epoch,
-                created_at_epoch,
-                updated_at_epoch
-            )
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(state_type, state_key)
-            DO UPDATE SET
-                expires_at_epoch = excluded.expires_at_epoch,
-                updated_at_epoch = excluded.updated_at_epoch
-            """,
-        ),
-        (state_type, state_key, expires_at_epoch, now, now),
-    )
-
-
-def _db_get_active_state_until(state_type: str, state_key: str) -> float | None:
-    _ensure_db_tables()
-    now = _now()
-    _db_prune_if_needed(now)
-
-    rows = db_fetchall(
-        _sql(
-            """
-            SELECT expires_at_epoch
-            FROM security_runtime_state
-            WHERE state_type = %s
-              AND state_key = %s
-              AND expires_at_epoch > %s
-            LIMIT 1
-            """,
-            """
-            SELECT expires_at_epoch
-            FROM security_runtime_state
-            WHERE state_type = ?
-              AND state_key = ?
-              AND expires_at_epoch > ?
-            LIMIT 1
-            """,
-        ),
-        (state_type, state_key, now),
-    )
-
-    if not rows:
-        return None
-
-    row = rows[0]
-    return float(row.get("expires_at_epoch") if isinstance(row, dict) else row[0])
 
 
 def _db_insert_lock_history(state_key: str) -> None:
@@ -493,7 +393,7 @@ def _memory_is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
 
 def ban_ip(ip: str, seconds: int) -> None:
     if _use_db_backend():
-        _db_upsert_state("banned_ip", ip, _now() + seconds)
+        upsert_state("banned_ip", ip, _now() + seconds)
         _db_prune_if_needed(_now())
         return
 
@@ -502,7 +402,7 @@ def ban_ip(ip: str, seconds: int) -> None:
 
 def is_ip_banned(ip: str) -> bool:
     if _use_db_backend():
-        until = _db_get_active_state_until("banned_ip", ip)
+        until = get_active_state_until("banned_ip", ip)
         return until is not None and until > _now()
 
     return _memory_is_ip_banned(ip)
@@ -511,7 +411,7 @@ def is_ip_banned(ip: str) -> bool:
 def lock_key(key: str, seconds: int) -> None:
     if _use_db_backend():
         now = _now()
-        _db_upsert_state("locked_key", key, now + seconds)
+        upsert_state("locked_key", key, now + seconds)
         _db_insert_lock_history(key)
         _db_prune_if_needed(now)
         return
@@ -521,7 +421,7 @@ def lock_key(key: str, seconds: int) -> None:
 
 def is_key_locked(key: str) -> bool:
     if _use_db_backend():
-        until = _db_get_active_state_until("locked_key", key)
+        until = get_active_state_until("locked_key", key)
         return until is not None and until > _now()
 
     return _memory_is_key_locked(key)
@@ -529,7 +429,7 @@ def is_key_locked(key: str) -> bool:
 
 def get_key_lock_seconds_remaining(key: str) -> int:
     if _use_db_backend():
-        until = _db_get_active_state_until("locked_key", key)
+        until = get_active_state_until("locked_key", key)
         if until is None:
             return 0
         return max(0, int(until - _now()))
