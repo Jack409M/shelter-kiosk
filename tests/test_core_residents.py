@@ -14,14 +14,23 @@ def test_generate_resident_code_and_identifier(app):
 
 
 def test_record_resident_transfer_basic(app):
-    from core.residents import record_resident_transfer
     from core.db import db_execute, db_fetchall
+    from core.residents import record_resident_transfer
 
     with app.app_context():
         init_db()
 
-        # clean
         db_execute("DELETE FROM residents WHERE resident_identifier = %s", ("transfer_test",))
+
+        db_execute(
+            """
+            SELECT setval(
+                pg_get_serial_sequence('residents', 'id'),
+                COALESCE((SELECT MAX(id) FROM residents), 1),
+                true
+            )
+            """
+        )
 
         db_execute(
             """
