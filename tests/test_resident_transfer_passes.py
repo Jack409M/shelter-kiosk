@@ -107,3 +107,4 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
     assert results[1][0] == "haven"
     assert results[2][0] == "haven"
     assert results[3][0] == "abba"
+    
