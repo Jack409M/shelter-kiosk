@@ -7,14 +7,27 @@ from typing import Any
 from flask import current_app, g
 
 try:
+    from psycopg2.extras import RealDictCursor
     from psycopg2.pool import PoolError, SimpleConnectionPool
 except Exception:
+    RealDictCursor = None
     PoolError = Exception
     SimpleConnectionPool = None
 
 
-PG_POOL = None
+PG_POOL: Any = None
 _PG_POOL_LOCK = Lock()
+
+
+def _require_database_url() -> str:
+    database_url = current_app.config.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is required. App is locked to Postgres.")
+    return str(database_url)
+
+
+def _normalize_sql(sql: str) -> str:
+    return sql.replace("?", "%s")
 
 
 def _init_pg_pool() -> None:
@@ -27,9 +40,7 @@ def _init_pg_pool() -> None:
         if PG_POOL is not None:
             return
 
-        database_url = current_app.config.get("DATABASE_URL")
-        if not database_url:
-            raise RuntimeError("DATABASE_URL is required. App is locked to Postgres.")
+        database_url = _require_database_url()
 
         if SimpleConnectionPool is None:
             raise RuntimeError("psycopg2 is not installed, but DATABASE_URL is set.")
@@ -41,29 +52,31 @@ def _init_pg_pool() -> None:
         )
 
 
-def _normalize_sql(sql: str) -> str:
-    return sql.replace("?", "%s")
-
-
-def get_db() -> Any:
-    if "db" in g:
-        return g.db
-
-    database_url = current_app.config.get("DATABASE_URL")
-
-    if not database_url:
-        raise RuntimeError("DATABASE_URL is required. App is locked to Postgres.")
-
+def _get_pg_pool():
     _init_pg_pool()
     if PG_POOL is None:
         raise RuntimeError("Postgres pool was not initialized.")
+    return PG_POOL
 
-    conn = PG_POOL.getconn()
+
+def _get_or_create_request_connection():
+    if "db" in g:
+        return g.db
+
+    _require_database_url()
+    pool = _get_pg_pool()
+
+    conn = pool.getconn()
     conn.autocommit = True
+
     g.db = conn
     g.db_kind = "pg"
     g.db_in_transaction = False
     return conn
+
+
+def get_db() -> Any:
+    return _get_or_create_request_connection()
 
 
 def close_db(e: Exception | None = None) -> None:
@@ -73,6 +86,11 @@ def close_db(e: Exception | None = None) -> None:
 
     if conn is None:
         return
+
+    try:
+        conn.autocommit = True
+    except Exception:
+        pass
 
     global PG_POOL
     if PG_POOL is not None:
@@ -84,42 +102,42 @@ def close_db(e: Exception | None = None) -> None:
             )
 
 
-def db_execute(sql: str, params: tuple = ()) -> None:
+@contextmanager
+def _db_cursor(*, dict_rows: bool = False):
     conn = get_db()
-    cur = conn.cursor()
+    sql_cursor_factory = RealDictCursor if dict_rows else None
 
+    if dict_rows and sql_cursor_factory is None:
+        raise RuntimeError("psycopg2.extras.RealDictCursor is unavailable.")
+
+    cur = conn.cursor(cursor_factory=sql_cursor_factory) if sql_cursor_factory else conn.cursor()
     try:
-        cur.execute(_normalize_sql(sql), params)
+        yield cur
     finally:
         cur.close()
+
+
+def db_execute(sql: str, params: tuple = ()) -> None:
+    normalized_sql = _normalize_sql(sql)
+
+    with _db_cursor(dict_rows=False) as cur:
+        cur.execute(normalized_sql, params)
 
 
 def db_fetchone(sql: str, params: tuple = ()) -> Any:
-    conn = get_db()
-    sql = _normalize_sql(sql)
+    normalized_sql = _normalize_sql(sql)
 
-    import psycopg2.extras
-
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    try:
-        cur.execute(sql, params)
+    with _db_cursor(dict_rows=True) as cur:
+        cur.execute(normalized_sql, params)
         return cur.fetchone()
-    finally:
-        cur.close()
 
 
 def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
-    conn = get_db()
-    sql = _normalize_sql(sql)
+    normalized_sql = _normalize_sql(sql)
 
-    import psycopg2.extras
-
-    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    try:
-        cur.execute(sql, params)
+    with _db_cursor(dict_rows=True) as cur:
+        cur.execute(normalized_sql, params)
         return cur.fetchall()
-    finally:
-        cur.close()
 
 
 @contextmanager
