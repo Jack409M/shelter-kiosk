@@ -22,6 +22,7 @@ from core.helpers import (
     shelter_display,
     utcnow_iso,
 )
+from core.pass_retention_scheduler import start_pass_retention_scheduler
 from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 from core.request_security import register_request_security
 from core.request_utils import client_ip
@@ -269,6 +270,7 @@ def create_app() -> Flask:
     _register_core_services(app)
     register_blueprints(app)
     register_app_hooks(app)
+    start_pass_retention_scheduler(app)
 
     app.logger.info(
         "blueprints_loaded=%s count=%s",
