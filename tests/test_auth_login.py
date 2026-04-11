@@ -12,7 +12,7 @@ def test_staff_login_get_renders(client, monkeypatch):
         lambda: ["Abba House", "Haven House", "Gratitude House"],
     )
 
-    response = client.get("/staff/login")
+    response = client.get("/staff/login", follow_redirects=True)
 
     assert response.status_code == 200
     assert (
