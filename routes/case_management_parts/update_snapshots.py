@@ -11,12 +11,51 @@ from routes.case_management_parts.update_utils import clean_value
 from routes.case_management_parts.update_utils import display_label
 
 
+SnapshotMap = dict[str, str]
+
+
 def _join_snapshot_parts(parts: list[str]) -> str:
-    cleaned = [part.strip() for part in parts if part and str(part).strip()]
+    cleaned = [str(part).strip() for part in parts if part and str(part).strip()]
     return " | ".join(cleaned)
 
 
-def load_previous_snapshot_map(previous_note_id: int | None, change_group: str) -> dict[str, str]:
+def _empty_snapshot(field_labels: dict[str, str]) -> SnapshotMap:
+    return {field_name: "" for field_name in field_labels}
+
+
+def _clean_snapshot_value(value) -> str:
+    return clean_value(value)
+
+
+def _display_snapshot_value(value) -> str:
+    if value is None:
+        return ""
+    return display_label(value)
+
+
+def _build_field_snapshot(
+    row,
+    field_labels: dict[str, str],
+    *,
+    display_fields: set[str] | None = None,
+) -> SnapshotMap:
+    if not row:
+        return _empty_snapshot(field_labels)
+
+    display_fields = display_fields or set()
+    snapshot: SnapshotMap = {}
+
+    for field_name in field_labels:
+        value = row.get(field_name)
+        if field_name in display_fields:
+            snapshot[field_name] = _display_snapshot_value(value) if value else ""
+        else:
+            snapshot[field_name] = _clean_snapshot_value(value)
+
+    return snapshot
+
+
+def load_previous_snapshot_map(previous_note_id: int | None, change_group: str) -> SnapshotMap:
     if not previous_note_id:
         return {}
 
@@ -34,16 +73,18 @@ def load_previous_snapshot_map(previous_note_id: int | None, change_group: str) 
         (previous_note_id, change_group),
     )
 
-    snapshot_map: dict[str, str] = {}
+    snapshot_map: SnapshotMap = {}
 
     for row in rows:
-        item_key = row["item_key"] or ""
-        snapshot_map[item_key] = row["detail"] or ""
+        item_key = clean_value(row.get("item_key"))
+        if not item_key:
+            continue
+        snapshot_map[item_key] = clean_value(row.get("detail"))
 
     return snapshot_map
 
 
-def get_current_children_snapshot(resident_id: int) -> dict[str, str]:
+def get_current_children_snapshot(resident_id: int) -> SnapshotMap:
     ph = placeholder()
 
     rows = db_fetchall(
@@ -62,12 +103,12 @@ def get_current_children_snapshot(resident_id: int) -> dict[str, str]:
         (resident_id,),
     )
 
-    snapshot: dict[str, str] = {}
+    snapshot: SnapshotMap = {}
 
     for row in rows:
         child_id = str(row["id"])
-        child_name = clean_value(row["child_name"]) or "Unnamed child"
-        birth_year = clean_value(row["birth_year"])
+        child_name = clean_value(row.get("child_name")) or "Unnamed child"
+        birth_year = clean_value(row.get("birth_year"))
         relationship = display_label(row.get("relationship"))
         living_status = display_label(row.get("living_status"))
 
@@ -84,7 +125,7 @@ def get_current_children_snapshot(resident_id: int) -> dict[str, str]:
     return snapshot
 
 
-def get_current_medication_snapshot(resident_id: int) -> dict[str, str]:
+def get_current_medication_snapshot(resident_id: int) -> SnapshotMap:
     ph = placeholder()
 
     rows = db_fetchall(
@@ -104,11 +145,11 @@ def get_current_medication_snapshot(resident_id: int) -> dict[str, str]:
         (resident_id,),
     )
 
-    snapshot: dict[str, str] = {}
+    snapshot: SnapshotMap = {}
 
     for row in rows:
-        med_id = str(row["id"])
-        medication_name = clean_value(row["medication_name"]) or "Medication"
+        medication_id = str(row["id"])
+        medication_name = clean_value(row.get("medication_name")) or "Medication"
         dosage = clean_value(row.get("dosage"))
         frequency = clean_value(row.get("frequency"))
         purpose = clean_value(row.get("purpose"))
@@ -124,16 +165,12 @@ def get_current_medication_snapshot(resident_id: int) -> dict[str, str]:
         if prescribed_by:
             parts.append(f"Prescribed by: {prescribed_by}")
 
-        snapshot[med_id] = _join_snapshot_parts(parts)
+        snapshot[medication_id] = _join_snapshot_parts(parts)
 
     return snapshot
 
 
-def _empty_snapshot(field_labels: dict[str, str]) -> dict[str, str]:
-    return {key: "" for key in field_labels}
-
-
-def get_current_employment_snapshot(resident_id: int) -> dict[str, str]:
+def get_current_employment_snapshot(resident_id: int) -> SnapshotMap:
     ph = placeholder()
 
     row = db_fetchone(
@@ -153,22 +190,14 @@ def get_current_employment_snapshot(resident_id: int) -> dict[str, str]:
         (resident_id,),
     )
 
-    if not row:
-        return _empty_snapshot(EMPLOYMENT_FIELD_LABELS)
-
-    snapshot: dict[str, str] = {}
-
-    for field_name in EMPLOYMENT_FIELD_LABELS:
-        value = row.get(field_name)
-        if field_name in {"employment_status_current", "employment_type_current"}:
-            snapshot[field_name] = display_label(value) if value else ""
-        else:
-            snapshot[field_name] = clean_value(value)
-
-    return snapshot
+    return _build_field_snapshot(
+        row,
+        EMPLOYMENT_FIELD_LABELS,
+        display_fields={"employment_status_current", "employment_type_current"},
+    )
 
 
-def get_current_sobriety_snapshot(resident_id: int) -> dict[str, str]:
+def get_current_sobriety_snapshot(resident_id: int) -> SnapshotMap:
     ph = placeholder()
 
     row = db_fetchone(
@@ -184,18 +213,17 @@ def get_current_sobriety_snapshot(resident_id: int) -> dict[str, str]:
         (resident_id,),
     )
 
-    if not row:
-        return _empty_snapshot(SOBRIETY_FIELD_LABELS)
+    return _build_field_snapshot(row, SOBRIETY_FIELD_LABELS)
 
-    snapshot: dict[str, str] = {}
 
-    for field_name in SOBRIETY_FIELD_LABELS:
-        snapshot[field_name] = clean_value(row.get(field_name))
-
+def _empty_advancement_snapshot() -> SnapshotMap:
+    snapshot = _empty_snapshot(MEETING_TEXT_FIELD_LABELS)
+    snapshot.update(_empty_snapshot(ADVANCEMENT_TEXT_FIELD_LABELS))
+    snapshot.update(_empty_snapshot(ADVANCEMENT_BOOL_FIELD_LABELS))
     return snapshot
 
 
-def get_current_advancement_snapshot(enrollment_id: int) -> dict[str, str]:
+def get_current_advancement_snapshot(enrollment_id: int) -> SnapshotMap:
     ph = placeholder()
 
     row = db_fetchone(
@@ -216,12 +244,9 @@ def get_current_advancement_snapshot(enrollment_id: int) -> dict[str, str]:
     )
 
     if not row:
-        snapshot = _empty_snapshot(MEETING_TEXT_FIELD_LABELS)
-        snapshot.update(_empty_snapshot(ADVANCEMENT_TEXT_FIELD_LABELS))
-        snapshot.update(_empty_snapshot(ADVANCEMENT_BOOL_FIELD_LABELS))
-        return snapshot
+        return _empty_advancement_snapshot()
 
-    snapshot: dict[str, str] = {}
+    snapshot: SnapshotMap = {}
 
     for field_name in MEETING_TEXT_FIELD_LABELS:
         snapshot[field_name] = clean_value(row.get(field_name))
