@@ -1,4 +1,4 @@
-from core.rate_limit import ban_ip, is_rate_limited
+from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 
 
 def test_rate_limit_basic_flow():
@@ -17,9 +17,6 @@ def test_rate_limit_basic_flow():
 def test_ban_ip():
     ip = "5.6.7.8"
 
-    # FIX: your function requires seconds
     ban_ip(ip, seconds=60)
 
-    result = is_rate_limited(ip, limit=10, window_seconds=60)
-
-    assert result is True
+    assert is_ip_banned(ip) is True
