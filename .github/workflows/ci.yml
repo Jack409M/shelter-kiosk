@@ -20,6 +20,7 @@ jobs:
       TWILIO_ENABLED: "0"
       TWILIO_INBOUND_ENABLED: "0"
       TWILIO_STATUS_ENABLED: "0"
+      PYTHONPATH: .
 
     steps:
       - name: Check out repo
