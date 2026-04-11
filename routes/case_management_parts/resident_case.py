@@ -24,7 +24,16 @@ from routes.case_management_parts.resident_case_viewmodel import build_workspace
 from routes.inspection_v2 import build_inspection_stability_snapshot
 from routes.rent_tracking import build_rent_stability_snapshot
 
+
 CHICAGO_TZ = ZoneInfo("America/Chicago")
+
+
+def _redirect_case_index():
+    return redirect(url_for("case_management.index"))
+
+
+def _redirect_resident_case(resident_id: int):
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
 def _require_case_manager_access():
@@ -330,7 +339,7 @@ def _load_appointments(enrollment_id: int):
     )
 
 
-def _load_enrollment_context(enrollment_id: int):
+def _load_enrollment_context(enrollment_id: int) -> dict:
     family_snapshot = _load_family_snapshot(enrollment_id)
     intake_assessment = _load_intake_assessment(enrollment_id)
     intake_income_support = load_intake_income_support(enrollment_id)
@@ -354,6 +363,23 @@ def _load_enrollment_context(enrollment_id: int):
         "followup_6_month": None if is_deceased_case else _get_latest_followup(enrollment_id, "6_month"),
         "followup_1_year": None if is_deceased_case else _get_latest_followup(enrollment_id, "1_year"),
         "is_deceased_case": is_deceased_case,
+    }
+
+
+def _base_empty_enrollment_context() -> dict:
+    return {
+        "family_snapshot": None,
+        "intake_assessment": None,
+        "intake_income_support": None,
+        "exit_assessment": None,
+        "goals": [],
+        "appointments": [],
+        "notes": [],
+        "services": [],
+        "open_needs": [],
+        "followup_6_month": None,
+        "followup_1_year": None,
+        "is_deceased_case": False,
     }
 
 
@@ -414,8 +440,9 @@ def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
                 item["label"] = "Program Probation"
                 item["detail"] = f"{item.get('probation_start_date') or '—'} to {item.get('probation_end_date') or '—'}"
                 active.append(item)
+            continue
 
-        elif outcome == "pre_termination":
+        if outcome == "pre_termination":
             scheduled_date = _parse_date_only(item.get("pre_termination_date"))
 
             is_active = bool(
@@ -434,7 +461,7 @@ def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
 def _load_employment_income_settings(shelter: str) -> dict:
     ph = placeholder()
 
-    default_settings = {
+    defaults = {
         "employment_income_module_enabled": True,
         "employment_income_graduation_minimum": 1200.0,
         "employment_income_band_green_min": 1200.0,
@@ -463,13 +490,27 @@ def _load_employment_income_settings(shelter: str) -> dict:
         row = None
 
     if not row:
-        return default_settings
+        return defaults
 
-    resolved = dict(default_settings)
-    for key in resolved.keys():
+    resolved = dict(defaults)
+    for key in resolved:
         if row.get(key) is not None:
             resolved[key] = row.get(key)
     return resolved
+
+
+def _resolve_monthly_income_for_display(enrollment_context: dict) -> object:
+    intake_income_support = enrollment_context.get("intake_income_support") or {}
+    monthly_income_for_display = intake_income_support.get("weighted_stable_income")
+
+    if monthly_income_for_display in (None, ""):
+        monthly_income_for_display = intake_income_support.get("total_cash_support")
+
+    if monthly_income_for_display in (None, ""):
+        intake_assessment = enrollment_context.get("intake_assessment") or {}
+        monthly_income_for_display = intake_assessment.get("income_at_entry")
+
+    return monthly_income_for_display
 
 
 def _build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
@@ -518,7 +559,10 @@ def _build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
     }
 
 
-def _resolve_employment_status_snapshot(recovery_snapshot: dict | None, intake_assessment: dict | None) -> str:
+def _resolve_employment_status_snapshot(
+    recovery_snapshot: dict | None,
+    intake_assessment: dict | None,
+) -> str:
     rs = recovery_snapshot or {}
     ia = intake_assessment or {}
 
@@ -591,49 +635,17 @@ def _build_employment_stability_snapshot(
     }
 
 
-def _base_empty_enrollment_context() -> dict:
-    return {
-        "family_snapshot": None,
-        "intake_assessment": None,
-        "intake_income_support": None,
-        "exit_assessment": None,
-        "goals": [],
-        "appointments": [],
-        "notes": [],
-        "services": [],
-        "open_needs": [],
-        "followup_6_month": None,
-        "followup_1_year": None,
-        "is_deceased_case": False,
-    }
-
-
-def resident_case_view(resident_id: int):
-    denied = _require_case_manager_access()
-    if denied is not None:
-        return denied
-
-    init_db()
-
-    shelter = _current_shelter()
-    resident = _load_resident_in_scope(resident_id, shelter)
-
-    if not resident:
-        flash("Resident not found.", "error")
-        return redirect(url_for("case_management.index"))
-
-    enrollment = _load_current_enrollment(resident_id)
-    enrollment_id = enrollment["id"] if enrollment else None
-
-    children = load_children_with_services(resident_id)
-    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
-    disciplinary_flags = _load_active_writeup_restrictions(resident_id)
-    has_disciplinary_block = len(disciplinary_flags) > 0
-
-    enrollment_context = _base_empty_enrollment_context()
-    if enrollment_id:
-        enrollment_context = _load_enrollment_context(enrollment_id)
-
+def _build_context(
+    *,
+    resident: dict,
+    enrollment: dict | None,
+    enrollment_id: int | None,
+    enrollment_context: dict,
+    recovery_snapshot: dict | None,
+    children: list[dict],
+    disciplinary_flags: list[dict],
+    shelter: str,
+) -> dict:
     grit_difference = _calculate_grit_difference(
         enrollment_context["intake_assessment"],
         enrollment_context["exit_assessment"],
@@ -656,10 +668,10 @@ def resident_case_view(resident_id: int):
     )
 
     operations_snapshot = build_operations_snapshot(recovery_snapshot)
-    rent_snapshot = build_rent_stability_snapshot(resident_id)
-    inspection_snapshot = build_inspection_stability_snapshot(resident_id, shelter=shelter)
+    rent_snapshot = build_rent_stability_snapshot(resident["id"])
+    inspection_snapshot = build_inspection_stability_snapshot(resident["id"], shelter=shelter)
     attendance_hours_snapshot = build_attendance_hours_snapshot(
-        resident_id=resident_id,
+        resident_id=resident["id"],
         shelter=shelter,
         enrollment_entry_date=(enrollment.get("entry_date") if enrollment else None),
     )
@@ -667,14 +679,7 @@ def resident_case_view(resident_id: int):
     employment_income_settings = _load_employment_income_settings(shelter)
     intake_income_support = enrollment_context.get("intake_income_support") or {}
 
-    monthly_income_for_display = intake_income_support.get("weighted_stable_income")
-
-    if monthly_income_for_display in (None, ""):
-        monthly_income_for_display = intake_income_support.get("total_cash_support")
-
-    if monthly_income_for_display in (None, ""):
-        intake_assessment = enrollment_context.get("intake_assessment") or {}
-        monthly_income_for_display = intake_assessment.get("income_at_entry")
+    monthly_income_for_display = _resolve_monthly_income_for_display(enrollment_context)
 
     employment_income_snapshot = _build_employment_income_snapshot(
         monthly_income_for_display,
@@ -691,35 +696,76 @@ def resident_case_view(resident_id: int):
         employment_status_snapshot=employment_status_snapshot,
     )
 
-    return render_template(
-        "case_management/resident_case.html",
+    return {
+        "resident": resident,
+        "enrollment": enrollment,
+        "enrollment_id": enrollment_id,
+        "family_snapshot": enrollment_context["family_snapshot"],
+        "intake_assessment": enrollment_context["intake_assessment"],
+        "intake_income_support": intake_income_support,
+        "exit_assessment": enrollment_context["exit_assessment"],
+        "grit_difference": grit_difference,
+        "goals": enrollment_context["goals"],
+        "appointments": enrollment_context["appointments"],
+        "notes": enrollment_context["notes"],
+        "services": enrollment_context["services"],
+        "children": children,
+        "open_needs": enrollment_context["open_needs"],
+        "recovery_snapshot": recovery_snapshot,
+        "followup_6_month": enrollment_context["followup_6_month"],
+        "followup_1_year": enrollment_context["followup_1_year"],
+        "meeting_defaults": meeting_defaults,
+        "workspace_header": workspace_header,
+        "operations_snapshot": operations_snapshot,
+        "rent_snapshot": rent_snapshot,
+        "inspection_snapshot": inspection_snapshot,
+        "attendance_hours_snapshot": attendance_hours_snapshot,
+        "employment_income_snapshot": employment_income_snapshot,
+        "employment_status_snapshot": employment_status_snapshot,
+        "employment_stability_snapshot": employment_stability_snapshot,
+        "is_deceased_case": enrollment_context["is_deceased_case"],
+        "disciplinary_flags": disciplinary_flags,
+        "has_disciplinary_block": len(disciplinary_flags) > 0,
+    }
+
+
+def resident_case_view(resident_id: int):
+    denied = _require_case_manager_access()
+    if denied is not None:
+        return denied
+
+    init_db()
+
+    shelter = _current_shelter()
+    resident = _load_resident_in_scope(resident_id, shelter)
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return _redirect_case_index()
+
+    enrollment = _load_current_enrollment(resident_id)
+    enrollment_id = enrollment["id"] if enrollment else None
+
+    children = load_children_with_services(resident_id)
+    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
+    disciplinary_flags = _load_active_writeup_restrictions(resident_id)
+
+    enrollment_context = _base_empty_enrollment_context()
+    if enrollment_id:
+        enrollment_context = _load_enrollment_context(enrollment_id)
+
+    context = _build_context(
         resident=resident,
         enrollment=enrollment,
         enrollment_id=enrollment_id,
-        family_snapshot=enrollment_context["family_snapshot"],
-        intake_assessment=enrollment_context["intake_assessment"],
-        intake_income_support=intake_income_support,
-        exit_assessment=enrollment_context["exit_assessment"],
-        grit_difference=grit_difference,
-        goals=enrollment_context["goals"],
-        appointments=enrollment_context["appointments"],
-        notes=enrollment_context["notes"],
-        services=enrollment_context["services"],
-        children=children,
-        open_needs=enrollment_context["open_needs"],
+        enrollment_context=enrollment_context,
         recovery_snapshot=recovery_snapshot,
-        followup_6_month=enrollment_context["followup_6_month"],
-        followup_1_year=enrollment_context["followup_1_year"],
-        meeting_defaults=meeting_defaults,
-        workspace_header=workspace_header,
-        operations_snapshot=operations_snapshot,
-        rent_snapshot=rent_snapshot,
-        inspection_snapshot=inspection_snapshot,
-        attendance_hours_snapshot=attendance_hours_snapshot,
-        employment_income_snapshot=employment_income_snapshot,
-        employment_status_snapshot=employment_status_snapshot,
-        employment_stability_snapshot=employment_stability_snapshot,
-        is_deceased_case=enrollment_context["is_deceased_case"],
+        children=children,
         disciplinary_flags=disciplinary_flags,
-        has_disciplinary_block=has_disciplinary_block,
+        shelter=shelter,
+    )
+
+    return render_template(
+        "case_management/resident_case.html",
+        **context,
     )
