@@ -14,6 +14,44 @@ from routes.case_management_parts.recovery_snapshot import load_recovery_snapsho
 from routes.case_management_parts.resident_case_notes import build_note_objects
 
 
+def _redirect_case_index():
+    return redirect(url_for("case_management.index"))
+
+
+def _redirect_resident_case(resident_id: int):
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+
+def _append_unique_text(target: list[str], value: str | None) -> None:
+    text = (value or "").strip()
+    if not text:
+        return
+    if text not in target:
+        target.append(text)
+
+
+def _load_resident_in_scope(resident_id: int):
+    shelter = normalize_shelter_name(session.get("shelter"))
+    ph = placeholder()
+
+    return db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_identifier,
+            first_name,
+            last_name,
+            resident_code,
+            shelter,
+            is_active
+        FROM residents
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
+        """,
+        (resident_id, shelter),
+    )
+
+
 def _load_current_enrollment(resident_id: int):
     return fetch_current_enrollment_for_resident(
         resident_id,
@@ -102,6 +140,23 @@ def _load_single_case_note(enrollment_id: int, update_id: int):
     return notes[0] if notes else None
 
 
+def _load_goals(enrollment_id: int) -> list[dict]:
+    ph = placeholder()
+
+    return db_fetchall(
+        f"""
+        SELECT
+            goal_text,
+            status,
+            target_date
+        FROM goals
+        WHERE enrollment_id = {ph}
+        ORDER BY created_at DESC, id DESC
+        """,
+        (enrollment_id,),
+    )
+
+
 def _load_case_manager_name(staff_user_id: int | None) -> str:
     if not staff_user_id:
         return "Current Staff"
@@ -129,14 +184,6 @@ def _load_case_manager_name(staff_user_id: int | None) -> str:
 
     full_name = " ".join(part for part in [first_name, last_name] if part).strip()
     return full_name or username or "Current Staff"
-
-
-def _append_unique_text(target: list[str], value: str | None):
-    text = (value or "").strip()
-    if not text:
-        return
-    if text not in target:
-        target.append(text)
 
 
 def _collect_summary_group_labels(note: dict, group_key: str) -> list[str]:
@@ -199,8 +246,10 @@ def _build_merge_profile_updates(
 
 def _build_services_merge(note_services: list[dict]) -> list[str]:
     service_names: list[str] = []
+
     for service in note_services:
         _append_unique_text(service_names, service.get("service_type"))
+
     return service_names
 
 
@@ -214,6 +263,97 @@ def _build_needs_merge(note: dict) -> tuple[list[str], list[str], bool]:
 
     all_identified_needs_resolved = not needs_outstanding
     return needs_addressed, needs_outstanding, all_identified_needs_resolved
+
+
+def _build_service_rows(note_services: list[dict], meeting_date: str | None) -> list[dict]:
+    rows: list[dict] = []
+
+    for service in note_services:
+        quantity_display = service.get("quantity_display")
+        rows.append(
+            {
+                "service_type": service.get("service_type") or "—",
+                "service_date": service.get("service_date") or meeting_date or "—",
+                "quantity_display": (
+                    quantity_display if quantity_display and quantity_display != "—" else ""
+                ),
+                "notes": service.get("notes") or "",
+            }
+        )
+
+    return rows
+
+
+def _build_goal_rows(goals: list[dict]) -> list[dict]:
+    rows: list[dict] = []
+
+    for goal in goals:
+        rows.append(
+            {
+                "goal_text": goal.get("goal_text") or "—",
+                "status": goal.get("status") or "—",
+                "target_date": goal.get("target_date") or "",
+            }
+        )
+
+    return rows
+
+
+def _build_program_snapshot(enrollment: dict | None, recovery_snapshot: dict) -> list[dict]:
+    return [
+        {
+            "label": "Program Status",
+            "value": enrollment.get("program_status") if enrollment else "—",
+        },
+        {
+            "label": "Level",
+            "value": recovery_snapshot.get("program_level") or "—",
+        },
+        {
+            "label": "Level Start Date",
+            "value": recovery_snapshot.get("level_start_date") or "—",
+        },
+        {
+            "label": "Days On Level",
+            "value": (
+                recovery_snapshot.get("days_on_level")
+                if recovery_snapshot.get("days_on_level") is not None
+                else "—"
+            ),
+        },
+        {
+            "label": "Days Sober",
+            "value": (
+                recovery_snapshot.get("days_sober_today")
+                if recovery_snapshot.get("days_sober_today") is not None
+                else "—"
+            ),
+        },
+        {
+            "label": "Sobriety Date",
+            "value": recovery_snapshot.get("sobriety_date") or "—",
+        },
+        {
+            "label": "Drug Of Choice",
+            "value": recovery_snapshot.get("drug_of_choice") or "—",
+        },
+        {
+            "label": "Sponsor",
+            "value": recovery_snapshot.get("sponsor_name") or "—",
+        },
+        {
+            "label": "Employment Status",
+            "value": recovery_snapshot.get("employment_status_current") or "—",
+        },
+        {
+            "label": "Monthly Income",
+            "value": (
+                recovery_snapshot.get("monthly_income")
+                if recovery_snapshot.get("monthly_income") not in (None, "")
+                else "—"
+            ),
+        },
+    ]
 
 
 def _build_progress_report_context(
@@ -238,31 +378,7 @@ def _build_progress_report_context(
         or str(resident.get("id") or "")
     )
 
-    service_rows = []
-    for service in note_services:
-        quantity_display = service.get("quantity_display")
-        service_rows.append(
-            {
-                "service_type": service.get("service_type") or "—",
-                "service_date": service.get("service_date") or note.get("meeting_date") or "—",
-                "quantity_display": quantity_display if quantity_display and quantity_display != "—" else "",
-                "notes": service.get("notes") or "",
-            }
-        )
-
-    goal_rows = []
-    for goal in goals:
-        goal_rows.append(
-            {
-                "goal_text": goal.get("goal_text") or "—",
-                "status": goal.get("status") or "—",
-                "target_date": goal.get("target_date") or "",
-            }
-        )
-
-    services_merge = _build_services_merge(note_services)
     needs_addressed, needs_outstanding, all_identified_needs_resolved = _build_needs_merge(note)
-    profile_updates = _build_merge_profile_updates(note, recovery_snapshot, enrollment)
 
     generated_at = utcnow_iso()
 
@@ -274,41 +390,15 @@ def _build_progress_report_context(
         "resident": resident,
         "enrollment": enrollment,
         "note": note,
-        "goals": goal_rows,
+        "goals": _build_goal_rows(goals),
         "case_manager_name": case_manager_name,
-        "service_rows": service_rows,
-        "services_merge": services_merge,
+        "service_rows": _build_service_rows(note_services, note.get("meeting_date")),
+        "services_merge": _build_services_merge(note_services),
         "needs_addressed_merge": needs_addressed,
         "needs_outstanding_merge": needs_outstanding,
         "all_identified_needs_resolved": all_identified_needs_resolved,
-        "profile_updates_merge": profile_updates,
-        "program_snapshot": [
-            {"label": "Program Status", "value": enrollment.get("program_status") if enrollment else "—"},
-            {"label": "Level", "value": recovery_snapshot.get("program_level") or "—"},
-            {"label": "Level Start Date", "value": recovery_snapshot.get("level_start_date") or "—"},
-            {
-                "label": "Days On Level",
-                "value": recovery_snapshot.get("days_on_level")
-                if recovery_snapshot.get("days_on_level") is not None
-                else "—",
-            },
-            {
-                "label": "Days Sober",
-                "value": recovery_snapshot.get("days_sober_today")
-                if recovery_snapshot.get("days_sober_today") is not None
-                else "—",
-            },
-            {"label": "Sobriety Date", "value": recovery_snapshot.get("sobriety_date") or "—"},
-            {"label": "Drug Of Choice", "value": recovery_snapshot.get("drug_of_choice") or "—"},
-            {"label": "Sponsor", "value": recovery_snapshot.get("sponsor_name") or "—"},
-            {"label": "Employment Status", "value": recovery_snapshot.get("employment_status_current") or "—"},
-            {
-                "label": "Monthly Income",
-                "value": recovery_snapshot.get("monthly_income")
-                if recovery_snapshot.get("monthly_income") not in (None, "")
-                else "—",
-            },
-        ],
+        "profile_updates_merge": _build_merge_profile_updates(note, recovery_snapshot, enrollment),
+        "program_snapshot": _build_program_snapshot(enrollment, recovery_snapshot),
     }
 
 
@@ -319,55 +409,24 @@ def progress_report_print_view(resident_id: int, update_id: int):
 
     init_db()
 
-    shelter = normalize_shelter_name(session.get("shelter"))
-    ph = placeholder()
-
-    resident = db_fetchone(
-        f"""
-        SELECT
-            id,
-            resident_identifier,
-            first_name,
-            last_name,
-            resident_code,
-            shelter,
-            is_active
-        FROM residents
-        WHERE id = {ph}
-          AND {shelter_equals_sql("shelter")}
-        """,
-        (resident_id, shelter),
-    )
-
+    resident = _load_resident_in_scope(resident_id)
     if not resident:
         flash("Resident not found.", "error")
-        return redirect(url_for("case_management.index"))
+        return _redirect_case_index()
 
     enrollment = _load_current_enrollment(resident_id)
     enrollment_id = enrollment["id"] if enrollment else None
 
     if not enrollment_id:
         flash("Resident does not have an active enrollment record yet.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _redirect_resident_case(resident_id)
 
     note = _load_single_case_note(enrollment_id, update_id)
     if not note:
         flash("Case note not found.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _redirect_resident_case(resident_id)
 
-    goals = db_fetchall(
-        f"""
-        SELECT
-            goal_text,
-            status,
-            target_date
-        FROM goals
-        WHERE enrollment_id = {ph}
-        ORDER BY created_at DESC, id DESC
-        """,
-        (enrollment_id,),
-    )
-
+    goals = _load_goals(enrollment_id)
     recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
     case_manager_name = _load_case_manager_name(note.get("staff_user_id"))
 
