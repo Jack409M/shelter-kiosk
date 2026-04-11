@@ -9,8 +9,8 @@ from datetime import timedelta
 
 from flask import (
     Blueprint,
-    Flask,
     flash,
+    Flask,
     redirect,
     render_template,
     request,
