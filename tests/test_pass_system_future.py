@@ -11,12 +11,11 @@ def _login_staff(client):
 
 
 def test_pass_review_endpoint_returns_200(client, monkeypatch):
-    import routes.attendance_parts.passes as passes_module
     import core.pass_retention as retention_module
+    import routes.attendance_parts.passes as passes_module
 
     _login_staff(client)
 
-    # 🔒 kill DB side effects
     monkeypatch.setattr(retention_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
     monkeypatch.setattr(passes_module, "db_fetchall", lambda *args, **kwargs: [])
     monkeypatch.setattr(passes_module, "db_execute", lambda *args, **kwargs: None)
@@ -27,12 +26,11 @@ def test_pass_review_endpoint_returns_200(client, monkeypatch):
 
 
 def test_pass_review_page_contains_expected_text(client, monkeypatch):
-    import routes.attendance_parts.passes as passes_module
     import core.pass_retention as retention_module
+    import routes.attendance_parts.passes as passes_module
 
     _login_staff(client)
 
-    # 🔒 same isolation
     monkeypatch.setattr(retention_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
     monkeypatch.setattr(passes_module, "db_fetchall", lambda *args, **kwargs: [])
     monkeypatch.setattr(passes_module, "db_execute", lambda *args, **kwargs: None)
