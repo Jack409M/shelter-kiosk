@@ -10,21 +10,34 @@ def _login_staff(client):
         session["allowed_shelters"] = ["abba"]
 
 
-def test_pass_review_endpoint_returns_200(client):
+def test_pass_review_endpoint_returns_200(client, monkeypatch):
+    import routes.attendance_parts.passes as passes_module
+    import core.pass_retention as retention_module
+
     _login_staff(client)
+
+    # 🔒 kill DB side effects
+    monkeypatch.setattr(retention_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
+    monkeypatch.setattr(passes_module, "db_fetchall", lambda *args, **kwargs: [])
+    monkeypatch.setattr(passes_module, "db_execute", lambda *args, **kwargs: None)
 
     response = client.get("/staff/passes/pending", follow_redirects=True)
 
     assert response.status_code == 200
 
 
-def test_pass_review_page_contains_expected_text(client):
+def test_pass_review_page_contains_expected_text(client, monkeypatch):
+    import routes.attendance_parts.passes as passes_module
+    import core.pass_retention as retention_module
+
     _login_staff(client)
+
+    # 🔒 same isolation
+    monkeypatch.setattr(retention_module, "run_pass_retention_cleanup_for_shelter", lambda shelter: None)
+    monkeypatch.setattr(passes_module, "db_fetchall", lambda *args, **kwargs: [])
+    monkeypatch.setattr(passes_module, "db_execute", lambda *args, **kwargs: None)
 
     response = client.get("/staff/passes/pending", follow_redirects=True)
 
     assert response.status_code == 200
-
-    # very light contract checks
-    # we are not guessing full UI yet, just making sure page is real
     assert b"pass" in response.data.lower() or b"request" in response.data.lower()
