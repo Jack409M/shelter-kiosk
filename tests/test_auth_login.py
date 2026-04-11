@@ -3,6 +3,12 @@ from __future__ import annotations
 from werkzeug.security import generate_password_hash
 
 
+def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
+    with client.session_transaction() as session:
+        session["_csrf_token"] = token
+    return token
+
+
 def test_staff_login_get_renders(client, monkeypatch):
     import routes.auth as auth_module
 
@@ -56,9 +62,12 @@ def test_staff_login_success_redirects(client, monkeypatch):
         lambda **kwargs: ["abba", "haven", "gratitude"],
     )
 
+    csrf_token = _set_csrf_token(client)
+
     response = client.post(
         "/staff/login",
         data={
+            "_csrf_token": csrf_token,
             "username": "admin",
             "password": "secret123",
             "shelter": "abba",
@@ -99,9 +108,12 @@ def test_staff_login_invalid_password_returns_401(client, monkeypatch):
         },
     )
 
+    csrf_token = _set_csrf_token(client)
+
     response = client.post(
         "/staff/login",
         data={
+            "_csrf_token": csrf_token,
             "username": "admin",
             "password": "wrong-password",
             "shelter": "abba",
