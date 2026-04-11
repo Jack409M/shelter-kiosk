@@ -6,7 +6,6 @@ from zoneinfo import ZoneInfo
 from flask import abort, flash, redirect, render_template, session, url_for
 
 from core.helpers import fmt_dt
-from core.pass_retention import run_pass_retention_cleanup_for_shelter
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_actions import (
     approve_pass_request,
@@ -26,7 +25,6 @@ CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 def staff_passes_pending_view():
     shelter = session.get("shelter")
-    run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
     role = session.get("role")
 
     if role not in {"admin", "shelter_director", "case_manager"}:
@@ -52,7 +50,6 @@ def staff_passes_pending_view():
 
 def staff_passes_approved_view():
     shelter = session.get("shelter")
-    run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
     role = session.get("role")
 
     if role not in {"admin", "shelter_director", "case_manager"}:
@@ -70,7 +67,6 @@ def staff_passes_approved_view():
 
 def staff_passes_away_now_view():
     shelter = session.get("shelter")
-    run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
     role = session.get("role")
 
     if role not in {"admin", "shelter_director", "case_manager"}:
@@ -88,7 +84,6 @@ def staff_passes_away_now_view():
 
 def staff_passes_overdue_view():
     shelter = session.get("shelter")
-    run_pass_retention_cleanup_for_shelter(str(shelter or "").strip())
     role = session.get("role")
 
     if role not in {"admin", "shelter_director", "case_manager"}:
