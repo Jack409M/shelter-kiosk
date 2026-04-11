@@ -115,6 +115,36 @@ def ensure_security_incidents_table(kind: str) -> None:
     )
 
 
+def ensure_audit_log_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER,
+            shelter TEXT,
+            staff_user_id INTEGER,
+            action_type TEXT NOT NULL,
+            action_details TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id SERIAL PRIMARY KEY,
+            entity_type TEXT NOT NULL,
+            entity_id INTEGER,
+            shelter TEXT,
+            staff_user_id INTEGER,
+            action_type TEXT NOT NULL,
+            action_details TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL
+        )
+        """,
+    )
+
+
 def ensure_columns_and_security_upgrades(kind: str) -> None:
     """
     Safe schema evolution for existing deployments.
@@ -131,6 +161,7 @@ def ensure_columns_and_security_upgrades(kind: str) -> None:
         ("security_settings", "kiosk_intake_expires_at TEXT"),
         ("security_settings", "admin_login_only_expires_at TEXT"),
         ("security_settings", "security_alerts_expires_at TEXT"),
+        ("audit_log", "action_details TEXT NOT NULL DEFAULT ''"),
     )
 
     for table_name, column_sql in upgrades:
@@ -175,4 +206,5 @@ def ensure_tables(kind: str) -> None:
     ensure_staff_users_table(kind)
     ensure_security_settings_table(kind)
     ensure_security_incidents_table(kind)
+    ensure_audit_log_table(kind)
     ensure_organizations_table(kind)
