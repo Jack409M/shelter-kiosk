@@ -537,7 +537,8 @@ def staff_resident_transfer(resident_id: int):
             VALUES (%s, %s, %s, %s, %s, %s)
             """
             if g.get("db_kind") == "pg"
-            else """
+            else
+            """
             INSERT INTO attendance_events (resident_id, shelter, event_type, event_time, staff_user_id, note)
             VALUES (?, ?, ?, ?, ?, ?)
             """,
@@ -554,12 +555,25 @@ def staff_resident_transfer(resident_id: int):
         resident_identifier = resident["resident_identifier"] if isinstance(resident, dict) else resident[2]
 
         db_execute(
-            f"""
-            UPDATE leave_requests
-            SET shelter = {('%s' if g.get('db_kind') == 'pg' else '?')}
-            WHERE {_shelter_equals_sql('shelter')} AND resident_identifier = {('%s' if g.get('db_kind') == 'pg' else '?')} AND status = 'pending'
+            """
+            UPDATE resident_passes
+            SET shelter = %s,
+                updated_at = %s
+            WHERE LOWER(COALESCE(shelter, '')) = %s
+              AND resident_id = %s
+              AND status IN ('pending', 'approved')
+            """
+            if g.get("db_kind") == "pg"
+            else
+            """
+            UPDATE resident_passes
+            SET shelter = ?,
+                updated_at = ?
+            WHERE LOWER(COALESCE(shelter, '')) = ?
+              AND resident_id = ?
+              AND status IN ('pending', 'approved')
             """,
-            (to_shelter, from_shelter, resident_identifier),
+            (to_shelter, utcnow_iso(), from_shelter, resident_id),
         )
 
         db_execute(
