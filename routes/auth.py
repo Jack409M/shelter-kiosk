@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from core.audit import log_action
 from core.auth import require_login, require_shelter
@@ -28,11 +28,14 @@ def _safe_log_value(value: str | None, max_length: int = 80) -> str:
     return text[:max_length]
 
 
-@auth.route("/staff/login", methods=["GET", "POST"])
-def staff_login():
+def _db_sql(pg_sql: str, sqlite_sql: str) -> str:
+    return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
+
+
+def _load_all_shelters() -> tuple[list[str], list[str], set[str]]:
     all_shelters_raw = get_all_shelters()
-    all_shelters = []
-    all_shelters_lower = []
+    all_shelters: list[str] = []
+    all_shelters_lower: list[str] = []
 
     for shelter_name in all_shelters_raw:
         cleaned = (shelter_name or "").strip()
@@ -41,23 +44,143 @@ def staff_login():
         all_shelters.append(cleaned)
         all_shelters_lower.append(cleaned.lower())
 
-    all_shelters_lower_set = set(all_shelters_lower)
+    return all_shelters, all_shelters_lower, set(all_shelters_lower)
+
+
+def _render_staff_login(all_shelters: list[str], status_code: int = 200):
+    return render_template("staff_login.html", all_shelters=all_shelters), status_code
+
+
+def _normalized_username_from_form() -> tuple[str, str]:
+    username = (request.form.get("username") or "").strip()
+    normalized_username = username.lower() or "blank"
+    return username, normalized_username
+
+
+def _username_lock_key(normalized_username: str) -> str:
+    return f"staff_login_username_lock:{normalized_username}"
+
+
+def _record_failed_login_attempt(
+    *,
+    ip: str,
+    normalized_username: str,
+    safe_username: str,
+    staff_user_id: int | None,
+) -> None:
+    username_lock_key = _username_lock_key(normalized_username)
+
+    triggered_username_lock = is_rate_limited(
+        f"staff_login_fail_username_lock:{normalized_username}",
+        limit=8,
+        window_seconds=900,
+    )
+    if triggered_username_lock:
+        lock_seconds = get_progressive_lock_seconds(username_lock_key)
+        lock_key(username_lock_key, lock_seconds)
+        log_action(
+            "auth",
+            None,
+            None,
+            staff_user_id,
+            "login_username_locked",
+            f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds={lock_seconds}",
+        )
+
+    triggered_ban = is_rate_limited(
+        f"staff_login_fail_ban_ip:{ip}",
+        limit=20,
+        window_seconds=3600,
+    )
+    if triggered_ban:
+        ban_ip(ip, 3600)
+        log_action(
+            "auth",
+            None,
+            None,
+            staff_user_id,
+            "login_ip_banned",
+            f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds=3600",
+        )
+
+
+def _load_staff_user_by_username(normalized_username: str):
+    return db_fetchone(
+        _db_sql(
+            "SELECT * FROM staff_users WHERE LOWER(username) = %s",
+            "SELECT * FROM staff_users WHERE LOWER(username) = ?",
+        ),
+        (normalized_username,),
+    )
+
+
+def _load_allowed_shelters_for_user(
+    *,
+    staff_user_id: int,
+    staff_role: str,
+    all_shelters_lower: list[str],
+    all_shelters_lower_set: set[str],
+) -> list[str]:
+    if staff_role in {"admin", "shelter_director"}:
+        return list(all_shelters_lower)
+
+    shelter_rows = db_fetchall(
+        _db_sql(
+            "SELECT shelter FROM staff_shelter_assignments WHERE staff_user_id = %s ORDER BY shelter",
+            "SELECT shelter FROM staff_shelter_assignments WHERE staff_user_id = ? ORDER BY shelter",
+        ),
+        (staff_user_id,),
+    )
+
+    allowed_shelters: list[str] = []
+    seen: set[str] = set()
+
+    for shelter_row in shelter_rows:
+        shelter_name = shelter_row["shelter"] if isinstance(shelter_row, dict) else shelter_row[0]
+        shelter_name = (shelter_name or "").strip().lower()
+
+        if shelter_name and shelter_name in all_shelters_lower_set and shelter_name not in seen:
+            allowed_shelters.append(shelter_name)
+            seen.add(shelter_name)
+
+    return allowed_shelters
+
+
+def _set_staff_session(
+    *,
+    staff_user_id: int,
+    staff_username: str,
+    staff_role: str,
+    shelter: str,
+    allowed_shelters: list[str],
+) -> None:
+    session.clear()
+    session["staff_user_id"] = staff_user_id
+    session["username"] = staff_username
+    session["role"] = staff_role
+    session["shelter"] = shelter
+    session["allowed_shelters"] = allowed_shelters
+    session.permanent = True
+
+
+@auth.route("/staff/login", methods=["GET", "POST"])
+def staff_login():
+    all_shelters, all_shelters_lower, all_shelters_lower_set = _load_all_shelters()
 
     if request.method == "GET":
         return render_template("staff_login.html", all_shelters=all_shelters)
 
-    username = (request.form.get("username") or "").strip()
+    _, normalized_username = _normalized_username_from_form()
     password = (request.form.get("password") or "").strip()
 
     ip = get_client_ip()
-    normalized_username = username.lower() or "blank"
     safe_username = _safe_log_value(normalized_username)
-    username_lock_key = f"staff_login_username_lock:{normalized_username}"
+    username_lock_key = _username_lock_key(normalized_username)
 
     if is_ip_banned(ip):
         log_action("auth", None, None, None, "login_blocked_banned_ip", f"ip={ip} username={safe_username}")
         flash("Too many login attempts. Please wait and try again later.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 403
+        return _render_staff_login(all_shelters, 403)
 
     if is_key_locked(username_lock_key):
         seconds_remaining = get_key_lock_seconds_remaining(username_lock_key)
@@ -70,58 +193,30 @@ def staff_login():
             f"ip={ip} username={safe_username} seconds_remaining={seconds_remaining}",
         )
         flash("That username is temporarily locked. Please wait and try again.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 429
+        return _render_staff_login(all_shelters, 429)
 
     if is_rate_limited(f"staff_login_ip:{ip}", limit=10, window_seconds=900):
         log_action("auth", None, None, None, "login_rate_limited_ip", f"ip={ip} username={safe_username}")
         flash("Too many login attempts. Please wait and try again.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 429
+        return _render_staff_login(all_shelters, 429)
 
     if is_rate_limited(f"staff_login_user:{normalized_username}", limit=8, window_seconds=900):
         log_action("auth", None, None, None, "login_rate_limited_user", f"ip={ip} username={safe_username}")
         flash("Too many login attempts for that account. Please wait and try again.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 429
+        return _render_staff_login(all_shelters, 429)
 
-    row = db_fetchone(
-        "SELECT * FROM staff_users WHERE LOWER(username) = %s"
-        if g.get("db_kind") == "pg"
-        else "SELECT * FROM staff_users WHERE LOWER(username) = ?",
-        (normalized_username,),
-    )
+    row = _load_staff_user_by_username(normalized_username)
 
     if not row:
-        triggered_username_lock = is_rate_limited(
-            f"staff_login_fail_username_lock:{normalized_username}",
-            limit=8,
-            window_seconds=900,
+        _record_failed_login_attempt(
+            ip=ip,
+            normalized_username=normalized_username,
+            safe_username=safe_username,
+            staff_user_id=None,
         )
-        if triggered_username_lock:
-            lock_seconds = get_progressive_lock_seconds(username_lock_key)
-            lock_key(username_lock_key, lock_seconds)
-            log_action(
-                "auth",
-                None,
-                None,
-                None,
-                "login_username_locked",
-                f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds={lock_seconds}",
-            )
-
-        triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
-        if triggered_ban:
-            ban_ip(ip, 3600)
-            log_action(
-                "auth",
-                None,
-                None,
-                None,
-                "login_ip_banned",
-                f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds=3600",
-            )
-
         log_action("auth", None, None, None, "login_failed", f"reason=bad_username ip={ip} username={safe_username}")
         flash("Invalid login.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 401
+        return _render_staff_login(all_shelters, 401)
 
     staff_user_id = row["id"] if isinstance(row, dict) else row[0]
     staff_username = row["username"] if isinstance(row, dict) else row[1]
@@ -130,35 +225,12 @@ def staff_login():
     is_active = bool(row["is_active"] if isinstance(row, dict) else row[4])
 
     if not is_active or not check_password_hash(pw_hash, password):
-        triggered_username_lock = is_rate_limited(
-            f"staff_login_fail_username_lock:{normalized_username}",
-            limit=8,
-            window_seconds=900,
+        _record_failed_login_attempt(
+            ip=ip,
+            normalized_username=normalized_username,
+            safe_username=safe_username,
+            staff_user_id=staff_user_id,
         )
-        if triggered_username_lock:
-            lock_seconds = get_progressive_lock_seconds(username_lock_key)
-            lock_key(username_lock_key, lock_seconds)
-            log_action(
-                "auth",
-                None,
-                None,
-                staff_user_id,
-                "login_username_locked",
-                f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds={lock_seconds}",
-            )
-
-        triggered_ban = is_rate_limited(f"staff_login_fail_ban_ip:{ip}", limit=20, window_seconds=3600)
-        if triggered_ban:
-            ban_ip(ip, 3600)
-            log_action(
-                "auth",
-                None,
-                None,
-                staff_user_id,
-                "login_ip_banned",
-                f"reason=too_many_failed_logins ip={ip} username={safe_username} seconds=3600",
-            )
-
         log_action(
             "auth",
             None,
@@ -168,28 +240,14 @@ def staff_login():
             f"reason=bad_password_or_inactive ip={ip} username={safe_username}",
         )
         flash("Invalid login.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 401
+        return _render_staff_login(all_shelters, 401)
 
-    if staff_role in {"admin", "shelter_director"}:
-        allowed_shelters = list(all_shelters_lower)
-    else:
-        shelter_rows = db_fetchall(
-            "SELECT shelter FROM staff_shelter_assignments WHERE staff_user_id = %s ORDER BY shelter"
-            if g.get("db_kind") == "pg"
-            else "SELECT shelter FROM staff_shelter_assignments WHERE staff_user_id = ? ORDER BY shelter",
-            (staff_user_id,),
-        )
-
-        allowed_shelters = []
-        seen = set()
-
-        for shelter_row in shelter_rows:
-            shelter_name = shelter_row["shelter"] if isinstance(shelter_row, dict) else shelter_row[0]
-            shelter_name = (shelter_name or "").strip().lower()
-
-            if shelter_name and shelter_name in all_shelters_lower_set and shelter_name not in seen:
-                allowed_shelters.append(shelter_name)
-                seen.add(shelter_name)
+    allowed_shelters = _load_allowed_shelters_for_user(
+        staff_user_id=staff_user_id,
+        staff_role=staff_role,
+        all_shelters_lower=all_shelters_lower,
+        all_shelters_lower_set=all_shelters_lower_set,
+    )
 
     if not allowed_shelters:
         log_action(
@@ -201,7 +259,7 @@ def staff_login():
             f"reason=no_assigned_shelters ip={ip} username={safe_username}",
         )
         flash("Your account does not have any shelter access assigned. Please contact an administrator.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 403
+        return _render_staff_login(all_shelters, 403)
 
     shelter = (request.form.get("shelter") or "").strip().lower()
     if shelter not in allowed_shelters:
@@ -214,15 +272,15 @@ def staff_login():
             f"reason=invalid_shelter_for_user ip={ip} username={safe_username} shelter={shelter}",
         )
         flash("You do not have access to that shelter.", "error")
-        return render_template("staff_login.html", all_shelters=all_shelters), 403
+        return _render_staff_login(all_shelters, 403)
 
-    session.clear()
-    session["staff_user_id"] = staff_user_id
-    session["username"] = staff_username
-    session["role"] = staff_role
-    session["shelter"] = shelter
-    session["allowed_shelters"] = allowed_shelters
-    session.permanent = True
+    _set_staff_session(
+        staff_user_id=staff_user_id,
+        staff_username=staff_username,
+        staff_role=staff_role,
+        shelter=shelter,
+        allowed_shelters=allowed_shelters,
+    )
 
     log_action(
         "auth",
@@ -251,17 +309,7 @@ def staff_logout():
 @auth.route("/staff/select-shelter", methods=["GET", "POST"])
 @require_login
 def staff_select_shelter():
-    all_shelters_raw = get_all_shelters()
-    all_shelters = []
-    all_shelters_lower = []
-
-    for shelter_name in all_shelters_raw:
-        cleaned = (shelter_name or "").strip()
-        if not cleaned:
-            continue
-        all_shelters.append(cleaned)
-        all_shelters_lower.append(cleaned.lower())
-
+    all_shelters, all_shelters_lower, _ = _load_all_shelters()
     allowed_shelters = session.get("allowed_shelters") or all_shelters_lower
     shelters = [s for s in all_shelters_lower if s in allowed_shelters]
 
@@ -286,16 +334,19 @@ def staff_select_shelter():
 @require_login
 @require_shelter
 def staff_profile():
-    from werkzeug.security import generate_password_hash
-
     staff_id = session.get("staff_user_id")
 
     row = db_fetchone(
-        "SELECT id, first_name, last_name, username, role, email, mobile_phone, is_active, created_at "
-        "FROM staff_users WHERE id = %s"
-        if g.get("db_kind") == "pg"
-        else "SELECT id, first_name, last_name, username, role, email, mobile_phone, is_active, created_at "
-             "FROM staff_users WHERE id = ?",
+        _db_sql(
+            (
+                "SELECT id, first_name, last_name, username, role, email, mobile_phone, "
+                "is_active, created_at FROM staff_users WHERE id = %s"
+            ),
+            (
+                "SELECT id, first_name, last_name, username, role, email, mobile_phone, "
+                "is_active, created_at FROM staff_users WHERE id = ?"
+            ),
+        ),
         (staff_id,),
     )
 
@@ -311,17 +362,19 @@ def staff_profile():
         password = (request.form.get("password") or "").strip()
 
         db_execute(
-            "UPDATE staff_users SET first_name=%s, last_name=%s, email=%s, mobile_phone=%s WHERE id=%s"
-            if g.get("db_kind") == "pg"
-            else "UPDATE staff_users SET first_name=?, last_name=?, email=?, mobile_phone=? WHERE id=?",
+            _db_sql(
+                "UPDATE staff_users SET first_name=%s, last_name=%s, email=%s, mobile_phone=%s WHERE id=%s",
+                "UPDATE staff_users SET first_name=?, last_name=?, email=?, mobile_phone=? WHERE id=?",
+            ),
             (first_name, last_name, email, mobile_phone, staff_id),
         )
 
         if password:
             db_execute(
-                "UPDATE staff_users SET password_hash=%s WHERE id=%s"
-                if g.get("db_kind") == "pg"
-                else "UPDATE staff_users SET password_hash=? WHERE id=?",
+                _db_sql(
+                    "UPDATE staff_users SET password_hash=%s WHERE id=%s",
+                    "UPDATE staff_users SET password_hash=? WHERE id=?",
+                ),
                 (generate_password_hash(password), staff_id),
             )
 
