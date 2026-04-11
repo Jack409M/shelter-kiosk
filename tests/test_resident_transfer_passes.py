@@ -62,6 +62,7 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
 
     import routes.residents as residents_module
 
+    # PATCH ALL NON-PASS DEPENDENCIES
     monkeypatch.setattr(
         residents_module,
         "_upsert_resident_housing_assignment",
@@ -72,6 +73,12 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
         residents_module,
         "_active_rent_config_for_resident",
         lambda *args, **kwargs: None,
+    )
+
+    monkeypatch.setattr(
+        residents_module,
+        "_availability_map_for_transfer",
+        lambda: {"abba": [], "haven": [], "gratitude": []},
     )
 
     response = client.post(
