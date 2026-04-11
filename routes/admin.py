@@ -22,6 +22,10 @@ from routes.admin_parts.field_audit import (
     admin_field_audit_view,
 )
 
+from routes.admin_parts.pass_retention import (
+    run_pass_cleanup,
+)
+
 from routes.admin_parts.system import (
     admin_demo_data_view,
     clear_demo_data_view,
@@ -164,3 +168,10 @@ def admin_seed_demo_data():
 @require_shelter
 def admin_clear_demo_data():
     return clear_demo_data_view()
+
+
+@admin.post("/staff/admin/run-pass-cleanup")
+@require_login
+@require_shelter
+def admin_run_pass_cleanup():
+    return run_pass_cleanup()
