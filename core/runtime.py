@@ -11,7 +11,25 @@ from db import schema
 
 
 # ------------------------------------------------------------
-# Environment / configuration flags
+# Environment helpers
+# ------------------------------------------------------------
+
+def env_flag(name: str, default: bool = False) -> bool:
+    value = (os.environ.get(name) or "").strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
+
+
+def env_text(name: str, default: str = "") -> str:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return str(value).strip()
+
+
+# ------------------------------------------------------------
+# Role and policy constants
 # ------------------------------------------------------------
 
 MIN_STAFF_PASSWORD_LEN = 8
@@ -31,17 +49,14 @@ STAFF_ROLES = {"admin", "shelter_director", "staff", "case_manager", "ra"}
 TRANSFER_ROLES = {"admin", "shelter_director", "case_manager"}
 
 
-def env_flag(name: str, default: bool = False) -> bool:
-    value = (os.environ.get(name) or "").strip().lower()
-    if not value:
-        return default
-    return value in {"1", "true", "yes", "on"}
-
+# ------------------------------------------------------------
+# Environment driven feature flags
+# ------------------------------------------------------------
 
 ENABLE_DEBUG_ROUTES = env_flag("ENABLE_DEBUG_ROUTES")
 ENABLE_DANGEROUS_ADMIN_ROUTES = env_flag("ENABLE_DANGEROUS_ADMIN_ROUTES")
 
-KIOSK_PIN = (os.environ.get("KIOSK_PIN") or "").strip()
+KIOSK_PIN = env_text("KIOSK_PIN")
 
 
 # ------------------------------------------------------------
@@ -51,10 +66,7 @@ KIOSK_PIN = (os.environ.get("KIOSK_PIN") or "").strip()
 TWILIO_ENABLED = env_flag("TWILIO_ENABLED")
 TWILIO_INBOUND_ENABLED = env_flag("TWILIO_INBOUND_ENABLED")
 TWILIO_STATUS_ENABLED = env_flag("TWILIO_STATUS_ENABLED")
-
-TWILIO_STATUS_CALLBACK_URL = (
-    os.environ.get("TWILIO_STATUS_CALLBACK_URL") or ""
-).strip()
+TWILIO_STATUS_CALLBACK_URL = env_text("TWILIO_STATUS_CALLBACK_URL")
 
 
 # ------------------------------------------------------------
@@ -89,9 +101,6 @@ def init_db() -> None:
 # ------------------------------------------------------------
 
 def get_all_shelters() -> list[str]:
-    """
-    Returns all shelters in the system.
-    """
     return load_all_shelters()
 
 
@@ -100,9 +109,6 @@ def get_all_shelters() -> list[str]:
 # ------------------------------------------------------------
 
 def get_client_ip() -> str:
-    """
-    Standardized client IP retrieval.
-    """
     return client_ip()
 
 
