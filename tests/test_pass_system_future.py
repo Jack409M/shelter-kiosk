@@ -35,6 +35,7 @@ def test_pass_review_page_contains_expected_text(client, monkeypatch):
         "fetch_pending_pass_rows",
         lambda shelter: [
             {
+                "id": 1,  # 🔥 THIS WAS MISSING
                 "resident_id": 123,
                 "resident_name": "Test Resident",
                 "pass_type": "pass",
