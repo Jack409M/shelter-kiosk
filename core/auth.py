@@ -2,21 +2,24 @@ from __future__ import annotations
 
 from functools import wraps
 
-from flask import flash, redirect, session, url_for
+from flask import current_app, flash, redirect, session, url_for
 
 from core.db import db_fetchone
 
 
-def _admin_only_mode_enabled() -> bool:
-    try:
-        row = db_fetchone(
-            "SELECT admin_login_only_mode FROM security_settings ORDER BY id ASC LIMIT 1"
-        )
-        if not row:
-            return False
-        return bool(row["admin_login_only_mode"] if isinstance(row, dict) else row[0])
-    except Exception:
-        return False
+REQUEST_MANAGER_ROLES = {
+    "admin",
+    "shelter_director",
+    "case_manager",
+}
+
+PASS_STATUS_ROLES = {
+    "admin",
+    "shelter_director",
+    "case_manager",
+    "ra",
+    "staff",
+}
 
 
 def _current_role() -> str:
@@ -41,52 +44,57 @@ def _clear_invalid_session_and_redirect():
     return _redirect_login()
 
 
+def _admin_only_mode_enabled() -> bool:
+    try:
+        row = db_fetchone(
+            "SELECT admin_login_only_mode FROM security_settings ORDER BY id ASC LIMIT 1"
+        )
+    except Exception:
+        current_app.logger.exception("Failed to read admin_login_only_mode from security_settings.")
+        return False
+
+    if not row:
+        return False
+
+    if isinstance(row, dict):
+        return bool(row.get("admin_login_only_mode"))
+
+    return bool(row[0])
+
+
 def _enforce_admin_only_mode():
-    role = _current_role()
+    if not _admin_only_mode_enabled():
+        return None
 
-    if _admin_only_mode_enabled() and role != "admin":
-        session.clear()
-        flash("System is currently restricted to administrators only.", "error")
-        return _redirect_login()
+    if _current_role() == "admin":
+        return None
 
-    return None
+    session.clear()
+    flash("System is currently restricted to administrators only.", "error")
+    return _redirect_login()
 
 
 def _ensure_staff_session():
     if not _has_staff_session():
         return _redirect_login()
 
-    resp = _enforce_admin_only_mode()
-    if resp is not None:
-        return resp
-
-    return None
+    return _enforce_admin_only_mode()
 
 
 def can_manage_requests() -> bool:
-    return _current_role() in {
-        "admin",
-        "shelter_director",
-        "case_manager",
-    }
+    return _current_role() in REQUEST_MANAGER_ROLES
 
 
 def can_view_pass_status() -> bool:
-    return _current_role() in {
-        "admin",
-        "shelter_director",
-        "case_manager",
-        "ra",
-        "staff",
-    }
+    return _current_role() in PASS_STATUS_ROLES
 
 
 def require_login(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        resp = _ensure_staff_session()
-        if resp is not None:
-            return resp
+        response = _ensure_staff_session()
+        if response is not None:
+            return response
 
         return fn(*args, **kwargs)
 
@@ -120,12 +128,11 @@ def require_roles(*allowed_roles):
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            resp = _ensure_staff_session()
-            if resp is not None:
-                return resp
+            response = _ensure_staff_session()
+            if response is not None:
+                return response
 
-            role = _current_role()
-            if role not in normalized_allowed_roles:
+            if _current_role() not in normalized_allowed_roles:
                 flash("You do not have permission to access that page.", "error")
                 return _redirect_staff_home()
 
