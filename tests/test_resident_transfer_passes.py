@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from core.runtime import init_db
+
 import core.residents as core_residents_module
 import routes.residents as residents_module
-
-from core.runtime import init_db
 
 
 def _login_staff(client):
