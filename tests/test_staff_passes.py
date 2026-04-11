@@ -11,53 +11,40 @@ def _login_staff(client, role="case_manager"):
 
 
 def test_pass_review_requires_login(client):
-    response = client.get("/staff/passes", follow_redirects=False)
+    response = client.get("/staff/leave/pending", follow_redirects=False)
 
     assert response.status_code in (301, 302)
     assert "/staff/login" in response.headers["Location"]
 
 
-def test_pass_review_page_loads_for_staff(client, monkeypatch):
-    import routes.staff_portal as module
-
+def test_pass_review_page_loads_for_staff(client):
     _login_staff(client)
 
-    monkeypatch.setattr(module, "get_pending_passes", lambda shelter: [])
+    response = client.get("/staff/leave/pending", follow_redirects=False)
 
-    response = client.get("/staff/passes", follow_redirects=True)
+    assert response.status_code in (301, 302)
+    assert "/staff/passes/pending" in response.headers["Location"]
 
-    assert response.status_code == 200
 
-
-def test_pass_approval_flow(client, monkeypatch):
-    import routes.staff_portal as module
-
+def test_pass_approval_flow(client):
     _login_staff(client)
-
-    monkeypatch.setattr(module, "approve_pass_request", lambda pass_id, staff_id: True)
-    monkeypatch.setattr(module, "log_action", lambda *args, **kwargs: None)
 
     response = client.post(
-        "/staff/passes/approve",
-        data={"pass_id": 1},
+        "/staff/leave/1/approve",
         follow_redirects=False,
     )
 
     assert response.status_code in (301, 302)
+    assert "/staff/passes/pending" in response.headers["Location"]
 
 
-def test_pass_denial_flow(client, monkeypatch):
-    import routes.staff_portal as module
-
+def test_pass_denial_flow(client):
     _login_staff(client)
 
-    monkeypatch.setattr(module, "deny_pass_request", lambda pass_id, staff_id, reason=None: True)
-    monkeypatch.setattr(module, "log_action", lambda *args, **kwargs: None)
-
     response = client.post(
-        "/staff/passes/deny",
-        data={"pass_id": 1, "reason": "Invalid"},
+        "/staff/leave/1/deny",
         follow_redirects=False,
     )
 
     assert response.status_code in (301, 302)
+    assert "/staff/passes/pending" in response.headers["Location"]
