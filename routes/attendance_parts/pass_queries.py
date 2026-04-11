@@ -5,8 +5,9 @@ from zoneinfo import ZoneInfo
 
 from flask import g
 
-from core.db import db_fetchall, db_fetchone
+from core.db import db_fetchall
 from core.helpers import utcnow_iso
+from core.pass_rules import pass_type_label
 from routes.attendance_parts.helpers import to_local
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
@@ -36,6 +37,7 @@ def _hydrate_pass_row(item: dict) -> dict:
     item["end_at_local"] = to_local(item.get("end_at"))
     item["created_at_local"] = to_local(item.get("created_at"))
     item["approved_at_local"] = to_local(item.get("approved_at"))
+    item["pass_type_label"] = pass_type_label(item.get("pass_type"))
 
     if item.get("end_at"):
         expected_back_iso = str(item.get("end_at") or "").strip()
