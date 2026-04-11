@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from flask import Blueprint, abort, jsonify, session
+from flask import Blueprint, abort, current_app, jsonify, session
 
+from core.helpers import utcnow_iso
 from core.pass_retention import run_pass_retention_cleanup_for_shelter
 
 bp = Blueprint("admin_pass_retention", __name__)
@@ -16,6 +17,9 @@ def run_pass_cleanup():
     if role != "admin":
         abort(403)
 
+    staff_id = session.get("staff_user_id")
+    staff_name = (session.get("username") or "").strip()
+
     results = []
     total_backfilled = 0
     total_deleted = 0
@@ -28,9 +32,23 @@ def run_pass_cleanup():
 
         results.append(result)
 
+    timestamp = utcnow_iso()
+
+    current_app.logger.info(
+        "manual pass cleanup run by staff_id=%s staff_name=%s at=%s total_backfilled=%s total_deleted=%s",
+        staff_id,
+        staff_name,
+        timestamp,
+        total_backfilled,
+        total_deleted,
+    )
+
     return jsonify(
         {
             "status": "ok",
+            "ran_at": timestamp,
+            "staff_id": staff_id,
+            "staff_name": staff_name,
             "total_backfilled": total_backfilled,
             "total_deleted": total_deleted,
             "results": results,
