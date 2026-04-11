@@ -71,6 +71,11 @@ jobs:
         run: |
           ruff check tests core/app_factory.py core/app_hooks.py core/runtime.py core/auth.py core/db.py core/request_security.py routes/auth.py routes/resident_requests.py
 
-      - name: Pytest
+      - name: MyPy
         run: |
-          pytest
+          mypy --ignore-missing-imports core/app_factory.py core/app_hooks.py core/runtime.py core/auth.py core/db.py core/request_security.py routes/auth.py routes/resident_requests.py
+
+      - name: Pytest with coverage
+        run: |
+          coverage run -m pytest
+          coverage report --fail-under=55
