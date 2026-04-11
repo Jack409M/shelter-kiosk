@@ -7,6 +7,18 @@ import pkgutil
 import secrets
 from datetime import timedelta
 
+from flask import (
+    Blueprint,
+    Flask,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from core.app_hooks import register_app_hooks
 from core.db import close_db
 from core.helpers import (
@@ -23,17 +35,6 @@ from core.rate_limit import ban_ip, is_ip_banned, is_rate_limited
 from core.request_security import register_request_security
 from core.request_utils import client_ip
 from core.runtime import init_db
-from flask import (
-    Blueprint,
-    Flask,
-    flash,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
-from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 CSRF_EXEMPT_ENDPOINTS = {
