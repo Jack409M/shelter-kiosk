@@ -5,6 +5,7 @@ from typing import Any
 
 from core.db import db_fetchone
 from routes.case_management_parts.helpers import placeholder
+from routes.inspection_v2 import build_inspection_stability_snapshot
 
 
 def _safe_days_between(start_date: str | None, end_date: date | None) -> int | None:
@@ -50,24 +51,6 @@ def _load_recovery_row(resident_id: int):
     )
 
 
-def _load_latest_inspection(resident_id: int):
-    ph = placeholder()
-
-    return db_fetchone(
-        f"""
-        SELECT
-            inspection_date,
-            passed_display,
-            notes
-        FROM inspections
-        WHERE resident_id = {ph}
-        ORDER BY inspection_date DESC, id DESC
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
-
-
 def _build_employment_metrics(row: dict[str, Any], today: date) -> dict:
     return {
         "current_job_days": _safe_days_between(
@@ -98,6 +81,15 @@ def _build_level_metrics(row: dict[str, Any], today: date) -> dict:
     }
 
 
+def _load_inspection_snapshot(resident_id: int) -> dict | None:
+    try:
+        snapshot = build_inspection_stability_snapshot(resident_id)
+        return snapshot
+    except Exception:
+        # Fail SAFE — never break case management over inspections
+        return None
+
+
 def load_recovery_snapshot(resident_id: int, enrollment_id: int | None = None) -> dict:
     row = _load_recovery_row(resident_id) or {}
     today = date.today()
@@ -121,14 +113,14 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None = None) -
         "upward_job_change": row.get("upward_job_change"),
     }
 
-    # Derived metrics (this is where bugs usually happen if not isolated)
+    # Derived metrics
     snapshot.update(_build_employment_metrics(row, today))
     snapshot.update(_build_sobriety_metrics(row, today))
     snapshot.update(_build_level_metrics(row, today))
 
-    # Latest inspection (optional)
-    latest_inspection = _load_latest_inspection(resident_id)
-    if latest_inspection:
-        snapshot["latest_inspection"] = latest_inspection
+    # SAFE integration with inspection system
+    inspection_snapshot = _load_inspection_snapshot(resident_id)
+    if inspection_snapshot:
+        snapshot["latest_inspection"] = inspection_snapshot
 
     return snapshot
