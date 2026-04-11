@@ -6,12 +6,26 @@ from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.needs import normalize_need_status
 
 
-def current_open_needs(enrollment_id: int) -> list[dict]:
+ALLOWED_RESOLUTION_STATUSES = {"addressed", "not_applicable"}
+
+
+def _clean_text(value) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _normalized_resolution_note(form, need_key: str) -> str:
+    return _clean_text(form.get(f"need_note_{need_key}"))
+
+
+def _open_needs_for_enrollment(enrollment_id: int) -> list[dict]:
     ph = placeholder()
 
     return db_fetchall(
         f"""
         SELECT
+            id,
             need_key,
             need_label,
             resolution_note
@@ -24,25 +38,41 @@ def current_open_needs(enrollment_id: int) -> list[dict]:
     )
 
 
+def current_open_needs(enrollment_id: int) -> list[dict]:
+    open_needs = _open_needs_for_enrollment(enrollment_id)
+
+    return [
+        {
+            "need_key": row["need_key"],
+            "need_label": row["need_label"],
+            "resolution_note": row.get("resolution_note"),
+        }
+        for row in open_needs
+    ]
+
+
 def collect_need_updates(form) -> list[dict]:
     updates: list[dict] = []
+    seen_need_keys: set[str] = set()
 
     for key in form.keys():
         if not key.startswith("need_status_"):
             continue
 
-        need_key = key.removeprefix("need_status_")
-        status = normalize_need_status(form.get(key))
-        if status not in {"addressed", "not_applicable"}:
+        need_key = key.removeprefix("need_status_").strip()
+        if not need_key or need_key in seen_need_keys:
             continue
 
-        resolution_note = (form.get(f"need_note_{need_key}") or "").strip()
+        status = normalize_need_status(form.get(key))
+        if status not in ALLOWED_RESOLUTION_STATUSES:
+            continue
 
+        seen_need_keys.add(need_key)
         updates.append(
             {
                 "need_key": need_key,
                 "status": status,
-                "resolution_note": resolution_note,
+                "resolution_note": _normalized_resolution_note(form, need_key),
             }
         )
 
@@ -60,25 +90,24 @@ def apply_need_updates(
     ph = placeholder()
     now = utcnow_iso()
 
-    open_needs = db_fetchall(
-        f"""
-        SELECT
-            id,
-            need_key,
-            need_label
-        FROM resident_needs
-        WHERE enrollment_id = {ph}
-          AND status = 'open'
-        ORDER BY need_label ASC, id ASC
-        """,
-        (enrollment_id,),
-    )
+    open_needs = _open_needs_for_enrollment(enrollment_id)
+    open_needs_by_key = {
+        row["need_key"]: row
+        for row in open_needs
+        if row.get("need_key")
+    }
 
-    open_needs_by_key = {row["need_key"]: row for row in open_needs}
     changed_needs: list[dict] = []
 
     for update in need_updates:
-        need = open_needs_by_key.get(update["need_key"])
+        need_key = _clean_text(update.get("need_key"))
+        status = _clean_text(update.get("status"))
+        resolution_note = _clean_text(update.get("resolution_note"))
+
+        if not need_key or status not in ALLOWED_RESOLUTION_STATUSES:
+            continue
+
+        need = open_needs_by_key.get(need_key)
         if not need:
             continue
 
@@ -94,8 +123,8 @@ def apply_need_updates(
             WHERE id = {ph}
             """,
             (
-                update["status"],
-                update["resolution_note"] or None,
+                status,
+                resolution_note or None,
                 now,
                 staff_user_id,
                 now,
@@ -107,8 +136,8 @@ def apply_need_updates(
             {
                 "need_key": need["need_key"],
                 "need_label": need["need_label"],
-                "status": update["status"],
-                "resolution_note": update["resolution_note"],
+                "status": status,
+                "resolution_note": resolution_note,
             }
         )
 
