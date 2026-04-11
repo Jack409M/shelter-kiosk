@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import wraps
 
 from flask import current_app, flash, redirect, session, url_for
+
 from core.db import db_fetchone
 
 REQUEST_MANAGER_ROLES = {
