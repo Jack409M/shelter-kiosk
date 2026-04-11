@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from core.runtime import init_db
+
 
 def _login_staff(client):
     with client.session_transaction() as session:
@@ -23,6 +25,8 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
     csrf = _set_csrf_token(client)
 
     with app.app_context():
+        init_db()
+
         db_execute(
             """
             INSERT INTO residents (
