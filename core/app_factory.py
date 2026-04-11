@@ -1,16 +1,5 @@
 from __future__ import annotations
 
-# ============================================================================
-# Application Factory
-# ----------------------------------------------------------------------------
-# This file is responsible for:
-# 1. Creating the Flask app
-# 2. Loading configuration from environment
-# 3. Registering blueprints automatically from routes/
-# 4. Registering security, CSRF, template helpers, and app hooks
-# 5. Setting up logging and proxy handling for Railway / production
-# ============================================================================
-
 import importlib
 import logging
 import os
@@ -39,13 +28,22 @@ from core.request_utils import client_ip
 from core.runtime import init_db
 
 
-# ============================================================================
-# Blueprint Loader
-# ----------------------------------------------------------------------------
-# This automatically imports every module inside routes/ and registers any
-# Flask Blueprint found there. That means new route files can usually be added
-# without editing this file again.
-# ============================================================================
+CSRF_EXEMPT_ENDPOINTS = {
+    "resident_requests.sms_consent",
+    "twilio.twilio_inbound",
+    "twilio.twilio_status",
+}
+
+RESIDENT_SAFE_PATHS = {
+    "/leave",
+    "/pass-request",
+    "/transport",
+    "/sms-consent",
+    "/sms-consent/",
+}
+
+TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
+
 
 def register_blueprints(app: Flask) -> None:
     import routes
@@ -59,139 +57,21 @@ def register_blueprints(app: Flask) -> None:
                 app.register_blueprint(obj)
 
 
-# ============================================================================
-# Internal Helpers
-# ----------------------------------------------------------------------------
-# Small private helper functions used during app setup.
-# ============================================================================
-
 def _client_ip() -> str:
     return client_ip()
 
 
 def _csrf_token() -> str:
-    tok = session.get("_csrf_token")
-    if not tok:
-        tok = secrets.token_urlsafe(32)
-        session["_csrf_token"] = tok
-    return tok
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
 
 
-# ============================================================================
-# CSRF Protection
-# ----------------------------------------------------------------------------
-# Registers:
-# - csrf_token() helper for templates
-# - before_request protection for POST / PUT / PATCH / DELETE
-#
-# Some webhook style endpoints are exempt because they are called externally.
-# ============================================================================
+def _env_truthy(name: str) -> bool:
+    return (os.environ.get(name) or "").strip().lower() in TRUTHY_ENV_VALUES
 
-def _register_csrf(app: Flask) -> None:
-    app.jinja_env.globals["csrf_token"] = _csrf_token
-
-    def _csrf_protect():
-        if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
-            return None
-
-        exempt_endpoints = {
-            "resident_requests.sms_consent",
-            "twilio.twilio_inbound",
-            "twilio.twilio_status",
-        }
-
-        if request.endpoint in exempt_endpoints:
-            return None
-
-        sent = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token") or ""
-        expected = session.get("_csrf_token") or ""
-
-        if not sent or not expected or sent != expected:
-            flash("Session expired. Please retry.", "error")
-
-            fallback = url_for("auth.staff_login")
-            if request.endpoint and (
-                str(request.endpoint).startswith("resident_")
-                or str(request.endpoint).startswith("resident_requests.")
-            ):
-                fallback = url_for("resident_requests.resident_signin")
-
-            return redirect(request.referrer or fallback)
-
-        return None
-
-    @app.before_request
-    def _csrf_before_request():
-        resp = _csrf_protect()
-        if resp is not None:
-            return resp
-
-
-# ============================================================================
-# Error Handlers
-# ----------------------------------------------------------------------------
-# Central place for app-wide error pages.
-# ============================================================================
-
-def _register_error_handlers(app: Flask) -> None:
-    def _resident_safe_response():
-        endpoint = str(request.endpoint or "")
-        path = (request.path or "").strip()
-
-        in_resident_context = (
-            "resident_id" in session
-            or endpoint.startswith("resident_")
-            or endpoint.startswith("resident_requests.")
-            or endpoint.startswith("resident_portal.")
-            or path == "/resident"
-            or path.startswith("/resident/")
-            or path in {"/leave", "/pass-request", "/transport", "/sms-consent", "/sms-consent/"}
-        )
-
-        if not in_resident_context:
-            return None
-
-        session.clear()
-        flash("Your session ended. Please sign in again.", "error")
-        return redirect(url_for("public.public_home"))
-
-    @app.errorhandler(403)
-    def page_forbidden(e):
-        resident_response = _resident_safe_response()
-        if resident_response is not None:
-            return resident_response
-        return "Forbidden", 403
-
-    @app.errorhandler(404)
-    def page_not_found(e):
-        resident_response = _resident_safe_response()
-        if resident_response is not None:
-            return resident_response
-        return render_template("404.html"), 404
-
-    @app.errorhandler(500)
-    def internal_server_error(e):
-        app.logger.exception("Internal server error", exc_info=e)
-        resident_response = _resident_safe_response()
-        if resident_response is not None:
-            return resident_response
-        return "Internal Server Error", 500
-
-    @app.errorhandler(Exception)
-    def unhandled_exception(e):
-        app.logger.exception("Unhandled exception", exc_info=e)
-        resident_response = _resident_safe_response()
-        if resident_response is not None:
-            return resident_response
-        return "Internal Server Error", 500
-
-
-# ============================================================================
-# Core App Configuration
-# ----------------------------------------------------------------------------
-# Loads environment variables and sets Flask config values used throughout the
-# application. This is where secrets, database mode, and cookie settings live.
-# ============================================================================
 
 def _configure_app(app: Flask) -> None:
     app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
@@ -209,91 +89,18 @@ def _configure_app(app: Flask) -> None:
     app.secret_key = secret
     app.permanent_session_lifetime = timedelta(hours=8)
 
-    cookie_secure = (os.environ.get("COOKIE_SECURE") or "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
-
     app.config.update(
-        SESSION_COOKIE_SECURE=cookie_secure,
+        SESSION_COOKIE_SECURE=_env_truthy("COOKIE_SECURE"),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
     )
 
 
-# ============================================================================
-# Template Helpers and Filters
-# ----------------------------------------------------------------------------
-# Makes utility functions available directly in Jinja templates.
-# Note:
-# fmt_date / fmt_dt / fmt_pretty_* already convert UTC timestamps into the app
-# timezone, which is Chicago in core.helpers.
-# ============================================================================
-
-def _register_template_helpers(app: Flask) -> None:
-    app.jinja_env.globals["safe_url_for"] = safe_url_for
-    app.jinja_env.globals["shelter_display"] = shelter_display
-    app.jinja_env.filters["shelter"] = shelter_display
-
-    app.jinja_env.filters["app_date"] = fmt_date
-    app.jinja_env.filters["app_dt"] = fmt_dt
-    app.jinja_env.filters["app_time"] = fmt_time_only
-    app.jinja_env.filters["app_pretty_date"] = fmt_pretty_date
-    app.jinja_env.filters["app_pretty_dt"] = fmt_pretty_dt
-
-    # Clear aliases for staff-facing timestamp display.
-    app.jinja_env.filters["chi_date"] = fmt_date
-    app.jinja_env.filters["chi_dt"] = fmt_dt
-    app.jinja_env.filters["chi_time"] = fmt_time_only
-    app.jinja_env.filters["chi_pretty_date"] = fmt_pretty_date
-    app.jinja_env.filters["chi_pretty_dt"] = fmt_pretty_dt
-
-
-# ============================================================================
-# Context Processors
-# ----------------------------------------------------------------------------
-# Injects values that should always be available in templates.
-# ============================================================================
-
-def _register_context_processors(app: Flask) -> None:
-    @app.context_processor
-    def inject_current_clock():
-        return {
-            "utcnow_iso": utcnow_iso,
-        }
-
-
-# ============================================================================
-# Application Factory
-# ----------------------------------------------------------------------------
-# Creates and returns the Flask app instance.
-#
-# Setup order:
-# 1. Create app object
-# 2. Configure app
-# 3. Apply ProxyFix for Railway / reverse proxy deployment
-# 4. Configure logging
-# 5. Register helpers, teardown, security, CSRF, errors, context
-# 6. Register all blueprints
-# 7. Register app hooks
-# ============================================================================
-
-def create_app() -> Flask:
-    app = Flask(
-        __name__,
-        template_folder="../templates",
-        static_folder="../static",
-    )
-
-    _configure_app(app)
-
-    # Railway and similar platforms sit behind a proxy.
-    # ProxyFix makes Flask respect forwarded headers for scheme and host.
+def _configure_proxy(app: Flask) -> None:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
-    # Configure logging level from environment.
+
+def _configure_logging(app: Flask) -> str:
     log_level_name = (os.getenv("LOG_LEVEL") or "INFO").strip().upper()
     log_level = getattr(logging, log_level_name, logging.INFO)
     app.logger.setLevel(log_level)
@@ -310,12 +117,128 @@ def create_app() -> Flask:
         log_level_name,
     )
 
-    _register_template_helpers(app)
+    return log_level_name
 
-    # Ensure database connections are closed cleanly at the end of each request.
-    app.teardown_appcontext(close_db)
 
-    # Register request-level security checks like IP banning and rate limiting.
+def _register_template_helpers(app: Flask) -> None:
+    app.jinja_env.globals["safe_url_for"] = safe_url_for
+    app.jinja_env.globals["shelter_display"] = shelter_display
+    app.jinja_env.globals["csrf_token"] = _csrf_token
+
+    app.jinja_env.filters["shelter"] = shelter_display
+
+    app.jinja_env.filters["app_date"] = fmt_date
+    app.jinja_env.filters["app_dt"] = fmt_dt
+    app.jinja_env.filters["app_time"] = fmt_time_only
+    app.jinja_env.filters["app_pretty_date"] = fmt_pretty_date
+    app.jinja_env.filters["app_pretty_dt"] = fmt_pretty_dt
+
+    app.jinja_env.filters["chi_date"] = fmt_date
+    app.jinja_env.filters["chi_dt"] = fmt_dt
+    app.jinja_env.filters["chi_time"] = fmt_time_only
+    app.jinja_env.filters["chi_pretty_date"] = fmt_pretty_date
+    app.jinja_env.filters["chi_pretty_dt"] = fmt_pretty_dt
+
+
+def _csrf_failure_redirect():
+    fallback = url_for("auth.staff_login")
+    endpoint = str(request.endpoint or "")
+
+    if endpoint.startswith("resident_") or endpoint.startswith("resident_requests."):
+        fallback = url_for("resident_requests.resident_signin")
+
+    return redirect(request.referrer or fallback)
+
+
+def _register_csrf(app: Flask) -> None:
+    def _csrf_protect():
+        if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+            return None
+
+        if request.endpoint in CSRF_EXEMPT_ENDPOINTS:
+            return None
+
+        sent_token = request.form.get("_csrf_token") or request.headers.get("X-CSRF-Token") or ""
+        expected_token = session.get("_csrf_token") or ""
+
+        if not sent_token or not expected_token or sent_token != expected_token:
+            flash("Session expired. Please retry.", "error")
+            return _csrf_failure_redirect()
+
+        return None
+
+    @app.before_request
+    def _csrf_before_request():
+        response = _csrf_protect()
+        if response is not None:
+            return response
+
+
+def _is_resident_context() -> bool:
+    endpoint = str(request.endpoint or "")
+    path = (request.path or "").strip()
+
+    return (
+        "resident_id" in session
+        or endpoint.startswith("resident_")
+        or endpoint.startswith("resident_requests.")
+        or endpoint.startswith("resident_portal.")
+        or path == "/resident"
+        or path.startswith("/resident/")
+        or path in RESIDENT_SAFE_PATHS
+    )
+
+
+def _resident_safe_response():
+    if not _is_resident_context():
+        return None
+
+    session.clear()
+    flash("Your session ended. Please sign in again.", "error")
+    return redirect(url_for("public.public_home"))
+
+
+def _register_error_handlers(app: Flask) -> None:
+    @app.errorhandler(403)
+    def page_forbidden(error):
+        resident_response = _resident_safe_response()
+        if resident_response is not None:
+            return resident_response
+        return "Forbidden", 403
+
+    @app.errorhandler(404)
+    def page_not_found(error):
+        resident_response = _resident_safe_response()
+        if resident_response is not None:
+            return resident_response
+        return render_template("404.html"), 404
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        app.logger.exception("Internal server error", exc_info=error)
+        resident_response = _resident_safe_response()
+        if resident_response is not None:
+            return resident_response
+        return "Internal Server Error", 500
+
+    @app.errorhandler(Exception)
+    def unhandled_exception(error):
+        app.logger.exception("Unhandled exception", exc_info=error)
+        resident_response = _resident_safe_response()
+        if resident_response is not None:
+            return resident_response
+        return "Internal Server Error", 500
+
+
+def _register_context_processors(app: Flask) -> None:
+    @app.context_processor
+    def inject_current_clock():
+        return {
+            "utcnow_iso": utcnow_iso,
+        }
+
+
+def _register_security(app: Flask) -> None:
     register_request_security(
         app,
         client_ip_func=_client_ip,
@@ -324,14 +247,28 @@ def create_app() -> Flask:
         ban_ip_func=ban_ip,
     )
 
+
+def _register_core_services(app: Flask) -> None:
+    _register_template_helpers(app)
+    app.teardown_appcontext(close_db)
+    _register_security(app)
     _register_csrf(app)
     _register_error_handlers(app)
     _register_context_processors(app)
 
-    # Auto-load and register all blueprints found in routes/
-    register_blueprints(app)
 
-    # Register any additional app hooks after blueprints are loaded.
+def create_app() -> Flask:
+    app = Flask(
+        __name__,
+        template_folder="../templates",
+        static_folder="../static",
+    )
+
+    _configure_app(app)
+    _configure_proxy(app)
+    _configure_logging(app)
+    _register_core_services(app)
+    register_blueprints(app)
     register_app_hooks(app)
 
     app.logger.info(
