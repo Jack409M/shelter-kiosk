@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from threading import Lock
 
 from core.db import get_db
 from core.request_utils import client_ip
@@ -29,17 +30,16 @@ STAFF_ROLES = {"admin", "shelter_director", "staff", "case_manager", "ra"}
 
 TRANSFER_ROLES = {"admin", "shelter_director", "case_manager"}
 
-ENABLE_DEBUG_ROUTES = (os.environ.get("ENABLE_DEBUG_ROUTES") or "").strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
 
-ENABLE_DANGEROUS_ADMIN_ROUTES = (
-    (os.environ.get("ENABLE_DANGEROUS_ADMIN_ROUTES") or "").strip().lower()
-    in {"1", "true", "yes", "on"}
-)
+def env_flag(name: str, default: bool = False) -> bool:
+    value = (os.environ.get(name) or "").strip().lower()
+    if not value:
+        return default
+    return value in {"1", "true", "yes", "on"}
+
+
+ENABLE_DEBUG_ROUTES = env_flag("ENABLE_DEBUG_ROUTES")
+ENABLE_DANGEROUS_ADMIN_ROUTES = env_flag("ENABLE_DANGEROUS_ADMIN_ROUTES")
 
 KIOSK_PIN = (os.environ.get("KIOSK_PIN") or "").strip()
 
@@ -48,15 +48,9 @@ KIOSK_PIN = (os.environ.get("KIOSK_PIN") or "").strip()
 # Twilio flags
 # ------------------------------------------------------------
 
-TWILIO_ENABLED = os.environ.get("TWILIO_ENABLED", "false").lower() == "true"
-
-TWILIO_INBOUND_ENABLED = (
-    os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true"
-)
-
-TWILIO_STATUS_ENABLED = (
-    os.environ.get("TWILIO_STATUS_ENABLED", "false").strip().lower() == "true"
-)
+TWILIO_ENABLED = env_flag("TWILIO_ENABLED")
+TWILIO_INBOUND_ENABLED = env_flag("TWILIO_INBOUND_ENABLED")
+TWILIO_STATUS_ENABLED = env_flag("TWILIO_STATUS_ENABLED")
 
 TWILIO_STATUS_CALLBACK_URL = (
     os.environ.get("TWILIO_STATUS_CALLBACK_URL") or ""
@@ -68,21 +62,26 @@ TWILIO_STATUS_CALLBACK_URL = (
 # ------------------------------------------------------------
 
 _DB_INITIALIZED = False
+_DB_INITIALIZATION_LOCK = Lock()
 
 
 def init_db() -> None:
     """
     Ensures database connection and schema initialization.
-    Runs only once per process.
+    Runs only once per process and is safe under concurrent startup.
     """
     global _DB_INITIALIZED
 
     if _DB_INITIALIZED:
         return
 
-    get_db()
-    schema.init_db()
-    _DB_INITIALIZED = True
+    with _DB_INITIALIZATION_LOCK:
+        if _DB_INITIALIZED:
+            return
+
+        get_db()
+        schema.init_db()
+        _DB_INITIALIZED = True
 
 
 # ------------------------------------------------------------
