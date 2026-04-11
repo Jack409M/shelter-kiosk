@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.db import db_execute, db_fetchall, db_fetchone
+from core.db import db_execute, db_fetchone
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.update_needs import current_open_needs
 from routes.case_management_parts.update_snapshots import get_current_advancement_snapshot
@@ -20,6 +20,9 @@ from routes.case_management_parts.update_utils import display_quantity_unit
 from routes.case_management_parts.update_utils import parse_quantity
 
 
+SummaryMap = dict[str, str]
+
+
 def _clean_text(value) -> str:
     if value is None:
         return ""
@@ -27,8 +30,71 @@ def _clean_text(value) -> str:
 
 
 def _join_non_empty(parts: list[str]) -> str:
-    cleaned = [part.strip() for part in parts if part and str(part).strip()]
+    cleaned = [str(part).strip() for part in parts if part and str(part).strip()]
     return " | ".join(cleaned)
+
+
+def _normalize_detail(value) -> str | None:
+    cleaned = _clean_text(value)
+    return cleaned or None
+
+
+def _normalize_key(value) -> str | None:
+    cleaned = _clean_text(value)
+    return cleaned or None
+
+
+def _normalize_label(value) -> str | None:
+    cleaned = _clean_text(value)
+    return cleaned or None
+
+
+def _display_snapshot_label(
+    item_key: str,
+    label_map: dict[str, str] | None,
+    fallback_label: str,
+) -> str:
+    if label_map and item_key in label_map:
+        return label_map[item_key]
+    return fallback_label
+
+
+def _resolve_snapshot_change_type(old_value: str, new_value: str) -> str | None:
+    if old_value == new_value:
+        return None
+    if old_value and not new_value:
+        return "removed"
+    if not old_value and new_value:
+        return "added"
+    return "updated"
+
+
+def _resolve_snapshot_item_label(
+    item_key: str,
+    change_type: str,
+    label_map: dict[str, str] | None,
+    added_label: str,
+    removed_label: str,
+    updated_label: str,
+) -> str:
+    if label_map:
+        return _display_snapshot_label(
+            item_key=item_key,
+            label_map=label_map,
+            fallback_label=item_key,
+        )
+
+    if change_type == "added":
+        return added_label or item_key
+    if change_type == "removed":
+        return removed_label or item_key
+    return updated_label or item_key
+
+
+def _resolve_snapshot_detail(change_type: str, old_value: str, new_value: str) -> str | None:
+    if change_type == "removed":
+        return _normalize_detail(old_value)
+    return _normalize_detail(new_value)
 
 
 def insert_summary_row(
@@ -158,8 +224,8 @@ def get_previous_note_id(
 def record_snapshot_change_group(
     case_manager_update_id: int,
     change_group: str,
-    previous_snapshot: dict[str, str],
-    current_snapshot: dict[str, str],
+    previous_snapshot: SummaryMap,
+    current_snapshot: SummaryMap,
     label_map: dict[str, str] | None,
     added_label: str,
     removed_label: str,
@@ -169,54 +235,58 @@ def record_snapshot_change_group(
 ) -> int:
     sort_order = starting_sort_order
 
-    all_keys = sorted(set(previous_snapshot.keys()) | set(current_snapshot.keys()), key=lambda x: str(x))
+    all_keys = sorted(
+        set(previous_snapshot.keys()) | set(current_snapshot.keys()),
+        key=lambda value: str(value),
+    )
 
     for item_key in all_keys:
         old_value = previous_snapshot.get(item_key, "")
         new_value = current_snapshot.get(item_key, "")
+        change_type = _resolve_snapshot_change_type(old_value, new_value)
 
-        if old_value == new_value:
+        if not change_type:
             continue
-
-        item_label = label_map[item_key] if label_map and item_key in label_map else item_key
-
-        if old_value and not new_value:
-            change_type = "removed"
-            display_name = removed_label if not label_map else item_label
-            detail = old_value
-        elif not old_value and new_value:
-            change_type = "added"
-            display_name = added_label if not label_map else item_label
-            detail = new_value
-        else:
-            change_type = "updated"
-            display_name = updated_label if not label_map else item_label
-            detail = new_value
 
         insert_summary_row(
             case_manager_update_id=case_manager_update_id,
             change_group=change_group,
             change_type=change_type,
-            item_key=item_key,
-            item_label=display_name,
-            old_value=old_value or None,
-            new_value=new_value or None,
-            detail=detail or None,
+            item_key=_normalize_key(item_key),
+            item_label=_normalize_label(
+                _resolve_snapshot_item_label(
+                    item_key=item_key,
+                    change_type=change_type,
+                    label_map=label_map,
+                    added_label=added_label,
+                    removed_label=removed_label,
+                    updated_label=updated_label,
+                )
+            ),
+            old_value=_normalize_detail(old_value),
+            new_value=_normalize_detail(new_value),
+            detail=_resolve_snapshot_detail(change_type, old_value, new_value),
             sort_order=sort_order,
             created_at=created_at,
         )
         sort_order += 1
 
-    for item_key in sorted(current_snapshot.keys(), key=lambda x: str(x)):
+    for item_key in sorted(current_snapshot.keys(), key=lambda value: str(value)):
         insert_summary_row(
             case_manager_update_id=case_manager_update_id,
             change_group=change_group,
             change_type="snapshot",
-            item_key=item_key,
-            item_label=(label_map[item_key] if label_map and item_key in label_map else item_key),
+            item_key=_normalize_key(item_key),
+            item_label=_normalize_label(
+                _display_snapshot_label(
+                    item_key=item_key,
+                    label_map=label_map,
+                    fallback_label=item_key,
+                )
+            ),
             old_value=None,
             new_value=None,
-            detail=current_snapshot.get(item_key, ""),
+            detail=_normalize_detail(current_snapshot.get(item_key, "")),
             sort_order=sort_order,
             created_at=created_at,
         )
@@ -240,7 +310,12 @@ def record_service_summary(
         unit = _clean_text(form.get(f"unit_{service_type}"))
         quantity_display = display_quantity_unit(quantity, unit or None)
 
-        detail = _join_non_empty([quantity_display if quantity_display != "—" else "", service_note])
+        detail = _join_non_empty(
+            [
+                quantity_display if quantity_display != "—" else "",
+                service_note,
+            ]
+        )
         if not detail:
             detail = service_type
 
@@ -273,15 +348,14 @@ def record_need_summary(
     for need in changed_needs:
         status = display_label(need.get("status"))
         resolution_note = clean_value(need.get("resolution_note"))
-
         detail = _join_non_empty([status, resolution_note])
 
         insert_summary_row(
             case_manager_update_id=case_manager_update_id,
             change_group="need_addressed",
             change_type=need.get("status") or "addressed",
-            item_key=need.get("need_key"),
-            item_label=need.get("need_label"),
+            item_key=_normalize_key(need.get("need_key")),
+            item_label=_normalize_label(need.get("need_label")),
             old_value="Open",
             new_value=status,
             detail=detail or status,
@@ -292,34 +366,37 @@ def record_need_summary(
 
     if outstanding_needs:
         for need in outstanding_needs:
-            need_label = need.get("need_label")
+            need_label = clean_value(need.get("need_label"))
+
             insert_summary_row(
                 case_manager_update_id=case_manager_update_id,
                 change_group="need_outstanding",
                 change_type="open",
-                item_key=need.get("need_key"),
-                item_label=need_label,
+                item_key=_normalize_key(need.get("need_key")),
+                item_label=need_label or None,
                 old_value=None,
                 new_value="Open",
-                detail=need_label,
+                detail=need_label or None,
                 sort_order=sort_order,
                 created_at=created_at,
             )
             sort_order += 1
-    else:
-        insert_summary_row(
-            case_manager_update_id=case_manager_update_id,
-            change_group="need_addressed",
-            change_type="all_resolved",
-            item_key="all_identified_needs_resolved",
-            item_label="Needs Review",
-            old_value=None,
-            new_value="Resolved",
-            detail="All identified needs at intake have been resolved.",
-            sort_order=sort_order,
-            created_at=created_at,
-        )
-        sort_order += 1
+
+        return sort_order
+
+    insert_summary_row(
+        case_manager_update_id=case_manager_update_id,
+        change_group="need_addressed",
+        change_type="all_resolved",
+        item_key="all_identified_needs_resolved",
+        item_label="Needs Review",
+        old_value=None,
+        new_value="Resolved",
+        detail="All identified needs at intake have been resolved.",
+        sort_order=sort_order,
+        created_at=created_at,
+    )
+    sort_order += 1
 
     return sort_order
 
