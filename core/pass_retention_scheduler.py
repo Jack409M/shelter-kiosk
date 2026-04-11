@@ -15,14 +15,43 @@ SHELTERS = ("abba", "haven", "gratitude")
 
 def _run_cleanup_cycle(app) -> None:
     with app.app_context():
+        cycle_started_at = datetime.now(CHICAGO_TZ)
+        app.logger.info(
+            "pass retention cleanup cycle started at %s",
+            cycle_started_at.isoformat(timespec="seconds"),
+        )
+
+        total_backfilled = 0
+        total_deleted = 0
+
         for shelter in SHELTERS:
             try:
-                run_pass_retention_cleanup_for_shelter(shelter)
+                result = run_pass_retention_cleanup_for_shelter(shelter)
+                backfilled = int(result.get("backfilled", 0))
+                deleted = int(result.get("deleted", 0))
+
+                total_backfilled += backfilled
+                total_deleted += deleted
+
+                app.logger.info(
+                    "pass retention cleanup shelter=%s backfilled=%s deleted=%s",
+                    shelter,
+                    backfilled,
+                    deleted,
+                )
             except Exception:
                 app.logger.exception(
                     "pass retention cleanup failed for shelter=%s",
                     shelter,
                 )
+
+        cycle_finished_at = datetime.now(CHICAGO_TZ)
+        app.logger.info(
+            "pass retention cleanup cycle finished at %s total_backfilled=%s total_deleted=%s",
+            cycle_finished_at.isoformat(timespec="seconds"),
+            total_backfilled,
+            total_deleted,
+        )
 
 
 def _scheduler_loop(app) -> None:
