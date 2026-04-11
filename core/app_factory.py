@@ -7,16 +7,7 @@ import pkgutil
 import secrets
 from datetime import timedelta
 
-from flask import (
-    Blueprint,
-    Flask,
-    flash,
-    redirect,
-    render_template,
-    request,
-    session,
-    url_for,
-)
+from flask import Blueprint, Flask, flash, redirect, render_template, request, session, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core.app_hooks import register_app_hooks
