@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 
 def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
@@ -52,7 +52,11 @@ def test_resident_can_submit_transport_request(client, monkeypatch):
     monkeypatch.setattr(module, "init_db", lambda: None)
     monkeypatch.setattr(module, "is_rate_limited", lambda key, limit, window_seconds: False)
     monkeypatch.setattr(module, "_client_ip", lambda: "127.0.0.1")
-    monkeypatch.setattr(module, "_parse_transport_needed_at", lambda value: (datetime.utcnow(), None))
+    monkeypatch.setattr(
+        module,
+        "_parse_transport_needed_at",
+        lambda value: (datetime.now(UTC).replace(tzinfo=None), None),
+    )
     monkeypatch.setattr(module, "_insert_transport_request", lambda **kwargs: 1)
     monkeypatch.setattr(module, "log_action", lambda *args, **kwargs: None)
 
