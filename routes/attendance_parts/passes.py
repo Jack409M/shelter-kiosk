@@ -22,6 +22,11 @@ from core.pass_rules import (
 )
 from core.sms_sender import send_sms
 from routes.attendance_parts.helpers import can_manage_passes, complete_active_passes, to_local
+from routes.attendance_parts.pass_queries import (
+    fetch_approved_pass_rows,
+    fetch_current_pass_rows,
+    fetch_pending_pass_rows,
+)
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
@@ -684,68 +689,14 @@ def staff_passes_pending_view():
     if role not in {"admin", "shelter_director", "case_manager"}:
         abort(403)
 
-    sql = (
-        """
-        SELECT
-            rp.id,
-            rp.resident_id,
-            r.first_name,
-            r.last_name,
-            rp.shelter,
-            rp.pass_type,
-            rp.start_at,
-            rp.end_at,
-            rp.start_date,
-            rp.end_date,
-            rp.destination,
-            rp.reason,
-            rp.created_at
-        FROM resident_passes rp
-        JOIN residents r ON r.id = rp.resident_id
-        WHERE rp.status = 'pending'
-        AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
-        ORDER BY rp.created_at ASC
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        SELECT
-            rp.id,
-            rp.resident_id,
-            r.first_name,
-            r.last_name,
-            rp.shelter,
-            rp.pass_type,
-            rp.start_at,
-            rp.end_at,
-            rp.start_date,
-            rp.end_date,
-            rp.destination,
-            rp.reason,
-            rp.created_at
-        FROM resident_passes rp
-        JOIN residents r ON r.id = rp.resident_id
-        WHERE rp.status = 'pending'
-        AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
-        ORDER BY rp.created_at ASC
-        """
-    )
-
-    rows = db_fetchall(sql, (shelter,))
+    rows = fetch_pending_pass_rows(shelter)
 
     processed = []
 
-    for r in rows:
-        row = dict(r)
-        row["start_at_local"] = to_local(row.get("start_at"))
-        row["end_at_local"] = to_local(row.get("end_at"))
-        row["created_at_local"] = to_local(row.get("created_at"))
-        row["pass_type_label"] = pass_type_label(row.get("pass_type"))
-
+    for row in rows:
         blocked, restriction_rows = _has_active_pass_block(int(row.get("resident_id") or 0))
         row["has_disciplinary_block"] = blocked
         row["disciplinary_restrictions"] = restriction_rows
-
         processed.append(row)
 
     return render_template(
