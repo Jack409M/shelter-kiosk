@@ -18,6 +18,12 @@ def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
     return token
 
 
+def _row_value(row, key: str, index: int):
+    if isinstance(row, dict):
+        return row[key]
+    return row[index]
+
+
 def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
     from core.db import db_execute, db_fetchall
 
@@ -102,7 +108,13 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
             "SELECT id, shelter, status FROM resident_passes WHERE resident_id = 1 ORDER BY id"
         )
 
-    results = {row[0]: (row[1], row[2]) for row in rows}
+    results = {
+        _row_value(row, "id", 0): (
+            _row_value(row, "shelter", 1),
+            _row_value(row, "status", 2),
+        )
+        for row in rows
+    }
 
     assert results[1][0] == "haven"
     assert results[2][0] == "haven"
