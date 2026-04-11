@@ -20,6 +20,8 @@ def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
 
 def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
     from core.db import db_execute, db_fetchall
+    import core.residents as core_residents_module
+    import routes.residents as residents_module
 
     _login_staff(client)
     csrf = _set_csrf_token(client)
@@ -60,8 +62,6 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
             """
         )
 
-    import routes.residents as residents_module
-
     monkeypatch.setattr(
         residents_module,
         "_upsert_resident_housing_assignment",
@@ -82,6 +82,12 @@ def test_transfer_moves_pending_and_approved_passes(app, client, monkeypatch):
 
     monkeypatch.setattr(
         residents_module,
+        "log_action",
+        lambda *args, **kwargs: None,
+    )
+
+    monkeypatch.setattr(
+        core_residents_module,
         "log_action",
         lambda *args, **kwargs: None,
     )
