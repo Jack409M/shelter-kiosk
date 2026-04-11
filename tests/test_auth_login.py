@@ -78,6 +78,13 @@ def test_staff_login_success_redirects(client, monkeypatch):
     assert response.status_code == 302
     assert "/staff/admin/dashboard" in response.headers["Location"]
 
+    with client.session_transaction() as session:
+        assert session["staff_user_id"] == 1
+        assert session["username"] == "admin"
+        assert session["role"] == "admin"
+        assert session["shelter"] == "abba"
+        assert session["allowed_shelters"] == ["abba", "haven", "gratitude"]
+
 
 def test_staff_login_invalid_password_returns_401(client, monkeypatch):
     import routes.auth as auth_module
