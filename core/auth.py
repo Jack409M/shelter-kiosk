@@ -31,6 +31,16 @@ def _redirect_login():
     return redirect(url_for("auth.staff_login"))
 
 
+def _redirect_staff_home():
+    return redirect(url_for("attendance.staff_attendance"))
+
+
+def _clear_invalid_session_and_redirect():
+    session.clear()
+    flash("Your session became invalid. Please log in again.", "error")
+    return _redirect_login()
+
+
 def _enforce_admin_only_mode():
     role = _current_role()
 
@@ -38,6 +48,17 @@ def _enforce_admin_only_mode():
         session.clear()
         flash("System is currently restricted to administrators only.", "error")
         return _redirect_login()
+
+    return None
+
+
+def _ensure_staff_session():
+    if not _has_staff_session():
+        return _redirect_login()
+
+    resp = _enforce_admin_only_mode()
+    if resp is not None:
+        return resp
 
     return None
 
@@ -60,17 +81,14 @@ def can_view_pass_status() -> bool:
     }
 
 
-def require_login(f):
-    @wraps(f)
+def require_login(fn):
+    @wraps(fn)
     def wrapper(*args, **kwargs):
-        if not _has_staff_session():
-            return _redirect_login()
-
-        resp = _enforce_admin_only_mode()
+        resp = _ensure_staff_session()
         if resp is not None:
             return resp
 
-        return f(*args, **kwargs)
+        return fn(*args, **kwargs)
 
     return wrapper
 
@@ -85,9 +103,7 @@ def require_shelter(fn):
             return redirect(url_for("auth.staff_select_shelter"))
 
         if allowed_shelters and shelter not in allowed_shelters:
-            session.clear()
-            flash("Your session became invalid. Please log in again.", "error")
-            return _redirect_login()
+            return _clear_invalid_session_and_redirect()
 
         return fn(*args, **kwargs)
 
@@ -95,22 +111,23 @@ def require_shelter(fn):
 
 
 def require_roles(*allowed_roles):
-    normalized_allowed_roles = {str(role).strip() for role in allowed_roles if str(role).strip()}
+    normalized_allowed_roles = {
+        str(role).strip()
+        for role in allowed_roles
+        if str(role).strip()
+    }
 
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            if not _has_staff_session():
-                return _redirect_login()
-
-            resp = _enforce_admin_only_mode()
+            resp = _ensure_staff_session()
             if resp is not None:
                 return resp
 
             role = _current_role()
             if role not in normalized_allowed_roles:
                 flash("You do not have permission to access that page.", "error")
-                return redirect(url_for("attendance.staff_attendance"))
+                return _redirect_staff_home()
 
             return fn(*args, **kwargs)
 
