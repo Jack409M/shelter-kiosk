@@ -3,10 +3,18 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from flask import g
-from flask import session
+from flask import g, session
 
 from core.db import db_fetchone
+
+
+def _db_placeholder() -> str:
+    return "%s" if g.get("db_kind") == "pg" else "?"
+
+
+def _clean_text(value: str | None) -> str | None:
+    cleaned = (value or "").strip()
+    return cleaned or None
 
 
 def case_manager_allowed() -> bool:
@@ -18,13 +26,11 @@ def normalize_shelter_name(value: str | None) -> str:
 
 
 def shelter_equals_sql(column_name: str) -> str:
-    if g.get("db_kind") == "pg":
-        return f"LOWER(COALESCE({column_name}, '')) = %s"
-    return f"LOWER(COALESCE({column_name}, '')) = ?"
+    return f"LOWER(COALESCE({column_name}, '')) = {_db_placeholder()}"
 
 
 def placeholder() -> str:
-    return "%s" if g.get("db_kind") == "pg" else "?"
+    return _db_placeholder()
 
 
 def current_enrollment_order_sql(alias: str = "") -> str:
@@ -37,7 +43,7 @@ def current_enrollment_order_sql(alias: str = "") -> str:
 
 
 def fetch_current_enrollment_for_resident(resident_id: int, columns: str = "*"):
-    ph = placeholder()
+    ph = _db_placeholder()
     return db_fetchone(
         f"""
         SELECT {columns}
@@ -60,7 +66,7 @@ def fetch_current_enrollment_id_for_resident(resident_id: int) -> int | None:
 
 
 def resident_has_active_enrollment(resident_id: int) -> bool:
-    ph = placeholder()
+    ph = _db_placeholder()
     row = db_fetchone(
         f"""
         SELECT id
@@ -75,8 +81,7 @@ def resident_has_active_enrollment(resident_id: int) -> bool:
 
 
 def clean(value: str | None) -> str | None:
-    cleaned = (value or "").strip()
-    return cleaned or None
+    return _clean_text(value)
 
 
 def digits_only(value: str | None) -> str:
@@ -84,9 +89,10 @@ def digits_only(value: str | None) -> str:
 
 
 def parse_iso_date(value: str | None) -> date | None:
-    cleaned = clean(value)
+    cleaned = _clean_text(value)
     if not cleaned:
         return None
+
     try:
         return date.fromisoformat(cleaned)
     except ValueError:
@@ -94,9 +100,10 @@ def parse_iso_date(value: str | None) -> date | None:
 
 
 def parse_int(value: str | None) -> int | None:
-    cleaned = clean(value)
+    cleaned = _clean_text(value)
     if cleaned is None:
         return None
+
     try:
         return int(cleaned)
     except ValueError:
@@ -104,7 +111,7 @@ def parse_int(value: str | None) -> int | None:
 
 
 def parse_money(value: str | None) -> float | None:
-    cleaned = clean(value)
+    cleaned = _clean_text(value)
     if cleaned is None:
         return None
 
@@ -125,7 +132,7 @@ def yes_no_to_int(value: str | None) -> int | None:
 
 
 def draft_display_name(form: Any) -> str:
-    first_name = clean(form.get("first_name")) or ""
-    last_name = clean(form.get("last_name")) or ""
+    first_name = _clean_text(form.get("first_name")) or ""
+    last_name = _clean_text(form.get("last_name")) or ""
     full_name = f"{first_name} {last_name}".strip()
     return full_name or "Unnamed intake draft"
