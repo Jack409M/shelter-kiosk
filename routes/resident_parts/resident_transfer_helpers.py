@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from flask import g, session
 
-from core.db import db_execute, db_fetchone, db_transaction
+from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 
 
