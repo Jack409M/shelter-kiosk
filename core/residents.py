@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Mapping
 from typing import Any
 
-from flask import current_app, g, session
+from flask import session
 
 from core.audit import log_action
-from core.db import db_execute, db_fetchone
+from core.db import DbRow, db_execute, db_fetchone
 from core.helpers import utcnow_iso
 
 
@@ -14,16 +15,60 @@ def _normalize_shelter_name(value: str | None) -> str:
     return (value or "").strip().lower()
 
 
-def _row_value(row: Any, key: str, index: int, default: str = ""):
-    if isinstance(row, dict):
-        return row.get(key, default)
+def _require_row_mapping(row: object, *, label: str) -> DbRow:
+    if not isinstance(row, Mapping):
+        raise RuntimeError(f"{label} must be a mapping row")
+    return dict(row)
+
+
+def _clean_text(value: object) -> str:
+    return str(value or "").strip()
+
+
+def _session_staff_user_id() -> int | None:
+    raw_staff_user_id = session.get("staff_user_id")
+    if raw_staff_user_id in (None, ""):
+        return None
+
     try:
-        return row[index]
-    except Exception:
-        return default
+        return int(raw_staff_user_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def _resident_identity_row_by_id(resident_id: int) -> DbRow | None:
+    return db_fetchone(
+        """
+        SELECT id, resident_identifier, first_name, last_name, phone, shelter
+        FROM residents
+        WHERE id = %s
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+
+def _resident_identity_row_by_code(
+    *,
+    resident_code: str,
+    shelter: str,
+) -> DbRow | None:
+    return db_fetchone(
+        """
+        SELECT id, resident_identifier, first_name, last_name, phone, shelter
+        FROM residents
+        WHERE resident_code = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
+        LIMIT 1
+        """,
+        (resident_code, shelter),
+    )
 
 
 def make_resident_code(length: int = 8) -> str:
+    if length <= 0:
+        raise ValueError("length must be greater than 0")
+
     return "".join(secrets.choice("0123456789") for _ in range(length))
 
 
@@ -32,12 +77,15 @@ def generate_resident_code() -> str:
 
     for _ in range(15):
         exists = db_fetchone(
-            "SELECT id FROM residents WHERE resident_code = %s"
-            if g.get("db_kind") == "pg"
-            else "SELECT id FROM residents WHERE resident_code = ?",
+            """
+            SELECT id
+            FROM residents
+            WHERE resident_code = %s
+            LIMIT 1
+            """,
             (code,),
         )
-        if not exists:
+        if exists is None:
             return code
         code = make_resident_code(8)
 
@@ -65,118 +113,88 @@ def has_active_pass(resident_id: int, shelter: str) -> bool:
              OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= %s AND end_date >= %s)
           )
         LIMIT 1
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        SELECT id
-        FROM resident_passes
-        WHERE resident_id = ?
-          AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
-          AND status = ?
-          AND (
-                (start_at IS NOT NULL AND end_at IS NOT NULL AND start_at <= ? AND end_at >= ?)
-             OR (start_date IS NOT NULL AND end_date IS NOT NULL AND start_date <= ? AND end_date >= ?)
-          )
-        LIMIT 1
         """,
-        (resident_id, normalized_shelter, "approved", now_iso, now_iso, today_iso, today_iso),
+        (
+            resident_id,
+            normalized_shelter,
+            "approved",
+            now_iso,
+            now_iso,
+            today_iso,
+            today_iso,
+        ),
     )
 
-    return bool(row)
+    return row is not None
 
 
 def resident_session_start(resident_row: Any, shelter: str, resident_code: str) -> None:
     session.permanent = True
 
-    resident_id = _row_value(resident_row, "id", 0, None)
     normalized_shelter = _normalize_shelter_name(shelter)
+    source_row = _require_row_mapping(resident_row, label="resident_row")
 
-    fresh_row = None
+    resident_id_value = source_row.get("id")
+    resident_id = resident_id_value if isinstance(resident_id_value, int) else None
 
-    if resident_id:
-        fresh_row = db_fetchone(
-            """
-            SELECT id, resident_identifier, first_name, last_name, phone, shelter
-            FROM residents
-            WHERE id = %s
-            LIMIT 1
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            SELECT id, resident_identifier, first_name, last_name, phone, shelter
-            FROM residents
-            WHERE id = ?
-            LIMIT 1
-            """,
-            (resident_id,),
+    fresh_row: DbRow | None = None
+    if resident_id is not None:
+        fresh_row = _resident_identity_row_by_id(resident_id)
+
+    if fresh_row is None:
+        fresh_row = _resident_identity_row_by_code(
+            resident_code=resident_code,
+            shelter=normalized_shelter,
         )
 
-    if not fresh_row:
-        fresh_row = db_fetchone(
-            """
-            SELECT id, resident_identifier, first_name, last_name, phone, shelter
-            FROM residents
-            WHERE resident_code = %s
-              AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
-            LIMIT 1
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            SELECT id, resident_identifier, first_name, last_name, phone, shelter
-            FROM residents
-            WHERE resident_code = ?
-              AND LOWER(TRIM(COALESCE(shelter, ''))) = ?
-            LIMIT 1
-            """,
-            (resident_code, normalized_shelter),
-        )
+    identity_row = fresh_row or source_row
 
-    source_row = fresh_row or resident_row
-
-    session["resident_id"] = _row_value(source_row, "id", 0, None)
-    session["resident_identifier"] = _row_value(source_row, "resident_identifier", 1, "")
-    session["resident_first"] = _row_value(source_row, "first_name", 2, "")
-    session["resident_last"] = _row_value(source_row, "last_name", 3, "")
-    session["resident_phone"] = _row_value(source_row, "phone", 4, "") or ""
+    session["resident_id"] = identity_row.get("id")
+    session["resident_identifier"] = _clean_text(identity_row.get("resident_identifier"))
+    session["resident_first"] = _clean_text(identity_row.get("first_name"))
+    session["resident_last"] = _clean_text(identity_row.get("last_name"))
+    session["resident_phone"] = _clean_text(identity_row.get("phone"))
     session["resident_shelter"] = _normalize_shelter_name(
-        _row_value(source_row, "shelter", 5, shelter)
+        str(identity_row.get("shelter") or normalized_shelter)
     )
     session["resident_code"] = resident_code
 
 
-def record_resident_transfer(resident_id: int, from_shelter: str, to_shelter: str, note: str = ""):
-    actor = session.get("username") or "unknown"
+def record_resident_transfer(
+    resident_id: int,
+    from_shelter: str,
+    to_shelter: str,
+    note: str = "",
+) -> None:
+    actor = _clean_text(session.get("username")) or "unknown"
     normalized_from_shelter = _normalize_shelter_name(from_shelter)
     normalized_to_shelter = _normalize_shelter_name(to_shelter)
+    cleaned_note = _clean_text(note)
 
-    if current_app.config.get("DATABASE_URL"):
-        db_execute(
-            """
-            INSERT INTO resident_transfers
-              (resident_id, from_shelter, to_shelter, transferred_by, note)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (resident_id, normalized_from_shelter, normalized_to_shelter, actor, note or None),
-        )
-    else:
-        db_execute(
-            """
-            INSERT INTO resident_transfers
-              (resident_id, from_shelter, to_shelter, transferred_by, transferred_at, note)
-            VALUES (?, ?, ?, ?, datetime('now'), ?)
-            """,
-            (resident_id, normalized_from_shelter, normalized_to_shelter, actor, note or None),
-        )
+    db_execute(
+        """
+        INSERT INTO resident_transfers
+          (resident_id, from_shelter, to_shelter, transferred_by, note)
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (
+            resident_id,
+            normalized_from_shelter,
+            normalized_to_shelter,
+            actor,
+            cleaned_note or None,
+        ),
+    )
 
-    staff_id = session.get("staff_user_id")
     log_action(
         "resident",
         resident_id,
         normalized_from_shelter,
-        staff_id,
+        _session_staff_user_id(),
         "resident_transfer",
-        f"from={normalized_from_shelter} to={normalized_to_shelter} note={note}".strip(),
+        (
+            f"from={normalized_from_shelter} "
+            f"to={normalized_to_shelter} "
+            f"note={cleaned_note}"
+        ).strip(),
     )
