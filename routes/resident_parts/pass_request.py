@@ -1,164 +1,27 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
-from zoneinfo import ZoneInfo
-
-from flask import flash, g, redirect, render_template, request, session, url_for
+from flask import flash, redirect, render_template, url_for
 
 from core.access import require_resident
-from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
-from core.db import db_fetchall, db_fetchone, db_transaction, get_db
-from core.helpers import utcnow_iso
-from core.pass_rules import (
-    CHICAGO_TZ,
-    gh_pass_rule_box,
-    is_late_standard_pass_request,
-    pass_type_options,
-    shared_pass_rule_box,
-    use_gh_pass_form,
-)
+from core.pass_rules import gh_pass_rule_box, pass_type_options, shared_pass_rule_box, use_gh_pass_form
 from core.rate_limit import is_rate_limited
 from core.runtime import init_db
+from routes.resident_parts.pass_request_helpers import (
+    extract_pass_form_data,
+    flash_pass_request_restriction_if_blocked,
+    insert_pass_request,
+    load_pass_request_context,
+    log_pass_insert_failure,
+    today_chicago_iso,
+    validate_pass_request_form,
+)
 
 
 def _client_ip() -> str:
+    from flask import request
+
     return (request.remote_addr or "").strip() or "unknown"
-
-
-def _load_resident_profile(resident_id: int):
-    return db_fetchone(
-        """
-        SELECT
-            id,
-            shelter,
-            program_level,
-            phone
-        FROM residents
-        WHERE id = %s
-        LIMIT 1
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        SELECT
-            id,
-            shelter,
-            program_level,
-            phone
-        FROM residents
-        WHERE id = ?
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
-
-
-def _resident_value(row, key: str, index: int, default=""):
-    if isinstance(row, dict):
-        return row.get(key, default)
-    try:
-        return row[index]
-    except Exception:
-        return default
-
-
-def _today_chicago_iso() -> str:
-    return datetime.now(CHICAGO_TZ).date().isoformat()
-
-
-def _parse_date_only(value: str | None) -> date | None:
-    text = str(value or "").strip()
-    if not text:
-        return None
-    try:
-        return datetime.fromisoformat(text[:10]).date()
-    except Exception:
-        return None
-
-
-def _status_is_open_for_discipline(value: str | None) -> bool:
-    return str(value or "").strip().lower() == "open"
-
-
-def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
-    rows = db_fetchall(
-        """
-        SELECT
-            id,
-            incident_date,
-            category,
-            severity,
-            summary,
-            status,
-            disciplinary_outcome,
-            probation_start_date,
-            probation_end_date,
-            pre_termination_date,
-            blocks_passes
-        FROM resident_writeups
-        WHERE resident_id = %s
-          AND COALESCE(blocks_passes, 0) IN (1, TRUE)
-        ORDER BY incident_date DESC, id DESC
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        SELECT
-            id,
-            incident_date,
-            category,
-            severity,
-            summary,
-            status,
-            disciplinary_outcome,
-            probation_start_date,
-            probation_end_date,
-            pre_termination_date,
-            blocks_passes
-        FROM resident_writeups
-        WHERE resident_id = ?
-          AND COALESCE(blocks_passes, 0) = 1
-        ORDER BY incident_date DESC, id DESC
-        """,
-        (resident_id,),
-    )
-
-    today = datetime.now(CHICAGO_TZ).date()
-    active: list[dict] = []
-
-    for row in rows:
-        item = dict(row)
-        outcome = str(item.get("disciplinary_outcome") or "").strip().lower()
-        is_open = _status_is_open_for_discipline(item.get("status"))
-
-        if outcome == "program_probation":
-            start_date = _parse_date_only(item.get("probation_start_date"))
-            end_date = _parse_date_only(item.get("probation_end_date"))
-            is_active = bool(
-                is_open
-                and start_date
-                and end_date
-                and start_date <= today <= end_date
-            )
-            if is_active:
-                item["restriction_label"] = "Program Probation"
-                item["restriction_detail"] = f"{item.get('probation_start_date') or '—'} to {item.get('probation_end_date') or '—'}"
-                active.append(item)
-
-        elif outcome == "pre_termination":
-            scheduled_date = _parse_date_only(item.get("pre_termination_date"))
-            is_active = bool(
-                is_open
-                and scheduled_date
-                and today <= scheduled_date
-            )
-            if is_active:
-                item["restriction_label"] = "Pre Termination Scheduled"
-                item["restriction_detail"] = f"Scheduled for {item.get('pre_termination_date') or '—'}"
-                active.append(item)
-
-    return active
 
 
 def _render_pass_form(
@@ -171,7 +34,11 @@ def _render_pass_form(
 ):
     use_gh_form = use_gh_pass_form(shelter, resident_level)
     template_name = "resident_pass_request_gh.html" if use_gh_form else "resident_pass_request.html"
-    rule_box = gh_pass_rule_box(shelter, resident_level) if use_gh_form else shared_pass_rule_box(shelter, resident_level)
+    rule_box = (
+        gh_pass_rule_box(shelter, resident_level)
+        if use_gh_form
+        else shared_pass_rule_box(shelter, resident_level)
+    )
 
     return render_template(
         template_name,
@@ -185,382 +52,115 @@ def _render_pass_form(
     )
 
 
+def _redirect_resident_signin(message: str):
+    flash(message, "error")
+    return redirect(url_for("resident_requests.resident_signin"))
+
+
+def _render_form_with_errors(*, context, form, errors: list[str]):
+    for error in errors:
+        flash(error, "error")
+    return (
+        _render_pass_form(
+            shelter=context.shelter,
+            resident_level=context.resident_level,
+            resident_phone=form.resident_phone,
+            hour_summary=context.hour_summary,
+            form_data=form.as_form_dict(),
+        ),
+        400,
+    )
+
+
+def _render_rate_limited_form(*, context, form):
+    flash("Too many pass submissions. Please wait a few minutes and try again.", "error")
+    return (
+        _render_pass_form(
+            shelter=context.shelter,
+            resident_level=context.resident_level,
+            resident_phone=form.resident_phone,
+            hour_summary=context.hour_summary,
+            form_data=form.as_form_dict(),
+        ),
+        429,
+    )
+
+
 def resident_pass_request_view():
     @require_resident
     def _inner():
         init_db()
 
-        shelter = (session.get("resident_shelter") or "").strip()
-        resident_id = session.get("resident_id")
+        context = load_pass_request_context()
+        if not context:
+            return _redirect_resident_signin("Resident session is invalid. Please sign in again.")
 
-        if not resident_id:
-            flash("Resident session is incomplete. Please sign in again.", "error")
-            return redirect(url_for("resident_requests.resident_signin"))
-
-        try:
-            resident_id_int = int(resident_id)
-        except Exception:
-            flash("Resident session is invalid. Please sign in again.", "error")
-            return redirect(url_for("resident_requests.resident_signin"))
-
-        resident_row = _load_resident_profile(resident_id_int)
-        if not resident_row:
-            flash("Resident record was not found. Please sign in again.", "error")
-            return redirect(url_for("resident_requests.resident_signin"))
-
-        resident_level = (_resident_value(resident_row, "program_level", 2, "") or "").strip()
-        resident_phone_from_db = (_resident_value(resident_row, "phone", 3, "") or "").strip()
-
-        hour_summary = None
-        if shelter:
-            try:
-                hour_summary = calculate_prior_week_attendance_hours(resident_id_int, shelter)
-            except Exception:
-                hour_summary = None
-
-        active_restrictions = _load_active_writeup_restrictions(resident_id_int)
-        if active_restrictions:
-            first_block = active_restrictions[0]
-            flash(
-                f"Pass requests are disabled because you are under {first_block.get('restriction_label')}. {first_block.get('restriction_detail')}".strip(),
-                "error",
-            )
+        if flash_pass_request_restriction_if_blocked(context.resident_id):
             return redirect(url_for("resident_portal.home"))
+
+        from flask import request
 
         if request.method == "GET":
             return _render_pass_form(
-                shelter=shelter,
-                resident_level=resident_level,
-                resident_phone=resident_phone_from_db,
-                hour_summary=hour_summary,
-                form_data={"request_date": _today_chicago_iso()},
+                shelter=context.shelter,
+                resident_level=context.resident_level,
+                resident_phone=context.resident_phone_from_db,
+                hour_summary=context.hour_summary,
+                form_data={"request_date": today_chicago_iso()},
             )
 
-        resident_identifier = (session.get("resident_identifier") or "").strip()
-        first = (session.get("resident_first") or "").strip()
-        last = (session.get("resident_last") or "").strip()
-        resident_phone = (request.form.get("resident_phone") or resident_phone_from_db or "").strip()
+        form = extract_pass_form_data(context.resident_phone_from_db)
 
-        ip = _client_ip()
-        rl_key = f"resident_pass_request:{ip}:{resident_identifier or 'unknown'}"
+        rl_key = f"resident_pass_request:{_client_ip()}:{context.resident_identifier or 'unknown'}"
         if is_rate_limited(rl_key, limit=6, window_seconds=900):
-            flash("Too many pass submissions. Please wait a few minutes and try again.", "error")
-            form_data = request.form.to_dict()
-            if not (form_data.get("request_date") or "").strip():
-                form_data["request_date"] = _today_chicago_iso()
-            return _render_pass_form(
-                shelter=shelter,
-                resident_level=resident_level,
-                resident_phone=resident_phone,
-                hour_summary=hour_summary,
-                form_data=form_data,
-            ), 429
+            return _render_rate_limited_form(context=context, form=form)
 
-        active_restrictions = _load_active_writeup_restrictions(resident_id_int)
-        if active_restrictions:
-            first_block = active_restrictions[0]
-            flash(
-                f"Pass requests are disabled because you are under {first_block.get('restriction_label')}. {first_block.get('restriction_detail')}".strip(),
-                "error",
-            )
+        if flash_pass_request_restriction_if_blocked(context.resident_id):
             return redirect(url_for("resident_portal.home"))
 
-        pass_type = (request.form.get("pass_type") or "").strip().lower()
-        destination = (request.form.get("destination") or "").strip()
-        reason = (request.form.get("reason") or "").strip()
-        resident_notes = (request.form.get("resident_notes") or "").strip()
-
-        request_date = (request.form.get("request_date") or "").strip() or _today_chicago_iso()
-        requirements_acknowledged = (request.form.get("requirements_acknowledged") or "").strip().lower()
-        requirements_not_met_explanation = (request.form.get("requirements_not_met_explanation") or "").strip()
-        who_with = (request.form.get("who_with") or "").strip()
-        destination_address = (request.form.get("destination_address") or "").strip()
-        destination_phone = (request.form.get("destination_phone") or "").strip()
-        companion_names = (request.form.get("companion_names") or "").strip()
-        companion_phone_numbers = (request.form.get("companion_phone_numbers") or "").strip()
-        budgeted_amount = (request.form.get("budgeted_amount") or "").strip()
-
-        start_at_raw = (request.form.get("start_at") or "").strip()
-        end_at_raw = (request.form.get("end_at") or "").strip()
-        start_date_raw = (request.form.get("start_date") or "").strip()
-        end_date_raw = (request.form.get("end_date") or "").strip()
-        special_reason = (request.form.get("special_reason") or "").strip()
-
-        errors: list[str] = []
-
-        if not first or not last or not shelter:
-            errors.append("Resident session is incomplete. Please sign in again.")
-
-        if pass_type not in {"pass", "overnight", "special"}:
-            errors.append("Select a valid pass type.")
-
-        if not destination:
-            errors.append("Destination is required.")
-
-        if not resident_level:
-            errors.append("Resident level is missing. Please contact staff.")
-
-        if pass_type in {"pass", "overnight"} and requirements_acknowledged not in {"yes", "no"}:
-            errors.append("Please answer whether you will meet all requirements for this pass.")
-
-        if pass_type in {"pass", "overnight"} and requirements_acknowledged == "no" and not requirements_not_met_explanation:
-            errors.append("Please explain why requirements will not be met.")
-
-        if pass_type == "special" and not special_reason:
-            errors.append("Special pass reason is required.")
-
-        start_at_iso = None
-        end_at_iso = None
-        start_date_iso = None
-        end_date_iso = None
-
-        now_local = datetime.now(CHICAGO_TZ)
-        late_submission_flag = False
-
-        if pass_type in {"pass", "overnight"}:
-            if not start_at_raw or not end_at_raw:
-                errors.append("Leave date and time and return date and time are required.")
-            else:
-                try:
-                    local_start = datetime.fromisoformat(start_at_raw).replace(tzinfo=CHICAGO_TZ)
-                    local_end = datetime.fromisoformat(end_at_raw).replace(tzinfo=CHICAGO_TZ)
-
-                    if local_end <= local_start:
-                        errors.append("Return time must be after leave time.")
-
-                    if local_start < now_local:
-                        errors.append("Leave time cannot be in the past.")
-
-                    if pass_type == "pass" and local_start.date() != local_end.date():
-                        errors.append("A normal Pass must begin and end on the same day.")
-
-                    if pass_type == "overnight" and local_end.date() <= local_start.date():
-                        errors.append("An Overnight Pass must return on a later day.")
-
-                    late_submission_flag = is_late_standard_pass_request(now_local, local_start, shelter=shelter)
-
-                    start_at_iso = (
-                        local_start.astimezone(timezone.utc)
-                        .replace(tzinfo=None)
-                        .isoformat(timespec="seconds")
-                    )
-                    end_at_iso = (
-                        local_end.astimezone(timezone.utc)
-                        .replace(tzinfo=None)
-                        .isoformat(timespec="seconds")
-                    )
-                except Exception:
-                    errors.append("Invalid leave or return date and time.")
-        elif pass_type == "special":
-            if not start_date_raw or not end_date_raw:
-                errors.append("Start date and end date are required for a Special Pass.")
-            else:
-                try:
-                    start_date_value = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
-                    end_date_value = datetime.strptime(end_date_raw, "%Y-%m-%d").date()
-
-                    if end_date_value < start_date_value:
-                        errors.append("End date cannot be earlier than start date.")
-
-                    start_date_iso = start_date_value.isoformat()
-                    end_date_iso = end_date_value.isoformat()
-                except Exception:
-                    errors.append("Invalid Special Pass dates.")
-
-        if errors:
-            for e in errors:
-                flash(e, "error")
-            form_data = request.form.to_dict()
-            if not (form_data.get("request_date") or "").strip():
-                form_data["request_date"] = _today_chicago_iso()
-            return _render_pass_form(
-                shelter=shelter,
-                resident_level=resident_level,
-                resident_phone=resident_phone,
-                hour_summary=hour_summary,
-                form_data=form_data,
-            ), 400
-
-        kind = g.get("db_kind")
-        now_iso = utcnow_iso()
-
-        pass_sql = (
-            """
-            INSERT INTO resident_passes (
-                resident_id,
-                shelter,
-                pass_type,
-                status,
-                start_at,
-                end_at,
-                start_date,
-                end_date,
-                destination,
-                reason,
-                resident_notes,
-                staff_notes,
-                approved_by,
-                approved_at,
-                created_at,
-                updated_at
-            )
-            VALUES (%s, %s, %s, 'pending', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-            """
-            if kind == "pg"
-            else
-            """
-            INSERT INTO resident_passes (
-                resident_id,
-                shelter,
-                pass_type,
-                status,
-                start_at,
-                end_at,
-                start_date,
-                end_date,
-                destination,
-                reason,
-                resident_notes,
-                staff_notes,
-                approved_by,
-                approved_at,
-                created_at,
-                updated_at
-            )
-            VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
+        validation = validate_pass_request_form(
+            context=context,
+            form=form,
         )
-
-        final_reason = special_reason if pass_type == "special" else reason
-        staff_notes = "Submitted after configured deadline." if late_submission_flag else None
-
-        pass_params = (
-            resident_id_int,
-            shelter,
-            pass_type,
-            start_at_iso,
-            end_at_iso,
-            start_date_iso,
-            end_date_iso,
-            destination,
-            final_reason or None,
-            resident_notes or None,
-            staff_notes,
-            None,
-            None,
-            now_iso,
-            now_iso,
-        )
-
-        detail_sql = (
-            """
-            INSERT INTO resident_pass_request_details (
-                pass_id,
-                resident_phone,
-                request_date,
-                resident_level,
-                requirements_acknowledged,
-                requirements_not_met_explanation,
-                reason_for_request,
-                who_with,
-                destination_address,
-                destination_phone,
-                companion_names,
-                companion_phone_numbers,
-                budgeted_amount,
-                approved_amount,
-                reviewed_by_user_id,
-                reviewed_by_name,
-                reviewed_at,
-                created_at,
-                updated_at
+        if not validation.is_valid:
+            return _render_form_with_errors(
+                context=context,
+                form=form,
+                errors=validation.errors,
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            if kind == "pg"
-            else
-            """
-            INSERT INTO resident_pass_request_details (
-                pass_id,
-                resident_phone,
-                request_date,
-                resident_level,
-                requirements_acknowledged,
-                requirements_not_met_explanation,
-                reason_for_request,
-                who_with,
-                destination_address,
-                destination_phone,
-                companion_names,
-                companion_phone_numbers,
-                budgeted_amount,
-                approved_amount,
-                reviewed_by_user_id,
-                reviewed_by_name,
-                reviewed_at,
-                created_at,
-                updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-        )
 
         try:
-            with db_transaction():
-                conn = get_db()
-                cur = conn.cursor()
-                try:
-                    cur.execute(pass_sql, pass_params)
-                    if kind == "pg":
-                        req_id = cur.fetchone()[0]
-                    else:
-                        req_id = cur.lastrowid
-
-                    detail_params = (
-                        req_id,
-                        resident_phone or None,
-                        request_date or None,
-                        resident_level or None,
-                        requirements_acknowledged or None,
-                        requirements_not_met_explanation or None,
-                        final_reason or None,
-                        who_with or None,
-                        destination_address or None,
-                        destination_phone or None,
-                        companion_names or None,
-                        companion_phone_numbers or None,
-                        budgeted_amount or None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        now_iso,
-                        now_iso,
-                    )
-                    cur.execute(detail_sql, detail_params)
-                finally:
-                    cur.close()
-        except Exception:
+            req_id = insert_pass_request(
+                context=context,
+                form=form,
+                validation=validation,
+            )
+        except Exception as exc:
+            log_pass_insert_failure(
+                exc,
+                resident_id=context.resident_id,
+                shelter=context.shelter,
+                pass_type=form.pass_type,
+            )
             flash("Your pass request could not be submitted. Please try again.", "error")
-            form_data = request.form.to_dict()
-            if not (form_data.get("request_date") or "").strip():
-                form_data["request_date"] = _today_chicago_iso()
-            return _render_pass_form(
-                shelter=shelter,
-                resident_level=resident_level,
-                resident_phone=resident_phone,
-                hour_summary=hour_summary,
-                form_data=form_data,
-            ), 500
+            return (
+                _render_pass_form(
+                    shelter=context.shelter,
+                    resident_level=context.resident_level,
+                    resident_phone=form.resident_phone,
+                    hour_summary=context.hour_summary,
+                    form_data=form.as_form_dict(),
+                ),
+                500,
+            )
 
         log_action(
             "pass",
             req_id,
-            shelter,
+            context.shelter,
             None,
             "create",
-            f"Resident submitted {pass_type} pass request phone={resident_phone or ''}".strip(),
+            f"Resident submitted {form.pass_type} pass request phone={form.resident_phone or ''}".strip(),
         )
 
         flash("Your pass request was submitted successfully.", "ok")
