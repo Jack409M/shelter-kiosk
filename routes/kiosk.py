@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from werkzeug.wrappers import Response
 
 from core.audit import log_action
 from core.db import db_fetchone
@@ -21,20 +22,18 @@ kiosk = Blueprint("kiosk", __name__)
 
 
 def _kiosk_enabled() -> bool:
-    try:
-        row = db_fetchone(
-            "SELECT kiosk_intake_enabled FROM security_settings ORDER BY id ASC LIMIT 1"
-        )
-        if not row:
-            return True
-        return bool(row.get("kiosk_intake_enabled"))
-    except Exception:
+    row = db_fetchone(
+        "SELECT kiosk_intake_enabled FROM security_settings ORDER BY id ASC LIMIT 1"
+    )
+    if row is None:
         return True
+    return bool(row.get("kiosk_intake_enabled"))
 
 
 def _resolve_shelter_or_404(shelter: str) -> str | None:
+    normalized = (shelter or "").strip().lower()
     return next(
-        (name for name in get_all_shelters() if name.lower() == shelter.lower()),
+        (name for name in get_all_shelters() if str(name or "").strip().lower() == normalized),
         None,
     )
 
@@ -45,7 +44,7 @@ def _active_checkout_categories_for_shelter(shelter: str) -> list[dict[str, Any]
 
     categories: list[dict[str, Any]] = []
     for row in rows or []:
-        label = (row.get("activity_label") or "").strip()
+        label = str(row.get("activity_label") or "").strip()
         if not label:
             continue
         if not row.get("active"):
@@ -64,7 +63,7 @@ def _active_aa_na_child_options_for_shelter(shelter: str) -> list[dict[str, Any]
 
     options: list[dict[str, Any]] = []
     for row in rows or []:
-        option_label = (row.get("option_label") or "").strip()
+        option_label = str(row.get("option_label") or "").strip()
         if not option_label:
             continue
         options.append(dict(row))
@@ -81,7 +80,7 @@ def _active_volunteer_child_options_for_shelter(shelter: str) -> list[dict[str, 
 
     options: list[dict[str, Any]] = []
     for row in rows or []:
-        option_label = (row.get("option_label") or "").strip()
+        option_label = str(row.get("option_label") or "").strip()
         if not option_label:
             continue
         options.append(dict(row))
@@ -123,28 +122,239 @@ def _checkout_template_context(
     }
 
 
+def _invalid_shelter_response() -> tuple[str, int]:
+    return "Invalid shelter", 404
+
+
+def _kiosk_disabled_response(*, shelter_key: str, ip: str) -> tuple[str, int]:
+    log_action(
+        "kiosk",
+        None,
+        shelter_key,
+        None,
+        "kiosk_disabled_block",
+        f"ip={ip}",
+    )
+    return "Kiosk intake is temporarily disabled.", 503
+
+
+def _cooldown_key(shelter_key: str, ip: str) -> str:
+    return f"kiosk_cooldown:{shelter_key}:{ip}"
+
+
+def _resident_code_lock_key(shelter_key: str, code_key: str) -> str:
+    return f"kiosk_resident_code_lock:{shelter_key}:{code_key}"
+
+
+def _resident_code_fail_key(shelter_key: str, code_key: str) -> str:
+    return f"kiosk_resident_code_fail:{shelter_key}:{code_key}"
+
+
+def _checkin_ip_rate_key(shelter_key: str, ip: str) -> str:
+    return f"kiosk_checkin_ip:{shelter_key}:{ip}"
+
+
+def _checkout_ip_rate_key(shelter_key: str, ip: str) -> str:
+    return f"kiosk_checkout_ip:{shelter_key}:{ip}"
+
+
+def _checkin_cooldown_trigger_key(shelter_key: str, ip: str) -> str:
+    return f"kiosk_checkin_cooldown_trigger:{shelter_key}:{ip}"
+
+
+def _checkout_cooldown_trigger_key(shelter_key: str, ip: str) -> str:
+    return f"kiosk_checkout_cooldown_trigger:{shelter_key}:{ip}"
+
+
+def _render_checkin(
+    *,
+    shelter: str,
+    actual_end_required: bool,
+    prior_activity_label: str,
+    resident_code_value: str = "",
+    status_code: int = 200,
+) -> tuple[str, int] | str:
+    rendered = render_template(
+        "kiosk_checkin.html",
+        **_checkin_template_context(
+            shelter=shelter,
+            actual_end_required=actual_end_required,
+            prior_activity_label=prior_activity_label,
+            resident_code_value=resident_code_value,
+        ),
+    )
+    if status_code == 200:
+        return rendered
+    return rendered, status_code
+
+
+def _render_checkout(
+    *,
+    shelter: str,
+    checkout_categories: list[dict[str, Any]],
+    aa_na_child_options: list[dict[str, Any]],
+    volunteer_child_options: list[dict[str, Any]],
+    status_code: int = 200,
+) -> tuple[str, int] | str:
+    rendered = render_template(
+        "kiosk_checkout.html",
+        **_checkout_template_context(
+            shelter=shelter,
+            checkout_categories=checkout_categories,
+            aa_na_child_options=aa_na_child_options,
+            volunteer_child_options=volunteer_child_options,
+        ),
+    )
+    if status_code == 200:
+        return rendered
+    return rendered, status_code
+
+
+def _blocked_by_cooldown_response(
+    *,
+    shelter_key: str,
+    ip: str,
+    seconds_remaining: int,
+    render_response: tuple[str, int] | str,
+) -> tuple[str, int] | str:
+    log_action(
+        "kiosk",
+        None,
+        shelter_key,
+        None,
+        "kiosk_cooldown_blocked",
+        f"ip={ip} seconds_remaining={seconds_remaining}",
+    )
+    flash("System cooling down. Please wait 30 seconds before trying again.", "error")
+    return render_response
+
+
+def _blocked_by_resident_code_lock_response(
+    *,
+    shelter_key: str,
+    ip: str,
+    code_key: str,
+    seconds_remaining: int,
+    render_response: tuple[str, int] | str,
+) -> tuple[str, int] | str:
+    log_action(
+        "kiosk",
+        None,
+        shelter_key,
+        None,
+        "kiosk_resident_code_locked",
+        f"ip={ip} resident_code={code_key} seconds_remaining={seconds_remaining}",
+    )
+    flash("That Resident Code is temporarily locked. Please wait and try again.", "error")
+    return render_response
+
+
+def _start_kiosk_cooldown_response(
+    *,
+    shelter_key: str,
+    ip: str,
+    lock_key_value: str,
+    lock_key_fn,
+    render_response: tuple[str, int] | str,
+) -> tuple[str, int] | str:
+    lock_key_fn(lock_key_value, 30)
+    log_action(
+        "kiosk",
+        None,
+        shelter_key,
+        None,
+        "kiosk_cooldown_started",
+        f"ip={ip} seconds=30",
+    )
+    flash("System cooling down. Please wait 30 seconds before trying again.", "error")
+    return render_response
+
+
+def _rate_limited_response(
+    *,
+    shelter_key: str,
+    ip: str,
+    action_type: str,
+    render_response: tuple[str, int] | str,
+) -> tuple[str, int] | str:
+    log_action(
+        "kiosk",
+        None,
+        shelter_key,
+        None,
+        action_type,
+        f"ip={ip}",
+    )
+    flash("Too many attempts. Please wait and try again.", "error")
+    return render_response
+
+
+def _maybe_lock_failed_resident_code(
+    *,
+    shelter_key: str,
+    ip: str,
+    code_key: str,
+    errors: list[str],
+    is_rate_limited_fn,
+    lock_key_fn,
+) -> None:
+    if "Invalid Resident Code." not in errors:
+        return
+
+    if is_rate_limited_fn(
+        _resident_code_fail_key(shelter_key, code_key),
+        limit=5,
+        window_seconds=300,
+    ):
+        lock_key_fn(_resident_code_lock_key(shelter_key, code_key), 180)
+        log_action(
+            "kiosk",
+            None,
+            shelter_key,
+            None,
+            "kiosk_resident_code_lock_started",
+            f"ip={ip} resident_code={code_key} seconds=180",
+        )
+
+
+def _log_kiosk_failure(
+    *,
+    shelter_key: str,
+    action_type: str,
+    ip: str,
+    code_key: str,
+    errors: list[str],
+) -> None:
+    log_action(
+        "kiosk",
+        None,
+        shelter_key,
+        None,
+        action_type,
+        f"ip={ip} resident_code={code_key} errors={' | '.join(errors)}",
+    )
+
+
 @kiosk.route("/kiosk/<shelter>")
 def kiosk_home(shelter: str):
     init_db()
 
     matched_shelter = _resolve_shelter_or_404(shelter)
     if not matched_shelter:
-        return "Invalid shelter", 404
+        return _invalid_shelter_response()
 
     display_shelter = matched_shelter
     shelter_key = matched_shelter.strip().lower()
     ip = get_client_ip()
 
-    if not _kiosk_enabled():
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_disabled_block",
-            f"ip={ip}",
-        )
-        return "Kiosk intake is temporarily disabled.", 503
+    try:
+        kiosk_enabled = _kiosk_enabled()
+    except Exception:
+        current_app.logger.exception("Failed to load kiosk enabled state for shelter=%s", shelter_key)
+        return "Kiosk is temporarily unavailable.", 503
+
+    if not kiosk_enabled:
+        return _kiosk_disabled_response(shelter_key=shelter_key, ip=ip)
 
     return render_template("kiosk_home.html", shelter=display_shelter)
 
@@ -162,125 +372,97 @@ def kiosk_checkin(shelter: str):
 
     matched_shelter = _resolve_shelter_or_404(shelter)
     if not matched_shelter:
-        return "Invalid shelter", 404
+        return _invalid_shelter_response()
 
     display_shelter = matched_shelter
     shelter_key = matched_shelter.strip().lower()
     ip = get_client_ip()
 
-    if not _kiosk_enabled():
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_disabled_block",
-            f"ip={ip}",
-        )
-        return "Kiosk intake is temporarily disabled.", 503
+    try:
+        kiosk_enabled = _kiosk_enabled()
+    except Exception:
+        current_app.logger.exception("Failed to load kiosk enabled state for shelter=%s", shelter_key)
+        return "Kiosk is temporarily unavailable.", 503
+
+    if not kiosk_enabled:
+        return _kiosk_disabled_response(shelter_key=shelter_key, ip=ip)
 
     if request.method == "GET":
-        return render_template(
-            "kiosk_checkin.html",
-            **_checkin_template_context(
-                shelter=display_shelter,
-                actual_end_required=False,
-                prior_activity_label="",
-            ),
+        return _render_checkin(
+            shelter=display_shelter,
+            actual_end_required=False,
+            prior_activity_label="",
         )
 
-    resident_code = (request.form.get("resident_code") or "").strip()
+    resident_code = str(request.form.get("resident_code") or "").strip()
     code_key = resident_code if resident_code else "blank"
 
-    actual_end_hour = (request.form.get("actual_end_hour") or "").strip()
-    actual_end_minute = (request.form.get("actual_end_minute") or "").strip()
-    actual_end_ampm = (request.form.get("actual_end_ampm") or "").strip().upper()
+    actual_end_hour = str(request.form.get("actual_end_hour") or "").strip()
+    actual_end_minute = str(request.form.get("actual_end_minute") or "").strip()
+    actual_end_ampm = str(request.form.get("actual_end_ampm") or "").strip().upper()
 
-    kiosk_cooldown_key = f"kiosk_cooldown:{shelter_key}:{ip}"
-    resident_code_lock_key = f"kiosk_resident_code_lock:{shelter_key}:{code_key}"
+    kiosk_cooldown_key = _cooldown_key(shelter_key, ip)
+    resident_code_lock_key = _resident_code_lock_key(shelter_key, code_key)
 
     if is_key_locked(kiosk_cooldown_key):
         seconds_remaining = get_key_lock_seconds_remaining(kiosk_cooldown_key)
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_cooldown_blocked",
-            f"ip={ip} seconds_remaining={seconds_remaining}",
-        )
-        flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template(
-            "kiosk_checkin.html",
-            **_checkin_template_context(
+        return _blocked_by_cooldown_response(
+            shelter_key=shelter_key,
+            ip=ip,
+            seconds_remaining=seconds_remaining,
+            render_response=_render_checkin(
                 shelter=display_shelter,
                 actual_end_required=False,
                 prior_activity_label="",
+                status_code=429,
             ),
-        ), 429
+        )
 
     if is_key_locked(resident_code_lock_key):
         seconds_remaining = get_key_lock_seconds_remaining(resident_code_lock_key)
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_resident_code_locked",
-            f"ip={ip} resident_code={code_key} seconds_remaining={seconds_remaining}",
-        )
-        flash("That Resident Code is temporarily locked. Please wait and try again.", "error")
-        return render_template(
-            "kiosk_checkin.html",
-            **_checkin_template_context(
+        return _blocked_by_resident_code_lock_response(
+            shelter_key=shelter_key,
+            ip=ip,
+            code_key=code_key,
+            seconds_remaining=seconds_remaining,
+            render_response=_render_checkin(
                 shelter=display_shelter,
                 actual_end_required=False,
                 prior_activity_label="",
+                status_code=429,
             ),
-        ), 429
+        )
 
     if is_rate_limited(
-        f"kiosk_checkin_cooldown_trigger:{shelter_key}:{ip}",
+        _checkin_cooldown_trigger_key(shelter_key, ip),
         limit=30,
         window_seconds=30,
     ):
-        lock_key(kiosk_cooldown_key, 30)
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_cooldown_started",
-            f"ip={ip} seconds=30",
-        )
-        flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template(
-            "kiosk_checkin.html",
-            **_checkin_template_context(
+        return _start_kiosk_cooldown_response(
+            shelter_key=shelter_key,
+            ip=ip,
+            lock_key_value=kiosk_cooldown_key,
+            lock_key_fn=lock_key,
+            render_response=_render_checkin(
                 shelter=display_shelter,
                 actual_end_required=False,
                 prior_activity_label="",
+                status_code=429,
             ),
-        ), 429
+        )
 
-    if is_rate_limited(f"kiosk_checkin_ip:{shelter_key}:{ip}", limit=15, window_seconds=60):
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_checkin_rate_limited",
-            f"ip={ip}",
-        )
-        flash("Too many attempts. Please wait and try again.", "error")
-        return render_template(
-            "kiosk_checkin.html",
-            **_checkin_template_context(
+    if is_rate_limited(_checkin_ip_rate_key(shelter_key, ip), limit=15, window_seconds=60):
+        return _rate_limited_response(
+            shelter_key=shelter_key,
+            ip=ip,
+            action_type="kiosk_checkin_rate_limited",
+            render_response=_render_checkin(
                 shelter=display_shelter,
                 actual_end_required=False,
                 prior_activity_label="",
+                status_code=429,
             ),
-        ), 429
+        )
 
     service_result = handle_checkin(
         shelter=shelter_key,
@@ -292,52 +474,40 @@ def kiosk_checkin(shelter: str):
 
     if not service_result.success:
         if service_result.needs_actual_end_prompt:
-            return render_template(
-                "kiosk_checkin.html",
-                **_checkin_template_context(
-                    shelter=display_shelter,
-                    actual_end_required=True,
-                    prior_activity_label=service_result.prior_activity_label,
-                    resident_code_value=resident_code,
-                ),
+            return _render_checkin(
+                shelter=display_shelter,
+                actual_end_required=True,
+                prior_activity_label=service_result.prior_activity_label,
+                resident_code_value=resident_code,
             )
 
         for error_message in service_result.errors:
             flash(error_message, "error")
 
-        if "Invalid Resident Code." in service_result.errors:
-            if is_rate_limited(
-                f"kiosk_resident_code_fail:{shelter_key}:{code_key}",
-                limit=5,
-                window_seconds=300,
-            ):
-                lock_key(resident_code_lock_key, 180)
-                log_action(
-                    "kiosk",
-                    None,
-                    shelter_key,
-                    None,
-                    "kiosk_resident_code_lock_started",
-                    f"ip={ip} resident_code={code_key} seconds=180",
-                )
-
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_checkin_failed",
-            f"ip={ip} resident_code={code_key} errors={' | '.join(service_result.errors)}",
+        _maybe_lock_failed_resident_code(
+            shelter_key=shelter_key,
+            ip=ip,
+            code_key=code_key,
+            errors=service_result.errors,
+            is_rate_limited_fn=is_rate_limited,
+            lock_key_fn=lock_key,
         )
-        return render_template(
-            "kiosk_checkin.html",
-            **_checkin_template_context(
-                shelter=display_shelter,
-                actual_end_required=service_result.actual_end_required,
-                prior_activity_label=service_result.prior_activity_label,
-                resident_code_value=resident_code if service_result.actual_end_required else "",
-            ),
-        ), service_result.status_code
+
+        _log_kiosk_failure(
+            shelter_key=shelter_key,
+            action_type="kiosk_checkin_failed",
+            ip=ip,
+            code_key=code_key,
+            errors=service_result.errors,
+        )
+
+        return _render_checkin(
+            shelter=display_shelter,
+            actual_end_required=service_result.actual_end_required,
+            prior_activity_label=service_result.prior_activity_label,
+            resident_code_value=resident_code if service_result.actual_end_required else "",
+            status_code=service_result.status_code,
+        )
 
     log_action(
         "attendance",
@@ -365,149 +535,121 @@ def kiosk_checkout(shelter: str):
 
     matched_shelter = _resolve_shelter_or_404(shelter)
     if not matched_shelter:
-        return "Invalid shelter", 404
+        return _invalid_shelter_response()
 
     display_shelter = matched_shelter
     shelter_key = matched_shelter.strip().lower()
     ip = get_client_ip()
-    checkout_categories = _active_checkout_categories_for_shelter(shelter_key)
-    aa_na_child_options = _active_aa_na_child_options_for_shelter(shelter_key)
-    volunteer_child_options = _active_volunteer_child_options_for_shelter(shelter_key)
 
-    if not _kiosk_enabled():
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_disabled_block",
-            f"ip={ip}",
-        )
-        return "Kiosk intake is temporarily disabled.", 503
+    try:
+        kiosk_enabled = _kiosk_enabled()
+        checkout_categories = _active_checkout_categories_for_shelter(shelter_key)
+        aa_na_child_options = _active_aa_na_child_options_for_shelter(shelter_key)
+        volunteer_child_options = _active_volunteer_child_options_for_shelter(shelter_key)
+    except Exception:
+        current_app.logger.exception("Failed to load kiosk checkout dependencies for shelter=%s", shelter_key)
+        return "Kiosk is temporarily unavailable.", 503
+
+    if not kiosk_enabled:
+        return _kiosk_disabled_response(shelter_key=shelter_key, ip=ip)
 
     if request.method == "GET":
-        return render_template(
-            "kiosk_checkout.html",
-            **_checkout_template_context(
-                shelter=display_shelter,
-                checkout_categories=checkout_categories,
-                aa_na_child_options=aa_na_child_options,
-                volunteer_child_options=volunteer_child_options,
-            ),
+        return _render_checkout(
+            shelter=display_shelter,
+            checkout_categories=checkout_categories,
+            aa_na_child_options=aa_na_child_options,
+            volunteer_child_options=volunteer_child_options,
         )
 
-    resident_code = (request.form.get("resident_code") or "").strip()
-    destination = (request.form.get("destination") or "").strip()
-    aa_na_meeting_1 = (request.form.get("aa_na_meeting_1") or "").strip()
-    aa_na_meeting_2 = (request.form.get("aa_na_meeting_2") or "").strip()
-    volunteer_community_service_option = (
+    resident_code = str(request.form.get("resident_code") or "").strip()
+    destination = str(request.form.get("destination") or "").strip()
+    aa_na_meeting_1 = str(request.form.get("aa_na_meeting_1") or "").strip()
+    aa_na_meeting_2 = str(request.form.get("aa_na_meeting_2") or "").strip()
+    volunteer_community_service_option = str(
         request.form.get("volunteer_community_service_option") or ""
     ).strip()
 
-    start_time_hour = (request.form.get("start_time_hour") or "").strip()
-    start_time_minute = (request.form.get("start_time_minute") or "").strip()
-    start_time_ampm = (request.form.get("start_time_ampm") or "").strip().upper()
+    start_time_hour = str(request.form.get("start_time_hour") or "").strip()
+    start_time_minute = str(request.form.get("start_time_minute") or "").strip()
+    start_time_ampm = str(request.form.get("start_time_ampm") or "").strip().upper()
 
-    end_time_hour = (request.form.get("end_time_hour") or "").strip()
-    end_time_minute = (request.form.get("end_time_minute") or "").strip()
-    end_time_ampm = (request.form.get("end_time_ampm") or "").strip().upper()
+    end_time_hour = str(request.form.get("end_time_hour") or "").strip()
+    end_time_minute = str(request.form.get("end_time_minute") or "").strip()
+    end_time_ampm = str(request.form.get("end_time_ampm") or "").strip().upper()
 
-    expected_back_hour = (request.form.get("expected_back_hour") or "").strip()
-    expected_back_minute = (request.form.get("expected_back_minute") or "").strip()
-    expected_back_ampm = (request.form.get("expected_back_ampm") or "").strip().upper()
+    expected_back_hour = str(request.form.get("expected_back_hour") or "").strip()
+    expected_back_minute = str(request.form.get("expected_back_minute") or "").strip()
+    expected_back_ampm = str(request.form.get("expected_back_ampm") or "").strip().upper()
 
-    note = (request.form.get("note") or "").strip()
+    note = str(request.form.get("note") or "").strip()
 
     code_key = resident_code if resident_code else "blank"
-    kiosk_cooldown_key = f"kiosk_cooldown:{shelter_key}:{ip}"
-    resident_code_lock_key = f"kiosk_resident_code_lock:{shelter_key}:{code_key}"
+    kiosk_cooldown_key = _cooldown_key(shelter_key, ip)
+    resident_code_lock_key = _resident_code_lock_key(shelter_key, code_key)
 
     if is_key_locked(kiosk_cooldown_key):
         seconds_remaining = get_key_lock_seconds_remaining(kiosk_cooldown_key)
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_cooldown_blocked",
-            f"ip={ip} seconds_remaining={seconds_remaining}",
-        )
-        flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template(
-            "kiosk_checkout.html",
-            **_checkout_template_context(
+        return _blocked_by_cooldown_response(
+            shelter_key=shelter_key,
+            ip=ip,
+            seconds_remaining=seconds_remaining,
+            render_response=_render_checkout(
                 shelter=display_shelter,
                 checkout_categories=checkout_categories,
                 aa_na_child_options=aa_na_child_options,
                 volunteer_child_options=volunteer_child_options,
+                status_code=429,
             ),
-        ), 429
+        )
 
     if is_key_locked(resident_code_lock_key):
         seconds_remaining = get_key_lock_seconds_remaining(resident_code_lock_key)
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_resident_code_locked",
-            f"ip={ip} resident_code={code_key} seconds_remaining={seconds_remaining}",
-        )
-        flash("That Resident Code is temporarily locked. Please wait and try again.", "error")
-        return render_template(
-            "kiosk_checkout.html",
-            **_checkout_template_context(
+        return _blocked_by_resident_code_lock_response(
+            shelter_key=shelter_key,
+            ip=ip,
+            code_key=code_key,
+            seconds_remaining=seconds_remaining,
+            render_response=_render_checkout(
                 shelter=display_shelter,
                 checkout_categories=checkout_categories,
                 aa_na_child_options=aa_na_child_options,
                 volunteer_child_options=volunteer_child_options,
+                status_code=429,
             ),
-        ), 429
+        )
 
     if is_rate_limited(
-        f"kiosk_checkout_cooldown_trigger:{shelter_key}:{ip}",
+        _checkout_cooldown_trigger_key(shelter_key, ip),
         limit=30,
         window_seconds=30,
     ):
-        lock_key(kiosk_cooldown_key, 30)
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_cooldown_started",
-            f"ip={ip} seconds=30",
-        )
-        flash("System cooling down. Please wait 30 seconds before trying again.", "error")
-        return render_template(
-            "kiosk_checkout.html",
-            **_checkout_template_context(
+        return _start_kiosk_cooldown_response(
+            shelter_key=shelter_key,
+            ip=ip,
+            lock_key_value=kiosk_cooldown_key,
+            lock_key_fn=lock_key,
+            render_response=_render_checkout(
                 shelter=display_shelter,
                 checkout_categories=checkout_categories,
                 aa_na_child_options=aa_na_child_options,
                 volunteer_child_options=volunteer_child_options,
+                status_code=429,
             ),
-        ), 429
+        )
 
-    if is_rate_limited(f"kiosk_checkout_ip:{shelter_key}:{ip}", limit=15, window_seconds=60):
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_checkout_rate_limited",
-            f"ip={ip}",
-        )
-        flash("Too many attempts. Please wait and try again.", "error")
-        return render_template(
-            "kiosk_checkout.html",
-            **_checkout_template_context(
+    if is_rate_limited(_checkout_ip_rate_key(shelter_key, ip), limit=15, window_seconds=60):
+        return _rate_limited_response(
+            shelter_key=shelter_key,
+            ip=ip,
+            action_type="kiosk_checkout_rate_limited",
+            render_response=_render_checkout(
                 shelter=display_shelter,
                 checkout_categories=checkout_categories,
                 aa_na_child_options=aa_na_child_options,
                 volunteer_child_options=volunteer_child_options,
+                status_code=429,
             ),
-        ), 429
+        )
 
     service_result = handle_checkout(
         shelter=shelter_key,
@@ -537,39 +679,30 @@ def kiosk_checkout(shelter: str):
         for error_message in service_result.errors:
             flash(error_message, "error")
 
-        if "Invalid Resident Code." in service_result.errors:
-            if is_rate_limited(
-                f"kiosk_resident_code_fail:{shelter_key}:{code_key}",
-                limit=5,
-                window_seconds=300,
-            ):
-                lock_key(resident_code_lock_key, 180)
-                log_action(
-                    "kiosk",
-                    None,
-                    shelter_key,
-                    None,
-                    "kiosk_resident_code_lock_started",
-                    f"ip={ip} resident_code={code_key} seconds=180",
-                )
-
-        log_action(
-            "kiosk",
-            None,
-            shelter_key,
-            None,
-            "kiosk_checkout_failed",
-            f"ip={ip} resident_code={code_key} errors={' | '.join(service_result.errors)}",
+        _maybe_lock_failed_resident_code(
+            shelter_key=shelter_key,
+            ip=ip,
+            code_key=code_key,
+            errors=service_result.errors,
+            is_rate_limited_fn=is_rate_limited,
+            lock_key_fn=lock_key,
         )
-        return render_template(
-            "kiosk_checkout.html",
-            **_checkout_template_context(
-                shelter=display_shelter,
-                checkout_categories=checkout_categories,
-                aa_na_child_options=aa_na_child_options,
-                volunteer_child_options=volunteer_child_options,
-            ),
-        ), service_result.status_code
+
+        _log_kiosk_failure(
+            shelter_key=shelter_key,
+            action_type="kiosk_checkout_failed",
+            ip=ip,
+            code_key=code_key,
+            errors=service_result.errors,
+        )
+
+        return _render_checkout(
+            shelter=display_shelter,
+            checkout_categories=checkout_categories,
+            aa_na_child_options=aa_na_child_options,
+            volunteer_child_options=volunteer_child_options,
+            status_code=service_result.status_code,
+        )
 
     log_action(
         "attendance",
