@@ -1,11 +1,29 @@
 from __future__ import annotations
 
-from flask import Blueprint, render_template
+from flask import Blueprint, current_app, flash, redirect, render_template, url_for
 
 from core.auth import require_login
-from core.db import db_fetchall
+from core.db import DbRow, db_fetchall
 
 staff_sms = Blueprint("staff_sms", __name__)
+
+
+def _normalize_sms_consent_rows(rows_raw: list[DbRow]) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+
+    for row in rows_raw or []:
+        rows.append(
+            {
+                "id": row.get("id"),
+                "first_name": row.get("first_name"),
+                "last_name": row.get("last_name"),
+                "phone": row.get("phone"),
+                "sms_opt_in": row.get("sms_opt_in"),
+                "sms_opt_out_at": row.get("sms_opt_out_at"),
+            }
+        )
+
+    return rows
 
 
 @staff_sms.route("/staff/sms-consent")
@@ -16,32 +34,20 @@ def staff_sms_consent():
             """
             SELECT id, first_name, last_name, phone, sms_opt_in, sms_opt_out_at
             FROM residents
-            WHERE phone IS NOT NULL AND phone != ''
+            WHERE COALESCE(phone, '') <> ''
             ORDER BY last_name ASC, first_name ASC, id DESC
             LIMIT 500
             """
         )
+    except Exception:
+        current_app.logger.exception("Failed to load SMS consent resident list.")
+        flash("Unable to load SMS consent data. Please try again or contact an administrator.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
 
-        rows = []
-        for r in rows_raw or []:
-            if isinstance(r, dict):
-                rows.append(r)
-            else:
-                rows.append(
-                    {
-                        "id": r[0],
-                        "first_name": r[1],
-                        "last_name": r[2],
-                        "phone": r[3],
-                        "sms_opt_in": r[4],
-                        "sms_opt_out_at": r[5],
-                    }
-                )
+    rows = _normalize_sms_consent_rows(rows_raw)
 
-        return render_template(
-            "staff_sms_consent.html",
-            rows=rows,
-            title="SMS Consent",
-        )
-    except Exception as e:
-        return "SMS consent error: " + str(e), 500
+    return render_template(
+        "staff_sms_consent.html",
+        rows=rows,
+        title="SMS Consent",
+    )
