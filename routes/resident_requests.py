@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
 from core.audit import log_action
-from core.db import db_fetchone, get_db
+from core.db import db_fetchone
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
 from core.runtime import init_db
@@ -64,13 +64,13 @@ def _parse_transport_needed_at(needed_raw: str) -> tuple[datetime | None, str | 
         needed_local = _parse_dt(needed_raw)
         needed_dt = (
             needed_local.replace(tzinfo=CHICAGO_TZ)
-            .astimezone(timezone.utc)
+            .astimezone(UTC)
             .replace(tzinfo=None)
         )
     except Exception:
         return None, "Invalid needed date or time."
 
-    if needed_dt < datetime.utcnow() - timedelta(minutes=1):
+    if needed_dt < datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=1):
         return None, "Needed time cannot be in the past."
 
     return needed_dt, None
@@ -90,25 +90,7 @@ def _insert_transport_request(
     callback_phone: str | None,
     submitted_at: str,
 ) -> int:
-    sql = _db_sql(
-        """
-        INSERT INTO transport_requests (
-            shelter,
-            resident_identifier,
-            first_name,
-            last_name,
-            needed_at,
-            pickup_location,
-            destination,
-            reason,
-            resident_notes,
-            callback_phone,
-            status,
-            submitted_at
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING id
-        """,
+    row = db_fetchone(
         """
         INSERT INTO transport_requests (
             shelter,
@@ -125,37 +107,24 @@ def _insert_transport_request(
             submitted_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING id
         """,
+        (
+            shelter,
+            resident_identifier,
+            first_name,
+            last_name,
+            needed_iso,
+            pickup_location,
+            destination,
+            reason,
+            resident_notes,
+            callback_phone,
+            "pending",
+            submitted_at,
+        ),
     )
-
-    params = (
-        shelter,
-        resident_identifier,
-        first_name,
-        last_name,
-        needed_iso,
-        pickup_location,
-        destination,
-        reason,
-        resident_notes,
-        callback_phone,
-        "pending",
-        submitted_at,
-    )
-
-    conn = get_db()
-    cur = conn.cursor()
-    try:
-        cur.execute(sql, params)
-        if g.get("db_kind") == "pg":
-            req_id = cur.fetchone()[0]
-        else:
-            conn.commit()
-            req_id = cur.lastrowid
-    finally:
-        cur.close()
-
-    return int(req_id)
+    return int(row["id"])
 
 
 @resident_requests.route("/resident", methods=["GET", "POST"])
