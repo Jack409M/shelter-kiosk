@@ -9,7 +9,6 @@ from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from db.schema_people import ensure_resident_child_income_supports_table
 from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import yes_no_to_int
 
 
 def ensure_intake_income_supports_table() -> None:
@@ -115,6 +114,27 @@ def _to_int(value: Any, default: int) -> int:
         return int(value)
     except Exception:
         return default
+
+
+def _to_bool_or_none(value: Any) -> bool | None:
+    if value is None:
+        return None
+
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, (int, float)):
+        return value != 0
+
+    normalized = str(value).strip().lower()
+    if normalized in {"", "unknown", "none", "null"}:
+        return None
+    if normalized in {"1", "true", "yes", "y", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off"}:
+        return False
+
+    return None
 
 
 def _load_income_weight_settings_for_enrollment(enrollment_id: int) -> dict[str, float | int]:
@@ -327,7 +347,7 @@ def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> d
         "alimony_income": alimony_income or None,
         "other_income": other_income or None,
         "other_income_description": (data.get("other_income_description") or "").strip() or None,
-        "receives_snap_at_entry": yes_no_to_int(data.get("receives_snap_at_entry")),
+        "receives_snap_at_entry": _to_bool_or_none(data.get("receives_snap_at_entry")),
         "total_cash_support": total_cash_support,
         "weighted_stable_income": weighted_stable_income,
         "survivor_benefit_total": survivor_benefit_total,
@@ -529,11 +549,13 @@ def recalculate_intake_income_support(enrollment_id: int) -> None:
         "alimony_income": current.get("alimony_income"),
         "other_income": current.get("other_income"),
         "other_income_description": current.get("other_income_description"),
-        "receives_snap_at_entry": "yes"
-        if current.get("receives_snap_at_entry") in (True, 1)
-        else "no"
-        if current.get("receives_snap_at_entry") in (False, 0)
-        else "",
+        "receives_snap_at_entry": (
+            "yes"
+            if current.get("receives_snap_at_entry") is True
+            else "no"
+            if current.get("receives_snap_at_entry") is False
+            else ""
+        ),
     }
     upsert_intake_income_support(enrollment_id, source_data)
 
