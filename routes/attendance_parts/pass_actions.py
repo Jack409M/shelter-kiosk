@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from core.audit import log_action
+from flask import abort, flash, redirect, url_for
+
+from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
     apply_pass_approval,
     apply_pass_check_in,
@@ -14,7 +16,22 @@ from routes.attendance_parts.pass_action_helpers import (
 from routes.attendance_parts.pass_policy import has_active_pass_block
 
 
-def approve_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str) -> tuple[bool, str, str, str]:
+def _require_pass_access():
+    if not can_manage_passes():
+        abort(403)
+
+
+def _redirect(target: str, pass_id: int | None = None):
+    if pass_id:
+        return redirect(url_for(target, pass_id=pass_id))
+    return redirect(url_for(target))
+
+
+# -----------------------------------------
+# APPROVE
+# -----------------------------------------
+
+def approve_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str):
     pass_row = load_pass_for_review(pass_id, shelter)
 
     ok, resident_id, pass_type_key, error_message = validate_pending_review_pass(pass_row)
@@ -44,11 +61,14 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: st
 
     send_approval_sms_if_possible(pass_id, shelter)
 
-    log_action("pass", resident_id, shelter, staff_id, "approve", f"pass_id={pass_id}")
     return True, "attendance.staff_passes_pending", "Pass request approved.", "ok"
 
 
-def deny_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str) -> tuple[bool, str, str, str]:
+# -----------------------------------------
+# DENY
+# -----------------------------------------
+
+def deny_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str):
     pass_row = load_pass_for_review(pass_id, shelter)
 
     ok, resident_id, pass_type_key, error_message = validate_pending_review_pass(pass_row)
@@ -64,11 +84,14 @@ def deny_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str) 
         staff_name=staff_name,
     )
 
-    log_action("pass", resident_id, shelter, staff_id, "deny", f"pass_id={pass_id}")
     return True, "attendance.staff_passes_pending", "Pass request denied.", "ok"
 
 
-def check_in_pass_return(*, pass_id: int, shelter: str, staff_id) -> tuple[bool, str, str, str]:
+# -----------------------------------------
+# CHECK IN
+# -----------------------------------------
+
+def check_in_pass_return(*, pass_id: int, shelter: str, staff_id):
     pass_row = load_pass_for_check_in(pass_id, shelter)
 
     ok, resident_id, error_message = validate_check_in_pass(pass_row)
@@ -82,5 +105,49 @@ def check_in_pass_return(*, pass_id: int, shelter: str, staff_id) -> tuple[bool,
         staff_id=staff_id,
     )
 
-    log_action("pass", resident_id, shelter, staff_id, "check_in", f"pass_id={pass_id}")
     return True, "attendance.staff_passes_away_now", "Resident checked in from pass.", "ok"
+
+
+# -----------------------------------------
+# VIEWS
+# -----------------------------------------
+
+def staff_pass_approve_view(pass_id: int, action_context):
+    _require_pass_access()
+
+    ok, target, message, category = approve_pass_request(
+        pass_id=pass_id,
+        shelter=action_context.shelter,
+        staff_id=action_context.staff_id,
+        staff_name=action_context.staff_name,
+    )
+
+    flash(message, category)
+    return _redirect(target, pass_id)
+
+
+def staff_pass_deny_view(pass_id: int, action_context):
+    _require_pass_access()
+
+    ok, target, message, category = deny_pass_request(
+        pass_id=pass_id,
+        shelter=action_context.shelter,
+        staff_id=action_context.staff_id,
+        staff_name=action_context.staff_name,
+    )
+
+    flash(message, category)
+    return _redirect(target)
+
+
+def staff_pass_check_in_view(pass_id: int, action_context):
+    _require_pass_access()
+
+    ok, target, message, category = check_in_pass_return(
+        pass_id=pass_id,
+        shelter=action_context.shelter,
+        staff_id=action_context.staff_id,
+    )
+
+    flash(message, category)
+    return _redirect(target)
