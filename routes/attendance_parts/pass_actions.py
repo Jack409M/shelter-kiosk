@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import abort, flash, redirect, url_for
 
+from core.audit import log_action
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
     apply_pass_approval,
@@ -61,6 +62,15 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: st
 
     send_approval_sms_if_possible(pass_id, shelter)
 
+    log_action(
+        "pass",
+        int(resident_id or 0),
+        shelter,
+        staff_id,
+        "approve",
+        {"pass_id": pass_id, "pass_type": pass_type_key},
+    )
+
     return True, "attendance.staff_passes_pending", "Pass request approved.", "ok"
 
 
@@ -84,6 +94,15 @@ def deny_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str):
         staff_name=staff_name,
     )
 
+    log_action(
+        "pass",
+        int(resident_id or 0),
+        shelter,
+        staff_id,
+        "deny",
+        {"pass_id": pass_id, "pass_type": pass_type_key},
+    )
+
     return True, "attendance.staff_passes_pending", "Pass request denied.", "ok"
 
 
@@ -103,6 +122,15 @@ def check_in_pass_return(*, pass_id: int, shelter: str, staff_id):
         shelter=shelter,
         resident_id=int(resident_id or 0),
         staff_id=staff_id,
+    )
+
+    log_action(
+        "pass",
+        int(resident_id or 0),
+        shelter,
+        staff_id,
+        "check_in",
+        {"pass_id": pass_id},
     )
 
     return True, "attendance.staff_passes_away_now", "Resident checked in from pass.", "ok"
