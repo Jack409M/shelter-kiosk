@@ -2,18 +2,24 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from threading import Lock
-from typing import Any
+from typing import Any, Iterator, TypeAlias
 
 from flask import current_app, g
 
 try:
+    from psycopg2.extensions import connection as PgConnection
+    from psycopg2.extensions import cursor as PgCursor
     from psycopg2.extras import RealDictCursor
     from psycopg2.pool import PoolError, SimpleConnectionPool
 except Exception:
+    PgConnection = Any
+    PgCursor = Any
     RealDictCursor = None
     PoolError = Exception
     SimpleConnectionPool = None
 
+
+DbRow: TypeAlias = dict[str, Any]
 
 PG_POOL: Any = None
 _PG_POOL_LOCK = Lock()
@@ -52,14 +58,14 @@ def _init_pg_pool() -> None:
         )
 
 
-def _get_pg_pool():
+def _get_pg_pool() -> Any:
     _init_pg_pool()
     if PG_POOL is None:
         raise RuntimeError("Postgres pool was not initialized.")
     return PG_POOL
 
 
-def _get_or_create_request_connection():
+def _get_or_create_request_connection() -> PgConnection:
     if "db" in g:
         return g.db
 
@@ -75,7 +81,7 @@ def _get_or_create_request_connection():
     return conn
 
 
-def get_db() -> Any:
+def get_db() -> PgConnection:
     return _get_or_create_request_connection()
 
 
@@ -103,7 +109,7 @@ def close_db(e: Exception | None = None) -> None:
 
 
 @contextmanager
-def _db_cursor(*, dict_rows: bool = False):
+def _db_cursor(*, dict_rows: bool = False) -> Iterator[PgCursor]:
     conn = get_db()
     sql_cursor_factory = RealDictCursor if dict_rows else None
 
@@ -117,31 +123,35 @@ def _db_cursor(*, dict_rows: bool = False):
         cur.close()
 
 
-def db_execute(sql: str, params: tuple = ()) -> None:
+def db_execute(sql: str, params: tuple[Any, ...] = ()) -> None:
     normalized_sql = _normalize_sql(sql)
 
     with _db_cursor(dict_rows=False) as cur:
         cur.execute(normalized_sql, params)
 
 
-def db_fetchone(sql: str, params: tuple = ()) -> Any:
+def db_fetchone(sql: str, params: tuple[Any, ...] = ()) -> DbRow | None:
     normalized_sql = _normalize_sql(sql)
 
     with _db_cursor(dict_rows=True) as cur:
         cur.execute(normalized_sql, params)
-        return cur.fetchone()
+        row = cur.fetchone()
+        if row is None:
+            return None
+        return dict(row)
 
 
-def db_fetchall(sql: str, params: tuple = ()) -> list[Any]:
+def db_fetchall(sql: str, params: tuple[Any, ...] = ()) -> list[DbRow]:
     normalized_sql = _normalize_sql(sql)
 
     with _db_cursor(dict_rows=True) as cur:
         cur.execute(normalized_sql, params)
-        return cur.fetchall()
+        rows = cur.fetchall()
+        return [dict(row) for row in rows]
 
 
 @contextmanager
-def db_transaction():
+def db_transaction() -> Iterator[PgConnection]:
     conn = get_db()
     already_in_transaction = bool(g.get("db_in_transaction"))
 
