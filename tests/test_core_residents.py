@@ -1,3 +1,5 @@
+from flask import session
+
 from core.runtime import init_db
 
 
@@ -64,6 +66,10 @@ def test_record_resident_transfer_basic(app):
             ("transfer_test",),
         )[0]
 
+    with app.test_request_context():
+        session["username"] = "test_staff"
+        session["staff_user_id"] = 1
+
         record_resident_transfer(
             resident_id=resident["id"],
             from_shelter="abba",
@@ -71,6 +77,7 @@ def test_record_resident_transfer_basic(app):
             note="test move",
         )
 
+    with app.app_context():
         rows = db_fetchall(
             "SELECT * FROM resident_transfers WHERE resident_id = %s",
             (resident["id"],),
