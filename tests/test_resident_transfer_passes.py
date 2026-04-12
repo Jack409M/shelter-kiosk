@@ -241,3 +241,5 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
 
     assert all(r["shelter"] == "haven" for r in leave)
     assert all(r["shelter"] == "haven" for r in transport)
+
+
