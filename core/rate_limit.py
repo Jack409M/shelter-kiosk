@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from collections import deque
 from threading import RLock
+from typing import Final
 
 from flask import has_app_context, g
 
@@ -13,11 +14,17 @@ from core.rate_limit_store import insert_lock_history
 from core.rate_limit_store import insert_rate_limit_event
 from core.rate_limit_store import prune_if_needed as prune_rate_limit_store_if_needed
 from core.rate_limit_store import recent_lock_count
-from core.security_state_store import ensure_tables as ensure_security_state_tables
 from core.security_state_store import get_active_state_rows
 from core.security_state_store import get_active_state_until
 from core.security_state_store import upsert_state
 
+
+_DEFAULT_PROGRESSIVE_LOCK_SECONDS: Final[int] = 600
+_ESCALATED_PROGRESSIVE_LOCK_SECONDS: Final[int] = 1800
+_MAX_PROGRESSIVE_LOCK_SECONDS: Final[int] = 10800
+_PROGRESSIVE_LOCK_LOOKBACK_SECONDS: Final[int] = 1800
+_MEMORY_HISTORY_RETENTION_SECONDS: Final[int] = 86400
+_MEMORY_BUCKET_RETENTION_SECONDS: Final[int] = 86400
 
 _BUCKETS: dict[str, deque[float]] = {}
 _BANNED_IPS: dict[str, float] = {}
@@ -28,6 +35,25 @@ _STATE_LOCK = RLock()
 
 def _now() -> float:
     return time.time()
+
+
+def _require_text(value: object, *, label: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise ValueError(f"{label} must not be empty")
+    return text
+
+
+def _require_positive_int(value: object, *, label: str) -> int:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{label} must be an integer")
+
+    if number <= 0:
+        raise ValueError(f"{label} must be positive")
+
+    return number
 
 
 def _prune_bucket(bucket: deque[float], window_seconds: int, now: float) -> None:
@@ -42,7 +68,7 @@ def _prune_expired_state(state: dict[str, float], now: float) -> None:
         del state[key]
 
 
-def _prune_lock_history(now: float, window_seconds: int = 86400) -> None:
+def _prune_lock_history(now: float, window_seconds: int = _MEMORY_HISTORY_RETENTION_SECONDS) -> None:
     empty_keys: list[str] = []
 
     for key, history in _LOCK_HISTORY.items():
@@ -54,7 +80,10 @@ def _prune_lock_history(now: float, window_seconds: int = 86400) -> None:
         del _LOCK_HISTORY[key]
 
 
-def _prune_stale_rate_limit_buckets(now: float, max_window_seconds: int = 86400) -> None:
+def _prune_stale_rate_limit_buckets(
+    now: float,
+    max_window_seconds: int = _MEMORY_BUCKET_RETENTION_SECONDS,
+) -> None:
     empty_keys: list[str] = []
 
     for key, bucket in _BUCKETS.items():
@@ -69,10 +98,8 @@ def _prune_stale_rate_limit_buckets(now: float, max_window_seconds: int = 86400)
 def _db_kind() -> str:
     if not has_app_context():
         return ""
-    try:
-        return str(g.get("db_kind") or "").strip().lower()
-    except Exception:
-        return ""
+    kind_value = g.get("db_kind")
+    return str(kind_value or "").strip().lower()
 
 
 def _use_db_backend() -> bool:
@@ -83,13 +110,13 @@ def _ensure_db_tables() -> None:
     if not has_app_context():
         return
 
-    ensure_security_state_tables()
     ensure_rate_limit_store_tables()
 
 
 def _prune_db_if_needed(now: float) -> None:
     if not has_app_context():
         return
+
     prune_rate_limit_store_if_needed(now)
 
 
@@ -121,7 +148,7 @@ def _memory_lock_key(key: str, seconds: int) -> None:
             _LOCK_HISTORY[key] = history
 
         history.append(now)
-        _prune_bucket(history, 86400, now)
+        _prune_bucket(history, _MEMORY_HISTORY_RETENTION_SECONDS, now)
 
 
 def _memory_is_key_locked(key: str) -> bool:
@@ -155,18 +182,18 @@ def _memory_get_progressive_lock_seconds(key: str) -> int:
 
         history = _LOCK_HISTORY.get(key)
         if history is None:
-            return 600
+            return _DEFAULT_PROGRESSIVE_LOCK_SECONDS
 
-        cutoff_30m = now - 1800
-        recent_lock_count_30m = sum(1 for ts in history if ts >= cutoff_30m)
+        cutoff = now - _PROGRESSIVE_LOCK_LOOKBACK_SECONDS
+        recent_count = sum(1 for timestamp in history if timestamp >= cutoff)
 
-        if recent_lock_count_30m >= 2:
-            return 10800
+        if recent_count >= 2:
+            return _MAX_PROGRESSIVE_LOCK_SECONDS
 
-        if recent_lock_count_30m >= 1:
-            return 1800
+        if recent_count >= 1:
+            return _ESCALATED_PROGRESSIVE_LOCK_SECONDS
 
-        return 600
+        return _DEFAULT_PROGRESSIVE_LOCK_SECONDS
 
 
 def _memory_is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
@@ -189,81 +216,97 @@ def _memory_is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
 
 
 def ban_ip(ip: str, seconds: int) -> None:
-    if _use_db_backend():
-        upsert_state("banned_ip", ip, _now() + seconds)
-        _prune_db_if_needed(_now())
-        return
+    ip_clean = _require_text(ip, label="ip")
+    seconds_clean = _require_positive_int(seconds, label="seconds")
 
-    _memory_ban_ip(ip, seconds)
-
-
-def is_ip_banned(ip: str) -> bool:
-    if _use_db_backend():
-        until = get_active_state_until("banned_ip", ip)
-        return until is not None and until > _now()
-
-    return _memory_is_ip_banned(ip)
-
-
-def lock_key(key: str, seconds: int) -> None:
     if _use_db_backend():
         now = _now()
-        upsert_state("locked_key", key, now + seconds)
-        insert_lock_history(key)
+        upsert_state("banned_ip", ip_clean, now + seconds_clean)
         _prune_db_if_needed(now)
         return
 
-    _memory_lock_key(key, seconds)
+    _memory_ban_ip(ip_clean, seconds_clean)
+
+
+def is_ip_banned(ip: str) -> bool:
+    ip_clean = _require_text(ip, label="ip")
+
+    if _use_db_backend():
+        until = get_active_state_until("banned_ip", ip_clean)
+        return until is not None and until > _now()
+
+    return _memory_is_ip_banned(ip_clean)
+
+
+def lock_key(key: str, seconds: int) -> None:
+    key_clean = _require_text(key, label="key")
+    seconds_clean = _require_positive_int(seconds, label="seconds")
+
+    if _use_db_backend():
+        now = _now()
+        upsert_state("locked_key", key_clean, now + seconds_clean)
+        insert_lock_history(key_clean)
+        _prune_db_if_needed(now)
+        return
+
+    _memory_lock_key(key_clean, seconds_clean)
 
 
 def is_key_locked(key: str) -> bool:
+    key_clean = _require_text(key, label="key")
+
     if _use_db_backend():
-        until = get_active_state_until("locked_key", key)
+        until = get_active_state_until("locked_key", key_clean)
         return until is not None and until > _now()
 
-    return _memory_is_key_locked(key)
+    return _memory_is_key_locked(key_clean)
 
 
 def get_key_lock_seconds_remaining(key: str) -> int:
+    key_clean = _require_text(key, label="key")
+
     if _use_db_backend():
-        until = get_active_state_until("locked_key", key)
+        until = get_active_state_until("locked_key", key_clean)
         if until is None:
             return 0
         return max(0, int(until - _now()))
 
-    return _memory_get_key_lock_seconds_remaining(key)
+    return _memory_get_key_lock_seconds_remaining(key_clean)
 
 
 def get_progressive_lock_seconds(key: str) -> int:
+    key_clean = _require_text(key, label="key")
+
     if _use_db_backend():
-        count = recent_lock_count(key, 1800)
+        count = recent_lock_count(key_clean, _PROGRESSIVE_LOCK_LOOKBACK_SECONDS)
 
         if count >= 2:
-            return 10800
+            return _MAX_PROGRESSIVE_LOCK_SECONDS
 
         if count >= 1:
-            return 1800
+            return _ESCALATED_PROGRESSIVE_LOCK_SECONDS
 
-        return 600
+        return _DEFAULT_PROGRESSIVE_LOCK_SECONDS
 
-    return _memory_get_progressive_lock_seconds(key)
+    return _memory_get_progressive_lock_seconds(key_clean)
 
 
 def is_rate_limited(key: str, limit: int, window_seconds: int) -> bool:
-    if limit <= 0 or window_seconds <= 0:
-        return True
+    key_clean = _require_text(key, label="key")
+    limit_clean = _require_positive_int(limit, label="limit")
+    window_clean = _require_positive_int(window_seconds, label="window_seconds")
 
     if _use_db_backend():
         _ensure_db_tables()
         now = _now()
 
-        insert_rate_limit_event(key)
-        count = count_rate_limit_events(key, window_seconds)
+        insert_rate_limit_event(key_clean)
+        count = count_rate_limit_events(key_clean, window_clean)
 
         _prune_db_if_needed(now)
-        return count > limit
+        return count > limit_clean
 
-    return _memory_is_rate_limited(key, limit, window_seconds)
+    return _memory_is_rate_limited(key_clean, limit_clean, window_clean)
 
 
 def get_banned_ips_snapshot() -> list[dict[str, int | str]]:
@@ -296,10 +339,12 @@ def get_banned_ips_snapshot() -> list[dict[str, int | str]]:
 
 
 def get_rate_limit_snapshot(window_seconds: int = 3600) -> list[dict[str, int | str]]:
+    window_clean = _require_positive_int(window_seconds, label="window_seconds")
+
     if _use_db_backend():
         _ensure_db_tables()
         _prune_db_if_needed(_now())
-        return get_rate_limit_snapshot_rows(window_seconds)
+        return get_rate_limit_snapshot_rows(window_clean)
 
     with _STATE_LOCK:
         now = _now()
@@ -307,7 +352,7 @@ def get_rate_limit_snapshot(window_seconds: int = 3600) -> list[dict[str, int | 
         empty_keys: list[str] = []
 
         for key, bucket in _BUCKETS.items():
-            _prune_bucket(bucket, window_seconds, now)
+            _prune_bucket(bucket, window_clean, now)
 
             if not bucket:
                 empty_keys.append(key)
