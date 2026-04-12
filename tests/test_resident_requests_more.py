@@ -5,6 +5,12 @@ from core.db import db_execute, db_fetchall
 from core.runtime import init_db
 
 
+def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
+    with client.session_transaction() as session:
+        session["_csrf_token"] = token
+    return token
+
+
 def _login_resident_session(client) -> None:
     with client.session_transaction() as session:
         session["resident_id"] = 1
@@ -22,6 +28,8 @@ def test_resident_signin_page_loads(client):
 
 
 def test_resident_signin_invalid_code_returns_401(client, monkeypatch):
+    csrf_token = _set_csrf_token(client)
+
     monkeypatch.setattr(resident_requests_module, "init_db", lambda: None)
     monkeypatch.setattr(resident_requests_module, "_client_ip", lambda: "127.0.0.1")
     monkeypatch.setattr(resident_requests_module, "is_rate_limited", lambda *args, **kwargs: False)
@@ -30,7 +38,10 @@ def test_resident_signin_invalid_code_returns_401(client, monkeypatch):
 
     response = client.post(
         "/resident",
-        data={"resident_code": "bad-code"},
+        data={
+            "_csrf_token": csrf_token,
+            "resident_code": "bad-code",
+        },
         follow_redirects=False,
     )
 
@@ -53,6 +64,7 @@ def test_resident_transport_page_loads_for_logged_in_resident(client):
 
 def test_resident_transport_post_missing_required_fields_returns_400(app, client, monkeypatch):
     _login_resident_session(client)
+    csrf_token = _set_csrf_token(client)
 
     with app.app_context():
         init_db()
@@ -64,6 +76,7 @@ def test_resident_transport_post_missing_required_fields_returns_400(app, client
     response = client.post(
         "/transport",
         data={
+            "_csrf_token": csrf_token,
             "needed_at": "",
             "pickup_location": "",
             "destination": "",
@@ -76,6 +89,7 @@ def test_resident_transport_post_missing_required_fields_returns_400(app, client
 
 def test_resident_transport_post_success_redirects(app, client, monkeypatch):
     _login_resident_session(client)
+    csrf_token = _set_csrf_token(client)
 
     with app.app_context():
         init_db()
@@ -96,6 +110,7 @@ def test_resident_transport_post_success_redirects(app, client, monkeypatch):
     response = client.post(
         "/transport",
         data={
+            "_csrf_token": csrf_token,
             "needed_at": "2026-12-31 10:00",
             "pickup_location": "Abba House",
             "destination": "Clinic",
