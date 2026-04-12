@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, TypeAlias
 
+from core.data_integrity import ensure_resident_integrity
 from core.db import db_execute, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
@@ -477,6 +478,8 @@ def create_intake(
         if draft_id is not None:
             _complete_intake_draft(draft_id)
 
+        ensure_resident_integrity(new_resident_id)
+
     return IntakeCreateResult(
         resident_id=new_resident_id,
         resident_identifier=resident_identifier,
@@ -503,6 +506,8 @@ def create_intake_for_existing_resident(
 
         if draft_id is not None:
             _complete_intake_draft(draft_id)
+
+        ensure_resident_integrity(existing_resident_id)
 
     return enrollment_id
 
@@ -537,6 +542,8 @@ def update_intake(
             enrollment_id,
             selected_need_keys=_entry_need_keys(data),
         )
+
+        ensure_resident_integrity(resident_id)
 
     return IntakeUpdateResult(
         resident_id=resident_id,
