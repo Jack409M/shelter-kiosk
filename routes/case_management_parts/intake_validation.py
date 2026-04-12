@@ -151,6 +151,11 @@ def _find_possible_duplicate(
     return None
 
 
+def _normalize_phone_or_none(value: str | None) -> str | None:
+    phone_digits = digits_only(value)
+    return phone_digits or None
+
+
 def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list[str]]:
     normalized_selected_shelter = normalize_shelter_name(shelter)
     selected_need_keys = normalize_selected_need_keys(form.getlist("entry_need"))
@@ -285,10 +290,11 @@ def _validate_intake_form(form: Any, shelter: str) -> tuple[dict[str, Any], list
         raw_days = (entry_date - sobriety_date).days
         data["days_sober_at_entry"] = max(raw_days, 0)
 
-    phone_digits = digits_only(data["phone"])
-    if data["phone"] and len(phone_digits) < 10:
+    phone_raw = data["phone"]
+    phone_digits = _normalize_phone_or_none(phone_raw)
+    if phone_digits is not None and len(phone_digits) < 10:
         errors.append("Phone must contain at least 10 digits.")
-    data["phone"] = phone_digits or None
+    data["phone"] = phone_digits
 
     if data["email"]:
         data["email"] = data["email"].strip().lower()
