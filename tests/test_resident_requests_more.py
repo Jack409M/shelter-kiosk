@@ -77,9 +77,8 @@ def test_resident_transport_post_missing_required_fields_returns_400(app, client
 
 
 def test_resident_transport_post_success_redirects(app, client, monkeypatch):
-    import routes.resident_requests as resident_requests_module
-
     from core.db import db_execute, db_fetchall
+    import routes.resident_requests as resident_requests_module
 
     _login_resident_session(client)
 
