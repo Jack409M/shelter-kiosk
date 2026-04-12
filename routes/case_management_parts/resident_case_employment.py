@@ -1,6 +1,33 @@
 from __future__ import annotations
 
 
+def _to_float_or_none(value) -> float | None:
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def _to_int_or_none(value) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except Exception:
+        return None
+
+
+def _to_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    normalized = str(value or "").strip().lower()
+    return normalized in {"1", "true", "yes", "y", "on"}
+
+
 def load_employment_income_defaults() -> dict:
     return {
         "employment_income_module_enabled": True,
@@ -27,41 +54,74 @@ def resolve_monthly_income_for_display(enrollment_context: dict) -> object:
 
 
 def build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
-    graduation_minimum = float(settings.get("employment_income_graduation_minimum") or 1200.0)
-    green_min = float(settings.get("employment_income_band_green_min") or graduation_minimum)
-    yellow_min = float(settings.get("employment_income_band_yellow_min") or 1000.0)
-    orange_min = float(settings.get("employment_income_band_orange_min") or 700.0)
+    graduation_minimum = _to_float_or_none(
+        settings.get("employment_income_graduation_minimum")
+    )
+    if graduation_minimum is None or graduation_minimum <= 0:
+        graduation_minimum = 1200.0
 
-    income_value = None
-    if monthly_income not in (None, ""):
-        try:
-            income_value = float(monthly_income)
-        except Exception:
-            income_value = None
+    green_min = _to_float_or_none(settings.get("employment_income_band_green_min"))
+    if green_min is None:
+        green_min = graduation_minimum
 
-    if income_value is None or graduation_minimum <= 0:
+    yellow_min = _to_float_or_none(settings.get("employment_income_band_yellow_min"))
+    if yellow_min is None:
+        yellow_min = 1000.0
+
+    orange_min = _to_float_or_none(settings.get("employment_income_band_orange_min"))
+    if orange_min is None:
+        orange_min = 700.0
+
+    income_value = _to_float_or_none(monthly_income)
+
+    if income_value is None:
         readiness_percent = None
     else:
         readiness_percent = round(min((income_value / graduation_minimum) * 100.0, 100.0))
 
     if income_value is None:
         band_key = "neutral"
-        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#eef2f6; border:1px solid #c7d2de; color:#46607a; font-weight:700; font-size:12px; line-height:1;"
+        pill_style = (
+            "display:inline-flex; align-items:center; justify-content:center; "
+            "min-width:48px; padding:4px 10px; border-radius:999px; "
+            "background:#eef2f6; border:1px solid #c7d2de; color:#46607a; "
+            "font-weight:700; font-size:12px; line-height:1;"
+        )
     elif income_value >= green_min:
         band_key = "green"
-        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#dfeee5; border:1px solid #8fbea0; color:#1d5f33; font-weight:700; font-size:12px; line-height:1;"
+        pill_style = (
+            "display:inline-flex; align-items:center; justify-content:center; "
+            "min-width:48px; padding:4px 10px; border-radius:999px; "
+            "background:#dfeee5; border:1px solid #8fbea0; color:#1d5f33; "
+            "font-weight:700; font-size:12px; line-height:1;"
+        )
     elif income_value >= yellow_min:
         band_key = "yellow"
-        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#fff3c7; border:1px solid #ddc56d; color:#7a6500; font-weight:700; font-size:12px; line-height:1;"
+        pill_style = (
+            "display:inline-flex; align-items:center; justify-content:center; "
+            "min-width:48px; padding:4px 10px; border-radius:999px; "
+            "background:#fff3c7; border:1px solid #ddc56d; color:#7a6500; "
+            "font-weight:700; font-size:12px; line-height:1;"
+        )
     elif income_value >= orange_min:
         band_key = "orange"
-        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#ffe0bf; border:1px solid #d9a06a; color:#98510a; font-weight:700; font-size:12px; line-height:1;"
+        pill_style = (
+            "display:inline-flex; align-items:center; justify-content:center; "
+            "min-width:48px; padding:4px 10px; border-radius:999px; "
+            "background:#ffe0bf; border:1px solid #d9a06a; color:#98510a; "
+            "font-weight:700; font-size:12px; line-height:1;"
+        )
     else:
         band_key = "red"
-        pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#f6dada; border:1px solid #d38b8b; color:#8f1f1f; font-weight:700; font-size:12px; line-height:1;"
+        pill_style = (
+            "display:inline-flex; align-items:center; justify-content:center; "
+            "min-width:48px; padding:4px 10px; border-radius:999px; "
+            "background:#f6dada; border:1px solid #d38b8b; color:#8f1f1f; "
+            "font-weight:700; font-size:12px; line-height:1;"
+        )
 
     return {
-        "module_enabled": bool(settings.get("employment_income_module_enabled", True)),
+        "module_enabled": _to_bool(settings.get("employment_income_module_enabled", True)),
         "graduation_minimum": graduation_minimum,
         "income_value": income_value,
         "readiness_percent": readiness_percent,
@@ -106,13 +166,13 @@ def build_employment_stability_snapshot(
     rs = recovery_snapshot or {}
 
     employment_status = str(employment_status_snapshot or "").strip().lower()
-    current_job_days = rs.get("current_job_days")
-    continuous_days = rs.get("continuous_employment_days")
-    gap_days = rs.get("employment_gap_days")
+    current_job_days = _to_int_or_none(rs.get("current_job_days"))
+    continuous_days = _to_int_or_none(rs.get("continuous_employment_days"))
+    gap_days = _to_int_or_none(rs.get("employment_gap_days"))
     upward_value = rs.get("upward_job_change")
 
     currently_employed = employment_status == "employed"
-    upward_protected = bool(currently_employed and upward_value is True)
+    upward_protected = bool(currently_employed and _to_bool(upward_value))
 
     current_job_days_min = 90
     continuous_days_min = 180
@@ -120,8 +180,8 @@ def build_employment_stability_snapshot(
     passes = bool(
         currently_employed
         and (
-            (isinstance(current_job_days, int) and current_job_days >= current_job_days_min)
-            or (isinstance(continuous_days, int) and continuous_days >= continuous_days_min)
+            (current_job_days is not None and current_job_days >= current_job_days_min)
+            or (continuous_days is not None and continuous_days >= continuous_days_min)
         )
     )
 
