@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.db import db_execute, db_fetchall
+from core.db import db_execute, db_fetchall, db_transaction
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import placeholder
 
@@ -96,8 +96,12 @@ LEGACY_INTAKE_RULES = [
 VALID_NEED_STATUSES = {"open", "addressed", "not_applicable"}
 
 
+def _normalize_need_key(value: Any) -> str:
+    return str(value or "").strip().lower().replace(" ", "_")
+
+
 def normalize_need_status(value: Any) -> str | None:
-    normalized = (str(value or "").strip().lower()).replace(" ", "_")
+    normalized = _normalize_need_key(value)
     if normalized in VALID_NEED_STATUSES:
         return normalized
     return None
@@ -116,7 +120,7 @@ def normalize_selected_need_keys(raw_values: Any) -> list[str]:
     seen: set[str] = set()
 
     for value in values:
-        key = (str(value or "").strip().lower()).replace(" ", "_")
+        key = _normalize_need_key(value)
         if not key:
             continue
         if key not in OFFICIAL_NEEDS_BY_KEY:
@@ -173,6 +177,7 @@ def build_triggered_needs(
         return []
 
     triggered: list[dict[str, Any]] = []
+    seen: set[str] = set()
 
     for definition in LEGACY_INTAKE_RULES:
         source_field = definition["source_field"]
@@ -183,7 +188,10 @@ def build_triggered_needs(
             need_meta = OFFICIAL_NEEDS_BY_KEY.get(need_key)
             if not need_meta:
                 continue
+            if need_key in seen:
+                continue
 
+            seen.add(need_key)
             triggered.append(
                 {
                     "need_key": need_key,
@@ -226,105 +234,120 @@ def sync_enrollment_needs(
     ph = placeholder()
     now = utcnow_iso()
 
-    existing_rows = db_fetchall(
-        f"""
-        SELECT
-            id,
-            need_key,
-            status
-        FROM resident_needs
-        WHERE enrollment_id = {ph}
-        """,
-        (enrollment_id,),
-    )
-
-    existing_by_key = {row["need_key"]: row for row in existing_rows}
     triggered_needs = build_triggered_needs(
         intake_row=intake_row,
         selected_need_keys=selected_need_keys,
     )
     triggered_by_key = {need["need_key"]: need for need in triggered_needs}
 
-    for need_key, need in triggered_by_key.items():
-        existing = existing_by_key.get(need_key)
+    with db_transaction():
+        existing_rows = db_fetchall(
+            f"""
+            SELECT
+                id,
+                need_key,
+                status
+            FROM resident_needs
+            WHERE enrollment_id = {ph}
+            """,
+            (enrollment_id,),
+        )
 
-        if existing:
+        existing_by_key: dict[str, dict[str, Any]] = {}
+        for row in existing_rows:
+            normalized_key = _normalize_need_key(row.get("need_key"))
+            if not normalized_key:
+                continue
+            if normalized_key not in OFFICIAL_NEEDS_BY_KEY:
+                continue
+            if normalized_key in existing_by_key:
+                continue
+            existing_by_key[normalized_key] = {
+                "id": row["id"],
+                "need_key": normalized_key,
+                "status": normalize_need_status(row.get("status")) or "",
+            }
+
+        for need_key, need in triggered_by_key.items():
+            existing = existing_by_key.get(need_key)
+
+            if existing:
+                db_execute(
+                    f"""
+                    UPDATE resident_needs
+                    SET
+                        need_label = {ph},
+                        source_field = {ph},
+                        source_value = {ph},
+                        updated_at = {ph}
+                    WHERE id = {ph}
+                    """,
+                    (
+                        need["need_label"],
+                        need["source_field"],
+                        need["source_value"],
+                        now,
+                        existing["id"],
+                    ),
+                )
+                continue
+
+            db_execute(
+                f"""
+                INSERT INTO resident_needs
+                (
+                    enrollment_id,
+                    need_key,
+                    need_label,
+                    source_field,
+                    source_value,
+                    status,
+                    created_at,
+                    updated_at
+                )
+                VALUES
+                (
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph},
+                    {ph}
+                )
+                """,
+                (
+                    enrollment_id,
+                    need["need_key"],
+                    need["need_label"],
+                    need["source_field"],
+                    need["source_value"],
+                    "open",
+                    now,
+                    now,
+                ),
+            )
+
+        for need_key, existing in existing_by_key.items():
+            if need_key in triggered_by_key:
+                continue
+            if existing["status"] != "open":
+                continue
+
             db_execute(
                 f"""
                 UPDATE resident_needs
                 SET
-                    need_label = {ph},
-                    source_field = {ph},
-                    source_value = {ph},
+                    status = 'not_applicable',
                     updated_at = {ph}
                 WHERE id = {ph}
                 """,
                 (
-                    need["need_label"],
-                    need["source_field"],
-                    need["source_value"],
                     now,
                     existing["id"],
                 ),
             )
-            continue
-
-        db_execute(
-            f"""
-            INSERT INTO resident_needs
-            (
-                enrollment_id,
-                need_key,
-                need_label,
-                source_field,
-                source_value,
-                status,
-                created_at,
-                updated_at
-            )
-            VALUES
-            (
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph},
-                {ph}
-            )
-            """,
-            (
-                enrollment_id,
-                need["need_key"],
-                need["need_label"],
-                need["source_field"],
-                need["source_value"],
-                "open",
-                now,
-                now,
-            ),
-        )
-
-    for need_key, existing in existing_by_key.items():
-        if need_key in triggered_by_key:
-            continue
-        if existing["status"] != "open":
-            continue
-
-        db_execute(
-            f"""
-            UPDATE resident_needs
-            SET
-                status = 'not_applicable',
-                updated_at = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                now,
-                existing["id"],
-            ),
-        )
 
 
 def get_open_enrollment_needs(enrollment_id: int) -> list[dict[str, Any]]:
