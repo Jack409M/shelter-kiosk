@@ -23,7 +23,10 @@ def _expected_back_utc_for_pass(end_at: str | None, end_date: str | None) -> dat
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
         try:
-            return datetime.fromisoformat(raw_end_at)
+            parsed = datetime.fromisoformat(raw_end_at)
+            if parsed.tzinfo is not None:
+                return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return parsed
         except Exception:
             return None
 
