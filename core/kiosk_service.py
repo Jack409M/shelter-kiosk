@@ -3,13 +3,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date as date_cls
 from datetime import datetime, time as time_cls, timezone
-from typing import Any
+from typing import Any, Final
 from zoneinfo import ZoneInfo
 
 from core.db import db_execute, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 
-CHICAGO_TZ = ZoneInfo("America/Chicago")
+
+CHICAGO_TZ: Final[ZoneInfo] = ZoneInfo("America/Chicago")
+UTC: Final[timezone] = timezone.utc
 
 
 @dataclass(slots=True)
@@ -42,84 +44,34 @@ class CheckoutResult:
     expected_back_value: str | None = None
 
 
-def _parse_iso_datetime(value: str | None) -> datetime | None:
-    raw_value = (value or "").strip()
+def _normalize_shelter(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+def _clean_text(value: str | None) -> str:
+    return (value or "").strip()
+
+
+def _parse_utc_datetime(value: str | None) -> datetime | None:
+    raw_value = _clean_text(value)
     if not raw_value:
         return None
 
     try:
-        return datetime.fromisoformat(raw_value)
-    except Exception:
+        parsed = datetime.fromisoformat(raw_value)
+    except ValueError:
         return None
 
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
 
-def active_resident_id_for_code(shelter: str, resident_code: str) -> int | None:
-    normalized_shelter = (shelter or "").strip().lower()
-    normalized_code = (resident_code or "").strip()
-
-    row = db_fetchone(
-        """
-        SELECT id
-        FROM residents
-        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = %s
-          AND TRIM(COALESCE(resident_code, '')) = %s
-          AND is_active = TRUE
-        LIMIT 1
-        """,
-        (normalized_shelter, normalized_code),
-    )
-
-    if not row:
-        return None
-
-    resident_id = row.get("id")
-    return int(resident_id) if resident_id is not None else None
+    return parsed.astimezone(UTC)
 
 
-def latest_open_checkout_row(resident_id: int, shelter: str) -> dict[str, Any] | None:
-    row = db_fetchone(
-        """
-        SELECT
-            id,
-            event_type,
-            event_time,
-            destination,
-            obligation_start_time,
-            obligation_end_time,
-            actual_obligation_end_time
-        FROM attendance_events
-        WHERE resident_id = %s
-          AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
-        ORDER BY event_time DESC, id DESC
-        LIMIT 1
-        """,
-        (resident_id, (shelter or "").strip().lower()),
-    )
-
-    if not row:
-        return None
-
-    if (row.get("event_type") or "").strip() != "check_out":
-        return None
-
-    return row
-
-
-def checkout_requires_actual_end_time(checkout_row: dict[str, Any] | None) -> bool:
-    if not checkout_row:
-        return False
-
-    destination = (checkout_row.get("destination") or "").strip()
-    obligation_start = (checkout_row.get("obligation_start_time") or "").strip()
-    obligation_end = (checkout_row.get("obligation_end_time") or "").strip()
-
-    return bool(destination and obligation_start and obligation_end)
-
-
-def manual_time_value(hour_text: str, minute_text: str, ampm_text: str) -> str:
+def _utc_iso_from_local_time(hour_text: str, minute_text: str, ampm_text: str) -> str:
     hour_int = int(hour_text)
     minute_int = int(minute_text)
-    ampm_value = (ampm_text or "").strip().upper()
+    ampm_value = _clean_text(ampm_text).upper()
 
     if hour_int < 1 or hour_int > 12:
         raise ValueError("Invalid hour")
@@ -144,14 +96,81 @@ def manual_time_value(hour_text: str, minute_text: str, ampm_text: str) -> str:
     )
 
     return (
-        local_dt.astimezone(timezone.utc)
+        local_dt.astimezone(UTC)
         .replace(tzinfo=None)
         .isoformat(timespec="seconds")
     )
 
 
+def active_resident_id_for_code(shelter: str, resident_code: str) -> int | None:
+    normalized_shelter = _normalize_shelter(shelter)
+    normalized_code = _clean_text(resident_code)
+
+    row = db_fetchone(
+        """
+        SELECT id
+        FROM residents
+        WHERE LOWER(TRIM(COALESCE(shelter, ''))) = %s
+          AND TRIM(COALESCE(resident_code, '')) = %s
+          AND is_active = TRUE
+        LIMIT 1
+        """,
+        (normalized_shelter, normalized_code),
+    )
+
+    if row is None:
+        return None
+
+    resident_id = row.get("id")
+    return int(resident_id) if resident_id is not None else None
+
+
+def latest_open_checkout_row(resident_id: int, shelter: str) -> dict[str, Any] | None:
+    row = db_fetchone(
+        """
+        SELECT
+            id,
+            event_type,
+            event_time,
+            destination,
+            obligation_start_time,
+            obligation_end_time,
+            actual_obligation_end_time
+        FROM attendance_events
+        WHERE resident_id = %s
+          AND LOWER(TRIM(COALESCE(shelter, ''))) = %s
+        ORDER BY event_time DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, _normalize_shelter(shelter)),
+    )
+
+    if row is None:
+        return None
+
+    if _clean_text(row.get("event_type")) != "check_out":
+        return None
+
+    return row
+
+
+def checkout_requires_actual_end_time(checkout_row: dict[str, Any] | None) -> bool:
+    if checkout_row is None:
+        return False
+
+    destination = _clean_text(checkout_row.get("destination"))
+    obligation_start = _clean_text(checkout_row.get("obligation_start_time"))
+    obligation_end = _clean_text(checkout_row.get("obligation_end_time"))
+
+    return bool(destination and obligation_start and obligation_end)
+
+
+def manual_time_value(hour_text: str, minute_text: str, ampm_text: str) -> str:
+    return _utc_iso_from_local_time(hour_text, minute_text, ampm_text)
+
+
 def active_pass_row(resident_id: int, shelter: str) -> dict[str, Any] | None:
-    normalized_shelter = (shelter or "").strip().lower()
+    normalized_shelter = _normalize_shelter(shelter)
     now_iso = utcnow_iso()
     today_iso = now_iso[:10]
 
@@ -178,11 +197,11 @@ def active_pass_row(resident_id: int, shelter: str) -> dict[str, Any] | None:
 
 
 def pass_expected_back_value(pass_row: dict[str, Any]) -> str | None:
-    end_at = (pass_row.get("end_at") or "").strip()
+    end_at = _clean_text(pass_row.get("end_at"))
     if end_at:
         return end_at
 
-    end_date = (pass_row.get("end_date") or "").strip()
+    end_date = _clean_text(pass_row.get("end_date"))
     if not end_date:
         return None
 
@@ -193,7 +212,7 @@ def pass_expected_back_value(pass_row: dict[str, Any]) -> str | None:
     )
 
     return (
-        local_end.astimezone(timezone.utc)
+        local_end.astimezone(UTC)
         .replace(tzinfo=None)
         .isoformat(timespec="seconds")
     )
@@ -207,7 +226,7 @@ def update_resident_rad_progress(
     if not resident_id:
         return
 
-    if (destination_label or "").strip().lower() != "rad":
+    if _clean_text(destination_label).lower() != "rad":
         return
 
     completed_at_value = utcnow_iso()
@@ -235,7 +254,7 @@ def update_resident_rad_progress(
             False,
             completed_at_value,
             resident_id,
-            (shelter or "").strip().lower(),
+            _normalize_shelter(shelter),
         ),
     )
 
@@ -248,8 +267,8 @@ def handle_checkin(
     actual_end_minute: str,
     actual_end_ampm: str,
 ) -> CheckinResult:
-    normalized_shelter = (shelter or "").strip().lower()
-    normalized_code = (resident_code or "").strip()
+    normalized_shelter = _normalize_shelter(shelter)
+    normalized_code = _clean_text(resident_code)
 
     errors: list[str] = []
 
@@ -270,7 +289,7 @@ def handle_checkin(
     open_checkout = latest_open_checkout_row(resident_id, normalized_shelter)
     actual_end_required = checkout_requires_actual_end_time(open_checkout)
     prior_activity_label = (
-        (open_checkout.get("destination") or "").strip()
+        _clean_text((open_checkout or {}).get("destination"))
         if open_checkout
         else ""
     )
@@ -286,7 +305,7 @@ def handle_checkin(
         )
 
     checkin_time_value = utcnow_iso()
-    checkin_time_dt = _parse_iso_datetime(checkin_time_value)
+    checkin_time_dt = _parse_utc_datetime(checkin_time_value)
     actual_obligation_end_value: str | None = None
 
     if actual_end_required:
@@ -296,7 +315,7 @@ def handle_checkin(
                 actual_end_minute,
                 actual_end_ampm,
             )
-        except Exception:
+        except ValueError:
             return CheckinResult(
                 success=False,
                 status_code=400,
@@ -306,8 +325,8 @@ def handle_checkin(
                 resident_id=resident_id,
             )
 
-        actual_obligation_end_dt = _parse_iso_datetime(actual_obligation_end_value)
-        planned_start_dt = _parse_iso_datetime(
+        actual_obligation_end_dt = _parse_utc_datetime(actual_obligation_end_value)
+        planned_start_dt = _parse_utc_datetime(
             (open_checkout or {}).get("obligation_start_time")
         )
 
@@ -433,9 +452,9 @@ def handle_checkout(
     aa_na_parent_activity_key: str,
     volunteer_parent_activity_key: str,
 ) -> CheckoutResult:
-    normalized_shelter = (shelter or "").strip().lower()
-    normalized_code = (resident_code or "").strip()
-    normalized_destination = (destination or "").strip()
+    normalized_shelter = _normalize_shelter(shelter)
+    normalized_code = _clean_text(resident_code)
+    normalized_destination = _clean_text(destination)
 
     errors: list[str] = []
 
@@ -450,9 +469,9 @@ def handle_checkout(
         errors.append("Invalid Resident Code.")
 
     category_map = {
-        (item.get("activity_label") or "").strip(): item
+        _clean_text(item.get("activity_label")): item
         for item in checkout_categories
-        if (item.get("activity_label") or "").strip()
+        if _clean_text(item.get("activity_label"))
     }
     selected_category = category_map.get(normalized_destination)
 
@@ -460,27 +479,25 @@ def handle_checkout(
         errors.append("Please select a valid Activity Category.")
 
     selected_activity_key = (
-        (selected_category.get("activity_key") or "").strip()
+        _clean_text(selected_category.get("activity_key"))
         if selected_category
         else ""
     )
 
     child_option_labels = {
-        (item.get("option_label") or "").strip()
+        _clean_text(item.get("option_label"))
         for item in aa_na_child_options
-        if (item.get("option_label") or "").strip()
+        if _clean_text(item.get("option_label"))
     }
 
     volunteer_option_labels = {
-        (item.get("option_label") or "").strip()
+        _clean_text(item.get("option_label"))
         for item in volunteer_child_options
-        if (item.get("option_label") or "").strip()
+        if _clean_text(item.get("option_label"))
     }
 
     is_aa_na_meeting = selected_activity_key == aa_na_parent_activity_key
-    is_volunteer_community_service = (
-        selected_activity_key == volunteer_parent_activity_key
-    )
+    is_volunteer_community_service = selected_activity_key == volunteer_parent_activity_key
 
     if is_aa_na_meeting:
         if not aa_na_meeting_1:
@@ -505,9 +522,7 @@ def handle_checkout(
     obligation_end_value: str | None = None
     active_pass: dict[str, Any] | None = None
 
-    requires_approved_pass = bool(
-        selected_category.get("requires_approved_pass")
-    ) if selected_category else False
+    requires_approved_pass = bool(selected_category.get("requires_approved_pass")) if selected_category else False
 
     if resident_id is not None and requires_approved_pass:
         active_pass = active_pass_row(resident_id, normalized_shelter)
@@ -527,7 +542,7 @@ def handle_checkout(
                     start_time_minute,
                     start_time_ampm,
                 )
-            except Exception:
+            except ValueError:
                 errors.append("Invalid Start Time.")
 
         if not end_time_hour or not end_time_minute or not end_time_ampm:
@@ -539,7 +554,7 @@ def handle_checkout(
                     end_time_minute,
                     end_time_ampm,
                 )
-            except Exception:
+            except ValueError:
                 errors.append("Invalid End Time.")
 
         if not expected_back_hour or not expected_back_minute or not expected_back_ampm:
@@ -551,7 +566,7 @@ def handle_checkout(
                     expected_back_minute,
                     expected_back_ampm,
                 )
-            except Exception:
+            except ValueError:
                 errors.append("Invalid Expected Back to Shelter.")
 
     if errors:
@@ -589,14 +604,12 @@ def handle_checkout(
         note_parts.append(f"Meeting 2: {aa_na_meeting_2}")
 
     if is_volunteer_community_service and volunteer_community_service_option:
-        note_parts.append(
-            f"Volunteer or Community Service: {volunteer_community_service_option}"
-        )
+        note_parts.append(f"Volunteer or Community Service: {volunteer_community_service_option}")
 
     if requires_approved_pass and active_pass:
         pass_id = active_pass.get("id")
-        pass_type = (active_pass.get("pass_type") or "").strip()
-        pass_destination = (active_pass.get("destination") or "").strip()
+        pass_type = _clean_text(active_pass.get("pass_type"))
+        pass_destination = _clean_text(active_pass.get("destination"))
 
         if pass_id:
             note_parts.append(f"Pass ID: {pass_id}")
