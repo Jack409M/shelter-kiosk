@@ -1,44 +1,45 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Final
 
 from flask import current_app, g, has_app_context
 
-from core.db import db_execute, db_fetchall
+from core.db import db_execute, db_fetchall, db_fetchone
+
+
+_TABLE_NAME: Final[str] = "security_runtime_state"
 
 
 def _now() -> float:
     return time.time()
 
 
-def _db_kind() -> str:
+def _require_db_kind() -> str:
     if not has_app_context():
-        return ""
-    try:
-        return str(g.get("db_kind") or "").strip().lower()
-    except Exception:
-        return ""
+        raise RuntimeError("security_state_store requires app context")
 
+    kind_value = g.get("db_kind")
+    if not kind_value:
+        raise RuntimeError("db_kind is not set in flask.g")
 
-def _is_pg() -> bool:
-    return _db_kind() == "pg"
+    kind = str(kind_value).strip().lower()
+    if kind not in {"pg", "sqlite"}:
+        raise RuntimeError(f"Unsupported db_kind: {kind!r}")
+
+    return kind
 
 
 def _sql(pg_sql: str, sqlite_sql: str) -> str:
-    return pg_sql if _is_pg() else sqlite_sql
+    kind = _require_db_kind()
+    return pg_sql if kind == "pg" else sqlite_sql
 
 
-def ensure_tables() -> None:
-    if not has_app_context():
-        return
-
+def _ensure_tables_once() -> None:
     if current_app.config.get("_SECURITY_STATE_READY") is True:
         return
 
-    kind = _db_kind()
-    if kind not in {"pg", "sqlite"}:
-        return
+    kind = _require_db_kind()
 
     db_execute(
         _sql(
@@ -75,8 +76,32 @@ def ensure_tables() -> None:
     current_app.config["_SECURITY_STATE_READY"] = True
 
 
+def _require_text(value: Any, *, label: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise ValueError(f"{label} must not be empty")
+    return text
+
+
+def _require_epoch(value: Any, *, label: str) -> float:
+    try:
+        epoch = float(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{label} must be a number")
+
+    if epoch <= 0:
+        raise ValueError(f"{label} must be positive")
+
+    return epoch
+
+
 def upsert_state(state_type: str, key: str, expires_at: float) -> None:
-    ensure_tables()
+    _ensure_tables_once()
+
+    state_type_clean = _require_text(state_type, label="state_type")
+    key_clean = _require_text(key, label="state_key")
+    expires_at_clean = _require_epoch(expires_at, label="expires_at")
+
     now = _now()
 
     db_execute(
@@ -110,15 +135,19 @@ def upsert_state(state_type: str, key: str, expires_at: float) -> None:
                 updated_at_epoch = excluded.updated_at_epoch
             """,
         ),
-        (state_type, key, expires_at, now, now),
+        (state_type_clean, key_clean, expires_at_clean, now, now),
     )
 
 
 def get_active_state_until(state_type: str, key: str) -> float | None:
-    ensure_tables()
+    _ensure_tables_once()
+
+    state_type_clean = _require_text(state_type, label="state_type")
+    key_clean = _require_text(key, label="state_key")
+
     now = _now()
 
-    rows = db_fetchall(
+    row = db_fetchone(
         _sql(
             """
             SELECT expires_at_epoch
@@ -137,18 +166,28 @@ def get_active_state_until(state_type: str, key: str) -> float | None:
             LIMIT 1
             """,
         ),
-        (state_type, key, now),
+        (state_type_clean, key_clean, now),
     )
 
-    if not rows:
+    if row is None:
         return None
 
-    row = rows[0]
-    return float(row.get("expires_at_epoch") if isinstance(row, dict) else row[0])
+    value = row.get("expires_at_epoch") if isinstance(row, dict) else row[0]
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        current_app.logger.warning(
+            "Invalid expires_at_epoch value in security_runtime_state: %r",
+            value,
+        )
+        return None
 
 
 def get_active_state_rows(state_type: str) -> list[dict[str, int | str]]:
-    ensure_tables()
+    _ensure_tables_once()
+
+    state_type_clean = _require_text(state_type, label="state_type")
     now = _now()
 
     rows = db_fetchall(
@@ -168,14 +207,20 @@ def get_active_state_rows(state_type: str) -> list[dict[str, int | str]]:
             ORDER BY expires_at_epoch DESC
             """,
         ),
-        (state_type, now),
+        (state_type_clean, now),
     )
 
     output: list[dict[str, int | str]] = []
 
     for row in rows or []:
         key = row.get("state_key") if isinstance(row, dict) else row[0]
-        until = float(row.get("expires_at_epoch") if isinstance(row, dict) else row[1])
+        until_value = row.get("expires_at_epoch") if isinstance(row, dict) else row[1]
+
+        try:
+            until = float(until_value)
+        except (TypeError, ValueError):
+            continue
+
         output.append(
             {
                 "key": str(key),
