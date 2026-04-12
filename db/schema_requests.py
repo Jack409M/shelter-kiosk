@@ -198,9 +198,10 @@ def ensure_resident_passes_table(kind: str) -> None:
         CREATE TABLE IF NOT EXISTS resident_passes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             resident_id INTEGER NOT NULL,
-            shelter TEXT NOT NULL,
+            shelter TEXT NOT NULL CHECK (LENGTH(TRIM(shelter)) > 0),
             pass_type TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
+            status TEXT NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending','approved','denied','completed')),
             start_at TEXT,
             end_at TEXT,
             start_date TEXT,
@@ -213,16 +214,18 @@ def ensure_resident_passes_table(kind: str) -> None:
             approved_at TEXT,
             delete_after_at TEXT,
             created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY(resident_id) REFERENCES residents(id) ON DELETE CASCADE
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS resident_passes (
             id SERIAL PRIMARY KEY,
-            resident_id INTEGER NOT NULL,
-            shelter TEXT NOT NULL,
+            resident_id INTEGER NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+            shelter TEXT NOT NULL CHECK (LENGTH(TRIM(shelter)) > 0),
             pass_type TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
+            status TEXT NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending','approved','denied','completed')),
             start_at TEXT,
             end_at TEXT,
             start_date TEXT,
@@ -457,6 +460,15 @@ def ensure_indexes() -> None:
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_passes_shelter_delete_after_idx "
             "ON resident_passes (shelter, delete_after_at)"
+        )
+    except Exception:
+        pass
+
+    try:
+        db_execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS resident_passes_one_active_idx "
+            "ON resident_passes (resident_id) "
+            "WHERE status IN ('pending','approved')"
         )
     except Exception:
         pass
