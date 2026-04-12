@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import routes.resident_requests as resident_requests_module
+from core.db import db_execute, db_fetchall
 from core.runtime import init_db
 
 
@@ -20,8 +22,6 @@ def test_resident_signin_page_loads(client):
 
 
 def test_resident_signin_invalid_code_returns_401(client, monkeypatch):
-    import routes.resident_requests as resident_requests_module
-
     monkeypatch.setattr(resident_requests_module, "init_db", lambda: None)
     monkeypatch.setattr(resident_requests_module, "_client_ip", lambda: "127.0.0.1")
     monkeypatch.setattr(resident_requests_module, "is_rate_limited", lambda *args, **kwargs: False)
@@ -52,8 +52,6 @@ def test_resident_transport_page_loads_for_logged_in_resident(client):
 
 
 def test_resident_transport_post_missing_required_fields_returns_400(app, client, monkeypatch):
-    import routes.resident_requests as resident_requests_module
-
     _login_resident_session(client)
 
     with app.app_context():
@@ -77,9 +75,6 @@ def test_resident_transport_post_missing_required_fields_returns_400(app, client
 
 
 def test_resident_transport_post_success_redirects(app, client, monkeypatch):
-    from core.db import db_execute, db_fetchall
-    import routes.resident_requests as resident_requests_module
-
     _login_resident_session(client)
 
     with app.app_context():
