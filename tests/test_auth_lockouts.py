@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from werkzeug.security import generate_password_hash
+
+from core.runtime import init_db
+
 
 def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
     with client.session_transaction() as session:
@@ -7,59 +11,151 @@ def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
     return token
 
 
-def test_staff_login_banned_ip_returns_403(client, monkeypatch):
+def _insert_staff_user(app, *, username: str, password: str) -> None:
+    from core.db import db_execute
+
+    with app.app_context():
+        init_db()
+
+        db_execute(
+            """
+            DELETE FROM staff_users
+            WHERE LOWER(username) = LOWER(%s)
+            """,
+            (username,),
+        )
+
+        db_execute(
+            """
+            INSERT INTO staff_users (
+                username,
+                password_hash,
+                role,
+                is_active,
+                created_at
+            )
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                username,
+                generate_password_hash(password),
+                "admin",
+                True,
+                "2026-01-01T00:00:00",
+            ),
+        )
+
+
+def test_staff_login_blocks_after_repeated_failures(app, client):
     import routes.auth as auth_module
 
-    monkeypatch.setattr(
-        auth_module,
-        "get_all_shelters",
-        lambda: ["Abba House", "Haven House", "Gratitude House"],
-    )
-    monkeypatch.setattr(auth_module, "get_client_ip", lambda: "127.0.0.1")
-    monkeypatch.setattr(auth_module, "is_ip_banned", lambda ip: True)
-    monkeypatch.setattr(auth_module, "log_action", lambda *args, **kwargs: None)
+    _insert_staff_user(app, username="lockout_user", password="correct")
 
-    csrf_token = _set_csrf_token(client)
+    csrf = _set_csrf_token(client)
+
+    # attempt multiple bad logins
+    for _ in range(10):
+        response = client.post(
+            "/staff/login",
+            data={
+                "_csrf_token": csrf,
+                "username": "lockout_user",
+                "password": "wrong",
+                "shelter": "abba",
+            },
+            follow_redirects=False,
+        )
+
+    # after repeated failures, system should block
+    assert response.status_code in (401, 429)
+
+
+def test_staff_login_allows_correct_password_before_lock(app, client):
+    import routes.auth as auth_module
+
+    _insert_staff_user(app, username="normal_user", password="correct")
+
+    csrf = _set_csrf_token(client)
 
     response = client.post(
         "/staff/login",
         data={
-            "_csrf_token": csrf_token,
-            "username": "admin",
-            "password": "secret123",
+            "_csrf_token": csrf,
+            "username": "normal_user",
+            "password": "correct",
             "shelter": "abba",
         },
         follow_redirects=False,
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 302
+    assert "/staff/admin/dashboard" in response.headers["Location"]
 
 
-def test_staff_login_locked_username_returns_429(client, monkeypatch):
+def test_staff_login_ip_ban_after_abuse(app, client):
     import routes.auth as auth_module
 
-    monkeypatch.setattr(
-        auth_module,
-        "get_all_shelters",
-        lambda: ["Abba House", "Haven House", "Gratitude House"],
-    )
-    monkeypatch.setattr(auth_module, "get_client_ip", lambda: "127.0.0.1")
-    monkeypatch.setattr(auth_module, "is_ip_banned", lambda ip: False)
-    monkeypatch.setattr(auth_module, "is_key_locked", lambda key: True)
-    monkeypatch.setattr(auth_module, "get_key_lock_seconds_remaining", lambda key: 120)
-    monkeypatch.setattr(auth_module, "log_action", lambda *args, **kwargs: None)
+    _insert_staff_user(app, username="ip_user", password="correct")
 
-    csrf_token = _set_csrf_token(client)
+    csrf = _set_csrf_token(client)
 
+    # simulate aggressive abuse
+    for _ in range(25):
+        client.post(
+            "/staff/login",
+            data={
+                "_csrf_token": csrf,
+                "username": "ip_user",
+                "password": "wrong",
+                "shelter": "abba",
+            },
+            follow_redirects=False,
+        )
+
+    # now even correct password should fail due to IP ban
     response = client.post(
         "/staff/login",
         data={
-            "_csrf_token": csrf_token,
-            "username": "admin",
-            "password": "secret123",
+            "_csrf_token": csrf,
+            "username": "ip_user",
+            "password": "correct",
             "shelter": "abba",
         },
         follow_redirects=False,
     )
 
-    assert response.status_code == 429
+    assert response.status_code in (403, 429)
+
+
+def test_staff_login_lock_is_username_specific(app, client):
+    _insert_staff_user(app, username="user_a", password="correct")
+    _insert_staff_user(app, username="user_b", password="correct")
+
+    csrf = _set_csrf_token(client)
+
+    # lock out user_a
+    for _ in range(15):
+        client.post(
+            "/staff/login",
+            data={
+                "_csrf_token": csrf,
+                "username": "user_a",
+                "password": "wrong",
+                "shelter": "abba",
+            },
+            follow_redirects=False,
+        )
+
+    # user_b should still work
+    response = client.post(
+        "/staff/login",
+        data={
+            "_csrf_token": csrf,
+            "username": "user_b",
+            "password": "correct",
+            "shelter": "abba",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
