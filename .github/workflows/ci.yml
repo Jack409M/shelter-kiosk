@@ -67,15 +67,41 @@ jobs:
             sleep 2
           done
 
+      - name: Create log directory
+        run: mkdir -p test-logs
+
       - name: Ruff
         run: |
-          ruff check tests core/app_factory.py core/app_hooks.py core/runtime.py core/auth.py core/db.py core/request_security.py routes/auth.py routes/resident_requests.py
+          ruff check tests core/app_factory.py core/app_hooks.py core/runtime.py core/auth.py core/db.py core/request_security.py routes/auth.py routes/resident_requests.py | tee test-logs/ruff.log
 
       - name: MyPy
         run: |
-          mypy --ignore-missing-imports --explicit-package-bases core/app_factory.py core/app_hooks.py core/runtime.py core/auth.py core/db.py core/request_security.py routes/auth.py routes/resident_requests.py
+          mypy --ignore-missing-imports --explicit-package-bases core/app_factory.py core/app_hooks.py core/runtime.py core/auth.py core/db.py core/request_security.py routes/auth.py routes/resident_requests.py | tee test-logs/mypy.log
 
-      - name: Pytest with coverage
+      - name: Pytest resident requests
         run: |
-          coverage run -m pytest
-          coverage report --fail-under=35
+          coverage run --parallel-mode -m pytest tests/test_resident_requests.py tests/test_resident_requests_more.py -q -x 2>&1 | tee test-logs/pytest_resident_requests.log
+
+      - name: Pytest residents core
+        run: |
+          coverage run --parallel-mode -m pytest tests/test_core_residents.py tests/test_residents_basic.py -q -x 2>&1 | tee test-logs/pytest_residents_core.log
+
+      - name: Pytest request security
+        run: |
+          coverage run --parallel-mode -m pytest tests/test_request_security.py tests/test_rate_limit_basic.py -q -x 2>&1 | tee test-logs/pytest_request_security.log
+
+      - name: Pytest auth
+        run: |
+          coverage run --parallel-mode -m pytest tests/test_auth_login.py tests/test_auth_additional.py -q -x 2>&1 | tee test-logs/pytest_auth.log
+
+      - name: Coverage report
+        run: |
+          coverage combine
+          coverage report --fail-under=35 2>&1 | tee test-logs/coverage.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-test-logs
+          path: test-logs/
