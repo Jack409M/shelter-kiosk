@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from typing import Any, Final
+
 from flask import g
 
-from core.db import db_execute, db_fetchone
+from core.db import DbRow, db_execute, db_fetchone
 from core.helpers import utcnow_iso
 
 
-DEFAULT_INSPECTION_ITEMS = [
+DEFAULT_INSPECTION_ITEMS: Final[list[str]] = [
     "Floors clean",
     "Bed made",
     "Trash removed",
@@ -15,8 +17,7 @@ DEFAULT_INSPECTION_ITEMS = [
     "General room condition acceptable",
 ]
 
-
-DEFAULT_PASS_SHARED_RULES_TEXT = "\n".join(
+DEFAULT_PASS_SHARED_RULES_TEXT: Final[str] = "\n".join(
     [
         "Pass requests are due by Monday at 8:00 a.m.",
         "Passes are not automatic.",
@@ -26,7 +27,7 @@ DEFAULT_PASS_SHARED_RULES_TEXT = "\n".join(
     ]
 )
 
-DEFAULT_PASS_GH_RULES_TEXT = "\n".join(
+DEFAULT_PASS_GH_RULES_TEXT: Final[str] = "\n".join(
     [
         "Pass requests are due by Monday at 8:00 a.m.",
         "Passes are not automatic.",
@@ -37,7 +38,7 @@ DEFAULT_PASS_GH_RULES_TEXT = "\n".join(
     ]
 )
 
-DEFAULT_PASS_LEVEL_RULES = {
+DEFAULT_PASS_LEVEL_RULES: Final[dict[str, str]] = {
     "pass_level_1_rules_text": "\n".join(
         [
             "Level 1 residents do not get friend or family passes.",
@@ -74,9 +75,253 @@ DEFAULT_PASS_LEVEL_RULES = {
     "pass_gh_level_8_rules_text": "Level 8 may have three passes per month with permission.",
 }
 
+_SETTINGS_TABLE_NAME: Final[str] = "shelter_operation_settings"
+
+_CREATE_TABLE_SQL: Final[str] = f"""
+CREATE TABLE IF NOT EXISTS {_SETTINGS_TABLE_NAME} (
+    id SERIAL PRIMARY KEY,
+    shelter TEXT NOT NULL UNIQUE,
+    rent_late_day_of_month INTEGER NOT NULL DEFAULT 6,
+    rent_score_paid INTEGER NOT NULL DEFAULT 100,
+    rent_score_partially_paid INTEGER NOT NULL DEFAULT 75,
+    rent_score_paid_late INTEGER NOT NULL DEFAULT 75,
+    rent_score_not_paid INTEGER NOT NULL DEFAULT 0,
+    rent_score_exempt INTEGER NOT NULL DEFAULT 100,
+    rent_carry_forward_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    hh_rent_amount DOUBLE PRECISION NOT NULL DEFAULT 150.00,
+    hh_rent_due_day INTEGER NOT NULL DEFAULT 1,
+    hh_rent_late_day INTEGER NOT NULL DEFAULT 5,
+    hh_rent_late_fee_per_day DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+    hh_late_arrangement_required BOOLEAN NOT NULL DEFAULT TRUE,
+    hh_payment_methods_text TEXT,
+    hh_payment_accepted_by_roles_text TEXT,
+    hh_work_off_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    hh_work_off_hourly_rate DOUBLE PRECISION NOT NULL DEFAULT 10.00,
+    hh_work_off_required_hours INTEGER NOT NULL DEFAULT 15,
+    hh_work_off_deadline_day INTEGER NOT NULL DEFAULT 10,
+    hh_work_off_location_text TEXT,
+    hh_work_off_notes_text TEXT,
+    gh_rent_due_day INTEGER NOT NULL DEFAULT 1,
+    gh_rent_late_fee_per_day DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+    gh_late_arrangement_required BOOLEAN NOT NULL DEFAULT TRUE,
+    gh_level_5_one_bedroom_rent DOUBLE PRECISION NOT NULL DEFAULT 250.00,
+    gh_level_5_two_bedroom_rent DOUBLE PRECISION NOT NULL DEFAULT 300.00,
+    gh_level_5_townhome_rent DOUBLE PRECISION NOT NULL DEFAULT 300.00,
+    gh_level_8_sliding_scale_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    gh_level_8_sliding_scale_basis_text TEXT,
+    gh_level_8_first_increase_amount DOUBLE PRECISION NOT NULL DEFAULT 50.00,
+    gh_level_8_second_increase_amount DOUBLE PRECISION NOT NULL DEFAULT 50.00,
+    gh_level_8_increase_schedule_text TEXT,
+    inspection_default_item_status TEXT NOT NULL DEFAULT 'passed',
+    inspection_item_labels TEXT,
+    inspection_scoring_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    inspection_lookback_months INTEGER NOT NULL DEFAULT 9,
+    inspection_include_current_open_month BOOLEAN NOT NULL DEFAULT FALSE,
+    inspection_score_passed INTEGER NOT NULL DEFAULT 100,
+    inspection_needs_attention_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    inspection_score_needs_attention INTEGER NOT NULL DEFAULT 70,
+    inspection_score_failed INTEGER NOT NULL DEFAULT 0,
+    inspection_passing_threshold INTEGER NOT NULL DEFAULT 83,
+    inspection_band_green_min INTEGER NOT NULL DEFAULT 83,
+    inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
+    inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
+    inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
+    employment_income_module_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    employment_income_graduation_minimum DOUBLE PRECISION NOT NULL DEFAULT 1200.00,
+    employment_income_band_green_min DOUBLE PRECISION NOT NULL DEFAULT 1200.00,
+    employment_income_band_yellow_min DOUBLE PRECISION NOT NULL DEFAULT 1000.00,
+    employment_income_band_orange_min DOUBLE PRECISION NOT NULL DEFAULT 700.00,
+    employment_income_band_red_max DOUBLE PRECISION NOT NULL DEFAULT 699.99,
+    income_weight_employment DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+    income_weight_ssi_ssdi_self DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+    income_weight_tanf DOUBLE PRECISION NOT NULL DEFAULT 1.00,
+    income_weight_alimony DOUBLE PRECISION NOT NULL DEFAULT 0.50,
+    income_weight_other_income DOUBLE PRECISION NOT NULL DEFAULT 0.25,
+    income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
+    pass_deadline_weekday INTEGER NOT NULL DEFAULT 0,
+    pass_deadline_hour INTEGER NOT NULL DEFAULT 8,
+    pass_deadline_minute INTEGER NOT NULL DEFAULT 0,
+    pass_late_submission_block_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    pass_work_required_hours INTEGER NOT NULL DEFAULT 29,
+    pass_productive_required_hours INTEGER NOT NULL DEFAULT 35,
+    special_pass_bypass_hours_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    pass_shared_rules_text TEXT,
+    pass_gh_rules_text TEXT,
+    pass_level_1_rules_text TEXT,
+    pass_level_2_rules_text TEXT,
+    pass_level_3_rules_text TEXT,
+    pass_level_4_rules_text TEXT,
+    pass_gh_level_5_rules_text TEXT,
+    pass_gh_level_6_rules_text TEXT,
+    pass_gh_level_7_rules_text TEXT,
+    pass_gh_level_8_rules_text TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+)
+"""
+
+_REQUIRED_COLUMNS: Final[tuple[tuple[str, str], ...]] = (
+    ("rent_late_day_of_month", "INTEGER DEFAULT 6"),
+    ("rent_score_paid", "INTEGER DEFAULT 100"),
+    ("rent_score_partially_paid", "INTEGER DEFAULT 75"),
+    ("rent_score_paid_late", "INTEGER DEFAULT 75"),
+    ("rent_score_not_paid", "INTEGER DEFAULT 0"),
+    ("rent_score_exempt", "INTEGER DEFAULT 100"),
+    ("rent_carry_forward_enabled", "BOOLEAN DEFAULT TRUE"),
+    ("hh_rent_amount", "DOUBLE PRECISION DEFAULT 150.00"),
+    ("hh_rent_due_day", "INTEGER DEFAULT 1"),
+    ("hh_rent_late_day", "INTEGER DEFAULT 5"),
+    ("hh_rent_late_fee_per_day", "DOUBLE PRECISION DEFAULT 1.00"),
+    ("hh_late_arrangement_required", "BOOLEAN DEFAULT TRUE"),
+    ("hh_payment_methods_text", "TEXT"),
+    ("hh_payment_accepted_by_roles_text", "TEXT"),
+    ("hh_work_off_enabled", "BOOLEAN DEFAULT TRUE"),
+    ("hh_work_off_hourly_rate", "DOUBLE PRECISION DEFAULT 10.00"),
+    ("hh_work_off_required_hours", "INTEGER DEFAULT 15"),
+    ("hh_work_off_deadline_day", "INTEGER DEFAULT 10"),
+    ("hh_work_off_location_text", "TEXT"),
+    ("hh_work_off_notes_text", "TEXT"),
+    ("gh_rent_due_day", "INTEGER DEFAULT 1"),
+    ("gh_rent_late_fee_per_day", "DOUBLE PRECISION DEFAULT 1.00"),
+    ("gh_late_arrangement_required", "BOOLEAN DEFAULT TRUE"),
+    ("gh_level_5_one_bedroom_rent", "DOUBLE PRECISION DEFAULT 250.00"),
+    ("gh_level_5_two_bedroom_rent", "DOUBLE PRECISION DEFAULT 300.00"),
+    ("gh_level_5_townhome_rent", "DOUBLE PRECISION DEFAULT 300.00"),
+    ("gh_level_8_sliding_scale_enabled", "BOOLEAN DEFAULT TRUE"),
+    ("gh_level_8_sliding_scale_basis_text", "TEXT"),
+    ("gh_level_8_first_increase_amount", "DOUBLE PRECISION DEFAULT 50.00"),
+    ("gh_level_8_second_increase_amount", "DOUBLE PRECISION DEFAULT 50.00"),
+    ("gh_level_8_increase_schedule_text", "TEXT"),
+    ("inspection_default_item_status", "TEXT DEFAULT 'passed'"),
+    ("inspection_item_labels", "TEXT"),
+    ("inspection_scoring_enabled", "BOOLEAN DEFAULT TRUE"),
+    ("inspection_lookback_months", "INTEGER DEFAULT 9"),
+    ("inspection_include_current_open_month", "BOOLEAN DEFAULT FALSE"),
+    ("inspection_score_passed", "INTEGER DEFAULT 100"),
+    ("inspection_needs_attention_enabled", "BOOLEAN DEFAULT FALSE"),
+    ("inspection_score_needs_attention", "INTEGER DEFAULT 70"),
+    ("inspection_score_failed", "INTEGER DEFAULT 0"),
+    ("inspection_passing_threshold", "INTEGER DEFAULT 83"),
+    ("inspection_band_green_min", "INTEGER DEFAULT 83"),
+    ("inspection_band_yellow_min", "INTEGER DEFAULT 78"),
+    ("inspection_band_orange_min", "INTEGER DEFAULT 56"),
+    ("inspection_band_red_max", "INTEGER DEFAULT 55"),
+    ("employment_income_module_enabled", "BOOLEAN DEFAULT TRUE"),
+    ("employment_income_graduation_minimum", "DOUBLE PRECISION DEFAULT 1200.00"),
+    ("employment_income_band_green_min", "DOUBLE PRECISION DEFAULT 1200.00"),
+    ("employment_income_band_yellow_min", "DOUBLE PRECISION DEFAULT 1000.00"),
+    ("employment_income_band_orange_min", "DOUBLE PRECISION DEFAULT 700.00"),
+    ("employment_income_band_red_max", "DOUBLE PRECISION DEFAULT 699.99"),
+    ("income_weight_employment", "DOUBLE PRECISION DEFAULT 1.00"),
+    ("income_weight_ssi_ssdi_self", "DOUBLE PRECISION DEFAULT 1.00"),
+    ("income_weight_tanf", "DOUBLE PRECISION DEFAULT 1.00"),
+    ("income_weight_alimony", "DOUBLE PRECISION DEFAULT 0.50"),
+    ("income_weight_other_income", "DOUBLE PRECISION DEFAULT 0.25"),
+    ("income_weight_survivor_cutoff_months", "INTEGER DEFAULT 18"),
+    ("pass_deadline_weekday", "INTEGER DEFAULT 0"),
+    ("pass_deadline_hour", "INTEGER DEFAULT 8"),
+    ("pass_deadline_minute", "INTEGER DEFAULT 0"),
+    ("pass_late_submission_block_enabled", "BOOLEAN DEFAULT TRUE"),
+    ("pass_work_required_hours", "INTEGER DEFAULT 29"),
+    ("pass_productive_required_hours", "INTEGER DEFAULT 35"),
+    ("special_pass_bypass_hours_enabled", "BOOLEAN DEFAULT TRUE"),
+    ("pass_shared_rules_text", "TEXT"),
+    ("pass_gh_rules_text", "TEXT"),
+    ("pass_level_1_rules_text", "TEXT"),
+    ("pass_level_2_rules_text", "TEXT"),
+    ("pass_level_3_rules_text", "TEXT"),
+    ("pass_level_4_rules_text", "TEXT"),
+    ("pass_gh_level_5_rules_text", "TEXT"),
+    ("pass_gh_level_6_rules_text", "TEXT"),
+    ("pass_gh_level_7_rules_text", "TEXT"),
+    ("pass_gh_level_8_rules_text", "TEXT"),
+    ("created_at", "TEXT"),
+    ("updated_at", "TEXT"),
+)
+
+_DEFAULT_INSERT_COLUMNS: Final[tuple[str, ...]] = (
+    "shelter",
+    "rent_late_day_of_month",
+    "rent_score_paid",
+    "rent_score_partially_paid",
+    "rent_score_paid_late",
+    "rent_score_not_paid",
+    "rent_score_exempt",
+    "rent_carry_forward_enabled",
+    "hh_rent_amount",
+    "hh_rent_due_day",
+    "hh_rent_late_day",
+    "hh_rent_late_fee_per_day",
+    "hh_late_arrangement_required",
+    "hh_payment_methods_text",
+    "hh_payment_accepted_by_roles_text",
+    "hh_work_off_enabled",
+    "hh_work_off_hourly_rate",
+    "hh_work_off_required_hours",
+    "hh_work_off_deadline_day",
+    "hh_work_off_location_text",
+    "hh_work_off_notes_text",
+    "gh_rent_due_day",
+    "gh_rent_late_fee_per_day",
+    "gh_late_arrangement_required",
+    "gh_level_5_one_bedroom_rent",
+    "gh_level_5_two_bedroom_rent",
+    "gh_level_5_townhome_rent",
+    "gh_level_8_sliding_scale_enabled",
+    "gh_level_8_sliding_scale_basis_text",
+    "gh_level_8_first_increase_amount",
+    "gh_level_8_second_increase_amount",
+    "gh_level_8_increase_schedule_text",
+    "inspection_default_item_status",
+    "inspection_item_labels",
+    "inspection_scoring_enabled",
+    "inspection_lookback_months",
+    "inspection_include_current_open_month",
+    "inspection_score_passed",
+    "inspection_needs_attention_enabled",
+    "inspection_score_needs_attention",
+    "inspection_score_failed",
+    "inspection_passing_threshold",
+    "inspection_band_green_min",
+    "inspection_band_yellow_min",
+    "inspection_band_orange_min",
+    "inspection_band_red_max",
+    "employment_income_module_enabled",
+    "employment_income_graduation_minimum",
+    "employment_income_band_green_min",
+    "employment_income_band_yellow_min",
+    "employment_income_band_orange_min",
+    "employment_income_band_red_max",
+    "income_weight_employment",
+    "income_weight_ssi_ssdi_self",
+    "income_weight_tanf",
+    "income_weight_alimony",
+    "income_weight_other_income",
+    "income_weight_survivor_cutoff_months",
+    "pass_deadline_weekday",
+    "pass_deadline_hour",
+    "pass_deadline_minute",
+    "pass_late_submission_block_enabled",
+    "pass_work_required_hours",
+    "pass_productive_required_hours",
+    "special_pass_bypass_hours_enabled",
+    "pass_shared_rules_text",
+    "pass_gh_rules_text",
+    "pass_level_1_rules_text",
+    "pass_level_2_rules_text",
+    "pass_level_3_rules_text",
+    "pass_level_4_rules_text",
+    "pass_gh_level_5_rules_text",
+    "pass_gh_level_6_rules_text",
+    "pass_gh_level_7_rules_text",
+    "pass_gh_level_8_rules_text",
+    "created_at",
+    "updated_at",
+)
+
 
 def _placeholder() -> str:
-    return "%s" if g.get("db_kind") == "pg" else "?"
+    return "%s"
 
 
 def _default_labels_text() -> str:
@@ -95,531 +340,209 @@ def _default_pass_level_rules_text(key: str) -> str:
     return DEFAULT_PASS_LEVEL_RULES.get(key, "")
 
 
-def _currency(value) -> str:
+def _currency(value: Any) -> str:
     if value in (None, ""):
         return "—"
+
     try:
         return f"${float(value):,.2f}"
-    except Exception:
+    except (TypeError, ValueError):
         return "—"
+
+
+def _require_postgres() -> None:
+    db_kind = str(g.get("db_kind") or "").strip().lower()
+    if db_kind and db_kind != "pg":
+        raise RuntimeError(
+            "operations settings store received a non Postgres database kind, "
+            f"which is unsupported: {db_kind!r}"
+        )
+
+
+def _normalize_shelter_value(shelter: str) -> str:
+    return shelter.strip().lower()
+
+
+def _column_exists(column_name: str) -> bool:
+    row = db_fetchone(
+        """
+        SELECT 1 AS present
+        FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = %s
+          AND column_name = %s
+        LIMIT 1
+        """,
+        (_SETTINGS_TABLE_NAME, column_name),
+    )
+    return row is not None
+
+
+def _ensure_column(column_name: str, column_definition: str) -> None:
+    if _column_exists(column_name):
+        return
+
+    db_execute(
+        f"ALTER TABLE {_SETTINGS_TABLE_NAME} "
+        f"ADD COLUMN {column_name} {column_definition}"
+    )
 
 
 def _ensure_operations_settings_table() -> None:
-    if g.get("db_kind") == "pg":
-        db_execute(
-            """
-            CREATE TABLE IF NOT EXISTS shelter_operation_settings (
-                id SERIAL PRIMARY KEY,
-                shelter TEXT NOT NULL UNIQUE,
-                rent_late_day_of_month INTEGER NOT NULL DEFAULT 6,
-                rent_score_paid INTEGER NOT NULL DEFAULT 100,
-                rent_score_partially_paid INTEGER NOT NULL DEFAULT 75,
-                rent_score_paid_late INTEGER NOT NULL DEFAULT 75,
-                rent_score_not_paid INTEGER NOT NULL DEFAULT 0,
-                rent_score_exempt INTEGER NOT NULL DEFAULT 100,
-                rent_carry_forward_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                hh_rent_amount DOUBLE PRECISION NOT NULL DEFAULT 150.00,
-                hh_rent_due_day INTEGER NOT NULL DEFAULT 1,
-                hh_rent_late_day INTEGER NOT NULL DEFAULT 5,
-                hh_rent_late_fee_per_day DOUBLE PRECISION NOT NULL DEFAULT 1.00,
-                hh_late_arrangement_required BOOLEAN NOT NULL DEFAULT TRUE,
-                hh_payment_methods_text TEXT,
-                hh_payment_accepted_by_roles_text TEXT,
-                hh_work_off_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                hh_work_off_hourly_rate DOUBLE PRECISION NOT NULL DEFAULT 10.00,
-                hh_work_off_required_hours INTEGER NOT NULL DEFAULT 15,
-                hh_work_off_deadline_day INTEGER NOT NULL DEFAULT 10,
-                hh_work_off_location_text TEXT,
-                hh_work_off_notes_text TEXT,
-                gh_rent_due_day INTEGER NOT NULL DEFAULT 1,
-                gh_rent_late_fee_per_day DOUBLE PRECISION NOT NULL DEFAULT 1.00,
-                gh_late_arrangement_required BOOLEAN NOT NULL DEFAULT TRUE,
-                gh_level_5_one_bedroom_rent DOUBLE PRECISION NOT NULL DEFAULT 250.00,
-                gh_level_5_two_bedroom_rent DOUBLE PRECISION NOT NULL DEFAULT 300.00,
-                gh_level_5_townhome_rent DOUBLE PRECISION NOT NULL DEFAULT 300.00,
-                gh_level_8_sliding_scale_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                gh_level_8_sliding_scale_basis_text TEXT,
-                gh_level_8_first_increase_amount DOUBLE PRECISION NOT NULL DEFAULT 50.00,
-                gh_level_8_second_increase_amount DOUBLE PRECISION NOT NULL DEFAULT 50.00,
-                gh_level_8_increase_schedule_text TEXT,
-                inspection_default_item_status TEXT NOT NULL DEFAULT 'passed',
-                inspection_item_labels TEXT,
-                inspection_scoring_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                inspection_lookback_months INTEGER NOT NULL DEFAULT 9,
-                inspection_include_current_open_month BOOLEAN NOT NULL DEFAULT FALSE,
-                inspection_score_passed INTEGER NOT NULL DEFAULT 100,
-                inspection_needs_attention_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-                inspection_score_needs_attention INTEGER NOT NULL DEFAULT 70,
-                inspection_score_failed INTEGER NOT NULL DEFAULT 0,
-                inspection_passing_threshold INTEGER NOT NULL DEFAULT 83,
-                inspection_band_green_min INTEGER NOT NULL DEFAULT 83,
-                inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
-                inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
-                inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
-                employment_income_module_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                employment_income_graduation_minimum DOUBLE PRECISION NOT NULL DEFAULT 1200.00,
-                employment_income_band_green_min DOUBLE PRECISION NOT NULL DEFAULT 1200.00,
-                employment_income_band_yellow_min DOUBLE PRECISION NOT NULL DEFAULT 1000.00,
-                employment_income_band_orange_min DOUBLE PRECISION NOT NULL DEFAULT 700.00,
-                employment_income_band_red_max DOUBLE PRECISION NOT NULL DEFAULT 699.99,
-                income_weight_employment DOUBLE PRECISION NOT NULL DEFAULT 1.00,
-                income_weight_ssi_ssdi_self DOUBLE PRECISION NOT NULL DEFAULT 1.00,
-                income_weight_tanf DOUBLE PRECISION NOT NULL DEFAULT 1.00,
-                income_weight_alimony DOUBLE PRECISION NOT NULL DEFAULT 0.50,
-                income_weight_other_income DOUBLE PRECISION NOT NULL DEFAULT 0.25,
-                income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
-                pass_deadline_weekday INTEGER NOT NULL DEFAULT 0,
-                pass_deadline_hour INTEGER NOT NULL DEFAULT 8,
-                pass_deadline_minute INTEGER NOT NULL DEFAULT 0,
-                pass_late_submission_block_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                pass_work_required_hours INTEGER NOT NULL DEFAULT 29,
-                pass_productive_required_hours INTEGER NOT NULL DEFAULT 35,
-                special_pass_bypass_hours_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                pass_shared_rules_text TEXT,
-                pass_gh_rules_text TEXT,
-                pass_level_1_rules_text TEXT,
-                pass_level_2_rules_text TEXT,
-                pass_level_3_rules_text TEXT,
-                pass_level_4_rules_text TEXT,
-                pass_gh_level_5_rules_text TEXT,
-                pass_gh_level_6_rules_text TEXT,
-                pass_gh_level_7_rules_text TEXT,
-                pass_gh_level_8_rules_text TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            """
-        )
-    else:
-        db_execute(
-            """
-            CREATE TABLE IF NOT EXISTS shelter_operation_settings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                shelter TEXT NOT NULL UNIQUE,
-                rent_late_day_of_month INTEGER NOT NULL DEFAULT 6,
-                rent_score_paid INTEGER NOT NULL DEFAULT 100,
-                rent_score_partially_paid INTEGER NOT NULL DEFAULT 75,
-                rent_score_paid_late INTEGER NOT NULL DEFAULT 75,
-                rent_score_not_paid INTEGER NOT NULL DEFAULT 0,
-                rent_score_exempt INTEGER NOT NULL DEFAULT 100,
-                rent_carry_forward_enabled INTEGER NOT NULL DEFAULT 1,
-                hh_rent_amount REAL NOT NULL DEFAULT 150.00,
-                hh_rent_due_day INTEGER NOT NULL DEFAULT 1,
-                hh_rent_late_day INTEGER NOT NULL DEFAULT 5,
-                hh_rent_late_fee_per_day REAL NOT NULL DEFAULT 1.00,
-                hh_late_arrangement_required INTEGER NOT NULL DEFAULT 1,
-                hh_payment_methods_text TEXT,
-                hh_payment_accepted_by_roles_text TEXT,
-                hh_work_off_enabled INTEGER NOT NULL DEFAULT 1,
-                hh_work_off_hourly_rate REAL NOT NULL DEFAULT 10.00,
-                hh_work_off_required_hours INTEGER NOT NULL DEFAULT 15,
-                hh_work_off_deadline_day INTEGER NOT NULL DEFAULT 10,
-                hh_work_off_location_text TEXT,
-                hh_work_off_notes_text TEXT,
-                gh_rent_due_day INTEGER NOT NULL DEFAULT 1,
-                gh_rent_late_fee_per_day REAL NOT NULL DEFAULT 1.00,
-                gh_late_arrangement_required INTEGER NOT NULL DEFAULT 1,
-                gh_level_5_one_bedroom_rent REAL NOT NULL DEFAULT 250.00,
-                gh_level_5_two_bedroom_rent REAL NOT NULL DEFAULT 300.00,
-                gh_level_5_townhome_rent REAL NOT NULL DEFAULT 300.00,
-                gh_level_8_sliding_scale_enabled INTEGER NOT NULL DEFAULT 1,
-                gh_level_8_sliding_scale_basis_text TEXT,
-                gh_level_8_first_increase_amount REAL NOT NULL DEFAULT 50.00,
-                gh_level_8_second_increase_amount REAL NOT NULL DEFAULT 50.00,
-                gh_level_8_increase_schedule_text TEXT,
-                inspection_default_item_status TEXT NOT NULL DEFAULT 'passed',
-                inspection_item_labels TEXT,
-                inspection_scoring_enabled INTEGER NOT NULL DEFAULT 1,
-                inspection_lookback_months INTEGER NOT NULL DEFAULT 9,
-                inspection_include_current_open_month INTEGER NOT NULL DEFAULT 0,
-                inspection_score_passed INTEGER NOT NULL DEFAULT 100,
-                inspection_needs_attention_enabled INTEGER NOT NULL DEFAULT 0,
-                inspection_score_needs_attention INTEGER NOT NULL DEFAULT 70,
-                inspection_score_failed INTEGER NOT NULL DEFAULT 0,
-                inspection_passing_threshold INTEGER NOT NULL DEFAULT 83,
-                inspection_band_green_min INTEGER NOT NULL DEFAULT 83,
-                inspection_band_yellow_min INTEGER NOT NULL DEFAULT 78,
-                inspection_band_orange_min INTEGER NOT NULL DEFAULT 56,
-                inspection_band_red_max INTEGER NOT NULL DEFAULT 55,
-                employment_income_module_enabled INTEGER NOT NULL DEFAULT 1,
-                employment_income_graduation_minimum REAL NOT NULL DEFAULT 1200.00,
-                employment_income_band_green_min REAL NOT NULL DEFAULT 1200.00,
-                employment_income_band_yellow_min REAL NOT NULL DEFAULT 1000.00,
-                employment_income_band_orange_min REAL NOT NULL DEFAULT 700.00,
-                employment_income_band_red_max REAL NOT NULL DEFAULT 699.99,
-                income_weight_employment REAL NOT NULL DEFAULT 1.00,
-                income_weight_ssi_ssdi_self REAL NOT NULL DEFAULT 1.00,
-                income_weight_tanf REAL NOT NULL DEFAULT 1.00,
-                income_weight_alimony REAL NOT NULL DEFAULT 0.50,
-                income_weight_other_income REAL NOT NULL DEFAULT 0.25,
-                income_weight_survivor_cutoff_months INTEGER NOT NULL DEFAULT 18,
-                pass_deadline_weekday INTEGER NOT NULL DEFAULT 0,
-                pass_deadline_hour INTEGER NOT NULL DEFAULT 8,
-                pass_deadline_minute INTEGER NOT NULL DEFAULT 0,
-                pass_late_submission_block_enabled INTEGER NOT NULL DEFAULT 1,
-                pass_work_required_hours INTEGER NOT NULL DEFAULT 29,
-                pass_productive_required_hours INTEGER NOT NULL DEFAULT 35,
-                special_pass_bypass_hours_enabled INTEGER NOT NULL DEFAULT 1,
-                pass_shared_rules_text TEXT,
-                pass_gh_rules_text TEXT,
-                pass_level_1_rules_text TEXT,
-                pass_level_2_rules_text TEXT,
-                pass_level_3_rules_text TEXT,
-                pass_level_4_rules_text TEXT,
-                pass_gh_level_5_rules_text TEXT,
-                pass_gh_level_6_rules_text TEXT,
-                pass_gh_level_7_rules_text TEXT,
-                pass_gh_level_8_rules_text TEXT,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            """
-        )
+    _require_postgres()
+    db_execute(_CREATE_TABLE_SQL)
 
-    statements = [
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_late_day_of_month INTEGER DEFAULT 6",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_paid INTEGER DEFAULT 100",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_partially_paid INTEGER DEFAULT 75",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_paid_late INTEGER DEFAULT 75",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_not_paid INTEGER DEFAULT 0",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_score_exempt INTEGER DEFAULT 100",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS rent_carry_forward_enabled BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_rent_amount DOUBLE PRECISION DEFAULT 150.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_rent_due_day INTEGER DEFAULT 1",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_rent_late_day INTEGER DEFAULT 5",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_rent_late_fee_per_day DOUBLE PRECISION DEFAULT 1.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_late_arrangement_required BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_payment_methods_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_payment_accepted_by_roles_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_work_off_enabled BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_work_off_hourly_rate DOUBLE PRECISION DEFAULT 10.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_work_off_required_hours INTEGER DEFAULT 15",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_work_off_deadline_day INTEGER DEFAULT 10",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_work_off_location_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS hh_work_off_notes_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_rent_due_day INTEGER DEFAULT 1",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_rent_late_fee_per_day DOUBLE PRECISION DEFAULT 1.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_late_arrangement_required BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_level_5_one_bedroom_rent DOUBLE PRECISION DEFAULT 250.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_level_5_two_bedroom_rent DOUBLE PRECISION DEFAULT 300.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_level_5_townhome_rent DOUBLE PRECISION DEFAULT 300.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_level_8_sliding_scale_enabled BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_level_8_sliding_scale_basis_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_level_8_first_increase_amount DOUBLE PRECISION DEFAULT 50.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_level_8_second_increase_amount DOUBLE PRECISION DEFAULT 50.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS gh_level_8_increase_schedule_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_default_item_status TEXT DEFAULT 'passed'",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_item_labels TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_scoring_enabled BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_lookback_months INTEGER DEFAULT 9",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_include_current_open_month BOOLEAN DEFAULT FALSE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_passed INTEGER DEFAULT 100",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_needs_attention_enabled BOOLEAN DEFAULT FALSE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_needs_attention INTEGER DEFAULT 70",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_score_failed INTEGER DEFAULT 0",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_passing_threshold INTEGER DEFAULT 83",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_green_min INTEGER DEFAULT 83",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_yellow_min INTEGER DEFAULT 78",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_orange_min INTEGER DEFAULT 56",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_red_max INTEGER DEFAULT 55",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_module_enabled BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_graduation_minimum DOUBLE PRECISION DEFAULT 1200.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_green_min DOUBLE PRECISION DEFAULT 1200.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_yellow_min DOUBLE PRECISION DEFAULT 1000.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_orange_min DOUBLE PRECISION DEFAULT 700.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS employment_income_band_red_max DOUBLE PRECISION DEFAULT 699.99",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_employment DOUBLE PRECISION DEFAULT 1.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_ssi_ssdi_self DOUBLE PRECISION DEFAULT 1.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_tanf DOUBLE PRECISION DEFAULT 1.00",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_alimony DOUBLE PRECISION DEFAULT 0.50",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_other_income DOUBLE PRECISION DEFAULT 0.25",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS income_weight_survivor_cutoff_months INTEGER DEFAULT 18",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_deadline_weekday INTEGER DEFAULT 0",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_deadline_hour INTEGER DEFAULT 8",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_deadline_minute INTEGER DEFAULT 0",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_late_submission_block_enabled BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_work_required_hours INTEGER DEFAULT 29",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_productive_required_hours INTEGER DEFAULT 35",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS special_pass_bypass_hours_enabled BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_shared_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_level_1_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_level_2_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_level_3_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_level_4_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_level_5_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_level_6_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_level_7_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS pass_gh_level_8_rules_text TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS created_at TEXT",
-        "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS updated_at TEXT",
-    ]
-    for statement in statements:
-        try:
-            db_execute(statement)
-        except Exception:
-            pass
+    for column_name, column_definition in _REQUIRED_COLUMNS:
+        _ensure_column(column_name, column_definition)
 
 
-def _settings_row_for_shelter(shelter: str):
-    _ensure_operations_settings_table()
-    ph = _placeholder()
-    row = db_fetchone(
-        f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
-        (shelter,),
+def _default_settings_values(shelter: str) -> dict[str, Any]:
+    normalized_shelter = _normalize_shelter_value(shelter)
+    now = utcnow_iso()
+
+    return {
+        "shelter": normalized_shelter,
+        "rent_late_day_of_month": 6,
+        "rent_score_paid": 100,
+        "rent_score_partially_paid": 75,
+        "rent_score_paid_late": 75,
+        "rent_score_not_paid": 0,
+        "rent_score_exempt": 100,
+        "rent_carry_forward_enabled": True,
+        "hh_rent_amount": 150.00,
+        "hh_rent_due_day": 1,
+        "hh_rent_late_day": 5,
+        "hh_rent_late_fee_per_day": 1.00,
+        "hh_late_arrangement_required": True,
+        "hh_payment_methods_text": "Money order\nCashier check",
+        "hh_payment_accepted_by_roles_text": "Case managers only",
+        "hh_work_off_enabled": True,
+        "hh_work_off_hourly_rate": 10.00,
+        "hh_work_off_required_hours": 15,
+        "hh_work_off_deadline_day": 10,
+        "hh_work_off_location_text": "Thrift City",
+        "hh_work_off_notes_text": (
+            "If unemployed, resident may work off rent at 10 dollars per hour. "
+            "Hours must be completed by the 10th unless arrangements are made in advance."
+        ),
+        "gh_rent_due_day": 1,
+        "gh_rent_late_fee_per_day": 1.00,
+        "gh_late_arrangement_required": True,
+        "gh_level_5_one_bedroom_rent": 250.00,
+        "gh_level_5_two_bedroom_rent": 300.00,
+        "gh_level_5_townhome_rent": 300.00,
+        "gh_level_8_sliding_scale_enabled": True,
+        "gh_level_8_sliding_scale_basis_text": (
+            "Sliding scale based on income, household size, and accepted expenses."
+        ),
+        "gh_level_8_first_increase_amount": 50.00,
+        "gh_level_8_second_increase_amount": 50.00,
+        "gh_level_8_increase_schedule_text": (
+            "Increase a minimum of 50 the month after graduation, then another 50 one year later."
+        ),
+        "inspection_default_item_status": "passed",
+        "inspection_item_labels": _default_labels_text(),
+        "inspection_scoring_enabled": True,
+        "inspection_lookback_months": 9,
+        "inspection_include_current_open_month": False,
+        "inspection_score_passed": 100,
+        "inspection_needs_attention_enabled": False,
+        "inspection_score_needs_attention": 70,
+        "inspection_score_failed": 0,
+        "inspection_passing_threshold": 83,
+        "inspection_band_green_min": 83,
+        "inspection_band_yellow_min": 78,
+        "inspection_band_orange_min": 56,
+        "inspection_band_red_max": 55,
+        "employment_income_module_enabled": True,
+        "employment_income_graduation_minimum": 1200.00,
+        "employment_income_band_green_min": 1200.00,
+        "employment_income_band_yellow_min": 1000.00,
+        "employment_income_band_orange_min": 700.00,
+        "employment_income_band_red_max": 699.99,
+        "income_weight_employment": 1.00,
+        "income_weight_ssi_ssdi_self": 1.00,
+        "income_weight_tanf": 1.00,
+        "income_weight_alimony": 0.50,
+        "income_weight_other_income": 0.25,
+        "income_weight_survivor_cutoff_months": 18,
+        "pass_deadline_weekday": 0,
+        "pass_deadline_hour": 8,
+        "pass_deadline_minute": 0,
+        "pass_late_submission_block_enabled": True,
+        "pass_work_required_hours": 29,
+        "pass_productive_required_hours": 35,
+        "special_pass_bypass_hours_enabled": True,
+        "pass_shared_rules_text": _default_pass_shared_rules_text(),
+        "pass_gh_rules_text": _default_pass_gh_rules_text(),
+        "pass_level_1_rules_text": _default_pass_level_rules_text("pass_level_1_rules_text"),
+        "pass_level_2_rules_text": _default_pass_level_rules_text("pass_level_2_rules_text"),
+        "pass_level_3_rules_text": _default_pass_level_rules_text("pass_level_3_rules_text"),
+        "pass_level_4_rules_text": _default_pass_level_rules_text("pass_level_4_rules_text"),
+        "pass_gh_level_5_rules_text": _default_pass_level_rules_text(
+            "pass_gh_level_5_rules_text"
+        ),
+        "pass_gh_level_6_rules_text": _default_pass_level_rules_text(
+            "pass_gh_level_6_rules_text"
+        ),
+        "pass_gh_level_7_rules_text": _default_pass_level_rules_text(
+            "pass_gh_level_7_rules_text"
+        ),
+        "pass_gh_level_8_rules_text": _default_pass_level_rules_text(
+            "pass_gh_level_8_rules_text"
+        ),
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def _insert_default_settings_row(shelter: str) -> None:
+    values = _default_settings_values(shelter)
+    columns_sql = ", ".join(_DEFAULT_INSERT_COLUMNS)
+    placeholders_sql = ", ".join(["%s"] * len(_DEFAULT_INSERT_COLUMNS))
+    insert_values = tuple(values[column_name] for column_name in _DEFAULT_INSERT_COLUMNS)
+
+    db_execute(
+        f"""
+        INSERT INTO {_SETTINGS_TABLE_NAME} ({columns_sql})
+        VALUES ({placeholders_sql})
+        ON CONFLICT (shelter) DO NOTHING
+        """,
+        insert_values,
     )
-    if row:
+
+
+def _fetch_settings_row(shelter: str) -> DbRow | None:
+    normalized_shelter = _normalize_shelter_value(shelter)
+    return db_fetchone(
+        f"""
+        SELECT *
+        FROM {_SETTINGS_TABLE_NAME}
+        WHERE LOWER(COALESCE(shelter, '')) = %s
+        LIMIT 1
+        """,
+        (normalized_shelter,),
+    )
+
+
+def _settings_row_for_shelter(shelter: str) -> DbRow:
+    normalized_shelter = _normalize_shelter_value(shelter)
+    if not normalized_shelter:
+        raise ValueError("shelter is required")
+
+    _ensure_operations_settings_table()
+
+    row = _fetch_settings_row(normalized_shelter)
+    if row is not None:
         return row
 
-    now = utcnow_iso()
-    db_execute(
-        (
-            """
-            INSERT INTO shelter_operation_settings (
-                shelter,
-                rent_late_day_of_month,
-                rent_score_paid,
-                rent_score_partially_paid,
-                rent_score_paid_late,
-                rent_score_not_paid,
-                rent_score_exempt,
-                rent_carry_forward_enabled,
-                hh_rent_amount,
-                hh_rent_due_day,
-                hh_rent_late_day,
-                hh_rent_late_fee_per_day,
-                hh_late_arrangement_required,
-                hh_payment_methods_text,
-                hh_payment_accepted_by_roles_text,
-                hh_work_off_enabled,
-                hh_work_off_hourly_rate,
-                hh_work_off_required_hours,
-                hh_work_off_deadline_day,
-                hh_work_off_location_text,
-                hh_work_off_notes_text,
-                gh_rent_due_day,
-                gh_rent_late_fee_per_day,
-                gh_late_arrangement_required,
-                gh_level_5_one_bedroom_rent,
-                gh_level_5_two_bedroom_rent,
-                gh_level_5_townhome_rent,
-                gh_level_8_sliding_scale_enabled,
-                gh_level_8_sliding_scale_basis_text,
-                gh_level_8_first_increase_amount,
-                gh_level_8_second_increase_amount,
-                gh_level_8_increase_schedule_text,
-                inspection_default_item_status,
-                inspection_item_labels,
-                inspection_scoring_enabled,
-                inspection_lookback_months,
-                inspection_include_current_open_month,
-                inspection_score_passed,
-                inspection_needs_attention_enabled,
-                inspection_score_needs_attention,
-                inspection_score_failed,
-                inspection_passing_threshold,
-                inspection_band_green_min,
-                inspection_band_yellow_min,
-                inspection_band_orange_min,
-                inspection_band_red_max,
-                employment_income_module_enabled,
-                employment_income_graduation_minimum,
-                employment_income_band_green_min,
-                employment_income_band_yellow_min,
-                employment_income_band_orange_min,
-                employment_income_band_red_max,
-                income_weight_employment,
-                income_weight_ssi_ssdi_self,
-                income_weight_tanf,
-                income_weight_alimony,
-                income_weight_other_income,
-                income_weight_survivor_cutoff_months,
-                pass_deadline_weekday,
-                pass_deadline_hour,
-                pass_deadline_minute,
-                pass_late_submission_block_enabled,
-                pass_work_required_hours,
-                pass_productive_required_hours,
-                special_pass_bypass_hours_enabled,
-                pass_shared_rules_text,
-                pass_gh_rules_text,
-                pass_level_1_rules_text,
-                pass_level_2_rules_text,
-                pass_level_3_rules_text,
-                pass_level_4_rules_text,
-                pass_gh_level_5_rules_text,
-                pass_gh_level_6_rules_text,
-                pass_gh_level_7_rules_text,
-                pass_gh_level_8_rules_text,
-                created_at,
-                updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """
-            if g.get("db_kind") == "pg"
-            else
-            """
-            INSERT INTO shelter_operation_settings (
-                shelter,
-                rent_late_day_of_month,
-                rent_score_paid,
-                rent_score_partially_paid,
-                rent_score_paid_late,
-                rent_score_not_paid,
-                rent_score_exempt,
-                rent_carry_forward_enabled,
-                hh_rent_amount,
-                hh_rent_due_day,
-                hh_rent_late_day,
-                hh_rent_late_fee_per_day,
-                hh_late_arrangement_required,
-                hh_payment_methods_text,
-                hh_payment_accepted_by_roles_text,
-                hh_work_off_enabled,
-                hh_work_off_hourly_rate,
-                hh_work_off_required_hours,
-                hh_work_off_deadline_day,
-                hh_work_off_location_text,
-                hh_work_off_notes_text,
-                gh_rent_due_day,
-                gh_rent_late_fee_per_day,
-                gh_late_arrangement_required,
-                gh_level_5_one_bedroom_rent,
-                gh_level_5_two_bedroom_rent,
-                gh_level_5_townhome_rent,
-                gh_level_8_sliding_scale_enabled,
-                gh_level_8_sliding_scale_basis_text,
-                gh_level_8_first_increase_amount,
-                gh_level_8_second_increase_amount,
-                gh_level_8_increase_schedule_text,
-                inspection_default_item_status,
-                inspection_item_labels,
-                inspection_scoring_enabled,
-                inspection_lookback_months,
-                inspection_include_current_open_month,
-                inspection_score_passed,
-                inspection_needs_attention_enabled,
-                inspection_score_needs_attention,
-                inspection_score_failed,
-                inspection_passing_threshold,
-                inspection_band_green_min,
-                inspection_band_yellow_min,
-                inspection_band_orange_min,
-                inspection_band_red_max,
-                employment_income_module_enabled,
-                employment_income_graduation_minimum,
-                employment_income_band_green_min,
-                employment_income_band_yellow_min,
-                employment_income_band_orange_min,
-                employment_income_band_red_max,
-                income_weight_employment,
-                income_weight_ssi_ssdi_self,
-                income_weight_tanf,
-                income_weight_alimony,
-                income_weight_other_income,
-                income_weight_survivor_cutoff_months,
-                pass_deadline_weekday,
-                pass_deadline_hour,
-                pass_deadline_minute,
-                pass_late_submission_block_enabled,
-                pass_work_required_hours,
-                pass_productive_required_hours,
-                special_pass_bypass_hours_enabled,
-                pass_shared_rules_text,
-                pass_gh_rules_text,
-                pass_level_1_rules_text,
-                pass_level_2_rules_text,
-                pass_level_3_rules_text,
-                pass_level_4_rules_text,
-                pass_gh_level_5_rules_text,
-                pass_gh_level_6_rules_text,
-                pass_gh_level_7_rules_text,
-                pass_gh_level_8_rules_text,
-                created_at,
-                updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-        ),
-        (
-            shelter,
-            6,
-            100,
-            75,
-            75,
-            0,
-            100,
-            True if g.get("db_kind") == "pg" else 1,
-            150.00,
-            1,
-            5,
-            1.00,
-            True if g.get("db_kind") == "pg" else 1,
-            "Money order\nCashier check",
-            "Case managers only",
-            True if g.get("db_kind") == "pg" else 1,
-            10.00,
-            15,
-            10,
-            "Thrift City",
-            "If unemployed, resident may work off rent at 10 dollars per hour. Hours must be completed by the 10th unless arrangements are made in advance.",
-            1,
-            1.00,
-            True if g.get("db_kind") == "pg" else 1,
-            250.00,
-            300.00,
-            300.00,
-            True if g.get("db_kind") == "pg" else 1,
-            "Sliding scale based on income, household size, and accepted expenses.",
-            50.00,
-            50.00,
-            "Increase a minimum of 50 the month after graduation, then another 50 one year later.",
-            "passed",
-            _default_labels_text(),
-            True if g.get("db_kind") == "pg" else 1,
-            9,
-            False if g.get("db_kind") == "pg" else 0,
-            100,
-            False if g.get("db_kind") == "pg" else 0,
-            70,
-            0,
-            83,
-            83,
-            78,
-            56,
-            55,
-            True if g.get("db_kind") == "pg" else 1,
-            1200.00,
-            1200.00,
-            1000.00,
-            700.00,
-            699.99,
-            1.00,
-            1.00,
-            1.00,
-            0.50,
-            0.25,
-            18,
-            0,
-            8,
-            0,
-            True if g.get("db_kind") == "pg" else 1,
-            29,
-            35,
-            True if g.get("db_kind") == "pg" else 1,
-            _default_pass_shared_rules_text(),
-            _default_pass_gh_rules_text(),
-            _default_pass_level_rules_text("pass_level_1_rules_text"),
-            _default_pass_level_rules_text("pass_level_2_rules_text"),
-            _default_pass_level_rules_text("pass_level_3_rules_text"),
-            _default_pass_level_rules_text("pass_level_4_rules_text"),
-            _default_pass_level_rules_text("pass_gh_level_5_rules_text"),
-            _default_pass_level_rules_text("pass_gh_level_6_rules_text"),
-            _default_pass_level_rules_text("pass_gh_level_7_rules_text"),
-            _default_pass_level_rules_text("pass_gh_level_8_rules_text"),
-            now,
-            now,
-        ),
-    )
-    return db_fetchone(
-        f"SELECT * FROM shelter_operation_settings WHERE LOWER(COALESCE(shelter, '')) = {ph} LIMIT 1",
-        (shelter,),
-    )
+    _insert_default_settings_row(normalized_shelter)
+
+    row = _fetch_settings_row(normalized_shelter)
+    if row is None:
+        raise RuntimeError(
+            "failed to load shelter operation settings row after insert "
+            f"for shelter={normalized_shelter!r}"
+        )
+
+    return row
