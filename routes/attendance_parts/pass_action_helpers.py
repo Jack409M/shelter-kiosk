@@ -10,6 +10,10 @@ from core.sms_sender import send_sms
 from routes.attendance_parts.helpers import complete_active_passes
 
 
+def _sql(pg: str, sqlite: str) -> str:
+    return pg if g.get("db_kind") == "pg" else sqlite
+
+
 def insert_resident_notification(
     *,
     resident_id: int,
@@ -20,36 +24,36 @@ def insert_resident_notification(
     related_pass_id: int | None,
 ) -> None:
     db_execute(
-        """
-        INSERT INTO resident_notifications (
-            resident_id,
-            shelter,
-            notification_type,
-            title,
-            message,
-            related_pass_id,
-            is_read,
-            created_at,
-            read_at
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, 0, %s, %s)
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        INSERT INTO resident_notifications (
-            resident_id,
-            shelter,
-            notification_type,
-            title,
-            message,
-            related_pass_id,
-            is_read,
-            created_at,
-            read_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
-        """,
+        _sql(
+            """
+            INSERT INTO resident_notifications (
+                resident_id,
+                shelter,
+                notification_type,
+                title,
+                message,
+                related_pass_id,
+                is_read,
+                created_at,
+                read_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, 0, %s, %s)
+            """,
+            """
+            INSERT INTO resident_notifications (
+                resident_id,
+                shelter,
+                notification_type,
+                title,
+                message,
+                related_pass_id,
+                is_read,
+                created_at,
+                read_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)
+            """,
+        ),
         (
             resident_id,
             shelter,
@@ -65,114 +69,114 @@ def insert_resident_notification(
 
 def load_pass_for_review(pass_id: int, shelter: str):
     return db_fetchone(
-        """
-        SELECT id, resident_id, shelter, status, pass_type, end_at, end_date
-        FROM resident_passes
-        WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-        LIMIT 1
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        SELECT id, resident_id, shelter, status, pass_type, end_at, end_date
-        FROM resident_passes
-        WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
-        LIMIT 1
-        """,
+        _sql(
+            """
+            SELECT id, resident_id, shelter, status, pass_type, end_at, end_date
+            FROM resident_passes
+            WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+            LIMIT 1
+            """,
+            """
+            SELECT id, resident_id, shelter, status, pass_type, end_at, end_date
+            FROM resident_passes
+            WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+            LIMIT 1
+            """,
+        ),
         (pass_id, shelter),
     )
 
 
 def load_pass_for_check_in(pass_id: int, shelter: str):
     return db_fetchone(
-        """
-        SELECT
-            rp.id,
-            rp.resident_id,
-            rp.shelter,
-            rp.status,
-            rp.pass_type,
-            rp.start_at,
-            rp.end_at,
-            rp.start_date,
-            rp.end_date,
-            rp.destination,
-            r.first_name,
-            r.last_name
-        FROM resident_passes rp
-        JOIN residents r ON r.id = rp.resident_id
-        WHERE rp.id = %s
-          AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
-        LIMIT 1
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        SELECT
-            rp.id,
-            rp.resident_id,
-            rp.shelter,
-            rp.status,
-            rp.pass_type,
-            rp.start_at,
-            rp.end_at,
-            rp.start_date,
-            rp.end_date,
-            rp.destination,
-            r.first_name,
-            r.last_name
-        FROM resident_passes rp
-        JOIN residents r ON r.id = rp.resident_id
-        WHERE rp.id = ?
-          AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
-        LIMIT 1
-        """,
+        _sql(
+            """
+            SELECT
+                rp.id,
+                rp.resident_id,
+                rp.shelter,
+                rp.status,
+                rp.pass_type,
+                rp.start_at,
+                rp.end_at,
+                rp.start_date,
+                rp.end_date,
+                rp.destination,
+                r.first_name,
+                r.last_name
+            FROM resident_passes rp
+            JOIN residents r ON r.id = rp.resident_id
+            WHERE rp.id = %s
+              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
+            LIMIT 1
+            """,
+            """
+            SELECT
+                rp.id,
+                rp.resident_id,
+                rp.shelter,
+                rp.status,
+                rp.pass_type,
+                rp.start_at,
+                rp.end_at,
+                rp.start_date,
+                rp.end_date,
+                rp.destination,
+                r.first_name,
+                r.last_name
+            FROM resident_passes rp
+            JOIN residents r ON r.id = rp.resident_id
+            WHERE rp.id = ?
+              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
+            LIMIT 1
+            """,
+        ),
         (pass_id, shelter),
     )
 
 
 def load_pass_sms_context(pass_id: int, shelter: str):
     return db_fetchone(
-        """
-        SELECT
-            rp.id,
-            rp.resident_id,
-            rp.pass_type,
-            rp.start_at,
-            rp.end_at,
-            rp.start_date,
-            rp.end_date,
-            r.first_name,
-            r.last_name,
-            d.resident_phone
-        FROM resident_passes rp
-        JOIN residents r ON r.id = rp.resident_id
-        LEFT JOIN resident_pass_request_details d ON d.pass_id = rp.id
-        WHERE rp.id = %s
-          AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
-        LIMIT 1
-        """
-        if g.get("db_kind") == "pg"
-        else
-        """
-        SELECT
-            rp.id,
-            rp.resident_id,
-            rp.pass_type,
-            rp.start_at,
-            rp.end_at,
-            rp.start_date,
-            rp.end_date,
-            r.first_name,
-            r.last_name,
-            d.resident_phone
-        FROM resident_passes rp
-        JOIN residents r ON r.id = rp.resident_id
-        LEFT JOIN resident_pass_request_details d ON d.pass_id = rp.id
-        WHERE rp.id = ?
-          AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
-        LIMIT 1
-        """,
+        _sql(
+            """
+            SELECT
+                rp.id,
+                rp.resident_id,
+                rp.pass_type,
+                rp.start_at,
+                rp.end_at,
+                rp.start_date,
+                rp.end_date,
+                r.first_name,
+                r.last_name,
+                d.resident_phone
+            FROM resident_passes rp
+            JOIN residents r ON r.id = rp.resident_id
+            LEFT JOIN resident_pass_request_details d ON d.pass_id = rp.id
+            WHERE rp.id = %s
+              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
+            LIMIT 1
+            """,
+            """
+            SELECT
+                rp.id,
+                rp.resident_id,
+                rp.pass_type,
+                rp.start_at,
+                rp.end_at,
+                rp.start_date,
+                rp.end_date,
+                r.first_name,
+                r.last_name,
+                d.resident_phone
+            FROM resident_passes rp
+            JOIN residents r ON r.id = rp.resident_id
+            LEFT JOIN resident_pass_request_details d ON d.pass_id = rp.id
+            WHERE rp.id = ?
+              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
+            LIMIT 1
+            """,
+        ),
         (pass_id, shelter),
     )
 
@@ -259,27 +263,48 @@ def apply_pass_approval(
 
     with db_transaction():
         db_execute(
-            """
-            UPDATE resident_passes
-            SET status = %s,
-                approved_by = %s,
-                approved_at = %s,
-                delete_after_at = %s,
-                updated_at = %s
-            WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-            """,
+            _sql(
+                """
+                UPDATE resident_passes
+                SET status = %s,
+                    approved_by = %s,
+                    approved_at = %s,
+                    delete_after_at = %s,
+                    updated_at = %s
+                WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                """,
+                """
+                UPDATE resident_passes
+                SET status = ?,
+                    approved_by = ?,
+                    approved_at = ?,
+                    delete_after_at = ?,
+                    updated_at = ?
+                WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                """,
+            ),
             ("approved", staff_id, now_iso, delete_after_at, now_iso, pass_id, shelter),
         )
 
         db_execute(
-            """
-            UPDATE resident_pass_request_details
-            SET reviewed_by_user_id = %s,
-                reviewed_by_name = %s,
-                reviewed_at = %s,
-                updated_at = %s
-            WHERE pass_id = %s
-            """,
+            _sql(
+                """
+                UPDATE resident_pass_request_details
+                SET reviewed_by_user_id = %s,
+                    reviewed_by_name = %s,
+                    reviewed_at = %s,
+                    updated_at = %s
+                WHERE pass_id = %s
+                """,
+                """
+                UPDATE resident_pass_request_details
+                SET reviewed_by_user_id = ?,
+                    reviewed_by_name = ?,
+                    reviewed_at = ?,
+                    updated_at = ?
+                WHERE pass_id = ?
+                """,
+            ),
             (staff_id, staff_name or None, now_iso, now_iso, pass_id),
         )
 
@@ -306,26 +331,46 @@ def apply_pass_denial(
 
     with db_transaction():
         db_execute(
-            """
-            UPDATE resident_passes
-            SET status = %s,
-                approved_by = %s,
-                approved_at = %s,
-                updated_at = %s
-            WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-            """,
+            _sql(
+                """
+                UPDATE resident_passes
+                SET status = %s,
+                    approved_by = %s,
+                    approved_at = %s,
+                    updated_at = %s
+                WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                """,
+                """
+                UPDATE resident_passes
+                SET status = ?,
+                    approved_by = ?,
+                    approved_at = ?,
+                    updated_at = ?
+                WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                """,
+            ),
             ("denied", staff_id, now_iso, now_iso, pass_id, shelter),
         )
 
         db_execute(
-            """
-            UPDATE resident_pass_request_details
-            SET reviewed_by_user_id = %s,
-                reviewed_by_name = %s,
-                reviewed_at = %s,
-                updated_at = %s
-            WHERE pass_id = %s
-            """,
+            _sql(
+                """
+                UPDATE resident_pass_request_details
+                SET reviewed_by_user_id = %s,
+                    reviewed_by_name = %s,
+                    reviewed_at = %s,
+                    updated_at = %s
+                WHERE pass_id = %s
+                """,
+                """
+                UPDATE resident_pass_request_details
+                SET reviewed_by_user_id = ?,
+                    reviewed_by_name = ?,
+                    reviewed_at = ?,
+                    updated_at = ?
+                WHERE pass_id = ?
+                """,
+            ),
             (staff_id, staff_name or None, now_iso, now_iso, pass_id),
         )
 
@@ -348,25 +393,46 @@ def apply_pass_check_in(
 ) -> None:
     with db_transaction():
         db_execute(
-            """
-            INSERT INTO attendance_events (
-                resident_id,
-                shelter,
-                event_type,
-                event_time,
-                staff_user_id,
-                note,
-                expected_back_time,
-                destination,
-                obligation_start_time,
-                obligation_end_time,
-                meeting_count,
-                meeting_1,
-                meeting_2,
-                is_recovery_meeting
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """,
+            _sql(
+                """
+                INSERT INTO attendance_events (
+                    resident_id,
+                    shelter,
+                    event_type,
+                    event_time,
+                    staff_user_id,
+                    note,
+                    expected_back_time,
+                    destination,
+                    obligation_start_time,
+                    obligation_end_time,
+                    meeting_count,
+                    meeting_1,
+                    meeting_2,
+                    is_recovery_meeting
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                """
+                INSERT INTO attendance_events (
+                    resident_id,
+                    shelter,
+                    event_type,
+                    event_time,
+                    staff_user_id,
+                    note,
+                    expected_back_time,
+                    destination,
+                    obligation_start_time,
+                    obligation_end_time,
+                    meeting_count,
+                    meeting_1,
+                    meeting_2,
+                    is_recovery_meeting
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+            ),
             (
                 resident_id,
                 shelter,
