@@ -229,3 +229,5 @@ def test_transfer_updates_resident_shelter(app, client):
         )
 
         assert updated["shelter"] == "haven"
+
+
