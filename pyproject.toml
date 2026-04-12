@@ -54,6 +54,7 @@ pretty = true
 explicit_package_bases = true
 ignore_missing_imports = true
 
-[mypy-tests.*]
+[[tool.mypy.overrides]]
+module = ["tests.*"]
 disallow_incomplete_defs = false
 check_untyped_defs = false
