@@ -1,17 +1,23 @@
 from __future__ import annotations
 
-from flask import abort, current_app, flash, render_template, request
+from collections.abc import Callable
+from typing import Any
+
+from flask import Flask, Response, abort, current_app, flash, render_template, request
 
 from core.audit import log_action
 
 
+BeforeRequestResult = Response | tuple[str, int] | tuple[str, int, dict[str, Any]] | None
+
+
 def register_request_security(
-    app,
+    app: Flask,
     *,
-    client_ip_func,
-    is_ip_banned_func,
-    is_rate_limited_func,
-    ban_ip_func,
+    client_ip_func: Callable[[], str | None],
+    is_ip_banned_func: Callable[[str], bool],
+    is_rate_limited_func: Callable[..., bool],
+    ban_ip_func: Callable[[str, int], None],
 ) -> None:
     """
     Register request security before_request handlers onto the Flask app.
@@ -29,7 +35,7 @@ def register_request_security(
                 action_type,
             )
 
-    def _truthy_config(value) -> bool:
+    def _truthy_config(value: object) -> bool:
         return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
 
     def _normalized_path() -> str:
@@ -75,12 +81,12 @@ def register_request_security(
 
         return " ".join(parts)
 
-    def _abort_and_audit(status_code: int, action_type: str, details: str):
+    def _abort_and_audit(status_code: int, action_type: str, details: str) -> None:
         _audit(action_type, details)
         abort(status_code)
 
     @app.before_request
-    def require_cloudflare_proxy():
+    def require_cloudflare_proxy() -> BeforeRequestResult:
         if not _truthy_config(current_app.config.get("CLOUDFLARE_ONLY")):
             return None
 
@@ -100,7 +106,7 @@ def register_request_security(
         abort(403)
 
     @app.before_request
-    def block_banned_ips():
+    def block_banned_ips() -> BeforeRequestResult:
         ip = _request_ip()
 
         if ip != "unknown" and is_ip_banned_func(ip):
@@ -113,7 +119,7 @@ def register_request_security(
         return None
 
     @app.before_request
-    def block_bad_methods_and_agents():
+    def block_bad_methods_and_agents() -> BeforeRequestResult:
         bad_methods = {"TRACE", "TRACK", "CONNECT"}
 
         if request.method in bad_methods:
@@ -164,7 +170,7 @@ def register_request_security(
         abort(403)
 
     @app.before_request
-    def auto_ban_scanner_probes():
+    def auto_ban_scanner_probes() -> BeforeRequestResult:
         path = _normalized_path().lower()
 
         if path.startswith("/static/") or path == "/favicon.ico":
@@ -215,7 +221,7 @@ def register_request_security(
         abort(404)
 
     @app.before_request
-    def public_bot_throttle():
+    def public_bot_throttle() -> BeforeRequestResult:
         path = _normalized_path()
 
         public_paths = {
