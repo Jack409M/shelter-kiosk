@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from core.db import db_fetchall
 from core.db import db_fetchone
+from core.db import db_transaction
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.intake_income_support import load_intake_income_support
 from routes.case_management_parts.needs import get_open_enrollment_needs
@@ -253,15 +254,21 @@ def load_appointments(enrollment_id: int):
 
 
 def load_enrollment_context(enrollment_id: int) -> dict:
-    family_snapshot = load_family_snapshot(enrollment_id)
-    intake_assessment = load_intake_assessment(enrollment_id)
-    intake_income_support = load_intake_income_support(enrollment_id)
-    exit_assessment = load_exit_assessment(enrollment_id)
-    goals = load_goals(enrollment_id)
-    appointments = load_appointments(enrollment_id)
-    notes, services = load_case_history(enrollment_id)
+    # 🔒 CRITICAL FIX: ensure consistent snapshot
+    with db_transaction():
+        family_snapshot = load_family_snapshot(enrollment_id)
+        intake_assessment = load_intake_assessment(enrollment_id)
+        intake_income_support = load_intake_income_support(enrollment_id)
+        exit_assessment = load_exit_assessment(enrollment_id)
+        goals = load_goals(enrollment_id)
+        appointments = load_appointments(enrollment_id)
+        notes, services = load_case_history(enrollment_id)
 
-    is_deceased_case = is_deceased_exit(exit_assessment)
+        is_deceased_case = is_deceased_exit(exit_assessment)
+
+        open_needs = [] if is_deceased_case else get_open_enrollment_needs(enrollment_id)
+        followup_6_month = None if is_deceased_case else get_latest_followup(enrollment_id, "6_month")
+        followup_1_year = None if is_deceased_case else get_latest_followup(enrollment_id, "1_year")
 
     return {
         "family_snapshot": family_snapshot,
@@ -272,9 +279,9 @@ def load_enrollment_context(enrollment_id: int) -> dict:
         "appointments": appointments,
         "notes": notes,
         "services": services,
-        "open_needs": [] if is_deceased_case else get_open_enrollment_needs(enrollment_id),
-        "followup_6_month": None if is_deceased_case else get_latest_followup(enrollment_id, "6_month"),
-        "followup_1_year": None if is_deceased_case else get_latest_followup(enrollment_id, "1_year"),
+        "open_needs": open_needs,
+        "followup_6_month": followup_6_month,
+        "followup_1_year": followup_1_year,
         "is_deceased_case": is_deceased_case,
     }
 
