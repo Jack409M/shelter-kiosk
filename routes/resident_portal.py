@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
@@ -40,7 +42,7 @@ def _resident_session_text(key: str) -> str:
     return str(session.get(key) or "").strip()
 
 
-def _load_recent_pass_items(resident_id: int, shelter: str) -> list[dict[str, object]]:
+def _load_recent_pass_items(resident_id: int, shelter: str) -> list[dict[str, Any]]:
     rows = db_fetchall(
         """
         SELECT
@@ -67,7 +69,7 @@ def _load_recent_pass_items(resident_id: int, shelter: str) -> list[dict[str, ob
     return rows
 
 
-def _load_recent_notifications(resident_id: int, shelter: str) -> list[dict[str, object]]:
+def _load_recent_notifications(resident_id: int, shelter: str) -> list[dict[str, Any]]:
     return db_fetchall(
         """
         SELECT
@@ -92,7 +94,7 @@ def _load_recent_notifications(resident_id: int, shelter: str) -> list[dict[str,
 def _load_recent_transport_requests(
     resident_identifier: str,
     shelter: str,
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     if not resident_identifier:
         return []
 
@@ -113,6 +115,12 @@ def _load_recent_transport_requests(
     )
 
 
+def _clear_resident_session_and_redirect():
+    session.clear()
+    flash("Your session ended. Please sign in again.", "error")
+    return redirect(url_for("resident_requests.resident_signin"))
+
+
 @resident_portal.route("/home")
 @require_resident
 def home():
@@ -123,9 +131,7 @@ def home():
     resident_identifier = _resident_session_text("resident_identifier")
 
     if resident_id is None or not shelter:
-        session.clear()
-        flash("Your session ended. Please sign in again.", "error")
-        return redirect(url_for("resident_requests.resident_signin"))
+        return _clear_resident_session_and_redirect()
 
     run_pass_retention_cleanup_for_shelter(shelter)
 
@@ -156,9 +162,7 @@ def resident_chores():
     resident_id = _resident_session_int("resident_id")
 
     if resident_id is None:
-        session.clear()
-        flash("Your session ended. Please sign in again.", "error")
-        return redirect(url_for("resident_requests.resident_signin"))
+        return _clear_resident_session_and_redirect()
 
     if request.method == "POST":
         assignment_id = str(request.form.get("assignment_id") or "").strip()
@@ -167,9 +171,13 @@ def resident_chores():
             flash("Missing chore assignment.", "error")
             return redirect(url_for("resident_portal.resident_chores"))
 
-        updated = complete_chore(resident_id, assignment_id)
+        result = complete_chore(resident_id, assignment_id)
 
-        if updated:
+        if not result.found:
+            flash("Chore not found.", "error")
+        elif result.already_completed:
+            flash("Chore was already completed.", "info")
+        elif result.completed:
             flash("Chore marked complete.", "success")
         else:
             flash("Chore was not updated.", "info")
