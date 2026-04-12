@@ -19,14 +19,22 @@ def can_manage_passes() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 
+def _to_naive_utc(dt: datetime) -> datetime:
+    """
+    Normalize ANY datetime to naive UTC.
+    This guarantees safe comparison everywhere.
+    """
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 def _expected_back_utc_for_pass(end_at: str | None, end_date: str | None) -> datetime | None:
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
         try:
             parsed = datetime.fromisoformat(raw_end_at)
-            if parsed.tzinfo is not None:
-                return parsed.astimezone(timezone.utc).replace(tzinfo=None)
-            return parsed
+            return _to_naive_utc(parsed)
         except Exception:
             return None
 
@@ -50,8 +58,11 @@ def _delete_after_from_check_in(
     end_at: str | None,
     end_date: str | None,
 ) -> str:
-    check_in_dt = datetime.fromisoformat(check_in_iso)
+    check_in_dt = _to_naive_utc(datetime.fromisoformat(check_in_iso))
     expected_back_dt = _expected_back_utc_for_pass(end_at, end_date)
+
+    if expected_back_dt is not None:
+        expected_back_dt = _to_naive_utc(expected_back_dt)
 
     if expected_back_dt is None:
         later_dt = check_in_dt
