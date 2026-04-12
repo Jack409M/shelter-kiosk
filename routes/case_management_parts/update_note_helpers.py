@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from flask import request
 
 from routes.case_management_parts.update_needs import collect_need_updates
@@ -9,18 +11,27 @@ from routes.case_management_parts.update_utils import parse_quantity
 from routes.case_management_parts.update_utils import yes_no_to_int
 
 
-def clean_text(value):
-    return (value or "").strip()
+def clean_text(value: object) -> str:
+    return str(value or "").strip()
 
 
-def collect_note_form_values():
+def yes_no_to_bool(value: object) -> bool | None:
+    normalized = str(value or "").strip().lower()
+    if normalized == "yes":
+        return True
+    if normalized == "no":
+        return False
+    return None
+
+
+def collect_note_form_values() -> dict[str, Any]:
     meeting_date = clean_text(request.form.get("meeting_date"))
     notes = clean_text(request.form.get("notes"))
     progress_notes = clean_text(request.form.get("progress_notes"))
     setbacks_or_incidents = clean_text(request.form.get("setbacks_or_incidents"))
     action_items = clean_text(request.form.get("action_items"))
     overall_summary = clean_text(request.form.get("overall_summary"))
-    ready_for_next_level = yes_no_to_int(request.form.get("ready_for_next_level"))
+    ready_for_next_level = yes_no_to_bool(request.form.get("ready_for_next_level"))
     recommended_next_level = clean_text(request.form.get("recommended_next_level"))
     blocker_reason = clean_text(request.form.get("blocker_reason"))
     override_or_exception = clean_text(request.form.get("override_or_exception"))
@@ -55,7 +66,7 @@ def collect_note_form_values():
     }
 
 
-def has_structured_progress(values, *, include_needs: bool):
+def has_structured_progress(values: dict[str, Any], *, include_needs: bool) -> bool:
     return (
         values["updated_grit"] is not None
         or values["parenting_class_completed"] is not None
@@ -70,8 +81,8 @@ def has_structured_progress(values, *, include_needs: bool):
     )
 
 
-def service_form_payloads(service_types: list[str]) -> list[dict]:
-    items: list[dict] = []
+def service_form_payloads(service_types: list[str]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
 
     for service_type in service_types:
         service_note = clean_text(request.form.get(f"service_notes_{service_type}"))
