@@ -67,8 +67,16 @@ def _category_map_for_shelter(shelter: str) -> dict[str, AttendanceHourCategory]
 def _utc_iso_to_local(dt_iso: str | None) -> datetime | None:
     if not dt_iso:
         return None
+
     try:
-        return datetime.fromisoformat(str(dt_iso)).replace(tzinfo=timezone.utc).astimezone(CHICAGO_TZ)
+        dt = datetime.fromisoformat(str(dt_iso))
+    except Exception:
+        return None
+
+    try:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(CHICAGO_TZ)
     except Exception:
         return None
 
