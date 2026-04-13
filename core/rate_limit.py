@@ -47,8 +47,8 @@ def _require_text(value: object, *, label: str) -> str:
 def _require_positive_int(value: object, *, label: str) -> int:
     try:
         number = int(value)
-    except (TypeError, ValueError):
-        raise ValueError(f"{label} must be an integer")
+    except (TypeError, ValueError) as err:
+        raise ValueError(f"{label} must be an integer") from err
 
     if number <= 0:
         raise ValueError(f"{label} must be positive")
@@ -68,7 +68,10 @@ def _prune_expired_state(state: dict[str, float], now: float) -> None:
         del state[key]
 
 
-def _prune_lock_history(now: float, window_seconds: int = _MEMORY_HISTORY_RETENTION_SECONDS) -> None:
+def _prune_lock_history(
+    now: float,
+    window_seconds: int = _MEMORY_HISTORY_RETENTION_SECONDS,
+) -> None:
     empty_keys: list[str] = []
 
     for key, history in _LOCK_HISTORY.items():
@@ -326,7 +329,11 @@ def get_banned_ips_snapshot() -> list[dict[str, int | str]]:
         _prune_expired_state(_BANNED_IPS, now)
 
         rows: list[dict[str, int | str]] = []
-        for ip, until in sorted(_BANNED_IPS.items(), key=lambda item: item[1], reverse=True):
+        for ip, until in sorted(
+            _BANNED_IPS.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        ):
             rows.append(
                 {
                     "ip": ip,
@@ -391,7 +398,11 @@ def get_locked_keys_snapshot() -> list[dict[str, int | str]]:
         _prune_expired_state(_LOCKED_KEYS, now)
 
         rows: list[dict[str, int | str]] = []
-        for key, until in sorted(_LOCKED_KEYS.items(), key=lambda item: item[1], reverse=True):
+        for key, until in sorted(
+            _LOCKED_KEYS.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        ):
             rows.append(
                 {
                     "key": key,
