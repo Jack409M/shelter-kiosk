@@ -7,62 +7,52 @@ permissions:
   contents: write
   pull-requests: write
 
-concurrency:
-  group: autofix-lint-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   autofix:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
 
     steps:
-      - name: Check out repo
+      - name: Checkout
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-          cache: "pip"
 
-      - name: Install dev dependencies
-        shell: bash
+      - name: Install deps
         run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Install Ruff
-        uses: astral-sh/ruff-action@v3
-        with:
-          args: "--version"
-
-      - name: Autofix Ruff issues
-        shell: bash
+      - name: Run Ruff autofix (safe + unsafe)
         run: |
-          set -euo pipefail
-          ruff check core db routes tests --fix
+          ruff check core db routes tests --fix --unsafe-fixes
           ruff format .
 
-      - name: Create pull request
+      - name: Commit changes
+        run: |
+          git config user.name "autofix-bot"
+          git config user.email "autofix@users.noreply.github.com"
+
+          git add .
+          git diff --cached --quiet || git commit -m "chore: auto-fix ruff issues"
+
+      - name: Push branch
+        run: |
+          git push origin HEAD:autofix-ruff || true
+
+      - name: Create PR
         uses: peter-evans/create-pull-request@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: auto-fix Ruff issues"
-          branch: "chore/autofix-ruff"
-          delete-branch: true
-          title: "chore: auto-fix Ruff issues"
+          branch: autofix-ruff
+          title: "chore: auto-fix lint issues"
           body: |
-            Automated Ruff cleanup PR.
+            Automated Ruff cleanup.
 
-            This workflow ran:
-            - ruff check core db routes tests --fix
-            - ruff format .
+            Includes:
+            - safe fixes
+            - unsafe fixes
 
-            Review the remaining CI results after this PR, because some issues are not auto-fixable.
-          labels: |
-            chore
-            automated
+            Remaining issues (if any) require manual review.
