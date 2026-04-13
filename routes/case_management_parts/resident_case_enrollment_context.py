@@ -253,8 +253,26 @@ def load_appointments(enrollment_id: int):
     )
 
 
+def _load_deceased_filtered_context(enrollment_id: int, exit_assessment):
+    is_deceased_case = is_deceased_exit(exit_assessment)
+
+    if is_deceased_case:
+        return {
+            "open_needs": [],
+            "followup_6_month": None,
+            "followup_1_year": None,
+            "is_deceased_case": True,
+        }
+
+    return {
+        "open_needs": get_open_enrollment_needs(enrollment_id),
+        "followup_6_month": get_latest_followup(enrollment_id, "6_month"),
+        "followup_1_year": get_latest_followup(enrollment_id, "1_year"),
+        "is_deceased_case": False,
+    }
+
+
 def load_enrollment_context(enrollment_id: int) -> dict:
-    # 🔒 CRITICAL FIX: ensure consistent snapshot
     with db_transaction():
         family_snapshot = load_family_snapshot(enrollment_id)
         intake_assessment = load_intake_assessment(enrollment_id)
@@ -263,12 +281,10 @@ def load_enrollment_context(enrollment_id: int) -> dict:
         goals = load_goals(enrollment_id)
         appointments = load_appointments(enrollment_id)
         notes, services = load_case_history(enrollment_id)
-
-        is_deceased_case = is_deceased_exit(exit_assessment)
-
-        open_needs = [] if is_deceased_case else get_open_enrollment_needs(enrollment_id)
-        followup_6_month = None if is_deceased_case else get_latest_followup(enrollment_id, "6_month")
-        followup_1_year = None if is_deceased_case else get_latest_followup(enrollment_id, "1_year")
+        deceased_filtered_context = _load_deceased_filtered_context(
+            enrollment_id,
+            exit_assessment,
+        )
 
     return {
         "family_snapshot": family_snapshot,
@@ -279,10 +295,10 @@ def load_enrollment_context(enrollment_id: int) -> dict:
         "appointments": appointments,
         "notes": notes,
         "services": services,
-        "open_needs": open_needs,
-        "followup_6_month": followup_6_month,
-        "followup_1_year": followup_1_year,
-        "is_deceased_case": is_deceased_case,
+        "open_needs": deceased_filtered_context["open_needs"],
+        "followup_6_month": deceased_filtered_context["followup_6_month"],
+        "followup_1_year": deceased_filtered_context["followup_1_year"],
+        "is_deceased_case": deceased_filtered_context["is_deceased_case"],
     }
 
 
@@ -311,3 +327,4 @@ def calculate_grit_difference(intake_assessment, exit_assessment):
         return None
 
     return exit_grit - intake_grit
+    
