@@ -43,6 +43,7 @@ RESIDENT_SAFE_PATHS = {
 }
 
 TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
+TEST_SQLITE_DATABASE_URL = "sqlite:///:memory:"
 
 
 def register_blueprints(app: Flask) -> None:
@@ -73,14 +74,46 @@ def _env_truthy(name: str) -> bool:
     return (os.environ.get(name) or "").strip().lower() in TRUTHY_ENV_VALUES
 
 
+def _is_pytest_runtime() -> bool:
+    return bool((os.environ.get("PYTEST_CURRENT_TEST") or "").strip())
+
+
+def _resolved_database_url() -> str | None:
+    if _is_pytest_runtime():
+        return TEST_SQLITE_DATABASE_URL
+
+    value = (os.getenv("DATABASE_URL") or "").strip()
+    return value or None
+
+
+def _database_mode_label(database_url: str | None) -> str:
+    if not database_url:
+        return "missing"
+
+    normalized = database_url.lower()
+    if normalized.startswith("sqlite:"):
+        return "sqlite"
+
+    if normalized.startswith("postgres://") or normalized.startswith("postgresql://"):
+        return "postgres"
+
+    return "custom"
+
+
 def _configure_app(app: Flask) -> None:
+    database_url = _resolved_database_url()
+
     app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
-    app.config["DATABASE_URL"] = (os.getenv("DATABASE_URL") or "").strip() or None
+    app.config["DATABASE_URL"] = database_url
     app.config["CLOUDFLARE_ONLY"] = os.getenv("CLOUDFLARE_ONLY", "")
     app.config["ADMIN_USERNAME"] = os.environ.get("ADMIN_USERNAME")
     app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
     app.config["INIT_DB_FUNC"] = init_db
     app.config["UTCNOW_ISO_FUNC"] = utcnow_iso
+    app.config["DATABASE_MODE_LABEL"] = _database_mode_label(database_url)
+
+    if _is_pytest_runtime():
+        os.environ["DATABASE_URL"] = TEST_SQLITE_DATABASE_URL
 
     secret = (os.environ.get("FLASK_SECRET_KEY") or "").strip()
     if not secret:
@@ -109,11 +142,11 @@ def _configure_logging(app: Flask) -> str:
     app.logger.info("Shelter Kiosk starting")
 
     if not app.config["DATABASE_URL"]:
-        raise RuntimeError("DATABASE_URL is required. App is locked to Postgres.")
+        raise RuntimeError("DATABASE_URL is required.")
 
     app.logger.info(
         "database_mode=%s cloudflare_only=%s log_level=%s",
-        "postgres",
+        app.config.get("DATABASE_MODE_LABEL"),
         app.config.get("CLOUDFLARE_ONLY"),
         log_level_name,
     )
