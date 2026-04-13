@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
-import pathlib
+
 import pytest
 
 # ------------------------------------------------------------
@@ -18,7 +18,6 @@ if ROOT_DIR not in sys.path:
 # FORCE SAFE DEFAULT ENV BEFORE ANY IMPORTS
 # ------------------------------------------------------------
 
-# Use a real file, NOT :memory:
 _DEFAULT_DB_PATH = os.path.join(tempfile.gettempdir(), "shelter_kiosk_test_bootstrap.db")
 
 os.environ["DATABASE_URL"] = f"sqlite:///{_DEFAULT_DB_PATH}"
@@ -35,34 +34,30 @@ os.environ["TWILIO_STATUS_ENABLED"] = "0"
 # TEST FIXTURES
 # ------------------------------------------------------------
 
+
 @pytest.fixture
 def app(tmp_path, monkeypatch):
     """
     Creates a clean app with isolated SQLite DB per test.
     """
 
-    # --- unique DB per test ---
     db_path = tmp_path / "test.db"
     database_url = f"sqlite:///{db_path}"
 
     monkeypatch.setenv("DATABASE_URL", database_url)
 
-    # --- disable background scheduler ---
     monkeypatch.setattr(
         "core.app_factory.start_pass_retention_scheduler",
         lambda app: None,
     )
 
-    # --- HARD RESET GLOBAL STATE (CRITICAL) ---
-    import core.runtime as runtime
     import core.db as db_module
+    import core.runtime as runtime
 
     runtime._DB_INITIALIZED = False
     runtime._DB_INIT_URL = None
-
     db_module.PG_POOL = None
 
-    # --- build app ---
     from core.app_factory import create_app
 
     app = create_app(
@@ -75,7 +70,6 @@ def app(tmp_path, monkeypatch):
 
     yield app
 
-    # --- cleanup ---
     runtime._DB_INITIALIZED = False
     runtime._DB_INIT_URL = None
     db_module.PG_POOL = None
