@@ -217,6 +217,10 @@ def create_intake(
         _insert_intake_assessment(enrollment_id, data)
         _insert_family_snapshot(enrollment_id, data)
         upsert_intake_income_support(enrollment_id, data)
+        sync_enrollment_needs(
+            enrollment_id,
+            selected_need_keys=data.get("entry_need_keys", []),
+        )
 
         if draft_id is not None:
             _complete_intake_draft(draft_id)
@@ -244,6 +248,10 @@ def create_intake_for_existing_resident(
         _insert_intake_assessment(enrollment_id, data)
         _insert_family_snapshot(enrollment_id, data)
         upsert_intake_income_support(enrollment_id, data)
+        sync_enrollment_needs(
+            enrollment_id,
+            selected_need_keys=data.get("entry_need_keys", []),
+        )
 
         if draft_id is not None:
             _complete_intake_draft(draft_id)
