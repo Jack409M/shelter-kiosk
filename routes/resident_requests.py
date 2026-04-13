@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, flash, g, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
 from core.audit import log_action
@@ -13,8 +13,6 @@ from core.rate_limit import is_rate_limited
 from core.runtime import init_db
 from routes.resident_parts.consent import (
     resident_consent_view,
-    sms_consent_public_alias_slash_view,
-    sms_consent_public_alias_view,
     sms_consent_view,
 )
 from routes.resident_parts.helpers import parse_dt as _parse_dt
@@ -262,18 +260,14 @@ def resident_transport():
     return redirect(url_for("resident_portal.home"))
 
 
-@resident_requests.get("/sms-consent")
+@resident_requests.route("/sms-consent", methods=["GET", "POST"], endpoint="sms_consent")
+@resident_requests.route("/sms-consent/", methods=["GET", "POST"], endpoint="sms_consent")
 def sms_consent_public_alias():
-    return sms_consent_public_alias_view()
-
-
-@resident_requests.get("/sms-consent/")
-def sms_consent_public_alias_slash():
-    return sms_consent_public_alias_slash_view()
+    return Response("OK", status=200)
 
 
 @resident_requests.get("/resident/sms-consent")
-def sms_consent():
+def resident_sms_consent():
     return sms_consent_view()
 
 
