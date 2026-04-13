@@ -21,7 +21,6 @@ def _set_csrf(client):
 # -----------------------------------------
 # APPROVE PASS
 # -----------------------------------------
-
 def test_approve_pass_updates_all_fields(app, client):
     from core.db import db_execute, db_fetchone
 
@@ -87,10 +86,94 @@ def test_approve_pass_updates_all_fields(app, client):
         assert "pass_id=999" in str(audit["action_details"] or "")
 
 
+def test_approve_pass_requires_login(client):
+    response = client.get("/staff/passes/approve/995", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert "/staff/login" in response.headers["Location"]
+
+
+def test_approve_pass_with_shelter_mismatch_does_not_approve(app, client):
+    from core.db import db_execute, db_fetchone
+
+    _login_staff(client)
+    _set_csrf(client)
+
+    with client.session_transaction() as session:
+        session["shelter"] = "haven"
+        session["allowed_shelters"] = ["haven"]
+
+    with app.app_context():
+        init_db()
+
+        db_execute("DELETE FROM resident_pass_request_details WHERE pass_id = 995")
+        db_execute("DELETE FROM resident_notifications WHERE related_pass_id = 995")
+        db_execute("DELETE FROM resident_passes WHERE id = 995")
+        db_execute("DELETE FROM residents WHERE id = 5")
+
+        db_execute(
+            """
+            INSERT INTO residents (id, first_name, last_name, shelter)
+            VALUES (5, 'Wrong', 'Shelter', 'abba')
+            """
+        )
+
+        db_execute(
+            """
+            INSERT INTO resident_passes (
+                id, resident_id, shelter, status, pass_type, created_at, updated_at
+            )
+            VALUES (995, 5, 'abba', 'pending', 'pass', '2026-01-01', '2026-01-01')
+            """
+        )
+
+        db_execute(
+            """
+            INSERT INTO resident_pass_request_details (pass_id, created_at, updated_at)
+            VALUES (995, '2026-01-01', '2026-01-01')
+            """
+        )
+
+    client.get("/staff/passes/approve/995", follow_redirects=False)
+
+    with app.app_context():
+        row = db_fetchone("SELECT status FROM resident_passes WHERE id = 995")
+
+        assert row["status"] == "pending"
+
+
+def test_approve_nonexistent_pass_is_safe(app, client):
+    from core.db import db_fetchone
+
+    _login_staff(client)
+    _set_csrf(client)
+
+    with app.app_context():
+        init_db()
+
+    response = client.get("/staff/passes/approve/123456", follow_redirects=False)
+
+    assert response.status_code in (200, 302, 404)
+
+    with app.app_context():
+        audit = db_fetchone(
+            """
+            SELECT entity_type, action_type, action_details
+            FROM audit_log
+            WHERE entity_type = 'pass'
+              AND action_type = 'approve'
+              AND action_details LIKE '%123456%'
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        )
+
+        assert audit is None
+
+
 # -----------------------------------------
 # DENY PASS
 # -----------------------------------------
-
 def test_deny_pass_sets_denied(app, client):
     from core.db import db_execute, db_fetchone
 
@@ -150,10 +233,92 @@ def test_deny_pass_sets_denied(app, client):
         assert "pass_id=998" in str(audit["action_details"] or "")
 
 
+def test_deny_pass_requires_login(client):
+    response = client.get("/staff/passes/deny/994", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert "/staff/login" in response.headers["Location"]
+
+
+def test_deny_pass_with_shelter_mismatch_does_not_deny(app, client):
+    from core.db import db_execute, db_fetchone
+
+    _login_staff(client)
+
+    with client.session_transaction() as session:
+        session["shelter"] = "haven"
+        session["allowed_shelters"] = ["haven"]
+
+    with app.app_context():
+        init_db()
+
+        db_execute("DELETE FROM resident_pass_request_details WHERE pass_id = 994")
+        db_execute("DELETE FROM resident_notifications WHERE related_pass_id = 994")
+        db_execute("DELETE FROM resident_passes WHERE id = 994")
+        db_execute("DELETE FROM residents WHERE id = 6")
+
+        db_execute(
+            """
+            INSERT INTO residents (id, first_name, last_name, shelter)
+            VALUES (6, 'Wrong', 'Shelter', 'abba')
+            """
+        )
+
+        db_execute(
+            """
+            INSERT INTO resident_passes (
+                id, resident_id, shelter, status, pass_type, created_at, updated_at
+            )
+            VALUES (994, 6, 'abba', 'pending', 'pass', '2026-01-01', '2026-01-01')
+            """
+        )
+
+        db_execute(
+            """
+            INSERT INTO resident_pass_request_details (pass_id, created_at, updated_at)
+            VALUES (994, '2026-01-01', '2026-01-01')
+            """
+        )
+
+    client.get("/staff/passes/deny/994", follow_redirects=False)
+
+    with app.app_context():
+        row = db_fetchone("SELECT status FROM resident_passes WHERE id = 994")
+
+        assert row["status"] == "pending"
+
+
+def test_deny_nonexistent_pass_is_safe(app, client):
+    from core.db import db_fetchone
+
+    _login_staff(client)
+
+    with app.app_context():
+        init_db()
+
+    response = client.get("/staff/passes/deny/123457", follow_redirects=False)
+
+    assert response.status_code in (200, 302, 404)
+
+    with app.app_context():
+        audit = db_fetchone(
+            """
+            SELECT entity_type, action_type, action_details
+            FROM audit_log
+            WHERE entity_type = 'pass'
+              AND action_type = 'deny'
+              AND action_details LIKE '%123457%'
+            ORDER BY id DESC
+            LIMIT 1
+            """
+        )
+
+        assert audit is None
+
+
 # -----------------------------------------
 # CHECK IN PASS
 # -----------------------------------------
-
 def test_check_in_creates_attendance_event(app, client):
     from core.db import db_execute, db_fetchone
 
@@ -210,7 +375,6 @@ def test_check_in_creates_attendance_event(app, client):
 # -----------------------------------------
 # SMS FAILURE DOES NOT BREAK APPROVAL
 # -----------------------------------------
-
 def test_sms_failure_does_not_break_approval(app, client, monkeypatch):
     from core.db import db_execute, db_fetchone
 
