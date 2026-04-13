@@ -13,6 +13,7 @@ from db import schema
 # Environment helpers
 # ------------------------------------------------------------
 
+
 def env_flag(name: str, default: bool = False) -> bool:
     value = (os.environ.get(name) or "").strip().lower()
     if not value:
@@ -74,25 +75,36 @@ TWILIO_STATUS_CALLBACK_URL = env_text("TWILIO_STATUS_CALLBACK_URL")
 
 _DB_INITIALIZED = False
 _DB_INITIALIZATION_LOCK = Lock()
+_DB_INIT_URL: str | None = None
+
+
+def _resolved_database_url() -> str:
+    if (os.environ.get("PYTEST_CURRENT_TEST") or "").strip():
+        return "sqlite:///:memory:"
+    return (os.environ.get("DATABASE_URL") or "").strip()
 
 
 def init_db() -> None:
     """
     Ensures database connection and schema initialization.
     Runs only once per process and is safe under concurrent startup.
+    Reinitializes if the effective DATABASE_URL changes.
     """
-    global _DB_INITIALIZED
+    global _DB_INITIALIZED, _DB_INIT_URL
 
-    if _DB_INITIALIZED:
-        return
+    effective_database_url = _resolved_database_url()
 
     with _DB_INITIALIZATION_LOCK:
-        if _DB_INITIALIZED:
+        if _DB_INITIALIZED and _DB_INIT_URL == effective_database_url:
             return
+
+        if effective_database_url:
+            os.environ["DATABASE_URL"] = effective_database_url
 
         get_db()
         schema.init_db()
         _DB_INITIALIZED = True
+        _DB_INIT_URL = effective_database_url or None
 
 
 # ------------------------------------------------------------
