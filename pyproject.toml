@@ -2,17 +2,26 @@
 minversion = "8.0"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-q --maxfail=1"
+addopts = "-q -ra"
+filterwarnings = [
+  "error::DeprecationWarning",
+]
 
 [tool.coverage.run]
 branch = true
 source = ["core", "db", "routes"]
+parallel = true
 
 [tool.coverage.report]
 skip_empty = true
 show_missing = true
 omit = [
   "tests/*",
+]
+exclude_lines = [
+  "pragma: no cover",
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
 ]
 
 [tool.ruff]
@@ -31,6 +40,8 @@ select = [
   "F",
   "I",
   "B",
+  "UP",
+  "SIM",
 ]
 ignore = [
   "E501",
