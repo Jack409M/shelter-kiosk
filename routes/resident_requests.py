@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
 from core.audit import log_action
+from core.data_integrity import check_resident_integrity
 from core.db import db_fetchone
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
@@ -20,6 +22,7 @@ from routes.resident_parts.consent import (
 from routes.resident_parts.helpers import parse_dt as _parse_dt
 from routes.resident_parts.pass_request import resident_pass_request_view
 
+
 resident_requests = Blueprint("resident_requests", __name__)
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
@@ -29,8 +32,23 @@ def _client_ip() -> str:
     return (request.remote_addr or "").strip() or "unknown"
 
 
-def _db_sql(pg_sql: str, sqlite_sql: str) -> str:
-    return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
+def _clean_text(value: object) -> str:
+    return str(value or "").strip()
+
+
+def _resident_session_int(key: str) -> int | None:
+    value = session.get(key)
+    if value is None:
+        return None
+
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _resident_session_text(key: str) -> str:
+    return _clean_text(session.get(key))
 
 
 def _allowed_resident_next_urls() -> set[str]:
@@ -43,19 +61,26 @@ def _allowed_resident_next_urls() -> set[str]:
 
 
 def _safe_next_url(candidate: str) -> str:
-    next_url = (candidate or "").strip()
+    next_url = _clean_text(candidate)
     if next_url in _allowed_resident_next_urls():
         return next_url
     return url_for("resident_portal.home")
 
 
-def _load_resident_by_code(resident_code: str):
+def _load_resident_by_code(resident_code: str) -> dict[str, Any] | None:
+    normalized_code = _clean_text(resident_code)
+    if not normalized_code:
+        return None
+
     return db_fetchone(
-        _db_sql(
-            "SELECT * FROM residents WHERE resident_code = %s",
-            "SELECT * FROM residents WHERE resident_code = ?",
-        ),
-        (resident_code,),
+        """
+        SELECT *
+        FROM residents
+        WHERE resident_code = %s
+          AND is_active = TRUE
+        LIMIT 1
+        """,
+        (normalized_code,),
     )
 
 
@@ -106,7 +131,7 @@ def _insert_transport_request(
             status,
             submitted_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """,
         (
@@ -124,7 +149,67 @@ def _insert_transport_request(
             submitted_at,
         ),
     )
+
+    if row is None or row.get("id") is None:
+        raise RuntimeError("Transport request insert did not return an id.")
+
     return int(row["id"])
+
+
+def _resident_signin_details(ip: str, resident_code: str, next_url: str) -> str:
+    safe_code = resident_code or "blank"
+    return f"ip={ip} resident_code={safe_code} next={next_url or ''}"
+
+
+def _clear_resident_session_and_redirect():
+    session.clear()
+    flash("Your session ended. Please sign in again.", "error")
+    return redirect(url_for("resident_requests.resident_signin"))
+
+
+def _enforce_resident_integrity_after_signin(resident_id: int):
+    integrity_result = check_resident_integrity(resident_id)
+
+    warning_messages = [
+        issue.message
+        for issue in integrity_result.issues
+        if issue.severity == "warning"
+    ]
+    if warning_messages:
+        current_app.logger.warning(
+            "resident_signin integrity warnings resident_id=%s warnings=%s",
+            resident_id,
+            warning_messages,
+        )
+
+    if integrity_result.ok:
+        return None
+
+    error_messages = [
+        issue.message
+        for issue in integrity_result.issues
+        if issue.severity == "error"
+    ]
+
+    current_app.logger.error(
+        "resident_signin integrity failure resident_id=%s errors=%s",
+        resident_id,
+        error_messages,
+    )
+
+    session.clear()
+    flash("We could not load your account safely. Please contact staff.", "error")
+    return redirect(url_for("resident_requests.resident_signin"))
+
+
+def _validate_transport_session_context() -> tuple[int | None, str, str, str, str]:
+    resident_id = _resident_session_int("resident_id")
+    shelter = _resident_session_text("resident_shelter")
+    resident_identifier = _resident_session_text("resident_identifier")
+    first_name = _resident_session_text("resident_first")
+    last_name = _resident_session_text("resident_last")
+
+    return resident_id, shelter, resident_identifier, first_name, last_name
 
 
 @resident_requests.route("/resident", methods=["GET", "POST"])
@@ -139,8 +224,7 @@ def resident_signin():
         return render_template("resident_signin.html")
 
     ip = _client_ip()
-    resident_code = (request.form.get("resident_code") or "").strip()
-    safe_code = resident_code or "blank"
+    resident_code = _clean_text(request.form.get("resident_code"))
 
     if is_rate_limited(f"resident_signin:{ip}", limit=30, window_seconds=300):
         log_action(
@@ -149,34 +233,49 @@ def resident_signin():
             None,
             None,
             "resident_signin_rate_limited",
-            f"ip={ip} resident_code={safe_code} next={next_url or ''}",
+            _resident_signin_details(ip, resident_code, next_url),
         )
         flash("Too many sign in attempts. Please wait a few minutes and try again.", "error")
         return render_template("resident_signin.html"), 429
 
     row = _load_resident_by_code(resident_code)
 
-    if not row:
+    if row is None:
         log_action(
             "security",
             None,
             None,
             None,
             "resident_signin_failed",
-            f"reason=invalid_resident_code ip={ip} resident_code={safe_code} next={next_url or ''}",
+            f"reason=invalid_resident_code {_resident_signin_details(ip, resident_code, next_url)}",
         )
         flash("Invalid Resident Code.", "error")
         return render_template("resident_signin.html"), 401
 
-    shelter = ((row.get("shelter") if isinstance(row, dict) else row[1]) or "").strip()
+    resident_id_value = row.get("id")
+    resident_id = int(resident_id_value) if resident_id_value is not None else None
+    shelter = _clean_text(row.get("shelter"))
+
+    if resident_id is None or not shelter:
+        current_app.logger.error(
+            "resident_signin missing critical resident fields resident_id=%s shelter=%s",
+            resident_id,
+            shelter,
+        )
+        flash("We could not load your account safely. Please contact staff.", "error")
+        return render_template("resident_signin.html"), 403
 
     session.clear()
     resident_session_start(row, shelter, resident_code)
 
+    integrity_response = _enforce_resident_integrity_after_signin(resident_id)
+    if integrity_response is not None:
+        return integrity_response
+
     log_action(
         "security",
         None,
-        shelter or None,
+        shelter,
         None,
         "resident_signin_success",
         f"ip={ip} resident_code={resident_code}",
@@ -204,27 +303,32 @@ def resident_pass_request():
 def resident_transport():
     init_db()
 
-    shelter = session.get("resident_shelter") or ""
+    resident_id, shelter, resident_identifier, first_name, last_name = (
+        _validate_transport_session_context()
+    )
+
+    if resident_id is None or not shelter or not resident_identifier:
+        return _clear_resident_session_and_redirect()
+
+    integrity_response = _enforce_resident_integrity_after_signin(resident_id)
+    if integrity_response is not None:
+        return integrity_response
 
     if request.method == "GET":
         return render_template("resident_transport.html", shelter=shelter)
 
-    resident_identifier = session.get("resident_identifier") or ""
-    first_name = session.get("resident_first") or ""
-    last_name = session.get("resident_last") or ""
-
     ip = _client_ip()
-    rl_key = f"resident_transport:{ip}:{resident_identifier or 'unknown'}"
+    rl_key = f"resident_transport:{ip}:{resident_identifier}"
     if is_rate_limited(rl_key, limit=6, window_seconds=900):
         flash("Too many transportation submissions. Please wait a few minutes and try again.", "error")
         return render_template("resident_transport.html", shelter=shelter), 429
 
-    needed_raw = (request.form.get("needed_at") or "").strip()
-    pickup_location = (request.form.get("pickup_location") or "").strip()
-    destination = (request.form.get("destination") or "").strip()
-    reason = (request.form.get("reason") or "").strip()
-    resident_notes = (request.form.get("resident_notes") or "").strip()
-    callback_phone = (request.form.get("callback_phone") or "").strip()
+    needed_raw = _clean_text(request.form.get("needed_at"))
+    pickup_location = _clean_text(request.form.get("pickup_location"))
+    destination = _clean_text(request.form.get("destination"))
+    reason = _clean_text(request.form.get("reason"))
+    resident_notes = _clean_text(request.form.get("resident_notes"))
+    callback_phone = _clean_text(request.form.get("callback_phone"))
 
     errors: list[str] = []
 
@@ -238,6 +342,10 @@ def resident_transport():
     if errors:
         for error in errors:
             flash(error, "error")
+        return render_template("resident_transport.html", shelter=shelter), 400
+
+    if needed_dt is None:
+        flash("Invalid needed date or time.", "error")
         return render_template("resident_transport.html", shelter=shelter), 400
 
     needed_iso = needed_dt.replace(microsecond=0).isoformat()
