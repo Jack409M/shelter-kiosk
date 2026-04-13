@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import suppress
 
 from flask import Blueprint, abort, current_app, g, request
 
@@ -71,16 +72,14 @@ def _rate_limited(key: str, limit: int, window_seconds: int) -> bool:
         """,
         (key, window_seconds),
     )
-    c = int((rows[0]["c"] if isinstance(rows[0], dict) else rows[0][0])) if rows else 0
+    c = int(rows[0]["c"] if isinstance(rows[0], dict) else rows[0][0]) if rows else 0
 
     last_prune = current_app.config.get("_LAST_RL_PRUNE_TS", 0.0)
     now = time.time()
     if now - last_prune > 600:
         current_app.config["_LAST_RL_PRUNE_TS"] = now
-        try:
+        with suppress(Exception):
             db_execute("DELETE FROM rate_limit_events WHERE created_at < NOW() - INTERVAL '2 days'")
-        except Exception:
-            pass
 
     return c > limit
 
@@ -96,11 +95,11 @@ def _twilio_auth_token() -> str:
 
 
 def _twilio_inbound_enabled() -> bool:
-    return (os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true")
+    return os.environ.get("TWILIO_INBOUND_ENABLED", "false").strip().lower() == "true"
 
 
 def _twilio_status_enabled() -> bool:
-    return (os.environ.get("TWILIO_STATUS_ENABLED", "false").strip().lower() == "true")
+    return os.environ.get("TWILIO_STATUS_ENABLED", "false").strip().lower() == "true"
 
 
 def _validate_twilio_request() -> None:
