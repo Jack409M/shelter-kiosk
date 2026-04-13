@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, TypeAlias
+
 from flask import abort, flash, redirect, url_for
 
 from core.audit import log_action
@@ -17,32 +19,76 @@ from routes.attendance_parts.pass_action_helpers import (
 from routes.attendance_parts.pass_policy import has_active_pass_block
 
 
-def _require_pass_access():
+PassActionResponse: TypeAlias = tuple[bool, str, str, str]
+
+
+def _require_pass_access() -> None:
     if not can_manage_passes():
         abort(403)
 
 
 def _redirect(target: str, pass_id: int | None = None):
-    if pass_id:
+    if pass_id is not None:
         return redirect(url_for(target, pass_id=pass_id))
     return redirect(url_for(target))
+
+
+def _resident_id_or_none(value: Any) -> int | None:
+    try:
+        resident_id = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    if resident_id <= 0:
+        return None
+
+    return resident_id
+
+
+def _pending_review_result(pass_row: Any) -> tuple[bool, int | None, str, str]:
+    ok, resident_id_raw, pass_type_key_raw, error_message = validate_pending_review_pass(pass_row)
+    if not ok:
+        return False, None, "", error_message
+
+    resident_id = _resident_id_or_none(resident_id_raw)
+    if resident_id is None:
+        return False, None, "", "Pass request is missing a valid resident."
+
+    pass_type_key = str(pass_type_key_raw or "").strip().lower()
+    if not pass_type_key:
+        return False, None, "", "Pass request is missing a valid pass type."
+
+    return True, resident_id, pass_type_key, ""
+
+
+def _check_in_result(pass_row: Any) -> tuple[bool, int | None, str]:
+    ok, resident_id_raw, error_message = validate_check_in_pass(pass_row)
+    if not ok:
+        return False, None, error_message
+
+    resident_id = _resident_id_or_none(resident_id_raw)
+    if resident_id is None:
+        return False, None, "Pass is missing a valid resident."
+
+    return True, resident_id, ""
 
 
 # -----------------------------------------
 # APPROVE
 # -----------------------------------------
 
-def approve_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str):
+def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_name: str) -> PassActionResponse:
     pass_row = load_pass_for_review(pass_id, shelter)
 
-    ok, resident_id, pass_type_key, error_message = validate_pending_review_pass(pass_row)
-    if not ok:
+    ok, resident_id, pass_type_key, error_message = _pending_review_result(pass_row)
+    if not ok or resident_id is None:
         return False, "attendance.staff_passes_pending", error_message, "error"
 
-    blocked, restriction_rows = has_active_pass_block(int(resident_id or 0))
+    blocked, restriction_rows = has_active_pass_block(resident_id)
     if blocked:
-        label = restriction_rows[0].get("restriction_label") or "disciplinary restriction"
-        detail = restriction_rows[0].get("restriction_detail") or ""
+        first_restriction = restriction_rows[0] if restriction_rows else {}
+        label = first_restriction.get("restriction_label") or "disciplinary restriction"
+        detail = first_restriction.get("restriction_detail") or ""
         return (
             False,
             "attendance.staff_pass_detail",
@@ -53,7 +99,7 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: st
     apply_pass_approval(
         pass_id=pass_id,
         shelter=shelter,
-        resident_id=int(resident_id or 0),
+        resident_id=resident_id,
         pass_type_key=pass_type_key,
         pass_row=pass_row,
         staff_id=staff_id,
@@ -64,7 +110,7 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: st
 
     log_action(
         "pass",
-        int(resident_id or 0),
+        resident_id,
         shelter,
         staff_id,
         "approve",
@@ -78,17 +124,17 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: st
 # DENY
 # -----------------------------------------
 
-def deny_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str):
+def deny_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_name: str) -> PassActionResponse:
     pass_row = load_pass_for_review(pass_id, shelter)
 
-    ok, resident_id, pass_type_key, error_message = validate_pending_review_pass(pass_row)
-    if not ok:
+    ok, resident_id, pass_type_key, error_message = _pending_review_result(pass_row)
+    if not ok or resident_id is None:
         return False, "attendance.staff_passes_pending", error_message, "error"
 
     apply_pass_denial(
         pass_id=pass_id,
         shelter=shelter,
-        resident_id=int(resident_id or 0),
+        resident_id=resident_id,
         pass_type_key=pass_type_key,
         staff_id=staff_id,
         staff_name=staff_name,
@@ -96,7 +142,7 @@ def deny_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str):
 
     log_action(
         "pass",
-        int(resident_id or 0),
+        resident_id,
         shelter,
         staff_id,
         "deny",
@@ -110,23 +156,23 @@ def deny_pass_request(*, pass_id: int, shelter: str, staff_id, staff_name: str):
 # CHECK IN
 # -----------------------------------------
 
-def check_in_pass_return(*, pass_id: int, shelter: str, staff_id):
+def check_in_pass_return(*, pass_id: int, shelter: str, staff_id: Any) -> PassActionResponse:
     pass_row = load_pass_for_check_in(pass_id, shelter)
 
-    ok, resident_id, error_message = validate_check_in_pass(pass_row)
-    if not ok:
+    ok, resident_id, error_message = _check_in_result(pass_row)
+    if not ok or resident_id is None:
         return False, "attendance.staff_passes_away_now", error_message, "error"
 
     apply_pass_check_in(
         pass_id=pass_id,
         shelter=shelter,
-        resident_id=int(resident_id or 0),
+        resident_id=resident_id,
         staff_id=staff_id,
     )
 
     log_action(
         "pass",
-        int(resident_id or 0),
+        resident_id,
         shelter,
         staff_id,
         "check_in",
@@ -151,7 +197,7 @@ def staff_pass_approve_view(pass_id: int, action_context):
     )
 
     flash(message, category)
-    return _redirect(target, pass_id)
+    return _redirect(target, pass_id if target == "attendance.staff_pass_detail" else None)
 
 
 def staff_pass_deny_view(pass_id: int, action_context):
