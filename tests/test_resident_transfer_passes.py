@@ -21,7 +21,6 @@ def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
 # -----------------------------------------
 # SECURITY
 # -----------------------------------------
-
 def test_transfer_requires_login(client):
     response = client.post(
         "/staff/residents/1/transfer",
@@ -35,7 +34,6 @@ def test_transfer_requires_login(client):
 # -----------------------------------------
 # INVALID INPUT
 # -----------------------------------------
-
 def test_transfer_rejects_invalid_shelter(app, client, monkeypatch):
     from core.db import db_execute, db_fetchone
 
@@ -82,7 +80,6 @@ def test_transfer_rejects_invalid_shelter(app, client, monkeypatch):
         follow_redirects=False,
     )
 
-    # 🔴 REAL ASSERT: shelter should NOT change
     with app.app_context():
         updated = db_fetchone(
             "SELECT shelter FROM residents WHERE id = %s",
@@ -93,9 +90,8 @@ def test_transfer_rejects_invalid_shelter(app, client, monkeypatch):
 
 
 # -----------------------------------------
-# NO-OP TRANSFER
+# NO OP TRANSFER
 # -----------------------------------------
-
 def test_transfer_same_shelter_no_change(app, client, monkeypatch):
     from core.db import db_execute, db_fetchone
 
@@ -142,7 +138,6 @@ def test_transfer_same_shelter_no_change(app, client, monkeypatch):
         follow_redirects=False,
     )
 
-    # 🔴 REAL ASSERT: still same shelter
     with app.app_context():
         updated = db_fetchone(
             "SELECT shelter FROM residents WHERE id = %s",
@@ -155,9 +150,8 @@ def test_transfer_same_shelter_no_change(app, client, monkeypatch):
 # -----------------------------------------
 # REAL TRANSFER
 # -----------------------------------------
-
 def test_transfer_updates_resident_and_related_records(app, client, monkeypatch):
-    from core.db import db_execute, db_fetchone, db_fetchall
+    from core.db import db_execute, db_fetchall, db_fetchone
 
     _login_staff(client)
     csrf = _set_csrf_token(client)
@@ -188,7 +182,6 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
             ("t_real",),
         )
 
-        # create dependent records
         db_execute(
             """
             INSERT INTO leave_requests (resident_identifier, shelter, status)
@@ -219,7 +212,6 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
         follow_redirects=False,
     )
 
-    # 🔴 ASSERT 1: resident moved
     with app.app_context():
         updated = db_fetchone(
             "SELECT shelter FROM residents WHERE id = %s",
@@ -228,7 +220,6 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
 
         assert updated["shelter"] == "haven"
 
-        # 🔴 ASSERT 2: related records updated
         leave = db_fetchall(
             "SELECT shelter FROM leave_requests WHERE resident_identifier = %s",
             (resident["resident_identifier"],),
@@ -241,5 +232,3 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
 
     assert all(r["shelter"] == "haven" for r in leave)
     assert all(r["shelter"] == "haven" for r in transport)
-
-
