@@ -11,11 +11,9 @@ def test_rate_limit_triggers_exactly_at_limit():
     limit = 5
     window = 60
 
-    # first N should pass
-    for i in range(limit):
+    for _ in range(limit):
         assert is_rate_limited(key, limit=limit, window_seconds=window) is False
 
-    # next one should trip
     assert is_rate_limited(key, limit=limit, window_seconds=window) is True
 
 
@@ -23,18 +21,15 @@ def test_rate_limit_resets_after_window():
     key = "rl:test:reset"
 
     limit = 3
-    window = 1  # short window for test
+    window = 1
 
     for _ in range(limit + 1):
         is_rate_limited(key, limit=limit, window_seconds=window)
 
-    # should be limited now
     assert is_rate_limited(key, limit=limit, window_seconds=window) is True
 
-    # wait for window to expire
     time.sleep(1.2)
 
-    # should reset
     assert is_rate_limited(key, limit=limit, window_seconds=window) is False
 
 
@@ -44,12 +39,10 @@ def test_rate_limit_is_isolated_per_key():
 
     limit = 2
 
-    # trip key A
     is_rate_limited(key_a, limit=limit, window_seconds=60)
     is_rate_limited(key_a, limit=limit, window_seconds=60)
     assert is_rate_limited(key_a, limit=limit, window_seconds=60) is True
 
-    # key B should not be affected
     assert is_rate_limited(key_b, limit=limit, window_seconds=60) is False
 
 
@@ -77,7 +70,6 @@ def test_multiple_bans_do_not_conflict():
 
     time.sleep(1.2)
 
-    # ip2 should expire first
     assert is_ip_banned(ip1) is True
     assert is_ip_banned(ip2) is False
 
@@ -88,5 +80,4 @@ def test_rate_limit_does_not_ban_automatically():
     for _ in range(20):
         is_rate_limited(key, limit=5, window_seconds=60)
 
-    # ensure rate limit does NOT implicitly ban
     assert is_ip_banned("1.2.3.4") is False
