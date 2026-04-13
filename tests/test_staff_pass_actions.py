@@ -179,8 +179,8 @@ def _insert_pass(app, *, resident_id: int, status: str) -> int:
 
 
 def test_staff_pass_approve_updates_db_and_creates_notification(app, client, monkeypatch):
-    from core.db import db_fetchone
     import routes.attendance_parts.pass_actions as actions_module
+    from core.db import db_fetchone
 
     _login_staff(client)
     csrf_token = _set_csrf_token(client)
@@ -247,8 +247,8 @@ def test_staff_pass_approve_updates_db_and_creates_notification(app, client, mon
 
 
 def test_staff_pass_deny_updates_db_and_creates_notification(app, client, monkeypatch):
-    from core.db import db_fetchone
     import routes.attendance_parts.pass_actions as actions_module
+    from core.db import db_fetchone
 
     _login_staff(client)
     csrf_token = _set_csrf_token(client)
@@ -313,8 +313,8 @@ def test_staff_pass_deny_updates_db_and_creates_notification(app, client, monkey
 
 
 def test_staff_pass_check_in_creates_attendance_event_and_completes_pass(app, client, monkeypatch):
-    from core.db import db_fetchone
     import routes.attendance_parts.pass_actions as actions_module
+    from core.db import db_fetchone
 
     _login_staff(client)
     csrf_token = _set_csrf_token(client)
