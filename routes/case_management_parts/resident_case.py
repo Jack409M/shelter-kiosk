@@ -189,7 +189,7 @@ def resident_case_view(resident_id: int):
         flash("Resident not found.", "error")
         return _redirect_case_index()
 
-    enrollment = load_current_enrollment(resident_id)
+    enrollment = load_current_enrollment(resident_id, shelter)
     enrollment_id = enrollment["id"] if enrollment else None
 
     children = load_children_with_services(resident_id)
