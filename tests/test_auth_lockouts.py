@@ -47,13 +47,10 @@ def _insert_staff_user(app, *, username: str, password: str) -> None:
 
 
 def test_staff_login_blocks_after_repeated_failures(app, client):
-    import routes.auth as auth_module
-
     _insert_staff_user(app, username="lockout_user", password="correct")
 
     csrf = _set_csrf_token(client)
 
-    # attempt multiple bad logins
     for _ in range(10):
         response = client.post(
             "/staff/login",
@@ -66,13 +63,10 @@ def test_staff_login_blocks_after_repeated_failures(app, client):
             follow_redirects=False,
         )
 
-    # after repeated failures, system should block
     assert response.status_code in (401, 429)
 
 
 def test_staff_login_allows_correct_password_before_lock(app, client):
-    import routes.auth as auth_module
-
     _insert_staff_user(app, username="normal_user", password="correct")
 
     csrf = _set_csrf_token(client)
@@ -93,13 +87,10 @@ def test_staff_login_allows_correct_password_before_lock(app, client):
 
 
 def test_staff_login_ip_ban_after_abuse(app, client):
-    import routes.auth as auth_module
-
     _insert_staff_user(app, username="ip_user", password="correct")
 
     csrf = _set_csrf_token(client)
 
-    # simulate aggressive abuse
     for _ in range(25):
         client.post(
             "/staff/login",
@@ -112,7 +103,6 @@ def test_staff_login_ip_ban_after_abuse(app, client):
             follow_redirects=False,
         )
 
-    # now even correct password should fail due to IP ban
     response = client.post(
         "/staff/login",
         data={
@@ -133,7 +123,6 @@ def test_staff_login_lock_is_username_specific(app, client):
 
     csrf = _set_csrf_token(client)
 
-    # lock out user_a
     for _ in range(15):
         client.post(
             "/staff/login",
@@ -146,7 +135,6 @@ def test_staff_login_lock_is_username_specific(app, client):
             follow_redirects=False,
         )
 
-    # user_b should still work
     response = client.post(
         "/staff/login",
         data={
