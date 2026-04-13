@@ -53,10 +53,12 @@ def app(tmp_path, monkeypatch):
 
     import core.db as db_module
     import core.runtime as runtime
+    from db import schema
 
     runtime._DB_INITIALIZED = False
     runtime._DB_INIT_URL = None
     db_module.PG_POOL = None
+    schema._SCHEMA_INITIALIZED_KEY = None
 
     from core.app_factory import create_app
 
@@ -73,6 +75,7 @@ def app(tmp_path, monkeypatch):
     runtime._DB_INITIALIZED = False
     runtime._DB_INIT_URL = None
     db_module.PG_POOL = None
+    schema._SCHEMA_INITIALIZED_KEY = None
 
 
 @pytest.fixture
