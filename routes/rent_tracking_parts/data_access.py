@@ -16,7 +16,7 @@ def _active_residents_for_shelter(shelter: str):
         SELECT id, first_name, last_name, shelter
         FROM residents
         WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND is_active = {('TRUE' if g.get('db_kind') == 'pg' else '1')}
+          AND is_active = {("TRUE" if g.get("db_kind") == "pg" else "1")}
         ORDER BY last_name ASC, first_name ASC
         """,
         (shelter,),
@@ -68,8 +68,7 @@ def _ensure_default_rent_config(resident_id: int, shelter: str) -> dict:
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if g.get("db_kind") == "pg"
-            else
-            """
+            else """
             INSERT INTO resident_rent_configs (
                 resident_id,
                 shelter,
@@ -106,7 +105,9 @@ def _ensure_default_rent_config(resident_id: int, shelter: str) -> dict:
     return _active_rent_config_for_resident(resident_id, shelter) or {}
 
 
-def _program_enrollment_for_month(resident_id: int, shelter: str, rent_year: int, rent_month: int) -> dict | None:
+def _program_enrollment_for_month(
+    resident_id: int, shelter: str, rent_year: int, rent_month: int
+) -> dict | None:
     from .dates import _month_start_end
 
     month_start, month_end = _month_start_end(rent_year, rent_month)
@@ -131,7 +132,9 @@ def _program_enrollment_for_month(resident_id: int, shelter: str, rent_year: int
     return dict(row) if row else None
 
 
-def _latest_prior_balance(resident_id: int, shelter: str, carry_forward_enabled: bool, rent_year: int, rent_month: int) -> float:
+def _latest_prior_balance(
+    resident_id: int, shelter: str, carry_forward_enabled: bool, rent_year: int, rent_month: int
+) -> float:
     if not carry_forward_enabled:
         return 0.0
 
@@ -221,8 +224,7 @@ def _insert_sheet(shelter: str, rent_year: int, rent_month: int):
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
             if g.get("db_kind") == "pg"
-            else
-            """
+            else """
             INSERT INTO resident_rent_sheets (
                 shelter,
                 rent_year,
@@ -305,7 +307,9 @@ def _insert_rent_ledger_entry(
 ) -> int | None:
     now = utcnow_iso()
     balance_before = _ledger_balance_before_entry(resident_id)
-    balance_after = round(balance_before + _float_value(debit_amount) - _float_value(credit_amount), 2)
+    balance_after = round(
+        balance_before + _float_value(debit_amount) - _float_value(credit_amount), 2
+    )
 
     if g.get("db_kind") == "pg":
         row = db_fetchone(

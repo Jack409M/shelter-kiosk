@@ -350,9 +350,7 @@ def test_check_in_creates_attendance_event(app, client):
     client.get("/staff/passes/check-in/997", follow_redirects=False)
 
     with app.app_context():
-        row = db_fetchone(
-            "SELECT COUNT(*) as count FROM attendance_events WHERE resident_id = 3"
-        )
+        row = db_fetchone("SELECT COUNT(*) as count FROM attendance_events WHERE resident_id = 3")
         audit = db_fetchone(
             """
             SELECT entity_type, action_type, action_details

@@ -117,7 +117,7 @@ def _validate_twilio_request() -> None:
     url = request.url
     xf_proto = (request.headers.get("X-Forwarded-Proto") or "").lower()
     if xf_proto == "https" and url.startswith("http://"):
-        url = "https://" + url[len("http://"):]
+        url = "https://" + url[len("http://") :]
 
     validator = RequestValidator(token)
     form = request.form.to_dict(flat=True)
@@ -136,12 +136,7 @@ def _normalize_last10(s: str) -> str:
 
 
 def _twiml_message(text: str) -> object:
-    twiml = (
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-        "<Response>"
-        f"<Message>{text}</Message>"
-        "</Response>"
-    )
+    twiml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{text}</Message></Response>'
     return current_app.response_class(twiml, mimetype="text/xml")
 
 
@@ -287,8 +282,10 @@ def twilio_status():
     message_sid = (request.form.get("MessageSid") or "").strip()
     message_status = (request.form.get("MessageStatus") or "").strip()
 
-    if message_sid and message_status and _rate_limited(
-        f"twilio_status:{message_sid}:{message_status}", 1, 172800
+    if (
+        message_sid
+        and message_status
+        and _rate_limited(f"twilio_status:{message_sid}:{message_status}", 1, 172800)
     ):
         return "OK", 200
 

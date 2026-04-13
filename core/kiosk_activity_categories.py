@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import contextlib
+
 from flask import g, request
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 
 from .kiosk_activity_category_defaults import KIOSK_ACTIVITY_CATEGORY_SEEDS
-
 
 AA_NA_PARENT_ACTIVITY_KEY = "aa_na_meeting"
 AA_NA_PARENT_ACTIVITY_LABEL = "AA or NA Meeting"
@@ -180,10 +181,8 @@ def ensure_kiosk_activity_categories_table() -> None:
         "ALTER TABLE kiosk_activity_categories ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_kiosk_activity_child_options_table() -> None:
@@ -230,10 +229,8 @@ def ensure_kiosk_activity_child_options_table() -> None:
         "ALTER TABLE kiosk_activity_child_options ADD COLUMN IF NOT EXISTS updated_at TEXT",
     ]
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def _backfill_locked_activity_keys_for_shelter(shelter: str) -> None:
@@ -318,8 +315,7 @@ def _insert_seed_rows_for_shelter(shelter: str) -> None:
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 if is_pg
-                else
-                """
+                else """
                 INSERT INTO kiosk_activity_categories (
                     shelter,
                     activity_key,
@@ -360,7 +356,9 @@ def _insert_child_seed_rows_for_shelter(
 ) -> None:
     now = utcnow_iso()
     is_pg = g.get("db_kind") == "pg"
-    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(
+        parent_activity_key_or_label
+    )
     seed_rows = _child_option_seeds_for_parent(parent_activity_key)
 
     for sort_order, option_label in enumerate(seed_rows, start=1):
@@ -380,8 +378,7 @@ def _insert_child_seed_rows_for_shelter(
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """
                 if is_pg
-                else
-                """
+                else """
                 INSERT INTO kiosk_activity_child_options (
                     shelter,
                     parent_activity_key,
@@ -434,7 +431,9 @@ def ensure_default_kiosk_activity_child_options_for_shelter(
     _backfill_locked_parent_keys_for_shelter(shelter)
 
     ph = _placeholder()
-    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(
+        parent_activity_key_or_label
+    )
 
     if parent_activity_key:
         count_row = db_fetchone(
@@ -488,7 +487,9 @@ def reset_kiosk_activity_child_options_for_shelter(
 ) -> None:
     ensure_kiosk_activity_child_options_table()
     ph = _placeholder()
-    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(
+        parent_activity_key_or_label
+    )
 
     if parent_activity_key:
         db_execute(
@@ -569,7 +570,9 @@ def load_kiosk_activity_child_options_for_shelter(
     ensure_kiosk_activity_child_options_table()
     ensure_default_kiosk_activity_child_options_for_shelter(shelter, parent_activity_key_or_label)
     ph = _placeholder()
-    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(
+        parent_activity_key_or_label
+    )
 
     if parent_activity_key:
         rows = db_fetchall(
@@ -635,7 +638,9 @@ def load_active_kiosk_activity_child_options_for_shelter(
     ensure_kiosk_activity_child_options_table()
     ensure_default_kiosk_activity_child_options_for_shelter(shelter, parent_activity_key_or_label)
     ph = _placeholder()
-    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(
+        parent_activity_key_or_label
+    )
     active_value = True if g.get("db_kind") == "pg" else 1
 
     if parent_activity_key:
@@ -732,7 +737,9 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
         posted_key = row_keys[idx].strip() if idx < len(row_keys) and row_keys[idx] else ""
         label = labels[idx].strip() if idx < len(labels) and labels[idx] else ""
         sort_order = _to_int(sort_orders[idx] if idx < len(sort_orders) else "", idx + 1)
-        weekly_cap_raw = cap_values[idx].strip() if idx < len(cap_values) and cap_values[idx] else ""
+        weekly_cap_raw = (
+            cap_values[idx].strip() if idx < len(cap_values) and cap_values[idx] else ""
+        )
         notes = notes_values[idx].strip() if idx < len(notes_values) and notes_values[idx] else ""
         is_active = idx in active_indexes
         counts_work = idx in work_indexes
@@ -753,7 +760,9 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
         if raw_id.isdigit():
             category_id = int(raw_id)
             existing_key = _existing_activity_key_for_category_id(category_id, shelter)
-            activity_key = existing_key or posted_key or _canonical_activity_key_for_label(label) or None
+            activity_key = (
+                existing_key or posted_key or _canonical_activity_key_for_label(label) or None
+            )
 
             keep_ids.append(category_id)
             db_execute(
@@ -774,8 +783,7 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                       AND LOWER(COALESCE(shelter, '')) = %s
                     """
                     if is_pg
-                    else
-                    """
+                    else """
                     UPDATE kiosk_activity_categories
                     SET activity_key = ?,
                         activity_label = ?,
@@ -831,8 +839,7 @@ def save_kiosk_activity_categories_for_shelter(shelter: str) -> None:
                 RETURNING id
                 """
                 if is_pg
-                else
-                """
+                else """
                 INSERT INTO kiosk_activity_categories (
                     shelter,
                     activity_key,
@@ -897,7 +904,9 @@ def save_kiosk_activity_child_options_for_shelter(
     ph = _placeholder()
     now = utcnow_iso()
     is_pg = g.get("db_kind") == "pg"
-    parent_activity_key, parent_activity_label = _resolve_parent_definition(parent_activity_key_or_label)
+    parent_activity_key, parent_activity_label = _resolve_parent_definition(
+        parent_activity_key_or_label
+    )
 
     row_ids = request.form.getlist("child_option_id[]")
     option_labels = request.form.getlist("child_option_label[]")
@@ -918,7 +927,9 @@ def save_kiosk_activity_child_options_for_shelter(
 
     for idx in range(total_rows):
         raw_id = row_ids[idx].strip() if idx < len(row_ids) and row_ids[idx] else ""
-        option_label = option_labels[idx].strip() if idx < len(option_labels) and option_labels[idx] else ""
+        option_label = (
+            option_labels[idx].strip() if idx < len(option_labels) and option_labels[idx] else ""
+        )
         sort_order = _to_int(sort_orders[idx] if idx < len(sort_orders) else "", idx + 1)
         is_active = idx in active_indexes
         remove_row = idx in remove_indexes
@@ -943,8 +954,7 @@ def save_kiosk_activity_child_options_for_shelter(
                       AND LOWER(COALESCE(shelter, '')) = %s
                     """
                     if is_pg
-                    else
-                    """
+                    else """
                     UPDATE kiosk_activity_child_options
                     SET parent_activity_key = ?,
                         parent_activity_label = ?,
@@ -986,8 +996,7 @@ def save_kiosk_activity_child_options_for_shelter(
                 RETURNING id
                 """
                 if is_pg
-                else
-                """
+                else """
                 INSERT INTO kiosk_activity_child_options (
                     shelter,
                     parent_activity_key,

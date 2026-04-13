@@ -4,6 +4,8 @@ Operational workflow schema objects.
 
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 from .schema_helpers import create_table
@@ -59,10 +61,8 @@ def drop_transport_dob_column_if_present(kind: str) -> None:
     if kind != "pg":
         return
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute("ALTER TABLE transport_requests DROP COLUMN IF EXISTS dob")
-    except Exception:
-        pass
 
 
 def drop_unused_transport_columns_if_present(kind: str) -> None:
@@ -79,10 +79,8 @@ def drop_unused_transport_columns_if_present(kind: str) -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_resident_transfers_table(kind: str) -> None:
@@ -185,10 +183,8 @@ def ensure_attendance_event_columns(kind: str) -> None:
         ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_resident_passes_table(kind: str) -> None:
@@ -252,13 +248,9 @@ def ensure_resident_passes_columns(kind: str) -> None:
     for column_def in columns:
         try:
             if kind == "pg":
-                db_execute(
-                    f"ALTER TABLE resident_passes ADD COLUMN IF NOT EXISTS {column_def}"
-                )
+                db_execute(f"ALTER TABLE resident_passes ADD COLUMN IF NOT EXISTS {column_def}")
             else:
-                db_execute(
-                    f"ALTER TABLE resident_passes ADD COLUMN {column_def}"
-                )
+                db_execute(f"ALTER TABLE resident_passes ADD COLUMN {column_def}")
         except Exception:
             pass
 
@@ -383,9 +375,7 @@ def ensure_resident_pass_request_details_columns(kind: str) -> None:
                     f"ALTER TABLE resident_pass_request_details ADD COLUMN IF NOT EXISTS {column_def}"
                 )
             else:
-                db_execute(
-                    f"ALTER TABLE resident_pass_request_details ADD COLUMN {column_def}"
-                )
+                db_execute(f"ALTER TABLE resident_pass_request_details ADD COLUMN {column_def}")
         except Exception:
             pass
 
@@ -408,91 +398,69 @@ def ensure_columns_and_constraints(kind: str) -> None:
 
 
 def ensure_indexes() -> None:
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS transport_requests_shelter_status_pickup_idx "
             "ON transport_requests (shelter, status, needed_at)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS attendance_events_shelter_occurred_idx "
             "ON attendance_events (shelter, event_time)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS attendance_events_resident_time_idx "
             "ON attendance_events (resident_id, event_time)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_transfers_resident_time_idx "
             "ON resident_transfers (resident_id, transferred_at)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_passes_resident_status_idx "
             "ON resident_passes (resident_id, status)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_passes_shelter_status_idx "
             "ON resident_passes (shelter, status)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_passes_shelter_delete_after_idx "
             "ON resident_passes (shelter, delete_after_at)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS resident_passes_one_active_idx "
             "ON resident_passes (resident_id) "
             "WHERE status IN ('pending','approved')"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_pass_request_details_pass_idx "
             "ON resident_pass_request_details (pass_id)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_notifications_resident_created_idx "
             "ON resident_notifications (resident_id, created_at)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS resident_notifications_resident_read_created_idx "
             "ON resident_notifications (resident_id, is_read, created_at)"
         )
-    except Exception:
-        pass

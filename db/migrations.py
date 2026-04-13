@@ -7,8 +7,6 @@ Safe for repeated app starts and repeated deploys.
 
 from __future__ import annotations
 
-from flask import g
-
 from core.db import db_execute, db_fetchone
 
 

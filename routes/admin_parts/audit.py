@@ -3,11 +3,13 @@ from __future__ import annotations
 import csv
 import io
 
-from flask import Response, current_app, flash, g, redirect, render_template, request, url_for
+from flask import Response, flash, g, redirect, render_template, request, url_for
 
 from core.db import db_fetchall
 from routes.admin_parts.helpers import (
     audit_where_from_request as _audit_where_from_request,
+)
+from routes.admin_parts.helpers import (
     require_admin_role as _require_admin,
 )
 
@@ -17,10 +19,10 @@ def _placeholder() -> str:
 
 
 def _load_audit_filter_options():
-    ph = _placeholder()
+    _placeholder()
 
     shelters = db_fetchall(
-        f"""
+        """
         SELECT DISTINCT a.shelter
         FROM audit_log a
         WHERE COALESCE(a.shelter, '') <> ''
@@ -81,8 +83,7 @@ def staff_audit_log_view():
     where_sql, params = _audit_where_from_request(request)
     ph = _placeholder()
 
-    sql = (
-        f"""
+    sql = f"""
         SELECT
             a.*,
             COALESCE(su.username, '') AS staff_username
@@ -92,7 +93,6 @@ def staff_audit_log_view():
         ORDER BY a.id DESC
         LIMIT {ph}
         """
-    )
 
     rows = db_fetchall(sql, params + (200,))
     all_shelters, staff_options, entity_options, action_options = _load_audit_filter_options()

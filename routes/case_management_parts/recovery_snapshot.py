@@ -3,27 +3,35 @@ from __future__ import annotations
 from core.meeting_progress import calculate_meeting_progress
 from core.promotion_readiness import build_promotion_readiness
 from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
-from routes.case_management_parts.recovery_snapshot_formatters import bool_display
-from routes.case_management_parts.recovery_snapshot_formatters import days_since
-from routes.case_management_parts.recovery_snapshot_formatters import employment_status_display
-from routes.case_management_parts.recovery_snapshot_formatters import employment_type_display
-from routes.case_management_parts.recovery_snapshot_formatters import money_display
-from routes.case_management_parts.recovery_snapshot_loaders import load_budget_rows
-from routes.case_management_parts.recovery_snapshot_loaders import load_enrollment_baseline
-from routes.case_management_parts.recovery_snapshot_loaders import load_inspection_rows
-from routes.case_management_parts.recovery_snapshot_loaders import load_medications
-from routes.case_management_parts.recovery_snapshot_loaders import load_resident_profile
-from routes.case_management_parts.recovery_snapshot_loaders import load_ua_rows
-from routes.case_management_parts.recovery_snapshot_loaders import load_writeup_rows
-from routes.case_management_parts.recovery_snapshot_mappers import budget_items
-from routes.case_management_parts.recovery_snapshot_mappers import inspection_items
-from routes.case_management_parts.recovery_snapshot_mappers import medication_items
-from routes.case_management_parts.recovery_snapshot_mappers import ua_items
-from routes.case_management_parts.recovery_snapshot_metrics import count_writeups_last_30_days
-from routes.case_management_parts.recovery_snapshot_metrics import employment_gap_days
-from routes.case_management_parts.recovery_snapshot_metrics import normalize_level_start_date
-from routes.case_management_parts.recovery_snapshot_metrics import normalize_sobriety_date
-from routes.case_management_parts.recovery_snapshot_metrics import normalize_treatment_graduation_date
+from routes.case_management_parts.recovery_snapshot_formatters import (
+    bool_display,
+    days_since,
+    employment_status_display,
+    employment_type_display,
+    money_display,
+)
+from routes.case_management_parts.recovery_snapshot_loaders import (
+    load_budget_rows,
+    load_enrollment_baseline,
+    load_inspection_rows,
+    load_medications,
+    load_resident_profile,
+    load_ua_rows,
+    load_writeup_rows,
+)
+from routes.case_management_parts.recovery_snapshot_mappers import (
+    budget_items,
+    inspection_items,
+    medication_items,
+    ua_items,
+)
+from routes.case_management_parts.recovery_snapshot_metrics import (
+    count_writeups_last_30_days,
+    employment_gap_days,
+    normalize_level_start_date,
+    normalize_sobriety_date,
+    normalize_treatment_graduation_date,
+)
 
 
 def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
@@ -86,7 +94,9 @@ def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
         "sponsor_active_display": bool_display(resident.get("sponsor_active")),
         "employer_name": resident.get("employer_name"),
         "employment_status_current": resident.get("employment_status_current"),
-        "employment_status_display": employment_status_display(resident.get("employment_status_current")),
+        "employment_status_display": employment_status_display(
+            resident.get("employment_status_current")
+        ),
         "employment_type_current": resident.get("employment_type_current"),
         "employment_type_display": employment_type_display(resident.get("employment_type_current")),
         "supervisor_name": resident.get("supervisor_name"),

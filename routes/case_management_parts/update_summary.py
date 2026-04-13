@@ -3,20 +3,26 @@ from __future__ import annotations
 from core.db import db_fetchone
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.update_needs import current_open_needs
-from routes.case_management_parts.update_snapshots import get_current_advancement_snapshot
-from routes.case_management_parts.update_snapshots import get_current_children_snapshot
-from routes.case_management_parts.update_snapshots import get_current_employment_snapshot
-from routes.case_management_parts.update_snapshots import get_current_medication_snapshot
-from routes.case_management_parts.update_snapshots import get_current_sobriety_snapshot
-from routes.case_management_parts.update_snapshots import load_previous_snapshot_map
-from routes.case_management_parts.update_summary_recorders import record_need_summary
-from routes.case_management_parts.update_summary_recorders import record_service_summary
-from routes.case_management_parts.update_summary_recorders import record_snapshot_change_group
-from routes.case_management_parts.update_utils import ADVANCEMENT_BOOL_FIELD_LABELS
-from routes.case_management_parts.update_utils import ADVANCEMENT_TEXT_FIELD_LABELS
-from routes.case_management_parts.update_utils import EMPLOYMENT_FIELD_LABELS
-from routes.case_management_parts.update_utils import MEETING_TEXT_FIELD_LABELS
-from routes.case_management_parts.update_utils import SOBRIETY_FIELD_LABELS
+from routes.case_management_parts.update_snapshots import (
+    get_current_advancement_snapshot,
+    get_current_children_snapshot,
+    get_current_employment_snapshot,
+    get_current_medication_snapshot,
+    get_current_sobriety_snapshot,
+    load_previous_snapshot_map,
+)
+from routes.case_management_parts.update_summary_recorders import (
+    record_need_summary,
+    record_service_summary,
+    record_snapshot_change_group,
+)
+from routes.case_management_parts.update_utils import (
+    ADVANCEMENT_BOOL_FIELD_LABELS,
+    ADVANCEMENT_TEXT_FIELD_LABELS,
+    EMPLOYMENT_FIELD_LABELS,
+    MEETING_TEXT_FIELD_LABELS,
+    SOBRIETY_FIELD_LABELS,
+)
 
 
 def get_previous_note_id(

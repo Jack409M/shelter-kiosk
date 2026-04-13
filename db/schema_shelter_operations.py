@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 from .schema_helpers import create_table
@@ -8,7 +10,6 @@ from .schema_helpers import create_table
 def ensure_chore_tables(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS chore_templates (
@@ -23,7 +24,6 @@ def ensure_chore_tables(kind: str) -> None:
             created_at TEXT NOT NULL
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS chore_templates (
@@ -42,7 +42,6 @@ def ensure_chore_tables(kind: str) -> None:
 
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS chore_assignments (
@@ -58,7 +57,6 @@ def ensure_chore_tables(kind: str) -> None:
             FOREIGN KEY (chore_id) REFERENCES chore_templates(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS chore_assignments (
@@ -78,7 +76,6 @@ def ensure_chore_tables(kind: str) -> None:
 def ensure_kiosk_activity_category_tables(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS kiosk_activity_categories (
@@ -96,7 +93,6 @@ def ensure_kiosk_activity_category_tables(kind: str) -> None:
             updated_at TEXT NOT NULL
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS kiosk_activity_categories (
@@ -120,7 +116,6 @@ def ensure_kiosk_activity_category_tables(kind: str) -> None:
 def ensure_kiosk_activity_child_option_tables(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS kiosk_activity_child_options (
@@ -134,7 +129,6 @@ def ensure_kiosk_activity_child_option_tables(kind: str) -> None:
             updated_at TEXT NOT NULL
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS kiosk_activity_child_options (
@@ -162,10 +156,8 @@ def ensure_chore_template_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_chore_assignment_columns() -> None:
@@ -177,10 +169,8 @@ def ensure_chore_assignment_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_kiosk_activity_category_columns() -> None:
@@ -198,10 +188,8 @@ def ensure_kiosk_activity_category_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_kiosk_activity_child_option_columns() -> None:
@@ -215,10 +203,8 @@ def ensure_kiosk_activity_child_option_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_default_kiosk_activity_categories(kind: str) -> None:
@@ -280,18 +266,11 @@ def ensure_default_kiosk_activity_categories(kind: str) -> None:
     now = "1970-01-01T00:00:00"
 
     for shelter, rows in seed_map.items():
-        existing = None
-        try:
-            existing = db_execute(
-                "SELECT 1"
-            )
-        except Exception:
-            pass
+        with contextlib.suppress(Exception):
+            db_execute("SELECT 1")
 
         try:
-            count_row = db_execute(
-                "SELECT 1"
-            )
+            count_row = db_execute("SELECT 1")
         except Exception:
             count_row = None
 
@@ -332,8 +311,7 @@ def ensure_default_kiosk_activity_categories(kind: str) -> None:
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     if kind == "pg"
-                    else
-                    """
+                    else """
                     INSERT INTO kiosk_activity_categories (
                         shelter,
                         activity_label,
@@ -453,8 +431,7 @@ def ensure_default_kiosk_activity_child_options(kind: str) -> None:
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """
                     if kind == "pg"
-                    else
-                    """
+                    else """
                     INSERT INTO kiosk_activity_child_options (
                         shelter,
                         parent_activity_label,
@@ -480,145 +457,117 @@ def ensure_default_kiosk_activity_child_options(kind: str) -> None:
 
 
 def ensure_indexes() -> None:
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_templates_shelter_idx
             ON chore_templates (shelter)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_templates_active_idx
             ON chore_templates (active)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_templates_shelter_active_sort_idx
             ON chore_templates (shelter, active, sort_order)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_templates_default_day_idx
             ON chore_templates (default_day)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_assignments_resident_idx
             ON chore_assignments (resident_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_assignments_chore_idx
             ON chore_assignments (chore_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_assignments_assigned_date_idx
             ON chore_assignments (assigned_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_assignments_status_idx
             ON chore_assignments (status)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS chore_assignments_resident_date_idx
             ON chore_assignments (resident_id, assigned_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE UNIQUE INDEX IF NOT EXISTS chore_assignments_resident_chore_date_uniq
             ON chore_assignments (resident_id, chore_id, assigned_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS kiosk_activity_categories_shelter_idx
             ON kiosk_activity_categories (shelter)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS kiosk_activity_categories_shelter_active_sort_idx
             ON kiosk_activity_categories (shelter, active, sort_order)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS kiosk_activity_child_options_shelter_parent_idx
             ON kiosk_activity_child_options (shelter, parent_activity_label)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS kiosk_activity_child_options_shelter_parent_active_sort_idx
             ON kiosk_activity_child_options (shelter, parent_activity_label, active, sort_order)
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_tables(kind: str) -> None:

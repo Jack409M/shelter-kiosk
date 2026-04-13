@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from flask import session
 
@@ -61,7 +61,7 @@ def row_value(
     if isinstance(row, Mapping):
         return row.get(key, default)
 
-    if isinstance(row, Sequence) and not isinstance(row, (str, bytes, bytearray)):
+    if isinstance(row, Sequence) and not isinstance(row, str | bytes | bytearray):
         if 0 <= index < len(row):
             return row[index]
         return default
@@ -309,7 +309,9 @@ def load_resident_transfer_context(
     destination_shelter_prefill: str,
 ) -> ResidentTransferContext | None:
     normalized_current_shelter = normalize_shelter_name(current_shelter)
-    normalized_prefill = normalize_shelter_name(destination_shelter_prefill) or normalized_current_shelter
+    normalized_prefill = (
+        normalize_shelter_name(destination_shelter_prefill) or normalized_current_shelter
+    )
 
     resident = db_fetchone(
         """
@@ -336,10 +338,9 @@ def load_resident_transfer_context(
         if active_config is not None
         else None
     )
-    current_apartment_size = (
-        derive_apartment_size_local(from_shelter, current_apartment_number)
-        or ((active_config or {}).get("apartment_size_snapshot") if active_config else None)
-    )
+    current_apartment_size = derive_apartment_size_local(
+        from_shelter, current_apartment_number
+    ) or ((active_config or {}).get("apartment_size_snapshot") if active_config else None)
 
     availability_map = availability_map_for_transfer()
     apartment_options = list(availability_map.get(normalized_prefill, []))

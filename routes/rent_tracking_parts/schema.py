@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 
@@ -228,10 +230,8 @@ def _ensure_tables() -> None:
         "ALTER TABLE resident_rent_sheet_entries ADD COLUMN IF NOT EXISTS calculation_notes TEXT",
     ]
     for statement in alter_statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
     ledger_alter_statements = [
         "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS description TEXT",
@@ -245,7 +245,5 @@ def _ensure_tables() -> None:
         "ALTER TABLE resident_rent_ledger_entries ADD COLUMN IF NOT EXISTS balance_after DOUBLE PRECISION DEFAULT 0",
     ]
     for statement in ledger_alter_statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass

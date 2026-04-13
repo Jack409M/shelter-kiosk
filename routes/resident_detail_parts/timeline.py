@@ -84,17 +84,10 @@ def normalize_timeline(rows):
                 "event_time_display": format_dt(raw_time),
                 "event_time_only": format_time_only(raw_time),
                 "event_type": (
-                    (row.get("event_type") if isinstance(row, dict) else row[1])
-                    or "activity"
+                    (row.get("event_type") if isinstance(row, dict) else row[1]) or "activity"
                 ),
-                "title": (
-                    (row.get("title") if isinstance(row, dict) else row[2])
-                    or "Activity"
-                ),
-                "detail": (
-                    (row.get("detail") if isinstance(row, dict) else row[3])
-                    or "—"
-                ),
+                "title": ((row.get("title") if isinstance(row, dict) else row[2]) or "Activity"),
+                "detail": ((row.get("detail") if isinstance(row, dict) else row[3]) or "—"),
             }
         )
 
@@ -453,15 +446,21 @@ def build_calendar_context(timeline, selected_view: str, anchor: date):
             )
 
         week_end = week_start + timedelta(days=6)
-        calendar["label"] = f"Week of {week_start.strftime('%b')} {week_start.day}, {week_start.year}"
+        calendar["label"] = (
+            f"Week of {week_start.strftime('%b')} {week_start.day}, {week_start.year}"
+        )
         calendar["prev_anchor"] = (anchor - timedelta(days=7)).isoformat()
         calendar["next_anchor"] = (anchor + timedelta(days=7)).isoformat()
         calendar["week_days"] = week_days
-        calendar["week_range_label"] = f"{week_start.strftime('%b')} {week_start.day} to {week_end.strftime('%b')} {week_end.day}, {week_end.year}"
+        calendar["week_range_label"] = (
+            f"{week_start.strftime('%b')} {week_start.day} to {week_end.strftime('%b')} {week_end.day}, {week_end.year}"
+        )
         return calendar
 
     current_day = anchor
-    calendar["label"] = f"{current_day.strftime('%A')}, {current_day.strftime('%B')} {current_day.day}, {current_day.year}"
+    calendar["label"] = (
+        f"{current_day.strftime('%A')}, {current_day.strftime('%B')} {current_day.day}, {current_day.year}"
+    )
     calendar["prev_anchor"] = (current_day - timedelta(days=1)).isoformat()
     calendar["next_anchor"] = (current_day + timedelta(days=1)).isoformat()
     calendar["day_events"] = events_by_date.get(current_day, [])

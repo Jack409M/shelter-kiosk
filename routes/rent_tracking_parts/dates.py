@@ -4,7 +4,6 @@ from calendar import monthrange
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 

@@ -155,8 +155,7 @@ def _load_settings(shelter: str) -> dict:
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             if g.get("db_kind") == "pg"
-            else
-            """
+            else """
             INSERT INTO shelter_operation_settings (
                 shelter,
                 rent_late_day_of_month,

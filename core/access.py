@@ -15,6 +15,7 @@ def _staff_home_redirect():
 # Staff / admin access control
 # ------------------------------------------------------------
 
+
 def require_staff_or_admin(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -41,6 +42,7 @@ def require_admin(fn):
 # Resident access control
 # ------------------------------------------------------------
 
+
 def require_resident(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -60,6 +62,7 @@ def require_resident(fn):
 # Transfer access
 # ------------------------------------------------------------
 
+
 def require_transfer(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
@@ -74,6 +77,7 @@ def require_transfer(fn):
 # ------------------------------------------------------------
 # Resident creation permission
 # ------------------------------------------------------------
+
 
 def require_resident_create(fn):
     @wraps(fn)

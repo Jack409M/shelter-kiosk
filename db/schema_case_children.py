@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 from .schema_helpers import create_table
@@ -8,7 +10,6 @@ from .schema_helpers import create_table
 def ensure_child_services_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS child_services (
@@ -30,7 +31,6 @@ def ensure_child_services_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS child_services (
@@ -49,7 +49,7 @@ def ensure_child_services_table(kind: str) -> None:
             created_at TEXT,
             updated_at TEXT
         )
-        """
+        """,
     )
 
 
@@ -63,12 +63,10 @@ def ensure_child_services_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             UPDATE child_services
@@ -78,80 +76,64 @@ def ensure_child_services_columns() -> None:
             WHERE COALESCE(outcome, '') = 'deleted'
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_case_children_indexes() -> None:
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS child_services_child_idx
             ON child_services (resident_child_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS child_services_enrollment_idx
             ON child_services (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS child_services_service_type_idx
             ON child_services (service_type)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS child_services_service_date_idx
             ON child_services (service_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS child_services_child_enrollment_idx
             ON child_services (resident_child_id, enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS child_services_child_deleted_idx
             ON child_services (resident_child_id, is_deleted)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS child_services_enrollment_deleted_idx
             ON child_services (enrollment_id, is_deleted)
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_tables(kind: str) -> None:

@@ -33,7 +33,9 @@ def test_resident_signin_invalid_code_returns_401(client, monkeypatch):
     monkeypatch.setattr(resident_requests_module, "init_db", lambda: None)
     monkeypatch.setattr(resident_requests_module, "_client_ip", lambda: "127.0.0.1")
     monkeypatch.setattr(resident_requests_module, "is_rate_limited", lambda *args, **kwargs: False)
-    monkeypatch.setattr(resident_requests_module, "_load_resident_by_code", lambda resident_code: None)
+    monkeypatch.setattr(
+        resident_requests_module, "_load_resident_by_code", lambda resident_code: None
+    )
     monkeypatch.setattr(resident_requests_module, "log_action", lambda *args, **kwargs: None)
 
     response = client.post(

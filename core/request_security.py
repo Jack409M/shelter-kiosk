@@ -7,7 +7,6 @@ from flask import Flask, Response, abort, current_app, flash, render_template, r
 
 from core.audit import log_action
 
-
 BeforeRequestResult = Response | tuple[str, int] | tuple[str, int, dict[str, Any]] | None
 
 
@@ -131,9 +130,7 @@ def register_request_security(
 
         user_agent_lower = _request_user_agent().lower()
 
-        allowed_agent_markers = (
-            "twilio",
-        )
+        allowed_agent_markers = ("twilio",)
         if any(marker in user_agent_lower for marker in allowed_agent_markers):
             return None
 

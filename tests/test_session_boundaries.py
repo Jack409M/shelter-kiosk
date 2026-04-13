@@ -24,6 +24,7 @@ def _login_staff(client):
 # Resident → Staff boundary
 # ----------------------------
 
+
 def test_resident_cannot_access_staff_dashboard(client):
     _login_resident(client)
 
@@ -36,6 +37,7 @@ def test_resident_cannot_access_staff_dashboard(client):
 # ----------------------------
 # Staff → Resident boundary
 # ----------------------------
+
 
 def test_staff_cannot_use_resident_transport(client):
     _login_staff(client)
@@ -50,6 +52,7 @@ def test_staff_cannot_use_resident_transport(client):
 # ----------------------------
 # Missing session safety
 # ----------------------------
+
 
 def test_transport_without_session_redirects_safely(client):
     response = client.get("/transport", follow_redirects=False)
@@ -72,6 +75,7 @@ def test_partial_resident_session_is_rejected(client):
 # ----------------------------
 # Session tampering resistance
 # ----------------------------
+
 
 def test_fake_resident_identifier_does_not_crash_or_grant_access(client):
     with client.session_transaction() as session:

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
+
 from .schema_helpers import create_table
 
 
 def ensure_resident_writeups_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS resident_writeups (
@@ -35,7 +37,6 @@ def ensure_resident_writeups_table(kind: str) -> None:
             FOREIGN KEY (resident_id) REFERENCES residents(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS resident_writeups (
@@ -89,92 +90,74 @@ def ensure_resident_writeups_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_writeups_indexes() -> None:
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_resident_idx
             ON resident_writeups (resident_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_incident_date_idx
             ON resident_writeups (incident_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_resident_incident_date_idx
             ON resident_writeups (resident_id, incident_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_status_idx
             ON resident_writeups (status)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_outcome_idx
             ON resident_writeups (disciplinary_outcome)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_blocks_passes_idx
             ON resident_writeups (resident_id, blocks_passes, status)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_probation_window_idx
             ON resident_writeups (resident_id, probation_start_date, probation_end_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_writeups_pre_term_date_idx
             ON resident_writeups (resident_id, pre_termination_date)
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_tables(kind: str) -> None:

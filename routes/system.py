@@ -4,7 +4,6 @@ from flask import abort, current_app, g, redirect, session, url_for, Blueprint
 
 from core.auth import require_login
 
-
 system = Blueprint("system", __name__)
 
 

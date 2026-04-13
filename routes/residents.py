@@ -2,7 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from core.audit import log_action
 from core.auth import require_login, require_shelter
@@ -178,7 +187,9 @@ def _create_resident() -> None:
     phone = (request.form.get("phone") or "").strip()
     email = (request.form.get("email") or "").strip()
     emergency_contact_name = (request.form.get("emergency_contact_name") or "").strip()
-    emergency_contact_relationship = (request.form.get("emergency_contact_relationship") or "").strip()
+    emergency_contact_relationship = (
+        request.form.get("emergency_contact_relationship") or ""
+    ).strip()
     emergency_contact_phone = (request.form.get("emergency_contact_phone") or "").strip()
     medical_alerts = (request.form.get("medical_alerts") or "").strip()
     medical_notes = (request.form.get("medical_notes") or "").strip()
@@ -396,9 +407,8 @@ def staff_resident_transfer(resident_id: int):
     current_shelter = _current_shelter()
     next_url = (request.form.get("next") or request.args.get("next") or "").strip()
     destination_shelter_prefill = (
-        (request.form.get("to_shelter") or request.args.get("to_shelter") or "").strip().lower()
-        or current_shelter
-    )
+        request.form.get("to_shelter") or request.args.get("to_shelter") or ""
+    ).strip().lower() or current_shelter
 
     context = load_resident_transfer_context(
         resident_id=resident_id,
@@ -452,7 +462,10 @@ def staff_resident_transfer(resident_id: int):
             context.from_shelter,
             form.to_shelter,
         )
-        flash("Unable to complete the resident transfer. Please try again or contact an administrator.", "error")
+        flash(
+            "Unable to complete the resident transfer. Please try again or contact an administrator.",
+            "error",
+        )
         return redirect(
             url_for(
                 "residents.staff_resident_transfer",
@@ -497,7 +510,10 @@ def staff_resident_set_active(resident_id: int):
             resident_id,
             shelter,
         )
-        flash("Unable to update resident status. Please try again or contact an administrator.", "error")
+        flash(
+            "Unable to update resident status. Please try again or contact an administrator.",
+            "error",
+        )
         return _return_redirect()
 
     log_action(

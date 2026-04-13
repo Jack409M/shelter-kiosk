@@ -1,7 +1,6 @@
 import csv
 from pathlib import Path
 
-
 MAPPING_FILE = Path("docs/dwc_jotform_to_dataset_mapping.csv")
 
 

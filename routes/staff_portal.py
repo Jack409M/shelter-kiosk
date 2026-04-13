@@ -4,7 +4,6 @@ from flask import Blueprint, Response, flash, redirect, url_for
 
 from core.auth import can_manage_requests, require_login, require_shelter
 
-
 staff_portal = Blueprint("staff_portal", __name__)
 
 type RouteResponse = Response | str

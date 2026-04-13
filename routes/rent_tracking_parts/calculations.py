@@ -3,14 +3,43 @@ from __future__ import annotations
 from .dates import _days_in_month, _month_start_end, _parse_iso_date
 from .utils import _bool_value, _float_value, _int_value
 
-
 ABBA_APARTMENT_NUMBERS = [str(i) for i in range(1, 11)]
 
 GH_APARTMENT_NUMBERS = [
-    "2", "3", "4", "5", "6", "7", "8", "9", "10",
-    "11", "12", "13", "14", "15", "16",
-    "20", "21", "22",
-    "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12",
+    "13",
+    "14",
+    "15",
+    "16",
+    "20",
+    "21",
+    "22",
+    "25",
+    "26",
+    "27",
+    "28",
+    "29",
+    "30",
+    "31",
+    "32",
+    "33",
+    "34",
+    "35",
+    "36",
+    "37",
+    "38",
+    "39",
+    "40",
 ]
 
 GH_TWO_BEDROOM_NUMBERS = {"2", "5", "8", "11", "26", "29", "32", "35"}
@@ -67,7 +96,13 @@ def _score_for_status(settings: dict, status: str) -> int:
     return mapping.get(status, 0)
 
 
-def _derive_status(total_due: float, amount_paid: float, paid_date: str | None, is_exempt: bool, late_fee_charge: float) -> str:
+def _derive_status(
+    total_due: float,
+    amount_paid: float,
+    paid_date: str | None,
+    is_exempt: bool,
+    late_fee_charge: float,
+) -> str:
     if is_exempt:
         return "Exempt"
     if total_due <= 0:
@@ -105,7 +140,9 @@ def _normalize_apartment_number(shelter: str, apartment_number: str | None) -> s
     return raw if raw in allowed else None
 
 
-def _derive_apartment_size_from_assignment(shelter: str, apartment_number: str | None) -> str | None:
+def _derive_apartment_size_from_assignment(
+    shelter: str, apartment_number: str | None
+) -> str | None:
     shelter_key = (shelter or "").strip().lower()
     apartment_value = _normalize_apartment_number(shelter_key, apartment_number)
 
@@ -134,26 +171,42 @@ def _derive_base_monthly_rent(settings: dict, shelter: str, config: dict) -> tup
 
     level = str(config.get("level_snapshot") or "").strip()
     apartment_number = config.get("apartment_number_snapshot")
-    apartment_size = _derive_apartment_size_from_assignment(shelter, apartment_number) or str(config.get("apartment_size_snapshot") or "").strip()
+    apartment_size = (
+        _derive_apartment_size_from_assignment(shelter, apartment_number)
+        or str(config.get("apartment_size_snapshot") or "").strip()
+    )
 
     if shelter == "haven":
-        return _float_value(settings.get("hh_rent_amount", 150.00)), "Haven base rent from admin settings"
+        return _float_value(
+            settings.get("hh_rent_amount", 150.00)
+        ), "Haven base rent from admin settings"
 
     if shelter == "gratitude":
         if level == "5":
             apartment_size_lower = apartment_size.lower()
             if "one" in apartment_size_lower:
-                return _float_value(settings.get("gh_level_5_one_bedroom_rent", 250.00)), "Gratitude level 5 one bedroom rate"
+                return _float_value(
+                    settings.get("gh_level_5_one_bedroom_rent", 250.00)
+                ), "Gratitude level 5 one bedroom rate"
             if "two" in apartment_size_lower:
-                return _float_value(settings.get("gh_level_5_two_bedroom_rent", 300.00)), "Gratitude level 5 two bedroom rate"
+                return _float_value(
+                    settings.get("gh_level_5_two_bedroom_rent", 300.00)
+                ), "Gratitude level 5 two bedroom rate"
             if "town" in apartment_size_lower:
-                return _float_value(settings.get("gh_level_5_townhome_rent", 300.00)), "Gratitude level 5 townhome rate"
-            return _float_value(settings.get("gh_level_5_one_bedroom_rent", 250.00)), "Gratitude level 5 defaulted to one bedroom rate"
+                return _float_value(
+                    settings.get("gh_level_5_townhome_rent", 300.00)
+                ), "Gratitude level 5 townhome rate"
+            return _float_value(
+                settings.get("gh_level_5_one_bedroom_rent", 250.00)
+            ), "Gratitude level 5 defaulted to one bedroom rate"
 
         if level == "8":
             if manual_rent > 0:
                 return manual_rent, "Manual level 8 override"
-            return 0.0, "Level 8 sliding scale still needs a resident specific monthly override amount"
+            return (
+                0.0,
+                "Level 8 sliding scale still needs a resident specific monthly override amount",
+            )
 
     return manual_rent, "No matching automatic rent rule"
 
@@ -179,7 +232,12 @@ def _calculate_proration(
     if enrollment_entry and enrollment_entry > occupancy_start:
         occupancy_start = enrollment_entry
         notes.append("Move in proration applied from program entry date")
-    elif config_start and config_start.year == rent_year and config_start.month == rent_month and config_start > occupancy_start:
+    elif (
+        config_start
+        and config_start.year == rent_year
+        and config_start.month == rent_month
+        and config_start > occupancy_start
+    ):
         occupancy_start = config_start
         notes.append("Proration applied from rent setup effective start date")
 

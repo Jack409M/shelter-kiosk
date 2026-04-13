@@ -3,7 +3,17 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, Response, flash, g, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    Response,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from core.access import require_resident
 from core.audit import log_action
@@ -60,11 +70,7 @@ def _load_resident_by_code(resident_code: str):
 def _parse_transport_needed_at(needed_raw: str) -> tuple[datetime | None, str | None]:
     try:
         needed_local = _parse_dt(needed_raw)
-        needed_dt = (
-            needed_local.replace(tzinfo=CHICAGO_TZ)
-            .astimezone(UTC)
-            .replace(tzinfo=None)
-        )
+        needed_dt = needed_local.replace(tzinfo=CHICAGO_TZ).astimezone(UTC).replace(tzinfo=None)
     except Exception:
         return None, "Invalid needed date or time."
 
@@ -214,7 +220,9 @@ def resident_transport():
     ip = _client_ip()
     rl_key = f"resident_transport:{ip}:{resident_identifier or 'unknown'}"
     if is_rate_limited(rl_key, limit=6, window_seconds=900):
-        flash("Too many transportation submissions. Please wait a few minutes and try again.", "error")
+        flash(
+            "Too many transportation submissions. Please wait a few minutes and try again.", "error"
+        )
         return render_template("resident_transport.html", shelter=shelter), 429
 
     needed_raw = (request.form.get("needed_at") or "").strip()

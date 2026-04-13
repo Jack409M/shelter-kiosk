@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.db import db_fetchone
 from core.report_filters import mask_small_counts
 from core.stats.common import (
     fetch_count,
@@ -13,8 +14,6 @@ from core.stats.common import (
     to_int,
     window_dates,
 )
-from core.db import db_fetchone
-
 
 _EXIT_REASON_TO_CATEGORY = {
     "Program Graduated": "Successful Completion",
@@ -135,7 +134,9 @@ def get_exit_outcomes(
     exit_category_percentages: list[dict[str, Any]] = []
     for category in _EXIT_CATEGORY_ORDER:
         count = exit_category_counts.get(category, 0)
-        percent = round((count / total_categorized_exits) * 100, 1) if total_categorized_exits else 0.0
+        percent = (
+            round((count / total_categorized_exits) * 100, 1) if total_categorized_exits else 0.0
+        )
         exit_category_percentages.append(
             {
                 "label": category,

@@ -28,6 +28,4 @@ def _int_value(value, default: int = 0) -> int:
 def _bool_value(value) -> bool:
     if isinstance(value, bool):
         return value
-    if value in (1, "1", "true", "True", "yes", "Yes", "on"):
-        return True
-    return False
+    return value in (1, "1", "true", "True", "yes", "Yes", "on")

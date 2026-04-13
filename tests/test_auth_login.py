@@ -128,7 +128,11 @@ def test_staff_login_success_redirects(app, client, monkeypatch):
         assert session["username"] == "admin"
         assert session["role"] == "admin"
         assert session["shelter"] == "abba"
-        assert session["allowed_shelters"] == ["abba", "haven house", "gratitude house"] or session["allowed_shelters"] == ["abba house", "haven house", "gratitude house"] or session["allowed_shelters"] == ["abba", "haven", "gratitude"]
+        assert (
+            session["allowed_shelters"] == ["abba", "haven house", "gratitude house"]
+            or session["allowed_shelters"] == ["abba house", "haven house", "gratitude house"]
+            or session["allowed_shelters"] == ["abba", "haven", "gratitude"]
+        )
 
 
 def test_staff_login_invalid_password_returns_401(app, client, monkeypatch):

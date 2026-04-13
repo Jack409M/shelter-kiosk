@@ -8,7 +8,6 @@ from typing import Final
 from flask import Flask, current_app, g, redirect, request
 from werkzeug.wrappers import Response
 
-
 _STATIC_CACHE_CONTROL: Final[str] = "public, max-age=86400"
 _DYNAMIC_CACHE_CONTROL: Final[str] = "no-store, no-cache, must-revalidate, private, max-age=0"
 _PERMISSIONS_POLICY: Final[str] = (
@@ -112,9 +111,7 @@ def _log_request_failure(app: Flask, error: BaseException) -> None:
 def _https_is_already_secure() -> bool:
     if request.headers.get("X-Forwarded-Proto", "").lower() == "https":
         return True
-    if request.is_secure:
-        return True
-    return False
+    return bool(request.is_secure)
 
 
 def _redirect_to_https() -> Response:

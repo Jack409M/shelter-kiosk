@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -106,11 +106,7 @@ def _pass_expected_back_value(pass_row) -> str | None:
         tzinfo=ZoneInfo("America/Chicago"),
     )
 
-    return (
-        local_end.astimezone(timezone.utc)
-        .replace(tzinfo=None)
-        .isoformat(timespec="seconds")
-    )
+    return local_end.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def _validate_allowed_attendance_minute(local_dt: datetime) -> None:
@@ -130,18 +126,14 @@ def _parse_datetime_local_to_utc_naive(value: str) -> str:
     local_dt = datetime.fromisoformat(raw_value)
     _validate_allowed_attendance_minute(local_dt)
     local_dt = local_dt.replace(tzinfo=ZoneInfo("America/Chicago"))
-    return (
-        local_dt.astimezone(timezone.utc)
-        .replace(tzinfo=None)
-        .isoformat(timespec="seconds")
-    )
+    return local_dt.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def _local_dt_input_value(dt_iso: str | None) -> str:
     if not dt_iso:
         return ""
     try:
-        dt = datetime.fromisoformat(str(dt_iso)).replace(tzinfo=timezone.utc)
+        dt = datetime.fromisoformat(str(dt_iso)).replace(tzinfo=UTC)
         local_dt = dt.astimezone(ZoneInfo("America/Chicago"))
         return local_dt.strftime("%Y-%m-%dT%H:%M")
     except Exception:
@@ -158,9 +150,9 @@ def _parse_stored_utc_naive(value: str | None) -> datetime | None:
         return None
 
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
+        return parsed.replace(tzinfo=UTC)
 
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def _late_status(expected_back_time: str | None, is_out: bool) -> tuple[bool, int | None]:
@@ -171,7 +163,7 @@ def _late_status(expected_back_time: str | None, is_out: bool) -> tuple[bool, in
     if not expected_back_dt:
         return False, None
 
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     if now_utc <= expected_back_dt:
         return False, None
 
@@ -258,7 +250,9 @@ def _latest_completed_attendance_pair(resident_id: int, shelter: str):
         return None
 
     checkin_id = int(checkin_row["id"] if isinstance(checkin_row, dict) else checkin_row[0])
-    checkin_time = (checkin_row["event_time"] if isinstance(checkin_row, dict) else checkin_row[1]) or ""
+    checkin_time = (
+        checkin_row["event_time"] if isinstance(checkin_row, dict) else checkin_row[1]
+    ) or ""
 
     checkout_row = db_fetchone(
         """
@@ -307,14 +301,42 @@ def _latest_completed_attendance_pair(resident_id: int, shelter: str):
     return {
         "checkin_id": checkin_id,
         "checkin_time": checkin_time,
-        "checkout_id": int(checkout_row["id"] if isinstance(checkout_row, dict) else checkout_row[0]),
-        "checkout_time": (checkout_row["event_time"] if isinstance(checkout_row, dict) else checkout_row[1]) or "",
+        "checkout_id": int(
+            checkout_row["id"] if isinstance(checkout_row, dict) else checkout_row[0]
+        ),
+        "checkout_time": (
+            checkout_row["event_time"] if isinstance(checkout_row, dict) else checkout_row[1]
+        )
+        or "",
         "note": (checkout_row["note"] if isinstance(checkout_row, dict) else checkout_row[2]) or "",
-        "expected_back_time": (checkout_row["expected_back_time"] if isinstance(checkout_row, dict) else checkout_row[3]) or "",
-        "destination": (checkout_row["destination"] if isinstance(checkout_row, dict) else checkout_row[4]) or "",
-        "obligation_start_time": (checkout_row["obligation_start_time"] if isinstance(checkout_row, dict) else checkout_row[5]) or "",
-        "obligation_end_time": (checkout_row["obligation_end_time"] if isinstance(checkout_row, dict) else checkout_row[6]) or "",
-        "actual_obligation_end_time": (checkout_row["actual_obligation_end_time"] if isinstance(checkout_row, dict) else checkout_row[7]) or "",
+        "expected_back_time": (
+            checkout_row["expected_back_time"]
+            if isinstance(checkout_row, dict)
+            else checkout_row[3]
+        )
+        or "",
+        "destination": (
+            checkout_row["destination"] if isinstance(checkout_row, dict) else checkout_row[4]
+        )
+        or "",
+        "obligation_start_time": (
+            checkout_row["obligation_start_time"]
+            if isinstance(checkout_row, dict)
+            else checkout_row[5]
+        )
+        or "",
+        "obligation_end_time": (
+            checkout_row["obligation_end_time"]
+            if isinstance(checkout_row, dict)
+            else checkout_row[6]
+        )
+        or "",
+        "actual_obligation_end_time": (
+            checkout_row["actual_obligation_end_time"]
+            if isinstance(checkout_row, dict)
+            else checkout_row[7]
+        )
+        or "",
     }
 
 
@@ -334,11 +356,19 @@ def _checkout_requires_actual_end_time(checkout_row) -> bool:
     if not checkout_row:
         return False
 
-    destination = (checkout_row["destination"] if isinstance(checkout_row, dict) else checkout_row[5]) or ""
-    obligation_start = (checkout_row["obligation_start_time"] if isinstance(checkout_row, dict) else checkout_row[6]) or ""
-    obligation_end = (checkout_row["obligation_end_time"] if isinstance(checkout_row, dict) else checkout_row[7]) or ""
+    destination = (
+        checkout_row["destination"] if isinstance(checkout_row, dict) else checkout_row[5]
+    ) or ""
+    obligation_start = (
+        checkout_row["obligation_start_time"] if isinstance(checkout_row, dict) else checkout_row[6]
+    ) or ""
+    obligation_end = (
+        checkout_row["obligation_end_time"] if isinstance(checkout_row, dict) else checkout_row[7]
+    ) or ""
 
-    return _checkout_requires_actual_end_time_from_values(destination, obligation_start, obligation_end)
+    return _checkout_requires_actual_end_time_from_values(
+        destination, obligation_start, obligation_end
+    )
 
 
 def _attendance_insert_sql() -> str:
@@ -358,7 +388,11 @@ def _later_delete_after_from_values(expected_back_time: str | None, checkin_time
     if expected_dt is None:
         later_dt = checkin_dt
     else:
-        later_dt = checkin_dt if checkin_dt >= expected_dt.replace(tzinfo=None) else expected_dt.replace(tzinfo=None)
+        later_dt = (
+            checkin_dt
+            if checkin_dt >= expected_dt.replace(tzinfo=None)
+            else expected_dt.replace(tzinfo=None)
+        )
 
     return (later_dt + timedelta(hours=48)).isoformat(timespec="seconds")
 
@@ -458,7 +492,9 @@ def _attendance_base_row(r, shelter: str) -> dict[str, Any]:
 
     last_event_type = ""
     if last_event:
-        last_event_type = last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
+        last_event_type = (
+            last_event["event_type"] if isinstance(last_event, dict) else last_event[0]
+        )
 
     last_checkout = db_fetchone(
         """
@@ -488,13 +524,35 @@ def _attendance_base_row(r, shelter: str) -> dict[str, Any]:
     actual_obligation_end_time = ""
 
     if last_checkout:
-        checkout_time = last_checkout["event_time"] if isinstance(last_checkout, dict) else last_checkout[0]
-        expected_back_time = last_checkout["expected_back_time"] if isinstance(last_checkout, dict) else (last_checkout[1] or "")
-        checkout_note = (last_checkout["note"] if isinstance(last_checkout, dict) else last_checkout[2]) or ""
-        destination = (last_checkout["destination"] if isinstance(last_checkout, dict) else last_checkout[3]) or ""
-        obligation_start_time = (last_checkout["obligation_start_time"] if isinstance(last_checkout, dict) else last_checkout[4]) or ""
-        obligation_end_time = (last_checkout["obligation_end_time"] if isinstance(last_checkout, dict) else last_checkout[5]) or ""
-        actual_obligation_end_time = (last_checkout["actual_obligation_end_time"] if isinstance(last_checkout, dict) else last_checkout[6]) or ""
+        checkout_time = (
+            last_checkout["event_time"] if isinstance(last_checkout, dict) else last_checkout[0]
+        )
+        expected_back_time = (
+            last_checkout["expected_back_time"]
+            if isinstance(last_checkout, dict)
+            else (last_checkout[1] or "")
+        )
+        checkout_note = (
+            last_checkout["note"] if isinstance(last_checkout, dict) else last_checkout[2]
+        ) or ""
+        destination = (
+            last_checkout["destination"] if isinstance(last_checkout, dict) else last_checkout[3]
+        ) or ""
+        obligation_start_time = (
+            last_checkout["obligation_start_time"]
+            if isinstance(last_checkout, dict)
+            else last_checkout[4]
+        ) or ""
+        obligation_end_time = (
+            last_checkout["obligation_end_time"]
+            if isinstance(last_checkout, dict)
+            else last_checkout[5]
+        ) or ""
+        actual_obligation_end_time = (
+            last_checkout["actual_obligation_end_time"]
+            if isinstance(last_checkout, dict)
+            else last_checkout[6]
+        ) or ""
 
     is_out = last_event_type == "check_out"
     active_pass = has_active_pass(rid, shelter)
@@ -523,12 +581,34 @@ def _attendance_base_row(r, shelter: str) -> dict[str, Any]:
         "has_active_pass": active_pass,
         "actual_end_required": bool(destination and obligation_start_time and obligation_end_time),
         "last_completed_pair": last_completed_pair,
-        "last_completed_checkout_time_input": _local_dt_input_value(last_completed_pair["checkout_time"]) if last_completed_pair else "",
-        "last_completed_checkin_time_input": _local_dt_input_value(last_completed_pair["checkin_time"]) if last_completed_pair else "",
-        "last_completed_destination": last_completed_pair["destination"] if last_completed_pair else "",
-        "last_completed_start_input": _local_dt_input_value(last_completed_pair["obligation_start_time"]) if last_completed_pair else "",
-        "last_completed_end_input": _local_dt_input_value(last_completed_pair["obligation_end_time"]) if last_completed_pair else "",
-        "last_completed_actual_end_input": _local_dt_input_value(last_completed_pair["actual_obligation_end_time"]) if last_completed_pair else "",
+        "last_completed_checkout_time_input": _local_dt_input_value(
+            last_completed_pair["checkout_time"]
+        )
+        if last_completed_pair
+        else "",
+        "last_completed_checkin_time_input": _local_dt_input_value(
+            last_completed_pair["checkin_time"]
+        )
+        if last_completed_pair
+        else "",
+        "last_completed_destination": last_completed_pair["destination"]
+        if last_completed_pair
+        else "",
+        "last_completed_start_input": _local_dt_input_value(
+            last_completed_pair["obligation_start_time"]
+        )
+        if last_completed_pair
+        else "",
+        "last_completed_end_input": _local_dt_input_value(
+            last_completed_pair["obligation_end_time"]
+        )
+        if last_completed_pair
+        else "",
+        "last_completed_actual_end_input": _local_dt_input_value(
+            last_completed_pair["actual_obligation_end_time"]
+        )
+        if last_completed_pair
+        else "",
         "last_completed_actual_end_required": _checkout_requires_actual_end_time_from_values(
             last_completed_pair["destination"] if last_completed_pair else "",
             last_completed_pair["obligation_start_time"] if last_completed_pair else "",
@@ -597,10 +677,19 @@ def staff_attendance_check_in_view(resident_id: int):
 
     if open_checkout:
         requires_actual_end = _checkout_requires_actual_end_time(open_checkout)
-        existing_actual_end = (open_checkout["actual_obligation_end_time"] if isinstance(open_checkout, dict) else open_checkout[8]) or ""
+        existing_actual_end = (
+            open_checkout["actual_obligation_end_time"]
+            if isinstance(open_checkout, dict)
+            else open_checkout[8]
+        ) or ""
         if requires_actual_end and not existing_actual_end:
-            flash("This resident needs an actual obligation end time before check in. Use Edit.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            flash(
+                "This resident needs an actual obligation end time before check in. Use Edit.",
+                "error",
+            )
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
     db_execute(
         """
@@ -634,7 +723,18 @@ def staff_attendance_check_in_view(resident_id: int):
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (resident_id, shelter, "check_in", checkin_time_value, staff_id, "Manual check in", None, None, None, None),
+        (
+            resident_id,
+            shelter,
+            "check_in",
+            checkin_time_value,
+            staff_id,
+            "Manual check in",
+            None,
+            None,
+            None,
+            None,
+        ),
     )
 
     complete_active_passes(resident_id, shelter)
@@ -705,8 +805,12 @@ def staff_attendance_check_out_global_view():
             return redirect(url_for("attendance.staff_attendance"))
 
         pass_id = active_pass["id"] if isinstance(active_pass, dict) else active_pass[0]
-        pass_type = (active_pass["pass_type"] if isinstance(active_pass, dict) else active_pass[1]) or ""
-        pass_destination = (active_pass["destination"] if isinstance(active_pass, dict) else active_pass[2]) or ""
+        pass_type = (
+            active_pass["pass_type"] if isinstance(active_pass, dict) else active_pass[1]
+        ) or ""
+        pass_destination = (
+            active_pass["destination"] if isinstance(active_pass, dict) else active_pass[2]
+        ) or ""
 
         if pass_id:
             note_parts.append(f"Pass ID: {pass_id}")
@@ -728,19 +832,28 @@ def staff_attendance_check_out_global_view():
         try:
             obligation_start_value = _parse_datetime_local_to_utc_naive(obligation_start_raw)
         except Exception:
-            flash("Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
+            flash(
+                "Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
             return redirect(url_for("attendance.staff_attendance"))
 
         try:
             obligation_end_value = _parse_datetime_local_to_utc_naive(obligation_end_raw)
         except Exception:
-            flash("Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
+            flash(
+                "Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
             return redirect(url_for("attendance.staff_attendance"))
 
         try:
             expected_back_value = _parse_datetime_local_to_utc_naive(expected_back_raw)
         except Exception:
-            flash("Invalid expected back time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
+            flash(
+                "Invalid expected back time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
             return redirect(url_for("attendance.staff_attendance"))
 
         if obligation_end_value < obligation_start_value:
@@ -846,7 +959,10 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
     try:
         updated_checkout_time = _parse_datetime_local_to_utc_naive(checkout_time_raw)
     except Exception:
-        flash("Invalid checkout time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
+        flash(
+            "Invalid checkout time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+            "error",
+        )
         return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
     if not destination_raw:
@@ -860,7 +976,9 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
         return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
 
     requires_approved_pass = bool(selected_category.get("requires_approved_pass"))
-    existing_expected_back = (open_checkout["expected_back_time"] if isinstance(open_checkout, dict) else open_checkout[4]) or ""
+    existing_expected_back = (
+        open_checkout["expected_back_time"] if isinstance(open_checkout, dict) else open_checkout[4]
+    ) or ""
 
     updated_expected_back = existing_expected_back
     updated_start = None
@@ -871,54 +989,85 @@ def staff_attendance_edit_open_submit_view(resident_id: int):
         active_pass = _active_pass_row(resident_id, shelter)
         if not active_pass:
             flash("No approved pass found for that activity category.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         updated_expected_back = _pass_expected_back_value(active_pass)
         if not updated_expected_back:
             flash("Approved pass is missing an end time.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
     else:
         if not start_raw:
             flash("Scheduled start time is required.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         if not end_raw:
             flash("Scheduled end time is required.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         if not actual_end_raw:
             flash("Actual obligation end time is required.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         try:
             updated_start = _parse_datetime_local_to_utc_naive(start_raw)
         except Exception:
-            flash("Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            flash(
+                "Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         try:
             updated_end = _parse_datetime_local_to_utc_naive(end_raw)
         except Exception:
-            flash("Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            flash(
+                "Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         try:
             updated_actual_end = _parse_datetime_local_to_utc_naive(actual_end_raw)
         except Exception:
-            flash("Invalid actual obligation end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            flash(
+                "Invalid actual obligation end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         if updated_end < updated_start:
             flash("Scheduled end time cannot be earlier than scheduled start time.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         if updated_actual_end < updated_start:
             flash("Actual end time cannot be earlier than scheduled start time.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
         if updated_actual_end > utcnow_iso():
             flash("Actual end time cannot be later than right now.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_open", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_open", resident_id=resident_id)
+            )
 
     checkout_id = int(open_checkout["id"] if isinstance(open_checkout, dict) else open_checkout[0])
 
@@ -1031,13 +1180,19 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
     try:
         updated_checkout_time = _parse_datetime_local_to_utc_naive(checkout_time_raw)
     except Exception:
-        flash("Invalid checkout time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
+        flash(
+            "Invalid checkout time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+            "error",
+        )
         return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
     try:
         updated_checkin_time = _parse_datetime_local_to_utc_naive(checkin_time_raw)
     except Exception:
-        flash("Invalid check in time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
+        flash(
+            "Invalid check in time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+            "error",
+        )
         return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
 
     if updated_checkin_time < updated_checkout_time:
@@ -1062,50 +1217,82 @@ def staff_attendance_edit_last_submit_view(resident_id: int):
 
     if requires_approved_pass:
         if destination_raw != (pair["destination"] or ""):
-            flash("Completed attendance cannot be changed into a different pass based category after the fact.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            flash(
+                "Completed attendance cannot be changed into a different pass based category after the fact.",
+                "error",
+            )
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
     else:
         if not start_raw:
             flash("Scheduled start time is required.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
         if not end_raw:
             flash("Scheduled end time is required.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
         if not actual_end_raw:
             flash("Actual obligation end time is required.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
         try:
             updated_start = _parse_datetime_local_to_utc_naive(start_raw)
         except Exception:
-            flash("Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            flash(
+                "Invalid scheduled start time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
         try:
             updated_end = _parse_datetime_local_to_utc_naive(end_raw)
         except Exception:
-            flash("Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            flash(
+                "Invalid scheduled end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
         try:
             updated_actual_end = _parse_datetime_local_to_utc_naive(actual_end_raw)
         except Exception:
-            flash("Invalid actual obligation end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            flash(
+                "Invalid actual obligation end time. Allowed minutes are 00, 10, 15, 20, 30, 40, 45, and 50.",
+                "error",
+            )
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
         if updated_end < updated_start:
             flash("Scheduled end time cannot be earlier than scheduled start time.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
         if updated_actual_end < updated_start:
             flash("Actual end time cannot be earlier than scheduled start time.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
         if updated_actual_end > updated_checkin_time:
             flash("Actual end time cannot be later than the check in time.", "error")
-            return redirect(url_for("attendance.staff_attendance_edit_last", resident_id=resident_id))
+            return redirect(
+                url_for("attendance.staff_attendance_edit_last", resident_id=resident_id)
+            )
 
     db_execute(
         """

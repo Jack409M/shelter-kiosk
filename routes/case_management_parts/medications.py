@@ -7,11 +7,13 @@ from flask import current_app, flash, redirect, render_template, request, sessio
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    fetch_current_enrollment_id_for_resident,
+    normalize_shelter_name,
+    placeholder,
+    shelter_equals_sql,
+)
 
 
 def _resident_case_redirect(resident_id: int):

@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-
 CHI = ZoneInfo("America/Chicago")
 
 APPOINTMENT_PARSE_FORMATS = [
@@ -123,9 +122,7 @@ def _is_current_or_future_appointment(value: str | None) -> bool:
 
 def _resolve_meeting_default_next_appointment(latest_appointment) -> str:
     latest_appointment_date = (
-        _clean_text(latest_appointment.get("appointment_date"))
-        if latest_appointment
-        else ""
+        _clean_text(latest_appointment.get("appointment_date")) if latest_appointment else ""
     )
 
     if latest_appointment_date and _is_current_or_future_appointment(latest_appointment_date):
@@ -200,9 +197,7 @@ def build_meeting_defaults(
         "parenting_class_completed": _yes_no_from_need_state(
             intake_assessment.get("parenting_class_needed")
         ),
-        "warrants_or_fines_paid": _yes_no_from_need_state(
-            intake_assessment.get("warrants_unpaid")
-        ),
+        "warrants_or_fines_paid": _yes_no_from_need_state(intake_assessment.get("warrants_unpaid")),
     }
 
 

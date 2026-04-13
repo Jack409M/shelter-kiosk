@@ -3,7 +3,6 @@ from __future__ import annotations
 from core.db import db_fetchall
 from core.helpers import is_postgres
 
-
 # Shelter lookup helpers
 #
 # Future extraction note
@@ -32,10 +31,7 @@ def get_all_shelters() -> list[str]:
     names: list[str] = []
 
     for row in rows:
-        if isinstance(row, dict):
-            name = row.get("name") or ""
-        else:
-            name = row[0] or ""
+        name = row.get("name") or "" if isinstance(row, dict) else row[0] or ""
 
         if name:
             names.append(name)

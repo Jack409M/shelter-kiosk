@@ -1,38 +1,27 @@
 from __future__ import annotations
 
-from typing import Any
-
 from core.db import db_fetchone
-from routes.case_management_parts.helpers import current_enrollment_order_sql
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import (
+    fetch_current_enrollment_for_resident,
+    placeholder,
+    shelter_equals_sql,
+)
 
 
-type Row = dict[str, Any]
-
-
-def load_current_enrollment(resident_id: int, shelter: str) -> Row | None:
-    ph = placeholder()
-
-    return db_fetchone(
-        f"""
-        SELECT
+def load_current_enrollment(resident_id: int):
+    return fetch_current_enrollment_for_resident(
+        resident_id,
+        columns="""
             id,
             shelter,
             program_status,
             entry_date,
             exit_date
-        FROM program_enrollments
-        WHERE resident_id = {ph}
-          AND {shelter_equals_sql("shelter")}
-        ORDER BY {current_enrollment_order_sql()}
-        LIMIT 1
         """,
-        (resident_id, shelter),
     )
 
 
-def load_resident_in_scope(resident_id: int, shelter: str) -> Row | None:
+def load_resident_in_scope(resident_id: int, shelter: str):
     ph = placeholder()
 
     return db_fetchone(

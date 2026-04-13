@@ -1,12 +1,11 @@
-from datetime import date, datetime, timedelta
 import random
+from datetime import date, datetime, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
-
 
 shelter_operations = Blueprint(
     "shelter_operations",
@@ -35,10 +34,7 @@ def _week_start_tuesday(date_text: str) -> str:
 def _week_dates_from_anchor(date_text: str) -> tuple[str, str, list[str]]:
     week_start = _week_start_tuesday(date_text)
     start_date = datetime.strptime(week_start, "%Y-%m-%d").date()
-    week_dates = [
-        (start_date + timedelta(days=i)).strftime("%Y-%m-%d")
-        for i in range(7)
-    ]
+    week_dates = [(start_date + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
     week_end = week_dates[-1]
     return week_start, week_end, week_dates
 
@@ -131,8 +127,7 @@ def _resident_assignment_candidates(
         (shelter, week_start, week_end),
     )
     weekly_counts = {
-        row["resident_id"]: int(row["assignment_count"] or 0)
-        for row in weekly_counts_rows
+        row["resident_id"]: int(row["assignment_count"] or 0) for row in weekly_counts_rows
     }
 
     history_rows = db_fetchall(
@@ -232,7 +227,7 @@ def _current_week_assignments_by_chore(
             }
 
         grouped[chore_id]["resident_ids"].add(row["resident_id"])
-        display_name = f'{row["last_name"]}, {row["first_name"]}'
+        display_name = f"{row['last_name']}, {row['first_name']}"
         if display_name not in grouped[chore_id]["resident_names"]:
             grouped[chore_id]["resident_names"].append(display_name)
 
@@ -693,7 +688,9 @@ def chore_assignments():
                 randomize_residents=randomize_residents,
             )
             flash(message, category)
-            return redirect(url_for("shelter_operations.chore_assignments", assigned_date=week_start))
+            return redirect(
+                url_for("shelter_operations.chore_assignments", assigned_date=week_start)
+            )
 
         chores = db_fetchall(
             """
@@ -723,7 +720,7 @@ def chore_assignments():
         cleared_chore_count = 0
 
         for chore in chores:
-            field_name = f'resident_for_chore_{chore["id"]}'
+            field_name = f"resident_for_chore_{chore['id']}"
             selected_resident_id = (request.form.get(field_name) or "").strip()
 
             if selected_resident_id and selected_resident_id not in valid_resident_ids:
@@ -978,7 +975,9 @@ def edit_assignment(assignment_id: int):
         flash("Assignment not found.", "error")
         return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date))
 
-    week_start, week_end, week_dates = _week_dates_from_anchor(assigned_date or target["assigned_date"])
+    week_start, week_end, week_dates = _week_dates_from_anchor(
+        assigned_date or target["assigned_date"]
+    )
 
     target_rows = db_fetchall(
         """
@@ -1067,7 +1066,13 @@ def toggle_assignment_status(assignment_id: int):
     )
 
     flash("Chore status updated.", "success")
-    return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date, scroll_y=request.form.get("scroll_y") or "0"))
+    return redirect(
+        url_for(
+            "shelter_operations.chore_board",
+            assigned_date=assigned_date,
+            scroll_y=request.form.get("scroll_y") or "0",
+        )
+    )
 
 
 @shelter_operations.route("/chore-board/<int:assignment_id>/delete", methods=["POST"])
@@ -1099,9 +1104,15 @@ def delete_assignment(assignment_id: int):
 
     if not target:
         flash("Assignment not found.", "error")
-        return redirect(url_for("shelter_operations.chore_board", assigned_date=assigned_date, scroll_y=scroll_y))
+        return redirect(
+            url_for(
+                "shelter_operations.chore_board", assigned_date=assigned_date, scroll_y=scroll_y
+            )
+        )
 
-    week_start, week_end, _week_dates = _week_dates_from_anchor(assigned_date or target["assigned_date"])
+    week_start, week_end, _week_dates = _week_dates_from_anchor(
+        assigned_date or target["assigned_date"]
+    )
 
     db_execute(
         """
@@ -1117,4 +1128,6 @@ def delete_assignment(assignment_id: int):
     )
 
     flash("Weekly assignment deleted.", "success")
-    return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start, scroll_y=scroll_y))
+    return redirect(
+        url_for("shelter_operations.chore_board", assigned_date=week_start, scroll_y=scroll_y)
+    )

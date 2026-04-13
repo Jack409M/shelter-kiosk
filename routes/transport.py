@@ -21,7 +21,6 @@ from core.auth import can_manage_requests, require_login, require_shelter
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt, utcnow_iso
 
-
 transport = Blueprint("transport", __name__)
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")

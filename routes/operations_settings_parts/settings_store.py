@@ -7,7 +7,6 @@ from flask import g
 from core.db import DbRow, db_execute, db_fetchone
 from core.helpers import utcnow_iso
 
-
 DEFAULT_INSPECTION_ITEMS: Final[list[str]] = [
     "Floors clean",
     "Bed made",
@@ -382,10 +381,7 @@ def _ensure_column(column_name: str, column_definition: str) -> None:
     if _column_exists(column_name):
         return
 
-    db_execute(
-        f"ALTER TABLE {_SETTINGS_TABLE_NAME} "
-        f"ADD COLUMN {column_name} {column_definition}"
-    )
+    db_execute(f"ALTER TABLE {_SETTINGS_TABLE_NAME} ADD COLUMN {column_name} {column_definition}")
 
 
 def _ensure_operations_settings_table() -> None:
@@ -479,18 +475,10 @@ def _default_settings_values(shelter: str) -> dict[str, Any]:
         "pass_level_2_rules_text": _default_pass_level_rules_text("pass_level_2_rules_text"),
         "pass_level_3_rules_text": _default_pass_level_rules_text("pass_level_3_rules_text"),
         "pass_level_4_rules_text": _default_pass_level_rules_text("pass_level_4_rules_text"),
-        "pass_gh_level_5_rules_text": _default_pass_level_rules_text(
-            "pass_gh_level_5_rules_text"
-        ),
-        "pass_gh_level_6_rules_text": _default_pass_level_rules_text(
-            "pass_gh_level_6_rules_text"
-        ),
-        "pass_gh_level_7_rules_text": _default_pass_level_rules_text(
-            "pass_gh_level_7_rules_text"
-        ),
-        "pass_gh_level_8_rules_text": _default_pass_level_rules_text(
-            "pass_gh_level_8_rules_text"
-        ),
+        "pass_gh_level_5_rules_text": _default_pass_level_rules_text("pass_gh_level_5_rules_text"),
+        "pass_gh_level_6_rules_text": _default_pass_level_rules_text("pass_gh_level_6_rules_text"),
+        "pass_gh_level_7_rules_text": _default_pass_level_rules_text("pass_gh_level_7_rules_text"),
+        "pass_gh_level_8_rules_text": _default_pass_level_rules_text("pass_gh_level_8_rules_text"),
         "created_at": now,
         "updated_at": now,
     }

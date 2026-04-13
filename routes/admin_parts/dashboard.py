@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from flask import (
+    flash,
+    g,
     jsonify,
     redirect,
     render_template,
     request,
     session,
     url_for,
-    flash,
-    g,
 )
 
 from core import rate_limit as rate_limit_store
@@ -18,13 +18,15 @@ from core.audit import log_action
 from core.db import db_execute
 from core.helpers import fmt_dt, utcnow_iso
 from core.rate_limit import ban_ip
-
 from routes.admin_parts.helpers import (
     build_admin_dashboard_payload as _build_admin_dashboard_payload,
+)
+from routes.admin_parts.helpers import (
     current_role as _current_role,
+)
+from routes.admin_parts.helpers import (
     require_admin_role as _require_admin,
 )
-
 
 AUTO_RESET_HOURS = 8
 MANUAL_IP_BAN_SECONDS = 3600
@@ -50,7 +52,7 @@ SECURITY_FIELD_META = {
 
 
 def _temporary_expiration_iso() -> str:
-    return (datetime.now(timezone.utc) + timedelta(hours=AUTO_RESET_HOURS)).isoformat()
+    return (datetime.now(UTC) + timedelta(hours=AUTO_RESET_HOURS)).isoformat()
 
 
 def _manual_unban_ip(ip: str) -> bool:

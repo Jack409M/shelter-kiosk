@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime, timezone
 from datetime import date as date_cls
-from datetime import datetime, timezone
 from typing import Any, Final
 from zoneinfo import ZoneInfo
 
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
 
-
 CHICAGO_TZ: Final[ZoneInfo] = ZoneInfo("America/Chicago")
-UTC: Final[timezone] = timezone.utc
+UTC: Final[timezone] = UTC
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,10 +34,7 @@ def _to_chicago(value: object) -> datetime | None:
     except ValueError:
         return None
 
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-    else:
-        parsed = parsed.astimezone(UTC)
+    parsed = parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed.astimezone(UTC)
 
     return parsed.astimezone(CHICAGO_TZ)
 

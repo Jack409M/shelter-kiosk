@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -10,7 +10,6 @@ from flask import g
 from core.db import db_fetchall
 from core.kiosk_activity_categories import load_kiosk_activity_categories_for_shelter
 from core.pass_rules import pass_required_hours
-
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 ATTENDANCE_LOOKBACK_WEEKS = 39
@@ -29,9 +28,7 @@ class AttendanceHourCategory:
 def _as_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
-    if value in {1, "1", "true", "True", "yes", "on"}:
-        return True
-    return False
+    return value in {1, "1", "true", "True", "yes", "on"}
 
 
 def _category_map_for_shelter(shelter: str) -> dict[str, AttendanceHourCategory]:
@@ -75,18 +72,14 @@ def _utc_iso_to_local(dt_iso: str | None) -> datetime | None:
 
     try:
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt.astimezone(CHICAGO_TZ)
     except Exception:
         return None
 
 
 def _local_to_utc_iso(local_dt: datetime) -> str:
-    return (
-        local_dt.astimezone(timezone.utc)
-        .replace(tzinfo=None)
-        .isoformat(timespec="seconds")
-    )
+    return local_dt.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def _start_of_week_local(any_local_dt: datetime) -> datetime:
@@ -111,7 +104,9 @@ def _parse_entry_date(value: str | None) -> date | None:
             return None
 
 
-def _completed_week_windows(lookback_weeks: int = ATTENDANCE_LOOKBACK_WEEKS) -> list[dict[str, Any]]:
+def _completed_week_windows(
+    lookback_weeks: int = ATTENDANCE_LOOKBACK_WEEKS,
+) -> list[dict[str, Any]]:
     now_local = datetime.now(CHICAGO_TZ)
     current_week_start = _start_of_week_local(now_local)
 
@@ -327,9 +322,15 @@ def _fetch_attendance_rows_for_window(
                 "actual_obligation_end_time": row[4],
             }
 
-        normalized["obligation_start_local"] = _utc_iso_to_local(normalized.get("obligation_start_time"))
-        normalized["obligation_end_local"] = _utc_iso_to_local(normalized.get("obligation_end_time"))
-        normalized["actual_obligation_end_local"] = _utc_iso_to_local(normalized.get("actual_obligation_end_time"))
+        normalized["obligation_start_local"] = _utc_iso_to_local(
+            normalized.get("obligation_start_time")
+        )
+        normalized["obligation_end_local"] = _utc_iso_to_local(
+            normalized.get("obligation_end_time")
+        )
+        normalized["actual_obligation_end_local"] = _utc_iso_to_local(
+            normalized.get("actual_obligation_end_time")
+        )
         rows.append(normalized)
 
     return rows
@@ -460,10 +461,14 @@ def build_attendance_hours_snapshot(
             }
         )
 
-    average_percent = round(
-        sum(eligible_percent_values) / len(eligible_percent_values),
-        1,
-    ) if eligible_percent_values else 0.0
+    average_percent = (
+        round(
+            sum(eligible_percent_values) / len(eligible_percent_values),
+            1,
+        )
+        if eligible_percent_values
+        else 0.0
+    )
 
     weighted_passes = average_percent >= ATTENDANCE_WEIGHTED_PASS_PERCENT
 
@@ -491,12 +496,16 @@ def build_attendance_hours_snapshot(
         "pill_style": pill_style,
         "eligible_weeks_count": len(eligible_percent_values),
         "excluded_pre_entry_weeks_count": excluded_pre_entry_weeks_count,
-        "current_week_status_label": latest_included_week["status_label"] if latest_included_week else "—",
-        "current_week_percent_display": latest_included_week["percent_grade_display"] if latest_included_week else "—",
+        "current_week_status_label": latest_included_week["status_label"]
+        if latest_included_week
+        else "—",
+        "current_week_percent_display": latest_included_week["percent_grade_display"]
+        if latest_included_week
+        else "—",
         "current_week_label": latest_included_week["week_label"] if latest_included_week else "",
         "weekly_rows": weekly_rows,
         "average_label": (
-            f"9 month weighted average using completed program weeks only. "
-            f"Weeks before entry are excluded."
+            "9 month weighted average using completed program weeks only. "
+            "Weeks before entry are excluded."
         ),
     }

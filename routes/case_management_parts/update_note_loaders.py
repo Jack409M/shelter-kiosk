@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
-
-from core.db import db_fetchall
-from core.db import db_fetchone
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
-
-
-type Row = dict[str, Any]
-type RowList = list[Row]
-type ScopePair = tuple[Row | None, Row | None]
+from core.db import db_fetchall, db_fetchone
+from routes.case_management_parts.helpers import (
+    fetch_current_enrollment_for_resident,
+    placeholder,
+    shelter_equals_sql,
+)
 
 
-def get_resident_and_enrollment_in_scope(resident_id: int, shelter: str) -> ScopePair:
+def get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
     ph = placeholder()
 
     resident = db_fetchone(
@@ -34,9 +28,8 @@ def get_resident_and_enrollment_in_scope(resident_id: int, shelter: str) -> Scop
     return resident, enrollment
 
 
-def load_note_for_edit(update_id: int) -> Row | None:
+def load_note_for_edit(update_id: int):
     ph = placeholder()
-
     return db_fetchone(
         f"""
         SELECT cmu.*, pe.resident_id
@@ -48,9 +41,8 @@ def load_note_for_edit(update_id: int) -> Row | None:
     )
 
 
-def load_services_for_note(update_id: int) -> RowList:
+def load_services_for_note(update_id: int):
     ph = placeholder()
-
     return db_fetchall(
         f"""
         SELECT service_type, quantity, unit, notes
@@ -61,25 +53,22 @@ def load_services_for_note(update_id: int) -> RowList:
     )
 
 
-def build_edit_service_maps(services: RowList) -> dict[str, Any]:
-    selected_services: list[str] = []
-    service_notes_map: dict[str, str] = {}
-    service_quantity_map: dict[str, Any] = {}
-    service_unit_map: dict[str, str] = {}
+def build_edit_service_maps(services: list[dict]):
+    selected_services = []
+    service_notes_map = {}
+    service_quantity_map = {}
+    service_unit_map = {}
 
     for service in services:
-        service_type = str(service.get("service_type") or "")
-        quantity = service.get("quantity")
-        unit = service.get("unit")
-        service_note = service.get("notes")
-
-        if not service_type:
-            continue
+        service_type = service["service_type"]
+        quantity = service["quantity"]
+        unit = service["unit"]
+        service_note = service["notes"]
 
         selected_services.append(service_type)
-        service_notes_map[service_type] = str(service_note or "")
+        service_notes_map[service_type] = service_note or ""
         service_quantity_map[service_type] = quantity if quantity is not None else ""
-        service_unit_map[service_type] = str(unit or "")
+        service_unit_map[service_type] = unit or ""
 
     return {
         "selected_services": selected_services,

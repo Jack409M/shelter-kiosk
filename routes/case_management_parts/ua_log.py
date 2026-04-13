@@ -5,11 +5,13 @@ from flask import flash, redirect, render_template, request, session, url_for
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    fetch_current_enrollment_id_for_resident,
+    normalize_shelter_name,
+    placeholder,
+    shelter_equals_sql,
+)
 
 
 def _resident_case_redirect(resident_id: int):
@@ -204,7 +206,9 @@ def edit_ua_log_view(resident_id: int, ua_id: int):
 
     if not ua_date:
         flash("UA date is required.", "error")
-        return redirect(url_for("case_management.edit_ua_log", resident_id=resident_id, ua_id=ua_id))
+        return redirect(
+            url_for("case_management.edit_ua_log", resident_id=resident_id, ua_id=ua_id)
+        )
 
     now = utcnow_iso()
 

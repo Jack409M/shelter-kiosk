@@ -41,7 +41,10 @@ def staff_sms_consent():
         )
     except Exception:
         current_app.logger.exception("Failed to load SMS consent resident list.")
-        flash("Unable to load SMS consent data. Please try again or contact an administrator.", "error")
+        flash(
+            "Unable to load SMS consent data. Please try again or contact an administrator.",
+            "error",
+        )
         return redirect(url_for("attendance.staff_attendance"))
 
     rows = _normalize_sms_consent_rows(rows_raw)

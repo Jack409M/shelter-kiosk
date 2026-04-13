@@ -5,16 +5,20 @@ from flask import flash, redirect, render_template, request, session, url_for
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import clean
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import parse_iso_date
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
-from routes.case_management_parts.intake_income_support import load_intake_income_support
-from routes.case_management_parts.intake_income_support import recalculate_intake_income_support
-from routes.case_management_parts.intake_income_support import upsert_intake_income_support
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    clean,
+    fetch_current_enrollment_for_resident,
+    normalize_shelter_name,
+    parse_iso_date,
+    placeholder,
+    shelter_equals_sql,
+)
+from routes.case_management_parts.intake_income_support import (
+    load_intake_income_support,
+    recalculate_intake_income_support,
+    upsert_intake_income_support,
+)
 
 
 def _yes_no_to_bool(value: str | None):

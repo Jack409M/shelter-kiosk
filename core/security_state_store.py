@@ -7,7 +7,6 @@ from flask import current_app, g, has_app_context
 
 from core.db import db_execute, db_fetchall, db_fetchone
 
-
 _TABLE_NAME: Final[str] = "security_runtime_state"
 
 

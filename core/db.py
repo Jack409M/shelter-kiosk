@@ -198,11 +198,7 @@ def _db_cursor(*, dict_rows: bool = False) -> Iterator[DbCursor]:
     if dict_rows and sql_cursor_factory is None:
         raise RuntimeError("psycopg2.extras.RealDictCursor is unavailable.")
 
-    cur = (
-        conn.cursor(cursor_factory=sql_cursor_factory)
-        if sql_cursor_factory
-        else conn.cursor()
-    )
+    cur = conn.cursor(cursor_factory=sql_cursor_factory) if sql_cursor_factory else conn.cursor()
     try:
         yield cur
     finally:
@@ -288,4 +284,3 @@ def db_transaction() -> Iterator[DbConnection]:
     finally:
         g.db_in_transaction = False
         conn.autocommit = previous_autocommit
-        

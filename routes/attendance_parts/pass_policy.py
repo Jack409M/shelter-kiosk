@@ -46,8 +46,7 @@ def load_resident_pass_profile(resident_id: int):
         LIMIT 1
         """
         if g.get("db_kind") == "pg"
-        else
-        """
+        else """
         SELECT
             id,
             shelter,
@@ -143,8 +142,7 @@ def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
         ORDER BY incident_date DESC, id DESC
         """
         if g.get("db_kind") == "pg"
-        else
-        """
+        else """
         SELECT
             id,
             incident_date,
@@ -178,26 +176,23 @@ def _load_active_writeup_restrictions(resident_id: int) -> list[dict]:
             start_date = _parse_date_only(item.get("probation_start_date"))
             end_date = _parse_date_only(item.get("probation_end_date"))
             is_active = bool(
-                is_open
-                and start_date
-                and end_date
-                and start_date <= today <= end_date
+                is_open and start_date and end_date and start_date <= today <= end_date
             )
             if is_active:
                 item["restriction_label"] = "Program Probation"
-                item["restriction_detail"] = f"{item.get('probation_start_date') or '—'} to {item.get('probation_end_date') or '—'}"
+                item["restriction_detail"] = (
+                    f"{item.get('probation_start_date') or '—'} to {item.get('probation_end_date') or '—'}"
+                )
                 active.append(item)
 
         elif outcome == "pre_termination":
             scheduled_date = _parse_date_only(item.get("pre_termination_date"))
-            is_active = bool(
-                is_open
-                and scheduled_date
-                and today <= scheduled_date
-            )
+            is_active = bool(is_open and scheduled_date and today <= scheduled_date)
             if is_active:
                 item["restriction_label"] = "Pre Termination Scheduled"
-                item["restriction_detail"] = f"Scheduled for {item.get('pre_termination_date') or '—'}"
+                item["restriction_detail"] = (
+                    f"Scheduled for {item.get('pre_termination_date') or '—'}"
+                )
                 active.append(item)
 
     return active
@@ -208,7 +203,9 @@ def has_active_pass_block(resident_id: int) -> tuple[bool, list[dict]]:
     return (len(restrictions) > 0, restrictions)
 
 
-def build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, meeting_summary=None):
+def build_policy_check(
+    pass_row: dict, pass_detail: dict | None, hour_summary, meeting_summary=None
+):
     resident_id = int(pass_row.get("resident_id") or 0)
     resident_profile = load_resident_pass_profile(resident_id) if resident_id else None
 
@@ -223,7 +220,11 @@ def build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, m
     required_hours = pass_required_hours(shelter)
     use_gh = use_gh_pass_form(shelter, resident_level)
 
-    rule_box = gh_pass_rule_box(shelter, resident_level) if use_gh else shared_pass_rule_box(shelter, resident_level)
+    rule_box = (
+        gh_pass_rule_box(shelter, resident_level)
+        if use_gh
+        else shared_pass_rule_box(shelter, resident_level)
+    )
     pass_type_key = str(pass_row.get("pass_type") or "").strip().lower()
     pass_type_text = pass_type_label(pass_type_key)
 
@@ -237,7 +238,9 @@ def build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, m
                     "label": restriction.get("restriction_label") or "Disciplinary Restriction",
                     "value": "Passes denied",
                     "status_class": "fail",
-                    "detail": restriction.get("restriction_detail") or restriction.get("summary") or "",
+                    "detail": restriction.get("restriction_detail")
+                    or restriction.get("summary")
+                    or "",
                 }
             )
 
@@ -304,7 +307,9 @@ def build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, m
             productive_hours = hour_summary.get("productive_hours", 0)
             work_hours = hour_summary.get("work_hours", 0)
 
-            meets_hours = (productive_hours >= productive_required) and (work_hours >= work_required)
+            meets_hours = (productive_hours >= productive_required) and (
+                work_hours >= work_required
+            )
 
             checks.append(
                 {
@@ -353,7 +358,9 @@ def build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, m
                     checks.append(
                         {
                             "label": "Weekly meeting requirement",
-                            "value": "Meets Level 3 weekly requirement" if weekly_met else "Below Level 3 weekly requirement",
+                            "value": "Meets Level 3 weekly requirement"
+                            if weekly_met
+                            else "Below Level 3 weekly requirement",
                             "status_class": "pass" if weekly_met else "fail",
                             "detail": (
                                 f"This week {meeting_summary.get('meetings_this_week', 0)} / 6 meetings"
@@ -366,7 +373,9 @@ def build_policy_check(pass_row: dict, pass_detail: dict | None, hour_summary, m
                     checks.append(
                         {
                             "label": "Weekly meeting requirement",
-                            "value": "Meets Level 4 weekly requirement" if weekly_met else "Below Level 4 weekly requirement",
+                            "value": "Meets Level 4 weekly requirement"
+                            if weekly_met
+                            else "Below Level 4 weekly requirement",
                             "status_class": "pass" if weekly_met else "fail",
                             "detail": (
                                 f"This week {meeting_summary.get('meetings_this_week', 0)} / 5 meetings"

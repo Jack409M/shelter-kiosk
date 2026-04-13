@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import timezone
+import contextlib
+from datetime import UTC
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -37,11 +38,15 @@ def staff_attendance_resident_print_view(resident_id: int):
     date_filter = ""
 
     if start:
-        date_filter += " AND ae.event_time >= %s" if g.get("db_kind") == "pg" else " AND ae.event_time >= ?"
+        date_filter += (
+            " AND ae.event_time >= %s" if g.get("db_kind") == "pg" else " AND ae.event_time >= ?"
+        )
         params.append(start + "T00:00:00")
 
     if end:
-        date_filter += " AND ae.event_time <= %s" if g.get("db_kind") == "pg" else " AND ae.event_time <= ?"
+        date_filter += (
+            " AND ae.event_time <= %s" if g.get("db_kind") == "pg" else " AND ae.event_time <= ?"
+        )
         params.append(end + "T23:59:59")
 
     events_raw = db_fetchall(
@@ -64,7 +69,7 @@ def staff_attendance_resident_print_view(resident_id: int):
 
     def local_day(dt_iso):
         try:
-            dt = parse_dt(dt_iso).replace(tzinfo=timezone.utc)
+            dt = parse_dt(dt_iso).replace(tzinfo=UTC)
             return dt.astimezone(ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
         except Exception:
             return dt_iso[:10]
@@ -91,21 +96,21 @@ def staff_attendance_resident_print_view(resident_id: int):
         if event_type == "check_in" and last_checkout:
             late = None
             if last_checkout["expected_back_at"]:
-                try:
+                with contextlib.suppress(Exception):
                     late = parse_dt(event_time) > parse_dt(last_checkout["expected_back_at"])
-                except Exception:
-                    pass
 
-            events.append({
-                "date": local_day(event_time),
-                "checked_out_at": last_checkout["checked_out_at"],
-                "expected_back_at": last_checkout["expected_back_at"],
-                "checked_in_at": event_time,
-                "late": late,
-                "note": last_checkout["note"],
-                "out_staff": last_checkout["out_staff"],
-                "in_staff": staff or "",
-            })
+            events.append(
+                {
+                    "date": local_day(event_time),
+                    "checked_out_at": last_checkout["checked_out_at"],
+                    "expected_back_at": last_checkout["expected_back_at"],
+                    "checked_in_at": event_time,
+                    "late": late,
+                    "note": last_checkout["note"],
+                    "out_staff": last_checkout["out_staff"],
+                    "in_staff": staff or "",
+                }
+            )
 
             last_checkout = None
 

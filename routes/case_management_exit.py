@@ -3,9 +3,7 @@ from __future__ import annotations
 from flask import Blueprint
 
 from core.auth import require_login, require_shelter
-from routes.case_management_parts.exit import exit_assessment_form_view
-from routes.case_management_parts.exit import submit_exit_assessment_view
-
+from routes.case_management_parts.exit import exit_assessment_form_view, submit_exit_assessment_view
 
 case_management_exit = Blueprint(
     "case_management_exit",

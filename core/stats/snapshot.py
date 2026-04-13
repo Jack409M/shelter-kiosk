@@ -7,6 +7,7 @@ from core.helpers import shelter_display
 from core.report_filters import mask_small_counts
 from core.stats.common import (
     base_enrollment_where,
+    days_between,
     display_shelter_label,
     entry_window_clause,
     exit_window_clause,
@@ -19,10 +20,7 @@ from core.stats.common import (
     row_get,
     scope_clause,
     shelter_expr,
-    window_dates,
-    days_between,
 )
-
 
 _SHELTER_CAPACITY = {
     "abba": 10,
@@ -151,19 +149,31 @@ def get_scope_comparison(
             }
         )
 
-    selected_value = total_program_served if normalized_scope == "total_program" else _get_filtered_served_total(
-        normalized_scope,
-        population,
-        date_range,
-        start,
-        end,
+    selected_value = (
+        total_program_served
+        if normalized_scope == "total_program"
+        else _get_filtered_served_total(
+            normalized_scope,
+            population,
+            date_range,
+            start,
+            end,
+        )
     )
 
-    selected_share = 100.0 if normalized_scope == "total_program" else (
-        round((selected_value / total_program_served) * 100, 1) if total_program_served else 0.0
+    selected_share = (
+        100.0
+        if normalized_scope == "total_program"
+        else (
+            round((selected_value / total_program_served) * 100, 1) if total_program_served else 0.0
+        )
     )
 
-    selected_label = "Total Program" if normalized_scope == "total_program" else shelter_display(normalized_scope)
+    selected_label = (
+        "Total Program"
+        if normalized_scope == "total_program"
+        else shelter_display(normalized_scope)
+    )
 
     return {
         "selected_scope_label": selected_label,
@@ -246,16 +256,19 @@ def get_program_snapshot(
 
     graduation_rate = round((graduates / women_exited) * 100, 1) if women_exited else 0.0
 
-    exited_rows = db_fetchall(
-        f"""
+    exited_rows = (
+        db_fetchall(
+            f"""
         SELECT pe.entry_date, pe.exit_date
         FROM program_enrollments pe
         WHERE 1=1
         {scope_sql}
         {exit_sql}
         """,
-        tuple(scope_params + exit_params),
-    ) or []
+            tuple(scope_params + exit_params),
+        )
+        or []
+    )
 
     stay_lengths: list[int] = []
     for row in exited_rows:
@@ -263,7 +276,9 @@ def get_program_snapshot(
         if days is not None and days >= 0:
             stay_lengths.append(days)
 
-    average_length_of_stay_days = round(sum(stay_lengths) / len(stay_lengths), 1) if stay_lengths else 0.0
+    average_length_of_stay_days = (
+        round(sum(stay_lengths) / len(stay_lengths), 1) if stay_lengths else 0.0
+    )
 
     current_active = fetch_count(
         f"""
@@ -308,16 +323,19 @@ def get_shelter_distribution(
         alias="pe",
     )
 
-    rows = db_fetchall(
-        f"""
-        SELECT {shelter_expr('pe')} AS shelter_key, COUNT(DISTINCT pe.resident_id) AS total
+    rows = (
+        db_fetchall(
+            f"""
+        SELECT {shelter_expr("pe")} AS shelter_key, COUNT(DISTINCT pe.resident_id) AS total
         FROM program_enrollments pe
         {where_sql}
-        GROUP BY {shelter_expr('pe')}
+        GROUP BY {shelter_expr("pe")}
         ORDER BY total DESC, shelter_key
         """,
-        tuple(where_params),
-    ) or []
+            tuple(where_params),
+        )
+        or []
+    )
 
     merged: dict[str, int] = {}
     for row in rows:

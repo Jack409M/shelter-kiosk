@@ -2,51 +2,69 @@ from __future__ import annotations
 
 from flask import Blueprint
 
-from core.auth import require_login
-from core.auth import require_shelter
-from routes.case_management_parts.actions import add_appointment_view
-from routes.case_management_parts.actions import add_goal_view
-from routes.case_management_parts.actions import create_enrollment_view
-from routes.case_management_parts.assessment import assessment_form_view
-from routes.case_management_parts.assessment import submit_assessment_view
-from routes.case_management_parts.budget_sessions import add_budget_session_view
-from routes.case_management_parts.budget_sessions import budget_sessions_view
-from routes.case_management_parts.budget_sessions import edit_budget_session_view
-from routes.case_management_parts.exit import exit_assessment_form_view
-from routes.case_management_parts.exit import submit_exit_assessment_view
-from routes.case_management_parts.family import child_services_view
-from routes.case_management_parts.family import delete_child_service_view
-from routes.case_management_parts.family import delete_child_view
-from routes.case_management_parts.family import edit_child_service_view
-from routes.case_management_parts.family import edit_child_view
-from routes.case_management_parts.family import family_intake_view
-from routes.case_management_parts.followups import followup_form_view
-from routes.case_management_parts.followups import submit_followup_view
+from core.auth import require_login, require_shelter
+from routes.case_management_parts.actions import (
+    add_appointment_view,
+    add_goal_view,
+    create_enrollment_view,
+)
+from routes.case_management_parts.assessment import assessment_form_view, submit_assessment_view
+from routes.case_management_parts.budget_sessions import (
+    add_budget_session_view,
+    budget_sessions_view,
+    edit_budget_session_view,
+)
+from routes.case_management_parts.exit import exit_assessment_form_view, submit_exit_assessment_view
+from routes.case_management_parts.family import (
+    child_services_view,
+    delete_child_service_view,
+    delete_child_view,
+    edit_child_service_view,
+    edit_child_view,
+    family_intake_view,
+)
+from routes.case_management_parts.followups import followup_form_view, submit_followup_view
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    clean,
+    digits_only,
+    normalize_shelter_name,
+    parse_int,
+    parse_iso_date,
+    parse_money,
+    placeholder,
+    shelter_equals_sql,
+    yes_no_to_int,
+)
 from routes.case_management_parts.income_support import income_support_view
-from routes.case_management_parts.index import index_view
-from routes.case_management_parts.index import intake_index_view
-from routes.case_management_parts.inspection_log import add_inspection_log_view
-from routes.case_management_parts.inspection_log import edit_inspection_log_view
-from routes.case_management_parts.inspection_log import inspection_log_view
-from routes.case_management_parts.intake import intake_edit_view
-from routes.case_management_parts.intake import intake_form_view
-from routes.case_management_parts.intake import submit_intake_assessment_view
-from routes.case_management_parts.intake_duplicates import duplicate_review_create_new_view
-from routes.case_management_parts.intake_duplicates import duplicate_review_dismiss_view
-from routes.case_management_parts.intake_duplicates import duplicate_review_return_to_edit_view
-from routes.case_management_parts.intake_duplicates import duplicate_review_use_existing_view
-from routes.case_management_parts.intake_duplicates import duplicate_review_view
-from routes.case_management_parts.medications import add_medication_view
-from routes.case_management_parts.medications import edit_medication_view
-from routes.case_management_parts.medications import medication_form_view
+from routes.case_management_parts.index import index_view, intake_index_view
+from routes.case_management_parts.inspection_log import (
+    add_inspection_log_view,
+    edit_inspection_log_view,
+    inspection_log_view,
+)
+from routes.case_management_parts.intake import (
+    intake_edit_view,
+    intake_form_view,
+    submit_intake_assessment_view,
+)
+from routes.case_management_parts.intake_duplicates import (
+    duplicate_review_create_new_view,
+    duplicate_review_dismiss_view,
+    duplicate_review_return_to_edit_view,
+    duplicate_review_use_existing_view,
+    duplicate_review_view,
+)
+from routes.case_management_parts.medications import (
+    add_medication_view,
+    edit_medication_view,
+    medication_form_view,
+)
 from routes.case_management_parts.progress_report import progress_report_print_view
 from routes.case_management_parts.recovery_profile import update_recovery_profile_view
 from routes.case_management_parts.resident_case import resident_case_view
-from routes.case_management_parts.ua_log import add_ua_log_view
-from routes.case_management_parts.ua_log import edit_ua_log_view
-from routes.case_management_parts.ua_log import ua_log_view
-from routes.case_management_parts.update import add_case_note_view
-from routes.case_management_parts.update import edit_case_note_view
+from routes.case_management_parts.ua_log import add_ua_log_view, edit_ua_log_view, ua_log_view
+from routes.case_management_parts.update import add_case_note_view, edit_case_note_view
 
 
 def _view(view_func):
@@ -58,6 +76,18 @@ case_management = Blueprint(
     __name__,
     url_prefix="/staff/case-management",
 )
+
+
+_case_manager_allowed = case_manager_allowed
+_clean = clean
+_digits_only = digits_only
+_normalize_shelter_name = normalize_shelter_name
+_parse_int = parse_int
+_parse_iso_date = parse_iso_date
+_parse_money = parse_money
+_placeholder = placeholder
+_shelter_equals_sql = shelter_equals_sql
+_yes_no_to_int = yes_no_to_int
 
 
 @case_management.get("/")
@@ -102,36 +132,6 @@ def intake_edit(resident_id: int):
     return intake_edit_view(resident_id)
 
 
-@case_management.get("/intake-assessment/duplicate-review/<int:draft_id>")
-@_view
-def intake_duplicate_review(draft_id: int):
-    return duplicate_review_view(draft_id)
-
-
-@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/use-existing")
-@_view
-def intake_duplicate_use_existing(draft_id: int):
-    return duplicate_review_use_existing_view(draft_id)
-
-
-@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/create-new")
-@_view
-def intake_duplicate_create_new(draft_id: int):
-    return duplicate_review_create_new_view(draft_id)
-
-
-@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/dismiss")
-@_view
-def intake_duplicate_dismiss(draft_id: int):
-    return duplicate_review_dismiss_view(draft_id)
-
-
-@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/return-to-edit")
-@_view
-def intake_duplicate_return_to_edit(draft_id: int):
-    return duplicate_review_return_to_edit_view(draft_id)
-
-
 @case_management.route("/<int:resident_id>/family-intake", methods=["GET", "POST"])
 @_view
 def family_intake(resident_id: int):
@@ -166,6 +166,36 @@ def edit_child_service(service_id: int):
 @_view
 def delete_child_service(service_id: int):
     return delete_child_service_view(service_id)
+
+
+@case_management.get("/intake-assessment/duplicate-review/<int:draft_id>")
+@_view
+def intake_duplicate_review(draft_id: int):
+    return duplicate_review_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/use-existing")
+@_view
+def intake_duplicate_use_existing(draft_id: int):
+    return duplicate_review_use_existing_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/create-new")
+@_view
+def intake_duplicate_create_new(draft_id: int):
+    return duplicate_review_create_new_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/dismiss")
+@_view
+def intake_duplicate_dismiss(draft_id: int):
+    return duplicate_review_dismiss_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/return-to-edit")
+@_view
+def intake_duplicate_return_to_edit(draft_id: int):
+    return duplicate_review_return_to_edit_view(draft_id)
 
 
 @case_management.get("/<int:resident_id>/exit-assessment")
@@ -234,7 +264,9 @@ def add_medication(resident_id: int):
     return add_medication_view(resident_id)
 
 
-@case_management.route("/<int:resident_id>/medications/<int:medication_id>/edit", methods=["GET", "POST"])
+@case_management.route(
+    "/<int:resident_id>/medications/<int:medication_id>/edit", methods=["GET", "POST"]
+)
 @_view
 def edit_medication(resident_id: int, medication_id: int):
     return edit_medication_view(resident_id, medication_id)
@@ -270,7 +302,9 @@ def add_inspection_log(resident_id: int):
     return add_inspection_log_view(resident_id)
 
 
-@case_management.route("/<int:resident_id>/inspection-log/<int:inspection_id>/edit", methods=["GET", "POST"])
+@case_management.route(
+    "/<int:resident_id>/inspection-log/<int:inspection_id>/edit", methods=["GET", "POST"]
+)
 @_view
 def edit_inspection_log(resident_id: int, inspection_id: int):
     return edit_inspection_log_view(resident_id, inspection_id)
@@ -288,7 +322,9 @@ def add_budget_session(resident_id: int):
     return add_budget_session_view(resident_id)
 
 
-@case_management.route("/<int:resident_id>/budget-sessions/<int:budget_id>/edit", methods=["GET", "POST"])
+@case_management.route(
+    "/<int:resident_id>/budget-sessions/<int:budget_id>/edit", methods=["GET", "POST"]
+)
 @_view
 def edit_budget_session(resident_id: int, budget_id: int):
     return edit_budget_session_view(resident_id, budget_id)
@@ -300,7 +336,9 @@ def add_case_note(resident_id: int):
     return add_case_note_view(resident_id)
 
 
-@case_management.route("/<int:resident_id>/case-notes/<int:update_id>/edit", methods=["GET", "POST"])
+@case_management.route(
+    "/<int:resident_id>/case-notes/<int:update_id>/edit", methods=["GET", "POST"]
+)
 @_view
 def edit_case_note(resident_id: int, update_id: int):
     return edit_case_note_view(resident_id, update_id)

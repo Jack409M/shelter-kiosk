@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 from .schema_helpers import create_table
@@ -8,7 +10,6 @@ from .schema_helpers import create_table
 def ensure_resident_needs_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS resident_needs (
@@ -28,7 +29,6 @@ def ensure_resident_needs_table(kind: str) -> None:
             UNIQUE (enrollment_id, need_key)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS resident_needs (
@@ -46,14 +46,13 @@ def ensure_resident_needs_table(kind: str) -> None:
             updated_at TEXT NOT NULL,
             UNIQUE (enrollment_id, need_key)
         )
-        """
+        """,
     )
 
 
 def ensure_resident_medications_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS resident_medications (
@@ -77,7 +76,6 @@ def ensure_resident_medications_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS resident_medications (
@@ -98,14 +96,13 @@ def ensure_resident_medications_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
 def ensure_resident_ua_log_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS resident_ua_log (
@@ -123,7 +120,6 @@ def ensure_resident_ua_log_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS resident_ua_log (
@@ -138,14 +134,13 @@ def ensure_resident_ua_log_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
 def ensure_resident_living_area_inspections_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS resident_living_area_inspections (
@@ -162,7 +157,6 @@ def ensure_resident_living_area_inspections_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS resident_living_area_inspections (
@@ -176,14 +170,13 @@ def ensure_resident_living_area_inspections_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
 def ensure_resident_budget_sessions_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS resident_budget_sessions (
@@ -199,7 +192,6 @@ def ensure_resident_budget_sessions_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS resident_budget_sessions (
@@ -212,7 +204,7 @@ def ensure_resident_budget_sessions_table(kind: str) -> None:
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
-        """
+        """,
     )
 
 
@@ -229,10 +221,8 @@ def ensure_resident_needs_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_resident_medications_columns() -> None:
@@ -253,10 +243,8 @@ def ensure_resident_medications_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_resident_ua_log_columns() -> None:
@@ -271,10 +259,8 @@ def ensure_resident_ua_log_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_resident_living_area_inspections_columns() -> None:
@@ -288,10 +274,8 @@ def ensure_resident_living_area_inspections_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_resident_budget_sessions_columns() -> None:
@@ -304,202 +288,162 @@ def ensure_resident_budget_sessions_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_case_support_indexes() -> None:
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_needs_enrollment_idx
             ON resident_needs (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_needs_status_idx
             ON resident_needs (status)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_needs_enrollment_status_idx
             ON resident_needs (enrollment_id, status)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE UNIQUE INDEX IF NOT EXISTS resident_needs_enrollment_key_uidx
             ON resident_needs (enrollment_id, need_key)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_medications_resident_idx
             ON resident_medications (resident_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_medications_enrollment_idx
             ON resident_medications (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_medications_active_idx
             ON resident_medications (resident_id, is_active)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_ua_log_resident_idx
             ON resident_ua_log (resident_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_ua_log_enrollment_idx
             ON resident_ua_log (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_ua_log_date_idx
             ON resident_ua_log (ua_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_ua_log_resident_date_idx
             ON resident_ua_log (resident_id, ua_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_living_area_inspections_resident_idx
             ON resident_living_area_inspections (resident_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_living_area_inspections_enrollment_idx
             ON resident_living_area_inspections (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_living_area_inspections_date_idx
             ON resident_living_area_inspections (inspection_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_living_area_inspections_resident_date_idx
             ON resident_living_area_inspections (resident_id, inspection_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_budget_sessions_resident_idx
             ON resident_budget_sessions (resident_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_budget_sessions_enrollment_idx
             ON resident_budget_sessions (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_budget_sessions_date_idx
             ON resident_budget_sessions (session_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_budget_sessions_resident_date_idx
             ON resident_budget_sessions (resident_id, session_date)
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_tables(kind: str) -> None:

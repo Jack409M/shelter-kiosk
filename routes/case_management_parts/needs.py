@@ -6,7 +6,6 @@ from core.db import db_execute, db_fetchall, db_transaction
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import placeholder
 
-
 OFFICIAL_NEEDS = [
     {
         "need_key": "dental",
@@ -111,10 +110,7 @@ def normalize_selected_need_keys(raw_values: Any) -> list[str]:
     if raw_values is None:
         return []
 
-    if isinstance(raw_values, str):
-        values = [raw_values]
-    else:
-        values = list(raw_values)
+    values = [raw_values] if isinstance(raw_values, str) else list(raw_values)
 
     cleaned: list[str] = []
     seen: set[str] = set()
@@ -150,10 +146,7 @@ def _is_triggered(value: Any, trigger_value: Any) -> bool:
     if trigger_value == 1 and value in (True, "1", "true", "True", "yes", "Yes"):
         return True
 
-    if trigger_value == 0 and value in (False, "0", "false", "False", "no", "No"):
-        return True
-
-    return False
+    return bool(trigger_value == 0 and value in (False, "0", "false", "False", "no", "No"))
 
 
 def build_triggered_needs(

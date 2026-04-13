@@ -7,8 +7,7 @@ from flask import g
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from core.residents import generate_resident_code, generate_resident_identifier
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import yes_no_to_int
+from routes.case_management_parts.helpers import placeholder, yes_no_to_int
 from routes.case_management_parts.needs import sync_enrollment_needs
 
 
@@ -75,7 +74,9 @@ def _build_intake_assessment_payload(data: dict[str, Any]) -> dict[str, Any]:
         "drug_court": _flag_or_zero(yes_no_to_int(data.get("drug_court"))),
         "sexual_survivor": _flag_or_zero(yes_no_to_int(data.get("sexual_survivor"))),
         "dv_survivor": _flag_or_zero(yes_no_to_int(data.get("domestic_violence_history"))),
-        "human_trafficking_survivor": _flag_or_zero(yes_no_to_int(data.get("human_trafficking_history"))),
+        "human_trafficking_survivor": _flag_or_zero(
+            yes_no_to_int(data.get("human_trafficking_history"))
+        ),
         "warrants_unpaid": _flag_or_zero(_checked_need(data, "warrants_fine_resolution")),
         "mh_exam_completed": 0,
         "med_exam_completed": 0,
@@ -90,7 +91,9 @@ def _build_intake_assessment_payload(data: dict[str, Any]) -> dict[str, Any]:
         "substance_use_need_at_entry": 0,
         "id_documents_status_at_entry": None,
         "has_drivers_license": _flag_or_zero(_missing_item_value(data, "state_id_drivers_license")),
-        "has_social_security_card": _flag_or_zero(_missing_item_value(data, "social_security_card")),
+        "has_social_security_card": _flag_or_zero(
+            _missing_item_value(data, "social_security_card")
+        ),
         "parenting_class_needed": _flag_or_zero(_checked_need(data, "parenting_class_needed")),
         "dwc_level_today": data.get("dwc_level_today"),
     }
@@ -103,7 +106,9 @@ def _build_family_snapshot_payload(data: dict[str, Any]) -> dict[str, Any]:
         "kids_ages_0_5": _safe_int_or_zero(data.get("kids_ages_0_5")),
         "kids_ages_6_11": _safe_int_or_zero(data.get("kids_ages_6_11")),
         "kids_ages_12_17": _safe_int_or_zero(data.get("kids_ages_12_17")),
-        "kids_reunited_while_in_program": _safe_int_or_zero(data.get("kids_reunited_while_in_program")),
+        "kids_reunited_while_in_program": _safe_int_or_zero(
+            data.get("kids_reunited_while_in_program")
+        ),
         "healthy_babies_born_at_dwc": _safe_int_or_zero(data.get("healthy_babies_born_at_dwc")),
     }
 

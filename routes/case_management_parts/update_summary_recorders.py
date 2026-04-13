@@ -1,19 +1,22 @@
 from __future__ import annotations
 
-from routes.case_management_parts.update_summary_helpers import display_snapshot_label
-from routes.case_management_parts.update_summary_helpers import join_non_empty
-from routes.case_management_parts.update_summary_helpers import normalize_detail
-from routes.case_management_parts.update_summary_helpers import normalize_key
-from routes.case_management_parts.update_summary_helpers import normalize_label
-from routes.case_management_parts.update_summary_helpers import resolve_snapshot_change_type
-from routes.case_management_parts.update_summary_helpers import resolve_snapshot_detail
-from routes.case_management_parts.update_summary_helpers import resolve_snapshot_item_label
+from routes.case_management_parts.update_summary_helpers import (
+    display_snapshot_label,
+    join_non_empty,
+    normalize_detail,
+    normalize_key,
+    normalize_label,
+    resolve_snapshot_change_type,
+    resolve_snapshot_detail,
+    resolve_snapshot_item_label,
+)
 from routes.case_management_parts.update_summary_rows import insert_summary_row
-from routes.case_management_parts.update_utils import clean_value
-from routes.case_management_parts.update_utils import display_label
-from routes.case_management_parts.update_utils import display_quantity_unit
-from routes.case_management_parts.update_utils import parse_quantity
-
+from routes.case_management_parts.update_utils import (
+    clean_value,
+    display_label,
+    display_quantity_unit,
+    parse_quantity,
+)
 
 SummaryMap = dict[str, str]
 

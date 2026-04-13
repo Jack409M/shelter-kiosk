@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from routes.case_management_parts.recovery_snapshot_formatters import bool_display
-from routes.case_management_parts.recovery_snapshot_formatters import result_display
+from routes.case_management_parts.recovery_snapshot_formatters import bool_display, result_display
 
 
 def _map_rows(rows, mapper):

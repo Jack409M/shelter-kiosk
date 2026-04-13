@@ -9,7 +9,6 @@ from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 
-
 calendar_bp = Blueprint(
     "calendar",
     __name__,

@@ -5,10 +5,12 @@ from typing import Any
 from flask import request
 
 from routes.case_management_parts.update_needs import collect_need_updates
-from routes.case_management_parts.update_utils import clean_service_types
-from routes.case_management_parts.update_utils import parse_grit
-from routes.case_management_parts.update_utils import parse_quantity
-from routes.case_management_parts.update_utils import yes_no_to_int
+from routes.case_management_parts.update_utils import (
+    clean_service_types,
+    parse_grit,
+    parse_quantity,
+    yes_no_to_int,
+)
 
 
 def clean_text(value: object) -> str:

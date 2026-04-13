@@ -8,13 +8,13 @@ from flask import abort, session
 
 from routes.attendance_parts.pass_policy import has_active_pass_block
 
-
 MANAGE_PASS_ROLES = {"admin", "shelter_director", "case_manager"}
 
 
 # -----------------------------------------
 # CONTEXT MODELS
 # -----------------------------------------
+
 
 @dataclass(frozen=True)
 class StaffPassViewContext:
@@ -32,6 +32,7 @@ class StaffPassActionContext:
 # -----------------------------------------
 # INTERNAL HELPERS
 # -----------------------------------------
+
 
 def _session_str(key: str) -> str:
     return str(session.get(key) or "").strip()
@@ -51,6 +52,7 @@ def _require_shelter(shelter: str) -> str:
 # -----------------------------------------
 # CONTEXT BUILDERS
 # -----------------------------------------
+
 
 def get_staff_pass_view_context() -> StaffPassViewContext:
     shelter = _require_shelter(_session_str("shelter"))
@@ -85,6 +87,7 @@ def get_staff_pass_action_context() -> StaffPassActionContext:
 # DATA TRANSFORMS
 # -----------------------------------------
 
+
 def enrich_pending_pass_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     enriched: list[dict[str, Any]] = []
 
@@ -93,26 +96,29 @@ def enrich_pending_pass_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]
 
         blocked, restriction_rows = has_active_pass_block(resident_id)
 
-        enriched.append({
-            **row,
-            "has_disciplinary_block": blocked,
-            "disciplinary_restrictions": restriction_rows,
-        })
+        enriched.append(
+            {
+                **row,
+                "has_disciplinary_block": blocked,
+                "disciplinary_restrictions": restriction_rows,
+            }
+        )
 
     return enriched
 
 
-def filter_overdue_pass_rows(rows: list[dict[str, Any]], now_local: datetime) -> list[dict[str, Any]]:
+def filter_overdue_pass_rows(
+    rows: list[dict[str, Any]], now_local: datetime
+) -> list[dict[str, Any]]:
     return [
-        row
-        for row in rows
-        if (expected := row.get("expected_back_local")) and expected < now_local
+        row for row in rows if (expected := row.get("expected_back_local")) and expected < now_local
     ]
 
 
 # -----------------------------------------
 # REDIRECT LOGIC
 # -----------------------------------------
+
 
 def build_pass_action_redirect_target(target: str, *, pass_id: int) -> tuple[str, dict]:
     if target == "attendance.staff_pass_detail":

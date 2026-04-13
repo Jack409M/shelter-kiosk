@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from flask import current_app
 
 from core.db import db_fetchall
@@ -24,7 +22,7 @@ def _init_db() -> None:
     raise RuntimeError("INIT_DB_FUNC is not configured")
 
 
-def _normalize_us_phone_10(phone: str) -> Optional[str]:
+def _normalize_us_phone_10(phone: str) -> str | None:
     """
     Normalize a phone number down to a 10 digit US number when possible.
 
@@ -92,9 +90,6 @@ def sms_is_allowed_for_number(phone: str) -> bool:
         if not bool(resident_opt_in):
             return False
 
-        if resident_opt_out_at:
-            return False
-
-        return True
+        return not resident_opt_out_at
 
     return False

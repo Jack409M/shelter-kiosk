@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 # ============================================================================
@@ -22,7 +22,7 @@ def _to_chi(dt: datetime | str | None) -> datetime | None:
             return None
 
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
 
     return dt.astimezone(CHI)
 
@@ -30,6 +30,7 @@ def _to_chi(dt: datetime | str | None) -> datetime | None:
 # ============================================================================
 # Formatting (Chicago time everywhere)
 # ============================================================================
+
 
 def fmt_dt(value) -> str:
     dt = _to_chi(value)
@@ -70,8 +71,9 @@ def fmt_pretty_date(value) -> str:
 # REQUIRED EXISTING FUNCTIONS (DO NOT REMOVE)
 # ============================================================================
 
+
 def utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def is_postgres() -> bool:
@@ -80,6 +82,7 @@ def is_postgres() -> bool:
 
 def safe_url_for(endpoint: str, **values) -> str:
     from flask import url_for
+
     try:
         return url_for(endpoint, **values)
     except Exception:

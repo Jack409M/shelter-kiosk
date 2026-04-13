@@ -25,13 +25,10 @@
 EDUCATION_LEVEL_OPTIONS = [
     {"value": "No High School", "label": "No High School", "rank": 1},
     {"value": "Some High School", "label": "Some High School", "rank": 2},
-
     {"value": "High School Graduate", "label": "High School Graduate", "rank": 3},
     {"value": "GED", "label": "GED", "rank": 3},
-
     {"value": "Vocational", "label": "Vocational", "rank": 4},
     {"value": "Associates", "label": "Associates", "rank": 4},
-
     {"value": "Bachelor", "label": "Bachelor", "rank": 5},
     {"value": "Masters", "label": "Masters", "rank": 6},
     {"value": "Doctorate", "label": "Doctorate", "rank": 7},
@@ -45,15 +42,9 @@ EDUCATION_LEVEL_OPTIONS = [
 # Do not store numeric values in DB — always derive from text.
 # ==========================================================
 
-EDUCATION_LEVEL_RANK = {
-    opt["value"]: opt["rank"]
-    for opt in EDUCATION_LEVEL_OPTIONS
-}
+EDUCATION_LEVEL_RANK = {opt["value"]: opt["rank"] for opt in EDUCATION_LEVEL_OPTIONS}
 
-EDUCATION_LEVEL_LABELS = {
-    opt["value"]: opt["label"]
-    for opt in EDUCATION_LEVEL_OPTIONS
-}
+EDUCATION_LEVEL_LABELS = {opt["value"]: opt["label"] for opt in EDUCATION_LEVEL_OPTIONS}
 
 
 # ==========================================================
@@ -108,11 +99,7 @@ EXIT_REASON_MAP = {
 
 
 # Flat list (useful for validation)
-ALL_EXIT_REASONS = [
-    reason
-    for reasons in EXIT_REASON_MAP.values()
-    for reason in reasons
-]
+ALL_EXIT_REASONS = [reason for reasons in EXIT_REASON_MAP.values() for reason in reasons]
 
 
 # ==========================================================

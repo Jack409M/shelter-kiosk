@@ -18,7 +18,6 @@ from core.resident_portal_service import (
 )
 from core.runtime import init_db
 
-
 resident_portal = Blueprint(
     "resident_portal",
     __name__,

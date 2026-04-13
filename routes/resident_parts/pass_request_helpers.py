@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from flask import current_app, flash, g, request, session
 
@@ -114,8 +115,7 @@ def load_resident_profile(resident_id: int):
         LIMIT 1
         """
         if g.get("db_kind") == "pg"
-        else
-        """
+        else """
         SELECT
             id,
             shelter,
@@ -159,8 +159,7 @@ def load_active_writeup_restrictions(resident_id: int) -> list[dict]:
         ORDER BY incident_date DESC, id DESC
         """
         if g.get("db_kind") == "pg"
-        else
-        """
+        else """
         SELECT
             id,
             incident_date,
@@ -193,10 +192,7 @@ def load_active_writeup_restrictions(resident_id: int) -> list[dict]:
             start_date = parse_date_only(item.get("probation_start_date"))
             end_date = parse_date_only(item.get("probation_end_date"))
             is_active = bool(
-                is_open
-                and start_date
-                and end_date
-                and start_date <= today <= end_date
+                is_open and start_date and end_date and start_date <= today <= end_date
             )
             if is_active:
                 item["restriction_label"] = "Program Probation"
@@ -208,11 +204,7 @@ def load_active_writeup_restrictions(resident_id: int) -> list[dict]:
 
         elif outcome == "pre_termination":
             scheduled_date = parse_date_only(item.get("pre_termination_date"))
-            is_active = bool(
-                is_open
-                and scheduled_date
-                and today <= scheduled_date
-            )
+            is_active = bool(is_open and scheduled_date and today <= scheduled_date)
             if is_active:
                 item["restriction_label"] = "Pre Termination Scheduled"
                 item["restriction_detail"] = (
@@ -378,14 +370,10 @@ def validate_pass_request_form(
                 )
 
                 start_at_iso = (
-                    local_start.astimezone(timezone.utc)
-                    .replace(tzinfo=None)
-                    .isoformat(timespec="seconds")
+                    local_start.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
                 )
                 end_at_iso = (
-                    local_end.astimezone(timezone.utc)
-                    .replace(tzinfo=None)
-                    .isoformat(timespec="seconds")
+                    local_end.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
                 )
             except Exception:
                 errors.append("Invalid leave or return date and time.")
@@ -525,7 +513,9 @@ def insert_pass_request(
     now_iso = utcnow_iso()
 
     final_reason = form.special_reason if form.pass_type == "special" else form.reason
-    staff_notes = "Submitted after configured deadline." if validation.late_submission_flag else None
+    staff_notes = (
+        "Submitted after configured deadline." if validation.late_submission_flag else None
+    )
 
     pass_params = (
         context.resident_id,
@@ -550,10 +540,7 @@ def insert_pass_request(
         cur = conn.cursor()
         try:
             cur.execute(pass_insert_sql(kind), pass_params)
-            if kind == "pg":
-                req_id = cur.fetchone()[0]
-            else:
-                req_id = cur.lastrowid
+            req_id = cur.fetchone()[0] if kind == "pg" else cur.lastrowid
 
             detail_params = (
                 req_id,
@@ -590,7 +577,7 @@ def log_pass_insert_failure(
     shelter: str,
     pass_type: str,
 ) -> None:
-    try:
+    with contextlib.suppress(Exception):
         current_app.logger.exception(
             "resident pass request insert failed resident_id=%s shelter=%s pass_type=%s",
             resident_id,
@@ -598,5 +585,3 @@ def log_pass_insert_failure(
             pass_type,
             exc_info=exc,
         )
-    except Exception:
-        pass

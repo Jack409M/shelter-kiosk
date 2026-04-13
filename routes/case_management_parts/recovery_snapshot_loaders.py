@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from core.db import db_fetchall
-from core.db import db_fetchone
+from core.db import db_fetchall, db_fetchone
 from routes.case_management_parts.helpers import placeholder
 
 
 def load_resident_profile(resident_id: int):
     ph = placeholder()
 
-    return db_fetchone(
-        f"""
+    return (
+        db_fetchone(
+            f"""
         SELECT
             shelter,
             program_level,
@@ -43,8 +43,10 @@ def load_resident_profile(resident_id: int):
         WHERE id = {ph}
         LIMIT 1
         """,
-        (resident_id,),
-    ) or {}
+            (resident_id,),
+        )
+        or {}
+    )
 
 
 def load_enrollment_baseline(enrollment_id: int | None):
@@ -53,19 +55,23 @@ def load_enrollment_baseline(enrollment_id: int | None):
 
     ph = placeholder()
 
-    row = db_fetchone(
-        f"""
+    row = (
+        db_fetchone(
+            f"""
         SELECT
             entry_date
         FROM program_enrollments
         WHERE id = {ph}
         LIMIT 1
         """,
-        (enrollment_id,),
-    ) or {}
+            (enrollment_id,),
+        )
+        or {}
+    )
 
-    intake_row = db_fetchone(
-        f"""
+    intake_row = (
+        db_fetchone(
+            f"""
         SELECT
             sobriety_date,
             treatment_grad_date
@@ -74,8 +80,10 @@ def load_enrollment_baseline(enrollment_id: int | None):
         ORDER BY id DESC
         LIMIT 1
         """,
-        (enrollment_id,),
-    ) or {}
+            (enrollment_id,),
+        )
+        or {}
+    )
 
     row["intake_sobriety_date"] = intake_row.get("sobriety_date")
     row["intake_treatment_grad_date"] = intake_row.get("treatment_grad_date")

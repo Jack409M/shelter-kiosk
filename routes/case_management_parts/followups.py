@@ -19,7 +19,6 @@ from routes.case_management_parts.helpers import (
     yes_no_to_int,
 )
 
-
 ALLOWED_FOLLOWUP_TYPES = {
     "6_month": "6 Month Follow Up",
     "1_year": "1 Year Follow Up",

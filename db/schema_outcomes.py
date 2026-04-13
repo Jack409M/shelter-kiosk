@@ -7,6 +7,8 @@ records tied to a program enrollment.
 
 from __future__ import annotations
 
+import contextlib
+
 from .schema_helpers import create_table
 
 
@@ -143,7 +145,7 @@ def ensure_intake_assessment_columns(kind: str) -> None:
                 data_type = None
 
             if data_type and "int" in str(data_type).lower():
-                try:
+                with contextlib.suppress(Exception):
                     db_execute(
                         """
                         ALTER TABLE intake_assessments
@@ -151,8 +153,6 @@ def ensure_intake_assessment_columns(kind: str) -> None:
                         USING disability::TEXT
                         """
                     )
-                except Exception:
-                    pass
 
         except Exception:
             pass
@@ -192,10 +192,8 @@ def ensure_intake_assessment_columns(kind: str) -> None:
         ]
 
         for sql in statements:
-            try:
+            with contextlib.suppress(Exception):
                 db_execute(sql)
-            except Exception:
-                pass
 
     except Exception:
         pass
@@ -312,10 +310,8 @@ def ensure_exit_assessment_columns(kind: str) -> None:
         ]
 
         for sql in statements:
-            try:
+            with contextlib.suppress(Exception):
                 db_execute(sql)
-            except Exception:
-                pass
 
     except Exception:
         pass

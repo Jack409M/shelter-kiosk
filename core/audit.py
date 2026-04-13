@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from flask import current_app
 
@@ -41,9 +42,9 @@ def _normalize_details(details: str | Mapping[str, Any] | None) -> str:
 
 def log_action(
     entity_type: str,
-    entity_id: Optional[int],
-    shelter: Optional[str],
-    staff_user_id: Optional[int],
+    entity_id: int | None,
+    shelter: str | None,
+    staff_user_id: int | None,
     action_type: str,
     details: str | Mapping[str, Any] | None = "",
 ) -> None:
@@ -55,8 +56,8 @@ def log_action(
     sql = (
         "INSERT INTO audit_log (entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at) "
         "VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        if current_app.config.get("DATABASE_URL") else
-        "INSERT INTO audit_log (entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at) "
+        if current_app.config.get("DATABASE_URL")
+        else "INSERT INTO audit_log (entity_type, entity_id, shelter, staff_user_id, action_type, action_details, created_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
 

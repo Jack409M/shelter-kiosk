@@ -131,8 +131,7 @@ def test_intake_review_no_duplicate_redirects_back_to_form_with_draft_id(
 
     assert response.status_code == 302
     assert (
-        "/staff/case-management/intake-assessment/new?draft_id=123"
-        in response.headers["Location"]
+        "/staff/case-management/intake-assessment/new?draft_id=123" in response.headers["Location"]
     )
 
 

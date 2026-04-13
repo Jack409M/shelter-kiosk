@@ -4,15 +4,15 @@ from typing import Any
 
 from flask import flash, redirect, render_template, session, url_for
 
-from core.intake_service import create_intake
-from core.intake_service import create_intake_for_existing_resident
+from core.intake_service import create_intake, create_intake_for_existing_resident
 from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import parse_int
-from routes.case_management_parts.intake_drafts import _dismiss_intake_draft
-from routes.case_management_parts.intake_drafts import _load_intake_draft
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    fetch_current_enrollment_for_resident,
+    normalize_shelter_name,
+    parse_int,
+)
+from routes.case_management_parts.intake_drafts import _dismiss_intake_draft, _load_intake_draft
 from routes.case_management_parts.intake_validation import _find_possible_duplicate
 
 

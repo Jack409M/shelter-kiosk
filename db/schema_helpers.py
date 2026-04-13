@@ -18,11 +18,7 @@ def create_table(kind: str, sqlite_sql: str, pg_sql: str) -> None:
 
 def _is_duplicate_column_error(exc: Exception) -> bool:
     text = str(exc).strip().lower()
-    return (
-        "duplicate column" in text
-        or "already exists" in text
-        or "column exists" in text
-    )
+    return "duplicate column" in text or "already exists" in text or "column exists" in text
 
 
 def safe_add_column(table_name: str, column_sql: str) -> bool:
@@ -40,7 +36,9 @@ def safe_add_column(table_name: str, column_sql: str) -> bool:
     try:
         db_execute(statement)
         if has_app_context():
-            current_app.logger.info("schema_upgrade_applied table=%s column=%s", table_name, column_sql)
+            current_app.logger.info(
+                "schema_upgrade_applied table=%s column=%s", table_name, column_sql
+            )
         return True
     except Exception as exc:
         if _is_duplicate_column_error(exc):

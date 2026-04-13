@@ -3,15 +3,18 @@ from __future__ import annotations
 from flask import flash, redirect, render_template, session, url_for
 
 from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import normalize_shelter_name
+from routes.case_management_parts.helpers import case_manager_allowed, normalize_shelter_name
 from routes.case_management_parts.progress_report_builders import build_progress_report_context
-from routes.case_management_parts.progress_report_loaders import load_case_manager_name
-from routes.case_management_parts.progress_report_loaders import load_goals
-from routes.case_management_parts.progress_report_loaders import load_single_case_note
+from routes.case_management_parts.progress_report_loaders import (
+    load_case_manager_name,
+    load_goals,
+    load_single_case_note,
+)
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
-from routes.case_management_parts.resident_case_scope import load_current_enrollment
-from routes.case_management_parts.resident_case_scope import load_resident_in_scope
+from routes.case_management_parts.resident_case_scope import (
+    load_current_enrollment,
+    load_resident_in_scope,
+)
 
 
 def _redirect_case_index():

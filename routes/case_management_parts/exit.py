@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from flask import flash, redirect, render_template, request, session, url_for
@@ -18,7 +19,6 @@ from routes.case_management_parts.helpers import (
     shelter_equals_sql,
     yes_no_to_int,
 )
-
 
 EDUCATION_LEVEL_OPTIONS = {
     "No High School",
@@ -74,10 +74,10 @@ def _row_value(row: Any, key: str, index: int):
 
 
 def _ensure_exit_assessment_columns() -> None:
-    try:
-        db_execute("ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS graduation_income_snapshot DOUBLE PRECISION")
-    except Exception:
-        pass
+    with contextlib.suppress(Exception):
+        db_execute(
+            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS graduation_income_snapshot DOUBLE PRECISION"
+        )
 
 
 def _fetch_resident_and_enrollment(resident_id: int):
@@ -157,7 +157,9 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
         "graduate_dwc": "yes" if int(_row_value(row, "graduate_dwc", 4) or 0) else "no",
         "leave_ama": "yes" if int(_row_value(row, "leave_ama", 5) or 0) else "no",
         "leave_amarillo_city": _row_value(row, "leave_amarillo_city", 6) or "",
-        "leave_amarillo_unknown": "yes" if int(_row_value(row, "leave_amarillo_unknown", 7) or 0) else "no",
+        "leave_amarillo_unknown": "yes"
+        if int(_row_value(row, "leave_amarillo_unknown", 7) or 0)
+        else "no",
         "income_at_exit": _row_value(row, "income_at_exit", 8) or "",
         "graduation_income_snapshot": _row_value(row, "graduation_income_snapshot", 9) or "",
         "education_at_exit": _row_value(row, "education_at_exit", 10) or "",
@@ -166,7 +168,9 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
         "car_insurance": "yes" if int(_row_value(row, "car_insurance", 13) or 0) else "no",
         "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 14) or 0) else "no",
         "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 15) or 0) else "no",
-        "obtained_public_insurance": "yes" if int(_row_value(row, "obtained_public_insurance", 16) or 0) else "no",
+        "obtained_public_insurance": "yes"
+        if int(_row_value(row, "obtained_public_insurance", 16) or 0)
+        else "no",
         "private_insurance": "yes" if int(_row_value(row, "private_insurance", 17) or 0) else "no",
     }
 
@@ -180,7 +184,9 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
         "graduate_dwc": clean(form.get("graduate_dwc")),
         "leave_ama": clean(form.get("leave_ama")),
         "leave_amarillo_city": clean(form.get("leave_amarillo_city")),
-        "leave_amarillo_unknown": "yes" if clean(form.get("leave_amarillo_unknown")) == "yes" else "no",
+        "leave_amarillo_unknown": "yes"
+        if clean(form.get("leave_amarillo_unknown")) == "yes"
+        else "no",
         "income_at_exit": clean(form.get("income_at_exit")),
         "education_at_exit": clean(form.get("education_at_exit")),
         "grit_at_exit": clean(form.get("grit_at_exit")),
@@ -218,8 +224,7 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
         errors.append("Exit Reason must match the selected Exit Category.")
 
     is_deceased_exit = (
-        data["exit_category"] == "Administrative Exit"
-        and data["exit_reason"] == "Deceased"
+        data["exit_category"] == "Administrative Exit" and data["exit_reason"] == "Deceased"
     )
 
     income = parse_money(data["income_at_exit"])
@@ -267,7 +272,9 @@ def _validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, An
 
         if data["leave_ama"] == "yes":
             if data["leave_amarillo_unknown"] != "yes" and not data["leave_amarillo_city"]:
-                errors.append("Enter the city left for or mark it Unknown when Leave Amarillo is Yes.")
+                errors.append(
+                    "Enter the city left for or mark it Unknown when Leave Amarillo is Yes."
+                )
         else:
             data["leave_amarillo_city"] = ""
             data["leave_amarillo_unknown"] = "no"
@@ -455,7 +462,9 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     )
 
 
-def _close_enrollment_and_resident(enrollment_id: int, resident_id: int, data: dict[str, Any]) -> None:
+def _close_enrollment_and_resident(
+    enrollment_id: int, resident_id: int, data: dict[str, Any]
+) -> None:
     ph = placeholder()
     now = utcnow_iso()
 

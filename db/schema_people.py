@@ -4,6 +4,7 @@ Resident identity and resident centered schema logic.
 
 from __future__ import annotations
 
+import contextlib
 import secrets
 
 from core.db import db_execute, db_fetchall, db_fetchone
@@ -239,10 +240,8 @@ def ensure_resident_child_income_supports_table(kind: str) -> None:
         ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_resident_substances_table(kind: str) -> None:
@@ -295,10 +294,8 @@ def ensure_basic_profile_columns(kind: str) -> None:
         ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_recovery_profile_columns(kind: str) -> None:
@@ -374,18 +371,14 @@ def ensure_recovery_profile_columns(kind: str) -> None:
         ]
 
     for statement in resident_statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
     for statement in child_statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             UPDATE residents
@@ -394,10 +387,8 @@ def ensure_recovery_profile_columns(kind: str) -> None:
               AND aa_step_current IS NOT NULL
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             UPDATE residents
@@ -407,8 +398,6 @@ def ensure_recovery_profile_columns(kind: str) -> None:
               AND aa_step_changed_at <> ''
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_reporting_columns(kind: str) -> None:
@@ -454,57 +443,35 @@ def ensure_reporting_columns(kind: str) -> None:
         ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def ensure_sms_consent_columns(kind: str) -> None:
     if kind == "pg":
-        try:
+        with contextlib.suppress(Exception):
             db_execute(
                 "ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE"
             )
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_at TEXT")
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_in_source TEXT")
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_at TEXT")
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS sms_opt_out_source TEXT")
-        except Exception:
-            pass
     else:
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in INTEGER NOT NULL DEFAULT 0")
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_at TEXT")
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN sms_opt_in_source TEXT")
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_at TEXT")
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             db_execute("ALTER TABLE residents ADD COLUMN sms_opt_out_source TEXT")
-        except Exception:
-            pass
 
 
 def ensure_resident_code_schema(kind: str) -> None:
@@ -516,21 +483,17 @@ def ensure_resident_code_schema(kind: str) -> None:
     except Exception:
         pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_code_uq "
             "ON residents (resident_code)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS residents_resident_identifier_uq "
             "ON residents (resident_identifier)"
         )
-    except Exception:
-        pass
 
 
 def backfill_birth_year_from_legacy_dob(kind: str) -> None:
@@ -573,9 +536,7 @@ def backfill_birth_year_from_legacy_dob(kind: str) -> None:
 
 
 def backfill_resident_codes(kind: str) -> None:
-    rows = db_fetchall(
-        "SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''"
-    )
+    rows = db_fetchall("SELECT id FROM residents WHERE resident_code IS NULL OR resident_code = ''")
 
     for row in rows or []:
         resident_id = row["id"] if isinstance(row, dict) else row[0]
@@ -651,7 +612,5 @@ def ensure_indexes() -> None:
         "CREATE INDEX IF NOT EXISTS resident_substances_primary_idx ON resident_substances (is_primary)",
     ]
     for statement in index_statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
