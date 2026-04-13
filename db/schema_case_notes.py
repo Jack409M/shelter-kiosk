@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Final
 
-from core.db import db_execute, db_fetchone
+from core.db import _db_kind, db_execute, db_fetchall, db_fetchone
 
 from .schema_helpers import create_table
 
@@ -222,6 +222,10 @@ _REQUIRED_INDEXES: Final[tuple[tuple[str, str], ...]] = (
 
 
 def _column_exists(table_name: str, column_name: str) -> bool:
+    if _db_kind() == "sqlite":
+        rows = db_fetchall(f"PRAGMA table_info({table_name})")
+        return any(str(row.get("name") or "") == column_name for row in rows)
+
     row = db_fetchone(
         """
         SELECT 1 AS present
@@ -247,6 +251,18 @@ def _ensure_column(table_name: str, column_name: str, column_definition: str) ->
 
 
 def _index_exists(index_name: str) -> bool:
+    if _db_kind() == "sqlite":
+        rows = db_fetchall(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type = 'index'
+              AND name = ?
+            """,
+            (index_name,),
+        )
+        return any(str(row.get("name") or "") == index_name for row in rows)
+
     row = db_fetchone(
         """
         SELECT 1 AS present
