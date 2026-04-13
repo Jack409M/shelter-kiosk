@@ -229,6 +229,9 @@ def register_request_security(
             "/leave",
             "/transport",
             "/resident/consent",
+            "/sms-consent",
+            "/sms-consent/",
+            "/resident/sms-consent",
         }
 
         if path not in public_paths:
