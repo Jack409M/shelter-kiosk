@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
+from core.data_integrity import check_resident_integrity
 from core.db import db_fetchall
 from core.pass_retention import run_pass_retention_cleanup_for_shelter
 from core.pass_rules import pass_type_label
@@ -121,6 +122,41 @@ def _clear_resident_session_and_redirect():
     return redirect(url_for("resident_requests.resident_signin"))
 
 
+def _enforce_resident_integrity(resident_id: int):
+    integrity_result = check_resident_integrity(resident_id)
+
+    warning_messages = [
+        issue.message
+        for issue in integrity_result.issues
+        if issue.severity == "warning"
+    ]
+    if warning_messages:
+        current_app.logger.warning(
+            "resident_portal integrity warnings resident_id=%s warnings=%s",
+            resident_id,
+            warning_messages,
+        )
+
+    if integrity_result.ok:
+        return None
+
+    error_messages = [
+        issue.message
+        for issue in integrity_result.issues
+        if issue.severity == "error"
+    ]
+
+    current_app.logger.error(
+        "resident_portal integrity failure resident_id=%s errors=%s",
+        resident_id,
+        error_messages,
+    )
+
+    session.clear()
+    flash("We could not load your account safely. Please sign in again.", "error")
+    return redirect(url_for("resident_requests.resident_signin"))
+
+
 @resident_portal.route("/home")
 @require_resident
 def home():
@@ -132,6 +168,10 @@ def home():
 
     if resident_id is None or not shelter:
         return _clear_resident_session_and_redirect()
+
+    integrity_response = _enforce_resident_integrity(resident_id)
+    if integrity_response is not None:
+        return integrity_response
 
     run_pass_retention_cleanup_for_shelter(shelter)
 
@@ -163,6 +203,10 @@ def resident_chores():
 
     if resident_id is None:
         return _clear_resident_session_and_redirect()
+
+    integrity_response = _enforce_resident_integrity(resident_id)
+    if integrity_response is not None:
+        return integrity_response
 
     if request.method == "POST":
         assignment_id = str(request.form.get("assignment_id") or "").strip()
