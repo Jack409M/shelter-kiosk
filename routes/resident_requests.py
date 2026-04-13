@@ -260,18 +260,17 @@ def resident_transport():
     return redirect(url_for("resident_portal.home"))
 
 
-@resident_requests.route("/sms-consent", methods=["GET", "POST"])
-@resident_requests.route("/sms-consent/", methods=["GET", "POST"])
+@resident_requests.route("/sms-consent", methods=["GET", "POST"], endpoint="sms_consent")
+@resident_requests.route("/sms-consent/", methods=["GET", "POST"], endpoint="sms_consent")
 def sms_consent_public_alias():
     return Response("OK", status=200)
 
 
 @resident_requests.get("/resident/sms-consent")
-def sms_consent():
+def resident_sms_consent():
     return sms_consent_view()
 
 
 @resident_requests.route("/resident/consent", methods=["GET", "POST"])
 def resident_consent():
     return resident_consent_view()
-    
