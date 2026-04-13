@@ -10,49 +10,51 @@ permissions:
 jobs:
   autofix:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
-      - name: Checkout
+      - name: Check out repo
         uses: actions/checkout@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: "pip"
 
-      - name: Install deps
+      - name: Install dev dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run Ruff autofix (safe + unsafe)
+      - name: Install Ruff
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "--version"
+
+      - name: Run Ruff autofix
         run: |
           ruff check core db routes tests --fix --unsafe-fixes
           ruff format .
 
-      - name: Commit changes
-        run: |
-          git config user.name "autofix-bot"
-          git config user.email "autofix@users.noreply.github.com"
-
-          git add .
-          git diff --cached --quiet || git commit -m "chore: auto-fix ruff issues"
-
-      - name: Push branch
-        run: |
-          git push origin HEAD:autofix-ruff || true
-
-      - name: Create PR
-        uses: peter-evans/create-pull-request@v7
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v8
         with:
-          branch: autofix-ruff
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: auto-fix lint issues"
+          branch: "autofix-ruff"
+          delete-branch: true
           title: "chore: auto-fix lint issues"
           body: |
             Automated Ruff cleanup.
 
-            Includes:
-            - safe fixes
-            - unsafe fixes
+            This workflow ran:
+            - ruff check core db routes tests --fix --unsafe-fixes
+            - ruff format .
 
-            Remaining issues (if any) require manual review.
+            Remaining CI issues, if any, need manual cleanup.
+          labels: |
+            chore
+            automated
