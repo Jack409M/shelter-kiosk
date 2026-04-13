@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from datetime import datetime
 from threading import Lock
+
+from flask import current_app, has_app_context
 
 from core.db import get_db
 from core.request_utils import client_ip
@@ -70,7 +73,7 @@ TWILIO_STATUS_CALLBACK_URL = env_text("TWILIO_STATUS_CALLBACK_URL")
 
 
 # ------------------------------------------------------------
-# Database initialization
+# Database runtime configuration
 # ------------------------------------------------------------
 
 _DB_INITIALIZED = False
@@ -78,33 +81,84 @@ _DB_INITIALIZATION_LOCK = Lock()
 _DB_INIT_URL: str | None = None
 
 
-def _resolved_database_url() -> str:
-    if (os.environ.get("PYTEST_CURRENT_TEST") or "").strip():
-        return "sqlite:///:memory:"
-    return (os.environ.get("DATABASE_URL") or "").strip()
+@dataclass(frozen=True)
+class RuntimeConfig:
+    database_url: str
+    database_mode_label: str
+
+
+def _normalize_database_url(value: str | None) -> str:
+    return str(value or "").strip()
+
+
+def database_mode_label_from_url(database_url: str) -> str:
+    normalized = _normalize_database_url(database_url).lower()
+
+    if not normalized:
+        return "missing"
+
+    if normalized.startswith("sqlite:"):
+        return "sqlite"
+
+    if normalized.startswith("postgres://") or normalized.startswith("postgresql://"):
+        return "postgres"
+
+    return "custom"
+
+
+def load_runtime_config(*, explicit_database_url: str | None = None) -> RuntimeConfig:
+    database_url = _normalize_database_url(
+        explicit_database_url if explicit_database_url is not None else os.environ.get("DATABASE_URL")
+    )
+
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is required.")
+
+    return RuntimeConfig(
+        database_url=database_url,
+        database_mode_label=database_mode_label_from_url(database_url),
+    )
+
+
+def current_database_url() -> str:
+    if has_app_context():
+        configured = _normalize_database_url(current_app.config.get("DATABASE_URL"))
+        if configured:
+            return configured
+
+    return _normalize_database_url(os.environ.get("DATABASE_URL"))
 
 
 def init_db() -> None:
     """
     Ensures database connection and schema initialization.
-    Runs only once per process and is safe under concurrent startup.
-    Reinitializes if the effective DATABASE_URL changes.
+    Runs only once per process per resolved DATABASE_URL.
+    Requires an active Flask app context so the database layer reads the same
+    configuration the app was built with.
     """
     global _DB_INITIALIZED, _DB_INIT_URL
 
-    effective_database_url = _resolved_database_url()
+    if not has_app_context():
+        raise RuntimeError("init_db() requires an active Flask app context.")
+
+    effective_database_url = current_database_url()
+    if not effective_database_url:
+        raise RuntimeError("DATABASE_URL is required before database initialization.")
 
     with _DB_INITIALIZATION_LOCK:
         if _DB_INITIALIZED and _DB_INIT_URL == effective_database_url:
             return
 
-        if effective_database_url:
-            os.environ["DATABASE_URL"] = effective_database_url
+        current_app.config["DATABASE_URL"] = effective_database_url
+        current_app.config["DATABASE_MODE_LABEL"] = database_mode_label_from_url(
+            effective_database_url
+        )
 
         get_db()
         schema.init_db()
+
         _DB_INITIALIZED = True
-        _DB_INIT_URL = effective_database_url or None
+        _DB_INIT_URL = effective_database_url
 
 
 # ------------------------------------------------------------
