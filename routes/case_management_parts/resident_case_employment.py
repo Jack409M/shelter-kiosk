@@ -28,6 +28,95 @@ def _to_bool(value) -> bool:
     return normalized in {"1", "true", "yes", "y", "on"}
 
 
+def _neutral_pill_style() -> str:
+    return (
+        "display:inline-flex; align-items:center; justify-content:center; "
+        "min-width:48px; padding:4px 10px; border-radius:999px; "
+        "background:#eef2f6; border:1px solid #c7d2de; color:#46607a; "
+        "font-weight:700; font-size:12px; line-height:1;"
+    )
+
+
+def _green_pill_style() -> str:
+    return (
+        "display:inline-flex; align-items:center; justify-content:center; "
+        "min-width:48px; padding:4px 10px; border-radius:999px; "
+        "background:#dfeee5; border:1px solid #8fbea0; color:#1d5f33; "
+        "font-weight:700; font-size:12px; line-height:1;"
+    )
+
+
+def _yellow_pill_style() -> str:
+    return (
+        "display:inline-flex; align-items:center; justify-content:center; "
+        "min-width:48px; padding:4px 10px; border-radius:999px; "
+        "background:#fff3c7; border:1px solid #ddc56d; color:#7a6500; "
+        "font-weight:700; font-size:12px; line-height:1;"
+    )
+
+
+def _orange_pill_style() -> str:
+    return (
+        "display:inline-flex; align-items:center; justify-content:center; "
+        "min-width:48px; padding:4px 10px; border-radius:999px; "
+        "background:#ffe0bf; border:1px solid #d9a06a; color:#98510a; "
+        "font-weight:700; font-size:12px; line-height:1;"
+    )
+
+
+def _red_pill_style() -> str:
+    return (
+        "display:inline-flex; align-items:center; justify-content:center; "
+        "min-width:48px; padding:4px 10px; border-radius:999px; "
+        "background:#f6dada; border:1px solid #d38b8b; color:#8f1f1f; "
+        "font-weight:700; font-size:12px; line-height:1;"
+    )
+
+
+def _resolve_income_thresholds(settings: dict) -> tuple[float, float, float, float]:
+    graduation_minimum = _to_float_or_none(
+        settings.get("employment_income_graduation_minimum")
+    )
+    if graduation_minimum is None or graduation_minimum <= 0:
+        graduation_minimum = 1200.0
+
+    green_min = _to_float_or_none(settings.get("employment_income_band_green_min"))
+    if green_min is None:
+        green_min = graduation_minimum
+
+    yellow_min = _to_float_or_none(settings.get("employment_income_band_yellow_min"))
+    if yellow_min is None:
+        yellow_min = 1000.0
+
+    orange_min = _to_float_or_none(settings.get("employment_income_band_orange_min"))
+    if orange_min is None:
+        orange_min = 700.0
+
+    return graduation_minimum, green_min, yellow_min, orange_min
+
+
+def _resolve_income_band(
+    income_value: float | None,
+    *,
+    green_min: float,
+    yellow_min: float,
+    orange_min: float,
+) -> tuple[str, str]:
+    if income_value is None:
+        return "neutral", _neutral_pill_style()
+
+    if income_value >= green_min:
+        return "green", _green_pill_style()
+
+    if income_value >= yellow_min:
+        return "yellow", _yellow_pill_style()
+
+    if income_value >= orange_min:
+        return "orange", _orange_pill_style()
+
+    return "red", _red_pill_style()
+
+
 def load_employment_income_defaults() -> dict:
     return {
         "employment_income_module_enabled": True,
@@ -54,24 +143,9 @@ def resolve_monthly_income_for_display(enrollment_context: dict) -> object:
 
 
 def build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
-    graduation_minimum = _to_float_or_none(
-        settings.get("employment_income_graduation_minimum")
+    graduation_minimum, green_min, yellow_min, orange_min = _resolve_income_thresholds(
+        settings
     )
-    if graduation_minimum is None or graduation_minimum <= 0:
-        graduation_minimum = 1200.0
-
-    green_min = _to_float_or_none(settings.get("employment_income_band_green_min"))
-    if green_min is None:
-        green_min = graduation_minimum
-
-    yellow_min = _to_float_or_none(settings.get("employment_income_band_yellow_min"))
-    if yellow_min is None:
-        yellow_min = 1000.0
-
-    orange_min = _to_float_or_none(settings.get("employment_income_band_orange_min"))
-    if orange_min is None:
-        orange_min = 700.0
-
     income_value = _to_float_or_none(monthly_income)
 
     if income_value is None:
@@ -79,46 +153,12 @@ def build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
     else:
         readiness_percent = round(min((income_value / graduation_minimum) * 100.0, 100.0))
 
-    if income_value is None:
-        band_key = "neutral"
-        pill_style = (
-            "display:inline-flex; align-items:center; justify-content:center; "
-            "min-width:48px; padding:4px 10px; border-radius:999px; "
-            "background:#eef2f6; border:1px solid #c7d2de; color:#46607a; "
-            "font-weight:700; font-size:12px; line-height:1;"
-        )
-    elif income_value >= green_min:
-        band_key = "green"
-        pill_style = (
-            "display:inline-flex; align-items:center; justify-content:center; "
-            "min-width:48px; padding:4px 10px; border-radius:999px; "
-            "background:#dfeee5; border:1px solid #8fbea0; color:#1d5f33; "
-            "font-weight:700; font-size:12px; line-height:1;"
-        )
-    elif income_value >= yellow_min:
-        band_key = "yellow"
-        pill_style = (
-            "display:inline-flex; align-items:center; justify-content:center; "
-            "min-width:48px; padding:4px 10px; border-radius:999px; "
-            "background:#fff3c7; border:1px solid #ddc56d; color:#7a6500; "
-            "font-weight:700; font-size:12px; line-height:1;"
-        )
-    elif income_value >= orange_min:
-        band_key = "orange"
-        pill_style = (
-            "display:inline-flex; align-items:center; justify-content:center; "
-            "min-width:48px; padding:4px 10px; border-radius:999px; "
-            "background:#ffe0bf; border:1px solid #d9a06a; color:#98510a; "
-            "font-weight:700; font-size:12px; line-height:1;"
-        )
-    else:
-        band_key = "red"
-        pill_style = (
-            "display:inline-flex; align-items:center; justify-content:center; "
-            "min-width:48px; padding:4px 10px; border-radius:999px; "
-            "background:#f6dada; border:1px solid #d38b8b; color:#8f1f1f; "
-            "font-weight:700; font-size:12px; line-height:1;"
-        )
+    band_key, pill_style = _resolve_income_band(
+        income_value,
+        green_min=green_min,
+        yellow_min=yellow_min,
+        orange_min=orange_min,
+    )
 
     return {
         "module_enabled": _to_bool(settings.get("employment_income_module_enabled", True)),
