@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from core.intake_service import IntakeCreateResult
-from core.intake_service import IntakeDuplicateStop
-from core.intake_service import IntakeReviewResult
+from core.intake_service import (
+    IntakeCreateResult,
+    IntakeDuplicateStop,
+    IntakeReviewResult,
+)
 
 
 def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
