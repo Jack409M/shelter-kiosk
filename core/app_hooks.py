@@ -59,9 +59,10 @@ def _log_request_start(app: Flask) -> None:
     if not _should_log_requests(app):
         return
 
+    request_id = getattr(g, "request_id", "")
     app.logger.info(
         "request_started request_id=%s method=%s path=%s endpoint=%s remote_ip=%s",
-        g.request_id,
+        request_id,
         request.method,
         request.path,
         request.endpoint,
@@ -73,10 +74,13 @@ def _log_request_complete(app: Flask, response: Response) -> None:
     if not _should_log_requests(app):
         return
 
-    duration_ms = int((time.perf_counter() - g.request_started_at) * 1000)
+    request_id = getattr(g, "request_id", "")
+    started_at = getattr(g, "request_started_at", None)
+    duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
+
     app.logger.info(
         "request_completed request_id=%s method=%s path=%s endpoint=%s status=%s duration_ms=%s",
-        g.request_id,
+        request_id,
         request.method,
         request.path,
         request.endpoint,
@@ -89,10 +93,13 @@ def _log_request_failure(app: Flask, error: BaseException) -> None:
     if not _should_log_requests(app):
         return
 
-    duration_ms = int((time.perf_counter() - g.request_started_at) * 1000)
+    request_id = getattr(g, "request_id", "")
+    started_at = getattr(g, "request_started_at", None)
+    duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
+
     app.logger.exception(
         "request_failed request_id=%s method=%s path=%s endpoint=%s duration_ms=%s error_type=%s",
-        g.request_id,
+        request_id,
         request.method,
         request.path,
         request.endpoint,
@@ -159,7 +166,9 @@ def register_app_hooks(app: Flask) -> None:
 
     @app.after_request
     def add_security_headers(response: Response) -> Response:
-        response.headers.setdefault("X-Request-ID", g.request_id)
+        request_id = getattr(g, "request_id", None)
+        if request_id:
+            response.headers.setdefault("X-Request-ID", request_id)
         _apply_cache_headers(response)
         _apply_security_headers(response)
         _log_request_complete(app, response)
@@ -168,7 +177,5 @@ def register_app_hooks(app: Flask) -> None:
     @app.teardown_request
     def log_request_exception(error: BaseException | None) -> None:
         if error is None:
-            return
-        if not hasattr(g, "request_started_at"):
             return
         _log_request_failure(app, error)
