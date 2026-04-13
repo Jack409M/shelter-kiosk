@@ -44,12 +44,6 @@ def _is_sqlite_url(database_url: str) -> bool:
     return database_url.lower().startswith("sqlite:")
 
 
-def _normalize_sql(sql: str) -> str:
-    if _db_kind() == "sqlite":
-        return sql
-    return sql.replace("?", "%s")
-
-
 def _db_kind() -> str:
     kind = g.get("db_kind")
     if kind:
@@ -57,6 +51,12 @@ def _db_kind() -> str:
 
     database_url = _database_url()
     return "sqlite" if _is_sqlite_url(database_url) else "pg"
+
+
+def _normalize_sql(sql: str) -> str:
+    if _db_kind() == "sqlite":
+        return sql.replace("%s", "?")
+    return sql.replace("?", "%s")
 
 
 def _sqlite_path_from_url(database_url: str) -> str:
