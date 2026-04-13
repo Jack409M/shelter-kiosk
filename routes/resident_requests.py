@@ -9,7 +9,7 @@ from core.access import require_resident
 from core.audit import log_action
 from core.db import db_fetchone
 from core.helpers import utcnow_iso
-from core.rate_limit import is_rate_limited
+from core.rate_limit import is_rate_limited   # ✅ REQUIRED FOR TESTS
 from core.runtime import init_db
 from routes.resident_parts.consent import (
     resident_consent_view,
@@ -27,61 +27,36 @@ def _client_ip() -> str:
     return (request.remote_addr or "").strip() or "unknown"
 
 
-def _db_sql(pg_sql: str, sqlite_sql: str) -> str:
-    return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
-
-
-def _allowed_resident_next_urls() -> set[str]:
-    return {
-        url_for("resident_requests.resident_pass_request"),
-        url_for("resident_requests.resident_transport"),
-        url_for("resident_portal.home"),
-        url_for("resident_portal.resident_chores"),
-    }
-
-
-def _safe_next_url(candidate: str) -> str:
-    next_url = (candidate or "").strip()
-    if next_url in _allowed_resident_next_urls():
-        return next_url
-    return url_for("resident_portal.home")
-
-
-def _load_resident_by_code(resident_code: str):
-    return db_fetchone(
-        _db_sql(
-            "SELECT * FROM residents WHERE resident_code = %s",
-            "SELECT * FROM residents WHERE resident_code = ?",
-        ),
-        (resident_code,),
-    )
-
-
-# -----------------------------
-# SIGN IN (needed for CSRF tests)
-# -----------------------------
 @resident_requests.route("/resident", methods=["GET", "POST"])
 def resident_signin():
     if request.method == "GET":
         return render_template("resident_signin.html")
 
-    if is_rate_limited("resident_signin_test"):
+    if is_rate_limited("resident_signin"):
         return render_template("resident_signin.html"), 429
 
     session["resident_logged_in"] = True
     return redirect(url_for("resident_requests.resident_consent"))
 
 
-# -----------------------------
-# TRANSPORT (used in CSRF tests)
-# -----------------------------
+@resident_requests.get("/resident/logout")
+def resident_logout():
+    session.clear()
+    return redirect(url_for("public.public_home"))
+
+
+@resident_requests.route("/pass-request", methods=["GET", "POST"])
+def resident_pass_request():
+    return resident_pass_request_view()
+
+
 @resident_requests.route("/transport", methods=["GET", "POST"])
 @require_resident
 def resident_transport():
     if request.method == "GET":
         return render_template("resident_transport.html")
 
-    if is_rate_limited("transport_test"):
+    if is_rate_limited("transport"):
         return render_template("resident_transport.html"), 429
 
     return redirect(url_for("resident_portal.home"))
