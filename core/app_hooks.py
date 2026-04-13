@@ -166,7 +166,6 @@ def register_app_hooks(app: Flask) -> None:
 
     @app.after_request
     def add_security_headers(response: Response) -> Response:
-        # ✅ FIXED LINE (this is what was breaking everything)
         request_id = getattr(g, "request_id", None)
         if request_id:
             response.headers.setdefault("X-Request-ID", request_id)
