@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import sqlite3
-from contextlib import contextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from threading import Lock
-from typing import Any, Iterator, TypeAlias
+from typing import Any
 from urllib.parse import parse_qs, unquote, urlparse
 
 from flask import current_app, g
@@ -21,9 +22,9 @@ except Exception:
     SimpleConnectionPool = None
 
 
-DbRow: TypeAlias = dict[str, Any]
-DbConnection: TypeAlias = Any
-DbCursor: TypeAlias = Any
+type DbRow = dict[str, Any]
+type DbConnection = Any
+type DbCursor = Any
 
 PG_POOL: Any = None
 _PG_POOL_LOCK = Lock()
@@ -44,6 +45,12 @@ def _is_sqlite_url(database_url: str) -> bool:
     return database_url.lower().startswith("sqlite:")
 
 
+def _normalize_sql(sql: str) -> str:
+    if _db_kind() == "sqlite":
+        return sql.replace("%s", "?")
+    return sql.replace("?", "%s")
+
+
 def _db_kind() -> str:
     kind = g.get("db_kind")
     if kind:
@@ -51,12 +58,6 @@ def _db_kind() -> str:
 
     database_url = _database_url()
     return "sqlite" if _is_sqlite_url(database_url) else "pg"
-
-
-def _normalize_sql(sql: str) -> str:
-    if _db_kind() == "sqlite":
-        return sql.replace("%s", "?")
-    return sql.replace("?", "%s")
 
 
 def _sqlite_path_from_url(database_url: str) -> str:
@@ -162,16 +163,12 @@ def close_db(e: Exception | None = None) -> None:
         return
 
     if kind == "sqlite":
-        try:
+        with suppress(Exception):
             conn.close()
-        except Exception:
-            pass
         return
 
-    try:
+    with suppress(Exception):
         conn.autocommit = True
-    except Exception:
-        pass
 
     global PG_POOL
     if PG_POOL is not None:
@@ -201,7 +198,11 @@ def _db_cursor(*, dict_rows: bool = False) -> Iterator[DbCursor]:
     if dict_rows and sql_cursor_factory is None:
         raise RuntimeError("psycopg2.extras.RealDictCursor is unavailable.")
 
-    cur = conn.cursor(cursor_factory=sql_cursor_factory) if sql_cursor_factory else conn.cursor()
+    cur = (
+        conn.cursor(cursor_factory=sql_cursor_factory)
+        if sql_cursor_factory
+        else conn.cursor()
+    )
     try:
         yield cur
     finally:
@@ -287,3 +288,4 @@ def db_transaction() -> Iterator[DbConnection]:
     finally:
         g.db_in_transaction = False
         conn.autocommit = previous_autocommit
+        
