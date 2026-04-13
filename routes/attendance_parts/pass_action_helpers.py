@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from flask import current_app, g
 
 from core.db import db_execute, db_fetchone, db_transaction
@@ -12,6 +14,34 @@ from routes.attendance_parts.helpers import complete_active_passes
 
 def _sql(pg: str, sqlite: str) -> str:
     return pg if g.get("db_kind") == "pg" else sqlite
+
+
+def _clean_text(value: object) -> str:
+    return str(value or "").strip()
+
+
+def _normalized_status(value: object) -> str:
+    return _clean_text(value).lower()
+
+
+def _normalized_pass_type(value: object) -> str:
+    return _clean_text(value).lower()
+
+
+def _safe_int(value: object) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    if parsed <= 0:
+        return None
+
+    return parsed
+
+
+def _digits_only(value: object) -> str:
+    return "".join(ch for ch in str(value or "") if ch.isdigit())
 
 
 def insert_resident_notification(
@@ -185,9 +215,15 @@ def validate_pending_review_pass(pass_row) -> tuple[bool, int | None, str, str]:
     if not pass_row:
         return False, None, "", "Pass request not found."
 
-    status = str(pass_row.get("status") or "").strip().lower()
-    resident_id = int(pass_row.get("resident_id") or 0)
-    pass_type_key = str(pass_row.get("pass_type") or "").strip().lower()
+    resident_id = _safe_int(pass_row.get("resident_id"))
+    pass_type_key = _normalized_pass_type(pass_row.get("pass_type"))
+    status = _normalized_status(pass_row.get("status"))
+
+    if resident_id is None:
+        return False, None, pass_type_key, "Pass request is missing a valid resident."
+
+    if not pass_type_key:
+        return False, resident_id, "", "Pass request is missing a valid pass type."
 
     if status != "pending":
         return False, resident_id, pass_type_key, "That pass request is no longer pending."
@@ -199,8 +235,11 @@ def validate_check_in_pass(pass_row) -> tuple[bool, int | None, str]:
     if not pass_row:
         return False, None, "Pass not found."
 
-    resident_id = int(pass_row.get("resident_id") or 0)
-    status = str(pass_row.get("status") or "").strip().lower()
+    resident_id = _safe_int(pass_row.get("resident_id"))
+    status = _normalized_status(pass_row.get("status"))
+
+    if resident_id is None:
+        return False, None, "Pass is missing a valid resident."
 
     if status != "approved":
         return False, resident_id, "Only approved passes can be checked back in."
@@ -209,17 +248,17 @@ def validate_check_in_pass(pass_row) -> tuple[bool, int | None, str]:
 
 
 def build_approval_sms(pass_row: dict) -> str:
-    pass_type_key = str(pass_row.get("pass_type") or "").strip().lower()
+    pass_type_key = _normalized_pass_type(pass_row.get("pass_type"))
     pass_type_text = pass_type_label(pass_type_key)
-    first_name = str(pass_row.get("first_name") or "").strip()
+    first_name = _clean_text(pass_row.get("first_name"))
 
     if pass_type_key in {"pass", "overnight"}:
         leave_text = fmt_pretty_date(pass_row.get("start_at"))
         return_text = fmt_pretty_date(pass_row.get("end_at"))
         return f"{pass_type_text} approved for {first_name}. Leave {leave_text}. Return {return_text}."
 
-    start_date = str(pass_row.get("start_date") or "").strip()
-    end_date = str(pass_row.get("end_date") or "").strip()
+    start_date = _clean_text(pass_row.get("start_date"))
+    end_date = _clean_text(pass_row.get("end_date"))
     return f"{pass_type_text} approved for {first_name}. Dates: {start_date} to {end_date}."
 
 
@@ -228,8 +267,8 @@ def send_approval_sms_if_possible(pass_id: int, shelter: str) -> None:
     if not sms_context:
         return
 
-    phone = str(sms_context.get("resident_phone") or "").strip()
-    if not phone:
+    phone = _clean_text(sms_context.get("resident_phone"))
+    if len(_digits_only(phone)) < 10:
         return
 
     try:
@@ -271,7 +310,9 @@ def apply_pass_approval(
                     approved_at = %s,
                     delete_after_at = %s,
                     updated_at = %s
-                WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                WHERE id = %s
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                  AND LOWER(TRIM(status)) = 'pending'
                 """,
                 """
                 UPDATE resident_passes
@@ -280,7 +321,9 @@ def apply_pass_approval(
                     approved_at = ?,
                     delete_after_at = ?,
                     updated_at = ?
-                WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                WHERE id = ?
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                  AND LOWER(TRIM(status)) = 'pending'
                 """,
             ),
             ("approved", staff_id, now_iso, delete_after_at, now_iso, pass_id, shelter),
@@ -338,7 +381,9 @@ def apply_pass_denial(
                     approved_by = %s,
                     approved_at = %s,
                     updated_at = %s
-                WHERE id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                WHERE id = %s
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                  AND LOWER(TRIM(status)) = 'pending'
                 """,
                 """
                 UPDATE resident_passes
@@ -346,7 +391,9 @@ def apply_pass_denial(
                     approved_by = ?,
                     approved_at = ?,
                     updated_at = ?
-                WHERE id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                WHERE id = ?
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                  AND LOWER(TRIM(status)) = 'pending'
                 """,
             ),
             ("denied", staff_id, now_iso, now_iso, pass_id, shelter),
@@ -391,6 +438,8 @@ def apply_pass_check_in(
     resident_id: int,
     staff_id,
 ) -> None:
+    del pass_id
+
     with db_transaction():
         db_execute(
             _sql(
