@@ -67,8 +67,8 @@ def test_require_shelter_clears_invalid_staff_session_when_shelter_not_allowed(
 
 
 def test_case_management_redirects_non_case_manager_user(client, monkeypatch):
-    import routes.case_management_parts.intake as intake_module
     import core.auth as auth_module
+    import routes.case_management_parts.intake as intake_module
 
     monkeypatch.setattr(
         auth_module,
@@ -94,8 +94,8 @@ def test_case_management_redirects_non_case_manager_user(client, monkeypatch):
 
 
 def test_case_management_allows_case_manager_user(client, monkeypatch):
-    import routes.case_management_parts.intake as intake_module
     import core.auth as auth_module
+    import routes.case_management_parts.intake as intake_module
 
     monkeypatch.setattr(
         auth_module,
