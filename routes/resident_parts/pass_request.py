@@ -3,8 +3,14 @@ from __future__ import annotations
 from flask import flash, redirect, render_template, url_for
 
 from core.access import require_resident
+from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
-from core.pass_rules import gh_pass_rule_box, pass_type_options, shared_pass_rule_box, use_gh_pass_form
+from core.pass_rules import (
+    gh_pass_rule_box,
+    pass_type_options,
+    shared_pass_rule_box,
+    use_gh_pass_form,
+)
 from core.rate_limit import is_rate_limited
 from core.runtime import init_db
 from routes.resident_parts.pass_request_helpers import (
@@ -167,3 +173,4 @@ def resident_pass_request_view():
         return redirect(url_for("resident_portal.home"))
 
     return _inner()
+    
