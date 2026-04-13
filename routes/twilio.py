@@ -288,9 +288,10 @@ def twilio_status():
     message_sid = (request.form.get("MessageSid") or "").strip()
     message_status = (request.form.get("MessageStatus") or "").strip()
 
-    if message_sid and message_status:
-        if _rate_limited(f"twilio_status:{message_sid}:{message_status}", 1, 172800):
-            return "OK", 200
+    if message_sid and message_status and _rate_limited(
+        f"twilio_status:{message_sid}:{message_status}", 1, 172800
+    ):
+        return "OK", 200
 
     init_db()
     kind = g.get("db_kind")
