@@ -19,7 +19,7 @@ from . import schema_shelter_operations
 from . import schema_shelters
 
 
-_SCHEMA_INITIALIZED: bool = False
+_SCHEMA_INITIALIZED_KEY: str | None = None
 
 _STAFF_SHELTER_ASSIGNMENTS_POSTGRES_SQL: Final[str] = """
 CREATE TABLE IF NOT EXISTS staff_shelter_assignments (
@@ -151,6 +151,11 @@ def _require_kind() -> str:
     return kind
 
 
+def _schema_key(kind: str) -> str:
+    database_url = str(current_app.config.get("DATABASE_URL") or "").strip()
+    return f"{kind}:{database_url}"
+
+
 def _sql(kind: str, pg_sql: str, sqlite_sql: str) -> str:
     if kind == "pg":
         return pg_sql
@@ -254,11 +259,13 @@ def _run_schema_initialization(kind: str) -> None:
 
 
 def init_db() -> None:
-    global _SCHEMA_INITIALIZED
-
-    if _SCHEMA_INITIALIZED:
-        return
+    global _SCHEMA_INITIALIZED_KEY
 
     kind = _require_kind()
+    current_key = _schema_key(kind)
+
+    if _SCHEMA_INITIALIZED_KEY == current_key:
+        return
+
     _run_schema_initialization(kind)
-    _SCHEMA_INITIALIZED = True
+    _SCHEMA_INITIALIZED_KEY = current_key
