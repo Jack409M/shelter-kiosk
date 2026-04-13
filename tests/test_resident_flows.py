@@ -37,7 +37,6 @@ def test_resident_signin_invalid_code(client, monkeypatch):
 
 def test_resident_signin_success_sets_session(client, monkeypatch):
     import routes.resident_requests as rr
-    from core.residents import resident_session_start
 
     monkeypatch.setattr(rr, "init_db", lambda: None)
     monkeypatch.setattr(rr, "is_rate_limited", lambda *args, **kwargs: False)
@@ -108,7 +107,6 @@ def test_transport_rejects_past_time(client, monkeypatch):
 
     monkeypatch.setattr(rr, "init_db", lambda: None)
 
-    # Force parser to return past date
     monkeypatch.setattr(
         rr,
         "_parse_transport_needed_at",
