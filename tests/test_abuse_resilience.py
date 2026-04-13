@@ -115,8 +115,8 @@ def _insert_resident(
 
 
 def test_real_pass_rate_limit_blocks_repeated_submissions(app, client, monkeypatch):
-    from core.db import db_fetchall
     import routes.resident_parts.pass_request as resident_pass_module
+    from core.db import db_fetchall
 
     resident_id = _insert_resident(
         app,
@@ -222,8 +222,8 @@ def test_real_transport_rate_limit_blocks_repeated_submissions(app, client):
 
 
 def test_malformed_pass_payload_fails_cleanly_without_insert(app, client, monkeypatch):
-    from core.db import db_fetchall
     import routes.resident_parts.pass_request as resident_pass_module
+    from core.db import db_fetchall
 
     resident_id = _insert_resident(
         app,
