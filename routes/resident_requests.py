@@ -262,6 +262,19 @@ def resident_transport():
     return redirect(url_for("resident_portal.home"))
 
 
+@resident_requests.get("/sms-consent")
+def sms_consent_public_alias():
+    return sms_consent_public_alias_view()
+
+
+@resident_requests.get("/sms-consent/")
+def sms_consent_public_alias_slash():
+    return sms_consent_public_alias_slash_view()
+
+
+@resident_requests.get("/resident/sms-consent")
+def sms_consent():
+    return sms_consent_view()
 
 
 @resident_requests.route("/resident/consent", methods=["GET", "POST"])
