@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     services:
       postgres:
@@ -39,6 +44,12 @@ jobs:
       TWILIO_INBOUND_ENABLED: "0"
       TWILIO_STATUS_ENABLED: "0"
       PYTHONPATH: .
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Check out repo
@@ -48,38 +59,47 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+          cache: "pip"
 
       - name: Install runtime dependencies
         run: |
+          set -euo pipefail
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Install dev dependencies
         run: |
+          set -euo pipefail
           pip install -r requirements-dev.txt
 
       - name: Wait for Postgres
         env:
           PGPASSWORD: postgres
         run: |
+          set -euo pipefail
           until pg_isready -h localhost -p 5432 -U postgres; do
             echo "Waiting for postgres..."
             sleep 2
           done
 
       - name: Create log directory
-        run: mkdir -p test-logs
+        run: |
+          set -euo pipefail
+          mkdir -p test-logs
 
       - name: Ruff
         run: |
+          set -euo pipefail
           ruff check core db routes tests 2>&1 | tee test-logs/ruff.log
 
       - name: MyPy
         run: |
+          set -euo pipefail
           mypy core db routes 2>&1 | tee test-logs/mypy.log
 
       - name: Pytest auth and session security
         run: |
+          set -euo pipefail
           coverage run --parallel-mode -m pytest \
             tests/test_auth_login.py \
             tests/test_auth_additional.py \
@@ -88,10 +108,13 @@ jobs:
             tests/test_session_boundaries.py \
             tests/test_request_security.py \
             tests/test_rate_limit_basic.py \
+            tests/test_access_controls.py \
+            tests/test_security_guards.py \
             -q -x 2>&1 | tee test-logs/pytest_auth_security.log
 
       - name: Pytest resident flows
         run: |
+          set -euo pipefail
           coverage run --parallel-mode -m pytest \
             tests/test_resident_requests.py \
             tests/test_resident_requests_more.py \
@@ -100,13 +123,25 @@ jobs:
             tests/test_residents_basic.py \
             tests/test_residents_routes.py \
             tests/test_resident_transfer_passes.py \
+            tests/test_resident_flows.py \
             -q -x 2>&1 | tee test-logs/pytest_resident_flows.log
+
+      - name: Pytest intake and validation
+        run: |
+          set -euo pipefail
+          coverage run --parallel-mode -m pytest \
+            tests/test_case_management_intake.py \
+            tests/test_intake_validation.py \
+            tests/test_intake_update_and_duplicate_review.py \
+            -q -x 2>&1 | tee test-logs/pytest_intake_validation.log
 
       - name: Pytest pass system
         run: |
+          set -euo pipefail
           coverage run --parallel-mode -m pytest \
             tests/test_staff_pass_actions.py \
             tests/test_pass_actions.py \
+            tests/test_pass_policy.py \
             tests/test_pass_retention.py \
             tests/test_pass_retention_integration.py \
             tests/test_pass_retention_scheduler.py \
@@ -116,15 +151,22 @@ jobs:
 
       - name: Pytest abuse and performance
         run: |
+          set -euo pipefail
           coverage run --parallel-mode -m pytest \
             tests/test_abuse_resilience.py \
             tests/test_performance_sanity.py \
             -q -x 2>&1 | tee test-logs/pytest_abuse_performance.log
 
+      - name: Full pytest sweep
+        run: |
+          set -euo pipefail
+          coverage run --parallel-mode -m pytest tests -q -x 2>&1 | tee test-logs/pytest_full_suite.log
+
       - name: Coverage report
         run: |
+          set -euo pipefail
           coverage combine
-          coverage report --fail-under=45 2>&1 | tee test-logs/coverage.log
+          coverage report --fail-under=60 2>&1 | tee test-logs/coverage.log
 
       - name: Upload logs
         if: always()
@@ -132,6 +174,3 @@ jobs:
         with:
           name: ci-test-logs
           path: test-logs/
-
-
-
