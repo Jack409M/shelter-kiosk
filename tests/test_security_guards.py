@@ -84,8 +84,6 @@ def test_public_post_rate_limit_returns_429(client, monkeypatch):
 
     try:
         with app.test_request_context("/resident", method="POST"):
-            from flask import get_flashed_messages
-
             result = target()
             assert result is not None
             body, status = result
