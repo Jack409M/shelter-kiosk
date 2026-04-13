@@ -274,3 +274,4 @@ def resident_sms_consent():
 @resident_requests.route("/resident/consent", methods=["GET", "POST"])
 def resident_consent():
     return resident_consent_view()
+    
