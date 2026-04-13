@@ -44,8 +44,8 @@ def _require_text(value: Any, *, label: str) -> str:
 def _require_positive_int(value: Any, *, label: str) -> int:
     try:
         number = int(value)
-    except (TypeError, ValueError):
-        raise ValueError(f"{label} must be an integer")
+    except (TypeError, ValueError) as err:
+        raise ValueError(f"{label} must be an integer") from err
 
     if number <= 0:
         raise ValueError(f"{label} must be positive")
