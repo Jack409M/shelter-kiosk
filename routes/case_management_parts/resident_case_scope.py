@@ -1,21 +1,29 @@
 from __future__ import annotations
 
 from core.db import db_fetchone
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import current_enrollment_order_sql
 
 
-def load_current_enrollment(resident_id: int):
-    return fetch_current_enrollment_for_resident(
-        resident_id,
-        columns="""
+def load_current_enrollment(resident_id: int, shelter: str):
+    ph = placeholder()
+
+    return db_fetchone(
+        f"""
+        SELECT
             id,
             shelter,
             program_status,
             entry_date,
             exit_date
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+          AND {shelter_equals_sql("shelter")}
+        ORDER BY {current_enrollment_order_sql()}
+        LIMIT 1
         """,
+        (resident_id, shelter),
     )
 
 
