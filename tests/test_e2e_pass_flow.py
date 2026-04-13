@@ -140,10 +140,10 @@ def _insert_resident(
 
 
 def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, client, monkeypatch):
+    import routes.attendance_parts.pass_actions as pass_actions_module
+    import routes.resident_parts.pass_request as resident_pass_module
     from core.db import db_execute, db_fetchone
     from core.pass_retention import run_pass_retention_cleanup_for_shelter
-    import routes.resident_parts.pass_request as resident_pass_module
-    import routes.attendance_parts.pass_actions as pass_actions_module
 
     resident_id = _insert_resident(
         app,
@@ -160,7 +160,6 @@ def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, clien
     monkeypatch.setattr(pass_actions_module, "log_action", lambda *args, **kwargs: None)
     monkeypatch.setattr(pass_actions_module, "send_sms", lambda *args, **kwargs: None)
 
-    # Step 1: resident submits pass request
     _login_resident(
         client,
         resident_id=resident_id,
@@ -204,7 +203,6 @@ def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, clien
         assert pass_row["shelter"] == "abba"
         assert pass_row["destination"] == "Clinic"
 
-    # Step 2: staff sees it in pending queue
     _login_staff(client, role="case_manager", shelter="abba")
     response = client.get("/staff/passes/pending", follow_redirects=False)
 
@@ -212,7 +210,6 @@ def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, clien
     assert b"Jane" in response.data
     assert b"Resident" in response.data
 
-    # Step 3: staff approves it
     csrf_token = _set_csrf_token(client)
     response = client.post(
         f"/staff/passes/{pass_id}/approve",
@@ -250,14 +247,12 @@ def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, clien
     assert notification_row["notification_type"] == "pass_approved"
     assert notification_row["related_pass_id"] == pass_id
 
-    # Step 4: approved queue shows it
     response = client.get("/staff/passes/approved", follow_redirects=False)
 
     assert response.status_code == 200
     assert b"Jane" in response.data
     assert b"Resident" in response.data
 
-    # Step 5: staff checks resident back in from pass
     csrf_token = _set_csrf_token(client)
     response = client.post(
         f"/staff/passes/{pass_id}/check-in",
@@ -294,7 +289,6 @@ def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, clien
     assert attendance_row["staff_user_id"] == 1
     assert "pass return" in str(attendance_row["note"] or "").lower()
 
-    # Step 6: force retention deadline into the past and run cleanup
     with app.app_context():
         db_execute(
             """
