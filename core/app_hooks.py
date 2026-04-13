@@ -157,7 +157,7 @@ def register_app_hooks(app: Flask) -> None:
 
     @app.before_request
     def force_https_redirect():
-        if current_app.debug:
+        if current_app.debug or current_app.config.get("TESTING"):
             return None
 
         if _https_is_already_secure():
