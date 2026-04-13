@@ -39,7 +39,7 @@ def _ensure_tables_once() -> None:
     if current_app.config.get("_SECURITY_STATE_READY") is True:
         return
 
-    kind = _require_db_kind()
+    _require_db_kind()
 
     db_execute(
         _sql(
@@ -86,8 +86,8 @@ def _require_text(value: Any, *, label: str) -> str:
 def _require_epoch(value: Any, *, label: str) -> float:
     try:
         epoch = float(value)
-    except (TypeError, ValueError):
-        raise ValueError(f"{label} must be a number")
+    except (TypeError, ValueError) as err:
+        raise ValueError(f"{label} must be a number") from err
 
     if epoch <= 0:
         raise ValueError(f"{label} must be positive")
