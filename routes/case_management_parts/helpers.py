@@ -7,6 +7,7 @@ from flask import g, session
 
 from core.db import db_fetchone
 
+
 CASE_MANAGER_ROLES = {
     "admin",
     "shelter_director",
