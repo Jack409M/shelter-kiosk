@@ -46,9 +46,11 @@ def employment_gap_days(current_job_start_date: Any, previous_job_end_date: Any)
 
 
 def count_writeups_last_30_days(writeup_rows) -> int:
-    return sum(
-        1
-        for row in (writeup_rows or [])
-        if (days_since(row.get("incident_date")) is not None)
-        and (days_since(row.get("incident_date")) <= 30)
-    )
+    total = 0
+
+    for row in writeup_rows or []:
+        incident_days = days_since(row.get("incident_date"))
+        if incident_days is not None and incident_days <= 30:
+            total += 1
+
+    return total
