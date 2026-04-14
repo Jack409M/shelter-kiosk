@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+from typing import Any
+
 from core.db import db_fetchall
 from core.db import db_fetchone
 from routes.case_management_parts.helpers import placeholder
+
+
+type Row = dict[str, Any]
+type RowList = list[Row]
 
 
 def _placeholder() -> str:
@@ -20,11 +26,11 @@ def _fetch_rows_for_resident(
     table: str,
     select_sql: str,
     order_by_sql: str,
-):
+) -> RowList:
     ph = _placeholder()
 
     where_lines = [f"resident_id = {ph}"]
-    params = [resident_id]
+    params: list[Any] = [resident_id]
 
     if enrollment_id is not None:
         where_lines.append(f"enrollment_id = {ph}")
@@ -42,7 +48,7 @@ def _fetch_rows_for_resident(
     )
 
 
-def load_resident_profile(resident_id: int):
+def load_resident_profile(resident_id: int) -> Row:
     ph = _placeholder()
 
     return db_fetchone(
@@ -84,7 +90,7 @@ def load_resident_profile(resident_id: int):
     ) or {}
 
 
-def load_enrollment_baseline(enrollment_id: int | None):
+def load_enrollment_baseline(enrollment_id: int | None) -> Row:
     if not enrollment_id:
         return {}
 
@@ -121,7 +127,7 @@ def load_enrollment_baseline(enrollment_id: int | None):
     }
 
 
-def load_medications(resident_id: int, enrollment_id: int | None):
+def load_medications(resident_id: int, enrollment_id: int | None) -> RowList:
     ph = _placeholder()
     active_true_sql = _active_true_sql(ph)
 
@@ -129,7 +135,7 @@ def load_medications(resident_id: int, enrollment_id: int | None):
         f"resident_id = {ph}",
         f"COALESCE(is_active, TRUE) = {active_true_sql}",
     ]
-    params = [resident_id]
+    params: list[Any] = [resident_id]
 
     if enrollment_id is not None:
         where_lines.insert(1, f"enrollment_id = {ph}")
@@ -160,7 +166,7 @@ def load_medications(resident_id: int, enrollment_id: int | None):
     )
 
 
-def load_ua_rows(resident_id: int, enrollment_id: int | None):
+def load_ua_rows(resident_id: int, enrollment_id: int | None) -> RowList:
     return _fetch_rows_for_resident(
         resident_id=resident_id,
         enrollment_id=enrollment_id,
@@ -176,7 +182,7 @@ def load_ua_rows(resident_id: int, enrollment_id: int | None):
     )
 
 
-def load_inspection_rows(resident_id: int, enrollment_id: int | None):
+def load_inspection_rows(resident_id: int, enrollment_id: int | None) -> RowList:
     return _fetch_rows_for_resident(
         resident_id=resident_id,
         enrollment_id=enrollment_id,
@@ -191,7 +197,7 @@ def load_inspection_rows(resident_id: int, enrollment_id: int | None):
     )
 
 
-def load_budget_rows(resident_id: int, enrollment_id: int | None):
+def load_budget_rows(resident_id: int, enrollment_id: int | None) -> RowList:
     return _fetch_rows_for_resident(
         resident_id=resident_id,
         enrollment_id=enrollment_id,
@@ -205,7 +211,7 @@ def load_budget_rows(resident_id: int, enrollment_id: int | None):
     )
 
 
-def load_writeup_rows(resident_id: int):
+def load_writeup_rows(resident_id: int) -> RowList:
     ph = _placeholder()
 
     try:
