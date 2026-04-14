@@ -12,7 +12,7 @@ def _clean_text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def parse_dateish(value: Any):
+def parse_dateish(value: Any) -> date | None:
     if value in (None, ""):
         return None
 
@@ -40,7 +40,7 @@ def parse_dateish(value: Any):
         return None
 
 
-def days_since(value: Any):
+def days_since(value: Any) -> int | None:
     parsed = parse_dateish(value)
     if not parsed:
         return None
