@@ -25,6 +25,7 @@ from routes.attendance_parts.pass_view_helpers import (
     get_staff_pass_action_context,
     require_manage_passes_role,
 )
+from routes.attendance_parts.pass_policy import has_active_pass_block as has_active_pass_block
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 

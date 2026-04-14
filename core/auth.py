@@ -77,6 +77,9 @@ def _ensure_staff_session():
     if not _has_staff_session():
         return _redirect_login()
 
+    if not _current_role():
+        return _clear_invalid_session_and_redirect()
+
     return _enforce_admin_only_mode()
 
 

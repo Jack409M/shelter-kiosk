@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from core.runtime import init_db
+
+CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
 def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
@@ -22,7 +25,7 @@ def _login_resident(client):
 
 
 def _valid_transport_payload():
-    future_time = (datetime.utcnow() + timedelta(hours=2)).strftime("%Y-%m-%d %I:%M %p")
+    future_time = (datetime.now(CHICAGO_TZ) + timedelta(hours=2)).strftime("%Y-%m-%d %I:%M %p")
 
     return {
         "needed_at": future_time,
@@ -104,7 +107,7 @@ def test_transport_post_past_datetime_rejected(client, monkeypatch):
     _login_resident(client)
     csrf = _set_csrf_token(client)
 
-    past_time = (datetime.utcnow() - timedelta(hours=2)).strftime("%Y-%m-%d %I:%M %p")
+    past_time = (datetime.now(CHICAGO_TZ) - timedelta(hours=2)).strftime("%Y-%m-%d %I:%M %p")
 
     monkeypatch.setattr(module, "init_db", lambda: None)
     monkeypatch.setattr(module, "is_rate_limited", lambda *args, **kwargs: False)

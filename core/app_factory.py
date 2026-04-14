@@ -9,6 +9,7 @@ from datetime import timedelta
 from typing import Any
 
 from flask import Blueprint, Flask, flash, redirect, render_template, request, session, url_for
+from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core.app_hooks import register_app_hooks
@@ -243,6 +244,8 @@ def _register_error_handlers(app: Flask) -> None:
 
     @app.errorhandler(Exception)
     def unhandled_exception(error):
+        if isinstance(error, HTTPException):
+            return error
         app.logger.exception("Unhandled exception", exc_info=error)
         resident_response = _resident_safe_response()
         if resident_response is not None:

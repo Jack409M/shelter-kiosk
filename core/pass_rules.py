@@ -172,32 +172,35 @@ def load_pass_settings_for_shelter(shelter: str | None) -> dict:
         return defaults
 
     ph = _db_placeholder()
-    row = db_fetchone(
-        f"""
-        SELECT
-            pass_deadline_weekday,
-            pass_deadline_hour,
-            pass_deadline_minute,
-            pass_late_submission_block_enabled,
-            pass_work_required_hours,
-            pass_productive_required_hours,
-            special_pass_bypass_hours_enabled,
-            pass_shared_rules_text,
-            pass_gh_rules_text,
-            pass_level_1_rules_text,
-            pass_level_2_rules_text,
-            pass_level_3_rules_text,
-            pass_level_4_rules_text,
-            pass_gh_level_5_rules_text,
-            pass_gh_level_6_rules_text,
-            pass_gh_level_7_rules_text,
-            pass_gh_level_8_rules_text
-        FROM shelter_operation_settings
-        WHERE LOWER(COALESCE(shelter, '')) = {ph}
-        LIMIT 1
-        """,
-        (shelter_key,),
-    )
+    try:
+        row = db_fetchone(
+            f"""
+            SELECT
+                pass_deadline_weekday,
+                pass_deadline_hour,
+                pass_deadline_minute,
+                pass_late_submission_block_enabled,
+                pass_work_required_hours,
+                pass_productive_required_hours,
+                special_pass_bypass_hours_enabled,
+                pass_shared_rules_text,
+                pass_gh_rules_text,
+                pass_level_1_rules_text,
+                pass_level_2_rules_text,
+                pass_level_3_rules_text,
+                pass_level_4_rules_text,
+                pass_gh_level_5_rules_text,
+                pass_gh_level_6_rules_text,
+                pass_gh_level_7_rules_text,
+                pass_gh_level_8_rules_text
+            FROM shelter_operation_settings
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+            LIMIT 1
+            """,
+            (shelter_key,),
+        )
+    except Exception:
+        return defaults
 
     if not row:
         return defaults

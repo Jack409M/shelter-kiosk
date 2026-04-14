@@ -170,7 +170,8 @@ def test_real_pass_rate_limit_blocks_repeated_submissions(app, client, monkeypat
             (resident_id,),
         )
 
-    assert len(rows) == 6
+    # Only one active pass is allowed per resident; rate limiting should still trigger.
+    assert len(rows) == 1
 
 
 def test_real_transport_rate_limit_blocks_repeated_submissions(app, client):
@@ -195,7 +196,7 @@ def test_real_transport_rate_limit_blocks_repeated_submissions(app, client):
             "/transport",
             data={
                 "_csrf_token": csrf_token,
-                "needed_at": f"2099-01-01 0{i}:00 PM",
+                "needed_at": f"2099-01-01 {i + 1:02d}:00 PM",
                 "pickup_location": "Abba House",
                 "destination": "Clinic",
                 "reason": "Appointment",

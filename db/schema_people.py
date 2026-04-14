@@ -55,7 +55,7 @@ def ensure_residents_table(kind: str) -> None:
         CREATE TABLE IF NOT EXISTS residents (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL DEFAULT (lower(hex(randomblob(16)))),
             resident_code TEXT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
@@ -95,14 +95,14 @@ def ensure_residents_table(kind: str) -> None:
             rad_completed INTEGER,
             rad_completed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS residents (
             id SERIAL PRIMARY KEY,
             shelter TEXT NOT NULL,
-            resident_identifier TEXT NOT NULL,
+            resident_identifier TEXT NOT NULL DEFAULT md5(random()::text || clock_timestamp()::text),
             resident_code TEXT,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
@@ -142,7 +142,7 @@ def ensure_residents_table(kind: str) -> None:
             rad_completed BOOLEAN,
             rad_completed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
         """,
     )

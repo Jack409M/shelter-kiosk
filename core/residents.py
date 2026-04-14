@@ -174,14 +174,15 @@ def record_resident_transfer(
     db_execute(
         """
         INSERT INTO resident_transfers
-          (resident_id, from_shelter, to_shelter, transferred_by, note)
-        VALUES (%s, %s, %s, %s, %s)
+          (resident_id, from_shelter, to_shelter, transferred_by, transferred_at, note)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """,
         (
             resident_id,
             normalized_from_shelter,
             normalized_to_shelter,
             actor,
+            utcnow_iso(),
             cleaned_note or None,
         ),
     )

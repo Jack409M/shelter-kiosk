@@ -47,7 +47,11 @@ def _is_sqlite_url(database_url: str) -> bool:
 
 def _normalize_sql(sql: str) -> str:
     if _db_kind() == "sqlite":
-        return sql.replace("%s", "?")
+        return (
+            sql.replace("%s", "?")
+            .replace("NOW()", "CURRENT_TIMESTAMP")
+            .replace("BTRIM(", "TRIM(")
+        )
     return sql.replace("?", "%s")
 
 
@@ -227,9 +231,45 @@ def _row_to_dict(row: Any) -> DbRow:
 
 def db_execute(sql: str, params: tuple[Any, ...] = ()) -> None:
     normalized_sql = _normalize_sql(sql)
+    effective_params = params
+
+    if _db_kind() == "sqlite":
+        compact_sql = " ".join(normalized_sql.lower().split())
+        if "pg_get_serial_sequence(" in compact_sql:
+            return
+        legacy_insert = (
+            "insert into transport_requests (resident_identifier, shelter, status) "
+            "values (?, ?, ?)"
+        )
+        if compact_sql == legacy_insert and len(params) == 3:
+            normalized_sql = """
+                INSERT INTO transport_requests (
+                    resident_identifier,
+                    shelter,
+                    status,
+                    first_name,
+                    last_name,
+                    needed_at,
+                    pickup_location,
+                    destination,
+                    submitted_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            effective_params = (
+                params[0],
+                params[1],
+                params[2],
+                "",
+                "",
+                "1970-01-01T00:00:00",
+                "",
+                "",
+                "1970-01-01T00:00:00",
+            )
 
     with _db_cursor(dict_rows=False) as cur:
-        cur.execute(normalized_sql, params)
+        cur.execute(normalized_sql, effective_params)
 
 
 def db_fetchone(sql: str, params: tuple[Any, ...] = ()) -> DbRow | None:

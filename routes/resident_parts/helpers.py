@@ -16,4 +16,13 @@ from datetime import datetime
 
 
 def parse_dt(dt_str: str) -> datetime:
-    return datetime.fromisoformat(dt_str)
+    text = (dt_str or "").strip()
+    if not text:
+        raise ValueError("datetime input is required")
+
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        pass
+
+    return datetime.strptime(text, "%Y-%m-%d %I:%M %p")
