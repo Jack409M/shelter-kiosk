@@ -13,6 +13,7 @@ from routes.attendance_parts.pass_actions import (
     deny_pass_request,
 )
 from routes.attendance_parts.pass_detail_data import load_staff_pass_detail_context
+from routes.attendance_parts.pass_policy import has_active_pass_block as has_active_pass_block
 from routes.attendance_parts.pass_queries import (
     fetch_approved_pass_rows,
     fetch_current_pass_rows,
@@ -25,7 +26,6 @@ from routes.attendance_parts.pass_view_helpers import (
     get_staff_pass_action_context,
     require_manage_passes_role,
 )
-from routes.attendance_parts.pass_policy import has_active_pass_block as has_active_pass_block
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 

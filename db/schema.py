@@ -266,7 +266,7 @@ def init_db() -> None:
     kind = _require_kind()
     current_key = _schema_key(kind)
 
-    if _SCHEMA_INITIALIZED_KEY == current_key:
+    if current_key == _SCHEMA_INITIALIZED_KEY:
         return
 
     _run_schema_initialization(kind)

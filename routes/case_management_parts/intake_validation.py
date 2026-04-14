@@ -34,7 +34,7 @@ def _form_getlist(form: IntakeFormLike, key: str) -> list[Any]:
     value = form.get(key)  # type: ignore[attr-defined]
     if value is None:
         return []
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
         return list(value)
     return [value]
 
