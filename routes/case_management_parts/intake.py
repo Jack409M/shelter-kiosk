@@ -577,6 +577,8 @@ def submit_intake_assessment_view():
             is_edit_mode=is_edit_mode,
         )
 
+
+    
     return _handle_create(
         current_shelter=current_shelter,
         draft_id=draft_id,
