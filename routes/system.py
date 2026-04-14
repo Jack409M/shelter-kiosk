@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint, abort, current_app, g, redirect, session, url_for
+from flask import abort, current_app, g, redirect, session, url_for, Blueprint
 
 from core.auth import require_login
 
