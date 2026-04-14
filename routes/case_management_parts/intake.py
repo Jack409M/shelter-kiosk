@@ -130,33 +130,3 @@ def _normalize_yes_no_value(value: object | None) -> str:
         return "no"
 
     return normalized
-
-
-def _normalize_yes_no_fields(form_data: dict[str, Any]) -> dict[str, Any]:
-    yes_no_fields = [
-        "veteran",
-        "pregnant",
-        "sexual_survivor",
-        "domestic_violence_history",
-        "human_trafficking_history",
-        "drug_court",
-        "felony_history",
-        "probation_parole",
-        "car_at_entry",
-        "car_insurance_at_entry",
-        "receives_snap_at_entry",
-    ]
-
-    for field_name in yes_no_fields:
-        if field_name in form_data:
-            form_data[field_name] = _normalize_yes_no_value(form_data.get(field_name))
-
-    for need in OFFICIAL_NEEDS:
-        field_name = f"need_{need['need_key']}"
-        if field_name in form_data:
-            form_data[field_name] = _normalize_yes_no_value(form_data.get(field_name))
-
-    return form_data
-
-
-# (rest unchanged)
