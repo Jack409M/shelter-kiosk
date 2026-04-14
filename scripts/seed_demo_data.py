@@ -15,7 +15,6 @@ from core.helpers import utcnow_iso
 from core.residents import generate_resident_code
 from core.runtime import init_db
 
-
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 DEMO_PREFIX = "demo-seed-20260406"
@@ -1233,13 +1232,9 @@ def seed_attendance_and_weekly_summary(
         for label in productive_only_labels:
             cap = capped_lookup.get(label)
             if cap is None:
-                if label == "AA or NA Meeting":
+                if label == "AA or NA Meeting" or label == "Church":
                     candidate_blocks.append((label, 1.5))
-                elif label == "Church":
-                    candidate_blocks.append((label, 1.5))
-                elif label == "Counseling":
-                    candidate_blocks.append((label, 1.0))
-                elif label == "Doctor Appointment":
+                elif label == "Counseling" or label == "Doctor Appointment":
                     candidate_blocks.append((label, 1.0))
                 elif label == "Job Search":
                     candidate_blocks.append((label, 2.0))

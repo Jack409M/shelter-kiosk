@@ -4,7 +4,6 @@ from core.app_factory import create_app
 from core.db import db_execute, db_fetchall, db_transaction
 from core.runtime import init_db
 
-
 DEMO_PREFIX = "demo-seed-20260406"
 
 
