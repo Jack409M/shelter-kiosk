@@ -45,7 +45,10 @@ def days_since(value: Any) -> int | None:
     if not parsed:
         return None
 
-    return max((date.today() - parsed).days, 0)
+    days = (date.today() - parsed).days
+    if days < 0:
+        days = 0
+    return days
 
 
 def money_display(value: Any) -> str:
@@ -68,27 +71,23 @@ def bool_display(value: Any) -> str:
 
 def employment_status_display(value: Any) -> str:
     normalized = _clean_text(value).lower()
-
     if not normalized:
         return EMPTY_DISPLAY
     if normalized == "employed":
         return "Employed"
     if normalized == "unemployed":
         return "Unemployed"
-
     return str(value)
 
 
 def employment_type_display(value: Any) -> str:
     normalized = _clean_text(value).lower()
-
     if not normalized:
         return EMPTY_DISPLAY
     if normalized == "full_time":
         return "Full Time"
     if normalized == "part_time":
         return "Part Time"
-
     return str(value).replace("_", " ").title()
 
 
