@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-# Standard library
-
 # Third party
-from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
 # Core / app
 from core.auth import require_login, require_shelter
