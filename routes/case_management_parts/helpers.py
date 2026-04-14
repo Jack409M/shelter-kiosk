@@ -19,8 +19,8 @@ def _db_placeholder() -> str:
     return "%s" if g.get("db_kind") == "pg" else "?"
 
 
-def _clean_text(value: str | None) -> str | None:
-    cleaned = (value or "").strip()
+def _clean_text(value: object | None) -> str | None:
+    cleaned = str(value or "").strip()
     return cleaned or None
 
 
@@ -32,8 +32,8 @@ def case_manager_allowed() -> bool:
     return session.get("role") in CASE_MANAGER_ROLES
 
 
-def normalize_shelter_name(value: str | None) -> str:
-    return (value or "").strip().lower()
+def normalize_shelter_name(value: object | None) -> str:
+    return str(value or "").strip().lower()
 
 
 def shelter_equals_sql(column_name: str) -> str:
@@ -96,15 +96,15 @@ def resident_has_active_enrollment(resident_id: int) -> bool:
     return bool(row)
 
 
-def clean(value: str | None) -> str | None:
+def clean(value: object | None) -> str | None:
     return _clean_text(value)
 
 
-def digits_only(value: str | None) -> str:
-    return "".join(ch for ch in (value or "") if ch.isdigit())
+def digits_only(value: object | None) -> str:
+    return "".join(ch for ch in str(value or "") if ch.isdigit())
 
 
-def parse_iso_date(value: str | None) -> date | None:
+def parse_iso_date(value: object | None) -> date | None:
     cleaned = _clean_text(value)
     if not cleaned:
         return None
@@ -115,7 +115,7 @@ def parse_iso_date(value: str | None) -> date | None:
         return None
 
 
-def parse_int(value: str | None) -> int | None:
+def parse_int(value: object | None) -> int | None:
     cleaned = _clean_text(value)
     if cleaned is None:
         return None
@@ -126,7 +126,7 @@ def parse_int(value: str | None) -> int | None:
         return None
 
 
-def parse_money(value: str | None) -> float | None:
+def parse_money(value: object | None) -> float | None:
     cleaned = _clean_text(value)
     if cleaned is None:
         return None
@@ -138,8 +138,8 @@ def parse_money(value: str | None) -> float | None:
         return None
 
 
-def yes_no_to_int(value: str | None) -> int | None:
-    normalized = (value or "").strip().lower()
+def yes_no_to_int(value: object | None) -> int | None:
+    normalized = str(value or "").strip().lower()
     if normalized == "yes":
         return 1
     if normalized == "no":
