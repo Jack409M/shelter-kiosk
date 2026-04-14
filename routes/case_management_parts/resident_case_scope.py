@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from typing import Any
+
 from core.db import db_fetchone
 from routes.case_management_parts.helpers import current_enrollment_order_sql
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.helpers import shelter_equals_sql
 
 
-def load_current_enrollment(resident_id: int, shelter: str):
+type Row = dict[str, Any]
+
+
+def load_current_enrollment(resident_id: int, shelter: str) -> Row | None:
     ph = placeholder()
 
     return db_fetchone(
@@ -27,7 +32,7 @@ def load_current_enrollment(resident_id: int, shelter: str):
     )
 
 
-def load_resident_in_scope(resident_id: int, shelter: str):
+def load_resident_in_scope(resident_id: int, shelter: str) -> Row | None:
     ph = placeholder()
 
     return db_fetchone(
