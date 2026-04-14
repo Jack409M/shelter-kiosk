@@ -8,13 +8,22 @@ from core.helpers import fmt_dt, utcnow_iso
 from core.runtime import MIN_STAFF_PASSWORD_LEN, ROLE_LABELS, init_db
 from routes.admin_parts.helpers import (
     all_roles as _all_roles,
+)
+from routes.admin_parts.helpers import (
     allowed_roles_to_create as _allowed_roles_to_create,
+)
+from routes.admin_parts.helpers import (
     current_role as _current_role,
+)
+from routes.admin_parts.helpers import (
     ordered_roles as _ordered_roles,
+)
+from routes.admin_parts.helpers import (
     require_admin_or_shelter_director_role as _require_admin_or_shelter_director,
+)
+from routes.admin_parts.helpers import (
     require_admin_role as _require_admin,
 )
-
 
 VALID_SHELTERS = {"abba", "haven", "gratitude"}
 VALID_CALENDAR_COLORS = {
@@ -136,10 +145,7 @@ def admin_users_view():
         like_op = "ILIKE" if kind == "pg" else "LIKE"
         ph = _ph()
         where.append(
-            "("
-            f"COALESCE(first_name, '') {like_op} {ph} OR "
-            f"COALESCE(last_name, '') {like_op} {ph}"
-            ")"
+            f"(COALESCE(first_name, '') {like_op} {ph} OR COALESCE(last_name, '') {like_op} {ph})"
         )
         pattern = f"%{q}%"
         params.extend([pattern, pattern])
@@ -151,7 +157,9 @@ def admin_users_view():
 
     if sort == "first_name":
         if kind == "pg":
-            order_sql = "ORDER BY first_name ASC NULLS LAST, last_name ASC NULLS LAST, created_at DESC"
+            order_sql = (
+                "ORDER BY first_name ASC NULLS LAST, last_name ASC NULLS LAST, created_at DESC"
+            )
         else:
             order_sql = "ORDER BY first_name IS NULL, first_name ASC, last_name IS NULL, last_name ASC, created_at DESC"
     elif sort == "role":
@@ -188,7 +196,9 @@ def admin_users_view():
     else:
         sort = "last_name"
         if kind == "pg":
-            order_sql = "ORDER BY last_name ASC NULLS LAST, first_name ASC NULLS LAST, created_at DESC"
+            order_sql = (
+                "ORDER BY last_name ASC NULLS LAST, first_name ASC NULLS LAST, created_at DESC"
+            )
         else:
             order_sql = "ORDER BY last_name IS NULL, last_name ASC, first_name IS NULL, first_name ASC, created_at DESC"
 
@@ -588,7 +598,8 @@ def admin_edit_user_view(user_id: int):
             None,
             session.get("staff_user_id"),
             "update",
-            f"Updated user username={username} role={final_role}" + (" password_changed=yes" if password else ""),
+            f"Updated user username={username} role={final_role}"
+            + (" password_changed=yes" if password else ""),
         )
 
         flash("User updated.", "ok")

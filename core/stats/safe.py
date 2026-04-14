@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 def safe_stat(name: str, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> dict[str, Any]:

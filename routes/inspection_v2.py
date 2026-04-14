@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -8,7 +9,6 @@ from flask import Blueprint, flash, g, redirect, render_template, request, sessi
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
-
 
 inspection_v2 = Blueprint(
     "inspection_v2",
@@ -133,10 +133,8 @@ def _ensure_settings_table() -> None:
         "ALTER TABLE shelter_operation_settings ADD COLUMN IF NOT EXISTS inspection_band_red_max INTEGER DEFAULT 55",
     ]
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def _load_settings(shelter: str) -> dict:
@@ -162,10 +160,8 @@ def _ensure_tables() -> None:
         "ALTER TABLE resident_living_area_inspections ADD COLUMN IF NOT EXISTS resident_name_snapshot TEXT",
     ]
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def _active_residents_for_shelter(shelter: str):
@@ -175,7 +171,7 @@ def _active_residents_for_shelter(shelter: str):
         SELECT id, first_name, last_name
         FROM residents
         WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND is_active = {('TRUE' if g.get('db_kind') == 'pg' else '1')}
+          AND is_active = {("TRUE" if g.get("db_kind") == "pg" else "1")}
         ORDER BY last_name ASC, first_name ASC
         """,
         (shelter,),
@@ -220,7 +216,7 @@ def _active_inspection_targets_for_shelter(shelter: str) -> list[dict]:
         JOIN resident_rent_configs c
           ON c.resident_id = r.id
         WHERE LOWER(COALESCE(r.shelter, '')) = {ph}
-          AND r.is_active = {('TRUE' if g.get('db_kind') == 'pg' else '1')}
+          AND r.is_active = {("TRUE" if g.get("db_kind") == "pg" else "1")}
           AND LOWER(COALESCE(c.shelter, '')) = {ph}
           AND COALESCE(c.effective_end_date, '') = ''
         ORDER BY r.last_name ASC, r.first_name ASC, c.id DESC
@@ -230,14 +226,18 @@ def _active_inspection_targets_for_shelter(shelter: str) -> list[dict]:
 
     by_apartment: dict[str, dict] = {}
     for row in assigned_rows:
-        apartment_number = _normalize_apartment_number(shelter_key, row.get("apartment_number_snapshot"))
+        apartment_number = _normalize_apartment_number(
+            shelter_key, row.get("apartment_number_snapshot")
+        )
         if not apartment_number:
             continue
         if apartment_number in by_apartment:
             continue
 
         resident_name = f"{row.get('first_name', '')} {row.get('last_name', '')}".strip()
-        apartment_size = _derive_apartment_size_from_assignment(shelter_key, apartment_number) or row.get("apartment_size_snapshot")
+        apartment_size = _derive_apartment_size_from_assignment(
+            shelter_key, apartment_number
+        ) or row.get("apartment_size_snapshot")
 
         by_apartment[apartment_number] = {
             "resident_id": row["resident_id"],
@@ -273,8 +273,10 @@ def _inspection_status_score(settings: dict, overall_status: str | None, passed_
     if status == "failed":
         return int(settings.get("inspection_score_failed", 0) or 0)
 
-    return int(settings.get("inspection_score_passed", 100) or 100) if passed_value else int(
-        settings.get("inspection_score_failed", 0) or 0
+    return (
+        int(settings.get("inspection_score_passed", 100) or 100)
+        if passed_value
+        else int(settings.get("inspection_score_failed", 0) or 0)
     )
 
 
@@ -331,9 +333,15 @@ def build_inspection_stability_snapshot(resident_id: int, shelter: str | None = 
 
     current_year, current_month = _current_year_month()
     if include_current_open_month:
-        month_keys = [_shift_month(current_year, current_month, -offset) for offset in range(0, lookback_months)]
+        month_keys = [
+            _shift_month(current_year, current_month, -offset)
+            for offset in range(0, lookback_months)
+        ]
     else:
-        month_keys = [_shift_month(current_year, current_month, -offset) for offset in range(1, lookback_months + 1)]
+        month_keys = [
+            _shift_month(current_year, current_month, -offset)
+            for offset in range(1, lookback_months + 1)
+        ]
 
     allowed_keys = set(month_keys)
     ph = _placeholder()
@@ -437,7 +445,11 @@ def inspection_sheet():
 
         if not inspection_date:
             flash("Inspection date is required.", "error")
-            return redirect(url_for("inspection_v2.inspection_sheet", year=inspection_year, month=inspection_month))
+            return redirect(
+                url_for(
+                    "inspection_v2.inspection_sheet", year=inspection_year, month=inspection_month
+                )
+            )
 
         try:
             inspection_dt = datetime.fromisoformat(inspection_date)
@@ -445,7 +457,11 @@ def inspection_sheet():
             submitted_inspection_month = inspection_dt.month
         except ValueError:
             flash("Inspection date is invalid.", "error")
-            return redirect(url_for("inspection_v2.inspection_sheet", year=inspection_year, month=inspection_month))
+            return redirect(
+                url_for(
+                    "inspection_v2.inspection_sheet", year=inspection_year, month=inspection_month
+                )
+            )
 
         now = utcnow_iso()
 
@@ -481,8 +497,7 @@ def inspection_sheet():
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     INSERT INTO resident_living_area_inspections (
                         resident_id,
                         enrollment_id,

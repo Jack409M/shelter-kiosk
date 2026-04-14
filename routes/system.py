@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from flask import Blueprint, abort, current_app, g, redirect, url_for
+from flask import abort, current_app, g, redirect, session, url_for, Blueprint
 
 from core.auth import require_login
-
 
 system = Blueprint("system", __name__)
 
@@ -13,8 +12,6 @@ def session_role() -> str:
     Return the current user's role from session storage.
     Kept as a tiny helper so role checks stay readable.
     """
-    from flask import session
-
     return (session.get("role") or "").strip()
 
 

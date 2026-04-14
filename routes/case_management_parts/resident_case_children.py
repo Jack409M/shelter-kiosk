@@ -105,7 +105,9 @@ def load_children_with_services(resident_id: int) -> list[dict]:
                 """,
                 tuple(child_ids),
             )
-            child_services = [normalize_child_service_row(service) for service in child_services_raw]
+            child_services = [
+                normalize_child_service_row(service) for service in child_services_raw
+            ]
 
         services_by_child = {}
         for service in child_services:

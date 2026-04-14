@@ -193,9 +193,12 @@ def build_progress_report_context(
     recovery_snapshot = recovery_snapshot or {}
     note_services = note.get("services") or []
 
-    resident_name = " ".join(
-        part for part in [resident.get("first_name"), resident.get("last_name")] if part
-    ).strip() or "Resident"
+    resident_name = (
+        " ".join(
+            part for part in [resident.get("first_name"), resident.get("last_name")] if part
+        ).strip()
+        or "Resident"
+    )
 
     resident_display_id = (
         resident.get("resident_identifier")

@@ -1,10 +1,18 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
+from datetime import datetime
 from typing import Any
 
 
-def parse_dateish(value: Any):
+EMPTY_DISPLAY = "—"
+
+
+def _clean_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def parse_dateish(value: Any) -> date | None:
     if value in (None, ""):
         return None
 
@@ -32,7 +40,7 @@ def parse_dateish(value: Any):
         return None
 
 
-def days_since(value: Any):
+def days_since(value: Any) -> int | None:
     parsed = parse_dateish(value)
     if not parsed:
         return None
@@ -45,7 +53,7 @@ def days_since(value: Any):
 
 def money_display(value: Any) -> str:
     if value in (None, ""):
-        return "—"
+        return EMPTY_DISPLAY
 
     try:
         amount = float(value)
@@ -57,14 +65,14 @@ def money_display(value: Any) -> str:
 
 def bool_display(value: Any) -> str:
     if value is None:
-        return "—"
+        return EMPTY_DISPLAY
     return "Yes" if bool(value) else "No"
 
 
 def employment_status_display(value: Any) -> str:
-    normalized = str(value or "").strip().lower()
+    normalized = _clean_text(value).lower()
     if not normalized:
-        return "—"
+        return EMPTY_DISPLAY
     if normalized == "employed":
         return "Employed"
     if normalized == "unemployed":
@@ -73,9 +81,9 @@ def employment_status_display(value: Any) -> str:
 
 
 def employment_type_display(value: Any) -> str:
-    normalized = str(value or "").strip().lower()
+    normalized = _clean_text(value).lower()
     if not normalized:
-        return "—"
+        return EMPTY_DISPLAY
     if normalized == "full_time":
         return "Full Time"
     if normalized == "part_time":
@@ -84,5 +92,5 @@ def employment_type_display(value: Any) -> str:
 
 
 def result_display(value: Any) -> str:
-    normalized = str(value or "").strip()
-    return normalized or "—"
+    normalized = _clean_text(value)
+    return normalized or EMPTY_DISPLAY

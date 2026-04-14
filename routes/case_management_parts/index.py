@@ -5,10 +5,12 @@ from flask import flash, g, redirect, render_template, request, session, url_for
 from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_fetchall
 from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    fetch_current_enrollment_for_resident,
+    normalize_shelter_name,
+    shelter_equals_sql,
+)
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
 from routes.inspection_v2 import build_inspection_stability_snapshot
 from routes.rent_tracking import build_rent_stability_snapshot

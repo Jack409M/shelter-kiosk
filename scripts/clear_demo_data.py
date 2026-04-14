@@ -4,7 +4,6 @@ from core.app_factory import create_app
 from core.db import db_execute, db_fetchall, db_transaction
 from core.runtime import init_db
 
-
 DEMO_PREFIX = "demo-seed-20260406"
 
 
@@ -118,7 +117,9 @@ def run_clear() -> None:
             delete_where_value("weekly_resident_summary", "submission_id", submission_id)
 
         for case_update_id in case_update_ids:
-            delete_where_value("case_manager_update_summary", "case_manager_update_id", case_update_id)
+            delete_where_value(
+                "case_manager_update_summary", "case_manager_update_id", case_update_id
+            )
 
         for child_id in child_ids:
             delete_where_value("resident_child_income_supports", "child_id", child_id)

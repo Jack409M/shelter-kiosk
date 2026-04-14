@@ -51,7 +51,9 @@ def test_build_policy_check_marks_deadline_pass_and_same_day_pass(monkeypatch):
             "shelter": "abba",
         },
     )
-    monkeypatch.setattr(pp, "load_pass_settings_for_shelter", lambda shelter: {"pass_deadline_weekday": 0})
+    monkeypatch.setattr(
+        pp, "load_pass_settings_for_shelter", lambda shelter: {"pass_deadline_weekday": 0}
+    )
     monkeypatch.setattr(
         pp,
         "pass_required_hours",
@@ -95,13 +97,9 @@ def test_build_policy_check_marks_deadline_pass_and_same_day_pass(monkeypatch):
 
     assert result["title"] == "Pass Policy Check"
     assert result["pass_type_label"] == "Pass"
+    assert any(check["label"] == "Deadline" and check["status_class"] == "pass" for check in checks)
     assert any(
-        check["label"] == "Deadline" and check["status_class"] == "pass"
-        for check in checks
-    )
-    assert any(
-        check["label"] == "Pass timing" and check["status_class"] == "pass"
-        for check in checks
+        check["label"] == "Pass timing" and check["status_class"] == "pass" for check in checks
     )
 
 
@@ -117,7 +115,9 @@ def test_build_policy_check_marks_late_deadline_and_bad_same_day_timing(monkeypa
             "shelter": "abba",
         },
     )
-    monkeypatch.setattr(pp, "load_pass_settings_for_shelter", lambda shelter: {"pass_deadline_weekday": 0})
+    monkeypatch.setattr(
+        pp, "load_pass_settings_for_shelter", lambda shelter: {"pass_deadline_weekday": 0}
+    )
     monkeypatch.setattr(
         pp,
         "pass_required_hours",
@@ -159,13 +159,9 @@ def test_build_policy_check_marks_late_deadline_and_bad_same_day_timing(monkeypa
 
     checks = result["checks"]
 
+    assert any(check["label"] == "Deadline" and check["status_class"] == "fail" for check in checks)
     assert any(
-        check["label"] == "Deadline" and check["status_class"] == "fail"
-        for check in checks
-    )
-    assert any(
-        check["label"] == "Pass timing" and check["status_class"] == "fail"
-        for check in checks
+        check["label"] == "Pass timing" and check["status_class"] == "fail" for check in checks
     )
 
 
@@ -181,7 +177,9 @@ def test_build_policy_check_fails_when_previous_week_hours_are_below_required(mo
             "shelter": "abba",
         },
     )
-    monkeypatch.setattr(pp, "load_pass_settings_for_shelter", lambda shelter: {"pass_deadline_weekday": 0})
+    monkeypatch.setattr(
+        pp, "load_pass_settings_for_shelter", lambda shelter: {"pass_deadline_weekday": 0}
+    )
     monkeypatch.setattr(
         pp,
         "pass_required_hours",
@@ -238,7 +236,9 @@ def test_build_policy_check_includes_disciplinary_block(monkeypatch):
             "shelter": "abba",
         },
     )
-    monkeypatch.setattr(pp, "load_pass_settings_for_shelter", lambda shelter: {"pass_deadline_weekday": 0})
+    monkeypatch.setattr(
+        pp, "load_pass_settings_for_shelter", lambda shelter: {"pass_deadline_weekday": 0}
+    )
     monkeypatch.setattr(
         pp,
         "pass_required_hours",

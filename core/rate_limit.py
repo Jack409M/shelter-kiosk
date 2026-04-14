@@ -5,19 +5,18 @@ from collections import deque
 from threading import RLock
 from typing import Final
 
-from flask import has_app_context, g
+from flask import g, has_app_context
 
-from core.rate_limit_store import count_rate_limit_events
+from core.rate_limit_store import (
+    count_rate_limit_events,
+    get_rate_limit_snapshot_rows,
+    insert_lock_history,
+    insert_rate_limit_event,
+    recent_lock_count,
+)
 from core.rate_limit_store import ensure_tables as ensure_rate_limit_store_tables
-from core.rate_limit_store import get_rate_limit_snapshot_rows
-from core.rate_limit_store import insert_lock_history
-from core.rate_limit_store import insert_rate_limit_event
 from core.rate_limit_store import prune_if_needed as prune_rate_limit_store_if_needed
-from core.rate_limit_store import recent_lock_count
-from core.security_state_store import get_active_state_rows
-from core.security_state_store import get_active_state_until
-from core.security_state_store import upsert_state
-
+from core.security_state_store import get_active_state_rows, get_active_state_until, upsert_state
 
 _DEFAULT_PROGRESSIVE_LOCK_SECONDS: Final[int] = 600
 _ESCALATED_PROGRESSIVE_LOCK_SECONDS: Final[int] = 1800

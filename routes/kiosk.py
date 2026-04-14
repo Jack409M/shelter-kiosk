@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
-from werkzeug.wrappers import Response
 
 from core.audit import log_action
 from core.db import db_fetchone
@@ -22,9 +21,7 @@ kiosk = Blueprint("kiosk", __name__)
 
 
 def _kiosk_enabled() -> bool:
-    row = db_fetchone(
-        "SELECT kiosk_intake_enabled FROM security_settings ORDER BY id ASC LIMIT 1"
-    )
+    row = db_fetchone("SELECT kiosk_intake_enabled FROM security_settings ORDER BY id ASC LIMIT 1")
     if row is None:
         return True
     return bool(row.get("kiosk_intake_enabled"))
@@ -350,7 +347,9 @@ def kiosk_home(shelter: str):
     try:
         kiosk_enabled = _kiosk_enabled()
     except Exception:
-        current_app.logger.exception("Failed to load kiosk enabled state for shelter=%s", shelter_key)
+        current_app.logger.exception(
+            "Failed to load kiosk enabled state for shelter=%s", shelter_key
+        )
         return "Kiosk is temporarily unavailable.", 503
 
     if not kiosk_enabled:
@@ -381,7 +380,9 @@ def kiosk_checkin(shelter: str):
     try:
         kiosk_enabled = _kiosk_enabled()
     except Exception:
-        current_app.logger.exception("Failed to load kiosk enabled state for shelter=%s", shelter_key)
+        current_app.logger.exception(
+            "Failed to load kiosk enabled state for shelter=%s", shelter_key
+        )
         return "Kiosk is temporarily unavailable.", 503
 
     if not kiosk_enabled:
@@ -547,7 +548,9 @@ def kiosk_checkout(shelter: str):
         aa_na_child_options = _active_aa_na_child_options_for_shelter(shelter_key)
         volunteer_child_options = _active_volunteer_child_options_for_shelter(shelter_key)
     except Exception:
-        current_app.logger.exception("Failed to load kiosk checkout dependencies for shelter=%s", shelter_key)
+        current_app.logger.exception(
+            "Failed to load kiosk checkout dependencies for shelter=%s", shelter_key
+        )
         return "Kiosk is temporarily unavailable.", 503
 
     if not kiosk_enabled:

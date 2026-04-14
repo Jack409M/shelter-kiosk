@@ -5,7 +5,6 @@ from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.needs import normalize_need_status
 
-
 ALLOWED_RESOLUTION_STATUSES = {"addressed", "not_applicable"}
 
 
@@ -55,7 +54,7 @@ def collect_need_updates(form) -> list[dict]:
     updates: list[dict] = []
     seen_need_keys: set[str] = set()
 
-    for key in form.keys():
+    for key in form:
         if not key.startswith("need_status_"):
             continue
 
@@ -91,11 +90,7 @@ def apply_need_updates(
     now = utcnow_iso()
 
     open_needs = _open_needs_for_enrollment(enrollment_id)
-    open_needs_by_key = {
-        row["need_key"]: row
-        for row in open_needs
-        if row.get("need_key")
-    }
+    open_needs_by_key = {row["need_key"]: row for row in open_needs if row.get("need_key")}
 
     changed_needs: list[dict] = []
 

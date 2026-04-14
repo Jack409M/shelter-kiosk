@@ -205,7 +205,9 @@ def next_appointment_for_enrollment(enrollment_id: int, sql_selector):
     )
 
 
-def resident_enrollment_for_shelter(resident_id: int, shelter: str, sql_selector, shelter_equals_sql):
+def resident_enrollment_for_shelter(
+    resident_id: int, shelter: str, sql_selector, shelter_equals_sql
+):
     resident = db_fetchone(
         sql_selector(
             f"""
@@ -241,8 +243,12 @@ def resident_enrollment_for_shelter(resident_id: int, shelter: str, sql_selector
     return merged
 
 
-def load_enrollment_context_for_shelter(resident_id: int, shelter: str, sql_selector, shelter_equals_sql) -> dict[str, object]:
-    resident = resident_enrollment_for_shelter(resident_id, shelter, sql_selector, shelter_equals_sql)
+def load_enrollment_context_for_shelter(
+    resident_id: int, shelter: str, sql_selector, shelter_equals_sql
+) -> dict[str, object]:
+    resident = resident_enrollment_for_shelter(
+        resident_id, shelter, sql_selector, shelter_equals_sql
+    )
     enrollment_id = row_value(resident, "enrollment_id", 1) if resident else None
 
     return {

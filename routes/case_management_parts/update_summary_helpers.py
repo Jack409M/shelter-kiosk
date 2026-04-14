@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-def clean_text(value) -> str:
+def clean_text(value: object | None) -> str:
     if value is None:
         return ""
     return str(value).strip()
@@ -12,17 +12,17 @@ def join_non_empty(parts: list[str]) -> str:
     return " | ".join(cleaned)
 
 
-def normalize_detail(value) -> str | None:
+def normalize_detail(value: object | None) -> str | None:
     cleaned = clean_text(value)
     return cleaned or None
 
 
-def normalize_key(value) -> str | None:
+def normalize_key(value: object | None) -> str | None:
     cleaned = clean_text(value)
     return cleaned or None
 
 
-def normalize_label(value) -> str | None:
+def normalize_label(value: object | None) -> str | None:
     cleaned = clean_text(value)
     return cleaned or None
 
@@ -69,7 +69,11 @@ def resolve_snapshot_item_label(
     return updated_label or item_key
 
 
-def resolve_snapshot_detail(change_type: str, old_value: str, new_value: str) -> str | None:
+def resolve_snapshot_detail(
+    change_type: str,
+    old_value: str,
+    new_value: str,
+) -> str | None:
     if change_type == "removed":
         return normalize_detail(old_value)
     return normalize_detail(new_value)

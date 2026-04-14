@@ -244,10 +244,7 @@ def _ensure_column(table_name: str, column_name: str, column_definition: str) ->
     if _column_exists(table_name, column_name):
         return
 
-    db_execute(
-        f"ALTER TABLE {table_name} "
-        f"ADD COLUMN {column_name} {column_definition}"
-    )
+    db_execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}")
 
 
 def _index_exists(index_name: str) -> bool:

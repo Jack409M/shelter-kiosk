@@ -5,23 +5,33 @@ from datetime import datetime
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
-from routes.case_management_parts.helpers import case_manager_allowed as _shared_case_manager_allowed
-from routes.case_management_parts.helpers import normalize_shelter_name as _shared_normalize_shelter_name
+from routes.case_management_parts.helpers import (
+    case_manager_allowed as _shared_case_manager_allowed,
+)
+from routes.case_management_parts.helpers import (
+    normalize_shelter_name as _shared_normalize_shelter_name,
+)
 from routes.case_management_parts.helpers import shelter_equals_sql as _shared_shelter_equals_sql
-from routes.resident_detail_parts.actions import add_appointment_view
-from routes.resident_detail_parts.actions import add_case_note_view
-from routes.resident_detail_parts.actions import add_goal_view
-from routes.resident_detail_parts.actions import complete_goal_view
-from routes.resident_detail_parts.actions import create_enrollment_view
-from routes.resident_detail_parts.read import load_enrollment_context_for_shelter
-from routes.resident_detail_parts.read import load_resident_for_shelter
-from routes.resident_detail_parts.read import row_value
-from routes.resident_detail_parts.timeline import build_calendar_context
-from routes.resident_detail_parts.timeline import coerce_calendar_view
-from routes.resident_detail_parts.timeline import load_timeline
-from routes.resident_detail_parts.timeline import normalize_timeline
-from routes.resident_detail_parts.timeline import parse_anchor_date
-from routes.resident_detail_parts.timeline import parse_dt
+from routes.resident_detail_parts.actions import (
+    add_appointment_view,
+    add_case_note_view,
+    add_goal_view,
+    complete_goal_view,
+    create_enrollment_view,
+)
+from routes.resident_detail_parts.read import (
+    load_enrollment_context_for_shelter,
+    load_resident_for_shelter,
+    row_value,
+)
+from routes.resident_detail_parts.timeline import (
+    build_calendar_context,
+    coerce_calendar_view,
+    load_timeline,
+    normalize_timeline,
+    parse_anchor_date,
+    parse_dt,
+)
 
 resident_detail = Blueprint(
     "resident_detail",
@@ -154,7 +164,9 @@ def resident_timeline(resident_id: int):
     if enrollment_id:
         timeline = normalize_timeline(load_timeline(enrollment_id, _sql))
         snapshot = {
-            "program_status": str(row_value(resident, "program_status", 7, "—") or "—").replace("_", " ").title(),
+            "program_status": str(row_value(resident, "program_status", 7, "—") or "—")
+            .replace("_", " ")
+            .title(),
             "days_in_program": _days_in_program(row_value(resident, "entry_date", 8)),
         }
         calendar = build_calendar_context(timeline, selected_view, anchor_date)

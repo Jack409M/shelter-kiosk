@@ -5,7 +5,6 @@ from typing import Any
 
 from core.db import db_fetchall, db_fetchone
 from core.report_filters import mask_small_counts
-
 from core.stats.common import (
     base_enrollment_where,
     normalize_date_range_key,
@@ -32,15 +31,18 @@ def get_family_composition(
         alias="pe",
     )
 
-    child_rows = db_fetchall(
-        f"""
+    child_rows = (
+        db_fetchall(
+            f"""
         SELECT DISTINCT rc.id, rc.resident_id, rc.birth_year
         FROM resident_children rc
         JOIN program_enrollments pe ON pe.resident_id = rc.resident_id
         {where_sql}
         """,
-        tuple(where_params),
-    ) or []
+            tuple(where_params),
+        )
+        or []
+    )
 
     current_year = datetime.now().year
 
@@ -106,11 +108,31 @@ def get_family_composition(
         "children_out_of_shelter": children_out_of_shelter,
         "children_out_of_shelter_display": mask_small_counts(children_out_of_shelter),
         "child_age_groups": [
-            {"label": "Ages 0 to 5", "value": ages_0_5, "display_value": mask_small_counts(ages_0_5)},
-            {"label": "Ages 6 to 11", "value": ages_6_11, "display_value": mask_small_counts(ages_6_11)},
-            {"label": "Ages 12 to 17", "value": ages_12_17, "display_value": mask_small_counts(ages_12_17)},
-            {"label": "Ages 18 to 21", "value": ages_18_21, "display_value": mask_small_counts(ages_18_21)},
-            {"label": "Ages 22 to 65", "value": ages_22_65, "display_value": mask_small_counts(ages_22_65)},
+            {
+                "label": "Ages 0 to 5",
+                "value": ages_0_5,
+                "display_value": mask_small_counts(ages_0_5),
+            },
+            {
+                "label": "Ages 6 to 11",
+                "value": ages_6_11,
+                "display_value": mask_small_counts(ages_6_11),
+            },
+            {
+                "label": "Ages 12 to 17",
+                "value": ages_12_17,
+                "display_value": mask_small_counts(ages_12_17),
+            },
+            {
+                "label": "Ages 18 to 21",
+                "value": ages_18_21,
+                "display_value": mask_small_counts(ages_18_21),
+            },
+            {
+                "label": "Ages 22 to 65",
+                "value": ages_22_65,
+                "display_value": mask_small_counts(ages_22_65),
+            },
         ],
         "children_reunited": reunited,
         "children_reunited_display": mask_small_counts(reunited),

@@ -193,9 +193,5 @@ def record_resident_transfer(
         normalized_from_shelter,
         _session_staff_user_id(),
         "resident_transfer",
-        (
-            f"from={normalized_from_shelter} "
-            f"to={normalized_to_shelter} "
-            f"note={cleaned_note}"
-        ).strip(),
+        (f"from={normalized_from_shelter} to={normalized_to_shelter} note={cleaned_note}").strip(),
     )

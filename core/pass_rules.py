@@ -7,7 +7,6 @@ from flask import g
 
 from core.db import db_fetchone
 
-
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
@@ -225,7 +224,11 @@ def load_pass_settings_for_shelter(shelter: str | None) -> dict:
         59,
     )
     merged["pass_late_submission_block_enabled"] = _coerce_bool(
-        _row_value(row, "pass_late_submission_block_enabled", defaults["pass_late_submission_block_enabled"]),
+        _row_value(
+            row,
+            "pass_late_submission_block_enabled",
+            defaults["pass_late_submission_block_enabled"],
+        ),
         defaults["pass_late_submission_block_enabled"],
     )
     merged["pass_work_required_hours"] = _coerce_int(
@@ -235,13 +238,17 @@ def load_pass_settings_for_shelter(shelter: str | None) -> dict:
         None,
     )
     merged["pass_productive_required_hours"] = _coerce_int(
-        _row_value(row, "pass_productive_required_hours", defaults["pass_productive_required_hours"]),
+        _row_value(
+            row, "pass_productive_required_hours", defaults["pass_productive_required_hours"]
+        ),
         defaults["pass_productive_required_hours"],
         0,
         None,
     )
     merged["special_pass_bypass_hours_enabled"] = _coerce_bool(
-        _row_value(row, "special_pass_bypass_hours_enabled", defaults["special_pass_bypass_hours_enabled"]),
+        _row_value(
+            row, "special_pass_bypass_hours_enabled", defaults["special_pass_bypass_hours_enabled"]
+        ),
         defaults["special_pass_bypass_hours_enabled"],
     )
 
@@ -264,7 +271,9 @@ def load_pass_settings_for_shelter(shelter: str | None) -> dict:
     return merged
 
 
-def standard_pass_deadline_for_leave(leave_local_dt: datetime, shelter: str | None = None) -> datetime:
+def standard_pass_deadline_for_leave(
+    leave_local_dt: datetime, shelter: str | None = None
+) -> datetime:
     settings = load_pass_settings_for_shelter(shelter)
     target_weekday = settings["pass_deadline_weekday"]
     delta_days = leave_local_dt.weekday() - target_weekday

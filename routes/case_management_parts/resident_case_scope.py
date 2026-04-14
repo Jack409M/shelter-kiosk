@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from core.db import db_fetchone
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import (
+    fetch_current_enrollment_for_resident,
+    placeholder,
+    shelter_equals_sql,
+)
 
 
 def load_current_enrollment(resident_id: int):

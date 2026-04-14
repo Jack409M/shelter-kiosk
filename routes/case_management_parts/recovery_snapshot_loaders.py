@@ -1,15 +1,21 @@
 from __future__ import annotations
 
-from core.db import db_fetchall
-from core.db import db_fetchone
+from typing import Any
+
+from core.db import db_fetchall, db_fetchone
 from routes.case_management_parts.helpers import placeholder
 
 
-def load_resident_profile(resident_id: int):
+Row = dict[str, Any]
+Rows = list[Row]
+
+
+def load_resident_profile(resident_id: int) -> Row:
     ph = placeholder()
 
-    return db_fetchone(
-        f"""
+    return (
+        db_fetchone(
+            f"""
         SELECT
             shelter,
             program_level,
@@ -43,224 +49,135 @@ def load_resident_profile(resident_id: int):
         WHERE id = {ph}
         LIMIT 1
         """,
-        (resident_id,),
-    ) or {}
+            (resident_id,),
+        )
+        or {}
+    )
 
 
-def load_enrollment_baseline(enrollment_id: int | None):
+def load_enrollment_baseline(enrollment_id: int | None) -> Row:
     if not enrollment_id:
         return {}
 
     ph = placeholder()
 
-    row = db_fetchone(
-        f"""
-        SELECT
-            entry_date
+    row: Row = (
+        db_fetchone(
+            f"""
+        SELECT entry_date
         FROM program_enrollments
         WHERE id = {ph}
         LIMIT 1
         """,
-        (enrollment_id,),
-    ) or {}
+            (enrollment_id,),
+        )
+        or {}
+    )
 
-    intake_row = db_fetchone(
-        f"""
-        SELECT
-            sobriety_date,
-            treatment_grad_date
+    intake_row: Row = (
+        db_fetchone(
+            f"""
+        SELECT sobriety_date, treatment_grad_date
         FROM intake_assessments
         WHERE enrollment_id = {ph}
         ORDER BY id DESC
         LIMIT 1
         """,
-        (enrollment_id,),
-    ) or {}
+            (enrollment_id,),
+        )
+        or {}
+    )
 
     row["intake_sobriety_date"] = intake_row.get("sobriety_date")
     row["intake_treatment_grad_date"] = intake_row.get("treatment_grad_date")
     return row
 
 
-def load_medications(resident_id: int, enrollment_id: int | None):
+def load_medications(resident_id: int, enrollment_id: int | None) -> Rows:
     ph = placeholder()
     active_true_sql = "TRUE" if ph == "%s" else "1"
 
     if enrollment_id is not None:
         return db_fetchall(
-            f"""
-            SELECT
-                id,
-                medication_name,
-                dosage,
-                frequency,
-                purpose,
-                prescribed_by,
-                started_on,
-                ended_on,
-                is_active,
-                notes,
-                updated_at,
-                created_at
-            FROM resident_medications
-            WHERE resident_id = {ph}
-              AND enrollment_id = {ph}
-              AND COALESCE(is_active, TRUE) = {active_true_sql}
-            ORDER BY
-                COALESCE(updated_at, created_at) DESC,
-                id DESC
-            """,
+            f"""SELECT * FROM resident_medications
+            WHERE resident_id = {ph} AND enrollment_id = {ph}
+            AND COALESCE(is_active, TRUE) = {active_true_sql}
+            ORDER BY COALESCE(updated_at, created_at) DESC, id DESC""",
             (resident_id, enrollment_id),
         )
 
     return db_fetchall(
-        f"""
-        SELECT
-            id,
-            medication_name,
-            dosage,
-            frequency,
-            purpose,
-            prescribed_by,
-            started_on,
-            ended_on,
-            is_active,
-            notes,
-            updated_at,
-            created_at
-        FROM resident_medications
+        f"""SELECT * FROM resident_medications
         WHERE resident_id = {ph}
-          AND COALESCE(is_active, TRUE) = {active_true_sql}
-        ORDER BY
-            COALESCE(updated_at, created_at) DESC,
-            id DESC
-        """,
+        AND COALESCE(is_active, TRUE) = {active_true_sql}
+        ORDER BY COALESCE(updated_at, created_at) DESC, id DESC""",
         (resident_id,),
     )
 
 
-def load_ua_rows(resident_id: int, enrollment_id: int | None):
+def load_ua_rows(resident_id: int, enrollment_id: int | None) -> Rows:
     ph = placeholder()
 
     if enrollment_id is not None:
         return db_fetchall(
-            f"""
-            SELECT
-                id,
-                ua_date,
-                result,
-                substances_detected,
-                notes
-            FROM resident_ua_log
-            WHERE resident_id = {ph}
-              AND enrollment_id = {ph}
-            ORDER BY ua_date DESC, id DESC
-            """,
+            f"""SELECT * FROM resident_ua_log
+            WHERE resident_id = {ph} AND enrollment_id = {ph}
+            ORDER BY ua_date DESC, id DESC""",
             (resident_id, enrollment_id),
         )
 
     return db_fetchall(
-        f"""
-        SELECT
-            id,
-            ua_date,
-            result,
-            substances_detected,
-            notes
-        FROM resident_ua_log
+        f"""SELECT * FROM resident_ua_log
         WHERE resident_id = {ph}
-        ORDER BY ua_date DESC, id DESC
-        """,
+        ORDER BY ua_date DESC, id DESC""",
         (resident_id,),
     )
 
 
-def load_inspection_rows(resident_id: int, enrollment_id: int | None):
+def load_inspection_rows(resident_id: int, enrollment_id: int | None) -> Rows:
     ph = placeholder()
 
     if enrollment_id is not None:
         return db_fetchall(
-            f"""
-            SELECT
-                id,
-                inspection_date,
-                passed,
-                notes
-            FROM resident_living_area_inspections
-            WHERE resident_id = {ph}
-              AND enrollment_id = {ph}
-            ORDER BY inspection_date DESC, id DESC
-            """,
+            f"""SELECT * FROM resident_living_area_inspections
+            WHERE resident_id = {ph} AND enrollment_id = {ph}
+            ORDER BY inspection_date DESC, id DESC""",
             (resident_id, enrollment_id),
         )
 
     return db_fetchall(
-        f"""
-        SELECT
-            id,
-            inspection_date,
-            passed,
-            notes
-        FROM resident_living_area_inspections
+        f"""SELECT * FROM resident_living_area_inspections
         WHERE resident_id = {ph}
-        ORDER BY inspection_date DESC, id DESC
-        """,
+        ORDER BY inspection_date DESC, id DESC""",
         (resident_id,),
     )
 
 
-def load_budget_rows(resident_id: int, enrollment_id: int | None):
+def load_budget_rows(resident_id: int, enrollment_id: int | None) -> Rows:
     ph = placeholder()
 
     if enrollment_id is not None:
         return db_fetchall(
-            f"""
-            SELECT
-                id,
-                session_date,
-                notes
-            FROM resident_budget_sessions
-            WHERE resident_id = {ph}
-              AND enrollment_id = {ph}
-            ORDER BY session_date DESC, id DESC
-            """,
+            f"""SELECT * FROM resident_budget_sessions
+            WHERE resident_id = {ph} AND enrollment_id = {ph}
+            ORDER BY session_date DESC, id DESC""",
             (resident_id, enrollment_id),
         )
 
     return db_fetchall(
-        f"""
-        SELECT
-            id,
-            session_date,
-            notes
-        FROM resident_budget_sessions
+        f"""SELECT * FROM resident_budget_sessions
         WHERE resident_id = {ph}
-        ORDER BY session_date DESC, id DESC
-        """,
+        ORDER BY session_date DESC, id DESC""",
         (resident_id,),
     )
 
 
-def load_writeup_rows(resident_id: int):
+def load_writeup_rows(resident_id: int) -> Rows:
     ph = placeholder()
 
-    try:
-        return db_fetchall(
-            f"""
-            SELECT
-                id,
-                incident_date,
-                category,
-                severity,
-                status,
-                summary,
-                created_at,
-                updated_at
-            FROM resident_writeups
-            WHERE resident_id = {ph}
-            ORDER BY incident_date DESC, id DESC
-            """,
-            (resident_id,),
-        )
-    except Exception:
-        return []
+    return db_fetchall(
+        f"""SELECT * FROM resident_writeups
+        WHERE resident_id = {ph}
+        ORDER BY incident_date DESC, id DESC""",
+        (resident_id,),
+    )

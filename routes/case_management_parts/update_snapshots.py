@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from core.db import db_fetchall, db_fetchone
 from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.update_utils import ADVANCEMENT_BOOL_FIELD_LABELS
-from routes.case_management_parts.update_utils import ADVANCEMENT_TEXT_FIELD_LABELS
-from routes.case_management_parts.update_utils import EMPLOYMENT_FIELD_LABELS
-from routes.case_management_parts.update_utils import MEETING_TEXT_FIELD_LABELS
-from routes.case_management_parts.update_utils import SOBRIETY_FIELD_LABELS
-from routes.case_management_parts.update_utils import clean_value
-from routes.case_management_parts.update_utils import display_label
-
+from routes.case_management_parts.update_utils import (
+    ADVANCEMENT_BOOL_FIELD_LABELS,
+    ADVANCEMENT_TEXT_FIELD_LABELS,
+    EMPLOYMENT_FIELD_LABELS,
+    MEETING_TEXT_FIELD_LABELS,
+    SOBRIETY_FIELD_LABELS,
+    clean_value,
+    display_label,
+)
 
 SnapshotMap = dict[str, str]
 

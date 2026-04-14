@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from statistics import median
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
@@ -11,7 +10,6 @@ from core.db import db_execute, db_fetchall
 from core.metrics_registry import PROGRAM_METRICS
 from core.program_statistics import get_dashboard_statistics
 from core.runtime import init_db
-
 
 reports = Blueprint("reports", __name__)
 
@@ -322,7 +320,9 @@ def _sort_income_band_key(label: str) -> int:
     return order.get(label, 99)
 
 
-def _fetch_graduation_income_study_rows(scope: str, start_date: str | None, end_date: str | None) -> list[dict]:
+def _fetch_graduation_income_study_rows(
+    scope: str, start_date: str | None, end_date: str | None
+) -> list[dict]:
     scope_filter_sql = ""
     params: list = []
 
@@ -376,7 +376,9 @@ def _fetch_graduation_income_study_rows(scope: str, start_date: str | None, end_
     return [dict(row) for row in rows]
 
 
-def _build_graduation_income_study(scope: str, start_date: str | None, end_date: str | None) -> dict:
+def _build_graduation_income_study(
+    scope: str, start_date: str | None, end_date: str | None
+) -> dict:
     raw_rows = _fetch_graduation_income_study_rows(scope, start_date, end_date)
 
     graduates: dict[int, dict] = {}
@@ -395,10 +397,14 @@ def _build_graduation_income_study(scope: str, start_date: str | None, end_date:
                 "resident_name": " ".join(
                     part for part in [row.get("first_name"), row.get("last_name")] if part
                 ).strip(),
-                "resident_display_id": row.get("resident_identifier") or row.get("resident_code") or str(row.get("resident_id") or ""),
+                "resident_display_id": row.get("resident_identifier")
+                or row.get("resident_code")
+                or str(row.get("resident_id") or ""),
                 "shelter": row.get("shelter"),
                 "date_graduated": row.get("date_graduated") or row.get("date_exit_dwc"),
-                "graduation_income_snapshot": float(snapshot_income) if snapshot_income not in (None, "") else None,
+                "graduation_income_snapshot": float(snapshot_income)
+                if snapshot_income not in (None, "")
+                else None,
                 "followups": {},
             }
             graduates[enrollment_id] = graduate
@@ -416,7 +422,9 @@ def _build_graduation_income_study(scope: str, start_date: str | None, end_date:
 
         graduate["followups"][followup_type] = {
             "followup_date": current_date,
-            "income_at_followup": float(row["income_at_followup"]) if row.get("income_at_followup") not in (None, "") else None,
+            "income_at_followup": float(row["income_at_followup"])
+            if row.get("income_at_followup") not in (None, "")
+            else None,
             "sober_at_followup": bool(int(row.get("sober_at_followup") or 0)),
         }
 
@@ -499,8 +507,12 @@ def _build_graduation_income_study(scope: str, start_date: str | None, end_date:
         band_rows.append(
             {
                 **band,
-                "six_month_sober_rate": _fmt_percent(band["six_month_sober"], band["six_month_with_followup"]),
-                "one_year_sober_rate": _fmt_percent(band["one_year_sober"], band["one_year_with_followup"]),
+                "six_month_sober_rate": _fmt_percent(
+                    band["six_month_sober"], band["six_month_with_followup"]
+                ),
+                "one_year_sober_rate": _fmt_percent(
+                    band["one_year_sober"], band["one_year_with_followup"]
+                ),
             }
         )
 
@@ -719,7 +731,9 @@ def demographics_dashboard():
             stats[key] = value.get("data", {})
 
     staff_user_id = _current_staff_user_id()
-    saved_favorite_metric_keys = _get_saved_favorite_metric_keys(staff_user_id) if staff_user_id else []
+    saved_favorite_metric_keys = (
+        _get_saved_favorite_metric_keys(staff_user_id) if staff_user_id else []
+    )
     display_top_metric_keys = _get_display_top_metric_keys(staff_user_id)
     metrics_values = _build_metrics_values(stats)
     top_stats = _build_top_stats(

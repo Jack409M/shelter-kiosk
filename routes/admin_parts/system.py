@@ -69,10 +69,7 @@ def _log_demo_action(action_type: str, detail: str) -> None:
 def _seed_detail(result: dict[str, Any]) -> str:
     resident_count = int(result.get("resident_count", 0) or 0)
     weeks_per_resident = int(result.get("weeks_per_resident", 0) or 0)
-    return (
-        f"resident_count={resident_count}\n"
-        f"weeks_per_resident={weeks_per_resident}"
-    )
+    return f"resident_count={resident_count}\nweeks_per_resident={weeks_per_resident}"
 
 
 def _clear_detail(result: dict[str, Any]) -> str:

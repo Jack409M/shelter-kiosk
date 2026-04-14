@@ -80,7 +80,9 @@ def create_enrollment_view(
     )
 
     flash("Program enrollment started.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#start-enrollment")
+    return redirect(
+        url_for("resident_detail.resident_profile", resident_id=resident_id) + "#start-enrollment"
+    )
 
 
 def add_goal_view(
@@ -146,7 +148,9 @@ def add_goal_view(
     )
 
     flash("Goal added.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-goal")
+    return redirect(
+        url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-goal"
+    )
 
 
 def complete_goal_view(
@@ -299,7 +303,9 @@ def add_case_note_view(
     )
 
     flash("Case manager note added.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-case-note")
+    return redirect(
+        url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-case-note"
+    )
 
 
 def add_appointment_view(
@@ -366,4 +372,6 @@ def add_appointment_view(
     )
 
     flash("Appointment scheduled.", "ok")
-    return redirect(url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-appointment")
+    return redirect(
+        url_for("resident_detail.resident_profile", resident_id=resident_id) + "#add-appointment"
+    )

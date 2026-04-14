@@ -137,7 +137,9 @@ def scope_clause(alias: str, scope: str) -> tuple[str, list[Any]]:
     return f" AND {shelter_expr(alias)} IN (?, ?)", [scope, f"{scope} house"]
 
 
-def window_dates(date_range: str, start: str | None = None, end: str | None = None) -> tuple[str | None, str | None]:
+def window_dates(
+    date_range: str, start: str | None = None, end: str | None = None
+) -> tuple[str | None, str | None]:
     resolved_start, resolved_end = resolve_date_range(date_range, start, end)
     return (
         resolved_start.isoformat() if resolved_start else None,
@@ -175,8 +177,7 @@ def population_clause(
                 [start_date, end_date],
             )
         return (
-            f" AND {alias}.exit_date IS NOT NULL "
-            f"AND {alias}.exit_date <> ''",
+            f" AND {alias}.exit_date IS NOT NULL AND {alias}.exit_date <> ''",
             [],
         )
 
@@ -190,13 +191,17 @@ def population_clause(
     return "", []
 
 
-def entry_window_clause(alias: str, start_date: str | None, end_date: str | None) -> tuple[str, list[Any]]:
+def entry_window_clause(
+    alias: str, start_date: str | None, end_date: str | None
+) -> tuple[str, list[Any]]:
     if start_date and end_date:
         return f" AND {alias}.entry_date >= ? AND {alias}.entry_date <= ?", [start_date, end_date]
     return "", []
 
 
-def exit_window_clause(alias: str, start_date: str | None, end_date: str | None) -> tuple[str, list[Any]]:
+def exit_window_clause(
+    alias: str, start_date: str | None, end_date: str | None
+) -> tuple[str, list[Any]]:
     if start_date and end_date:
         return (
             f" AND {alias}.exit_date IS NOT NULL "
@@ -206,8 +211,7 @@ def exit_window_clause(alias: str, start_date: str | None, end_date: str | None)
             [start_date, end_date],
         )
     return (
-        f" AND {alias}.exit_date IS NOT NULL "
-        f"AND {alias}.exit_date <> ''",
+        f" AND {alias}.exit_date IS NOT NULL AND {alias}.exit_date <> ''",
         [],
     )
 

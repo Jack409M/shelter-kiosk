@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from core.db import db_fetchall
-from core.db import db_fetchone
-from core.db import db_transaction
+from core.db import db_fetchall, db_fetchone, db_transaction
 from routes.case_management_parts.helpers import placeholder
 from routes.case_management_parts.intake_income_support import load_intake_income_support
 from routes.case_management_parts.needs import get_open_enrollment_needs
@@ -267,7 +265,9 @@ def load_enrollment_context(enrollment_id: int) -> dict:
         is_deceased_case = is_deceased_exit(exit_assessment)
 
         open_needs = [] if is_deceased_case else get_open_enrollment_needs(enrollment_id)
-        followup_6_month = None if is_deceased_case else get_latest_followup(enrollment_id, "6_month")
+        followup_6_month = (
+            None if is_deceased_case else get_latest_followup(enrollment_id, "6_month")
+        )
         followup_1_year = None if is_deceased_case else get_latest_followup(enrollment_id, "1_year")
 
     return {

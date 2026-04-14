@@ -5,21 +5,25 @@ from datetime import datetime
 from typing import Any
 
 from core.db import db_execute, db_fetchone, db_transaction
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.intake_drafts import _complete_intake_draft
-from routes.case_management_parts.intake_drafts import _save_intake_draft
-from routes.case_management_parts.intake_income_support import load_intake_income_support
-from routes.case_management_parts.intake_income_support import upsert_intake_income_support
-from routes.case_management_parts.intake_inserts import _build_family_snapshot_payload
-from routes.case_management_parts.intake_inserts import _build_intake_assessment_payload
-from routes.case_management_parts.intake_inserts import _insert_family_snapshot
-from routes.case_management_parts.intake_inserts import _insert_intake_assessment
-from routes.case_management_parts.intake_inserts import _insert_program_enrollment
-from routes.case_management_parts.intake_inserts import _insert_resident
-from routes.case_management_parts.needs import build_triggered_needs
-from routes.case_management_parts.needs import list_enrollment_need_keys
-from routes.case_management_parts.needs import sync_enrollment_needs
+from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident, placeholder
+from routes.case_management_parts.intake_drafts import _complete_intake_draft, _save_intake_draft
+from routes.case_management_parts.intake_income_support import (
+    load_intake_income_support,
+    upsert_intake_income_support,
+)
+from routes.case_management_parts.intake_inserts import (
+    _build_family_snapshot_payload,
+    _build_intake_assessment_payload,
+    _insert_family_snapshot,
+    _insert_intake_assessment,
+    _insert_program_enrollment,
+    _insert_resident,
+)
+from routes.case_management_parts.needs import (
+    build_triggered_needs,
+    list_enrollment_need_keys,
+    sync_enrollment_needs,
+)
 
 
 @dataclass(slots=True)
@@ -51,20 +55,10 @@ class IntakeUpdateResult:
 
 def duplicate_identity(duplicate: Any) -> tuple[str | None, str, str]:
     duplicate_identifier = (
-        duplicate["resident_identifier"]
-        if isinstance(duplicate, dict)
-        else duplicate[6]
+        duplicate["resident_identifier"] if isinstance(duplicate, dict) else duplicate[6]
     )
-    duplicate_first_name = (
-        duplicate["first_name"]
-        if isinstance(duplicate, dict)
-        else duplicate[2]
-    )
-    duplicate_last_name = (
-        duplicate["last_name"]
-        if isinstance(duplicate, dict)
-        else duplicate[3]
-    )
+    duplicate_first_name = duplicate["first_name"] if isinstance(duplicate, dict) else duplicate[2]
+    duplicate_last_name = duplicate["last_name"] if isinstance(duplicate, dict) else duplicate[3]
     return duplicate_identifier, duplicate_first_name or "", duplicate_last_name or ""
 
 
@@ -151,8 +145,7 @@ def intake_edit_form_data(
 
     if not selected_need_keys and intake:
         selected_need_keys = [
-            need["need_key"]
-            for need in build_triggered_needs(intake_row=dict(intake))
+            need["need_key"] for need in build_triggered_needs(intake_row=dict(intake))
         ]
 
     return form_data, selected_need_keys
@@ -217,6 +210,10 @@ def create_intake(
         _insert_intake_assessment(enrollment_id, data)
         _insert_family_snapshot(enrollment_id, data)
         upsert_intake_income_support(enrollment_id, data)
+        sync_enrollment_needs(
+            enrollment_id,
+            selected_need_keys=data.get("entry_need_keys", []),
+        )
 
         if draft_id is not None:
             _complete_intake_draft(draft_id)
@@ -244,6 +241,10 @@ def create_intake_for_existing_resident(
         _insert_intake_assessment(enrollment_id, data)
         _insert_family_snapshot(enrollment_id, data)
         upsert_intake_income_support(enrollment_id, data)
+        sync_enrollment_needs(
+            enrollment_id,
+            selected_need_keys=data.get("entry_need_keys", []),
+        )
 
         if draft_id is not None:
             _complete_intake_draft(draft_id)

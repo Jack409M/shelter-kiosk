@@ -1,7 +1,6 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 

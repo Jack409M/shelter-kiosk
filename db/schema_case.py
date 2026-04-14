@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from . import schema_case_calendar
-from . import schema_case_children
-from . import schema_case_intake_drafts
-from . import schema_case_notes
-from . import schema_case_support
-from . import schema_writeups
+from . import (
+    schema_case_calendar,
+    schema_case_children,
+    schema_case_intake_drafts,
+    schema_case_notes,
+    schema_case_support,
+    schema_writeups,
+)
 
 
 def ensure_tables(kind: str) -> None:

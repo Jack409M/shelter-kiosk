@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-
 CHI = ZoneInfo("America/Chicago")
 
 APPOINTMENT_PARSE_FORMATS = [
@@ -53,6 +52,7 @@ def _yes_no_from_need_state(is_need_present):
 def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     rs = recovery_snapshot or {}
     fs = family_snapshot or {}
+    needs = open_needs or []
 
     parts: list[str] = []
 
@@ -77,6 +77,9 @@ def _build_summary_hint(*, recovery_snapshot, family_snapshot, open_needs):
     kids_at_dwc = fs.get("kids_at_dwc")
     if kids_at_dwc not in (None, ""):
         parts.append(f"children at DWC {kids_at_dwc}")
+
+    if needs:
+        parts.append(f"{len(needs)} open needs")
 
     return ". ".join(parts)
 
@@ -119,9 +122,7 @@ def _is_current_or_future_appointment(value: str | None) -> bool:
 
 def _resolve_meeting_default_next_appointment(latest_appointment) -> str:
     latest_appointment_date = (
-        _clean_text(latest_appointment.get("appointment_date"))
-        if latest_appointment
-        else ""
+        _clean_text(latest_appointment.get("appointment_date")) if latest_appointment else ""
     )
 
     if latest_appointment_date and _is_current_or_future_appointment(latest_appointment_date):
@@ -136,6 +137,22 @@ def _resolve_ready_for_next_level(value) -> str:
     if value == 0:
         return "no"
     return ""
+
+
+def _resolve_days_sober(recovery_snapshot: dict) -> object:
+    sobriety_date = recovery_snapshot.get("sobriety_date")
+    days_sober = recovery_snapshot.get("days_sober_today")
+    if days_sober is None:
+        days_sober = safe_days_since(sobriety_date)
+    return days_sober
+
+
+def _resolve_days_on_level(recovery_snapshot: dict) -> tuple[object, object]:
+    level_start_date = recovery_snapshot.get("level_start_date")
+    days_on_level = recovery_snapshot.get("days_on_level")
+    if days_on_level is None:
+        days_on_level = safe_days_since(level_start_date)
+    return level_start_date, days_on_level
 
 
 def build_meeting_defaults(
@@ -180,26 +197,8 @@ def build_meeting_defaults(
         "parenting_class_completed": _yes_no_from_need_state(
             intake_assessment.get("parenting_class_needed")
         ),
-        "warrants_or_fines_paid": _yes_no_from_need_state(
-            intake_assessment.get("warrants_unpaid")
-        ),
+        "warrants_or_fines_paid": _yes_no_from_need_state(intake_assessment.get("warrants_unpaid")),
     }
-
-
-def _resolve_days_sober(recovery_snapshot: dict) -> object:
-    sobriety_date = recovery_snapshot.get("sobriety_date")
-    days_sober = recovery_snapshot.get("days_sober_today")
-    if days_sober is None:
-        days_sober = safe_days_since(sobriety_date)
-    return days_sober
-
-
-def _resolve_days_on_level(recovery_snapshot: dict) -> tuple[object, object]:
-    level_start_date = recovery_snapshot.get("level_start_date")
-    days_on_level = recovery_snapshot.get("days_on_level")
-    if days_on_level is None:
-        days_on_level = safe_days_since(level_start_date)
-    return level_start_date, days_on_level
 
 
 def build_workspace_header(*, resident, enrollment, recovery_snapshot, open_needs):

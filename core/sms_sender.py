@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 from flask import g
 
 from core.db import db_execute, db_fetchone
 from core.sms import sms_is_allowed_for_number
-
 
 try:
     from twilio.rest import Client
@@ -23,7 +21,7 @@ TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 
 
-def _normalize_to_e164(to_number: str) -> Optional[str]:
+def _normalize_to_e164(to_number: str) -> str | None:
     raw = (to_number or "").strip()
     digits = "".join(ch for ch in raw if ch.isdigit())
 

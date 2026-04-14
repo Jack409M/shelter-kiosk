@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from flask import Blueprint
-from flask import render_template
+from flask import Blueprint, render_template
 
 from core.auth import require_login
 from core.db import db_fetchone
 from core.field_registry import get_all_fields
-
 
 field_audit = Blueprint(
     "field_audit",

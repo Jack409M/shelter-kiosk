@@ -629,7 +629,9 @@ def _insert_resident(plan: DemoResidentPlan, now_iso: str) -> int:
     )
 
 
-def _insert_enrollment(resident_id: int, plan: DemoResidentPlan, staff_user_id: int, now_iso: str) -> int:
+def _insert_enrollment(
+    resident_id: int, plan: DemoResidentPlan, staff_user_id: int, now_iso: str
+) -> int:
     return _insert_returning_id(
         """
         INSERT INTO program_enrollments
@@ -659,7 +661,9 @@ def _insert_enrollment(resident_id: int, plan: DemoResidentPlan, staff_user_id: 
     )
 
 
-def _maybe_insert_children(resident_id: int, enrollment_id: int, plan: DemoResidentPlan, staff_user_id: int, now_iso: str) -> list[int]:
+def _maybe_insert_children(
+    resident_id: int, enrollment_id: int, plan: DemoResidentPlan, staff_user_id: int, now_iso: str
+) -> list[int]:
     child_ids: list[int] = []
     if plan.ordinal % 3 != 0:
         return child_ids
@@ -826,17 +830,29 @@ def _week_start_local(weeks_ago: int) -> datetime:
     return _current_week_monday_local() - timedelta(days=7 * weeks_ago)
 
 
-def _choose_week_targets(ordinal: int, productive_required: float, work_required: float) -> tuple[float, float]:
+def _choose_week_targets(
+    ordinal: int, productive_required: float, work_required: float
+) -> tuple[float, float]:
     bucket = ordinal % 5
     if bucket == 0:
-        return round(productive_required + random.uniform(2, 9), 1), round(work_required + random.uniform(2, 8), 1)
+        return round(productive_required + random.uniform(2, 9), 1), round(
+            work_required + random.uniform(2, 8), 1
+        )
     if bucket == 1:
-        return round(productive_required + random.uniform(0, 3), 1), round(work_required + random.uniform(0, 3), 1)
+        return round(productive_required + random.uniform(0, 3), 1), round(
+            work_required + random.uniform(0, 3), 1
+        )
     if bucket == 2:
-        return round(productive_required - random.uniform(1, 4), 1), round(work_required - random.uniform(1, 4), 1)
+        return round(productive_required - random.uniform(1, 4), 1), round(
+            work_required - random.uniform(1, 4), 1
+        )
     if bucket == 3:
-        return round(productive_required - random.uniform(6, 14), 1), round(work_required - random.uniform(6, 10), 1)
-    return round(productive_required + random.uniform(1, 6), 1), round(work_required + random.uniform(0, 4), 1)
+        return round(productive_required - random.uniform(6, 14), 1), round(
+            work_required - random.uniform(6, 10), 1
+        )
+    return round(productive_required + random.uniform(1, 6), 1), round(
+        work_required + random.uniform(0, 4), 1
+    )
 
 
 def _split_hours(total_hours: float, parts: int) -> list[float]:
@@ -964,10 +980,13 @@ def _seed_attendance_and_weekly_summary(
             if remaining_extra <= 0:
                 break
             suggested_hours = capped_lookup.get(label) or (
-                1.5 if label in {"AA or NA Meeting", "Church"} else
-                1.0 if label in {"Counseling", "Doctor Appointment", "Sponsor Meeting"} else
-                2.0 if label == "Job Search" else
-                1.0
+                1.5
+                if label in {"AA or NA Meeting", "Church"}
+                else 1.0
+                if label in {"Counseling", "Doctor Appointment", "Sponsor Meeting"}
+                else 2.0
+                if label == "Job Search"
+                else 1.0
             )
             hours = round(min(remaining_extra, float(suggested_hours)), 2)
             if hours <= 0:
@@ -1118,7 +1137,9 @@ def _seed_case_management(
                         "Resident needs more consistency with scheduling",
                     ]
                 ),
-                random.choice([None, "Minor attendance lapse", "Needed reminder about responsibilities"]),
+                random.choice(
+                    [None, "Minor attendance lapse", "Needed reminder about responsibilities"]
+                ),
                 "Follow up on appointments and work schedule",
                 (_now_local() + timedelta(days=random.randint(2, 14))).date().isoformat(),
                 "Demo seeded update",
@@ -1394,7 +1415,9 @@ def _seed_goals_and_appointments(enrollment_id: int, now_iso: str) -> None:
     for index in range(2):
         created_at = (_now_local() - timedelta(days=30 - (index * 10))).date().isoformat()
         target_date = (_now_local() + timedelta(days=20 + (index * 10))).date().isoformat()
-        completed_date = None if index == 1 else (_now_local() - timedelta(days=5)).date().isoformat()
+        completed_date = (
+            None if index == 1 else (_now_local() - timedelta(days=5)).date().isoformat()
+        )
 
         db_execute(
             """
@@ -1449,7 +1472,9 @@ def _seed_goals_and_appointments(enrollment_id: int, now_iso: str) -> None:
         )
 
 
-def _seed_requests_and_passes(resident_id: int, plan: DemoResidentPlan, staff_user_id: int, now_iso: str) -> None:
+def _seed_requests_and_passes(
+    resident_id: int, plan: DemoResidentPlan, staff_user_id: int, now_iso: str
+) -> None:
     if plan.ordinal % 2 == 0:
         leave_start_local = _now_local() + timedelta(days=3, hours=10)
         leave_end_local = leave_start_local + timedelta(hours=4)
@@ -1672,7 +1697,9 @@ def _seed_requests_and_passes(resident_id: int, plan: DemoResidentPlan, staff_us
     )
 
 
-def _seed_chore_assignments(resident_id: int, shelter: str, chore_template_ids: dict[str, list[int]], now_iso: str) -> None:
+def _seed_chore_assignments(
+    resident_id: int, shelter: str, chore_template_ids: dict[str, list[int]], now_iso: str
+) -> None:
     template_ids = chore_template_ids.get(shelter, [])
     for offset, template_id in enumerate(template_ids[:2]):
         db_execute(
@@ -1747,7 +1774,9 @@ def run_demo_seed(per_shelter: int = 10, weeks: int = 12) -> dict[str, int]:
 
                 resident_id = _insert_resident(plan, now_iso)
                 enrollment_id = _insert_enrollment(resident_id, plan, staff_user_id, now_iso)
-                child_ids = _maybe_insert_children(resident_id, enrollment_id, plan, staff_user_id, now_iso)
+                child_ids = _maybe_insert_children(
+                    resident_id, enrollment_id, plan, staff_user_id, now_iso
+                )
 
                 _insert_substances(resident_id, now_iso)
                 _seed_attendance_and_weekly_summary(
@@ -1949,19 +1978,31 @@ def clear_demo_seed() -> dict[str, int]:
         if resident_ids:
             db_execute("DELETE FROM resident_passes WHERE resident_id = ANY(%s)", (resident_ids,))
             db_execute("DELETE FROM attendance_events WHERE resident_id = ANY(%s)", (resident_ids,))
-            db_execute("DELETE FROM resident_transfers WHERE resident_id = ANY(%s)", (resident_ids,))
-            db_execute("DELETE FROM resident_form_submissions WHERE resident_id = ANY(%s)", (resident_ids,))
-            db_execute("DELETE FROM resident_medications WHERE resident_id = ANY(%s)", (resident_ids,))
+            db_execute(
+                "DELETE FROM resident_transfers WHERE resident_id = ANY(%s)", (resident_ids,)
+            )
+            db_execute(
+                "DELETE FROM resident_form_submissions WHERE resident_id = ANY(%s)", (resident_ids,)
+            )
+            db_execute(
+                "DELETE FROM resident_medications WHERE resident_id = ANY(%s)", (resident_ids,)
+            )
             db_execute("DELETE FROM resident_ua_log WHERE resident_id = ANY(%s)", (resident_ids,))
             db_execute(
                 "DELETE FROM resident_living_area_inspections WHERE resident_id = ANY(%s)",
                 (resident_ids,),
             )
-            db_execute("DELETE FROM resident_budget_sessions WHERE resident_id = ANY(%s)", (resident_ids,))
+            db_execute(
+                "DELETE FROM resident_budget_sessions WHERE resident_id = ANY(%s)", (resident_ids,)
+            )
             db_execute("DELETE FROM chore_assignments WHERE resident_id = ANY(%s)", (resident_ids,))
-            db_execute("DELETE FROM resident_substances WHERE resident_id = ANY(%s)", (resident_ids,))
+            db_execute(
+                "DELETE FROM resident_substances WHERE resident_id = ANY(%s)", (resident_ids,)
+            )
             db_execute("DELETE FROM resident_children WHERE resident_id = ANY(%s)", (resident_ids,))
-            db_execute("DELETE FROM program_enrollments WHERE resident_id = ANY(%s)", (resident_ids,))
+            db_execute(
+                "DELETE FROM program_enrollments WHERE resident_id = ANY(%s)", (resident_ids,)
+            )
             db_execute("DELETE FROM residents WHERE id = ANY(%s)", (resident_ids,))
 
     return {

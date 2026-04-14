@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List, Optional
 
 
 @dataclass
@@ -8,24 +7,26 @@ class FieldDefinition:
     label: str
 
     # lifecycle placement
-    lifecycle_stage: Optional[str] = None  # demographics, intake, current_status, exit, followup_6m, followup_1y, derived, reporting_only
+    lifecycle_stage: str | None = (
+        None  # demographics, intake, current_status, exit, followup_6m, followup_1y, derived, reporting_only
+    )
 
     # wiring status
-    wiring_status: Optional[str] = None  # complete, partial, missing, derived, misaligned
+    wiring_status: str | None = None  # complete, partial, missing, derived, misaligned
 
     # where collected
-    form_page: Optional[str] = None
-    form_field: Optional[str] = None
+    form_page: str | None = None
+    form_field: str | None = None
 
     # where stored
-    table: Optional[str] = None
-    column: Optional[str] = None
+    table: str | None = None
+    column: str | None = None
 
     # reporting usage
     used_in_stats: bool = False
 
     # notes
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 LOCKED_EDUCATION_NOTE = (
@@ -48,14 +49,13 @@ LOCKED_EXIT_REASON_NOTE = (
 )
 
 
-FIELDS: List[FieldDefinition] = [
+FIELDS: list[FieldDefinition] = [
     # ==========================================================
     # BLUEPRINT GROUP 1
     # REPORTING ONLY AND SYSTEM LEVEL FIELDS
     # These are not direct resident collected source fields.
     # Keep these separate from intake, assessment, and exit forms.
     # ==========================================================
-
     FieldDefinition(
         key="last_updated",
         label="Last updated",
@@ -97,14 +97,12 @@ FIELDS: List[FieldDefinition] = [
         wiring_status="derived",
         notes="Derived from grit_score_at_entry and grit_at_exit, and displayed on the resident case page when both values exist. Do not collect directly.",
     ),
-
     # ==========================================================
     # BLUEPRINT GROUP 2
     # DEMOGRAPHICS AND IDENTITY
     # Core identity fields. These belong at intake and should stay
     # separate from progress, exit, and derived outcome fields.
     # ==========================================================
-
     FieldDefinition(
         key="name_last_first",
         label="Name (Last, First)",
@@ -197,14 +195,12 @@ FIELDS: List[FieldDefinition] = [
         used_in_stats=False,
         notes="Collected and stored. Identity and contact blueprint field.",
     ),
-
     # ==========================================================
     # BLUEPRINT GROUP 3
     # INTAKE BASELINE
     # Fields collected at or immediately tied to intake. These
     # represent the entry snapshot, not later progress.
     # ==========================================================
-
     FieldDefinition(
         key="date_entered",
         label="Date Entered",
@@ -539,14 +535,12 @@ FIELDS: List[FieldDefinition] = [
         used_in_stats=False,
         notes="Collected and stored at intake baseline.",
     ),
-
     # ==========================================================
     # BLUEPRINT GROUP 4
     # CURRENT STATUS OR DURING PROGRAM
     # These fields change during enrollment and should be handled
     # in a current status or progress blueprint, not pure intake.
     # ==========================================================
-
     FieldDefinition(
         key="rad_graduation",
         label="RAD Graduation",
@@ -609,14 +603,12 @@ FIELDS: List[FieldDefinition] = [
         used_in_stats=False,
         notes="Current program level field. Allowed values are 1, 2, 3, 4, 5, 6, 7, 8, 9, and E. It is now collected on the intake assessment page and stored in intake_assessments as a current status field.",
     ),
-
     # ==========================================================
     # BLUEPRINT GROUP 5
     # FAMILY AND CHILD DERIVED METRICS
     # These should trend toward child record driven calculations,
     # not manual entry counts.
     # ==========================================================
-
     FieldDefinition(
         key="kids_at_dwc",
         label="Kids @ DWC",
@@ -701,14 +693,12 @@ FIELDS: List[FieldDefinition] = [
         used_in_stats=True,
         notes="Should eventually be derived from child level records, not manually keyed.",
     ),
-
     # ==========================================================
     # BLUEPRINT GROUP 6
     # EXIT
     # Exit collected fields. These should stay controlled and clean
     # because they directly drive reporting and outcomes.
     # ==========================================================
-
     FieldDefinition(
         key="date_graduated",
         label="Date Graduated",
@@ -889,14 +879,12 @@ FIELDS: List[FieldDefinition] = [
         used_in_stats=False,
         notes="Collected through exit assessment and stored as a separate private health insurance field.",
     ),
-
     # ==========================================================
     # BLUEPRINT GROUP 7
     # FOLLOW UP AND LONGER TERM OUTCOMES
     # These should move into a dedicated follow up blueprint when
     # that workflow is built out.
     # ==========================================================
-
     FieldDefinition(
         key="educational_programs_entered_after_intake",
         label="Educational Programs entered after intake",
@@ -1022,5 +1010,5 @@ FIELDS: List[FieldDefinition] = [
 ]
 
 
-def get_all_fields() -> List[FieldDefinition]:
+def get_all_fields() -> list[FieldDefinition]:
     return FIELDS

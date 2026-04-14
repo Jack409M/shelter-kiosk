@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from flask import g
@@ -12,12 +12,15 @@ def _placeholder() -> str:
     return "%s" if g.get("db_kind") == "pg" else "?"
 
 
-def _parse_dateish(value: Any):
+def _parse_dateish(value: Any) -> date | None:
     if value in (None, ""):
         return None
 
     if isinstance(value, datetime):
         return value.date()
+
+    if isinstance(value, date):
+        return value
 
     text = str(value).strip()
     if not text:
@@ -45,7 +48,7 @@ def _days_since(value: Any) -> int | None:
     days = (datetime.now().date() - parsed).days
     if days < 0:
         days = 0
-    return days
+    return int(days)
 
 
 def _safe_int(value: Any, default: int = 0) -> int:
@@ -64,7 +67,7 @@ def _fetch_recovery_meeting_rows(
     resident_id: int,
     shelter: str,
     start_date: Any | None = None,
-):
+) -> list[dict[str, Any]]:
     ph = _placeholder()
     params: list[Any] = [resident_id, shelter]
 
@@ -97,21 +100,21 @@ def _fetch_recovery_meeting_rows(
     )
 
 
-def _meeting_row_to_count(row: dict) -> int:
+def _meeting_row_to_count(row: dict[str, Any]) -> int:
     stored_count = _safe_int(row.get("meeting_count"), 0)
     if stored_count > 0:
         return stored_count
 
     fallback = 0
-    if (row.get("meeting_1") or "").strip():
+    if str(row.get("meeting_1") or "").strip():
         fallback += 1
-    if (row.get("meeting_2") or "").strip():
+    if str(row.get("meeting_2") or "").strip():
         fallback += 1
 
     return fallback
 
 
-def _week_start(d: datetime.date):
+def _week_start(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
@@ -139,8 +142,8 @@ def calculate_meeting_progress(
 
     weekly_totals: dict[str, int] = {}
 
-    for raw_row in rows or []:
-        row = dict(raw_row) if not isinstance(raw_row, dict) else raw_row
+    for raw_row in rows:
+        row = dict(raw_row)
         event_date = _parse_dateish(row.get("event_time"))
         if not event_date:
             continue
@@ -183,13 +186,13 @@ def calculate_meeting_progress(
 
     level_num = _safe_int("".join(ch for ch in str(level_value or "") if ch.isdigit()), 0)
 
-    required_weekly_meetings = None
+    required_weekly_meetings: int | None = None
     if level_num == 3:
         required_weekly_meetings = 6
     elif level_num == 4:
         required_weekly_meetings = 5
 
-    weekly_requirement_met = None
+    weekly_requirement_met: bool | None = None
     if required_weekly_meetings is not None:
         weekly_requirement_met = meetings_this_week >= required_weekly_meetings
 
@@ -202,7 +205,7 @@ def calculate_meeting_progress(
     else:
         status_label = "Behind Pace for 90 in 90"
 
-    weekly_rows = []
+    weekly_rows: list[dict[str, Any]] = []
     for week_key in sorted(weekly_totals.keys(), reverse=True):
         weekly_rows.append(
             {

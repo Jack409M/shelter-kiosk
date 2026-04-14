@@ -7,7 +7,6 @@ from flask import current_app, g, has_app_context
 
 from core.db import db_execute, db_fetchall
 
-
 _TABLE_READY_FLAG: Final[str] = "_RATE_LIMIT_STORE_READY"
 
 

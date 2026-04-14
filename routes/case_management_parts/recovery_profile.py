@@ -10,14 +10,16 @@ from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 from db.schema_people import ensure_resident_child_income_supports_table
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import clean
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import parse_int
-from routes.case_management_parts.helpers import parse_iso_date
-from routes.case_management_parts.helpers import parse_money
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    clean,
+    normalize_shelter_name,
+    parse_int,
+    parse_iso_date,
+    parse_money,
+    placeholder,
+    shelter_equals_sql,
+)
 
 
 def _redirect_resident_case(resident_id: int):

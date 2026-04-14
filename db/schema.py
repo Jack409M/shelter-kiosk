@@ -5,19 +5,21 @@ from typing import Final
 from flask import current_app, g
 
 from core.db import db_execute
-from . import schema_bootstrap
-from . import schema_case
-from . import schema_comms
-from . import schema_core
-from . import schema_forms
-from . import schema_goals
-from . import schema_outcomes
-from . import schema_people
-from . import schema_program
-from . import schema_requests
-from . import schema_shelter_operations
-from . import schema_shelters
 
+from . import (
+    schema_bootstrap,
+    schema_case,
+    schema_comms,
+    schema_core,
+    schema_forms,
+    schema_goals,
+    schema_outcomes,
+    schema_people,
+    schema_program,
+    schema_requests,
+    schema_shelter_operations,
+    schema_shelters,
+)
 
 _SCHEMA_INITIALIZED_KEY: str | None = None
 

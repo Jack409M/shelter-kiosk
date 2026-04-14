@@ -6,9 +6,7 @@ from typing import Any
 from flask import g, session
 
 from core.db import db_execute, db_fetchone
-from routes.case_management_parts.helpers import clean
-from routes.case_management_parts.helpers import draft_display_name
-from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import clean, draft_display_name, placeholder
 
 
 def _coerce_form_dict(form: Any) -> dict[str, Any]:

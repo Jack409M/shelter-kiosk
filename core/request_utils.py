@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from flask import request
 
-
 # Request utility helpers
 #
 # Future extraction note

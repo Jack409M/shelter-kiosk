@@ -4,6 +4,8 @@ Messaging and throttling schema objects.
 
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 from .schema_helpers import create_table
@@ -74,27 +76,20 @@ def ensure_indexes(kind: str) -> None:
     """
     Ensure indexes exist for communication related tables.
     """
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS twilio_message_status_sid_idx "
             "ON twilio_message_status (message_sid)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS twilio_message_status_created_idx "
             "ON twilio_message_status (created_at)"
         )
-    except Exception:
-        pass
 
     if kind == "pg":
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS rate_limit_events_k_idx "
-            "ON rate_limit_events (k)"
-        )
+        db_execute("CREATE INDEX IF NOT EXISTS rate_limit_events_k_idx ON rate_limit_events (k)")
         db_execute(
             "CREATE INDEX IF NOT EXISTS rate_limit_events_created_at_idx "
             "ON rate_limit_events (created_at)"

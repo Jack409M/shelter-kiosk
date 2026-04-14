@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, TypeAlias
+from typing import Any
 
 from flask import abort, flash, redirect, url_for
 
@@ -19,8 +19,7 @@ from routes.attendance_parts.pass_action_helpers import (
 )
 from routes.attendance_parts.pass_policy import has_active_pass_block
 
-
-PassActionResponse: TypeAlias = tuple[bool, str, str, str]
+type PassActionResponse = tuple[bool, str, str, str]
 
 
 def _require_pass_access() -> None:
@@ -78,7 +77,10 @@ def _check_in_result(pass_row: Any) -> tuple[bool, int | None, str]:
 # APPROVE
 # -----------------------------------------
 
-def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_name: str) -> PassActionResponse:
+
+def approve_pass_request(
+    *, pass_id: int, shelter: str, staff_id: Any, staff_name: str
+) -> PassActionResponse:
     pass_row = load_pass_for_review(pass_id, shelter)
 
     ok, resident_id, pass_type_key, error_message = _pending_review_result(pass_row)
@@ -125,7 +127,10 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_nam
 # DENY
 # -----------------------------------------
 
-def deny_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_name: str) -> PassActionResponse:
+
+def deny_pass_request(
+    *, pass_id: int, shelter: str, staff_id: Any, staff_name: str
+) -> PassActionResponse:
     pass_row = load_pass_for_review(pass_id, shelter)
 
     ok, resident_id, pass_type_key, error_message = _pending_review_result(pass_row)
@@ -157,6 +162,7 @@ def deny_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_name: 
 # CHECK IN
 # -----------------------------------------
 
+
 def check_in_pass_return(*, pass_id: int, shelter: str, staff_id: Any) -> PassActionResponse:
     pass_row = load_pass_for_check_in(pass_id, shelter)
 
@@ -186,6 +192,7 @@ def check_in_pass_return(*, pass_id: int, shelter: str, staff_id: Any) -> PassAc
 # -----------------------------------------
 # VIEWS
 # -----------------------------------------
+
 
 def staff_pass_approve_view(pass_id: int, action_context):
     _require_pass_access()

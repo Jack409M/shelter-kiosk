@@ -8,7 +8,6 @@ from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
 from core.runtime import init_db
 
-
 # Resident SMS consent flows
 #
 # Future extraction note
@@ -124,7 +123,9 @@ def resident_consent_view():
             (True, now, resident_id),
         )
 
-        log_action("resident", resident_id, shelter, None, "sms_opt_in", "Resident accepted SMS consent")
+        log_action(
+            "resident", resident_id, shelter, None, "sms_opt_in", "Resident accepted SMS consent"
+        )
         flash("Thank you. SMS consent recorded.", "ok")
         return redirect(next_url)
 
@@ -146,6 +147,8 @@ def resident_consent_view():
         (False, resident_id),
     )
 
-    log_action("resident", resident_id, shelter, None, "sms_opt_out", "Resident declined SMS consent")
+    log_action(
+        "resident", resident_id, shelter, None, "sms_opt_out", "Resident declined SMS consent"
+    )
     flash("Preference saved.", "ok")
     return redirect(next_url)

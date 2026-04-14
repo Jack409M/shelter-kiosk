@@ -23,6 +23,7 @@ from .data_access import (
     _ensure_default_rent_config,
     _history_rows_for_resident,
     _insert_rent_ledger_entry,
+    _insert_sheet,
     _latest_prior_balance,
     _ledger_entries_for_resident,
     _ledger_summary_for_resident,
@@ -31,7 +32,6 @@ from .data_access import (
     _resident_any_shelter,
     _resident_for_shelter,
     _sheet_for_month,
-    _insert_sheet,
 )
 from .dates import _current_year_month, _month_label, _today_chicago
 from .schema import _ensure_tables
@@ -60,7 +60,9 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
         existing = dict(existing) if existing else None
 
         config = _ensure_default_rent_config(resident_id, shelter)
-        config["apartment_number_snapshot"] = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
+        config["apartment_number_snapshot"] = _normalize_apartment_number(
+            shelter, config.get("apartment_number_snapshot")
+        )
         config["apartment_size_snapshot"] = _derive_apartment_size_from_assignment(
             shelter,
             config.get("apartment_number_snapshot"),
@@ -69,13 +71,19 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
         enrollment = _program_enrollment_for_month(resident_id, shelter, rent_year, rent_month)
 
         carry_forward_enabled = _bool_value(settings.get("rent_carry_forward_enabled", True))
-        prior_balance = _latest_prior_balance(resident_id, shelter, carry_forward_enabled, rent_year, rent_month)
+        prior_balance = _latest_prior_balance(
+            resident_id, shelter, carry_forward_enabled, rent_year, rent_month
+        )
         is_exempt = _bool_value(config.get("is_exempt"))
 
         base_monthly_rent, base_note = _derive_base_monthly_rent(settings, shelter, config)
-        proration = _calculate_proration(base_monthly_rent, config, enrollment, rent_year, rent_month)
+        proration = _calculate_proration(
+            base_monthly_rent, config, enrollment, rent_year, rent_month
+        )
 
-        approved_late_arrangement = _bool_value(existing.get("approved_late_arrangement") if existing else False)
+        approved_late_arrangement = _bool_value(
+            existing.get("approved_late_arrangement") if existing else False
+        )
         manual_adjustment = _float_value(existing.get("manual_adjustment") if existing else 0)
         amount_paid = _float_value(existing.get("amount_paid") if existing else 0)
         paid_date = (existing.get("paid_date") if existing else None) or None
@@ -94,7 +102,9 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
             today_date=_today_chicago().date(),
         )
         total_due = 0.0 if is_exempt else round(subtotal_due + late_fee_charge, 2)
-        current_charge = 0.0 if is_exempt else round(proration["prorated_charge"] + manual_adjustment, 2)
+        current_charge = (
+            0.0 if is_exempt else round(proration["prorated_charge"] + manual_adjustment, 2)
+        )
         remaining_balance = 0.0 if is_exempt else round(total_due - amount_paid, 2)
         status = _derive_status(total_due, amount_paid, paid_date, is_exempt, late_fee_charge)
         compliance_score = _score_for_status(settings, status)
@@ -138,8 +148,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     WHERE id = %s
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     UPDATE resident_rent_sheet_entries
                     SET shelter_snapshot = ?,
                         resident_name_snapshot = ?,
@@ -193,7 +202,9 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     proration["prorated_charge"],
                     late_fee_charge,
                     manual_adjustment,
-                    approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
+                    approved_late_arrangement
+                    if g.get("db_kind") == "pg"
+                    else (1 if approved_late_arrangement else 0),
                     "\n".join([note for note in calculation_notes if note]),
                     session.get("staff_user_id"),
                     now,
@@ -238,8 +249,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     INSERT INTO resident_rent_sheet_entries (
                         sheet_id,
                         resident_id,
@@ -299,7 +309,9 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     proration["prorated_charge"],
                     late_fee_charge,
                     manual_adjustment,
-                    approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
+                    approved_late_arrangement
+                    if g.get("db_kind") == "pg"
+                    else (1 if approved_late_arrangement else 0),
                     "\n".join([note for note in calculation_notes if note]),
                     session.get("staff_user_id"),
                     now,
@@ -330,12 +342,16 @@ def _group_entries_for_payment_page(shelter: str, entries: list[dict]) -> list[d
         return [
             {
                 "group_label": "Residents",
-                "entries": sorted(entries, key=lambda entry: (entry.get("resident_name_snapshot") or "").lower()),
+                "entries": sorted(
+                    entries, key=lambda entry: (entry.get("resident_name_snapshot") or "").lower()
+                ),
             }
         ]
 
     apartment_order = _apartment_options_for_shelter(shelter_key)
-    grouped_map: dict[str, list[dict]] = {apartment_number: [] for apartment_number in apartment_order}
+    grouped_map: dict[str, list[dict]] = {
+        apartment_number: [] for apartment_number in apartment_order
+    }
     unassigned_entries: list[dict] = []
 
     for entry in entries:
@@ -423,8 +439,7 @@ def _post_monthly_charge_ledger_entries(
                     LIMIT 1
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     SELECT id
                     FROM resident_rent_ledger_entries
                     WHERE resident_id = ?
@@ -465,8 +480,7 @@ def _post_monthly_charge_ledger_entries(
                     LIMIT 1
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     SELECT id
                     FROM resident_rent_ledger_entries
                     WHERE resident_id = ?
@@ -507,8 +521,7 @@ def _post_monthly_charge_ledger_entries(
                     LIMIT 1
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     SELECT id
                     FROM resident_rent_ledger_entries
                     WHERE resident_id = ?
@@ -548,8 +561,7 @@ def _post_monthly_charge_ledger_entries(
                     LIMIT 1
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     SELECT id
                     FROM resident_rent_ledger_entries
                     WHERE resident_id = ?
@@ -578,7 +590,11 @@ def _post_monthly_charge_ledger_entries(
                     notes=None,
                 )
 
-        if late_fee_info["is_postable"] and late_fee_info["amount"] > 0 and late_fee_info["posting_date"]:
+        if (
+            late_fee_info["is_postable"]
+            and late_fee_info["amount"] > 0
+            and late_fee_info["posting_date"]
+        ):
             existing_late_fee = db_fetchone(
                 (
                     """
@@ -590,8 +606,7 @@ def _post_monthly_charge_ledger_entries(
                     LIMIT 1
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     SELECT id
                     FROM resident_rent_ledger_entries
                     WHERE resident_id = ?
@@ -632,8 +647,7 @@ def _ledger_payment_total_for_sheet_entry(resident_id: int, sheet_entry_id: int)
               AND source_code IN (%s, %s)
             """
             if g.get("db_kind") == "pg"
-            else
-            """
+            else """
             SELECT COALESCE(SUM(credit_amount), 0) AS total_paid
             FROM resident_rent_ledger_entries
             WHERE resident_id = ?
@@ -663,7 +677,9 @@ def _reconcile_payment_ledger_entry(
     if missing_payment <= 0:
         return
 
-    payment_entry_date = (entry.get("paid_date") or "").strip() or _today_chicago().date().isoformat()
+    payment_entry_date = (
+        entry.get("paid_date") or ""
+    ).strip() or _today_chicago().date().isoformat()
     stamp = utcnow_iso()
 
     _insert_rent_ledger_entry(
@@ -700,8 +716,12 @@ def register_routes(rent_tracking):
         rows = []
         for resident in _active_residents_for_shelter(shelter):
             config = _ensure_default_rent_config(resident["id"], shelter)
-            apartment_number_snapshot = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
-            apartment_size_snapshot = _derive_apartment_size_from_assignment(shelter, apartment_number_snapshot) or config.get("apartment_size_snapshot")
+            apartment_number_snapshot = _normalize_apartment_number(
+                shelter, config.get("apartment_number_snapshot")
+            )
+            apartment_size_snapshot = _derive_apartment_size_from_assignment(
+                shelter, apartment_number_snapshot
+            ) or config.get("apartment_size_snapshot")
             config["apartment_number_snapshot"] = apartment_number_snapshot
             config["apartment_size_snapshot"] = apartment_size_snapshot
 
@@ -774,8 +794,12 @@ def register_routes(rent_tracking):
                     amount_paid = round(existing_amount_paid + payment_received, 2)
 
                     paid_date = (request.form.get(f"paid_date_{entry_id}") or "").strip() or None
-                    manual_adjustment = round(_float_value(request.form.get(f"manual_adjustment_{entry_id}")), 2)
-                    approved_late_arrangement = (request.form.get(f"approved_late_arrangement_{entry_id}") or "").strip().lower() == "yes"
+                    manual_adjustment = round(
+                        _float_value(request.form.get(f"manual_adjustment_{entry_id}")), 2
+                    )
+                    approved_late_arrangement = (
+                        request.form.get(f"approved_late_arrangement_{entry_id}") or ""
+                    ).strip().lower() == "yes"
 
                     subtotal_due = round(
                         _float_value(entry.get("prior_balance"))
@@ -796,9 +820,17 @@ def register_routes(rent_tracking):
                         today_date=_today_chicago().date(),
                     )
                     total_due = 0.0 if is_exempt else round(subtotal_due + late_fee_charge, 2)
-                    current_charge = 0.0 if is_exempt else round(_float_value(entry.get("prorated_charge")) + manual_adjustment, 2)
+                    current_charge = (
+                        0.0
+                        if is_exempt
+                        else round(
+                            _float_value(entry.get("prorated_charge")) + manual_adjustment, 2
+                        )
+                    )
                     remaining_balance = 0.0 if is_exempt else round(total_due - amount_paid, 2)
-                    status = _derive_status(total_due, amount_paid, paid_date, is_exempt, late_fee_charge)
+                    status = _derive_status(
+                        total_due, amount_paid, paid_date, is_exempt, late_fee_charge
+                    )
                     compliance_score = _score_for_status(settings, status)
                     calculation_notes = (entry.get("calculation_notes") or "").strip()
                     now = utcnow_iso()
@@ -824,8 +856,7 @@ def register_routes(rent_tracking):
                             WHERE id = %s
                             """
                             if g.get("db_kind") == "pg"
-                            else
-                            """
+                            else """
                             UPDATE resident_rent_sheet_entries
                             SET current_charge = ?,
                                 total_due = ?,
@@ -855,7 +886,9 @@ def register_routes(rent_tracking):
                             None,
                             late_fee_charge,
                             manual_adjustment,
-                            approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
+                            approved_late_arrangement
+                            if g.get("db_kind") == "pg"
+                            else (1 if approved_late_arrangement else 0),
                             calculation_notes,
                             session.get("staff_user_id"),
                             now,
@@ -903,7 +936,9 @@ def register_routes(rent_tracking):
                     )
 
             flash("Rent payment sheet saved.", "ok")
-            return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
+            return redirect(
+                url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month)
+            )
 
         repaired_entries = _load_sheet_entries(sheet["id"])
         with db_transaction():
@@ -948,7 +983,9 @@ def register_routes(rent_tracking):
             return redirect(url_for("rent_tracking.rent_roll"))
 
         config = _ensure_default_rent_config(resident_id, shelter)
-        config["apartment_number_snapshot"] = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
+        config["apartment_number_snapshot"] = _normalize_apartment_number(
+            shelter, config.get("apartment_number_snapshot")
+        )
         config["apartment_size_snapshot"] = _derive_apartment_size_from_assignment(
             shelter,
             config.get("apartment_number_snapshot"),
@@ -983,7 +1020,10 @@ def register_routes(rent_tracking):
             monthly_rent = _float_value(request.form.get("monthly_rent"))
             is_exempt = (request.form.get("is_exempt") or "no").strip().lower() == "yes"
             from .dates import _today_chicago as _today_local
-            effective_start_date = (request.form.get("effective_start_date") or _today_local().date().isoformat()).strip()
+
+            effective_start_date = (
+                request.form.get("effective_start_date") or _today_local().date().isoformat()
+            ).strip()
             now = utcnow_iso()
 
             db_execute(
@@ -997,8 +1037,7 @@ def register_routes(rent_tracking):
                       AND COALESCE(effective_end_date, '') = ''
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     UPDATE resident_rent_configs
                     SET effective_end_date = ?,
                         updated_at = ?
@@ -1030,8 +1069,7 @@ def register_routes(rent_tracking):
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     if g.get("db_kind") == "pg"
-                    else
-                    """
+                    else """
                     INSERT INTO resident_rent_configs (
                         resident_id,
                         shelter,

@@ -7,14 +7,16 @@ from flask import current_app, flash, g, redirect, render_template, request, ses
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
 from db.schema_people import ensure_resident_child_income_supports_table
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import clean
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import parse_int
-from routes.case_management_parts.helpers import parse_money
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    clean,
+    fetch_current_enrollment_for_resident,
+    normalize_shelter_name,
+    parse_int,
+    parse_money,
+    placeholder,
+    shelter_equals_sql,
+)
 from routes.case_management_parts.intake_income_support import recalculate_intake_income_support
 
 
@@ -240,7 +242,9 @@ def _yes_no_to_bool(value: str | None):
     return None
 
 
-def _upsert_child_income_support(child_id: int, support_type: str, monthly_amount, notes: str | None) -> None:
+def _upsert_child_income_support(
+    child_id: int, support_type: str, monthly_amount, notes: str | None
+) -> None:
     ph = placeholder()
     now = datetime.utcnow().isoformat()
 
@@ -722,7 +726,7 @@ def edit_child_service_view(service_id: int):
         flash("Service not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    child_id = service["resident_child_id"]
+    service["resident_child_id"]
     resident_id = service["resident_id"]
 
     if request.method == "POST":
@@ -770,7 +774,10 @@ def edit_child_service_view(service_id: int):
                 service_id,
                 resident_id,
             )
-            flash("Unable to update child service. Please try again or contact an administrator.", "error")
+            flash(
+                "Unable to update child service. Please try again or contact an administrator.",
+                "error",
+            )
             return redirect(url_for("case_management.edit_child_service", service_id=service_id))
 
         flash("Service updated.", "success")
@@ -825,7 +832,9 @@ def delete_child_service_view(service_id: int):
             service_id,
             child_id,
         )
-        flash("Unable to remove child service. Please try again or contact an administrator.", "error")
+        flash(
+            "Unable to remove child service. Please try again or contact an administrator.", "error"
+        )
         return redirect(url_for("case_management.child_services", child_id=child_id))
 
     flash("Service deleted.", "success")
@@ -919,7 +928,10 @@ def child_services_view(child_id: int):
                 resident_id,
                 enrollment_id,
             )
-            flash("Unable to add child service. Please try again or contact an administrator.", "error")
+            flash(
+                "Unable to add child service. Please try again or contact an administrator.",
+                "error",
+            )
             return _post_child_service_redirect(child_id, resident_id)
 
         flash("Child service added.", "success")

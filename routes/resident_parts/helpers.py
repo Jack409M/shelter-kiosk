@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-
 # Resident request shared helpers
 #
 # Future extraction note

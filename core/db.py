@@ -102,17 +102,11 @@ def _sqlite_connect(database_url: str) -> sqlite3.Connection:
 def _init_pg_pool() -> None:
     global PG_POOL
 
-    if PG_POOL is not None:
-        return
-
     with _PG_POOL_LOCK:
         if PG_POOL is not None:
             return
 
         database_url = _database_url()
-
-        if _is_sqlite_url(database_url):
-            return
 
         if SimpleConnectionPool is None:
             raise RuntimeError("psycopg2 is not installed, but a Postgres DATABASE_URL is set.")
@@ -195,22 +189,21 @@ def _db_cursor(*, dict_rows: bool = False) -> Iterator[DbCursor]:
             yield cur
         finally:
             cur.close()
-        return
+    else:
+        sql_cursor_factory = RealDictCursor if dict_rows else None
 
-    sql_cursor_factory = RealDictCursor if dict_rows else None
+        if dict_rows and sql_cursor_factory is None:
+            raise RuntimeError("psycopg2.extras.RealDictCursor is unavailable.")
 
-    if dict_rows and sql_cursor_factory is None:
-        raise RuntimeError("psycopg2.extras.RealDictCursor is unavailable.")
-
-    cur = (
-        conn.cursor(cursor_factory=sql_cursor_factory)
-        if sql_cursor_factory
-        else conn.cursor()
-    )
-    try:
-        yield cur
-    finally:
-        cur.close()
+        cur = (
+            conn.cursor(cursor_factory=sql_cursor_factory)
+            if sql_cursor_factory
+            else conn.cursor()
+        )
+        try:
+            yield cur
+        finally:
+            cur.close()
 
 
 def _row_to_dict(row: Any) -> DbRow:
@@ -328,4 +321,3 @@ def db_transaction() -> Iterator[DbConnection]:
     finally:
         g.db_in_transaction = False
         conn.autocommit = previous_autocommit
-        

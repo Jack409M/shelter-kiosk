@@ -121,11 +121,7 @@ def require_shelter(fn):
 
 
 def require_roles(*allowed_roles):
-    normalized_allowed_roles = {
-        str(role).strip()
-        for role in allowed_roles
-        if str(role).strip()
-    }
+    normalized_allowed_roles = {str(role).strip() for role in allowed_roles if str(role).strip()}
 
     def decorator(fn):
         @wraps(fn)

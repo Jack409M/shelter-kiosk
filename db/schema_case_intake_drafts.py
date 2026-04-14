@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 from .schema_helpers import create_table
@@ -8,7 +10,6 @@ from .schema_helpers import create_table
 def ensure_intake_drafts_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS intake_drafts (
@@ -28,7 +29,6 @@ def ensure_intake_drafts_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS intake_drafts (
@@ -65,12 +65,10 @@ def ensure_intake_drafts_columns() -> None:
     ]
 
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             UPDATE intake_drafts
@@ -81,10 +79,8 @@ def ensure_intake_drafts_columns() -> None:
                 AND form_payload <> ''
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             UPDATE intake_drafts
@@ -92,80 +88,64 @@ def ensure_intake_drafts_columns() -> None:
             WHERE draft_data IS NULL OR draft_data = ''
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_case_intake_drafts_indexes() -> None:
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS intake_drafts_status_idx
             ON intake_drafts (status)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS intake_drafts_shelter_idx
             ON intake_drafts (shelter)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS intake_drafts_entry_date_idx
             ON intake_drafts (entry_date)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS intake_drafts_resident_idx
             ON intake_drafts (resident_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS intake_drafts_enrollment_idx
             ON intake_drafts (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS intake_drafts_shelter_status_updated_idx
             ON intake_drafts (shelter, status, updated_at)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS intake_drafts_created_by_idx
             ON intake_drafts (created_by_user_id)
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_tables(kind: str) -> None:

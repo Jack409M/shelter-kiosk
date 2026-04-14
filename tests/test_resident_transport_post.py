@@ -174,9 +174,7 @@ def test_transport_post_success_writes_db_and_redirects(app, client, monkeypatch
     with app.app_context():
         init_db()
 
-        row = db_fetchone(
-            "SELECT * FROM transport_requests ORDER BY id DESC LIMIT 1"
-        )
+        row = db_fetchone("SELECT * FROM transport_requests ORDER BY id DESC LIMIT 1")
 
         assert row is not None
         assert row["pickup_location"] == "Shelter"

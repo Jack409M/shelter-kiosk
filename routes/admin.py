@@ -3,12 +3,10 @@ from __future__ import annotations
 from flask import Blueprint
 
 from core.auth import require_login, require_shelter
-
 from routes.admin_parts.audit import (
     staff_audit_log_csv_view,
     staff_audit_log_view,
 )
-
 from routes.admin_parts.dashboard import (
     admin_ban_ip_view,
     admin_dashboard_live_view,
@@ -17,21 +15,17 @@ from routes.admin_parts.dashboard import (
     admin_unlock_username_view,
     admin_update_security_settings_view,
 )
-
 from routes.admin_parts.field_audit import (
     admin_field_audit_view,
 )
-
 from routes.admin_parts.pass_retention import (
     run_pass_cleanup,
 )
-
 from routes.admin_parts.system import (
     admin_demo_data_view,
     clear_demo_data_view,
     seed_demo_data_view,
 )
-
 from routes.admin_parts.users import (
     admin_add_user_view,
     admin_edit_user_view,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import Blueprint, g, render_template, session
@@ -59,9 +59,9 @@ def _parse_dt(value):
             return None
 
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
 
-    return dt.astimezone(timezone.utc)
+    return dt.astimezone(UTC)
 
 
 def _to_chicago(value):
@@ -72,7 +72,11 @@ def _to_chicago(value):
 
 
 def _scope_filter_and_params(shelter: str | None):
-    filter_sql = "AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(%s))" if g.get("db_kind") == "pg" else "AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(?))"
+    filter_sql = (
+        "AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(%s))"
+        if g.get("db_kind") == "pg"
+        else "AND LOWER(TRIM(r.shelter)) = LOWER(TRIM(?))"
+    )
     return filter_sql, (shelter,)
 
 
@@ -274,20 +278,32 @@ def dashboard():
     )
 
     pending_pass_count = (
-        pending_pass_count_row["count"] if isinstance(pending_pass_count_row, dict) and "count" in pending_pass_count_row
-        else pending_pass_count_row[0] if pending_pass_count_row else 0
+        pending_pass_count_row["count"]
+        if isinstance(pending_pass_count_row, dict) and "count" in pending_pass_count_row
+        else pending_pass_count_row[0]
+        if pending_pass_count_row
+        else 0
     )
     approved_pass_count = (
-        approved_pass_count_row["count"] if isinstance(approved_pass_count_row, dict) and "count" in approved_pass_count_row
-        else approved_pass_count_row[0] if approved_pass_count_row else 0
+        approved_pass_count_row["count"]
+        if isinstance(approved_pass_count_row, dict) and "count" in approved_pass_count_row
+        else approved_pass_count_row[0]
+        if approved_pass_count_row
+        else 0
     )
     pending_transport_count = (
-        pending_transport_count_row["count"] if isinstance(pending_transport_count_row, dict) and "count" in pending_transport_count_row
-        else pending_transport_count_row[0] if pending_transport_count_row else 0
+        pending_transport_count_row["count"]
+        if isinstance(pending_transport_count_row, dict) and "count" in pending_transport_count_row
+        else pending_transport_count_row[0]
+        if pending_transport_count_row
+        else 0
     )
     intake_drafts_count = (
-        intake_drafts_count_row["count"] if isinstance(intake_drafts_count_row, dict) and "count" in intake_drafts_count_row
-        else intake_drafts_count_row[0] if intake_drafts_count_row else 0
+        intake_drafts_count_row["count"]
+        if isinstance(intake_drafts_count_row, dict) and "count" in intake_drafts_count_row
+        else intake_drafts_count_row[0]
+        if intake_drafts_count_row
+        else 0
     )
     family_intakes_pending_count = len(family_intakes_pending_rows)
 

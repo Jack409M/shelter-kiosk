@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from core.db import db_execute, db_fetchall
@@ -13,9 +13,9 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
         try:
-            return (
-                datetime.fromisoformat(raw_end_at) + timedelta(hours=48)
-            ).isoformat(timespec="seconds")
+            return (datetime.fromisoformat(raw_end_at) + timedelta(hours=48)).isoformat(
+                timespec="seconds"
+            )
         except Exception:
             return None
 
@@ -27,7 +27,7 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
                 time(hour=23, minute=59, second=59),
                 tzinfo=CHICAGO_TZ,
             )
-            utc_dt = local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            utc_dt = local_dt.astimezone(UTC).replace(tzinfo=None)
             return (utc_dt + timedelta(hours=48)).isoformat(timespec="seconds")
         except Exception:
             return None

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import session
 
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
-
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
@@ -22,7 +21,7 @@ def can_manage_passes() -> bool:
 
 def _to_naive_utc(dt: datetime) -> datetime:
     if dt.tzinfo is not None:
-        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt.astimezone(UTC).replace(tzinfo=None)
     return dt
 
 
@@ -43,7 +42,7 @@ def _expected_back_utc_for_pass(end_at: str | None, end_date: str | None) -> dat
                 time(hour=23, minute=59, second=59),
                 tzinfo=CHICAGO_TZ,
             )
-            return local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return local_dt.astimezone(UTC).replace(tzinfo=None)
         except Exception:
             return None
 
@@ -118,7 +117,7 @@ def to_local(dt_iso):
 
     try:
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt.astimezone(CHICAGO_TZ)
     except Exception:
         return None

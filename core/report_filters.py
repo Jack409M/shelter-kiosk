@@ -30,10 +30,10 @@ Date Range
 
 from datetime import datetime, timedelta
 
-
 # -----------------------------------------------------
 # Date Range Helpers
 # -----------------------------------------------------
+
 
 def _start_of_month(date):
     return date.replace(day=1)
@@ -93,6 +93,7 @@ def resolve_date_range(range_key, start=None, end=None):
 # SQL Filter Builder
 # -----------------------------------------------------
 
+
 def build_resident_filters(scope=None, population=None, date_range=None, start=None, end=None):
     """
     Build SQL WHERE clauses for resident based reporting.
@@ -139,10 +140,7 @@ def build_resident_filters(scope=None, population=None, date_range=None, start=N
     # Final WHERE Clause
     # -----------------------------
 
-    if where:
-        clause = "WHERE " + " AND ".join(where)
-    else:
-        clause = ""
+    clause = "WHERE " + " AND ".join(where) if where else ""
 
     return clause, params
 
@@ -150,6 +148,7 @@ def build_resident_filters(scope=None, population=None, date_range=None, start=N
 # -----------------------------------------------------
 # Privacy Helpers
 # -----------------------------------------------------
+
 
 def mask_small_counts(value):
     """

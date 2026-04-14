@@ -108,7 +108,9 @@ def database_mode_label_from_url(database_url: str) -> str:
 
 def load_runtime_config(*, explicit_database_url: str | None = None) -> RuntimeConfig:
     database_url = _normalize_database_url(
-        explicit_database_url if explicit_database_url is not None else os.environ.get("DATABASE_URL")
+        explicit_database_url
+        if explicit_database_url is not None
+        else os.environ.get("DATABASE_URL")
     )
 
     if not database_url:
@@ -146,7 +148,7 @@ def init_db() -> None:
         raise RuntimeError("DATABASE_URL is required before database initialization.")
 
     with _DB_INITIALIZATION_LOCK:
-        if _DB_INITIALIZED and _DB_INIT_URL == effective_database_url:
+        if _DB_INITIALIZED and effective_database_url == _DB_INIT_URL:
             return
 
         current_app.config["DATABASE_URL"] = effective_database_url
@@ -165,6 +167,7 @@ def init_db() -> None:
 # Shelter helpers
 # ------------------------------------------------------------
 
+
 def get_all_shelters() -> list[str]:
     return load_all_shelters()
 
@@ -173,6 +176,7 @@ def get_all_shelters() -> list[str]:
 # Client IP helper
 # ------------------------------------------------------------
 
+
 def get_client_ip() -> str:
     return client_ip()
 
@@ -180,6 +184,7 @@ def get_client_ip() -> str:
 # ------------------------------------------------------------
 # Datetime helper
 # ------------------------------------------------------------
+
 
 def parse_dt(dt_str: str) -> datetime:
     return datetime.fromisoformat(dt_str)

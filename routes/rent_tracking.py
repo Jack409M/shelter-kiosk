@@ -5,7 +5,6 @@ from flask import Blueprint
 from .rent_tracking_parts.snapshot import build_rent_stability_snapshot
 from .rent_tracking_parts.views import register_routes
 
-
 rent_tracking = Blueprint(
     "rent_tracking",
     __name__,

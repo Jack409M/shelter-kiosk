@@ -1,16 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TypeAlias
-
 from flask import Blueprint, Response, flash, redirect, url_for
 
 from core.auth import can_manage_requests, require_login, require_shelter
 
-
 staff_portal = Blueprint("staff_portal", __name__)
 
-RouteResponse: TypeAlias = Response | str
+type RouteResponse = Response | str
 
 
 def _manage_requests_denied_response() -> Response | None:

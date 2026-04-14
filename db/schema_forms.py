@@ -8,6 +8,8 @@ later be extracted into structured tables for reporting.
 
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 from .schema_helpers import create_table
@@ -16,7 +18,6 @@ from .schema_helpers import create_table
 def ensure_resident_form_submissions_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS resident_form_submissions (
@@ -34,7 +35,6 @@ def ensure_resident_form_submissions_table(kind: str) -> None:
             FOREIGN KEY (enrollment_id) REFERENCES program_enrollments(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS resident_form_submissions (
@@ -56,7 +56,6 @@ def ensure_resident_form_submissions_table(kind: str) -> None:
 def ensure_weekly_resident_summary_table(kind: str) -> None:
     create_table(
         kind,
-
         # SQLite
         """
         CREATE TABLE IF NOT EXISTS weekly_resident_summary (
@@ -74,7 +73,6 @@ def ensure_weekly_resident_summary_table(kind: str) -> None:
             FOREIGN KEY (submission_id) REFERENCES resident_form_submissions(id)
         )
         """,
-
         # PostgreSQL
         """
         CREATE TABLE IF NOT EXISTS weekly_resident_summary (
@@ -94,75 +92,61 @@ def ensure_weekly_resident_summary_table(kind: str) -> None:
 
 
 def ensure_indexes() -> None:
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_form_submissions_resident_idx
             ON resident_form_submissions (resident_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_form_submissions_enrollment_idx
             ON resident_form_submissions (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_form_submissions_form_type_submitted_idx
             ON resident_form_submissions (form_type, submitted_at)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_form_submissions_source_submission_idx
             ON resident_form_submissions (source_submission_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS resident_form_submissions_source_form_idx
             ON resident_form_submissions (source_form_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS weekly_resident_summary_enrollment_idx
             ON weekly_resident_summary (enrollment_id)
             """
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS weekly_resident_summary_submission_idx
             ON weekly_resident_summary (submission_id)
             """
         )
-    except Exception:
-        pass
 
 
 def ensure_tables(kind: str) -> None:

@@ -15,7 +15,6 @@ from core.stats.common import (
     to_float,
 )
 
-
 _EDUCATION_AVERAGE_LABELS = {
     1: "No High School",
     2: "Some High School",

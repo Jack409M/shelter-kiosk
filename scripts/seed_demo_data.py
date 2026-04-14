@@ -15,7 +15,6 @@ from core.helpers import utcnow_iso
 from core.residents import generate_resident_code
 from core.runtime import init_db
 
-
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 DEMO_PREFIX = "demo-seed-20260406"
@@ -157,44 +156,214 @@ CHORE_SEEDS = {
 
 HARD_CODED_ACTIVITY_MAP = {
     "abba": [
-        {"activity_label": "Employment", "counts_as_work_hours": True, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Job Search", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "AA or NA Meeting", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Church", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Doctor Appointment", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Counseling", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Step Work", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": 2.0},
-        {"activity_label": "Sponsor Meeting", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": 1.0},
-        {"activity_label": "Volunteer or Community Service", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "School", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Legal Obligation", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
+        {
+            "activity_label": "Employment",
+            "counts_as_work_hours": True,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Job Search",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "AA or NA Meeting",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Church",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Doctor Appointment",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Counseling",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Step Work",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": 2.0,
+        },
+        {
+            "activity_label": "Sponsor Meeting",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": 1.0,
+        },
+        {
+            "activity_label": "Volunteer or Community Service",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "School",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Legal Obligation",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
     ],
     "haven": [
-        {"activity_label": "Employment", "counts_as_work_hours": True, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "RAD", "counts_as_work_hours": True, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Job Search", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "AA or NA Meeting", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Church", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Doctor Appointment", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Counseling", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Step Work", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": 2.0},
-        {"activity_label": "Sponsor Meeting", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": 1.0},
-        {"activity_label": "Volunteer or Community Service", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "School", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Legal Obligation", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
+        {
+            "activity_label": "Employment",
+            "counts_as_work_hours": True,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "RAD",
+            "counts_as_work_hours": True,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Job Search",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "AA or NA Meeting",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Church",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Doctor Appointment",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Counseling",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Step Work",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": 2.0,
+        },
+        {
+            "activity_label": "Sponsor Meeting",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": 1.0,
+        },
+        {
+            "activity_label": "Volunteer or Community Service",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "School",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Legal Obligation",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
     ],
     "gratitude": [
-        {"activity_label": "Employment", "counts_as_work_hours": True, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Job Search", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "AA or NA Meeting", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Church", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Doctor Appointment", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Counseling", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Step Work", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": 2.0},
-        {"activity_label": "Sponsor Meeting", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": 1.0},
-        {"activity_label": "Volunteer or Community Service", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "School", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
-        {"activity_label": "Legal Obligation", "counts_as_work_hours": False, "counts_as_productive_hours": True, "weekly_cap_hours": None},
+        {
+            "activity_label": "Employment",
+            "counts_as_work_hours": True,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Job Search",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "AA or NA Meeting",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Church",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Doctor Appointment",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Counseling",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Step Work",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": 2.0,
+        },
+        {
+            "activity_label": "Sponsor Meeting",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": 1.0,
+        },
+        {
+            "activity_label": "Volunteer or Community Service",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "School",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
+        {
+            "activity_label": "Legal Obligation",
+            "counts_as_work_hours": False,
+            "counts_as_productive_hours": True,
+            "weekly_cap_hours": None,
+        },
     ],
 }
 
@@ -230,20 +399,19 @@ class SeedResident:
 
 def iso_local_to_utc(local_dt: datetime) -> str:
     return (
-        local_dt.astimezone(CHICAGO_TZ)
-        .astimezone(tz=datetime.now().astimezone().tzinfo)
-        .astimezone(CHICAGO_TZ)
-        .astimezone(datetime.now().astimezone().tzinfo)
-    ) and (
-        local_dt.astimezone(CHICAGO_TZ)
-        .astimezone()
-        .astimezone(CHICAGO_TZ)
-        .astimezone()
-    ) and (
-        local_dt.astimezone(CHICAGO_TZ)
-        .astimezone()
-        .replace(tzinfo=None)
-        .isoformat(timespec="seconds")
+        (
+            local_dt.astimezone(CHICAGO_TZ)
+            .astimezone(tz=datetime.now().astimezone().tzinfo)
+            .astimezone(CHICAGO_TZ)
+            .astimezone(datetime.now().astimezone().tzinfo)
+        )
+        and (local_dt.astimezone(CHICAGO_TZ).astimezone().astimezone(CHICAGO_TZ).astimezone())
+        and (
+            local_dt.astimezone(CHICAGO_TZ)
+            .astimezone()
+            .replace(tzinfo=None)
+            .isoformat(timespec="seconds")
+        )
     )
 
 
@@ -460,8 +628,12 @@ def build_seed_resident(shelter: str, ordinal: int, today_local: datetime) -> Se
 
     entry_days_ago = random.randint(7, 180)
     entry_dt = today_local - timedelta(days=entry_days_ago)
-    level_start_dt = entry_dt + timedelta(days=random.randint(0, max(1, min(30, entry_days_ago // 2))))
-    sobriety_dt = max(entry_dt - timedelta(days=random.randint(10, 200)), entry_dt - timedelta(days=30))
+    level_start_dt = entry_dt + timedelta(
+        days=random.randint(0, max(1, min(30, entry_days_ago // 2)))
+    )
+    sobriety_dt = max(
+        entry_dt - timedelta(days=random.randint(10, 200)), entry_dt - timedelta(days=30)
+    )
 
     is_exited = ordinal in {9, 10} and shelter != "gratitude"
     date_exit_dwc = None
@@ -682,7 +854,9 @@ def insert_resident(seed: SeedResident, now_iso: str) -> int:
     )
 
 
-def insert_program_enrollment(resident_id: int, seed: SeedResident, staff_user_id: int, now_iso: str) -> int:
+def insert_program_enrollment(
+    resident_id: int, seed: SeedResident, staff_user_id: int, now_iso: str
+) -> int:
     program_status = "exited" if not seed.is_active else "active"
     updated_at = seed.date_exit_dwc or now_iso
 
@@ -817,7 +991,9 @@ def maybe_insert_children(
             (
                 child_id,
                 enrollment_id,
-                (datetime.now(CHICAGO_TZ) - timedelta(days=random.randint(5, 40))).date().isoformat(),
+                (datetime.now(CHICAGO_TZ) - timedelta(days=random.randint(5, 40)))
+                .date()
+                .isoformat(),
                 random.choice(CHILD_SERVICE_TYPES),
                 "Completed",
                 1,
@@ -901,21 +1077,35 @@ def utc_naive_iso_from_chicago(local_dt: datetime) -> str:
     )
 
 
-def choose_week_targets(shelter: str, ordinal: int, productive_required: float, work_required: float) -> tuple[float, float]:
+def choose_week_targets(
+    shelter: str, ordinal: int, productive_required: float, work_required: float
+) -> tuple[float, float]:
     bucket = ordinal % 5
 
     if bucket == 0:
-        return round(productive_required + random.uniform(2, 9), 1), round(work_required + random.uniform(2, 8), 1)
+        return round(productive_required + random.uniform(2, 9), 1), round(
+            work_required + random.uniform(2, 8), 1
+        )
     if bucket == 1:
-        return round(productive_required + random.uniform(0, 3), 1), round(work_required + random.uniform(0, 3), 1)
+        return round(productive_required + random.uniform(0, 3), 1), round(
+            work_required + random.uniform(0, 3), 1
+        )
     if bucket == 2:
-        return round(productive_required - random.uniform(1, 4), 1), round(work_required - random.uniform(1, 4), 1)
+        return round(productive_required - random.uniform(1, 4), 1), round(
+            work_required - random.uniform(1, 4), 1
+        )
     if bucket == 3:
-        return round(productive_required - random.uniform(6, 14), 1), round(work_required - random.uniform(6, 10), 1)
+        return round(productive_required - random.uniform(6, 14), 1), round(
+            work_required - random.uniform(6, 10), 1
+        )
 
     if shelter == "gratitude":
-        return round(productive_required + random.uniform(4, 10), 1), round(work_required + random.uniform(1, 6), 1)
-    return round(productive_required + random.uniform(1, 6), 1), round(work_required + random.uniform(0, 4), 1)
+        return round(productive_required + random.uniform(4, 10), 1), round(
+            work_required + random.uniform(1, 6), 1
+        )
+    return round(productive_required + random.uniform(1, 6), 1), round(
+        work_required + random.uniform(0, 4), 1
+    )
 
 
 def split_hours(total_hours: float, parts: int) -> list[float]:
@@ -1008,10 +1198,7 @@ def seed_attendance_and_weekly_summary(
         if row["counts_as_productive_hours"] and not row["counts_as_work_hours"]
     ]
 
-    capped_lookup = {
-        row["activity_label"]: row["weekly_cap_hours"]
-        for row in categories
-    }
+    capped_lookup = {row["activity_label"]: row["weekly_cap_hours"] for row in categories}
 
     for weeks_ago in range(1, weeks + 1):
         start_of_week = week_start_local(weeks_ago)
@@ -1045,13 +1232,9 @@ def seed_attendance_and_weekly_summary(
         for label in productive_only_labels:
             cap = capped_lookup.get(label)
             if cap is None:
-                if label == "AA or NA Meeting":
+                if label == "AA or NA Meeting" or label == "Church":
                     candidate_blocks.append((label, 1.5))
-                elif label == "Church":
-                    candidate_blocks.append((label, 1.5))
-                elif label == "Counseling":
-                    candidate_blocks.append((label, 1.0))
-                elif label == "Doctor Appointment":
+                elif label == "Counseling" or label == "Doctor Appointment":
                     candidate_blocks.append((label, 1.0))
                 elif label == "Job Search":
                     candidate_blocks.append((label, 2.0))
@@ -1224,7 +1407,9 @@ def seed_case_management(
                     ]
                 ),
                 "Follow up on appointments and work schedule",
-                (datetime.now(CHICAGO_TZ) + timedelta(days=random.randint(2, 14))).date().isoformat(),
+                (datetime.now(CHICAGO_TZ) + timedelta(days=random.randint(2, 14)))
+                .date()
+                .isoformat(),
                 "Demo seeded update",
                 random.randint(1, 10),
                 random.choice([0, 1]),
@@ -1497,9 +1682,17 @@ def seed_case_management(
 
 def seed_goals_and_appointments(enrollment_id: int, now_iso: str) -> None:
     for index in range(2):
-        created_at = (datetime.now(CHICAGO_TZ) - timedelta(days=30 - (index * 10))).date().isoformat()
-        target_date = (datetime.now(CHICAGO_TZ) + timedelta(days=20 + (index * 10))).date().isoformat()
-        completed_date = None if index == 1 else (datetime.now(CHICAGO_TZ) - timedelta(days=5)).date().isoformat()
+        created_at = (
+            (datetime.now(CHICAGO_TZ) - timedelta(days=30 - (index * 10))).date().isoformat()
+        )
+        target_date = (
+            (datetime.now(CHICAGO_TZ) + timedelta(days=20 + (index * 10))).date().isoformat()
+        )
+        completed_date = (
+            None
+            if index == 1
+            else (datetime.now(CHICAGO_TZ) - timedelta(days=5)).date().isoformat()
+        )
 
         db_execute(
             """
@@ -1527,7 +1720,9 @@ def seed_goals_and_appointments(enrollment_id: int, now_iso: str) -> None:
         )
 
     for _ in range(2):
-        appointment_date = (datetime.now(CHICAGO_TZ) + timedelta(days=random.randint(2, 20))).date().isoformat()
+        appointment_date = (
+            (datetime.now(CHICAGO_TZ) + timedelta(days=random.randint(2, 20))).date().isoformat()
+        )
         db_execute(
             """
             INSERT INTO appointments
@@ -1870,7 +2065,9 @@ def run_seed(per_shelter: int, weeks: int) -> None:
 
         for shelter in SHELTERS:
             for ordinal in range(1, per_shelter + 1):
-                seed = build_seed_resident(shelter=shelter, ordinal=ordinal, today_local=today_local)
+                seed = build_seed_resident(
+                    shelter=shelter, ordinal=ordinal, today_local=today_local
+                )
                 staff_user_id = staff_user_ids[(ordinal - 1) % len(staff_user_ids)]
 
                 resident_id = insert_resident(seed=seed, now_iso=now_iso)
@@ -1914,7 +2111,9 @@ def run_seed(per_shelter: int, weeks: int) -> None:
                 )
 
                 seed_goals_and_appointments(enrollment_id=enrollment_id, now_iso=now_iso)
-                seed_requests_and_passes(resident_id=resident_id, seed=seed, staff_user_id=staff_user_id, now_iso=now_iso)
+                seed_requests_and_passes(
+                    resident_id=resident_id, seed=seed, staff_user_id=staff_user_id, now_iso=now_iso
+                )
                 seed_chore_assignments(
                     resident_id=resident_id,
                     shelter=shelter,

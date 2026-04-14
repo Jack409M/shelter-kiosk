@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from core.db import db_execute
-from core.db import db_fetchone
+from core.db import db_execute, db_fetchone
 from routes.case_management_parts.helpers import placeholder
 
 

@@ -8,6 +8,7 @@ from flask import current_app
 from werkzeug.security import generate_password_hash
 
 from core.db import db_execute, db_fetchall, db_fetchone
+
 from . import schema_program
 
 

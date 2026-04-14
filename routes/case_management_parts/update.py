@@ -7,30 +7,40 @@ from flask import current_app, flash, redirect, render_template, request, sessio
 from core.db import DbRow, db_execute, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    normalize_shelter_name,
+    placeholder,
+)
 from routes.case_management_parts.update_needs import apply_need_updates
-from routes.case_management_parts.update_note_helpers import collect_note_form_values
-from routes.case_management_parts.update_note_helpers import service_form_payloads
-from routes.case_management_parts.update_note_loaders import build_edit_service_maps
-from routes.case_management_parts.update_note_loaders import get_resident_and_enrollment_in_scope
-from routes.case_management_parts.update_note_loaders import load_note_for_edit
-from routes.case_management_parts.update_note_loaders import load_services_for_note
+from routes.case_management_parts.update_note_helpers import (
+    collect_note_form_values,
+    service_form_payloads,
+)
+from routes.case_management_parts.update_note_loaders import (
+    build_edit_service_maps,
+    get_resident_and_enrollment_in_scope,
+    load_note_for_edit,
+    load_services_for_note,
+)
 from routes.case_management_parts.update_note_services import insert_client_services
 from routes.case_management_parts.update_note_validation import validate_note_values
-from routes.case_management_parts.update_summary import build_note_summary
-from routes.case_management_parts.update_summary import get_previous_note_id
-from routes.case_management_parts.update_summary_recorders import record_service_summary
-from routes.case_management_parts.update_summary_recorders import record_snapshot_change_group
-from routes.case_management_parts.update_summary_rows import delete_summary_rows_by_group
-from routes.case_management_parts.update_summary_rows import get_next_summary_sort_order
 from routes.case_management_parts.update_snapshots import load_previous_snapshot_map
-from routes.case_management_parts.update_utils import ADVANCEMENT_BOOL_FIELD_LABELS
-from routes.case_management_parts.update_utils import ADVANCEMENT_TEXT_FIELD_LABELS
-from routes.case_management_parts.update_utils import MEETING_TEXT_FIELD_LABELS
-from routes.case_management_parts.update_utils import display_label
-
+from routes.case_management_parts.update_summary import build_note_summary, get_previous_note_id
+from routes.case_management_parts.update_summary_recorders import (
+    record_service_summary,
+    record_snapshot_change_group,
+)
+from routes.case_management_parts.update_summary_rows import (
+    delete_summary_rows_by_group,
+    get_next_summary_sort_order,
+)
+from routes.case_management_parts.update_utils import (
+    ADVANCEMENT_BOOL_FIELD_LABELS,
+    ADVANCEMENT_TEXT_FIELD_LABELS,
+    MEETING_TEXT_FIELD_LABELS,
+    display_label,
+)
 
 RedirectResponse = Any
 TemplateResponse = Any
@@ -219,15 +229,11 @@ def _insert_case_note(
     )
 
     if note is None:
-        raise RuntimeError(
-            f"Case note insert returned no row for enrollment_id={enrollment_id}"
-        )
+        raise RuntimeError(f"Case note insert returned no row for enrollment_id={enrollment_id}")
 
     note_id = note.get("id")
     if not isinstance(note_id, int):
-        raise RuntimeError(
-            f"Case note insert returned invalid id payload: {note!r}"
-        )
+        raise RuntimeError(f"Case note insert returned invalid id payload: {note!r}")
 
     return note_id
 
@@ -508,8 +514,7 @@ def edit_case_note_view(resident_id: int, update_id: int) -> RouteResponse:
     note_enrollment_id = note.get("enrollment_id")
     if not isinstance(note_enrollment_id, int):
         current_app.logger.error(
-            "Case note edit aborted because note enrollment_id was invalid. "
-            "update_id=%s note=%r",
+            "Case note edit aborted because note enrollment_id was invalid. update_id=%s note=%r",
             update_id,
             note,
         )

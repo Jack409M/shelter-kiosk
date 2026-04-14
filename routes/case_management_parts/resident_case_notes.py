@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from routes.case_management_parts.resident_case_children import display_label
-from routes.case_management_parts.resident_case_children import display_quantity_unit
-
+from routes.case_management_parts.resident_case_children import display_label, display_quantity_unit
 
 SUMMARY_GROUP_ORDER = [
     "child",
@@ -80,14 +78,15 @@ def group_summary_rows(rows: list[dict]) -> list[dict]:
 
         if group_key == "need_addressed":
             all_resolved_items = [
-                item for item in display_items
-                if item.get("change_type") == "all_resolved"
+                item for item in display_items if item.get("change_type") == "all_resolved"
             ]
             if all_resolved_items:
                 result.append(
                     {
                         "group_key": group_key,
-                        "group_label": SUMMARY_GROUP_LABELS.get(group_key, display_label(group_key)),
+                        "group_label": SUMMARY_GROUP_LABELS.get(
+                            group_key, display_label(group_key)
+                        ),
                         "items": all_resolved_items,
                     }
                 )

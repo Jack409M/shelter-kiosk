@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -10,7 +10,6 @@ from core.db import db_fetchall
 from core.helpers import utcnow_iso
 from core.pass_rules import pass_type_label
 from routes.attendance_parts.helpers import to_local
-
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
@@ -37,11 +36,7 @@ def _end_of_day_utc_naive(date_text: str | None) -> str | None:
     except ValueError:
         return None
 
-    return (
-        local_dt.astimezone(timezone.utc)
-        .replace(tzinfo=None)
-        .isoformat(timespec="seconds")
-    )
+    return local_dt.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def _hydrate_pass_row(row: dict[str, Any]) -> dict[str, Any]:
@@ -54,10 +49,7 @@ def _hydrate_pass_row(row: dict[str, Any]) -> dict[str, Any]:
     item["pass_type_label"] = pass_type_label(item.get("pass_type"))
 
     end_at_text = _clean_text(item.get("end_at"))
-    if end_at_text:
-        expected_back_iso = end_at_text
-    else:
-        expected_back_iso = _end_of_day_utc_naive(item.get("end_date"))
+    expected_back_iso = end_at_text if end_at_text else _end_of_day_utc_naive(item.get("end_date"))
 
     item["expected_back_at"] = expected_back_iso
     item["expected_back_local"] = to_local(expected_back_iso)

@@ -15,8 +15,8 @@ from routes.attendance_parts.board import (
 from routes.attendance_parts.passes import (
     staff_pass_approve_view,
     staff_pass_check_in_view,
-    staff_pass_detail_view,
     staff_pass_deny_view,
+    staff_pass_detail_view,
     staff_passes_approved_view,
     staff_passes_away_now_view,
     staff_passes_overdue_view,

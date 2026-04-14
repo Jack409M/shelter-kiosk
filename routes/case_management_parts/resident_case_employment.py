@@ -22,7 +22,7 @@ def _to_int_or_none(value) -> int | None:
 def _to_bool(value) -> bool:
     if isinstance(value, bool):
         return value
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return value != 0
     normalized = str(value or "").strip().lower()
     return normalized in {"1", "true", "yes", "y", "on"}
@@ -54,9 +54,7 @@ def resolve_monthly_income_for_display(enrollment_context: dict) -> object:
 
 
 def build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
-    graduation_minimum = _to_float_or_none(
-        settings.get("employment_income_graduation_minimum")
-    )
+    graduation_minimum = _to_float_or_none(settings.get("employment_income_graduation_minimum"))
     if graduation_minimum is None or graduation_minimum <= 0:
         graduation_minimum = 1200.0
 
@@ -125,7 +123,9 @@ def build_employment_income_snapshot(monthly_income, settings: dict) -> dict:
         "graduation_minimum": graduation_minimum,
         "income_value": income_value,
         "readiness_percent": readiness_percent,
-        "readiness_percent_display": f"{readiness_percent}%" if readiness_percent is not None else "—",
+        "readiness_percent_display": f"{readiness_percent}%"
+        if readiness_percent is not None
+        else "—",
         "meets_goal": bool(income_value is not None and income_value >= graduation_minimum),
         "band_key": band_key,
         "pill_style": pill_style,
@@ -139,11 +139,11 @@ def resolve_employment_status_snapshot(
     rs = recovery_snapshot or {}
     ia = intake_assessment or {}
 
-    recovery_employment_status = str(
-        rs.get("employment_status_current")
-        or rs.get("employment_status")
-        or ""
-    ).strip().lower()
+    recovery_employment_status = (
+        str(rs.get("employment_status_current") or rs.get("employment_status") or "")
+        .strip()
+        .lower()
+    )
 
     if recovery_employment_status in {"employed", "unemployed"}:
         return recovery_employment_status

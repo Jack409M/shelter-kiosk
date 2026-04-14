@@ -56,14 +56,30 @@ def _build_settings_section_context(shelter: str, row, current_section: str) -> 
     context["settings"] = row
     context["default_pass_shared_rules_text"] = _default_pass_shared_rules_text()
     context["default_pass_gh_rules_text"] = _default_pass_gh_rules_text()
-    context["default_pass_level_1_rules_text"] = _default_pass_level_rules_text("pass_level_1_rules_text")
-    context["default_pass_level_2_rules_text"] = _default_pass_level_rules_text("pass_level_2_rules_text")
-    context["default_pass_level_3_rules_text"] = _default_pass_level_rules_text("pass_level_3_rules_text")
-    context["default_pass_level_4_rules_text"] = _default_pass_level_rules_text("pass_level_4_rules_text")
-    context["default_pass_gh_level_5_rules_text"] = _default_pass_level_rules_text("pass_gh_level_5_rules_text")
-    context["default_pass_gh_level_6_rules_text"] = _default_pass_level_rules_text("pass_gh_level_6_rules_text")
-    context["default_pass_gh_level_7_rules_text"] = _default_pass_level_rules_text("pass_gh_level_7_rules_text")
-    context["default_pass_gh_level_8_rules_text"] = _default_pass_level_rules_text("pass_gh_level_8_rules_text")
+    context["default_pass_level_1_rules_text"] = _default_pass_level_rules_text(
+        "pass_level_1_rules_text"
+    )
+    context["default_pass_level_2_rules_text"] = _default_pass_level_rules_text(
+        "pass_level_2_rules_text"
+    )
+    context["default_pass_level_3_rules_text"] = _default_pass_level_rules_text(
+        "pass_level_3_rules_text"
+    )
+    context["default_pass_level_4_rules_text"] = _default_pass_level_rules_text(
+        "pass_level_4_rules_text"
+    )
+    context["default_pass_gh_level_5_rules_text"] = _default_pass_level_rules_text(
+        "pass_gh_level_5_rules_text"
+    )
+    context["default_pass_gh_level_6_rules_text"] = _default_pass_level_rules_text(
+        "pass_gh_level_6_rules_text"
+    )
+    context["default_pass_gh_level_7_rules_text"] = _default_pass_level_rules_text(
+        "pass_gh_level_7_rules_text"
+    )
+    context["default_pass_gh_level_8_rules_text"] = _default_pass_level_rules_text(
+        "pass_gh_level_8_rules_text"
+    )
     context["aa_na_parent_activity_key"] = AA_NA_PARENT_ACTIVITY_KEY
     context["aa_na_parent_activity_label"] = AA_NA_PARENT_ACTIVITY_LABEL
     context["volunteer_parent_activity_key"] = VOLUNTEER_PARENT_ACTIVITY_KEY
@@ -281,18 +297,24 @@ def settings_section_page(section_key: str):
             row.get("hh_late_arrangement_required"),
             True,
         )
-        hh_payment_methods_text = _merge_text(
-            "hh_payment_methods_text",
-            form,
-            row.get("hh_payment_methods_text"),
-            "Money order\nCashier check",
-        ) or "Money order\nCashier check"
-        hh_payment_accepted_by_roles_text = _merge_text(
-            "hh_payment_accepted_by_roles_text",
-            form,
-            row.get("hh_payment_accepted_by_roles_text"),
-            "Case managers only",
-        ) or "Case managers only"
+        hh_payment_methods_text = (
+            _merge_text(
+                "hh_payment_methods_text",
+                form,
+                row.get("hh_payment_methods_text"),
+                "Money order\nCashier check",
+            )
+            or "Money order\nCashier check"
+        )
+        hh_payment_accepted_by_roles_text = (
+            _merge_text(
+                "hh_payment_accepted_by_roles_text",
+                form,
+                row.get("hh_payment_accepted_by_roles_text"),
+                "Case managers only",
+            )
+            or "Case managers only"
+        )
         hh_work_off_enabled = _merge_bool(
             "hh_work_off_enabled",
             form,
@@ -329,18 +351,24 @@ def settings_section_page(section_key: str):
             ),
             28,
         )
-        hh_work_off_location_text = _merge_text(
-            "hh_work_off_location_text",
-            form,
-            row.get("hh_work_off_location_text"),
-            "Thrift City",
-        ) or "Thrift City"
-        hh_work_off_notes_text = _merge_text(
-            "hh_work_off_notes_text",
-            form,
-            row.get("hh_work_off_notes_text"),
-            "If unemployed, resident may work off rent at 10 dollars per hour. Hours must be completed by the 10th unless arrangements are made in advance.",
-        ) or "If unemployed, resident may work off rent at 10 dollars per hour. Hours must be completed by the 10th unless arrangements are made in advance."
+        hh_work_off_location_text = (
+            _merge_text(
+                "hh_work_off_location_text",
+                form,
+                row.get("hh_work_off_location_text"),
+                "Thrift City",
+            )
+            or "Thrift City"
+        )
+        hh_work_off_notes_text = (
+            _merge_text(
+                "hh_work_off_notes_text",
+                form,
+                row.get("hh_work_off_notes_text"),
+                "If unemployed, resident may work off rent at 10 dollars per hour. Hours must be completed by the 10th unless arrangements are made in advance.",
+            )
+            or "If unemployed, resident may work off rent at 10 dollars per hour. Hours must be completed by the 10th unless arrangements are made in advance."
+        )
 
         gh_rent_due_day = min(
             max(
@@ -402,12 +430,15 @@ def settings_section_page(section_key: str):
             row.get("gh_level_8_sliding_scale_enabled"),
             True,
         )
-        gh_level_8_sliding_scale_basis_text = _merge_text(
-            "gh_level_8_sliding_scale_basis_text",
-            form,
-            row.get("gh_level_8_sliding_scale_basis_text"),
-            "Sliding scale based on income, household size, and accepted expenses.",
-        ) or "Sliding scale based on income, household size, and accepted expenses."
+        gh_level_8_sliding_scale_basis_text = (
+            _merge_text(
+                "gh_level_8_sliding_scale_basis_text",
+                form,
+                row.get("gh_level_8_sliding_scale_basis_text"),
+                "Sliding scale based on income, household size, and accepted expenses.",
+            )
+            or "Sliding scale based on income, household size, and accepted expenses."
+        )
         gh_level_8_first_increase_amount = max(
             _merge_float(
                 "gh_level_8_first_increase_amount",
@@ -426,12 +457,15 @@ def settings_section_page(section_key: str):
             ),
             0.0,
         )
-        gh_level_8_increase_schedule_text = _merge_text(
-            "gh_level_8_increase_schedule_text",
-            form,
-            row.get("gh_level_8_increase_schedule_text"),
-            "Increase a minimum of 50 the month after graduation, then another 50 one year later.",
-        ) or "Increase a minimum of 50 the month after graduation, then another 50 one year later."
+        gh_level_8_increase_schedule_text = (
+            _merge_text(
+                "gh_level_8_increase_schedule_text",
+                form,
+                row.get("gh_level_8_increase_schedule_text"),
+                "Increase a minimum of 50 the month after graduation, then another 50 one year later.",
+            )
+            or "Increase a minimum of 50 the month after graduation, then another 50 one year later."
+        )
 
         inspection_default_item_status = _merge_text(
             "inspection_default_item_status",
@@ -442,12 +476,15 @@ def settings_section_page(section_key: str):
         if inspection_default_item_status not in {"passed", "needs_attention", "failed"}:
             inspection_default_item_status = "passed"
 
-        inspection_item_labels = _merge_text(
-            "inspection_item_labels",
-            form,
-            row.get("inspection_item_labels"),
-            default_inspection_items,
-        ) or default_inspection_items
+        inspection_item_labels = (
+            _merge_text(
+                "inspection_item_labels",
+                form,
+                row.get("inspection_item_labels"),
+                default_inspection_items,
+            )
+            or default_inspection_items
+        )
 
         rent_score_paid = _merge_int("rent_score_paid", form, row.get("rent_score_paid"), 100)
         rent_score_partially_paid = _merge_int(
@@ -724,19 +761,25 @@ def settings_section_page(section_key: str):
             True,
         )
 
-        pass_shared_rules_text = _merge_text(
-            "pass_shared_rules_text",
-            form,
-            row.get("pass_shared_rules_text"),
-            _default_pass_shared_rules_text(),
-        ) or _default_pass_shared_rules_text()
+        pass_shared_rules_text = (
+            _merge_text(
+                "pass_shared_rules_text",
+                form,
+                row.get("pass_shared_rules_text"),
+                _default_pass_shared_rules_text(),
+            )
+            or _default_pass_shared_rules_text()
+        )
 
-        pass_gh_rules_text = _merge_text(
-            "pass_gh_rules_text",
-            form,
-            row.get("pass_gh_rules_text"),
-            _default_pass_gh_rules_text(),
-        ) or _default_pass_gh_rules_text()
+        pass_gh_rules_text = (
+            _merge_text(
+                "pass_gh_rules_text",
+                form,
+                row.get("pass_gh_rules_text"),
+                _default_pass_gh_rules_text(),
+            )
+            or _default_pass_gh_rules_text()
+        )
 
         pass_level_1_rules_text = _merge_text(
             "pass_level_1_rules_text",
@@ -875,8 +918,7 @@ def settings_section_page(section_key: str):
             WHERE LOWER(COALESCE(shelter, '')) = %s
             """
             if is_pg
-            else
-            """
+            else """
             UPDATE shelter_operation_settings
             SET rent_late_day_of_month = ?,
                 rent_score_paid = ?,
@@ -967,7 +1009,9 @@ def settings_section_page(section_key: str):
                 hh_rent_due_day,
                 hh_rent_late_day,
                 hh_rent_late_fee_per_day,
-                hh_late_arrangement_required if is_pg else (1 if hh_late_arrangement_required else 0),
+                hh_late_arrangement_required
+                if is_pg
+                else (1 if hh_late_arrangement_required else 0),
                 hh_payment_methods_text,
                 hh_payment_accepted_by_roles_text,
                 hh_work_off_enabled if is_pg else (1 if hh_work_off_enabled else 0),
@@ -978,11 +1022,15 @@ def settings_section_page(section_key: str):
                 hh_work_off_notes_text,
                 gh_rent_due_day,
                 gh_rent_late_fee_per_day,
-                gh_late_arrangement_required if is_pg else (1 if gh_late_arrangement_required else 0),
+                gh_late_arrangement_required
+                if is_pg
+                else (1 if gh_late_arrangement_required else 0),
                 gh_level_5_one_bedroom_rent,
                 gh_level_5_two_bedroom_rent,
                 gh_level_5_townhome_rent,
-                gh_level_8_sliding_scale_enabled if is_pg else (1 if gh_level_8_sliding_scale_enabled else 0),
+                gh_level_8_sliding_scale_enabled
+                if is_pg
+                else (1 if gh_level_8_sliding_scale_enabled else 0),
                 gh_level_8_sliding_scale_basis_text,
                 gh_level_8_first_increase_amount,
                 gh_level_8_second_increase_amount,
@@ -991,9 +1039,13 @@ def settings_section_page(section_key: str):
                 inspection_item_labels,
                 inspection_scoring_enabled if is_pg else (1 if inspection_scoring_enabled else 0),
                 inspection_lookback_months,
-                inspection_include_current_open_month if is_pg else (1 if inspection_include_current_open_month else 0),
+                inspection_include_current_open_month
+                if is_pg
+                else (1 if inspection_include_current_open_month else 0),
                 inspection_score_passed,
-                inspection_needs_attention_enabled if is_pg else (1 if inspection_needs_attention_enabled else 0),
+                inspection_needs_attention_enabled
+                if is_pg
+                else (1 if inspection_needs_attention_enabled else 0),
                 inspection_score_needs_attention,
                 inspection_score_failed,
                 inspection_passing_threshold,
@@ -1001,7 +1053,9 @@ def settings_section_page(section_key: str):
                 inspection_band_yellow_min,
                 inspection_band_orange_min,
                 inspection_band_red_max,
-                employment_income_module_enabled if is_pg else (1 if employment_income_module_enabled else 0),
+                employment_income_module_enabled
+                if is_pg
+                else (1 if employment_income_module_enabled else 0),
                 employment_income_graduation_minimum,
                 employment_income_band_green_min,
                 employment_income_band_yellow_min,
@@ -1016,10 +1070,14 @@ def settings_section_page(section_key: str):
                 pass_deadline_weekday,
                 pass_deadline_hour,
                 pass_deadline_minute,
-                pass_late_submission_block_enabled if is_pg else (1 if pass_late_submission_block_enabled else 0),
+                pass_late_submission_block_enabled
+                if is_pg
+                else (1 if pass_late_submission_block_enabled else 0),
                 pass_work_required_hours,
                 pass_productive_required_hours,
-                special_pass_bypass_hours_enabled if is_pg else (1 if special_pass_bypass_hours_enabled else 0),
+                special_pass_bypass_hours_enabled
+                if is_pg
+                else (1 if special_pass_bypass_hours_enabled else 0),
                 pass_shared_rules_text,
                 pass_gh_rules_text,
                 pass_level_1_rules_text,

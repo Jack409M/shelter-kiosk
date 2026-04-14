@@ -8,7 +8,6 @@ from typing import Final
 from flask import Flask, current_app, g, redirect, request
 from werkzeug.wrappers import Response
 
-
 _STATIC_CACHE_CONTROL: Final[str] = "public, max-age=86400"
 _DYNAMIC_CACHE_CONTROL: Final[str] = "no-store, no-cache, must-revalidate, private, max-age=0"
 _PERMISSIONS_POLICY: Final[str] = (
@@ -60,6 +59,7 @@ def _log_request_start(app: Flask) -> None:
         return
 
     request_id = getattr(g, "request_id", "")
+
     app.logger.info(
         "request_started request_id=%s method=%s path=%s endpoint=%s remote_ip=%s",
         request_id,
@@ -75,9 +75,9 @@ def _log_request_complete(app: Flask, response: Response) -> None:
         return
 
     request_id = getattr(g, "request_id", "")
+
     started_at = getattr(g, "request_started_at", None)
     duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
-
     app.logger.info(
         "request_completed request_id=%s method=%s path=%s endpoint=%s status=%s duration_ms=%s",
         request_id,
@@ -94,9 +94,9 @@ def _log_request_failure(app: Flask, error: BaseException) -> None:
         return
 
     request_id = getattr(g, "request_id", "")
+
     started_at = getattr(g, "request_started_at", None)
     duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
-
     app.logger.exception(
         "request_failed request_id=%s method=%s path=%s endpoint=%s duration_ms=%s error_type=%s",
         request_id,
@@ -111,9 +111,7 @@ def _log_request_failure(app: Flask, error: BaseException) -> None:
 def _https_is_already_secure() -> bool:
     if request.headers.get("X-Forwarded-Proto", "").lower() == "https":
         return True
-    if request.is_secure:
-        return True
-    return False
+    return bool(request.is_secure)
 
 
 def _redirect_to_https() -> Response:
@@ -156,7 +154,7 @@ def register_app_hooks(app: Flask) -> None:
 
     @app.before_request
     def force_https_redirect():
-        if current_app.debug:
+        if current_app.debug or current_app.config.get("TESTING"):
             return None
 
         if _https_is_already_secure():
@@ -169,7 +167,6 @@ def register_app_hooks(app: Flask) -> None:
         request_id = getattr(g, "request_id", None)
         if request_id:
             response.headers.setdefault("X-Request-ID", request_id)
-
         _apply_cache_headers(response)
         _apply_security_headers(response)
         _log_request_complete(app, response)
@@ -178,5 +175,7 @@ def register_app_hooks(app: Flask) -> None:
     @app.teardown_request
     def log_request_exception(error: BaseException | None) -> None:
         if error is None:
+            return
+        if not hasattr(g, "request_started_at"):
             return
         _log_request_failure(app, error)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 from collections import Counter, deque
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from flask import current_app, g, session
 
@@ -15,7 +15,6 @@ from core.rate_limit import (
     get_rate_limit_snapshot,
 )
 from core.sms_sender import send_sms
-
 
 ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff"]
 
@@ -151,7 +150,7 @@ def scalar_value(rows, default=0):
     if isinstance(row, dict):
         return next(iter(row.values()), default)
 
-    if isinstance(row, (list, tuple)) and row:
+    if isinstance(row, list | tuple) and row:
         return row[0]
 
     return default
@@ -196,7 +195,7 @@ def extract_detail_value(details: str, key: str) -> str:
             if not part.startswith(prefix):
                 continue
 
-            value = part[len(prefix):].strip()
+            value = part[len(prefix) :].strip()
             if not value:
                 return ""
 
@@ -226,7 +225,11 @@ def build_attack_intelligence(rows):
     username_counter = Counter()
 
     for row in rows or []:
-        details = row.get("action_details", "") if isinstance(row, dict) else row_value(row, "action_details", "")
+        details = (
+            row.get("action_details", "")
+            if isinstance(row, dict)
+            else row_value(row, "action_details", "")
+        )
         ip = extract_detail_value(details, "ip")
         username = extract_detail_value(details, "username")
 
@@ -237,8 +240,7 @@ def build_attack_intelligence(rows):
             username_counter[username] += 1
 
     top_attacking_ips = [
-        {"ip": ip, "attempts": attempts}
-        for ip, attempts in ip_counter.most_common(10)
+        {"ip": ip, "attempts": attempts} for ip, attempts in ip_counter.most_common(10)
     ]
 
     targeted_usernames = [
@@ -259,7 +261,10 @@ def _human_threat_summary(type_counter: Counter) -> str:
     if len(top_types) == 1:
         return THREAT_SUMMARY_LABELS.get(top_types[0], top_types[0].replace("_", " ")).capitalize()
 
-    labels = [THREAT_SUMMARY_LABELS.get(event_type, event_type.replace("_", " ")) for event_type in top_types]
+    labels = [
+        THREAT_SUMMARY_LABELS.get(event_type, event_type.replace("_", " "))
+        for event_type in top_types
+    ]
 
     if len(set(labels)) == 1:
         return labels[0].capitalize()
@@ -375,7 +380,7 @@ def build_locked_username_snapshot():
 
         rows.append(
             {
-                "username": key[len(prefix):],
+                "username": key[len(prefix) :],
                 "seconds_remaining": row.get("seconds_remaining", 0),
                 "key": key,
             }
@@ -397,8 +402,8 @@ def _expired_timestamp(value) -> bool:
         raw = raw.replace("Z", "+00:00")
         dt = datetime.fromisoformat(raw)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt <= datetime.now(timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
+        return dt <= datetime.now(UTC)
     except Exception:
         return False
 
@@ -414,7 +419,9 @@ def _security_status_from_conditions(
     if banned_ips or locked_usernames or top_threat_score >= 20:
         return "critical", "Critical threat level"
 
-    if top_threat_score >= 10 or failed_login_count >= int(settings.get("failed_login_alert_threshold", 15) or 15):
+    if top_threat_score >= 10 or failed_login_count >= int(
+        settings.get("failed_login_alert_threshold", 15) or 15
+    ):
         return "elevated", "Elevated threat level"
 
     if failed_login_count > 0:
@@ -455,7 +462,9 @@ def build_security_banner(
         ip = str(row.get("ip", "") or "").strip() or "unknown"
         primary_risk = "Active banned IP still hitting the system"
         recommended_action = f"Block IP {ip} upstream and review related events"
-        recommended_reason = f"An IP is currently banned and remains the highest priority threat. IP {ip}."
+        recommended_reason = (
+            f"An IP is currently banned and remains the highest priority threat. IP {ip}."
+        )
         focal_value = ip
         focal_type = "ip"
 
@@ -480,11 +489,15 @@ def build_security_banner(
         summary = str(row.get("summary", "") or "").strip()
         primary_risk = "Concentrated hostile activity from one IP"
         recommended_action = f"Block IP {ip}"
-        recommended_reason = f"That IP reached threat score {score} across {events} hostile events. {summary}"
+        recommended_reason = (
+            f"That IP reached threat score {score} across {events} hostile events. {summary}"
+        )
         focal_value = ip
         focal_type = "ip"
 
-    elif top_attacking_ips and int(top_attacking_ips[0].get("attempts", 0) or 0) >= int(settings.get("attacker_ip_alert_threshold", 10) or 10):
+    elif top_attacking_ips and int(top_attacking_ips[0].get("attempts", 0) or 0) >= int(
+        settings.get("attacker_ip_alert_threshold", 10) or 10
+    ):
         row = top_attacking_ips[0]
         ip = str(row.get("ip", "") or "").strip() or "unknown"
         attempts = int(row.get("attempts", 0) or 0)
@@ -494,25 +507,35 @@ def build_security_banner(
         focal_value = ip
         focal_type = "ip"
 
-    elif targeted_usernames and int(targeted_usernames[0].get("attempts", 0) or 0) >= int(settings.get("targeted_username_alert_threshold", 10) or 10):
+    elif targeted_usernames and int(targeted_usernames[0].get("attempts", 0) or 0) >= int(
+        settings.get("targeted_username_alert_threshold", 10) or 10
+    ):
         row = targeted_usernames[0]
         username = str(row.get("username", "") or "").strip() or "unknown"
         attempts = int(row.get("attempts", 0) or 0)
         primary_risk = "Repeated targeting of one username"
         recommended_action = f"Investigate username {username}"
-        recommended_reason = f"That username appeared in {attempts} hostile events in the last 24 hours."
+        recommended_reason = (
+            f"That username appeared in {attempts} hostile events in the last 24 hours."
+        )
         focal_value = username
         focal_type = "username"
 
-    elif int(failed_login_count or 0) >= int(settings.get("failed_login_alert_threshold", 15) or 15):
+    elif int(failed_login_count or 0) >= int(
+        settings.get("failed_login_alert_threshold", 15) or 15
+    ):
         primary_risk = "High hostile event volume across the system"
         recommended_action = "Review recent failed login activity now"
-        recommended_reason = f"Hostile security events reached {int(failed_login_count or 0)} in the last 24 hours."
+        recommended_reason = (
+            f"Hostile security events reached {int(failed_login_count or 0)} in the last 24 hours."
+        )
 
     elif int(failed_login_count or 0) > 0:
         primary_risk = "Low level hostile activity detected"
         recommended_action = "Monitor live activity and review top offenders"
-        recommended_reason = f"There were {int(failed_login_count or 0)} hostile events in the last 24 hours."
+        recommended_reason = (
+            f"There were {int(failed_login_count or 0)} hostile events in the last 24 hours."
+        )
 
     headline = f"Security Status: {status_label}"
 
@@ -633,9 +656,13 @@ def load_security_settings() -> dict:
         "kiosk_intake_enabled": bool(row_value(row, "kiosk_intake_enabled", True)),
         "admin_login_only_mode": bool(row_value(row, "admin_login_only_mode", False)),
         "security_alerts_enabled": bool(row_value(row, "security_alerts_enabled", True)),
-        "failed_login_alert_threshold": int(row_value(row, "failed_login_alert_threshold", 15) or 15),
+        "failed_login_alert_threshold": int(
+            row_value(row, "failed_login_alert_threshold", 15) or 15
+        ),
         "attacker_ip_alert_threshold": int(row_value(row, "attacker_ip_alert_threshold", 10) or 10),
-        "targeted_username_alert_threshold": int(row_value(row, "targeted_username_alert_threshold", 10) or 10),
+        "targeted_username_alert_threshold": int(
+            row_value(row, "targeted_username_alert_threshold", 10) or 10
+        ),
         "lockout_seconds": int(row_value(row, "lockout_seconds", 900) or 900),
         "ip_ban_seconds": int(row_value(row, "ip_ban_seconds", 1800) or 1800),
         "alert_cooldown_seconds": int(row_value(row, "alert_cooldown_seconds", 1800) or 1800),
@@ -762,7 +789,7 @@ def security_alert_cooldown_hit(key: str, window_seconds: int) -> bool:
             """,
             (key, window_seconds),
         )
-        count = int((rows[0]["c"] if isinstance(rows[0], dict) else rows[0][0])) if rows else 0
+        count = int(rows[0]["c"] if isinstance(rows[0], dict) else rows[0][0]) if rows else 0
         return count > 1
 
     store = current_app.config.setdefault("_SECURITY_ALERT_BUCKETS_MEM", {})
@@ -1013,11 +1040,18 @@ def maybe_send_security_alerts(
         row = top_threats[0]
         alert_key = f"security_alert:threat_score:{row.get('ip', 'unknown')}"
         alert_message = f"DWC security alert. IP {row.get('ip', 'unknown')} reached threat score {row.get('score', 0)} with repeated hostile behavior. Review the admin dashboard immediately."
-    elif top_attacking_ips and int(top_attacking_ips[0].get("attempts", 0)) >= settings["attacker_ip_alert_threshold"]:
+    elif (
+        top_attacking_ips
+        and int(top_attacking_ips[0].get("attempts", 0)) >= settings["attacker_ip_alert_threshold"]
+    ):
         row = top_attacking_ips[0]
         alert_key = f"security_alert:attacker_ip:{row.get('ip', 'unknown')}"
         alert_message = f"DWC security alert. High volume hostile activity detected from IP {row.get('ip', 'unknown')} with {row.get('attempts', 0)} events in the last 24 hours."
-    elif targeted_usernames and int(targeted_usernames[0].get("attempts", 0)) >= settings["targeted_username_alert_threshold"]:
+    elif (
+        targeted_usernames
+        and int(targeted_usernames[0].get("attempts", 0))
+        >= settings["targeted_username_alert_threshold"]
+    ):
         row = targeted_usernames[0]
         alert_key = f"security_alert:targeted_user:{row.get('username', 'unknown')}"
         alert_message = f"DWC security alert. Username {row.get('username', 'unknown')} has been targeted {row.get('attempts', 0)} times in the last 24 hours."
@@ -1038,7 +1072,9 @@ def maybe_send_security_alerts(
             continue
 
 
-def build_admin_dashboard_payload(*, send_alerts: bool = False, include_static: bool = True) -> dict:
+def build_admin_dashboard_payload(
+    *, send_alerts: bool = False, include_static: bool = True
+) -> dict:
     is_pg = bool(current_app.config.get("DATABASE_URL"))
     settings = load_security_settings()
 
@@ -1047,9 +1083,7 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False, include_static: 
     recent_audit = []
 
     if include_static:
-        total_users = scalar_value(
-            db_fetchall("SELECT COUNT(*) AS c FROM staff_users")
-        )
+        total_users = scalar_value(db_fetchall("SELECT COUNT(*) AS c FROM staff_users"))
 
         active_users = scalar_value(
             db_fetchall(
@@ -1235,9 +1269,15 @@ def build_admin_dashboard_payload(*, send_alerts: bool = False, include_static: 
         "live_payload": {
             "settings": settings,
             "failed_login_count": int(failed_login_count or 0),
-            "recent_audit": serialize_rows(recent_audit, ["created_at", "staff_username", "action_type", "action_details"]),
-            "recent_failed_logins": serialize_rows(recent_failed_logins, ["created_at", "action_type", "action_details"]),
-            "kiosk_security_events": serialize_rows(kiosk_security_events, ["created_at", "action_type", "action_details"]),
+            "recent_audit": serialize_rows(
+                recent_audit, ["created_at", "staff_username", "action_type", "action_details"]
+            ),
+            "recent_failed_logins": serialize_rows(
+                recent_failed_logins, ["created_at", "action_type", "action_details"]
+            ),
+            "kiosk_security_events": serialize_rows(
+                kiosk_security_events, ["created_at", "action_type", "action_details"]
+            ),
             "recent_staff_sessions": recent_staff_sessions,
             "recent_security_incidents": recent_security_incidents,
             "top_attacking_ips": top_attacking_ips,

@@ -2,21 +2,22 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import date
-from typing import Any, Protocol, TypeAlias, cast
+from typing import Any, Protocol, cast
 
 from core.db import db_fetchall
-from routes.case_management_parts.helpers import clean
-from routes.case_management_parts.helpers import digits_only
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import parse_int
-from routes.case_management_parts.helpers import parse_iso_date
-from routes.case_management_parts.helpers import parse_money
-from routes.case_management_parts.helpers import placeholder
+from routes.case_management_parts.helpers import (
+    clean,
+    digits_only,
+    normalize_shelter_name,
+    parse_int,
+    parse_iso_date,
+    parse_money,
+    placeholder,
+)
 from routes.case_management_parts.intake_income_support import benefits_screening_needed
 from routes.case_management_parts.needs import normalize_selected_need_keys
 
-
-DbRow: TypeAlias = dict[str, Any]
+type DbRow = dict[str, Any]
 
 
 class IntakeFormLike(Protocol):
@@ -372,9 +373,7 @@ def _validate_family_count_fields(data: dict[str, Any], errors: list[str]) -> No
 
 
 def _normalize_snap_field(data: dict[str, Any]) -> None:
-    data["receives_snap_at_entry"] = _normalize_yes_no_blank(
-        data.get("receives_snap_at_entry")
-    )
+    data["receives_snap_at_entry"] = _normalize_yes_no_blank(data.get("receives_snap_at_entry"))
 
 
 def _apply_benefits_screening_need(data: dict[str, Any]) -> None:

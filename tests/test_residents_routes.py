@@ -22,6 +22,7 @@ def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
 # Residents page
 # ----------------------------
 
+
 def test_staff_residents_requires_login_redirects(client):
     response = client.get("/staff/residents", follow_redirects=False)
     assert response.status_code in (301, 302)
@@ -35,10 +36,13 @@ def test_staff_residents_page_loads_for_staff(app, client):
     with app.app_context():
         init_db()
 
-        db_execute("DELETE FROM residents WHERE resident_identifier = %s",
-                   ("test_staff_residents_page_loads",))
+        db_execute(
+            "DELETE FROM residents WHERE resident_identifier = %s",
+            ("test_staff_residents_page_loads",),
+        )
 
-        db_execute("""
+        db_execute(
+            """
             INSERT INTO residents (
                 resident_identifier,
                 resident_code,
@@ -49,14 +53,16 @@ def test_staff_residents_page_loads_for_staff(app, client):
                 created_at
             )
             VALUES (%s, %s, %s, %s, %s, %s, NOW())
-        """, (
-            "test_staff_residents_page_loads",
-            "12345678",
-            "Jane",
-            "Resident",
-            "abba",
-            True,
-        ))
+        """,
+            (
+                "test_staff_residents_page_loads",
+                "12345678",
+                "Jane",
+                "Resident",
+                "abba",
+                True,
+            ),
+        )
 
     response = client.get("/staff/residents", follow_redirects=False)
 
@@ -69,6 +75,7 @@ def test_staff_residents_page_loads_for_staff(app, client):
 # Transfer validation
 # ----------------------------
 
+
 def test_transfer_invalid_shelter_redirects(app, client):
     from core.db import db_execute, db_fetchone
 
@@ -78,10 +85,12 @@ def test_transfer_invalid_shelter_redirects(app, client):
     with app.app_context():
         init_db()
 
-        db_execute("DELETE FROM residents WHERE resident_identifier = %s",
-                   ("test_transfer_invalid",))
+        db_execute(
+            "DELETE FROM residents WHERE resident_identifier = %s", ("test_transfer_invalid",)
+        )
 
-        db_execute("""
+        db_execute(
+            """
             INSERT INTO residents (
                 resident_identifier,
                 resident_code,
@@ -92,14 +101,16 @@ def test_transfer_invalid_shelter_redirects(app, client):
                 created_at
             )
             VALUES (%s, %s, %s, %s, %s, %s, NOW())
-        """, (
-            "test_transfer_invalid",
-            "11111111",
-            "Bad",
-            "Shelter",
-            "abba",
-            True,
-        ))
+        """,
+            (
+                "test_transfer_invalid",
+                "11111111",
+                "Bad",
+                "Shelter",
+                "abba",
+                True,
+            ),
+        )
 
         resident_id = db_fetchone(
             "SELECT id FROM residents WHERE resident_identifier = %s",
@@ -128,10 +139,10 @@ def test_transfer_same_shelter_no_change_redirects(app, client):
     with app.app_context():
         init_db()
 
-        db_execute("DELETE FROM residents WHERE resident_identifier = %s",
-                   ("test_transfer_same",))
+        db_execute("DELETE FROM residents WHERE resident_identifier = %s", ("test_transfer_same",))
 
-        db_execute("""
+        db_execute(
+            """
             INSERT INTO residents (
                 resident_identifier,
                 resident_code,
@@ -142,14 +153,16 @@ def test_transfer_same_shelter_no_change_redirects(app, client):
                 created_at
             )
             VALUES (%s, %s, %s, %s, %s, %s, NOW())
-        """, (
-            "test_transfer_same",
-            "22222222",
-            "Same",
-            "Shelter",
-            "abba",
-            True,
-        ))
+        """,
+            (
+                "test_transfer_same",
+                "22222222",
+                "Same",
+                "Shelter",
+                "abba",
+                True,
+            ),
+        )
 
         resident_id = db_fetchone(
             "SELECT id FROM residents WHERE resident_identifier = %s",
@@ -173,6 +186,7 @@ def test_transfer_same_shelter_no_change_redirects(app, client):
 # Successful transfer (real behavior)
 # ----------------------------
 
+
 def test_transfer_updates_resident_shelter(app, client):
     from core.db import db_execute, db_fetchone
 
@@ -182,10 +196,12 @@ def test_transfer_updates_resident_shelter(app, client):
     with app.app_context():
         init_db()
 
-        db_execute("DELETE FROM residents WHERE resident_identifier = %s",
-                   ("test_transfer_success",))
+        db_execute(
+            "DELETE FROM residents WHERE resident_identifier = %s", ("test_transfer_success",)
+        )
 
-        db_execute("""
+        db_execute(
+            """
             INSERT INTO residents (
                 resident_identifier,
                 resident_code,
@@ -196,14 +212,16 @@ def test_transfer_updates_resident_shelter(app, client):
                 created_at
             )
             VALUES (%s, %s, %s, %s, %s, %s, NOW())
-        """, (
-            "test_transfer_success",
-            "33333333",
-            "Move",
-            "Resident",
-            "abba",
-            True,
-        ))
+        """,
+            (
+                "test_transfer_success",
+                "33333333",
+                "Move",
+                "Resident",
+                "abba",
+                True,
+            ),
+        )
 
         resident_id = db_fetchone(
             "SELECT id FROM residents WHERE resident_identifier = %s",
@@ -229,5 +247,3 @@ def test_transfer_updates_resident_shelter(app, client):
         )
 
         assert updated["shelter"] == "haven"
-
-

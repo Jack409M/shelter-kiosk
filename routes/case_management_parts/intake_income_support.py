@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from typing import Any
 
@@ -83,10 +84,8 @@ def ensure_intake_income_supports_table() -> None:
         "ALTER TABLE intake_income_supports ADD COLUMN IF NOT EXISTS tanf_weight_applied DOUBLE PRECISION",
     ]
     for statement in statements:
-        try:
+        with contextlib.suppress(Exception):
             db_execute(statement)
-        except Exception:
-            pass
 
 
 def _safe_money(value: Any) -> float:
@@ -123,7 +122,7 @@ def _to_bool_or_none(value: Any) -> bool | None:
     if isinstance(value, bool):
         return value
 
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return value != 0
 
     normalized = str(value).strip().lower()
@@ -308,7 +307,9 @@ def _build_income_support_payload(enrollment_id: int, data: dict[str, Any]) -> d
     youngest_child_weight = _load_youngest_active_child_weight(enrollment_id, cutoff_months)
 
     survivor_benefit_total = _safe_money(child_rollups.get("survivor_benefit_total"))
-    survivor_benefit_weighted_total = _safe_money(child_rollups.get("survivor_benefit_weighted_total"))
+    survivor_benefit_weighted_total = _safe_money(
+        child_rollups.get("survivor_benefit_weighted_total")
+    )
     child_support_total = _safe_money(child_rollups.get("child_support_total"))
     child_support_weighted_total = _safe_money(child_rollups.get("child_support_weighted_total"))
 

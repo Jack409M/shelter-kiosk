@@ -181,12 +181,8 @@ def _resident_profile_summary(
     program_start_date = None
 
     if resident_profile:
-        resident_level = _clean_text(
-            resident_value(resident_profile, "program_level", 2, "")
-        )
-        sponsor_name = _clean_text(
-            resident_value(resident_profile, "sponsor_name", 3, "")
-        )
+        resident_level = _clean_text(resident_value(resident_profile, "program_level", 2, ""))
+        sponsor_name = _clean_text(resident_value(resident_profile, "sponsor_name", 3, ""))
         sponsor_active = resident_value(resident_profile, "sponsor_active", 4, None)
         step_current = resident_value(resident_profile, "step_current", 5, None)
         step_work_active = resident_value(

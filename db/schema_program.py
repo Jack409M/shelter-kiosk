@@ -7,6 +7,8 @@ existing residents table without disturbing current shelter logic.
 
 from __future__ import annotations
 
+import contextlib
+
 from core.db import db_execute
 
 from .schema_helpers import create_table
@@ -75,37 +77,29 @@ def ensure_user_dashboard_favorites_table(kind: str) -> None:
 
 
 def ensure_indexes() -> None:
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS program_enrollments_resident_idx "
             "ON program_enrollments (resident_id)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS program_enrollments_status_idx "
             "ON program_enrollments (program_status, entry_date)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS user_dashboard_favorites_user_dashboard_idx "
             "ON user_dashboard_favorites (user_id, dashboard_key, display_order)"
         )
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         db_execute(
             "CREATE INDEX IF NOT EXISTS user_dashboard_favorites_metric_idx "
             "ON user_dashboard_favorites (dashboard_key, metric_key)"
         )
-    except Exception:
-        pass
 
 
 def ensure_tables(kind: str) -> None:

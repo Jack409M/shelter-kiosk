@@ -4,13 +4,22 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from core.audit import log_action
 from core.auth import can_manage_requests, require_login, require_shelter
 from core.db import db_execute, db_fetchall
 from core.helpers import fmt_dt, utcnow_iso
-
 
 transport = Blueprint("transport", __name__)
 
