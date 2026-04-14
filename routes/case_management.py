@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from flask import Blueprint
 
-from core.auth import require_login, require_shelter
+from core.auth import require_login
+from core.auth import require_shelter
 from routes.case_management_parts.actions import add_appointment_view
 from routes.case_management_parts.actions import add_goal_view
 from routes.case_management_parts.actions import create_enrollment_view
@@ -21,16 +22,6 @@ from routes.case_management_parts.family import edit_child_view
 from routes.case_management_parts.family import family_intake_view
 from routes.case_management_parts.followups import followup_form_view
 from routes.case_management_parts.followups import submit_followup_view
-from routes.case_management_parts.helpers import case_manager_allowed
-from routes.case_management_parts.helpers import clean
-from routes.case_management_parts.helpers import digits_only
-from routes.case_management_parts.helpers import normalize_shelter_name
-from routes.case_management_parts.helpers import parse_int
-from routes.case_management_parts.helpers import parse_iso_date
-from routes.case_management_parts.helpers import parse_money
-from routes.case_management_parts.helpers import placeholder
-from routes.case_management_parts.helpers import shelter_equals_sql
-from routes.case_management_parts.helpers import yes_no_to_int
 from routes.case_management_parts.income_support import income_support_view
 from routes.case_management_parts.index import index_view
 from routes.case_management_parts.index import intake_index_view
@@ -67,18 +58,6 @@ case_management = Blueprint(
     __name__,
     url_prefix="/staff/case-management",
 )
-
-
-_case_manager_allowed = case_manager_allowed
-_clean = clean
-_digits_only = digits_only
-_normalize_shelter_name = normalize_shelter_name
-_parse_int = parse_int
-_parse_iso_date = parse_iso_date
-_parse_money = parse_money
-_placeholder = placeholder
-_shelter_equals_sql = shelter_equals_sql
-_yes_no_to_int = yes_no_to_int
 
 
 @case_management.get("/")
@@ -123,6 +102,36 @@ def intake_edit(resident_id: int):
     return intake_edit_view(resident_id)
 
 
+@case_management.get("/intake-assessment/duplicate-review/<int:draft_id>")
+@_view
+def intake_duplicate_review(draft_id: int):
+    return duplicate_review_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/use-existing")
+@_view
+def intake_duplicate_use_existing(draft_id: int):
+    return duplicate_review_use_existing_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/create-new")
+@_view
+def intake_duplicate_create_new(draft_id: int):
+    return duplicate_review_create_new_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/dismiss")
+@_view
+def intake_duplicate_dismiss(draft_id: int):
+    return duplicate_review_dismiss_view(draft_id)
+
+
+@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/return-to-edit")
+@_view
+def intake_duplicate_return_to_edit(draft_id: int):
+    return duplicate_review_return_to_edit_view(draft_id)
+
+
 @case_management.route("/<int:resident_id>/family-intake", methods=["GET", "POST"])
 @_view
 def family_intake(resident_id: int):
@@ -157,36 +166,6 @@ def edit_child_service(service_id: int):
 @_view
 def delete_child_service(service_id: int):
     return delete_child_service_view(service_id)
-
-
-@case_management.get("/intake-assessment/duplicate-review/<int:draft_id>")
-@_view
-def intake_duplicate_review(draft_id: int):
-    return duplicate_review_view(draft_id)
-
-
-@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/use-existing")
-@_view
-def intake_duplicate_use_existing(draft_id: int):
-    return duplicate_review_use_existing_view(draft_id)
-
-
-@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/create-new")
-@_view
-def intake_duplicate_create_new(draft_id: int):
-    return duplicate_review_create_new_view(draft_id)
-
-
-@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/dismiss")
-@_view
-def intake_duplicate_dismiss(draft_id: int):
-    return duplicate_review_dismiss_view(draft_id)
-
-
-@case_management.post("/intake-assessment/duplicate-review/<int:draft_id>/return-to-edit")
-@_view
-def intake_duplicate_return_to_edit(draft_id: int):
-    return duplicate_review_return_to_edit_view(draft_id)
 
 
 @case_management.get("/<int:resident_id>/exit-assessment")
