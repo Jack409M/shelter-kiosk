@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from core.meeting_progress import calculate_meeting_progress
 from core.promotion_readiness import build_promotion_readiness
 from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
@@ -26,6 +28,10 @@ from routes.case_management_parts.recovery_snapshot_metrics import normalize_sob
 from routes.case_management_parts.recovery_snapshot_metrics import normalize_treatment_graduation_date
 
 
+type Row = dict[str, Any]
+type RowList = list[Row]
+
+
 def _resolve_enrollment_id(resident_id: int, enrollment_id: int | None) -> int | None:
     return enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
 
@@ -33,7 +39,7 @@ def _resolve_enrollment_id(resident_id: int, enrollment_id: int | None) -> int |
 def _load_snapshot_source_data(
     resident_id: int,
     enrollment_id: int | None,
-) -> dict:
+) -> dict[str, Any]:
     resident = load_resident_profile(resident_id)
     enrollment_baseline = load_enrollment_baseline(enrollment_id)
 
@@ -54,7 +60,7 @@ def _load_snapshot_source_data(
     }
 
 
-def _build_date_context(resident: dict, enrollment_baseline: dict) -> dict:
+def _build_date_context(resident: Row, enrollment_baseline: Row) -> dict[str, Any]:
     level_start_date = normalize_level_start_date(resident, enrollment_baseline)
     sobriety_date = normalize_sobriety_date(resident, enrollment_baseline)
     treatment_graduation_date = normalize_treatment_graduation_date(
@@ -69,13 +75,13 @@ def _build_date_context(resident: dict, enrollment_baseline: dict) -> dict:
     }
 
 
-def _build_collection_context(source_data: dict) -> dict:
+def _build_collection_context(source_data: dict[str, Any]) -> dict[str, Any]:
     medications_list = medication_items(source_data["medications_raw"])
     ua_rows_list = ua_items(source_data["ua_rows_raw"])
     inspection_rows_list = inspection_items(source_data["inspection_rows_raw"])
     budget_rows_list = budget_items(source_data["budget_rows_raw"])
 
-    writeup_rows_raw = source_data["writeup_rows_raw"]
+    writeup_rows_raw: RowList = source_data["writeup_rows_raw"]
     writeups_last_30_days = count_writeups_last_30_days(writeup_rows_raw)
     latest_writeup = writeup_rows_raw[0] if writeup_rows_raw else None
 
@@ -96,12 +102,12 @@ def _build_collection_context(source_data: dict) -> dict:
 def _build_meeting_progress_snapshot(
     *,
     resident_id: int,
-    resident: dict,
-    enrollment_baseline: dict,
-) -> dict:
+    resident: Row,
+    enrollment_baseline: Row,
+) -> dict[str, Any]:
     return calculate_meeting_progress(
         resident_id=resident_id,
-        shelter=resident.get("shelter") or "",
+        shelter=str(resident.get("shelter") or ""),
         program_start_date=enrollment_baseline.get("entry_date"),
         level_value=resident.get("program_level"),
     )
@@ -109,11 +115,11 @@ def _build_meeting_progress_snapshot(
 
 def _build_promotion_readiness_snapshot(
     *,
-    resident: dict,
-    level_start_date,
-    meeting_progress: dict,
+    resident: Row,
+    level_start_date: Any,
+    meeting_progress: dict[str, Any],
     writeups_last_30_days: int,
-) -> dict:
+) -> dict[str, Any]:
     return build_promotion_readiness(
         {
             **meeting_progress,
@@ -131,12 +137,12 @@ def _build_promotion_readiness_snapshot(
 
 def _build_snapshot_payload(
     *,
-    resident: dict,
-    date_context: dict,
-    collection_context: dict,
-    meeting_progress: dict,
-    promotion_readiness: dict,
-) -> dict:
+    resident: Row,
+    date_context: dict[str, Any],
+    collection_context: dict[str, Any],
+    meeting_progress: dict[str, Any],
+    promotion_readiness: dict[str, Any],
+) -> dict[str, Any]:
     step_changed_at = resident.get("step_changed_at")
     employment_updated_at = resident.get("employment_updated_at")
     current_job_start_date = resident.get("current_job_start_date")
@@ -220,29 +226,14 @@ def _build_snapshot_payload(
         "meetings_last_30_days": meeting_progress.get("meetings_last_30_days", 0),
         "meetings_last_90_days": meeting_progress.get("meetings_last_90_days", 0),
         "days_in_program": meeting_progress.get("days_in_program", 0),
-        "expected_meetings_so_far": meeting_progress.get(
-            "expected_meetings_so_far",
-            0,
-        ),
+        "expected_meetings_so_far": meeting_progress.get("expected_meetings_so_far", 0),
         "pace_percent": meeting_progress.get("pace_percent", 0.0),
-        "pace_percent_display": meeting_progress.get(
-            "pace_percent_display",
-            "0.0%",
-        ),
+        "pace_percent_display": meeting_progress.get("pace_percent_display", "0.0%"),
         "projected_90_day_total": meeting_progress.get("projected_90_day_total", 0),
-        "meetings_remaining_to_90": meeting_progress.get(
-            "meetings_remaining_to_90",
-            0,
-        ),
+        "meetings_remaining_to_90": meeting_progress.get("meetings_remaining_to_90", 0),
         "completed_90_in_90": meeting_progress.get("completed_90_in_90", False),
-        "completed_116_meetings": meeting_progress.get(
-            "completed_116_meetings",
-            False,
-        ),
-        "completed_168_meetings": meeting_progress.get(
-            "completed_168_meetings",
-            False,
-        ),
+        "completed_116_meetings": meeting_progress.get("completed_116_meetings", False),
+        "completed_168_meetings": meeting_progress.get("completed_168_meetings", False),
         "required_weekly_meetings": meeting_progress.get("required_weekly_meetings"),
         "weekly_requirement_met": meeting_progress.get("weekly_requirement_met"),
         "meeting_status_label": meeting_progress.get("status_label", "Not Started"),
@@ -252,12 +243,15 @@ def _build_snapshot_payload(
     }
 
 
-def load_recovery_snapshot(resident_id: int, enrollment_id: int | None):
+def load_recovery_snapshot(
+    resident_id: int,
+    enrollment_id: int | None,
+) -> dict[str, Any]:
     current_enrollment_id = _resolve_enrollment_id(resident_id, enrollment_id)
 
     source_data = _load_snapshot_source_data(resident_id, current_enrollment_id)
-    resident = source_data["resident"]
-    enrollment_baseline = source_data["enrollment_baseline"]
+    resident: Row = source_data["resident"]
+    enrollment_baseline: Row = source_data["enrollment_baseline"]
 
     date_context = _build_date_context(resident, enrollment_baseline)
     collection_context = _build_collection_context(source_data)
