@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-# Third party
 from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 
-# Core / app
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
