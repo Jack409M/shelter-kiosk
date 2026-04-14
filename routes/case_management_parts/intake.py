@@ -22,6 +22,55 @@ from routes.case_management_parts.intake_validation import _validate_intake_form
 from routes.case_management_parts.needs import OFFICIAL_NEEDS
 
 
+def _deny_case_manager_access():
+    flash("Case manager access required.", "error")
+    return redirect(url_for("attendance.staff_attendance"))
+
+
+def _current_shelter() -> str:
+    return normalize_shelter_name(session.get("shelter"))
+
+
+def _request_form_data() -> dict[str, Any]:
+    return request.form.to_dict(flat=True)
+
+
+def _render_intake_form(
+    *,
+    current_shelter: str,
+    form_data: dict[str, Any] | None,
+    review_passed: bool,
+    is_edit_mode: bool,
+    resident_id: int | None,
+):
+    return render_template(
+        "case_management/intake_assessment.html",
+        **_intake_template_context(
+            current_shelter=current_shelter,
+            form_data=form_data,
+            review_passed=review_passed,
+            is_edit_mode=is_edit_mode,
+            resident_id=resident_id,
+        ),
+    )
+
+
+def _render_intake_form_from_request(
+    *,
+    current_shelter: str,
+    review_passed: bool,
+    is_edit_mode: bool,
+    resident_id: int | None,
+):
+    return _render_intake_form(
+        current_shelter=current_shelter,
+        form_data=_request_form_data(),
+        review_passed=review_passed,
+        is_edit_mode=is_edit_mode,
+        resident_id=resident_id,
+    )
+
+
 def _intake_template_context(
     current_shelter: str,
     form_data: dict[str, Any] | None = None,
@@ -100,30 +149,6 @@ def _intake_template_context(
     }
 
 
-def _render_intake_form(
-    *,
-    current_shelter: str,
-    form_data: dict[str, Any] | None,
-    review_passed: bool,
-    is_edit_mode: bool,
-    resident_id: int | None,
-):
-    return render_template(
-        "case_management/intake_assessment.html",
-        **_intake_template_context(
-            current_shelter=current_shelter,
-            form_data=form_data,
-            review_passed=review_passed,
-            is_edit_mode=is_edit_mode,
-            resident_id=resident_id,
-        ),
-    )
-
-
-def _request_form_data() -> dict[str, Any]:
-    return request.form.to_dict(flat=True)
-
-
 def _form_review_passed(form_source: Any) -> bool:
     value = clean(form_source.get("review_passed"))
     return value in {"1", "true", "yes", "on"}
@@ -193,18 +218,13 @@ def _apply_intake_edit_aliases(form_data: dict[str, Any]) -> dict[str, Any]:
         if form_data.get(form_key) in (None, "") and db_key in form_data:
             form_data[form_key] = form_data.get(db_key)
 
-    if "car_at_entry" in form_data:
-        form_data["car_at_entry"] = _normalize_yes_no_value(form_data.get("car_at_entry"))
-
-    if "car_insurance_at_entry" in form_data:
-        form_data["car_insurance_at_entry"] = _normalize_yes_no_value(
-            form_data.get("car_insurance_at_entry")
-        )
-
-    if "receives_snap_at_entry" in form_data:
-        form_data["receives_snap_at_entry"] = _normalize_yes_no_value(
-            form_data.get("receives_snap_at_entry")
-        )
+    for field_name in [
+        "car_at_entry",
+        "car_insurance_at_entry",
+        "receives_snap_at_entry",
+    ]:
+        if field_name in form_data:
+            form_data[field_name] = _normalize_yes_no_value(form_data.get(field_name))
 
     return form_data
 
@@ -223,6 +243,18 @@ def _apply_selected_need_flags(
     return form_data
 
 
+def _find_duplicate_for_data(*, data: dict[str, Any], current_shelter: str):
+    return _find_possible_duplicate(
+        first_name=data["first_name"],
+        last_name=data["last_name"],
+        birth_year=data["birth_year"],
+        phone=data["phone"],
+        email=data["email"],
+        shelter=current_shelter,
+        shelter_equals_sql=None,
+    )
+
+
 def _handle_save_draft(
     *,
     current_shelter: str,
@@ -236,9 +268,8 @@ def _handle_save_draft(
 
     if not first_name or not last_name:
         flash("Save Draft requires at least first name and last name.", "error")
-        return _render_intake_form(
+        return _render_intake_form_from_request(
             current_shelter=current_shelter,
-            form_data=_request_form_data(),
             review_passed=review_passed,
             is_edit_mode=is_edit_mode,
             resident_id=resident_id,
@@ -263,15 +294,7 @@ def _handle_review(
     draft_id: int | None,
     data: dict[str, Any],
 ):
-    duplicate = _find_possible_duplicate(
-        first_name=data["first_name"],
-        last_name=data["last_name"],
-        birth_year=data["birth_year"],
-        phone=data["phone"],
-        email=data["email"],
-        shelter=current_shelter,
-        shelter_equals_sql=None,
-    )
+    duplicate = _find_duplicate_for_data(data=data, current_shelter=current_shelter)
 
     review_result = save_intake_review_decision(
         current_shelter=current_shelter,
@@ -350,9 +373,8 @@ def _handle_update(
             enrollment_id,
         )
         flash("Unable to save intake changes. Please try again or contact an administrator.", "error")
-        return _render_intake_form(
+        return _render_intake_form_from_request(
             current_shelter=current_shelter,
-            form_data=_request_form_data(),
             review_passed=review_passed,
             is_edit_mode=is_edit_mode,
             resident_id=resident_id,
@@ -372,15 +394,7 @@ def _handle_create(
     is_edit_mode: bool,
 ):
     try:
-        final_duplicate = _find_possible_duplicate(
-            first_name=data["first_name"],
-            last_name=data["last_name"],
-            birth_year=data["birth_year"],
-            phone=data["phone"],
-            email=data["email"],
-            shelter=current_shelter,
-            shelter_equals_sql=None,
-        )
+        final_duplicate = _find_duplicate_for_data(data=data, current_shelter=current_shelter)
 
         if final_duplicate:
             duplicate_identifier, duplicate_first_name, duplicate_last_name = duplicate_identity(
@@ -420,9 +434,8 @@ def _handle_create(
             data.get("last_name"),
         )
         flash("Unable to save intake. Please try again or contact an administrator.", "error")
-        return _render_intake_form(
+        return _render_intake_form_from_request(
             current_shelter=current_shelter,
-            form_data=_request_form_data(),
             review_passed=review_passed,
             is_edit_mode=is_edit_mode,
             resident_id=resident_id,
@@ -437,12 +450,11 @@ def _handle_create(
 
 def intake_form_view():
     if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
+        return _deny_case_manager_access()
 
     init_db()
 
-    current_shelter = normalize_shelter_name(session.get("shelter"))
+    current_shelter = _current_shelter()
     draft_id = parse_int(request.args.get("draft_id"))
     form_data: dict[str, Any] | None = None
     review_passed = False
@@ -467,12 +479,11 @@ def intake_form_view():
 
 def intake_edit_view(resident_id: int):
     if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
+        return _deny_case_manager_access()
 
     init_db()
 
-    current_shelter = normalize_shelter_name(session.get("shelter"))
+    current_shelter = _current_shelter()
     resident, enrollment = resident_enrollment_in_scope(resident_id, current_shelter)
 
     if not resident:
@@ -503,12 +514,11 @@ def intake_edit_view(resident_id: int):
 
 def submit_intake_assessment_view():
     if not case_manager_allowed():
-        flash("Case manager access required.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
+        return _deny_case_manager_access()
 
     init_db()
 
-    current_shelter = normalize_shelter_name(session.get("shelter"))
+    current_shelter = _current_shelter()
     action = (request.form.get("action") or "review").strip().lower()
     resident_id = parse_int(request.form.get("resident_id"))
     is_edit_mode = request.form.get("is_edit_mode") == "true" or resident_id is not None
@@ -529,9 +539,8 @@ def submit_intake_assessment_view():
     if errors:
         for error in errors:
             flash(error, "error")
-        return _render_intake_form(
+        return _render_intake_form_from_request(
             current_shelter=current_shelter,
-            form_data=_request_form_data(),
             review_passed=review_passed,
             is_edit_mode=is_edit_mode,
             resident_id=resident_id,
@@ -546,9 +555,8 @@ def submit_intake_assessment_view():
 
     if not review_passed:
         flash("Submit the basic identity information for review before finalizing intake.", "error")
-        return _render_intake_form(
+        return _render_intake_form_from_request(
             current_shelter=current_shelter,
-            form_data=_request_form_data(),
             review_passed=False,
             is_edit_mode=is_edit_mode,
             resident_id=resident_id,
@@ -571,4 +579,3 @@ def submit_intake_assessment_view():
         review_passed=review_passed,
         is_edit_mode=is_edit_mode,
     )
-    
