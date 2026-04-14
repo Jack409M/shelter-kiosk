@@ -49,7 +49,10 @@ def current_enrollment_order_sql(alias: str = "") -> str:
     )
 
 
-def fetch_current_enrollment_for_resident(resident_id: int, columns: str = "*"):
+def fetch_current_enrollment_for_resident(
+    resident_id: int,
+    columns: str = "*",
+) -> dict[str, Any] | tuple[Any, ...] | None:
     ph = placeholder()
 
     return db_fetchone(
@@ -70,9 +73,11 @@ def fetch_current_enrollment_id_for_resident(resident_id: int) -> int | None:
         return None
 
     if isinstance(row, dict):
-        return row.get("id")
+        raw_id = row.get("id")
+        return int(raw_id) if raw_id is not None else None
 
-    return row[0]
+    raw_id = row[0] if len(row) > 0 else None
+    return int(raw_id) if raw_id is not None else None
 
 
 def resident_has_active_enrollment(resident_id: int) -> bool:
