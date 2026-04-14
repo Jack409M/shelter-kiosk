@@ -28,7 +28,6 @@ resident_portal = Blueprint(
 
 def _resident_session_int(key: str) -> int | None:
     value = session.get(key)
-
     if value is None:
         return None
 
@@ -40,6 +39,32 @@ def _resident_session_int(key: str) -> int | None:
 
 def _resident_session_text(key: str) -> str:
     return str(session.get(key) or "").strip()
+
+
+def _resident_session_context() -> dict[str, Any]:
+    return {
+        "resident_id": _resident_session_int("resident_id"),
+        "shelter": _resident_session_text("resident_shelter"),
+        "resident_identifier": _resident_session_text("resident_identifier"),
+    }
+
+
+def _clear_resident_session_and_redirect():
+    session.clear()
+    flash("Your session ended. Please sign in again.", "error")
+    return redirect(url_for("resident_requests.resident_signin"))
+
+
+def _require_resident_session(*, require_identifier: bool = False):
+    context = _resident_session_context()
+
+    if context["resident_id"] is None or not context["shelter"]:
+        return None, _clear_resident_session_and_redirect()
+
+    if require_identifier and not context["resident_identifier"]:
+        return None, _clear_resident_session_and_redirect()
+
+    return context, None
 
 
 def _load_recent_pass_items(resident_id: int, shelter: str) -> list[dict[str, Any]]:
@@ -115,24 +140,7 @@ def _load_recent_transport_requests(
     )
 
 
-def _clear_resident_session_and_redirect():
-    session.clear()
-    flash("Your session ended. Please sign in again.", "error")
-    return redirect(url_for("resident_requests.resident_signin"))
-
-
-@resident_portal.route("/home")
-@require_resident
-def home():
-    init_db()
-
-    resident_id = _resident_session_int("resident_id")
-    shelter = _resident_session_text("resident_shelter")
-    resident_identifier = _resident_session_text("resident_identifier")
-
-    if resident_id is None or not shelter:
-        return _clear_resident_session_and_redirect()
-
+def _build_home_context(*, resident_id: int, shelter: str, resident_identifier: str) -> dict[str, Any]:
     run_pass_retention_cleanup_for_shelter(shelter)
 
     raw_pass_items = _load_recent_pass_items(resident_id, shelter)
@@ -144,13 +152,33 @@ def home():
     transport_items = process_transport(raw_transport_items)
     chores = get_today_chores(resident_id)
 
+    return {
+        "pass_items": pass_items,
+        "notification_items": notification_items,
+        "transport_items": transport_items,
+        "active_pass": active_pass,
+        "chores": chores,
+    }
+
+
+@resident_portal.route("/home")
+@require_resident
+def home():
+    init_db()
+
+    resident_context, redirect_response = _require_resident_session(require_identifier=False)
+    if redirect_response is not None:
+        return redirect_response
+
+    context = _build_home_context(
+        resident_id=resident_context["resident_id"],
+        shelter=resident_context["shelter"],
+        resident_identifier=resident_context["resident_identifier"],
+    )
+
     return render_template(
         "resident_home.html",
-        pass_items=pass_items,
-        notification_items=notification_items,
-        transport_items=transport_items,
-        active_pass=active_pass,
-        chores=chores,
+        **context,
     )
 
 
@@ -159,10 +187,11 @@ def home():
 def resident_chores():
     init_db()
 
-    resident_id = _resident_session_int("resident_id")
+    resident_context, redirect_response = _require_resident_session()
+    if redirect_response is not None:
+        return redirect_response
 
-    if resident_id is None:
-        return _clear_resident_session_and_redirect()
+    resident_id = resident_context["resident_id"]
 
     if request.method == "POST":
         assignment_id = str(request.form.get("assignment_id") or "").strip()
