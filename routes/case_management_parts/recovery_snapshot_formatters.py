@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from datetime import date
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
-
 
 EMPTY_DISPLAY = "—"
 

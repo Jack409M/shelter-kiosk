@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from flask import g
-
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
 
@@ -48,17 +46,6 @@ def backfill_missing_delete_after_at_for_shelter(shelter: str) -> int:
                 end_at IS NOT NULL
              OR end_date IS NOT NULL
           )
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        SELECT id, end_at, end_date
-        FROM resident_passes
-        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(?))
-          AND delete_after_at IS NULL
-          AND (
-                end_at IS NOT NULL
-             OR end_date IS NOT NULL
-          )
         """,
         (shelter,),
     )
@@ -79,13 +66,6 @@ def backfill_missing_delete_after_at_for_shelter(shelter: str) -> int:
             SET delete_after_at = %s,
                 updated_at = %s
             WHERE id = %s
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            UPDATE resident_passes
-            SET delete_after_at = ?,
-                updated_at = ?
-            WHERE id = ?
             """,
             (delete_after_at, utcnow_iso(), row["id"]),
         )
@@ -104,14 +84,6 @@ def delete_expired_passes_for_shelter(shelter: str) -> int:
         WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
           AND delete_after_at IS NOT NULL
           AND delete_after_at <= %s
-        """
-        if g.get("db_kind") == "pg"
-        else """
-        SELECT id
-        FROM resident_passes
-        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(?))
-          AND delete_after_at IS NOT NULL
-          AND delete_after_at <= ?
         """,
         (shelter, now_iso),
     )
@@ -125,11 +97,6 @@ def delete_expired_passes_for_shelter(shelter: str) -> int:
             """
             DELETE FROM resident_notifications
             WHERE related_pass_id = %s
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            DELETE FROM resident_notifications
-            WHERE related_pass_id = ?
             """,
             (pass_id,),
         )
@@ -138,11 +105,6 @@ def delete_expired_passes_for_shelter(shelter: str) -> int:
             """
             DELETE FROM resident_pass_request_details
             WHERE pass_id = %s
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            DELETE FROM resident_pass_request_details
-            WHERE pass_id = ?
             """,
             (pass_id,),
         )
@@ -151,11 +113,6 @@ def delete_expired_passes_for_shelter(shelter: str) -> int:
             """
             DELETE FROM resident_passes
             WHERE id = %s
-            """
-            if g.get("db_kind") == "pg"
-            else """
-            DELETE FROM resident_passes
-            WHERE id = ?
             """,
             (pass_id,),
         )

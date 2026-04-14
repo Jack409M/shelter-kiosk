@@ -5,7 +5,13 @@ from typing import Any
 from core.meeting_progress import calculate_meeting_progress
 from core.promotion_readiness import build_promotion_readiness
 from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
-from routes.case_management_parts.recovery_snapshot_formatters import bool_display, days_since, employment_status_display, employment_type_display, money_display
+from routes.case_management_parts.recovery_snapshot_formatters import (
+    bool_display,
+    days_since,
+    employment_status_display,
+    employment_type_display,
+    money_display,
+)
 from routes.case_management_parts.recovery_snapshot_loaders import (
     load_budget_rows,
     load_enrollment_baseline,

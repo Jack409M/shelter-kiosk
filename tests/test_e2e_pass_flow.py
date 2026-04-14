@@ -299,7 +299,8 @@ def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, clien
             ("2000-01-01T00:00:00", pass_id),
         )
 
-    result = run_pass_retention_cleanup_for_shelter("abba")
+    with app.app_context():
+        result = run_pass_retention_cleanup_for_shelter("abba")
 
     assert result["deleted"] >= 1
 

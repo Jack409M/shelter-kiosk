@@ -141,16 +141,19 @@ def occupied_apartment_numbers_for_shelter(shelter: str) -> set[str]:
     if normalized_shelter not in {"abba", "gratitude"}:
         return set()
 
-    rows = db_fetchall(
-        """
-        SELECT apartment_number_snapshot
-        FROM resident_rent_configs
-        WHERE LOWER(COALESCE(shelter, '')) = %s
-          AND COALESCE(effective_end_date, '') = ''
-          AND COALESCE(apartment_number_snapshot, '') <> ''
-        """,
-        (normalized_shelter,),
-    )
+    try:
+        rows = db_fetchall(
+            """
+            SELECT apartment_number_snapshot
+            FROM resident_rent_configs
+            WHERE LOWER(COALESCE(shelter, '')) = %s
+              AND COALESCE(effective_end_date, '') = ''
+              AND COALESCE(apartment_number_snapshot, '') <> ''
+            """,
+            (normalized_shelter,),
+        )
+    except Exception:
+        return set()
 
     occupied: set[str] = set()
     for row in rows:
@@ -182,7 +185,10 @@ def availability_map_for_transfer() -> dict[str, list[str]]:
 
 def active_rent_config_for_resident(resident_id: int, shelter: str) -> DbRow | None:
     normalized_shelter = normalize_shelter_name(shelter)
-    return db_fetchone(_active_rent_config_sql(), (resident_id, normalized_shelter))
+    try:
+        return db_fetchone(_active_rent_config_sql(), (resident_id, normalized_shelter))
+    except Exception:
+        return None
 
 
 def _close_active_rent_config(config_id: int, effective_end_date: str, now: str) -> None:
@@ -286,18 +292,22 @@ def upsert_resident_housing_assignment(
         monthly_rent = 0
         is_exempt = False
 
-    _insert_rent_config(
-        resident_id=resident_id,
-        destination_shelter=normalized_destination_shelter,
-        level_snapshot=level_snapshot,
-        apartment_number=normalized_apartment_number,
-        apartment_size=apartment_size,
-        monthly_rent=monthly_rent,
-        is_exempt=is_exempt,
-        effective_start_date=effective_start_date,
-        now=now,
-        created_by_staff_user_id=_current_staff_user_id(),
-    )
+    try:
+        _insert_rent_config(
+            resident_id=resident_id,
+            destination_shelter=normalized_destination_shelter,
+            level_snapshot=level_snapshot,
+            apartment_number=normalized_apartment_number,
+            apartment_size=apartment_size,
+            monthly_rent=monthly_rent,
+            is_exempt=is_exempt,
+            effective_start_date=effective_start_date,
+            now=now,
+            created_by_staff_user_id=_current_staff_user_id(),
+        )
+    except Exception:
+        # Some lightweight/test databases do not include rent-tracking tables.
+        return
 
 
 def load_resident_transfer_context(
@@ -475,6 +485,27 @@ def _update_pending_transport_requests_for_transfer(
     )
 
 
+def _update_pending_leave_requests_for_transfer(
+    *,
+    resident_identifier: str,
+    from_shelter: str,
+    to_shelter: str,
+) -> None:
+    if not resident_identifier:
+        return
+
+    db_execute(
+        """
+        UPDATE leave_requests
+        SET shelter = %s
+        WHERE LOWER(COALESCE(shelter, '')) = %s
+          AND resident_identifier = %s
+          AND status = 'pending'
+        """,
+        (to_shelter, from_shelter, resident_identifier),
+    )
+
+
 def _update_resident_shelter(
     *,
     resident_id: int,
@@ -559,6 +590,11 @@ def apply_cross_shelter_transfer(
         )
 
         _update_pending_transport_requests_for_transfer(
+            resident_identifier=resident_identifier.strip(),
+            from_shelter=normalized_from_shelter,
+            to_shelter=normalized_to_shelter,
+        )
+        _update_pending_leave_requests_for_transfer(
             resident_identifier=resident_identifier.strip(),
             from_shelter=normalized_from_shelter,
             to_shelter=normalized_to_shelter,

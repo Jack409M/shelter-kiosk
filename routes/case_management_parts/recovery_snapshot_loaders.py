@@ -5,7 +5,6 @@ from typing import Any
 from core.db import db_fetchall, db_fetchone
 from routes.case_management_parts.helpers import placeholder
 
-
 Row = dict[str, Any]
 Rows = list[Row]
 

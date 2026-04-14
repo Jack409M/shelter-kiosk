@@ -25,6 +25,20 @@ class IntakeFormLike(Protocol):
     def getlist(self, key: str) -> list[Any]: ...
 
 
+def _form_getlist(form: IntakeFormLike, key: str) -> list[Any]:
+    getlist = getattr(form, "getlist", None)
+    if callable(getlist):
+        values = getlist(key)
+        return list(values) if isinstance(values, Sequence) else []
+
+    value = form.get(key)  # type: ignore[attr-defined]
+    if value is None:
+        return []
+    if isinstance(value, Sequence) and not isinstance(value, str | bytes | bytearray):
+        return list(value)
+    return [value]
+
+
 ALLOWED_GENDER_VALUES = {"m", "f"}
 
 ALLOWED_DISABILITY_VALUES = {
@@ -75,7 +89,7 @@ def _normalized_phone_or_none(value: object) -> str | None:
 
 
 def _normalize_yes_no_blank(value: object) -> str:
-    normalized = clean(value).lower()
+    normalized = (clean(value) or "").lower()
 
     if normalized in {"yes", "true", "1", "on", "y"}:
         return "yes"
@@ -234,8 +248,8 @@ def _validate_shelter_scope(
 
 
 def _validate_gender_and_disability(data: dict[str, Any], errors: list[str]) -> None:
-    gender_value = clean(data.get("gender")).lower()
-    disability_value = clean(data.get("disability"))
+    gender_value = (clean(data.get("gender")) or "").lower()
+    disability_value = clean(data.get("disability")) or ""
 
     data["gender"] = gender_value
     data["disability"] = disability_value
@@ -299,7 +313,10 @@ def _validate_phone_and_email(data: dict[str, Any], errors: list[str]) -> None:
         errors.append("Phone must contain at least 10 digits.")
     data["phone"] = phone_value
 
-    data["email"] = _normalized_email_or_none(data.get("email"))
+    email_value = _normalized_email_or_none(data.get("email"))
+    if email_value and ("@" not in email_value or "." not in email_value.rsplit("@", 1)[-1]):
+        errors.append("Email must be valid.")
+    data["email"] = email_value
 
 
 def _validate_zipcode(data: dict[str, Any], errors: list[str]) -> None:
@@ -372,7 +389,7 @@ def _apply_benefits_screening_need(data: dict[str, Any]) -> None:
 
 
 def _build_intake_data(form: IntakeFormLike, shelter: str) -> dict[str, Any]:
-    normalized_need_keys = normalize_selected_need_keys(form.getlist("entry_need"))
+    normalized_need_keys = normalize_selected_need_keys(_form_getlist(form, "entry_need"))
     normalized_shelter = normalize_shelter_name(form.get("shelter") or shelter)
 
     data: dict[str, Any] = {

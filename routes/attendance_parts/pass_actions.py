@@ -5,6 +5,7 @@ from typing import Any
 from flask import abort, flash, redirect, url_for
 
 from core.audit import log_action
+from core.sms_sender import send_sms as send_sms
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
     apply_pass_approval,

@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from routes.case_management_parts.recovery_snapshot_formatters import days_since
-from routes.case_management_parts.recovery_snapshot_formatters import parse_dateish
+from routes.case_management_parts.recovery_snapshot_formatters import days_since, parse_dateish
 
 
 def _first_present(*values: Any) -> Any:

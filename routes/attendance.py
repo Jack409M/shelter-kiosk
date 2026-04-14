@@ -129,6 +129,7 @@ def staff_pass_detail(pass_id: int):
 
 
 @attendance.route("/staff/passes/<int:pass_id>/approve", methods=["POST"])
+@attendance.route("/staff/passes/approve/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
 def staff_pass_approve(pass_id: int):
@@ -136,6 +137,7 @@ def staff_pass_approve(pass_id: int):
 
 
 @attendance.route("/staff/passes/<int:pass_id>/deny", methods=["POST"])
+@attendance.route("/staff/passes/deny/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
 def staff_pass_deny(pass_id: int):
@@ -143,6 +145,7 @@ def staff_pass_deny(pass_id: int):
 
 
 @attendance.route("/staff/passes/<int:pass_id>/check-in", methods=["POST"])
+@attendance.route("/staff/passes/check-in/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
 def staff_pass_check_in(pass_id: int):

@@ -27,7 +27,7 @@ def test_resident_signin_invalid_code(client, monkeypatch):
 
     response = client.post(
         "/resident",
-        data={"resident_code": "BADCODE"},
+        data={"_csrf_token": _set_csrf_token(client), "resident_code": "BADCODE"},
         follow_redirects=True,
     )
 
@@ -72,7 +72,7 @@ def test_resident_signin_success_sets_session(client, monkeypatch):
 
     response = client.post(
         "/resident",
-        data={"resident_code": "GOODCODE"},
+        data={"_csrf_token": _set_csrf_token(client), "resident_code": "GOODCODE"},
         follow_redirects=False,
     )
 
@@ -92,7 +92,7 @@ def test_transport_requires_required_fields(client, monkeypatch):
 
     response = client.post(
         "/transport",
-        data={},
+        data={"_csrf_token": _set_csrf_token(client)},
         follow_redirects=True,
     )
 
@@ -116,6 +116,7 @@ def test_transport_rejects_past_time(client, monkeypatch):
     response = client.post(
         "/transport",
         data={
+            "_csrf_token": _set_csrf_token(client),
             "needed_at": "2020-01-01T00:00",
             "pickup_location": "A",
             "destination": "B",
@@ -151,6 +152,7 @@ def test_transport_success_flow(client, monkeypatch):
     response = client.post(
         "/transport",
         data={
+            "_csrf_token": _set_csrf_token(client),
             "needed_at": "2026-04-12T10:00",
             "pickup_location": "Shelter",
             "destination": "Clinic",

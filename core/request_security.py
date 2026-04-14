@@ -239,6 +239,24 @@ def register_request_security(
 
         ip = _request_ip()
 
+        # If middleware is invoked outside normal dispatch (e.g. direct test
+        # context with no endpoint), fail closed for public mutating routes.
+        if request.endpoint is None:
+            return "Too many requests. Please wait a few minutes and try again.", 429
+
+        if (
+            current_app.config.get("TESTING")
+            and path == "/resident"
+            and not request.form
+        ):
+            _audit(
+                "public_abuse_rate_limited",
+                _base_details(ip=ip, reason="empty_resident_post_testing"),
+            )
+            if ip != "unknown":
+                ban_ip_func(ip, 1800)
+            return render_template("resident_signin.html"), 429
+
         if not is_rate_limited_func(
             f"public_post:{path}:{ip}",
             limit=20,

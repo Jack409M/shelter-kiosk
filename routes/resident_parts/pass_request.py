@@ -3,7 +3,6 @@ from __future__ import annotations
 from flask import flash, redirect, render_template, url_for
 
 from core.access import require_resident
-from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.audit import log_action
 from core.pass_rules import (
     gh_pass_rule_box,

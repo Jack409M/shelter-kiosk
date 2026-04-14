@@ -438,9 +438,30 @@ def apply_pass_check_in(
     resident_id: int,
     staff_id,
 ) -> None:
-    del pass_id
-
     with db_transaction():
+        pass_row = db_fetchone(
+            _sql(
+                """
+                SELECT end_at, end_date
+                FROM resident_passes
+                WHERE id = %s
+                  AND resident_id = %s
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                LIMIT 1
+                """,
+                """
+                SELECT end_at, end_date
+                FROM resident_passes
+                WHERE id = ?
+                  AND resident_id = ?
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                LIMIT 1
+                """,
+            ),
+            (pass_id, resident_id, shelter),
+        )
+        now_iso = utcnow_iso()
+
         db_execute(
             _sql(
                 """
@@ -486,7 +507,7 @@ def apply_pass_check_in(
                 resident_id,
                 shelter,
                 "check_in",
-                utcnow_iso(),
+                now_iso,
                 staff_id,
                 "Pass return check in",
                 None,
@@ -499,5 +520,36 @@ def apply_pass_check_in(
                 0,
             ),
         )
+
+        if pass_row:
+            delete_after_at = cleanup_deadline_from_expected_back(
+                pass_row.get("end_at"),
+                pass_row.get("end_date"),
+            )
+            db_execute(
+                _sql(
+                    """
+                    UPDATE resident_passes
+                    SET status = %s,
+                        updated_at = %s,
+                        delete_after_at = %s
+                    WHERE id = %s
+                      AND resident_id = %s
+                      AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                      AND LOWER(TRIM(status)) = 'approved'
+                    """,
+                    """
+                    UPDATE resident_passes
+                    SET status = ?,
+                        updated_at = ?,
+                        delete_after_at = ?
+                    WHERE id = ?
+                      AND resident_id = ?
+                      AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                      AND LOWER(TRIM(status)) = 'approved'
+                    """,
+                ),
+                ("completed", now_iso, delete_after_at, pass_id, resident_id, shelter),
+            )
 
         complete_active_passes(resident_id, shelter)

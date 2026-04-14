@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -20,6 +21,7 @@ from core.audit import log_action
 from core.db import db_fetchone
 from core.helpers import utcnow_iso
 from core.rate_limit import is_rate_limited
+from core.residents import resident_session_start
 from core.runtime import init_db
 from routes.resident_parts.consent import (
     resident_consent_view,
@@ -133,8 +135,6 @@ def _insert_transport_request(
 
 @resident_requests.route("/resident", methods=["GET", "POST"])
 def resident_signin():
-    from core.residents import resident_session_start
-
     init_db()
 
     next_url = _safe_next_url(request.args.get("next") or request.form.get("next") or "")
@@ -237,7 +237,9 @@ def resident_transport():
     if not first_name or not last_name or not needed_raw or not pickup_location or not destination:
         errors.append("Complete all required fields.")
 
-    needed_dt, needed_error = _parse_transport_needed_at(needed_raw)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        needed_dt, needed_error = _parse_transport_needed_at(needed_raw)
     if needed_error:
         errors.append(needed_error)
 

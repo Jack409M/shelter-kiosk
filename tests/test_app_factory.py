@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import os
+
 
 def test_create_app_sets_expected_core_config(app):
     assert app.config["MAX_CONTENT_LENGTH"] == 2 * 1024 * 1024
-    assert app.config["DATABASE_URL"] == "postgresql://postgres:postgres@localhost:5432/testdb"
+    assert app.config["DATABASE_URL"] == os.environ["DATABASE_URL"]
     assert app.config["SESSION_COOKIE_HTTPONLY"] is True
     assert app.config["SESSION_COOKIE_SAMESITE"] == "Lax"
 

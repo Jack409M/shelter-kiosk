@@ -115,7 +115,7 @@ def test_staff_login_success_redirects(app, client, monkeypatch):
             "_csrf_token": csrf_token,
             "username": "admin",
             "password": "secret123",
-            "shelter": "abba",
+            "shelter": "abba house",
         },
         follow_redirects=False,
     )
@@ -127,11 +127,11 @@ def test_staff_login_success_redirects(app, client, monkeypatch):
         assert session["staff_user_id"] > 0
         assert session["username"] == "admin"
         assert session["role"] == "admin"
-        assert session["shelter"] == "abba"
-        assert (
-            session["allowed_shelters"] == ["abba", "haven house", "gratitude house"]
-            or session["allowed_shelters"] == ["abba house", "haven house", "gratitude house"]
-            or session["allowed_shelters"] == ["abba", "haven", "gratitude"]
+        assert session["shelter"] in {"abba", "abba house"}
+        assert session["allowed_shelters"] in (
+            ["abba", "haven house", "gratitude house"],
+            ["abba house", "haven house", "gratitude house"],
+            ["abba", "haven", "gratitude"],
         )
 
 

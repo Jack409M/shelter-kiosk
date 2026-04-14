@@ -46,7 +46,15 @@ def require_admin(fn):
 def require_resident(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        if "resident_id" not in session:
+        required_values = (
+            session.get("resident_id"),
+            session.get("resident_identifier"),
+            session.get("resident_first"),
+            session.get("resident_last"),
+            session.get("resident_shelter"),
+        )
+        if any(not value for value in required_values):
+            session.clear()
             return redirect(
                 url_for(
                     "resident_requests.resident_signin",
