@@ -142,6 +142,7 @@ def _insert_resident(
 def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, client, monkeypatch):
     import routes.attendance_parts.pass_actions as pass_actions_module
     import routes.resident_parts.pass_request as resident_pass_module
+    import routes.resident_parts.pass_request_helpers as pass_request_helpers_module
     from core.db import db_execute, db_fetchone
     from core.pass_retention import run_pass_retention_cleanup_for_shelter
 
@@ -152,7 +153,7 @@ def test_full_pass_flow_submit_approve_check_in_and_retention_cleanup(app, clien
     )
 
     monkeypatch.setattr(
-        resident_pass_module,
+        pass_request_helpers_module,
         "calculate_prior_week_attendance_hours",
         lambda resident_id, shelter: None,
     )
