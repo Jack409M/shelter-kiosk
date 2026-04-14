@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from flask import current_app
 
 from core.db import db_fetchall
@@ -7,9 +9,12 @@ from core.helpers import fmt_dt
 from routes.case_management_parts.helpers import placeholder
 
 
+type Row = dict[str, Any]
+type RowList = list[Row]
+
 DISPLAY_EMPTY = "—"
 
-SPECIAL_LABELS = {
+SPECIAL_LABELS: dict[str, str] = {
     "full_time": "Full time",
     "part_time": "Part time",
     "drug_of_choice": "Drug of choice",
@@ -39,7 +44,7 @@ def display_label(value: str | None) -> str:
     return normalized[:1].upper() + normalized[1:] if normalized else DISPLAY_EMPTY
 
 
-def display_quantity_unit(quantity, unit: str | None) -> str:
+def display_quantity_unit(quantity: Any, unit: str | None) -> str:
     if quantity is None and not unit:
         return DISPLAY_EMPTY
     if quantity is None:
@@ -52,7 +57,7 @@ def display_quantity_unit(quantity, unit: str | None) -> str:
     return f"{quantity} {unit_clean}"
 
 
-def normalize_child_service_row(service: dict) -> dict:
+def normalize_child_service_row(service: Row) -> Row:
     return {
         "resident_child_id": service.get("resident_child_id"),
         "service_type": service.get("service_type"),
@@ -71,7 +76,7 @@ def normalize_child_service_row(service: dict) -> dict:
     }
 
 
-def _load_children(resident_id: int) -> list[dict]:
+def _load_children(resident_id: int) -> RowList:
     ph = placeholder()
 
     return db_fetchall(
@@ -93,7 +98,7 @@ def _load_children(resident_id: int) -> list[dict]:
     )
 
 
-def _load_child_services(child_ids: list[int]) -> list[dict]:
+def _load_child_services(child_ids: list[int]) -> RowList:
     if not child_ids:
         return []
 
@@ -121,18 +126,27 @@ def _load_child_services(child_ids: list[int]) -> list[dict]:
     return [normalize_child_service_row(service) for service in rows]
 
 
-def _group_services_by_child(child_services: list[dict]) -> dict[int, list[dict]]:
-    services_by_child: dict[int, list[dict]] = {}
+def _group_services_by_child(child_services: RowList) -> dict[int, RowList]:
+    services_by_child: dict[int, RowList] = {}
 
     for service in child_services:
-        child_id = service["resident_child_id"]
+        child_id_value = service.get("resident_child_id")
+        if child_id_value is None:
+            continue
+
+        try:
+            child_id = int(child_id_value)
+        except (TypeError, ValueError):
+            continue
+
         services_by_child.setdefault(child_id, []).append(service)
 
     return services_by_child
 
 
-def _enrich_child(child: dict, services_by_child: dict[int, list[dict]]) -> dict:
-    child_id = child["id"]
+def _enrich_child(child: Row, services_by_child: dict[int, RowList]) -> Row:
+    child_id_value = child.get("id")
+    child_id = int(child_id_value) if child_id_value is not None else -1
 
     return {
         **dict(child),
@@ -142,10 +156,14 @@ def _enrich_child(child: dict, services_by_child: dict[int, list[dict]]) -> dict
     }
 
 
-def load_children_with_services(resident_id: int) -> list[dict]:
+def load_children_with_services(resident_id: int) -> RowList:
     try:
         children = _load_children(resident_id)
-        child_ids = [child["id"] for child in children]
+        child_ids = [
+            int(child["id"])
+            for child in children
+            if child.get("id") is not None
+        ]
         child_services = _load_child_services(child_ids)
         services_by_child = _group_services_by_child(child_services)
 
