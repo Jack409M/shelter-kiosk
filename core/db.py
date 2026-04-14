@@ -98,9 +98,6 @@ def _sqlite_connect(database_url: str) -> sqlite3.Connection:
 def _init_pg_pool() -> None:
     global PG_POOL
 
-    if PG_POOL is not None:
-        return
-
     with _PG_POOL_LOCK:
         if PG_POOL is not None:
             return
