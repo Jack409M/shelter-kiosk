@@ -11,7 +11,6 @@ from flask import current_app, g
 
 from core.db import db_execute, db_fetchall, db_transaction, get_db
 
-
 _SCHEMA_MIGRATIONS_POSTGRES_SQL: Final[str] = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,
