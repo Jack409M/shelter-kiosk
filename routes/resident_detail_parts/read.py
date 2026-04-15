@@ -82,6 +82,7 @@ def load_resident_for_shelter(resident_id: int, shelter: str, sql_selector, shel
 
     enrollment = fetch_current_enrollment_for_resident(
         resident_id,
+        shelter=shelter,
         columns="""
             id AS enrollment_id,
             shelter AS enrollment_shelter,
@@ -235,6 +236,7 @@ def resident_enrollment_for_shelter(
 
     enrollment = fetch_current_enrollment_for_resident(
         resident_id,
+        shelter=shelter,
         columns="id AS enrollment_id",
     )
 
