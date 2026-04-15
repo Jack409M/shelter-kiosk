@@ -272,10 +272,6 @@ def test_resident_signin_without_consent_redirects_to_consent_with_safe_next(cli
 
 
 def test_resident_home_redirects_when_session_is_partial(client, monkeypatch):
-    
-
-    
-
     with client.session_transaction() as session_state:
         session_state["resident_id"] = 1
         session_state["resident_identifier"] = "R-000001"
@@ -286,7 +282,7 @@ def test_resident_home_redirects_when_session_is_partial(client, monkeypatch):
     response = client.get("/resident/home", follow_redirects=False)
 
     assert response.status_code == 302
-    assert "/resident?next=/resident/home" in response.headers["Location"] 
+    assert "/resident?next=/resident/home" in response.headers["Location"]
 
     with client.session_transaction() as session_state:
         assert "resident_id" not in session_state
@@ -296,10 +292,6 @@ def test_resident_home_redirects_when_session_is_partial(client, monkeypatch):
 
 
 def test_resident_chores_redirects_when_session_is_corrupted(client, monkeypatch):
-    import routes.resident_portal as rp
-
-    monkeypatch.setattr(rp, "init_db", lambda: None)
-
     with client.session_transaction() as session_state:
         session_state["resident_id"] = "not-an-int"
         session_state["resident_identifier"] = "R-000001"
