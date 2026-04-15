@@ -43,6 +43,10 @@ def _db_sql(pg_sql: str, sqlite_sql: str) -> str:
     return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
 
 
+def _resident_session_text(key: str) -> str:
+    return str(session.get(key) or "").strip()
+
+
 def _allowed_resident_next_urls() -> set[str]:
     return {
         url_for("resident_requests.resident_pass_request"),
@@ -57,6 +61,10 @@ def _safe_next_url(candidate: str) -> str:
     if next_url in _allowed_resident_next_urls():
         return next_url
     return url_for("resident_portal.home")
+
+
+def _signin_next_url() -> str:
+    return _safe_next_url(request.args.get("next") or request.form.get("next") or "")
 
 
 def _load_resident_by_code(resident_code: str):
@@ -133,11 +141,20 @@ def _insert_transport_request(
     return int(row["id"])
 
 
+def _resident_transport_session_context() -> dict[str, str]:
+    return {
+        "shelter": _resident_session_text("resident_shelter"),
+        "resident_identifier": _resident_session_text("resident_identifier"),
+        "first_name": _resident_session_text("resident_first"),
+        "last_name": _resident_session_text("resident_last"),
+    }
+
+
 @resident_requests.route("/resident", methods=["GET", "POST"])
 def resident_signin():
     init_db()
 
-    next_url = _safe_next_url(request.args.get("next") or request.form.get("next") or "")
+    next_url = _signin_next_url()
 
     if request.method == "GET":
         return render_template("resident_signin.html")
@@ -153,7 +170,7 @@ def resident_signin():
             None,
             None,
             "resident_signin_rate_limited",
-            f"ip={ip} resident_code={safe_code} next={next_url or ''}",
+            f"ip={ip} resident_code={safe_code} next={next_url}",
         )
         flash("Too many sign in attempts. Please wait a few minutes and try again.", "error")
         return render_template("resident_signin.html"), 429
@@ -167,7 +184,7 @@ def resident_signin():
             None,
             None,
             "resident_signin_failed",
-            f"reason=invalid_resident_code ip={ip} resident_code={safe_code} next={next_url or ''}",
+            f"reason=invalid_resident_code ip={ip} resident_code={safe_code} next={next_url}",
         )
         flash("Invalid Resident Code.", "error")
         return render_template("resident_signin.html"), 401
@@ -208,20 +225,22 @@ def resident_pass_request():
 def resident_transport():
     init_db()
 
-    shelter = session.get("resident_shelter") or ""
+    resident_context = _resident_transport_session_context()
+    shelter = resident_context["shelter"]
 
     if request.method == "GET":
         return render_template("resident_transport.html", shelter=shelter)
 
-    resident_identifier = session.get("resident_identifier") or ""
-    first_name = session.get("resident_first") or ""
-    last_name = session.get("resident_last") or ""
+    resident_identifier = resident_context["resident_identifier"]
+    first_name = resident_context["first_name"]
+    last_name = resident_context["last_name"]
 
     ip = _client_ip()
     rl_key = f"resident_transport:{ip}:{resident_identifier or 'unknown'}"
     if is_rate_limited(rl_key, limit=6, window_seconds=900):
         flash(
-            "Too many transportation submissions. Please wait a few minutes and try again.", "error"
+            "Too many transportation submissions. Please wait a few minutes and try again.",
+            "error",
         )
         return render_template("resident_transport.html", shelter=shelter), 429
 
@@ -240,6 +259,7 @@ def resident_transport():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
         needed_dt, needed_error = _parse_transport_needed_at(needed_raw)
+
     if needed_error:
         errors.append(needed_error)
 
