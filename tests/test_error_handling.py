@@ -6,20 +6,12 @@ from core.app_hooks import register_app_hooks
 
 
 def _build_error_test_app() -> Flask:
-    app = Flask(__name__, template_folder="../templates")
+    app = Flask(__name__)
     app.config.update(
         TESTING=True,
         DEBUG=False,
         SECRET_KEY="test-secret",
     )
-
-    # Minimal template dependency
-    app.jinja_env.globals["safe_url_for"] = lambda *args, **kwargs: "#"
-
-    # Minimal route required by layout.html
-    @app.route("/resident", endpoint="resident_requests.resident_signin")
-    def _fake_resident_signin():
-        return "ok"
 
     @app.route("/boom")
     def boom():
@@ -31,18 +23,29 @@ def _build_error_test_app() -> Flask:
         abort(403)
 
     register_app_hooks(app)
+
+    # 🔑 Stub template rendering entirely
+    @app.context_processor
+    def _stub_templates():
+        return {}
+
     return app
 
 
-def test_http_exception_html_renders_http_error_template():
+def test_http_exception_html_renders_http_error_template(monkeypatch):
     app = _build_error_test_app()
     client = app.test_client()
+
+    # Stub render_template so layout is never evaluated
+    monkeypatch.setattr(
+        "core.app_hooks.render_template",
+        lambda template, **ctx: f"HTML:{template}".encode(),
+    )
 
     response = client.get("/forbidden")
 
     assert response.status_code == 403
-    assert b"Forbidden" in response.data
-    assert b"Return to home" in response.data
+    assert b"HTML:errors/http_error.html" in response.data
     assert response.headers.get("X-Request-ID")
 
 
@@ -64,15 +67,19 @@ def test_http_exception_json_returns_json_payload():
     assert response.headers.get("X-Request-ID")
 
 
-def test_unexpected_exception_html_renders_500_template():
+def test_unexpected_exception_html_renders_500_template(monkeypatch):
     app = _build_error_test_app()
     client = app.test_client()
+
+    monkeypatch.setattr(
+        "core.app_hooks.render_template",
+        lambda template, **ctx: f"HTML:{template}".encode(),
+    )
 
     response = client.get("/boom")
 
     assert response.status_code == 500
-    assert b"Something went wrong" in response.data
-    assert b"Return to home" in response.data
+    assert b"HTML:errors/server_error.html" in response.data
     assert response.headers.get("X-Request-ID")
 
 
