@@ -4,7 +4,10 @@ from typing import Any
 
 from core.meeting_progress import calculate_meeting_progress
 from core.promotion_readiness import build_promotion_readiness
-from routes.case_management_parts.helpers import fetch_current_enrollment_id_for_resident
+from routes.case_management_parts.helpers import (
+    fetch_current_enrollment_id_for_resident,
+    normalize_shelter_name,
+)
 from routes.case_management_parts.recovery_snapshot_formatters import (
     bool_display,
     days_since,
@@ -34,9 +37,14 @@ def load_recovery_snapshot(
     resident_id: int,
     enrollment_id: int | None,
 ) -> dict[str, Any]:
-    enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(resident_id)
-
     resident = load_resident_profile(resident_id)
+    resident_shelter = normalize_shelter_name(resident.get("shelter"))
+
+    enrollment_id = enrollment_id or fetch_current_enrollment_id_for_resident(
+        resident_id,
+        shelter=resident_shelter or None,
+    )
+
     enrollment_baseline = load_enrollment_baseline(enrollment_id)
 
     medications = load_medications(resident_id, enrollment_id)
