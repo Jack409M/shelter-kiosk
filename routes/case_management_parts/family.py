@@ -190,12 +190,17 @@ def _active_children_for_resident(resident_id: int):
     return children
 
 
-def _latest_enrollment_for_resident(resident_id: int):
-    return fetch_current_enrollment_for_resident(resident_id, columns="id")
+def _latest_enrollment_for_resident(resident_id: int, shelter: str):
+    return fetch_current_enrollment_for_resident(
+        resident_id,
+        shelter=shelter,
+        columns="id",
+    )
 
 
 def _recalculate_current_enrollment_income_support(resident_id: int) -> None:
-    enrollment = _latest_enrollment_for_resident(resident_id)
+    shelter = _current_shelter()
+    enrollment = _latest_enrollment_for_resident(resident_id, shelter)
     if not enrollment:
         return
     enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
@@ -855,7 +860,8 @@ def child_services_view(child_id: int):
         return redirect(url_for("case_management.index"))
 
     resident_id = child["resident_id"]
-    enrollment = _latest_enrollment_for_resident(resident_id)
+    shelter = _current_shelter()
+    enrollment = _latest_enrollment_for_resident(resident_id, shelter)
 
     if not enrollment:
         flash("No active enrollment found.", "error")
