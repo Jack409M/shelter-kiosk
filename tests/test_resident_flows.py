@@ -272,7 +272,7 @@ def test_resident_signin_without_consent_redirects_to_consent_with_safe_next(cli
 
 
 def test_resident_home_redirects_when_session_is_partial(client, monkeypatch):
-    import routes.resident_portal as rp
+    
 
     
 
