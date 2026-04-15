@@ -41,29 +41,20 @@ def _resident_session_text(key: str) -> str:
 
 
 def _resident_session_context() -> dict[str, Any]:
+    resident_id = _resident_session_int("resident_id")
+    resident_identifier = _resident_session_text("resident_identifier")
+    resident_shelter = _resident_session_text("resident_shelter")
+
+    if resident_id is None or not resident_identifier or not resident_shelter:
+        session.clear()
+        flash("Your session ended. Please sign in again.", "error")
+        return {}
+
     return {
-        "resident_id": _resident_session_int("resident_id"),
-        "shelter": _resident_session_text("resident_shelter"),
-        "resident_identifier": _resident_session_text("resident_identifier"),
+        "resident_id": resident_id,
+        "shelter": resident_shelter,
+        "resident_identifier": resident_identifier,
     }
-
-
-def _clear_resident_session_and_redirect():
-    session.clear()
-    flash("Your session ended. Please sign in again.", "error")
-    return redirect(url_for("resident_requests.resident_signin"))
-
-
-def _require_resident_session(*, require_identifier: bool = False):
-    context = _resident_session_context()
-
-    if context["resident_id"] is None or not context["shelter"]:
-        return None, _clear_resident_session_and_redirect()
-
-    if require_identifier and not context["resident_identifier"]:
-        return None, _clear_resident_session_and_redirect()
-
-    return context, None
 
 
 def _load_recent_pass_items(resident_id: int, shelter: str) -> list[dict[str, Any]]:
@@ -165,9 +156,9 @@ def _build_home_context(*, resident_id: int, shelter: str, resident_identifier: 
 def home():
     init_db()
 
-    resident_context, redirect_response = _require_resident_session(require_identifier=False)
-    if redirect_response is not None:
-        return redirect_response
+    resident_context = _resident_session_context()
+    if not resident_context:
+        return redirect(url_for("resident_requests.resident_signin", next=request.path))
 
     context = _build_home_context(
         resident_id=resident_context["resident_id"],
@@ -186,9 +177,9 @@ def home():
 def resident_chores():
     init_db()
 
-    resident_context, redirect_response = _require_resident_session()
-    if redirect_response is not None:
-        return redirect_response
+    resident_context = _resident_session_context()
+    if not resident_context:
+        return redirect(url_for("resident_requests.resident_signin", next=request.path))
 
     resident_id = resident_context["resident_id"]
 
