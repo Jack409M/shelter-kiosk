@@ -286,7 +286,7 @@ def test_resident_home_redirects_when_session_is_partial(client, monkeypatch):
     response = client.get("/resident/home", follow_redirects=False)
 
     assert response.status_code == 302
-    assert "/resident?next=%2Fresident%2Fhome" in response.headers["Location"]
+    assert "/resident?next=/resident/home" in response.headers["Location"] 
 
     with client.session_transaction() as session_state:
         assert "resident_id" not in session_state
