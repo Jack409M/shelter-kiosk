@@ -57,30 +57,6 @@ def ensure_transport_requests_table(kind: str) -> None:
     )
 
 
-def ensure_leave_requests_table(kind: str) -> None:
-    create_table(
-        kind,
-        """
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resident_identifier TEXT NOT NULL,
-            shelter TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-        )
-        """,
-        """
-        CREATE TABLE IF NOT EXISTS leave_requests (
-            id SERIAL PRIMARY KEY,
-            resident_identifier TEXT NOT NULL,
-            shelter TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        )
-        """,
-    )
-
-
 def drop_transport_dob_column_if_present(kind: str) -> None:
     if kind != "pg":
         return
@@ -405,7 +381,6 @@ def ensure_resident_pass_request_details_columns(kind: str) -> None:
 
 
 def ensure_tables(kind: str) -> None:
-    ensure_leave_requests_table(kind)
     ensure_transport_requests_table(kind)
     ensure_resident_transfers_table(kind)
     ensure_attendance_events_table(kind)
