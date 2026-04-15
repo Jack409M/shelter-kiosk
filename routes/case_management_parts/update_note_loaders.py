@@ -24,20 +24,29 @@ def get_resident_and_enrollment_in_scope(resident_id: int, shelter: str):
     if not resident:
         return None, None
 
-    enrollment = fetch_current_enrollment_for_resident(resident_id, columns="id")
+    enrollment = fetch_current_enrollment_for_resident(
+        resident_id,
+        shelter=shelter,
+        columns="id",
+    )
+
     return resident, enrollment
 
 
-def load_note_for_edit(update_id: int):
+def load_note_for_edit(update_id: int, shelter: str):
     ph = placeholder()
+
     return db_fetchone(
         f"""
-        SELECT cmu.*, pe.resident_id
+        SELECT
+            cmu.*,
+            pe.resident_id
         FROM case_manager_updates cmu
         JOIN program_enrollments pe ON pe.id = cmu.enrollment_id
         WHERE cmu.id = {ph}
+          AND {shelter_equals_sql("pe.shelter")}
         """,
-        (update_id,),
+        (update_id, shelter),
     )
 
 
