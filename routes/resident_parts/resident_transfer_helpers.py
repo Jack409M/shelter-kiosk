@@ -306,7 +306,6 @@ def upsert_resident_housing_assignment(
             created_by_staff_user_id=_current_staff_user_id(),
         )
     except Exception:
-        # Some lightweight/test databases do not include rent-tracking tables.
         return
 
 
@@ -485,27 +484,6 @@ def _update_pending_transport_requests_for_transfer(
     )
 
 
-def _update_pending_leave_requests_for_transfer(
-    *,
-    resident_identifier: str,
-    from_shelter: str,
-    to_shelter: str,
-) -> None:
-    if not resident_identifier:
-        return
-
-    db_execute(
-        """
-        UPDATE leave_requests
-        SET shelter = %s
-        WHERE LOWER(COALESCE(shelter, '')) = %s
-          AND resident_identifier = %s
-          AND status = 'pending'
-        """,
-        (to_shelter, from_shelter, resident_identifier),
-    )
-
-
 def _update_resident_shelter(
     *,
     resident_id: int,
@@ -590,11 +568,6 @@ def apply_cross_shelter_transfer(
         )
 
         _update_pending_transport_requests_for_transfer(
-            resident_identifier=resident_identifier.strip(),
-            from_shelter=normalized_from_shelter,
-            to_shelter=normalized_to_shelter,
-        )
-        _update_pending_leave_requests_for_transfer(
             resident_identifier=resident_identifier.strip(),
             from_shelter=normalized_from_shelter,
             to_shelter=normalized_to_shelter,
