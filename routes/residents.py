@@ -105,7 +105,6 @@ def _normalize_all_shelter_values() -> None:
     updates = [
         ("residents", "shelter"),
         ("program_enrollments", "shelter"),
-        ("leave_requests", "shelter"),
         ("transport_requests", "shelter"),
         ("attendance_events", "shelter"),
         ("resident_transfers", "from_shelter"),
