@@ -268,7 +268,7 @@ def test_resident_signin_without_consent_redirects_to_consent_with_safe_next(cli
 
     assert response.status_code == 302
     assert "/resident/consent" in response.headers["Location"]
-    assert "next=%2Ftransport" in response.headers["Location"]
+    assert "next=/transport" in response.headers["Location"]
 
 
 def test_resident_home_redirects_when_session_is_partial(client, monkeypatch):
