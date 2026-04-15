@@ -105,11 +105,6 @@ def staff_pass_detail_view(pass_id: int):
         hour_summary=context["hour_summary"],
         meeting_summary=context["meeting_summary"],
         resident_level=context["resident_level"],
-        sponsor_name=context["sponsor_name"],
-        sponsor_active=context["sponsor_active"],
-        step_current=context["step_current"],
-        step_work_active=context["step_work_active"],
-        monthly_income=context["monthly_income"],
         policy_check=context["policy_check"],
         fmt_dt=fmt_dt,
     )
