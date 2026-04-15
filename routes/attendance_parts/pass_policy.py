@@ -35,11 +35,6 @@ def load_resident_pass_profile(resident_id: int):
             id,
             shelter,
             program_level,
-            sponsor_name,
-            sponsor_active,
-            step_current,
-            step_work_active,
-            monthly_income,
             date_entered
         FROM residents
         WHERE id = %s
@@ -51,11 +46,6 @@ def load_resident_pass_profile(resident_id: int):
             id,
             shelter,
             program_level,
-            sponsor_name,
-            sponsor_active,
-            step_current,
-            step_work_active,
-            monthly_income,
             date_entered
         FROM residents
         WHERE id = ?
