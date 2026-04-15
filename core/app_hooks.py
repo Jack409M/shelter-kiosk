@@ -6,7 +6,7 @@ import time
 import uuid
 from typing import Any, Final
 
-from flask import Flask, current_app, g, redirect, request, render_template
+from flask import Flask, current_app, g, redirect, render_template, request
 from werkzeug.exceptions import HTTPException
 from werkzeug.wrappers import Response
 
@@ -153,11 +153,6 @@ def _apply_security_headers(response: Response) -> None:
         response.headers.setdefault("Strict-Transport-Security", _HSTS_HEADER)
 
 
-# -----------------------------
-# NEW: GLOBAL ERROR HANDLERS
-# -----------------------------
-
-
 def _wants_json() -> bool:
     return "application/json" in request.headers.get("Accept", "")
 
@@ -180,11 +175,6 @@ def _handle_unexpected_exception(error: Exception):
         return {"error": "Internal Server Error"}, 500
 
     return render_template("errors/500.html"), 500
-
-
-# -----------------------------
-# REGISTER HOOKS
-# -----------------------------
 
 
 def register_app_hooks(app: Flask) -> None:
@@ -224,6 +214,5 @@ def register_app_hooks(app: Flask) -> None:
             return
         _log_request_failure(app, error)
 
-    # NEW: register error handlers
     app.register_error_handler(HTTPException, _handle_http_exception)
     app.register_error_handler(Exception, _handle_unexpected_exception)
