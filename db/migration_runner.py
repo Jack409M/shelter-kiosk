@@ -11,6 +11,7 @@ from flask import current_app, g
 
 from core.db import db_execute, db_fetchall, db_transaction, get_db
 
+
 _SCHEMA_MIGRATIONS_POSTGRES_SQL: Final[str] = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,
@@ -63,7 +64,12 @@ def _ensure_schema_migrations_table(kind: str) -> None:
 
 
 def _load_migration_package() -> ModuleType:
-    return importlib.import_module("db.migrations")
+    try:
+        return importlib.import_module("db.migrations")
+    except Exception as exc:
+        raise RuntimeError(
+            "Failed to load migration package 'db.migrations'"
+        ) from exc
 
 
 def _iter_migration_module_names() -> list[str]:
@@ -71,10 +77,14 @@ def _iter_migration_module_names() -> list[str]:
 
     package_path = getattr(package, "__path__", None)
     if not package_path:
-        return []
+        raise RuntimeError(
+            "Migration package has no __path__; cannot load migrations"
+        )
 
     module_names: list[str] = []
-    for module_info in pkgutil.iter_modules(package_path, prefix="db.migrations."):
+    for module_info in pkgutil.iter_modules(
+        package_path, prefix="db.migrations."
+    ):
         full_name = str(module_info.name)
         short_name = full_name.rsplit(".", 1)[-1]
 
@@ -121,6 +131,9 @@ def _load_migration_definitions() -> list[MigrationDefinition]:
         module = importlib.import_module(module_name)
         definitions.append(_coerce_migration_definition(module))
 
+    if not definitions:
+        raise RuntimeError("No migration definitions found in db.migrations")
+
     definitions.sort(key=lambda item: item.version)
 
     seen_versions: set[int] = set()
@@ -161,16 +174,22 @@ def _fetch_applied_migrations() -> dict[int, dict[str, object]]:
     return applied
 
 
-def _record_applied_migration(definition: MigrationDefinition) -> None:
-    db_execute(
+def _record_applied_migration(kind: str, definition: MigrationDefinition) -> None:
+    sql = (
         """
-        INSERT INTO schema_migrations (
-            version,
-            name,
-            applied_at
-        )
+        INSERT INTO schema_migrations (version, name, applied_at)
         VALUES (%s, %s, %s)
-        """,
+        """
+        if kind == "pg"
+        else
+        """
+        INSERT INTO schema_migrations (version, name, applied_at)
+        VALUES (?, ?, ?)
+        """
+    )
+
+    db_execute(
+        sql,
         (
             definition.version,
             definition.name,
@@ -191,7 +210,7 @@ def _apply_one_migration(kind: str, definition: MigrationDefinition) -> None:
 
     with db_transaction():
         apply_func(kind)
-        _record_applied_migration(definition)
+        _record_applied_migration(kind, definition)
 
     current_app.logger.info(
         "Applied migration version=%s name=%s",
@@ -201,12 +220,6 @@ def _apply_one_migration(kind: str, definition: MigrationDefinition) -> None:
 
 
 def apply_pending_migrations() -> list[int]:
-    """
-    Ensures the migration tracking table exists, loads migration modules, and
-    applies any unapplied migrations in ascending version order.
-
-    Returns a list of version numbers that were applied in this call.
-    """
     get_db()
     kind = _require_kind()
 
@@ -259,10 +272,19 @@ def get_current_schema_version() -> int:
 
 def get_required_schema_version() -> int:
     definitions = _load_migration_definitions()
-    if not definitions:
-        return 0
     return definitions[-1].version
 
 
 def database_schema_is_compatible() -> bool:
-    return get_current_schema_version() >= get_required_schema_version()
+    current = get_current_schema_version()
+    required = get_required_schema_version()
+
+    if current < required:
+        return False
+
+    if current > required:
+        raise RuntimeError(
+            f"Database schema version {current} is newer than code version {required}"
+        )
+
+    return True
