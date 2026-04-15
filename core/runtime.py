@@ -13,6 +13,7 @@ from core.shelters import get_all_shelters as load_all_shelters
 from db import schema
 from db.migration_runner import (
     apply_pending_migrations,
+    database_schema_is_compatible,
     get_current_schema_version,
     get_required_schema_version,
 )
@@ -65,6 +66,8 @@ ENABLE_DEBUG_ROUTES = env_flag("ENABLE_DEBUG_ROUTES")
 ENABLE_DANGEROUS_ADMIN_ROUTES = env_flag("ENABLE_DANGEROUS_ADMIN_ROUTES")
 
 KIOSK_PIN = env_text("KIOSK_PIN")
+
+AUTO_APPLY_MIGRATIONS = env_flag("AUTO_APPLY_MIGRATIONS", default=True)
 
 
 # ------------------------------------------------------------
@@ -142,28 +145,56 @@ def _log_migration_result(applied_versions: list[int]) -> None:
 
     if applied_versions:
         current_app.logger.info(
-            "database_migrations_applied versions=%s current_version=%s required_version=%s",
+            "database_migrations_applied versions=%s current_version=%s required_version=%s auto_apply=%s",
             applied_versions,
+            current_version,
+            required_version,
+            AUTO_APPLY_MIGRATIONS,
+        )
+        return
+
+    current_app.logger.info(
+        "database_migrations_current current_version=%s required_version=%s auto_apply=%s",
+        current_version,
+        required_version,
+        AUTO_APPLY_MIGRATIONS,
+    )
+
+
+def _ensure_schema_compatibility() -> None:
+    current_version = get_current_schema_version()
+    required_version = get_required_schema_version()
+
+    if database_schema_is_compatible():
+        current_app.logger.info(
+            "database_schema_compatible current_version=%s required_version=%s",
             current_version,
             required_version,
         )
         return
 
-    current_app.logger.info(
-        "database_migrations_current current_version=%s required_version=%s",
+    current_app.logger.error(
+        "database_schema_incompatible current_version=%s required_version=%s auto_apply=%s",
         current_version,
         required_version,
+        AUTO_APPLY_MIGRATIONS,
+    )
+    raise RuntimeError(
+        "Database schema is behind the application requirement. "
+        f"Current version={current_version}, required version={required_version}."
     )
 
 
 def init_db() -> None:
     """
-    Ensures database connection, migration application, and schema initialization.
+    Ensures database connection, migration handling, and schema initialization.
 
     Current transition contract:
-    - migrations are now the official schema evolution path
-    - legacy schema.init_db() still runs as a temporary compatibility verifier
-    - initialization still runs only once per process per resolved DATABASE_URL
+    - tracked migrations are now the official schema evolution path
+    - startup may auto apply migrations when AUTO_APPLY_MIGRATIONS is enabled
+    - when AUTO_APPLY_MIGRATIONS is disabled, startup refuses to continue if the
+      database schema is behind
+    - legacy schema.init_db() still runs as temporary compatibility glue
 
     Requires an active Flask app context so the database layer reads the same
     configuration the app was built with.
@@ -188,8 +219,17 @@ def init_db() -> None:
 
         get_db()
 
-        applied_versions = apply_pending_migrations()
-        _log_migration_result(applied_versions)
+        if AUTO_APPLY_MIGRATIONS:
+            applied_versions = apply_pending_migrations()
+            _log_migration_result(applied_versions)
+        else:
+            current_app.logger.info(
+                "database_migration_auto_apply_disabled current_version=%s required_version=%s",
+                get_current_schema_version(),
+                get_required_schema_version(),
+            )
+
+        _ensure_schema_compatibility()
 
         # Temporary compatibility bridge.
         # Keep legacy schema initialization active until future migrations fully
