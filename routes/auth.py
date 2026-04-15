@@ -414,3 +414,5 @@ def staff_profile():
         return redirect(url_for("auth.staff_profile"))
 
     return render_template("staff_profile.html", user=row)
+
+
