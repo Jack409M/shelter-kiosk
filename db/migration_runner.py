@@ -162,13 +162,7 @@ def _fetch_applied_migrations() -> dict[int, dict[str, object]]:
         if version_value is None:
             continue
 
-        try:
-            version = int(version_value)
-        except Exception as exc:
-            raise RuntimeError(
-                f"schema_migrations contains a non integer version: {version_value!r}"
-            ) from exc
-
+        version = int(version_value)
         applied[version] = row
 
     return applied
@@ -206,10 +200,8 @@ def _apply_one_migration(kind: str, definition: MigrationDefinition) -> None:
         definition.module_name,
     )
 
-    apply_func = definition.module.apply
-
     with db_transaction():
-        apply_func(kind)
+        definition.module.apply(kind)
         _record_applied_migration(kind, definition)
 
     current_app.logger.info(
@@ -236,8 +228,7 @@ def apply_pending_migrations() -> list[int]:
             existing_name = str(existing.get("name") or "").strip()
             if existing_name and existing_name != definition.name:
                 raise RuntimeError(
-                    "Applied migration name mismatch for version "
-                    f"{definition.version}: db={existing_name!r} code={definition.name!r}"
+                    f"Applied migration mismatch version={definition.version}"
                 )
             continue
 
@@ -263,11 +254,7 @@ def get_current_schema_version() -> int:
     if not rows:
         return 0
 
-    top_value = rows[0].get("version")
-    if top_value is None:
-        return 0
-
-    return int(top_value)
+    return int(rows[0]["version"])
 
 
 def get_required_schema_version() -> int:
