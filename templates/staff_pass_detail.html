@@ -702,38 +702,14 @@
               </div>
             </div>
 
-            <div class="paper-grid-4">
+            <div class="paper-grid-2">
               <div class="paper-field">
                 <span class="paper-label">Resident Level</span>
                 <div class="paper-value">{{ resident_level or (policy_check.resident_level if policy_check else "") }}</div>
               </div>
               <div class="paper-field">
-                <span class="paper-label">Sponsor</span>
-                <div class="paper-value">
-                  {{ sponsor_name or "—" }}
-                  {% if sponsor_active is not none %}
-                    • {{ "Active" if sponsor_active else "Inactive" }}
-                  {% endif %}
-                </div>
-              </div>
-              <div class="paper-field">
-                <span class="paper-label">Step Work</span>
-                <div class="paper-value">
-                  Step {{ step_current if step_current is not none and step_current != "" else "—" }}
-                  {% if step_work_active is not none %}
-                    • {{ "Active" if step_work_active else "Inactive" }}
-                  {% endif %}
-                </div>
-              </div>
-              <div class="paper-field">
-                <span class="paper-label">Monthly Income</span>
-                <div class="paper-value">
-                  {% if monthly_income not in (None, "") %}
-                    ${{ "{:,.2f}".format(monthly_income|float) }}
-                  {% else %}
-                    —
-                  {% endif %}
-                </div>
+                <span class="paper-label">Submitted</span>
+                <div class="paper-value">{{ fmt_dt(p.created_at_local) }}</div>
               </div>
             </div>
 
