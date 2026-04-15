@@ -150,8 +150,6 @@ def ensure_columns_and_security_upgrades(kind: str) -> None:
     Safe schema evolution for existing deployments.
     """
 
-    del kind
-
     upgrades = (
         ("staff_users", "first_name TEXT"),
         ("staff_users", "last_name TEXT"),
@@ -165,7 +163,7 @@ def ensure_columns_and_security_upgrades(kind: str) -> None:
     )
 
     for table_name, column_sql in upgrades:
-        safe_add_column(table_name, column_sql)
+        safe_add_column(kind, table_name, column_sql)
 
 
 def ensure_organizations_table(kind: str) -> None:

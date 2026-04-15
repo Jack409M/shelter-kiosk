@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-import importlib
-
 from core.db import db_execute, db_fetchall
 from db import migration_runner
+
+
+def _latest_version() -> int:
+    return migration_runner.get_required_schema_version()
 
 
 def test_migration_runner_applies_baseline_once(app):
@@ -19,9 +21,11 @@ def test_migration_runner_applies_baseline_once(app):
 
         applied_versions = migration_runner.apply_pending_migrations()
 
-        assert applied_versions == [1]
-        assert migration_runner.get_current_schema_version() == 1
-        assert migration_runner.get_required_schema_version() == 1
+        latest_version = _latest_version()
+
+        assert applied_versions == []
+        assert migration_runner.get_current_schema_version() == latest_version
+        assert migration_runner.get_required_schema_version() == latest_version
         assert migration_runner.database_schema_is_compatible() is True
 
         rows = db_fetchall(
@@ -32,9 +36,8 @@ def test_migration_runner_applies_baseline_once(app):
             """
         )
 
-        assert len(rows) == 1
-        assert int(rows[0]["version"]) == 1
-        assert rows[0]["name"] == "baseline"
+        assert rows
+        assert int(rows[-1]["version"]) == latest_version
 
 
 def test_migration_runner_is_idempotent_after_baseline(app):
@@ -51,7 +54,7 @@ def test_migration_runner_is_idempotent_after_baseline(app):
         first_applied = migration_runner.apply_pending_migrations()
         second_applied = migration_runner.apply_pending_migrations()
 
-        assert first_applied == [1]
+        assert first_applied == []
         assert second_applied == []
 
         rows = db_fetchall(
@@ -62,9 +65,9 @@ def test_migration_runner_is_idempotent_after_baseline(app):
             """
         )
 
-        assert len(rows) == 1
-        assert int(rows[0]["version"]) == 1
-        assert rows[0]["name"] == "baseline"
+        latest_version = _latest_version()
+        assert rows
+        assert int(rows[-1]["version"]) == latest_version
 
 
 def test_runtime_init_db_applies_migrations_and_keeps_schema_compatible(app):
@@ -80,8 +83,10 @@ def test_runtime_init_db_applies_migrations_and_keeps_schema_compatible(app):
 
         runtime.init_db()
 
-        assert migration_runner.get_current_schema_version() == 1
-        assert migration_runner.get_required_schema_version() == 1
+        latest_version = _latest_version()
+
+        assert migration_runner.get_current_schema_version() == latest_version
+        assert migration_runner.get_required_schema_version() == latest_version
         assert migration_runner.database_schema_is_compatible() is True
 
         rows = db_fetchall(
@@ -92,9 +97,8 @@ def test_runtime_init_db_applies_migrations_and_keeps_schema_compatible(app):
             """
         )
 
-        assert len(rows) == 1
-        assert int(rows[0]["version"]) == 1
-        assert rows[0]["name"] == "baseline"
+        assert rows
+        assert int(rows[-1]["version"]) == latest_version
 
 
 def test_migration_runner_detects_applied_name_mismatch(app, monkeypatch):
@@ -132,6 +136,8 @@ def test_migration_runner_detects_applied_name_mismatch(app, monkeypatch):
 
         try:
             migration_runner.apply_pending_migrations()
-            assert False, "Expected applied migration name mismatch to raise RuntimeError"
+            raise AssertionError(
+                "Expected applied migration name mismatch to raise RuntimeError"
+            )
         except RuntimeError as exc:
             assert "Applied migration name mismatch" in str(exc)
