@@ -70,6 +70,23 @@ def _env_truthy(name: str) -> bool:
     return (os.environ.get(name) or "").strip().lower() in TRUTHY_ENV_VALUES
 
 
+def _resolve_session_cookie_secure(app: Flask) -> bool:
+    cookie_secure_env = (os.environ.get("COOKIE_SECURE") or "").strip()
+    if cookie_secure_env:
+        return cookie_secure_env.lower() in TRUTHY_ENV_VALUES
+
+    if app.config.get("TESTING") or app.config.get("DEBUG"):
+        return False
+
+    return True
+
+
+def _resolve_session_cookie_name(session_cookie_secure: bool) -> str:
+    if session_cookie_secure:
+        return "__Host-shelter_session"
+    return "shelter_session"
+
+
 def _configure_app(app: Flask, test_config: dict[str, Any] | None = None) -> None:
     explicit_database_url = None
     if test_config and "DATABASE_URL" in test_config:
@@ -103,10 +120,15 @@ def _configure_app(app: Flask, test_config: dict[str, Any] | None = None) -> Non
     app.secret_key = secret
     app.permanent_session_lifetime = timedelta(hours=8)
 
+    session_cookie_secure = _resolve_session_cookie_secure(app)
+    session_cookie_name = _resolve_session_cookie_name(session_cookie_secure)
+
     app.config.update(
-        SESSION_COOKIE_SECURE=_env_truthy("COOKIE_SECURE"),
+        SESSION_COOKIE_NAME=session_cookie_name,
+        SESSION_COOKIE_SECURE=session_cookie_secure,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_REFRESH_EACH_REQUEST=False,
     )
 
 
