@@ -8,8 +8,7 @@ import secrets
 from datetime import timedelta
 from typing import Any
 
-from flask import Blueprint, Flask, flash, redirect, render_template, request, session, url_for
-from werkzeug.exceptions import HTTPException
+from flask import Blueprint, Flask, flash, redirect, request, session, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core.app_hooks import register_app_hooks
@@ -38,14 +37,6 @@ CSRF_EXEMPT_ENDPOINTS = {
     "resident_requests.sms_consent",
     "twilio.twilio_inbound",
     "twilio.twilio_status",
-}
-
-RESIDENT_SAFE_PATHS = {
-    "/leave",
-    "/pass-request",
-    "/transport",
-    "/sms-consent",
-    "/sms-consent/",
 }
 
 TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
@@ -195,64 +186,6 @@ def _register_csrf(app: Flask) -> None:
         return None
 
 
-def _is_resident_context() -> bool:
-    endpoint = str(request.endpoint or "")
-    path = (request.path or "").strip()
-
-    return (
-        "resident_id" in session
-        or endpoint.startswith("resident_")
-        or endpoint.startswith("resident_requests.")
-        or endpoint.startswith("resident_portal.")
-        or path == "/resident"
-        or path.startswith("/resident/")
-        or path in RESIDENT_SAFE_PATHS
-    )
-
-
-def _resident_safe_response():
-    if not _is_resident_context():
-        return None
-
-    session.clear()
-    flash("Your session ended. Please sign in again.", "error")
-    return redirect(url_for("public.public_home"))
-
-
-def _register_error_handlers(app: Flask) -> None:
-    @app.errorhandler(403)
-    def page_forbidden(error):
-        resident_response = _resident_safe_response()
-        if resident_response is not None:
-            return resident_response
-        return "Forbidden", 403
-
-    @app.errorhandler(404)
-    def page_not_found(error):
-        resident_response = _resident_safe_response()
-        if resident_response is not None:
-            return resident_response
-        return render_template("404.html"), 404
-
-    @app.errorhandler(500)
-    def internal_server_error(error):
-        app.logger.exception("Internal server error", exc_info=error)
-        resident_response = _resident_safe_response()
-        if resident_response is not None:
-            return resident_response
-        return "Internal Server Error", 500
-
-    @app.errorhandler(Exception)
-    def unhandled_exception(error):
-        if isinstance(error, HTTPException):
-            return error
-        app.logger.exception("Unhandled exception", exc_info=error)
-        resident_response = _resident_safe_response()
-        if resident_response is not None:
-            return resident_response
-        return "Internal Server Error", 500
-
-
 def _register_context_processors(app: Flask) -> None:
     @app.context_processor
     def inject_current_clock():
@@ -280,7 +213,6 @@ def _register_core_services(app: Flask) -> None:
     app.teardown_appcontext(_close_db_teardown)
     _register_security(app)
     _register_csrf(app)
-    _register_error_handlers(app)
     _register_context_processors(app)
 
 
