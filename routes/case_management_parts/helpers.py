@@ -50,9 +50,23 @@ def current_enrollment_order_sql(alias: str = "") -> str:
 
 def fetch_current_enrollment_for_resident(
     resident_id: int,
+    shelter: str | None = None,
     columns: str = "*",
 ) -> dict[str, Any] | tuple[Any, ...] | None:
     ph = placeholder()
+
+    if shelter is not None:
+        return db_fetchone(
+            f"""
+            SELECT {columns}
+            FROM program_enrollments
+            WHERE resident_id = {ph}
+              AND {shelter_equals_sql("shelter")}
+            ORDER BY {current_enrollment_order_sql()}
+            LIMIT 1
+            """,
+            (resident_id, shelter),
+        )
 
     return db_fetchone(
         f"""
@@ -66,8 +80,15 @@ def fetch_current_enrollment_for_resident(
     )
 
 
-def fetch_current_enrollment_id_for_resident(resident_id: int) -> int | None:
-    row = fetch_current_enrollment_for_resident(resident_id, columns="id")
+def fetch_current_enrollment_id_for_resident(
+    resident_id: int,
+    shelter: str | None = None,
+) -> int | None:
+    row = fetch_current_enrollment_for_resident(
+        resident_id,
+        shelter=shelter,
+        columns="id",
+    )
     if not row:
         return None
 
