@@ -86,6 +86,9 @@
         <div class="nav-desktop">
           {% if session.get("staff_user_id") %}
 
+            {% set allowed_shelters = session.get("allowed_shelters") or [] %}
+            {% set allowed_shelters_text = "|" ~ (allowed_shelters | join("|") | lower) ~ "|" %}
+
             <div class="nav-dd">
               <button type="button">
                 {% if shelter_raw %}
@@ -100,9 +103,15 @@
                 <form method="post" action="{{ url_for('auth.staff_select_shelter') }}" style="margin:0;">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="next" value="{{ request.full_path }}">
-                  <button type="submit" name="shelter" value="Abba" style="width:100%;text-align:left;margin:0;">Abba House</button>
-                  <button type="submit" name="shelter" value="Haven" style="width:100%;text-align:left;margin:0;">Haven House</button>
-                  <button type="submit" name="shelter" value="Gratitude" style="width:100%;text-align:left;margin:0;">Gratitude House</button>
+                  {% if not allowed_shelters or "|abba|" in allowed_shelters_text %}
+                    <button type="submit" name="shelter" value="Abba" style="width:100%;text-align:left;margin:0;">Abba House</button>
+                  {% endif %}
+                  {% if not allowed_shelters or "|haven|" in allowed_shelters_text %}
+                    <button type="submit" name="shelter" value="Haven" style="width:100%;text-align:left;margin:0;">Haven House</button>
+                  {% endif %}
+                  {% if not allowed_shelters or "|gratitude|" in allowed_shelters_text %}
+                    <button type="submit" name="shelter" value="Gratitude" style="width:100%;text-align:left;margin:0;">Gratitude House</button>
+                  {% endif %}
                 </form>
               </div>
             </div>
