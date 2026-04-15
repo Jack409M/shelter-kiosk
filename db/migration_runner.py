@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import pkgutil
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from types import ModuleType
 from typing import Final
 
@@ -37,7 +37,7 @@ class MigrationDefinition:
 
 
 def _utcnow_iso() -> str:
-    return datetime.utcnow().replace(microsecond=0).isoformat()
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def _require_kind() -> str:
