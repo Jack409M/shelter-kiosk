@@ -8,7 +8,7 @@ from core.app_hooks import register_app_hooks
 def _build_error_test_app() -> Flask:
     app = Flask(__name__, template_folder="../templates")
     app.config.update(
-        TESTING=False,
+        TESTING=True,
         DEBUG=False,
         SECRET_KEY="test-secret",
     )
