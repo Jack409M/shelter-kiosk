@@ -1,0 +1,21 @@
+# Default owner for all files
+* @Jack409M
+
+# Core application and security sensitive areas
+/core/ @Jack409M
+/db/ @Jack409M
+/routes/ @Jack409M
+/tests/ @Jack409M
+
+# CI and repo governance
+/.github/ @Jack409M
+/Dockerfile @Jack409M
+/requirements.txt @Jack409M
+/requirements-dev.txt @Jack409M
+/pyproject.toml @Jack409M
+
+# Documentation and policy
+/README.md @Jack409M
+/SECURITY.md @Jack409M
+/.env.example @Jack409M
+/docs/ @Jack409M
