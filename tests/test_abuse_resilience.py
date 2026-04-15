@@ -116,6 +116,7 @@ def _insert_resident(
 
 def test_real_pass_rate_limit_blocks_repeated_submissions(app, client, monkeypatch):
     import routes.resident_parts.pass_request as resident_pass_module
+    import routes.resident_parts.pass_request_helpers as pass_request_helpers
     from core.db import db_fetchall
 
     resident_id = _insert_resident(
@@ -130,7 +131,7 @@ def test_real_pass_rate_limit_blocks_repeated_submissions(app, client, monkeypat
     )
 
     monkeypatch.setattr(
-        resident_pass_module,
+        pass_request_helpers,
         "calculate_prior_week_attendance_hours",
         lambda resident_id, shelter: None,
     )
@@ -224,6 +225,7 @@ def test_real_transport_rate_limit_blocks_repeated_submissions(app, client):
 
 def test_malformed_pass_payload_fails_cleanly_without_insert(app, client, monkeypatch):
     import routes.resident_parts.pass_request as resident_pass_module
+    import routes.resident_parts.pass_request_helpers as pass_request_helpers
     from core.db import db_fetchall
 
     resident_id = _insert_resident(
@@ -238,7 +240,7 @@ def test_malformed_pass_payload_fails_cleanly_without_insert(app, client, monkey
     )
 
     monkeypatch.setattr(
-        resident_pass_module,
+        pass_request_helpers,
         "calculate_prior_week_attendance_hours",
         lambda resident_id, shelter: None,
     )

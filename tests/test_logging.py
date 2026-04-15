@@ -88,15 +88,13 @@ def test_unhandled_exception_is_logged(app, client, caplog):
 def test_health_ready_failure_is_logged(client, monkeypatch, caplog):
     import routes.health as health_module
 
-    monkeypatch.setattr(health_module, "init_db", lambda: None)
-
     def _boom(query):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(health_module, "db_fetchone", _boom)
 
     with caplog.at_level(logging.ERROR):
-        response = client.get("/health/ready")
+        response = client.get("/ready")
 
-    assert response.status_code == 500
-    assert any("health_ready_failed" in record.getMessage() for record in caplog.records)
+    assert response.status_code == 503
+    assert any("health_readiness_failed" in record.getMessage() for record in caplog.records)
