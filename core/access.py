@@ -11,6 +11,31 @@ def _staff_home_redirect():
     return redirect(url_for("attendance.staff_attendance"))
 
 
+def _clean_session_text(key: str) -> str:
+    return str(session.get(key) or "").strip()
+
+
+def _session_int(key: str) -> int | None:
+    raw_value = session.get(key)
+    if raw_value in (None, ""):
+        return None
+
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clear_session_and_redirect_to_resident_signin():
+    session.clear()
+    return redirect(
+        url_for(
+            "resident_requests.resident_signin",
+            next=request.path,
+        )
+    )
+
+
 # ------------------------------------------------------------
 # Staff / admin access control
 # ------------------------------------------------------------
@@ -46,21 +71,21 @@ def require_admin(fn):
 def require_resident(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        required_values = (
-            session.get("resident_id"),
-            session.get("resident_identifier"),
-            session.get("resident_first"),
-            session.get("resident_last"),
-            session.get("resident_shelter"),
-        )
-        if any(not value for value in required_values):
-            session.clear()
-            return redirect(
-                url_for(
-                    "resident_requests.resident_signin",
-                    next=request.path,
-                )
-            )
+        resident_id = _session_int("resident_id")
+        resident_identifier = _clean_session_text("resident_identifier")
+        resident_first = _clean_session_text("resident_first")
+        resident_last = _clean_session_text("resident_last")
+        resident_shelter = _clean_session_text("resident_shelter")
+
+        if (
+            resident_id is None
+            or not resident_identifier
+            or not resident_first
+            or not resident_last
+            or not resident_shelter
+        ):
+            return _clear_session_and_redirect_to_resident_signin()
+
         return fn(*args, **kwargs)
 
     return wrapper
