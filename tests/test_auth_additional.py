@@ -65,6 +65,23 @@ def _insert_staff_user(
         )
 
 
+def _set_staff_session(
+    client,
+    *,
+    staff_user_id: int = 1,
+    username: str = "staff",
+    role: str = "admin",
+    shelter: str = "abba",
+    allowed_shelters: list[str] | None = None,
+) -> None:
+    with client.session_transaction() as session:
+        session["staff_user_id"] = staff_user_id
+        session["username"] = username
+        session["role"] = role
+        session["shelter"] = shelter
+        session["allowed_shelters"] = allowed_shelters or ["abba", "haven", "gratitude"]
+
+
 def test_staff_login_page_loads(client, monkeypatch):
     import routes.auth as auth_module
 
@@ -172,3 +189,141 @@ def test_staff_logout_clears_session(client, monkeypatch):
         assert "username" not in session
         assert "role" not in session
         assert "shelter" not in session
+
+
+def test_staff_select_shelter_get_filters_to_allowed_shelters(client, monkeypatch):
+    import routes.auth as auth_module
+
+    _set_staff_session(
+        client,
+        allowed_shelters=["abba", "gratitude"],
+    )
+
+    monkeypatch.setattr(
+        auth_module,
+        "get_all_shelters",
+        lambda: ["Abba", "Haven", "Gratitude"],
+    )
+
+    response = client.get("/staff/select-shelter", follow_redirects=False)
+
+    assert response.status_code == 200
+    assert b"Abba" in response.data
+    assert b"Gratitude" in response.data
+    assert b"Haven" not in response.data
+
+
+def test_staff_select_shelter_rejects_invalid_shelter(client, monkeypatch):
+    import routes.auth as auth_module
+
+    _set_staff_session(
+        client,
+        allowed_shelters=["abba"],
+    )
+
+    monkeypatch.setattr(
+        auth_module,
+        "get_all_shelters",
+        lambda: ["Abba", "Haven", "Gratitude"],
+    )
+
+    response = client.post(
+        "/staff/select-shelter",
+        data={
+            "_csrf_token": _set_csrf_token(client),
+            "shelter": "haven",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code in (301, 302)
+    assert "/staff/select-shelter" in response.headers["Location"]
+
+    with client.session_transaction() as session:
+        assert session["shelter"] == "abba"
+
+
+def test_staff_select_shelter_accepts_valid_shelter_and_updates_session(client, monkeypatch):
+    import routes.auth as auth_module
+
+    _set_staff_session(
+        client,
+        allowed_shelters=["abba", "gratitude"],
+    )
+
+    monkeypatch.setattr(
+        auth_module,
+        "get_all_shelters",
+        lambda: ["Abba", "Haven", "Gratitude"],
+    )
+
+    response = client.post(
+        "/staff/select-shelter",
+        data={
+            "_csrf_token": _set_csrf_token(client),
+            "shelter": "gratitude",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code in (301, 302)
+    assert "/staff/attendance" in response.headers["Location"]
+
+    with client.session_transaction() as session:
+        assert session["shelter"] == "gratitude"
+
+
+def test_staff_select_shelter_allows_safe_staff_next_path(client, monkeypatch):
+    import routes.auth as auth_module
+
+    _set_staff_session(
+        client,
+        allowed_shelters=["abba", "gratitude"],
+    )
+
+    monkeypatch.setattr(
+        auth_module,
+        "get_all_shelters",
+        lambda: ["Abba", "Haven", "Gratitude"],
+    )
+
+    response = client.post(
+        "/staff/select-shelter",
+        data={
+            "_csrf_token": _set_csrf_token(client),
+            "shelter": "gratitude",
+            "next": "/staff/profile",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code in (301, 302)
+    assert response.headers["Location"].endswith("/staff/profile")
+
+
+def test_staff_select_shelter_rejects_non_staff_next_path(client, monkeypatch):
+    import routes.auth as auth_module
+
+    _set_staff_session(
+        client,
+        allowed_shelters=["abba", "gratitude"],
+    )
+
+    monkeypatch.setattr(
+        auth_module,
+        "get_all_shelters",
+        lambda: ["Abba", "Haven", "Gratitude"],
+    )
+
+    response = client.post(
+        "/staff/select-shelter",
+        data={
+            "_csrf_token": _set_csrf_token(client),
+            "shelter": "gratitude",
+            "next": "/admin",
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code in (301, 302)
+    assert response.headers["Location"].endswith("/staff/attendance")
