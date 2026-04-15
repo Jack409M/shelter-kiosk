@@ -478,7 +478,7 @@ def edit_case_note_view(resident_id: int, update_id: int) -> RouteResponse:
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    note = load_note_for_edit(update_id)
+    note = load_note_for_edit(update_id, shelter)
     if note is None:
         flash("Note not found.", "error")
         return _redirect_resident_case(resident_id)
