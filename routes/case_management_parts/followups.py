@@ -59,6 +59,7 @@ def _fetch_resident_and_enrollment(resident_id: int):
 
     enrollment = fetch_current_enrollment_for_resident(
         resident_id,
+        shelter=shelter,
         columns="""
             id,
             resident_id,
