@@ -179,6 +179,7 @@ def _ensure_schema_compatibility() -> None:
         required_version,
         AUTO_APPLY_MIGRATIONS,
     )
+
     raise RuntimeError(
         "Database schema is behind the application requirement. "
         f"Current version={current_version}, required version={required_version}."
@@ -186,19 +187,6 @@ def _ensure_schema_compatibility() -> None:
 
 
 def init_db() -> None:
-    """
-    Ensures database connection, migration handling, and schema initialization.
-
-    Current transition contract:
-    - tracked migrations are now the official schema evolution path
-    - startup may auto apply migrations when AUTO_APPLY_MIGRATIONS is enabled
-    - when AUTO_APPLY_MIGRATIONS is disabled, startup refuses to continue if the
-      database schema is behind
-    - legacy schema.init_db() still runs as temporary compatibility glue
-
-    Requires an active Flask app context so the database layer reads the same
-    configuration the app was built with.
-    """
     global _DB_INITIALIZED, _DB_INIT_URL
 
     if not has_app_context():
@@ -220,8 +208,15 @@ def init_db() -> None:
         get_db()
 
         if AUTO_APPLY_MIGRATIONS:
-            applied_versions = apply_pending_migrations()
-            _log_migration_result(applied_versions)
+            try:
+                applied_versions = apply_pending_migrations()
+                _log_migration_result(applied_versions)
+            except Exception as exc:
+                current_app.logger.exception(
+                    "database_migration_failed exception_type=%s",
+                    type(exc).__name__,
+                )
+                raise RuntimeError("Migration failed. Startup aborted.") from exc
         else:
             current_app.logger.info(
                 "database_migration_auto_apply_disabled current_version=%s required_version=%s",
@@ -231,9 +226,6 @@ def init_db() -> None:
 
         _ensure_schema_compatibility()
 
-        # Temporary compatibility bridge.
-        # Keep legacy schema initialization active until future migrations fully
-        # absorb the existing ensure_* upgrade paths.
         schema.init_db()
 
         _DB_INITIALIZED = True
