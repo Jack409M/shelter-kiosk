@@ -75,10 +75,7 @@ def _resolve_session_cookie_secure(app: Flask) -> bool:
     if cookie_secure_env:
         return cookie_secure_env.lower() in TRUTHY_ENV_VALUES
 
-    if app.config.get("TESTING") or app.config.get("DEBUG"):
-        return False
-
-    return True
+    return not (app.config.get("TESTING") or app.config.get("DEBUG"))
 
 
 def _resolve_session_cookie_name(session_cookie_secure: bool) -> str:
