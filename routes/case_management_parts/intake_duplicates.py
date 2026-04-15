@@ -36,9 +36,10 @@ def _fetch_existing_duplicate_for_draft(current_shelter: str, pending_form_data:
     )
 
 
-def _fetch_existing_enrollment_for_resident(resident_id: int):
+def _fetch_existing_enrollment_for_resident(resident_id: int, shelter: str):
     return fetch_current_enrollment_for_resident(
         resident_id,
+        shelter=shelter,
         columns="""
             id,
             entry_date,
@@ -73,7 +74,10 @@ def duplicate_review_view(draft_id: int):
         return redirect(url_for("case_management.intake_form", draft_id=draft_id))
 
     existing_resident_id = _row_value(existing_resident, "id", 0)
-    existing_enrollment = _fetch_existing_enrollment_for_resident(existing_resident_id)
+    existing_enrollment = _fetch_existing_enrollment_for_resident(
+        existing_resident_id,
+        current_shelter,
+    )
 
     return render_template(
         "case_management/intake_duplicate_review.html",
@@ -105,7 +109,10 @@ def duplicate_review_use_existing_view(draft_id: int):
         return redirect(url_for("case_management.intake_form", draft_id=draft_id))
 
     existing_resident_id = _row_value(existing_resident, "id", 0)
-    existing_enrollment = _fetch_existing_enrollment_for_resident(existing_resident_id)
+    existing_enrollment = _fetch_existing_enrollment_for_resident(
+        existing_resident_id,
+        current_shelter,
+    )
 
     if existing_enrollment:
         flash(
