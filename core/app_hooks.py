@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
 import uuid
-from typing import Final
+from typing import Any, Final
 
 from flask import Flask, current_app, g, redirect, request
 from werkzeug.wrappers import Response
@@ -54,19 +55,24 @@ def _should_log_requests(app: Flask) -> bool:
     return app.logger.isEnabledFor(logging.INFO)
 
 
+def _json_log(app: Flask, level: int, event: str, **fields: Any) -> None:
+    payload = {"event": event, **fields}
+    app.logger.log(level, json.dumps(payload, sort_keys=True, default=str))
+
+
 def _log_request_start(app: Flask) -> None:
     if not _should_log_requests(app):
         return
 
-    request_id = getattr(g, "request_id", "")
-
-    app.logger.info(
-        "request_started request_id=%s method=%s path=%s endpoint=%s remote_ip=%s",
-        request_id,
-        request.method,
-        request.path,
-        request.endpoint,
-        _client_ip(),
+    _json_log(
+        app,
+        logging.INFO,
+        "request_started",
+        request_id=getattr(g, "request_id", ""),
+        method=request.method,
+        path=request.path,
+        endpoint=request.endpoint,
+        remote_ip=_client_ip(),
     )
 
 
@@ -74,18 +80,19 @@ def _log_request_complete(app: Flask, response: Response) -> None:
     if not _should_log_requests(app):
         return
 
-    request_id = getattr(g, "request_id", "")
-
     started_at = getattr(g, "request_started_at", None)
     duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
-    app.logger.info(
-        "request_completed request_id=%s method=%s path=%s endpoint=%s status=%s duration_ms=%s",
-        request_id,
-        request.method,
-        request.path,
-        request.endpoint,
-        response.status_code,
-        duration_ms,
+
+    _json_log(
+        app,
+        logging.INFO,
+        "request_completed",
+        request_id=getattr(g, "request_id", ""),
+        method=request.method,
+        path=request.path,
+        endpoint=request.endpoint,
+        status=response.status_code,
+        duration_ms=duration_ms,
     )
 
 
@@ -93,18 +100,19 @@ def _log_request_failure(app: Flask, error: BaseException) -> None:
     if not _should_log_requests(app):
         return
 
-    request_id = getattr(g, "request_id", "")
-
     started_at = getattr(g, "request_started_at", None)
     duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
-    app.logger.exception(
-        "request_failed request_id=%s method=%s path=%s endpoint=%s duration_ms=%s error_type=%s",
-        request_id,
-        request.method,
-        request.path,
-        request.endpoint,
-        duration_ms,
-        type(error).__name__,
+
+    _json_log(
+        app,
+        logging.ERROR,
+        "request_failed",
+        request_id=getattr(g, "request_id", ""),
+        method=request.method,
+        path=request.path,
+        endpoint=request.endpoint,
+        duration_ms=duration_ms,
+        error_type=type(error).__name__,
     )
 
 
