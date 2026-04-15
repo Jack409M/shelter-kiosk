@@ -12,6 +12,7 @@ def _build_error_test_app() -> Flask:
         DEBUG=False,
         SECRET_KEY="test-secret",
     )
+    app.jinja_env.globals["safe_url_for"] = lambda *args, **kwargs: "#"
 
     @app.route("/boom")
     def boom():
