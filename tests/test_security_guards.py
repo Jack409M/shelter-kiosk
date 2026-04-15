@@ -43,7 +43,6 @@ def test_resident_context_500_clears_session_and_redirects(client, monkeypatch):
         session["resident_shelter"] = "abba"
         session["sms_consent_done"] = True
 
-    monkeypatch.setattr(portal, "init_db", lambda: None)
     monkeypatch.setattr(
         portal,
         "run_pass_retention_cleanup_for_shelter",
