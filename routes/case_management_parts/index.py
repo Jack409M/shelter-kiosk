@@ -128,6 +128,7 @@ def _build_readiness_band(score: int) -> tuple[str, str]:
 def _build_readiness_score(resident_id: int, shelter: str) -> dict:
     enrollment = fetch_current_enrollment_for_resident(
         resident_id,
+        shelter=shelter,
         columns="""
             id,
             entry_date
