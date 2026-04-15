@@ -12,7 +12,14 @@ def _build_error_test_app() -> Flask:
         DEBUG=False,
         SECRET_KEY="test-secret",
     )
+
+    # Minimal template dependency
     app.jinja_env.globals["safe_url_for"] = lambda *args, **kwargs: "#"
+
+    # Minimal route required by layout.html
+    @app.route("/resident", endpoint="resident_requests.resident_signin")
+    def _fake_resident_signin():
+        return "ok"
 
     @app.route("/boom")
     def boom():
@@ -21,7 +28,6 @@ def _build_error_test_app() -> Flask:
     @app.route("/forbidden")
     def forbidden():
         from flask import abort
-
         abort(403)
 
     register_app_hooks(app)
