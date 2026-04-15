@@ -58,10 +58,10 @@ def _column_name_from_sql(column_sql: str) -> str:
 
 def _sqlite_column_exists(table_name: str, column_name: str) -> bool:
     rows = db_fetchall(f"PRAGMA table_info({table_name})")
-    for row in rows:
-        if str(row.get("name") or "").strip().lower() == column_name.lower():
-            return True
-    return False
+    return any(
+        str(row.get("name") or "").strip().lower() == column_name.lower()
+        for row in rows
+    )
 
 
 def _pg_column_exists(table_name: str, column_name: str) -> bool:

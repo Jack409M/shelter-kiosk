@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import logging
 
-import pytest
-
 
 def _build_app(monkeypatch, tmp_path, log_level: str = "INFO"):
     db_path = tmp_path / "test_logging.db"

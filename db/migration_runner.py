@@ -9,7 +9,7 @@ from typing import Final
 
 from flask import current_app, g
 
-from core.db import db_execute, db_fetchall, get_db, db_transaction
+from core.db import db_execute, db_fetchall, db_transaction, get_db
 
 _SCHEMA_MIGRATIONS_POSTGRES_SQL: Final[str] = """
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -187,7 +187,7 @@ def _apply_one_migration(kind: str, definition: MigrationDefinition) -> None:
         definition.module_name,
     )
 
-    apply_func = getattr(definition.module, "apply")
+    apply_func = definition.module.apply
 
     with db_transaction():
         apply_func(kind)

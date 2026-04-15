@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import importlib
-
 from core.db import db_execute, db_fetchall
 from db import migration_runner
 
@@ -132,6 +130,8 @@ def test_migration_runner_detects_applied_name_mismatch(app, monkeypatch):
 
         try:
             migration_runner.apply_pending_migrations()
-            assert False, "Expected applied migration name mismatch to raise RuntimeError"
+            raise AssertionError(
+                "Expected applied migration name mismatch to raise RuntimeError"
+            )
         except RuntimeError as exc:
             assert "Applied migration name mismatch" in str(exc)
