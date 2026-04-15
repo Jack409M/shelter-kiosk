@@ -6,7 +6,8 @@ import time
 import uuid
 from typing import Any, Final
 
-from flask import Flask, current_app, g, redirect, request
+from flask import Flask, current_app, g, redirect, request, render_template
+from werkzeug.exceptions import HTTPException
 from werkzeug.wrappers import Response
 
 _STATIC_CACHE_CONTROL: Final[str] = "public, max-age=86400"
@@ -81,7 +82,7 @@ def _log_request_complete(app: Flask, response: Response) -> None:
         return
 
     started_at = getattr(g, "request_started_at", None)
-    duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
+    duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at else 0
 
     _json_log(
         app,
@@ -101,7 +102,7 @@ def _log_request_failure(app: Flask, error: BaseException) -> None:
         return
 
     started_at = getattr(g, "request_started_at", None)
-    duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at is not None else 0
+    duration_ms = int((time.perf_counter() - started_at) * 1000) if started_at else 0
 
     _json_log(
         app,
@@ -152,6 +153,40 @@ def _apply_security_headers(response: Response) -> None:
         response.headers.setdefault("Strict-Transport-Security", _HSTS_HEADER)
 
 
+# -----------------------------
+# NEW: GLOBAL ERROR HANDLERS
+# -----------------------------
+
+
+def _wants_json() -> bool:
+    return "application/json" in request.headers.get("Accept", "")
+
+
+def _handle_http_exception(error: HTTPException):
+    status_code = error.code or 500
+
+    if _wants_json():
+        return {"error": error.name, "message": error.description}, status_code
+
+    return render_template("errors/http_error.html", error=error), status_code
+
+
+def _handle_unexpected_exception(error: Exception):
+    app = current_app
+
+    _log_request_failure(app, error)
+
+    if _wants_json():
+        return {"error": "Internal Server Error"}, 500
+
+    return render_template("errors/500.html"), 500
+
+
+# -----------------------------
+# REGISTER HOOKS
+# -----------------------------
+
+
 def register_app_hooks(app: Flask) -> None:
     @app.before_request
     def start_request_context() -> None:
@@ -175,6 +210,7 @@ def register_app_hooks(app: Flask) -> None:
         request_id = getattr(g, "request_id", None)
         if request_id:
             response.headers.setdefault("X-Request-ID", request_id)
+
         _apply_cache_headers(response)
         _apply_security_headers(response)
         _log_request_complete(app, response)
@@ -187,3 +223,7 @@ def register_app_hooks(app: Flask) -> None:
         if not hasattr(g, "request_started_at"):
             return
         _log_request_failure(app, error)
+
+    # NEW: register error handlers
+    app.register_error_handler(HTTPException, _handle_http_exception)
+    app.register_error_handler(Exception, _handle_unexpected_exception)
