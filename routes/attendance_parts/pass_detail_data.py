@@ -173,25 +173,10 @@ def _resident_profile_summary(
     resident_profile = load_resident_pass_profile(resident_id)
 
     resident_level = ""
-    sponsor_name = ""
-    sponsor_active = None
-    step_current = None
-    step_work_active = None
-    monthly_income = None
     program_start_date = None
 
     if resident_profile:
         resident_level = _clean_text(resident_value(resident_profile, "program_level", 2, ""))
-        sponsor_name = _clean_text(resident_value(resident_profile, "sponsor_name", 3, ""))
-        sponsor_active = resident_value(resident_profile, "sponsor_active", 4, None)
-        step_current = resident_value(resident_profile, "step_current", 5, None)
-        step_work_active = resident_value(
-            resident_profile,
-            "step_work_active",
-            6,
-            None,
-        )
-        monthly_income = resident_value(resident_profile, "monthly_income", 7, None)
         program_start_date = resident_value(resident_profile, "date_entered", 8, None)
 
     if pass_detail and pass_detail.get("resident_level"):
@@ -199,11 +184,6 @@ def _resident_profile_summary(
 
     return {
         "resident_level": resident_level,
-        "sponsor_name": sponsor_name,
-        "sponsor_active": sponsor_active,
-        "step_current": step_current,
-        "step_work_active": step_work_active,
-        "monthly_income": monthly_income,
         "program_start_date": program_start_date,
     }
 
@@ -260,10 +240,5 @@ def load_staff_pass_detail_context(*, pass_id: int, shelter: str) -> dict | None
         "hour_summary": hour_summary,
         "meeting_summary": meeting_summary,
         "resident_level": profile_summary["resident_level"],
-        "sponsor_name": profile_summary["sponsor_name"],
-        "sponsor_active": profile_summary["sponsor_active"],
-        "step_current": profile_summary["step_current"],
-        "step_work_active": profile_summary["step_work_active"],
-        "monthly_income": profile_summary["monthly_income"],
         "policy_check": policy_check,
     }
