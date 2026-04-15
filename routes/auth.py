@@ -334,13 +334,19 @@ def staff_logout():
 def staff_select_shelter():
     all_shelters, all_shelters_lower, _ = _load_all_shelters()
     allowed_shelters = session.get("allowed_shelters") or all_shelters_lower
-    shelters = [s for s in all_shelters_lower if s in allowed_shelters]
+    allowed_shelters_set = {str(shelter).strip().lower() for shelter in allowed_shelters if shelter}
+
+    shelters = [
+        original_shelter
+        for original_shelter, lower_shelter in zip(all_shelters, all_shelters_lower)
+        if lower_shelter in allowed_shelters_set
+    ]
 
     if request.method == "GET":
         return render_template("staff_select_shelter.html", shelters=shelters)
 
     shelter = (request.form.get("shelter") or "").strip().lower()
-    if shelter not in shelters:
+    if shelter not in allowed_shelters_set:
         flash("Select a valid shelter.", "error")
         return redirect(url_for("auth.staff_select_shelter"))
 
@@ -414,5 +420,3 @@ def staff_profile():
         return redirect(url_for("auth.staff_profile"))
 
     return render_template("staff_profile.html", user=row)
-
-
