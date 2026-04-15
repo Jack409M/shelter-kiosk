@@ -30,9 +30,10 @@ def _yes_no_to_bool(value: str | None):
     return None
 
 
-def _load_current_enrollment(resident_id: int):
+def _load_current_enrollment(resident_id: int, shelter: str):
     return fetch_current_enrollment_for_resident(
         resident_id,
+        shelter=shelter,
         columns="""
             id,
             shelter,
@@ -148,7 +149,7 @@ def income_support_view(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    enrollment = _load_current_enrollment(resident_id)
+    enrollment = _load_current_enrollment(resident_id, shelter)
     enrollment_id = enrollment["id"] if enrollment else None
 
     if not enrollment_id:
