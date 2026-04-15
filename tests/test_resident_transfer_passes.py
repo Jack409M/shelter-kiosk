@@ -159,6 +159,9 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
     with app.app_context():
         init_db()
 
+        db_execute("DELETE FROM resident_pass_request_details WHERE pass_id IN (SELECT id FROM resident_passes WHERE resident_id IN (SELECT id FROM residents WHERE resident_identifier = %s))", ("t_real",))
+        db_execute("DELETE FROM resident_passes WHERE resident_id IN (SELECT id FROM residents WHERE resident_identifier = %s)", ("t_real",))
+        db_execute("DELETE FROM transport_requests WHERE resident_identifier = %s", ("t_real",))
         db_execute("DELETE FROM residents WHERE resident_identifier = %s", ("t_real",))
 
         db_execute(
@@ -184,18 +187,58 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
 
         db_execute(
             """
-            INSERT INTO leave_requests (resident_identifier, shelter, status)
-            VALUES (%s, %s, %s)
+            INSERT INTO resident_passes (
+                resident_id,
+                shelter,
+                pass_type,
+                status,
+                start_at,
+                end_at,
+                destination,
+                created_at,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (resident["resident_identifier"], "abba", "pending"),
+            (
+                resident["id"],
+                "abba",
+                "pass",
+                "pending",
+                "2099-01-01T10:00:00",
+                "2099-01-01T18:00:00",
+                "Clinic",
+                "2026-01-01T00:00:00",
+                "2026-01-01T00:00:00",
+            ),
         )
 
         db_execute(
             """
-            INSERT INTO transport_requests (resident_identifier, shelter, status)
-            VALUES (%s, %s, %s)
+            INSERT INTO transport_requests (
+                resident_identifier,
+                shelter,
+                first_name,
+                last_name,
+                needed_at,
+                pickup_location,
+                destination,
+                status,
+                submitted_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            (resident["resident_identifier"], "abba", "pending"),
+            (
+                resident["resident_identifier"],
+                "abba",
+                "Real",
+                "Transfer",
+                "2099-01-01T09:00:00",
+                "DWC",
+                "Clinic",
+                "pending",
+                "2026-01-01T00:00:00",
+            ),
         )
 
     monkeypatch.setattr(
@@ -218,11 +261,9 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
             (resident["id"],),
         )
 
-        assert updated["shelter"] == "haven"
-
-        leave = db_fetchall(
-            "SELECT shelter FROM leave_requests WHERE resident_identifier = %s",
-            (resident["resident_identifier"],),
+        passes = db_fetchall(
+            "SELECT shelter FROM resident_passes WHERE resident_id = %s",
+            (resident["id"],),
         )
 
         transport = db_fetchall(
@@ -230,5 +271,6 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
             (resident["resident_identifier"],),
         )
 
-    assert all(r["shelter"] == "haven" for r in leave)
+    assert updated["shelter"] == "haven"
+    assert all(r["shelter"] == "haven" for r in passes)
     assert all(r["shelter"] == "haven" for r in transport)
