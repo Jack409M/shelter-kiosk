@@ -337,8 +337,8 @@ def staff_select_shelter():
     allowed_shelters_set = {str(shelter).strip().lower() for shelter in allowed_shelters if shelter}
 
     shelters = [
-        original_shelter
-        for original_shelter, lower_shelter in zip(all_shelters, all_shelters_lower)
+        all_shelters[index]
+        for index, lower_shelter in enumerate(all_shelters_lower)
         if lower_shelter in allowed_shelters_set
     ]
 
