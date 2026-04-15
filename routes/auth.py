@@ -154,7 +154,6 @@ def _set_staff_session(
     shelter: str,
     allowed_shelters: list[str],
 ) -> None:
-    session.clear()
     session["staff_user_id"] = staff_user_id
     session["username"] = staff_username
     session["role"] = staff_role
@@ -290,6 +289,7 @@ def staff_login():
         flash("You do not have access to that shelter.", "error")
         return _render_staff_login(all_shelters, 403)
 
+    session.clear()
     _set_staff_session(
         staff_user_id=staff_user_id,
         staff_username=staff_username,
