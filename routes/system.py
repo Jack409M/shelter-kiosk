@@ -82,14 +82,6 @@ def favicon():
     return redirect(url_for("static", filename="favicon.ico"), code=301)
 
 
-@system.get("/health")
-def health():
-    """
-    Lightweight health endpoint for uptime checks and platform probes.
-    """
-    return {"status": "ok"}, 200
-
-
 @system.get("/_routes")
 def list_routes():
     """
