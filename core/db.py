@@ -81,6 +81,9 @@ def _sqlite_path_from_url(database_url: str) -> str:
     if not raw_path:
         raise RuntimeError("SQLite DATABASE_URL must include a database path.")
 
+    if raw_path.startswith("//"):
+        raw_path = raw_path[1:]
+
     return raw_path
 
 
