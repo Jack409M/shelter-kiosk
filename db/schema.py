@@ -221,8 +221,11 @@ def _ensure_foundation_tables(kind: str) -> None:
     _ensure_security_runtime_tables(kind)
 
 
-def _ensure_domain_tables(kind: str) -> None:
+def _ensure_program_anchor_tables(kind: str) -> None:
     schema_program.ensure_tables(kind)
+
+
+def _ensure_dependent_domain_tables(kind: str) -> None:
     schema_outcomes.ensure_tables(kind)
     schema_goals.ensure_tables(kind)
     schema_case.ensure_tables(kind)
@@ -236,6 +239,10 @@ def _ensure_schema_upgrades(kind: str) -> None:
     schema_core.ensure_columns_and_security_upgrades(kind)
     schema_people.ensure_columns_and_constraints(kind)
     schema_requests.ensure_columns_and_constraints(kind)
+
+
+def _ensure_integrity_pre_index_tasks() -> None:
+    schema_outcomes.ensure_single_row_baseline_integrity()
 
 
 def _ensure_shared_indexes() -> None:
@@ -256,12 +263,31 @@ def _ensure_indexes(kind: str) -> None:
     schema_comms.ensure_indexes(kind)
 
 
-def _run_schema_initialization(kind: str) -> None:
-    _ensure_foundation_tables(kind)
-    _ensure_domain_tables(kind)
-    _ensure_schema_upgrades(kind)
-    _ensure_indexes(kind)
+def _ensure_bootstrap_tasks(kind: str) -> None:
     schema_bootstrap.ensure_all(kind)
+
+
+def _run_schema_initialization(kind: str) -> None:
+    # Phase 1: foundational tables required by all later modules.
+    _ensure_foundation_tables(kind)
+
+    # Phase 2: program anchor tables that downstream domains reference.
+    _ensure_program_anchor_tables(kind)
+
+    # Phase 3: dependent domain tables that rely on prior foundations.
+    _ensure_dependent_domain_tables(kind)
+
+    # Phase 4: additive column and security upgrades.
+    _ensure_schema_upgrades(kind)
+
+    # Phase 5: data integrity preparation that must run before constraints and indexes.
+    _ensure_integrity_pre_index_tasks()
+
+    # Phase 6: indexes and uniqueness enforcement.
+    _ensure_indexes(kind)
+
+    # Phase 7: bootstrap seed and compatibility tasks.
+    _ensure_bootstrap_tasks(kind)
 
 
 def _schema_state() -> SchemaState:
