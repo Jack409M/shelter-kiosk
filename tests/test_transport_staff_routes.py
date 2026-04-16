@@ -15,6 +15,7 @@ def _login_staff(
         session["staff_user_id"] = staff_user_id
         session["shelter"] = shelter
         session["allowed_shelters"] = [shelter]
+        session["_fresh"] = True
         session.modified = True
 
 
@@ -109,11 +110,6 @@ def test_board_is_open_to_logged_in_staff(client, monkeypatch):
 
     _login_staff(client, role="staff")
 
-    monkeypatch.setattr(
-        module,
-        "_can_manage_transport",
-        lambda: False,
-    )
     monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
     monkeypatch.setattr(module, "db_fetchall", lambda sql, params: [])
 
@@ -127,7 +123,6 @@ def test_board_filters_rows_by_local_day(client, monkeypatch):
 
     _login_staff(client, shelter="abba", role="staff")
 
-    monkeypatch.setattr(module, "_can_manage_transport", lambda: True)
     monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
 
     fake_rows = [
@@ -166,11 +161,6 @@ def test_print_is_open_to_logged_in_staff(client, monkeypatch):
 
     _login_staff(client, role="staff")
 
-    monkeypatch.setattr(
-        module,
-        "_can_manage_transport",
-        lambda: False,
-    )
     monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
     monkeypatch.setattr(module, "db_fetchall", lambda sql, params: [])
 
@@ -184,7 +174,6 @@ def test_print_defaults_to_today_and_shows_no_rides_message(client, monkeypatch)
 
     _login_staff(client, shelter="abba", role="staff")
 
-    monkeypatch.setattr(module, "_can_manage_transport", lambda: True)
     monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
     monkeypatch.setattr(module, "db_fetchall", lambda sql, params: [])
 
@@ -200,7 +189,6 @@ def test_print_renders_filtered_rows_and_escapes_html(client, monkeypatch):
 
     _login_staff(client, shelter="abba", role="staff")
 
-    monkeypatch.setattr(module, "_can_manage_transport", lambda: True)
     monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
 
     fake_rows = [
