@@ -45,13 +45,19 @@ TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
 def register_blueprints(app: Flask) -> None:
     import routes
 
-    for _, module_name, _ in pkgutil.iter_modules(routes.__path__):
+    discovered_blueprints: list[Blueprint] = []
+
+    for _, module_name, _ in sorted(pkgutil.iter_modules(routes.__path__), key=lambda item: item[1]):
         module = importlib.import_module(f"routes.{module_name}")
 
-        for attr_name in dir(module):
+        for attr_name in sorted(dir(module)):
             obj = getattr(module, attr_name)
-            if isinstance(obj, Blueprint) and obj.name not in app.blueprints:
-                app.register_blueprint(obj)
+            if isinstance(obj, Blueprint):
+                discovered_blueprints.append(obj)
+
+    for blueprint in sorted(discovered_blueprints, key=lambda item: item.name):
+        if blueprint.name not in app.blueprints:
+            app.register_blueprint(blueprint)
 
 
 def _client_ip() -> str:
@@ -91,14 +97,19 @@ def _configure_app(app: Flask, test_config: dict[str, Any] | None = None) -> Non
 
     runtime_config = load_runtime_config(explicit_database_url=explicit_database_url)
 
-    app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
-    app.config["DATABASE_URL"] = runtime_config.database_url
-    app.config["DATABASE_MODE_LABEL"] = runtime_config.database_mode_label
-    app.config["CLOUDFLARE_ONLY"] = os.getenv("CLOUDFLARE_ONLY", "")
-    app.config["ADMIN_USERNAME"] = os.environ.get("ADMIN_USERNAME")
-    app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
-    app.config["INIT_DB_FUNC"] = init_db
-    app.config["UTCNOW_ISO_FUNC"] = utcnow_iso
+    app.config.update(
+        APP_NAME="shelter-kiosk",
+        MAX_CONTENT_LENGTH=2 * 1024 * 1024,
+        DATABASE_URL=runtime_config.database_url,
+        DATABASE_MODE_LABEL=runtime_config.database_mode_label,
+        CLOUDFLARE_ONLY=os.getenv("CLOUDFLARE_ONLY", ""),
+        ADMIN_USERNAME=os.environ.get("ADMIN_USERNAME"),
+        ADMIN_PASSWORD=os.environ.get("ADMIN_PASSWORD"),
+        INIT_DB_FUNC=init_db,
+        UTCNOW_ISO_FUNC=utcnow_iso,
+        INITIALIZE_DATABASE_ON_STARTUP=True,
+        START_PASS_RETENTION_SCHEDULER=not _env_truthy("PYTEST_CURRENT_TEST"),
+    )
 
     if test_config:
         app.config.update(test_config)
@@ -235,6 +246,15 @@ def _register_core_services(app: Flask) -> None:
     _register_context_processors(app)
 
 
+def _initialize_runtime_services(app: Flask) -> None:
+    if app.config.get("INITIALIZE_DATABASE_ON_STARTUP", True):
+        with app.app_context():
+            init_db()
+
+    if app.config.get("START_PASS_RETENTION_SCHEDULER", True):
+        start_pass_retention_scheduler(app)
+
+
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app = Flask(
         __name__,
@@ -246,13 +266,10 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     _configure_proxy(app)
     _configure_logging(app)
 
-    with app.app_context():
-        init_db()
-
     _register_core_services(app)
     register_blueprints(app)
     register_app_hooks(app)
-    start_pass_retention_scheduler(app)
+    _initialize_runtime_services(app)
 
     app.logger.info(
         "blueprints_loaded=%s count=%s",
