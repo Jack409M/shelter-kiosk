@@ -55,7 +55,7 @@ def test_pending_requires_permission(client, monkeypatch):
     response = client.get("/staff/transport/pending", follow_redirects=False)
 
     assert response.status_code == 302
-    assert "/staff/login" in response.headers["Location"]
+    assert "/staff/attendance" in response.headers["Location"]
 
 
 def test_pending_renders_rows_for_shelter(client, monkeypatch):
@@ -95,6 +95,19 @@ def test_pending_renders_rows_for_shelter(client, monkeypatch):
     assert b"Jane" in response.data or b"Doe" in response.data
 
 
+def test_board_requires_permission(client, monkeypatch):
+    import routes.transport as module
+
+    _login_staff(client)
+
+    monkeypatch.setattr(module, "_can_manage_transport", lambda: False)
+
+    response = client.get("/staff/transport/board", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert "/staff/attendance" in response.headers["Location"]
+
+
 def test_board_filters_rows_by_local_day(client, monkeypatch):
     import routes.transport as module
 
@@ -132,6 +145,19 @@ def test_board_filters_rows_by_local_day(client, monkeypatch):
     assert b"Jane" in response.data or b"Doe" in response.data
     assert b"Amy" not in response.data
     assert b"Smith" not in response.data
+
+
+def test_print_requires_permission(client, monkeypatch):
+    import routes.transport as module
+
+    _login_staff(client)
+
+    monkeypatch.setattr(module, "_can_manage_transport", lambda: False)
+
+    response = client.get("/staff/transport/print", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert "/staff/attendance" in response.headers["Location"]
 
 
 def test_print_defaults_to_today_and_shows_no_rides_message(client, monkeypatch):
@@ -207,7 +233,7 @@ def test_schedule_requires_permission(client, monkeypatch):
     response = client.post("/staff/transport/5/schedule", data={}, follow_redirects=False)
 
     assert response.status_code == 302
-    assert "/staff/login" in response.headers["Location"]
+    assert "/staff/attendance" in response.headers["Location"]
 
 
 def test_schedule_updates_request_logs_and_redirects(client, monkeypatch):
@@ -288,5 +314,7 @@ def test_cleanup_transport_requests_uses_expected_sql_placeholder(monkeypatch, d
 
     assert first_params[0] == "abba"
     assert first_params[1] == "pending"
+    assert first_params[2]
     assert second_params[0] == "abba"
     assert second_params[1] == "scheduled"
+    assert second_params[2]
