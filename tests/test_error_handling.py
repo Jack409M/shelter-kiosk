@@ -20,11 +20,11 @@ def _build_error_test_app() -> Flask:
     @app.route("/forbidden")
     def forbidden():
         from flask import abort
+
         abort(403)
 
     register_app_hooks(app)
 
-    # 🔑 Stub template rendering entirely
     @app.context_processor
     def _stub_templates():
         return {}
@@ -36,7 +36,6 @@ def test_http_exception_html_renders_http_error_template(monkeypatch):
     app = _build_error_test_app()
     client = app.test_client()
 
-    # Stub render_template so layout is never evaluated
     monkeypatch.setattr(
         "core.app_hooks.render_template",
         lambda template, **ctx: f"HTML:{template}".encode(),
@@ -79,7 +78,7 @@ def test_unexpected_exception_html_renders_500_template(monkeypatch):
     response = client.get("/boom")
 
     assert response.status_code == 500
-    assert b"HTML:errors/server_error.html" in response.data
+    assert b"HTML:errors/500.html" in response.data
     assert response.headers.get("X-Request-ID")
 
 
