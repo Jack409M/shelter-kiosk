@@ -8,6 +8,24 @@ from flask import Flask, session
 def app():
     app = Flask(__name__)
     app.secret_key = "test"
+
+    def _staff_attendance():
+        return "ok"
+
+    def _resident_signin():
+        return "ok"
+
+    app.add_url_rule(
+        "/staff-attendance",
+        endpoint="attendance.staff_attendance",
+        view_func=_staff_attendance,
+    )
+    app.add_url_rule(
+        "/resident-signin",
+        endpoint="resident_requests.resident_signin",
+        view_func=_resident_signin,
+    )
+
     return app
 
 
@@ -16,10 +34,6 @@ def ctx(app):
     with app.test_request_context("/test"):
         yield
 
-
-# ------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------
 
 def test_clean_session_text_handles_none_and_whitespace(ctx):
     import core.access as module
@@ -43,10 +57,6 @@ def test_session_int_valid_and_invalid(ctx):
     session["x"] = "bad"
     assert module._session_int("x") is None
 
-
-# ------------------------------------------------------------
-# Staff access
-# ------------------------------------------------------------
 
 def test_require_staff_or_admin_allows_valid_role(ctx, monkeypatch):
     import core.access as module
@@ -82,7 +92,7 @@ def test_require_staff_or_admin_blocks_invalid_role(ctx, monkeypatch):
     result = fn()
 
     assert result.status_code == 302
-    assert "/attendance" in result.location
+    assert "/staff-attendance" in result.location
 
 
 def test_require_admin_blocks_non_admin(ctx):
@@ -97,7 +107,7 @@ def test_require_admin_blocks_non_admin(ctx):
     result = fn()
 
     assert result.status_code == 302
-    assert "/attendance" in result.location
+    assert "/staff-attendance" in result.location
 
 
 def test_require_admin_allows_admin(ctx):
@@ -112,20 +122,18 @@ def test_require_admin_allows_admin(ctx):
     assert fn() == "ok"
 
 
-# ------------------------------------------------------------
-# Resident access
-# ------------------------------------------------------------
-
 def test_require_resident_allows_valid_session(ctx):
     import core.access as module
 
-    session.update({
-        "resident_id": "5",
-        "resident_identifier": "abc",
-        "resident_first": "John",
-        "resident_last": "Doe",
-        "resident_shelter": "abba",
-    })
+    session.update(
+        {
+            "resident_id": "5",
+            "resident_identifier": "abc",
+            "resident_first": "John",
+            "resident_last": "Doe",
+            "resident_shelter": "abba",
+        }
+    )
 
     @module.require_resident
     def fn():
@@ -146,19 +154,22 @@ def test_require_resident_blocks_missing_fields(ctx):
     result = fn()
 
     assert result.status_code == 302
-    assert "resident_signin" in result.location
+    assert "/resident-signin" in result.location
+    assert "next=%2Ftest" in result.location or "next=/test" in result.location
 
 
 def test_require_resident_blocks_partial_session(ctx):
     import core.access as module
 
-    session.update({
-        "resident_id": "5",
-        "resident_identifier": "",
-        "resident_first": "John",
-        "resident_last": "Doe",
-        "resident_shelter": "abba",
-    })
+    session.update(
+        {
+            "resident_id": "5",
+            "resident_identifier": "",
+            "resident_first": "John",
+            "resident_last": "Doe",
+            "resident_shelter": "abba",
+        }
+    )
 
     @module.require_resident
     def fn():
@@ -167,11 +178,9 @@ def test_require_resident_blocks_partial_session(ctx):
     result = fn()
 
     assert result.status_code == 302
+    assert "/resident-signin" in result.location
+    assert "next=%2Ftest" in result.location or "next=/test" in result.location
 
-
-# ------------------------------------------------------------
-# Transfer access
-# ------------------------------------------------------------
 
 def test_require_transfer_allows_valid(ctx, monkeypatch):
     import core.access as module
@@ -201,11 +210,8 @@ def test_require_transfer_blocks_invalid(ctx, monkeypatch):
     result = fn()
 
     assert result.status_code == 302
+    assert "/staff-attendance" in result.location
 
-
-# ------------------------------------------------------------
-# Resident create access
-# ------------------------------------------------------------
 
 def test_require_resident_create_allows_valid(ctx):
     import core.access as module
@@ -231,3 +237,4 @@ def test_require_resident_create_blocks_invalid(ctx):
     result = fn()
 
     assert result.status_code == 302
+    assert "/staff-attendance" in result.location
