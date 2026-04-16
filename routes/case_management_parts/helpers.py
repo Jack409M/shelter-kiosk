@@ -80,6 +80,65 @@ def fetch_current_enrollment_for_resident(
     )
 
 
+def fetch_enrollment_for_resident(
+    *,
+    enrollment_id: int,
+    resident_id: int,
+    shelter: str | None = None,
+    require_active: bool = False,
+    columns: str = "*",
+) -> dict[str, Any] | tuple[Any, ...] | None:
+    ph = placeholder()
+    params: list[Any] = [enrollment_id, resident_id]
+    where_parts = [f"id = {ph}", f"resident_id = {ph}"]
+
+    if shelter is not None:
+        where_parts.append(shelter_equals_sql("shelter"))
+        params.append(shelter)
+
+    if require_active:
+        where_parts.append(f"COALESCE(program_status, '') = {ph}")
+        params.append("active")
+
+    return db_fetchone(
+        f"""
+        SELECT {columns}
+        FROM program_enrollments
+        WHERE {' AND '.join(where_parts)}
+        LIMIT 1
+        """,
+        tuple(params),
+    )
+
+
+def assert_enrollment_belongs_to_resident(
+    *,
+    enrollment_id: int,
+    resident_id: int,
+    shelter: str | None = None,
+    require_active: bool = False,
+    columns: str = "*",
+) -> dict[str, Any] | tuple[Any, ...]:
+    enrollment = fetch_enrollment_for_resident(
+        enrollment_id=enrollment_id,
+        resident_id=resident_id,
+        shelter=shelter,
+        require_active=require_active,
+        columns=columns,
+    )
+    if enrollment:
+        return enrollment
+
+    message = (
+        f"Enrollment {enrollment_id} does not belong to resident {resident_id}"
+    )
+    if shelter is not None:
+        message += f" in shelter {shelter!r}"
+    if require_active:
+        message += " with active status"
+    raise LookupError(message)
+
+
 def fetch_current_enrollment_id_for_resident(
     resident_id: int,
     shelter: str | None = None,
