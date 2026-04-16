@@ -7,27 +7,20 @@ from core.helpers import utcnow_iso
 from core.runtime import init_db
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
-    clean,
     fetch_current_enrollment_for_resident,
     normalize_shelter_name,
     parse_iso_date,
     placeholder,
     shelter_equals_sql,
 )
+from routes.case_management_parts.income_support_validation import (
+    validate_income_support_form,
+)
 from routes.case_management_parts.intake_income_support import (
     load_intake_income_support,
     recalculate_intake_income_support,
     upsert_intake_income_support,
 )
-
-
-def _yes_no_to_bool(value: str | None):
-    normalized = (value or "").strip().lower()
-    if normalized == "yes":
-        return True
-    if normalized == "no":
-        return False
-    return None
 
 
 def _load_current_enrollment(resident_id: int, shelter: str):
@@ -135,6 +128,27 @@ def _sync_resident_income_snapshot(
     )
 
 
+def _render_income_support_page(
+    *,
+    resident,
+    enrollment,
+    enrollment_id: int,
+):
+    intake_income_support = load_intake_income_support(enrollment_id) or {}
+    total_cash_support = intake_income_support.get("total_cash_support")
+    weighted_stable_income = intake_income_support.get("weighted_stable_income")
+
+    return render_template(
+        "case_management/income_support.html",
+        resident=resident,
+        enrollment=enrollment,
+        enrollment_id=enrollment_id,
+        intake_income_support=intake_income_support,
+        total_cash_support=total_cash_support,
+        weighted_stable_income=weighted_stable_income,
+    )
+
+
 def income_support_view(resident_id: int):
     init_db()
 
@@ -157,52 +171,48 @@ def income_support_view(resident_id: int):
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     if request.method == "POST":
-        upsert_intake_income_support(enrollment_id, request.form)
+        values, errors = validate_income_support_form(request.form)
+
+        if errors:
+            for error in errors:
+                flash(error, "error")
+            return _render_income_support_page(
+                resident=resident,
+                enrollment=enrollment,
+                enrollment_id=enrollment_id,
+            )
+
+        upsert_intake_income_support(enrollment_id, values)
 
         intake_income_support = load_intake_income_support(enrollment_id) or {}
         weighted_stable_income = intake_income_support.get("weighted_stable_income")
 
-        employment_status_current = clean(request.form.get("employment_status_current"))
-        employer_name = clean(request.form.get("employer_name"))
-        employment_type_current = clean(request.form.get("employment_type_current"))
-        supervisor_name = clean(request.form.get("supervisor_name"))
-        supervisor_phone = clean(request.form.get("supervisor_phone"))
-        unemployment_reason = clean(request.form.get("unemployment_reason"))
-        employment_notes = clean(request.form.get("employment_notes"))
-        job_change_notes = clean(request.form.get("job_change_notes"))
-        current_job_start_date = parse_iso_date(request.form.get("current_job_start_date"))
-        previous_job_end_date = parse_iso_date(request.form.get("previous_job_end_date"))
-        upward_job_change = _yes_no_to_bool(request.form.get("upward_job_change"))
-
         _sync_resident_income_snapshot(
             resident_id=resident_id,
             weighted_stable_income=weighted_stable_income,
-            employment_status_current=employment_status_current,
-            employer_name=employer_name,
-            employment_type_current=employment_type_current,
-            supervisor_name=supervisor_name,
-            supervisor_phone=supervisor_phone,
-            unemployment_reason=unemployment_reason,
-            employment_notes=employment_notes,
-            current_job_start_date=current_job_start_date,
-            previous_job_end_date=previous_job_end_date,
-            upward_job_change=upward_job_change,
-            job_change_notes=job_change_notes,
+            employment_status_current=values["employment_status_current"],
+            employer_name=values["employer_name"],
+            employment_type_current=values["employment_type_current"],
+            supervisor_name=values["supervisor_name"],
+            supervisor_phone=values["supervisor_phone"],
+            unemployment_reason=values["unemployment_reason"],
+            employment_notes=values["employment_notes"],
+            current_job_start_date=values["current_job_start_date"],
+            previous_job_end_date=values["previous_job_end_date"],
+            upward_job_change=values["upward_job_change"],
+            job_change_notes=values["job_change_notes"],
         )
 
         flash("Employment and income support updated.", "success")
         return redirect(url_for("case_management.income_support", resident_id=resident_id))
 
     recalculate_intake_income_support(enrollment_id)
-    intake_income_support = load_intake_income_support(enrollment_id) or {}
+    resident_weighted_income = load_intake_income_support(enrollment_id) or {}
 
-    total_cash_support = intake_income_support.get("total_cash_support")
-    weighted_stable_income = intake_income_support.get("weighted_stable_income")
-
-    if weighted_stable_income not in (None, ""):
+    if resident_weighted_income.get("weighted_stable_income") not in (None, ""):
         _sync_resident_income_snapshot(
             resident_id=resident_id,
-            weighted_stable_income=weighted_stable_income,
+            weighted_stable_income=resident_weighted_income.get("weighted_stable_income"),
             employment_status_current=resident.get("employment_status_current"),
             employer_name=resident.get("employer_name"),
             employment_type_current=resident.get("employment_type_current"),
@@ -217,12 +227,8 @@ def income_support_view(resident_id: int):
         )
         resident = _load_resident_in_scope(resident_id, shelter)
 
-    return render_template(
-        "case_management/income_support.html",
+    return _render_income_support_page(
         resident=resident,
         enrollment=enrollment,
         enrollment_id=enrollment_id,
-        intake_income_support=intake_income_support,
-        total_cash_support=total_cash_support,
-        weighted_stable_income=weighted_stable_income,
     )
