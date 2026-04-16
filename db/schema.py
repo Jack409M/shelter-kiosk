@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Final
 
-from flask import current_app, g
+from flask import current_app, g, has_app_context
 
 from core.db import db_execute
 
@@ -20,8 +21,6 @@ from . import (
     schema_shelter_operations,
     schema_shelters,
 )
-
-_SCHEMA_INITIALIZED_KEY: str | None = None
 
 _STAFF_SHELTER_ASSIGNMENTS_POSTGRES_SQL: Final[str] = """
 CREATE TABLE IF NOT EXISTS staff_shelter_assignments (
@@ -139,6 +138,11 @@ _REQUIRED_INDEXES: Final[tuple[str, ...]] = (
     ON rate_limit_events (created_at)
     """,
 )
+
+
+@dataclass
+class SchemaState:
+    initialized_key: str | None = None
 
 
 def _require_kind() -> str:
@@ -260,14 +264,26 @@ def _run_schema_initialization(kind: str) -> None:
     schema_bootstrap.ensure_all(kind)
 
 
-def init_db() -> None:
-    global _SCHEMA_INITIALIZED_KEY
+def _schema_state() -> SchemaState:
+    if not has_app_context():
+        raise RuntimeError("Schema state requires an active Flask app context.")
 
+    state = current_app.extensions.get("shelter_kiosk_schema_state")
+    if isinstance(state, SchemaState):
+        return state
+
+    state = SchemaState()
+    current_app.extensions["shelter_kiosk_schema_state"] = state
+    return state
+
+
+def init_db() -> None:
     kind = _require_kind()
     current_key = _schema_key(kind)
 
-    if current_key == _SCHEMA_INITIALIZED_KEY:
+    state = _schema_state()
+    if state.initialized_key == current_key:
         return
 
     _run_schema_initialization(kind)
-    _SCHEMA_INITIALIZED_KEY = current_key
+    state.initialized_key = current_key
