@@ -7,13 +7,15 @@ from flask import current_app, flash, g, redirect, render_template, request, ses
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.runtime import init_db
 from db.schema_people import ensure_resident_child_income_supports_table
+from routes.case_management_parts.family_validation import (
+    validate_child_form,
+    validate_child_service_form,
+)
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
     clean,
     fetch_current_enrollment_for_resident,
     normalize_shelter_name,
-    parse_int,
-    parse_money,
     placeholder,
     shelter_equals_sql,
 )
@@ -207,44 +209,9 @@ def _recalculate_current_enrollment_income_support(resident_id: int) -> None:
     recalculate_intake_income_support(enrollment_id)
 
 
-def _parse_service_date(value: str | None) -> str | None:
-    value = clean(value)
-    if not value:
-        return None
-
-    try:
-        datetime.fromisoformat(value)
-    except ValueError:
-        return None
-
-    return value
-
-
 def _is_unique_constraint_error(exc: Exception) -> bool:
     message = str(exc).lower()
     return "unique" in message or "duplicate" in message
-
-
-def _resolve_child_service_type(form) -> str | None:
-    service_type = clean(form.get("service_type"))
-    service_type_other = clean(form.get("service_type_other"))
-
-    if service_type and service_type.lower() == "other":
-        return service_type_other or service_type
-
-    if service_type_other and not service_type:
-        return service_type_other
-
-    return service_type
-
-
-def _yes_no_to_bool(value: str | None):
-    normalized = (value or "").strip().lower()
-    if normalized == "yes":
-        return True
-    if normalized == "no":
-        return False
-    return None
 
 
 def _upsert_child_income_support(
@@ -358,6 +325,16 @@ def _sync_child_support_records(
     )
 
 
+def _render_family_intake_error(resident_id: int, message: str):
+    children = _active_children_for_resident(resident_id)
+    flash(message, "error")
+    return render_template(
+        "case_management/family_intake.html",
+        resident_id=resident_id,
+        children=children,
+    )
+
+
 def family_intake_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -374,19 +351,12 @@ def family_intake_view(resident_id: int):
     ph = placeholder()
 
     if request.method == "POST":
-        child_name = clean(request.form.get("child_name"))
-        birth_year = parse_int(request.form.get("birth_year"))
-        relationship = clean(request.form.get("relationship"))
-        living_status = clean(request.form.get("living_status"))
-        receives_survivor_benefit = _yes_no_to_bool(request.form.get("receives_survivor_benefit"))
-        survivor_benefit_amount = parse_money(request.form.get("survivor_benefit_amount"))
-        survivor_benefit_notes = clean(request.form.get("survivor_benefit_notes"))
-        child_support_amount = parse_money(request.form.get("child_support_amount"))
-        child_support_notes = clean(request.form.get("child_support_notes"))
+        validated, errors = validate_child_form(request.form)
 
-        if not child_name:
+        if errors:
+            for error in errors:
+                flash(error, "error")
             children = _active_children_for_resident(resident_id)
-            flash("Child name is required.", "error")
             return render_template(
                 "case_management/family_intake.html",
                 resident_id=resident_id,
@@ -408,19 +378,16 @@ def family_intake_view(resident_id: int):
             """,
             (
                 resident_id,
-                child_name,
-                birth_year,
-                birth_year,
+                validated["child_name"],
+                validated["birth_year"],
+                validated["birth_year"],
             ),
         )
 
         if existing_child:
-            children = _active_children_for_resident(resident_id)
-            flash("This child already exists for this resident.", "error")
-            return render_template(
-                "case_management/family_intake.html",
-                resident_id=resident_id,
-                children=children,
+            return _render_family_intake_error(
+                resident_id,
+                "This child already exists for this resident.",
             )
 
         now = datetime.utcnow().isoformat()
@@ -459,13 +426,13 @@ def family_intake_view(resident_id: int):
                 """,
                 (
                     resident_id,
-                    child_name,
-                    birth_year,
-                    relationship,
-                    living_status,
-                    receives_survivor_benefit,
-                    survivor_benefit_amount,
-                    survivor_benefit_notes,
+                    validated["child_name"],
+                    validated["birth_year"],
+                    validated["relationship"],
+                    validated["living_status"],
+                    validated["receives_survivor_benefit"],
+                    validated["survivor_benefit_amount"],
+                    validated["survivor_benefit_notes"],
                     now,
                     now,
                 ),
@@ -487,43 +454,37 @@ def family_intake_view(resident_id: int):
                 """,
                 (
                     resident_id,
-                    child_name,
-                    birth_year,
-                    birth_year,
+                    validated["child_name"],
+                    validated["birth_year"],
+                    validated["birth_year"],
                 ),
             )
 
             if child_row:
                 _sync_child_support_records(
                     child_id=child_row["id"],
-                    receives_survivor_benefit=receives_survivor_benefit,
-                    survivor_benefit_amount=survivor_benefit_amount,
-                    survivor_benefit_notes=survivor_benefit_notes,
-                    child_support_amount=child_support_amount,
-                    child_support_notes=child_support_notes,
+                    receives_survivor_benefit=validated["receives_survivor_benefit"],
+                    survivor_benefit_amount=validated["survivor_benefit_amount"],
+                    survivor_benefit_notes=validated["survivor_benefit_notes"],
+                    child_support_amount=validated["child_support_amount"],
+                    child_support_notes=validated["child_support_notes"],
                 )
 
             _recalculate_current_enrollment_income_support(resident_id)
         except Exception as exc:
             if _is_unique_constraint_error(exc):
-                children = _active_children_for_resident(resident_id)
-                flash("This child already exists for this resident.", "error")
-                return render_template(
-                    "case_management/family_intake.html",
-                    resident_id=resident_id,
-                    children=children,
+                return _render_family_intake_error(
+                    resident_id,
+                    "This child already exists for this resident.",
                 )
 
             current_app.logger.exception(
                 "Failed to add child for resident_id=%s",
                 resident_id,
             )
-            children = _active_children_for_resident(resident_id)
-            flash("Unable to add child. Please try again or contact an administrator.", "error")
-            return render_template(
-                "case_management/family_intake.html",
-                resident_id=resident_id,
-                children=children,
+            return _render_family_intake_error(
+                resident_id,
+                "Unable to add child. Please try again or contact an administrator.",
             )
 
         flash("Child added.", "success")
@@ -554,18 +515,11 @@ def edit_child_view(child_id: int):
     resident_id = child["resident_id"]
 
     if request.method == "POST":
-        child_name = clean(request.form.get("child_name"))
-        birth_year = parse_int(request.form.get("birth_year"))
-        relationship = clean(request.form.get("relationship"))
-        living_status = clean(request.form.get("living_status"))
-        receives_survivor_benefit = _yes_no_to_bool(request.form.get("receives_survivor_benefit"))
-        survivor_benefit_amount = parse_money(request.form.get("survivor_benefit_amount"))
-        survivor_benefit_notes = clean(request.form.get("survivor_benefit_notes"))
-        child_support_amount = parse_money(request.form.get("child_support_amount"))
-        child_support_notes = clean(request.form.get("child_support_notes"))
+        validated, errors = validate_child_form(request.form)
 
-        if not child_name:
-            flash("Child name is required.", "error")
+        if errors:
+            for error in errors:
+                flash(error, "error")
             return redirect(url_for("case_management.edit_child", child_id=child_id))
 
         ph = placeholder()
@@ -585,9 +539,9 @@ def edit_child_view(child_id: int):
             """,
             (
                 resident_id,
-                child_name,
-                birth_year,
-                birth_year,
+                validated["child_name"],
+                validated["birth_year"],
+                validated["birth_year"],
                 child_id,
             ),
         )
@@ -612,13 +566,13 @@ def edit_child_view(child_id: int):
                 WHERE id = {ph}
                 """,
                 (
-                    child_name,
-                    birth_year,
-                    relationship,
-                    living_status,
-                    receives_survivor_benefit,
-                    survivor_benefit_amount,
-                    survivor_benefit_notes,
+                    validated["child_name"],
+                    validated["birth_year"],
+                    validated["relationship"],
+                    validated["living_status"],
+                    validated["receives_survivor_benefit"],
+                    validated["survivor_benefit_amount"],
+                    validated["survivor_benefit_notes"],
                     datetime.utcnow().isoformat(),
                     child_id,
                 ),
@@ -626,11 +580,11 @@ def edit_child_view(child_id: int):
 
             _sync_child_support_records(
                 child_id=child_id,
-                receives_survivor_benefit=receives_survivor_benefit,
-                survivor_benefit_amount=survivor_benefit_amount,
-                survivor_benefit_notes=survivor_benefit_notes,
-                child_support_amount=child_support_amount,
-                child_support_notes=child_support_notes,
+                receives_survivor_benefit=validated["receives_survivor_benefit"],
+                survivor_benefit_amount=validated["survivor_benefit_amount"],
+                survivor_benefit_notes=validated["survivor_benefit_notes"],
+                child_support_amount=validated["child_support_amount"],
+                child_support_notes=validated["child_support_notes"],
             )
 
             _recalculate_current_enrollment_income_support(resident_id)
@@ -731,19 +685,14 @@ def edit_child_service_view(service_id: int):
         flash("Service not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    service["resident_child_id"]
     resident_id = service["resident_id"]
 
     if request.method == "POST":
-        service_type = _resolve_child_service_type(request.form)
-        outcome = clean(request.form.get("outcome"))
-        quantity = parse_int(request.form.get("quantity"))
-        unit = clean(request.form.get("unit"))
-        notes = clean(request.form.get("notes"))
-        service_date = _parse_service_date(request.form.get("service_date"))
+        validated, errors = validate_child_service_form(request.form)
 
-        if request.form.get("service_date") and not service_date:
-            flash("Service date must be valid.", "error")
+        if errors:
+            for error in errors:
+                flash(error, "error")
             return redirect(url_for("case_management.edit_child_service", service_id=service_id))
 
         ph = placeholder()
@@ -763,12 +712,12 @@ def edit_child_service_view(service_id: int):
                 WHERE id = {ph}
                 """,
                 (
-                    service_type,
-                    outcome,
-                    quantity,
-                    unit,
-                    notes,
-                    service_date,
+                    validated["service_type"],
+                    validated["outcome"],
+                    validated["quantity"],
+                    validated["unit"],
+                    validated["notes"],
+                    validated["service_date"],
                     datetime.utcnow().isoformat(),
                     service_id,
                 ),
@@ -838,7 +787,8 @@ def delete_child_service_view(service_id: int):
             child_id,
         )
         flash(
-            "Unable to remove child service. Please try again or contact an administrator.", "error"
+            "Unable to remove child service. Please try again or contact an administrator.",
+            "error",
         )
         return redirect(url_for("case_management.child_services", child_id=child_id))
 
@@ -871,15 +821,11 @@ def child_services_view(child_id: int):
     ph = placeholder()
 
     if request.method == "POST":
-        service_type = _resolve_child_service_type(request.form)
-        outcome = clean(request.form.get("outcome"))
-        quantity = parse_int(request.form.get("quantity"))
-        unit = clean(request.form.get("unit"))
-        notes = clean(request.form.get("notes"))
-        service_date = _parse_service_date(request.form.get("service_date"))
+        validated, errors = validate_child_service_form(request.form)
 
-        if request.form.get("service_date") and not service_date:
-            flash("Service date must be valid.", "error")
+        if errors:
+            for error in errors:
+                flash(error, "error")
             return _post_child_service_redirect(child_id, resident_id)
 
         now = datetime.utcnow().isoformat()
@@ -917,12 +863,12 @@ def child_services_view(child_id: int):
                 (
                     child_id,
                     enrollment_id,
-                    service_date or now,
-                    service_type,
-                    outcome,
-                    quantity,
-                    unit,
-                    notes,
+                    validated["service_date"] or now,
+                    validated["service_type"],
+                    validated["outcome"],
+                    validated["quantity"],
+                    validated["unit"],
+                    validated["notes"],
                     now,
                     now,
                 ),
