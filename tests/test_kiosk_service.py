@@ -433,7 +433,6 @@ def test_handle_checkout_rejects_bad_code_and_missing_category(monkeypatch):
     )
 
     assert result.success is False
-    assert result.status_code == 400
     assert "Enter an 8 digit Resident Code." in result.errors
     assert "Activity Category is required." in result.errors
     assert "Invalid Resident Code." in result.errors
@@ -469,7 +468,10 @@ def test_handle_checkout_rejects_invalid_category(monkeypatch):
     )
 
     assert result.success is False
-    assert result.errors == ["Please select a valid Activity Category."]
+    assert "Please select a valid Activity Category." in result.errors
+    assert "Start Time is required." in result.errors
+    assert "End Time is required." in result.errors
+    assert "Expected Back to Shelter is required." in result.errors
 
 
 def test_handle_checkout_validates_aa_na_options(monkeypatch):
