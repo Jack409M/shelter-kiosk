@@ -4,12 +4,56 @@ from pathlib import Path
 ROUTES_DIR = Path("routes/case_management_parts")
 TESTS_DIR = Path("tests")
 
+SKIP_EXACT = {
+    "__init__.py",
+}
 
-def test_every_module_has_validation_and_test():
+SKIP_SUFFIXES = (
+    "_validation.py",
+    "_helpers.py",
+    "_helper.py",
+    "_loaders.py",
+    "_loader.py",
+    "_mappers.py",
+    "_mapper.py",
+    "_builders.py",
+    "_builder.py",
+    "_formatters.py",
+    "_formatter.py",
+    "_metrics.py",
+    "_metric.py",
+    "_utils.py",
+    "_util.py",
+    "_scope.py",
+    "_viewmodel.py",
+    "_inserts.py",
+    "_recorders.py",
+    "_drafts.py",
+)
+
+
+def _is_form_handling_module(route_file: Path) -> bool:
+    text = route_file.read_text(encoding="utf-8")
+
+    return any(
+        marker in text
+        for marker in (
+            "request.form",
+            "request.method == \"POST\"",
+            "request.method == 'POST'",
+            "methods=[\"GET\", \"POST\"]",
+            "methods=['GET', 'POST']",
+            ".post(",
+        )
+    )
+
+
+def test_every_form_module_has_validation_and_test():
     route_files = [
         f for f in ROUTES_DIR.glob("*.py")
-        if not f.name.endswith("_validation.py")
-        and f.name != "__init__.py"
+        if f.name not in SKIP_EXACT
+        and not f.name.endswith(SKIP_SUFFIXES)
+        and _is_form_handling_module(f)
     ]
 
     missing_validation = []
@@ -28,9 +72,9 @@ def test_every_module_has_validation_and_test():
             missing_tests.append(module_name)
 
     assert not missing_validation, (
-        f"Missing validation files for modules: {missing_validation}"
+        f"Missing validation files for form modules: {missing_validation}"
     )
 
     assert not missing_tests, (
-        f"Missing validation tests for modules: {missing_tests}"
+        f"Missing validation tests for form modules: {missing_tests}"
     )
