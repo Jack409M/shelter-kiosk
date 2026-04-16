@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
@@ -182,50 +182,79 @@ def income_support_view(resident_id: int):
                 enrollment_id=enrollment_id,
             )
 
-        upsert_intake_income_support(enrollment_id, values)
+        try:
+            upsert_intake_income_support(enrollment_id, values)
 
-        intake_income_support = load_intake_income_support(enrollment_id) or {}
-        weighted_stable_income = intake_income_support.get("weighted_stable_income")
+            intake_income_support = load_intake_income_support(enrollment_id) or {}
+            weighted_stable_income = intake_income_support.get("weighted_stable_income")
 
-        _sync_resident_income_snapshot(
-            resident_id=resident_id,
-            weighted_stable_income=weighted_stable_income,
-            employment_status_current=values["employment_status_current"],
-            employer_name=values["employer_name"],
-            employment_type_current=values["employment_type_current"],
-            supervisor_name=values["supervisor_name"],
-            supervisor_phone=values["supervisor_phone"],
-            unemployment_reason=values["unemployment_reason"],
-            employment_notes=values["employment_notes"],
-            current_job_start_date=values["current_job_start_date"],
-            previous_job_end_date=values["previous_job_end_date"],
-            upward_job_change=values["upward_job_change"],
-            job_change_notes=values["job_change_notes"],
-        )
+            _sync_resident_income_snapshot(
+                resident_id=resident_id,
+                weighted_stable_income=weighted_stable_income,
+                employment_status_current=values["employment_status_current"],
+                employer_name=values["employer_name"],
+                employment_type_current=values["employment_type_current"],
+                supervisor_name=values["supervisor_name"],
+                supervisor_phone=values["supervisor_phone"],
+                unemployment_reason=values["unemployment_reason"],
+                employment_notes=values["employment_notes"],
+                current_job_start_date=values["current_job_start_date"],
+                previous_job_end_date=values["previous_job_end_date"],
+                upward_job_change=values["upward_job_change"],
+                job_change_notes=values["job_change_notes"],
+            )
+        except Exception as exc:
+            current_app.logger.exception(
+                "income_support_save_failed resident_id=%s enrollment_id=%s exception_type=%s",
+                resident_id,
+                enrollment_id,
+                type(exc).__name__,
+            )
+            flash(
+                "Unable to save employment and income support. Please try again or contact an administrator.",
+                "error",
+            )
+            return _render_income_support_page(
+                resident=resident,
+                enrollment=enrollment,
+                enrollment_id=enrollment_id,
+            )
 
         flash("Employment and income support updated.", "success")
         return redirect(url_for("case_management.income_support", resident_id=resident_id))
 
-    recalculate_intake_income_support(enrollment_id)
-    resident_weighted_income = load_intake_income_support(enrollment_id) or {}
+    try:
+        recalculate_intake_income_support(enrollment_id)
+        resident_weighted_income = load_intake_income_support(enrollment_id) or {}
 
-    if resident_weighted_income.get("weighted_stable_income") not in (None, ""):
-        _sync_resident_income_snapshot(
-            resident_id=resident_id,
-            weighted_stable_income=resident_weighted_income.get("weighted_stable_income"),
-            employment_status_current=resident.get("employment_status_current"),
-            employer_name=resident.get("employer_name"),
-            employment_type_current=resident.get("employment_type_current"),
-            supervisor_name=resident.get("supervisor_name"),
-            supervisor_phone=resident.get("supervisor_phone"),
-            unemployment_reason=resident.get("unemployment_reason"),
-            employment_notes=resident.get("employment_notes"),
-            current_job_start_date=parse_iso_date(resident.get("current_job_start_date")),
-            previous_job_end_date=parse_iso_date(resident.get("previous_job_end_date")),
-            upward_job_change=resident.get("upward_job_change"),
-            job_change_notes=resident.get("job_change_notes"),
+        if resident_weighted_income.get("weighted_stable_income") not in (None, ""):
+            _sync_resident_income_snapshot(
+                resident_id=resident_id,
+                weighted_stable_income=resident_weighted_income.get("weighted_stable_income"),
+                employment_status_current=resident.get("employment_status_current"),
+                employer_name=resident.get("employer_name"),
+                employment_type_current=resident.get("employment_type_current"),
+                supervisor_name=resident.get("supervisor_name"),
+                supervisor_phone=resident.get("supervisor_phone"),
+                unemployment_reason=resident.get("unemployment_reason"),
+                employment_notes=resident.get("employment_notes"),
+                current_job_start_date=parse_iso_date(resident.get("current_job_start_date")),
+                previous_job_end_date=parse_iso_date(resident.get("previous_job_end_date")),
+                upward_job_change=resident.get("upward_job_change"),
+                job_change_notes=resident.get("job_change_notes"),
+            )
+            resident = _load_resident_in_scope(resident_id, shelter)
+    except Exception as exc:
+        current_app.logger.exception(
+            "income_support_resync_failed resident_id=%s enrollment_id=%s exception_type=%s",
+            resident_id,
+            enrollment_id,
+            type(exc).__name__,
         )
-        resident = _load_resident_in_scope(resident_id, shelter)
+        flash(
+            "Employment income totals could not be refreshed right now. Displaying the latest saved data.",
+            "error",
+        )
 
     return _render_income_support_page(
         resident=resident,
