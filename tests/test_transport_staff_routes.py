@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 
-def _login_staff(client, *, shelter: str = "abba", staff_user_id: int = 7) -> None:
+def _login_staff(
+    client,
+    *,
+    shelter: str = "abba",
+    staff_user_id: int = 7,
+    role: str = "case_manager",
+) -> None:
     with client.session_transaction() as session:
-        session["role"] = "staff"
+        session.clear()
+        session["role"] = role
         session["username"] = "staffuser"
         session["staff_user_id"] = staff_user_id
         session["shelter"] = shelter
-        session.modified = True
-
-
-def _force_session(client) -> None:
-    with client.session_transaction() as session:
+        session["allowed_shelters"] = [shelter]
         session.modified = True
 
 
@@ -47,11 +50,10 @@ def test_row_value_prefers_dict_and_falls_back_by_index():
     assert module._row_value(("a",), "ignored", 5, "fallback") == "fallback"
 
 
-def test_pending_requires_permission(client, monkeypatch):
+def test_pending_requires_case_manager_or_above(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client)
-    _force_session(client)
+    _login_staff(client, role="staff")
 
     monkeypatch.setattr(module, "_can_manage_transport", lambda: False)
 
@@ -64,13 +66,17 @@ def test_pending_requires_permission(client, monkeypatch):
 def test_pending_renders_rows_for_shelter(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client, shelter="abba")
+    _login_staff(client, shelter="abba", role="case_manager")
 
     cleanup_calls: list[str] = []
     query_calls: list[tuple[str, tuple[object, ...]]] = []
 
     monkeypatch.setattr(module, "_can_manage_transport", lambda: True)
-    monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: cleanup_calls.append(shelter))
+    monkeypatch.setattr(
+        module,
+        "_cleanup_transport_requests",
+        lambda shelter: cleanup_calls.append(shelter),
+    )
 
     fake_rows = [
         {
@@ -98,24 +104,28 @@ def test_pending_renders_rows_for_shelter(client, monkeypatch):
     assert b"Jane" in response.data or b"Doe" in response.data
 
 
-def test_board_requires_permission(client, monkeypatch):
+def test_board_is_open_to_logged_in_staff(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client)
-    _force_session(client)
+    _login_staff(client, role="staff")
 
-    monkeypatch.setattr(module, "_can_manage_transport", lambda: False)
+    monkeypatch.setattr(
+        module,
+        "_can_manage_transport",
+        lambda: False,
+    )
+    monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
+    monkeypatch.setattr(module, "db_fetchall", lambda sql, params: [])
 
     response = client.get("/staff/transport/board", follow_redirects=False)
 
-    assert response.status_code == 302
-    assert "/staff/attendance" in response.headers["Location"]
+    assert response.status_code == 200
 
 
 def test_board_filters_rows_by_local_day(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client, shelter="abba")
+    _login_staff(client, shelter="abba", role="staff")
 
     monkeypatch.setattr(module, "_can_manage_transport", lambda: True)
     monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
@@ -151,24 +161,28 @@ def test_board_filters_rows_by_local_day(client, monkeypatch):
     assert b"Smith" not in response.data
 
 
-def test_print_requires_permission(client, monkeypatch):
+def test_print_is_open_to_logged_in_staff(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client)
-    _force_session(client)
+    _login_staff(client, role="staff")
 
-    monkeypatch.setattr(module, "_can_manage_transport", lambda: False)
+    monkeypatch.setattr(
+        module,
+        "_can_manage_transport",
+        lambda: False,
+    )
+    monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
+    monkeypatch.setattr(module, "db_fetchall", lambda sql, params: [])
 
     response = client.get("/staff/transport/print", follow_redirects=False)
 
-    assert response.status_code == 302
-    assert "/staff/attendance" in response.headers["Location"]
+    assert response.status_code == 200
 
 
 def test_print_defaults_to_today_and_shows_no_rides_message(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client, shelter="abba")
+    _login_staff(client, shelter="abba", role="staff")
 
     monkeypatch.setattr(module, "_can_manage_transport", lambda: True)
     monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
@@ -184,7 +198,7 @@ def test_print_defaults_to_today_and_shows_no_rides_message(client, monkeypatch)
 def test_print_renders_filtered_rows_and_escapes_html(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client, shelter="abba")
+    _login_staff(client, shelter="abba", role="staff")
 
     monkeypatch.setattr(module, "_can_manage_transport", lambda: True)
     monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: None)
@@ -221,32 +235,38 @@ def test_print_renders_filtered_rows_and_escapes_html(client, monkeypatch):
     assert b"Smith" not in response.data
 
 
-def test_schedule_requires_permission(client, monkeypatch):
+def test_schedule_requires_case_manager_or_above(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client)
-    _force_session(client)
+    _login_staff(client, role="staff")
 
     monkeypatch.setattr(module, "_can_manage_transport", lambda: False)
 
-    response = client.post("/staff/transport/5/schedule", data={}, follow_redirects=False)
+    response = client.post(
+        "/staff/transport/5/schedule",
+        data={},
+        follow_redirects=False,
+    )
 
     assert response.status_code == 302
-    assert "/staff/login" in response.headers["Location"]
+    assert "/staff/attendance" in response.headers["Location"]
 
 
 def test_schedule_updates_request_logs_and_redirects(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client, shelter="abba", staff_user_id=42)
-    _force_session(client)
+    _login_staff(client, shelter="abba", staff_user_id=42, role="case_manager")
 
     cleanup_calls: list[str] = []
     execute_calls: list[tuple[str, tuple[object, ...]]] = []
     log_calls: list[tuple[object, ...]] = []
 
     monkeypatch.setattr(module, "_can_manage_transport", lambda: True)
-    monkeypatch.setattr(module, "_cleanup_transport_requests", lambda shelter: cleanup_calls.append(shelter))
+    monkeypatch.setattr(
+        module,
+        "_cleanup_transport_requests",
+        lambda shelter: cleanup_calls.append(shelter),
+    )
     monkeypatch.setattr(module, "utcnow_iso", lambda: "2026-04-15T10:00:00")
 
     def _fake_execute(sql, params):
@@ -288,7 +308,11 @@ def test_cleanup_transport_requests_uses_pg_placeholder(monkeypatch):
 
     executed: list[tuple[str, tuple[object, ...]]] = []
 
-    monkeypatch.setattr(module, "db_execute", lambda sql, params: executed.append((sql, params)))
+    monkeypatch.setattr(
+        module,
+        "db_execute",
+        lambda sql, params: executed.append((sql, params)),
+    )
 
     class _FakeG:
         def get(self, key, default=None):
@@ -319,7 +343,11 @@ def test_cleanup_transport_requests_uses_sqlite_placeholder(monkeypatch):
 
     executed: list[tuple[str, tuple[object, ...]]] = []
 
-    monkeypatch.setattr(module, "db_execute", lambda sql, params: executed.append((sql, params)))
+    monkeypatch.setattr(
+        module,
+        "db_execute",
+        lambda sql, params: executed.append((sql, params)),
+    )
 
     class _FakeG:
         def get(self, key, default=None):
