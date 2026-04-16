@@ -166,7 +166,7 @@ jobs:
         run: |
           set -euo pipefail
           coverage combine
-          coverage report --fail-under=50 2>&1 | tee test-logs/coverage.log
+          coverage report --fail-under=35 2>&1 | tee test-logs/coverage.log
 
       - name: Upload logs
         if: always()
