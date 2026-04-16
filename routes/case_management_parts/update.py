@@ -391,7 +391,7 @@ def add_case_note_view(resident_id: int) -> RouteResponse:
         flash("Resident does not have an active enrollment record yet.", "error")
         return _redirect_resident_case(resident_id)
 
-    values = collect_note_form_values()
+    values = collect_note_form_values(request.form)
     validation_error = validate_note_values(
         values,
         resident_id=resident_id,
@@ -402,7 +402,7 @@ def add_case_note_view(resident_id: int) -> RouteResponse:
 
     service_date = values["meeting_date"]
     now = utcnow_iso()
-    service_payloads_list = service_form_payloads(values["service_types"])
+    service_payloads_list = service_form_payloads(request.form, values["service_types"])
 
     try:
         with db_transaction():
@@ -502,7 +502,7 @@ def edit_case_note_view(resident_id: int, update_id: int) -> RouteResponse:
             service_unit_map=service_maps["service_unit_map"],
         )
 
-    values = collect_note_form_values()
+    values = collect_note_form_values(request.form)
     validation_error = validate_note_values(
         values,
         resident_id=resident_id,
@@ -523,7 +523,7 @@ def edit_case_note_view(resident_id: int, update_id: int) -> RouteResponse:
 
     service_date = values["meeting_date"]
     now = utcnow_iso()
-    service_payloads_list = service_form_payloads(values["service_types"])
+    service_payloads_list = service_form_payloads(request.form, values["service_types"])
 
     try:
         with db_transaction():
