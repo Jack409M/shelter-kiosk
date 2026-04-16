@@ -352,6 +352,7 @@ def ensure_followups_table(kind: str) -> None:
 
 def _dedupe_single_row_per_enrollment(table_name: str) -> None:
     from core.db import db_execute, db_fetchall
+    from routes.case_management_parts.helpers import placeholder
 
     duplicate_rows = db_fetchall(
         f"""
@@ -362,28 +363,15 @@ def _dedupe_single_row_per_enrollment(table_name: str) -> None:
         """
     )
 
+    ph = placeholder()
+
     for duplicate_row in duplicate_rows or []:
         enrollment_id = (
             duplicate_row["enrollment_id"]
             if isinstance(duplicate_row, dict)
             else duplicate_row[0]
         )
-        rows = db_fetchall(
-            f"""
-            SELECT id
-            FROM {table_name}
-            WHERE enrollment_id = %s
-            ORDER BY COALESCE(updated_at, '') DESC, COALESCE(created_at, '') DESC, id DESC
-            """
-            if "%s" == "%s" else ""
-        )
-        # placeholder-safe branch below
-        if rows is None:
-            rows = []
 
-        from routes.case_management_parts.helpers import placeholder
-
-        ph = placeholder()
         rows = db_fetchall(
             f"""
             SELECT id
