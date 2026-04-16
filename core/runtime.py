@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from datetime import datetime
-from threading import Lock
 
 from flask import current_app, has_app_context
 
@@ -84,15 +83,16 @@ TWILIO_STATUS_CALLBACK_URL = env_text("TWILIO_STATUS_CALLBACK_URL")
 # Database runtime configuration
 # ------------------------------------------------------------
 
-_DB_INITIALIZED = False
-_DB_INITIALIZATION_LOCK = Lock()
-_DB_INIT_URL: str | None = None
-
 
 @dataclass(frozen=True)
 class RuntimeConfig:
     database_url: str
     database_mode_label: str
+
+
+@dataclass
+class RuntimeState:
+    initialized_database_url: str | None = None
 
 
 def _normalize_database_url(value: str | None) -> str:
@@ -137,6 +137,19 @@ def current_database_url() -> str:
             return configured
 
     return _normalize_database_url(os.environ.get("DATABASE_URL"))
+
+
+def _runtime_state() -> RuntimeState:
+    if not has_app_context():
+        raise RuntimeError("Runtime state requires an active Flask app context.")
+
+    state = current_app.extensions.get("shelter_kiosk_runtime_state")
+    if isinstance(state, RuntimeState):
+        return state
+
+    state = RuntimeState()
+    current_app.extensions["shelter_kiosk_runtime_state"] = state
+    return state
 
 
 def _log_migration_result(applied_versions: list[int]) -> None:
@@ -187,8 +200,6 @@ def _ensure_schema_compatibility() -> None:
 
 
 def init_db() -> None:
-    global _DB_INITIALIZED, _DB_INIT_URL
-
     if not has_app_context():
         raise RuntimeError("init_db() requires an active Flask app context.")
 
@@ -196,40 +207,38 @@ def init_db() -> None:
     if not effective_database_url:
         raise RuntimeError("DATABASE_URL is required before database initialization.")
 
-    with _DB_INITIALIZATION_LOCK:
-        if _DB_INITIALIZED and effective_database_url == _DB_INIT_URL:
-            return
+    current_app.config["DATABASE_URL"] = effective_database_url
+    current_app.config["DATABASE_MODE_LABEL"] = database_mode_label_from_url(
+        effective_database_url
+    )
 
-        current_app.config["DATABASE_URL"] = effective_database_url
-        current_app.config["DATABASE_MODE_LABEL"] = database_mode_label_from_url(
-            effective_database_url
+    state = _runtime_state()
+    if state.initialized_database_url == effective_database_url:
+        return
+
+    get_db()
+
+    if AUTO_APPLY_MIGRATIONS:
+        try:
+            applied_versions = apply_pending_migrations()
+            _log_migration_result(applied_versions)
+        except Exception as exc:
+            current_app.logger.exception(
+                "database_migration_failed exception_type=%s",
+                type(exc).__name__,
+            )
+            raise RuntimeError("Migration failed. Startup aborted.") from exc
+    else:
+        current_app.logger.info(
+            "database_migration_auto_apply_disabled current_version=%s required_version=%s",
+            get_current_schema_version(),
+            get_required_schema_version(),
         )
 
-        get_db()
+    _ensure_schema_compatibility()
+    schema.init_db()
 
-        if AUTO_APPLY_MIGRATIONS:
-            try:
-                applied_versions = apply_pending_migrations()
-                _log_migration_result(applied_versions)
-            except Exception as exc:
-                current_app.logger.exception(
-                    "database_migration_failed exception_type=%s",
-                    type(exc).__name__,
-                )
-                raise RuntimeError("Migration failed. Startup aborted.") from exc
-        else:
-            current_app.logger.info(
-                "database_migration_auto_apply_disabled current_version=%s required_version=%s",
-                get_current_schema_version(),
-                get_required_schema_version(),
-            )
-
-        _ensure_schema_compatibility()
-
-        schema.init_db()
-
-        _DB_INITIALIZED = True
-        _DB_INIT_URL = effective_database_url
+    state.initialized_database_url = effective_database_url
 
 
 # ------------------------------------------------------------
