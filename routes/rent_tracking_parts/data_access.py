@@ -291,10 +291,11 @@ def _ledger_balance_before_entry(resident_id: int) -> float:
 
 def _insert_rent_ledger_entry(
     resident_id: int,
-    shelter: str,
-    entry_date: str,
-    entry_type: str,
-    description: str | None,
+    enrollment_id: int | None = None,
+    shelter: str = "",
+    entry_date: str = "",
+    entry_type: str = "",
+    description: str | None = None,
     debit_amount: float = 0.0,
     credit_amount: float = 0.0,
     related_sheet_id: int | None = None,
@@ -316,6 +317,7 @@ def _insert_rent_ledger_entry(
             """
             INSERT INTO resident_rent_ledger_entries (
                 resident_id,
+                enrollment_id,
                 shelter,
                 entry_date,
                 entry_type,
@@ -334,11 +336,12 @@ def _insert_rent_ledger_entry(
                 created_at,
                 updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
                 resident_id,
+                enrollment_id,
                 shelter,
                 entry_date,
                 entry_type,
@@ -364,6 +367,7 @@ def _insert_rent_ledger_entry(
         """
         INSERT INTO resident_rent_ledger_entries (
             resident_id,
+            enrollment_id,
             shelter,
             entry_date,
             entry_type,
@@ -382,10 +386,11 @@ def _insert_rent_ledger_entry(
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             resident_id,
+            enrollment_id,
             shelter,
             entry_date,
             entry_type,
