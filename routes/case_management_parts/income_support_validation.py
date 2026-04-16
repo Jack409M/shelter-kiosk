@@ -7,10 +7,13 @@ from routes.case_management_parts.helpers import clean, parse_iso_date
 
 def _yes_no_to_bool(value: Any) -> bool | None:
     normalized = str(value or "").strip().lower()
+
     if normalized in {"yes", "true", "1", "on", "y"}:
         return True
+
     if normalized in {"no", "false", "0", "off", "n"}:
         return False
+
     return None
 
 
