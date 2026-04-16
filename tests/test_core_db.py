@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 
 import pytest
-from flask import g
+from flask import current_app, g
 
 from core import db as core_db
 
