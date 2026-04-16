@@ -10,13 +10,9 @@ from urllib.parse import parse_qs, unquote, urlparse
 from flask import current_app, g
 
 try:
-    from psycopg2.extensions import connection as PgConnection
-    from psycopg2.extensions import cursor as PgCursor
     from psycopg2.extras import RealDictCursor
     from psycopg2.pool import PoolError, SimpleConnectionPool
 except Exception:
-    PgConnection = Any
-    PgCursor = Any
     RealDictCursor = None
     PoolError = Exception
     SimpleConnectionPool = None
@@ -28,6 +24,10 @@ type DbCursor = Any
 
 PG_POOL: Any = None
 _PG_POOL_LOCK = Lock()
+
+_LEGACY_TRANSPORT_INSERT_SQL = (
+    "insert into transport_requests (resident_identifier, shelter, status) values (?, ?, ?)"
+)
 
 
 def _require_database_url() -> str:
@@ -45,16 +45,6 @@ def _is_sqlite_url(database_url: str) -> bool:
     return database_url.lower().startswith("sqlite:")
 
 
-def _normalize_sql(sql: str) -> str:
-    if _db_kind() == "sqlite":
-        return (
-            sql.replace("%s", "?")
-            .replace("NOW()", "CURRENT_TIMESTAMP")
-            .replace("BTRIM(", "TRIM(")
-        )
-    return sql.replace("?", "%s")
-
-
 def _db_kind() -> str:
     kind = g.get("db_kind")
     if kind:
@@ -62,6 +52,16 @@ def _db_kind() -> str:
 
     database_url = _database_url()
     return "sqlite" if _is_sqlite_url(database_url) else "pg"
+
+
+def _normalize_sql(sql: str, *, db_kind: str) -> str:
+    if db_kind == "sqlite":
+        return (
+            sql.replace("%s", "?")
+            .replace("NOW()", "CURRENT_TIMESTAMP")
+            .replace("BTRIM(", "TRIM(")
+        )
+    return sql.replace("?", "%s")
 
 
 def _sqlite_path_from_url(database_url: str) -> str:
@@ -125,6 +125,13 @@ def _get_pg_pool() -> Any:
     return PG_POOL
 
 
+def _set_request_connection(conn: DbConnection, *, kind: str) -> DbConnection:
+    g.db = conn
+    g.db_kind = kind
+    g.db_in_transaction = False
+    return conn
+
+
 def _get_or_create_request_connection() -> DbConnection:
     if "db" in g:
         return g.db
@@ -133,19 +140,12 @@ def _get_or_create_request_connection() -> DbConnection:
 
     if _is_sqlite_url(database_url):
         conn = _sqlite_connect(database_url)
-        g.db = conn
-        g.db_kind = "sqlite"
-        g.db_in_transaction = False
-        return conn
+        return _set_request_connection(conn, kind="sqlite")
 
     pool = _get_pg_pool()
     conn = pool.getconn()
     conn.autocommit = True
-
-    g.db = conn
-    g.db_kind = "pg"
-    g.db_in_transaction = False
-    return conn
+    return _set_request_connection(conn, kind="pg")
 
 
 def get_db() -> DbConnection:
@@ -153,6 +153,8 @@ def get_db() -> DbConnection:
 
 
 def close_db(e: Exception | None = None) -> None:
+    del e
+
     conn = g.pop("db", None)
     kind = g.pop("db_kind", None)
     g.pop("db_in_transaction", None)
@@ -189,21 +191,18 @@ def _db_cursor(*, dict_rows: bool = False) -> Iterator[DbCursor]:
             yield cur
         finally:
             cur.close()
-    else:
-        sql_cursor_factory = RealDictCursor if dict_rows else None
+        return
 
-        if dict_rows and sql_cursor_factory is None:
-            raise RuntimeError("psycopg2.extras.RealDictCursor is unavailable.")
+    sql_cursor_factory = RealDictCursor if dict_rows else None
 
-        cur = (
-            conn.cursor(cursor_factory=sql_cursor_factory)
-            if sql_cursor_factory
-            else conn.cursor()
-        )
-        try:
-            yield cur
-        finally:
-            cur.close()
+    if dict_rows and sql_cursor_factory is None:
+        raise RuntimeError("psycopg2.extras.RealDictCursor is unavailable.")
+
+    cur = conn.cursor(cursor_factory=sql_cursor_factory) if sql_cursor_factory else conn.cursor()
+    try:
+        yield cur
+    finally:
+        cur.close()
 
 
 def _row_to_dict(row: Any) -> DbRow:
@@ -222,67 +221,100 @@ def _row_to_dict(row: Any) -> DbRow:
         raise RuntimeError("Database row could not be converted to dict.") from err
 
 
-def db_execute(sql: str, params: tuple[Any, ...] = ()) -> None:
-    normalized_sql = _normalize_sql(sql)
-    effective_params = params
+def _sqlite_should_skip_statement(normalized_sql: str) -> bool:
+    compact_sql = " ".join(normalized_sql.lower().split())
+    return "pg_get_serial_sequence(" in compact_sql
 
-    if _db_kind() == "sqlite":
-        compact_sql = " ".join(normalized_sql.lower().split())
-        if "pg_get_serial_sequence(" in compact_sql:
-            return
-        legacy_insert = (
-            "insert into transport_requests (resident_identifier, shelter, status) "
-            "values (?, ?, ?)"
+
+def _rewrite_legacy_sqlite_transport_insert(
+    normalized_sql: str,
+    params: tuple[Any, ...],
+) -> tuple[str, tuple[Any, ...]]:
+    compact_sql = " ".join(normalized_sql.lower().split())
+
+    if compact_sql != _LEGACY_TRANSPORT_INSERT_SQL or len(params) != 3:
+        return normalized_sql, params
+
+    rewritten_sql = """
+        INSERT INTO transport_requests (
+            resident_identifier,
+            shelter,
+            status,
+            first_name,
+            last_name,
+            needed_at,
+            pickup_location,
+            destination,
+            submitted_at
         )
-        if compact_sql == legacy_insert and len(params) == 3:
-            normalized_sql = """
-                INSERT INTO transport_requests (
-                    resident_identifier,
-                    shelter,
-                    status,
-                    first_name,
-                    last_name,
-                    needed_at,
-                    pickup_location,
-                    destination,
-                    submitted_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-            effective_params = (
-                params[0],
-                params[1],
-                params[2],
-                "",
-                "",
-                "1970-01-01T00:00:00",
-                "",
-                "",
-                "1970-01-01T00:00:00",
-            )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """
+
+    rewritten_params = (
+        params[0],
+        params[1],
+        params[2],
+        "",
+        "",
+        "1970-01-01T00:00:00",
+        "",
+        "",
+        "1970-01-01T00:00:00",
+    )
+
+    return rewritten_sql, rewritten_params
+
+
+def _prepare_sql_and_params(
+    sql: str,
+    params: tuple[Any, ...],
+) -> tuple[str | None, tuple[Any, ...]]:
+    kind = _db_kind()
+    normalized_sql = _normalize_sql(sql, db_kind=kind)
+
+    if kind != "sqlite":
+        return normalized_sql, params
+
+    if _sqlite_should_skip_statement(normalized_sql):
+        return None, params
+
+    rewritten_sql, rewritten_params = _rewrite_legacy_sqlite_transport_insert(
+        normalized_sql,
+        params,
+    )
+    return rewritten_sql, rewritten_params
+
+
+def db_execute(sql: str, params: tuple[Any, ...] = ()) -> None:
+    prepared_sql, prepared_params = _prepare_sql_and_params(sql, params)
+    if prepared_sql is None:
+        return
 
     with _db_cursor(dict_rows=False) as cur:
-        cur.execute(normalized_sql, effective_params)
+        cur.execute(prepared_sql, prepared_params)
 
 
 def db_fetchone(sql: str, params: tuple[Any, ...] = ()) -> DbRow | None:
-    normalized_sql = _normalize_sql(sql)
+    normalized_sql = _normalize_sql(sql, db_kind=_db_kind())
 
     with _db_cursor(dict_rows=True) as cur:
         cur.execute(normalized_sql, params)
         row = cur.fetchone()
-        if row is None:
-            return None
-        return _row_to_dict(row)
+
+    if row is None:
+        return None
+
+    return _row_to_dict(row)
 
 
 def db_fetchall(sql: str, params: tuple[Any, ...] = ()) -> list[DbRow]:
-    normalized_sql = _normalize_sql(sql)
+    normalized_sql = _normalize_sql(sql, db_kind=_db_kind())
 
     with _db_cursor(dict_rows=True) as cur:
         cur.execute(normalized_sql, params)
         rows = cur.fetchall()
-        return [_row_to_dict(row) for row in rows]
+
+    return [_row_to_dict(row) for row in rows]
 
 
 @contextmanager
