@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 
-from core.db import db_fetchone
+from core.db import db_fetchone, db_transaction
 from core.runtime import init_db
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
@@ -14,10 +14,13 @@ from routes.case_management_parts.helpers import (
 from routes.case_management_parts.income_support_validation import (
     validate_income_support_form,
 )
-from routes.case_management_parts.intake_income_support import load_intake_income_support
+from routes.case_management_parts.intake_income_support import (
+    load_intake_income_support,
+    recalculate_intake_income_support,
+    upsert_intake_income_support,
+)
 from routes.case_management_parts.income_state_sync import (
-    recalculate_and_sync_income_state_atomic,
-    save_income_support_and_sync_snapshot_atomic,
+    sync_resident_income_snapshot as _shared_sync_resident_income_snapshot,
 )
 
 
@@ -55,7 +58,11 @@ def _load_resident_in_scope(resident_id: int, shelter: str):
             supervisor_phone,
             unemployment_reason,
             employment_notes,
-            monthly_income
+            monthly_income,
+            current_job_start_date,
+            previous_job_end_date,
+            upward_job_change,
+            job_change_notes
         FROM residents
         WHERE id = {ph}
           AND {shelter_equals_sql("shelter")}
@@ -63,6 +70,97 @@ def _load_resident_in_scope(resident_id: int, shelter: str):
         """,
         (resident_id, shelter),
     )
+
+
+def _sync_resident_income_snapshot(
+    *,
+    resident_id: int,
+    weighted_stable_income,
+    employment_status_current,
+    employer_name,
+    employment_type_current,
+    supervisor_name,
+    supervisor_phone,
+    unemployment_reason,
+    employment_notes,
+    current_job_start_date,
+    previous_job_end_date,
+    upward_job_change,
+    job_change_notes,
+) -> None:
+    _shared_sync_resident_income_snapshot(
+        resident_id=resident_id,
+        weighted_stable_income=weighted_stable_income,
+        employment_status_current=employment_status_current,
+        employer_name=employer_name,
+        employment_type_current=employment_type_current,
+        supervisor_name=supervisor_name,
+        supervisor_phone=supervisor_phone,
+        unemployment_reason=unemployment_reason,
+        employment_notes=employment_notes,
+        current_job_start_date=current_job_start_date,
+        previous_job_end_date=previous_job_end_date,
+        upward_job_change=upward_job_change,
+        job_change_notes=job_change_notes,
+    )
+
+
+def _save_income_support_atomic(
+    *,
+    resident_id: int,
+    enrollment_id: int,
+    values,
+) -> None:
+    with db_transaction():
+        upsert_intake_income_support(enrollment_id, values)
+
+        intake_income_support = load_intake_income_support(enrollment_id) or {}
+        weighted_stable_income = intake_income_support.get("weighted_stable_income")
+
+        _sync_resident_income_snapshot(
+            resident_id=resident_id,
+            weighted_stable_income=weighted_stable_income,
+            employment_status_current=values["employment_status_current"],
+            employer_name=values["employer_name"],
+            employment_type_current=values["employment_type_current"],
+            supervisor_name=values["supervisor_name"],
+            supervisor_phone=values["supervisor_phone"],
+            unemployment_reason=values["unemployment_reason"],
+            employment_notes=values["employment_notes"],
+            current_job_start_date=values["current_job_start_date"],
+            previous_job_end_date=values["previous_job_end_date"],
+            upward_job_change=values["upward_job_change"],
+            job_change_notes=values["job_change_notes"],
+        )
+
+
+def _resync_income_support_atomic(
+    *,
+    resident_id: int,
+    enrollment_id: int,
+    resident,
+) -> None:
+    with db_transaction():
+        recalculate_intake_income_support(enrollment_id)
+
+        intake_income_support = load_intake_income_support(enrollment_id) or {}
+        weighted_stable_income = intake_income_support.get("weighted_stable_income")
+
+        _sync_resident_income_snapshot(
+            resident_id=resident_id,
+            weighted_stable_income=weighted_stable_income,
+            employment_status_current=resident.get("employment_status_current"),
+            employer_name=resident.get("employer_name"),
+            employment_type_current=resident.get("employment_type_current"),
+            supervisor_name=resident.get("supervisor_name"),
+            supervisor_phone=resident.get("supervisor_phone"),
+            unemployment_reason=resident.get("unemployment_reason"),
+            employment_notes=resident.get("employment_notes"),
+            current_job_start_date=resident.get("current_job_start_date"),
+            previous_job_end_date=resident.get("previous_job_end_date"),
+            upward_job_change=resident.get("upward_job_change"),
+            job_change_notes=resident.get("job_change_notes"),
+        )
 
 
 def _render_income_support_page(
@@ -120,7 +218,7 @@ def income_support_view(resident_id: int):
             )
 
         try:
-            save_income_support_and_sync_snapshot_atomic(
+            _save_income_support_atomic(
                 resident_id=resident_id,
                 enrollment_id=enrollment_id,
                 values=values,
@@ -146,9 +244,10 @@ def income_support_view(resident_id: int):
         return redirect(url_for("case_management.income_support", resident_id=resident_id))
 
     try:
-        recalculate_and_sync_income_state_atomic(
+        _resync_income_support_atomic(
             resident_id=resident_id,
             enrollment_id=enrollment_id,
+            resident=resident,
         )
         resident = _load_resident_in_scope(resident_id, shelter)
     except Exception as exc:
