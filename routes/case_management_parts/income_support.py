@@ -16,12 +16,22 @@ from routes.case_management_parts.income_support_validation import (
 )
 from routes.case_management_parts.intake_income_support import (
     load_intake_income_support,
-    recalculate_intake_income_support,
-    upsert_intake_income_support,
+    recalculate_intake_income_support as _recalculate_intake_income_support_impl,
+    upsert_intake_income_support as _upsert_intake_income_support_impl,
 )
 from routes.case_management_parts.income_state_sync import (
     sync_resident_income_snapshot as _shared_sync_resident_income_snapshot,
 )
+
+
+# --- compatibility layer for tests and legacy monkeypatch targets ---
+
+def upsert_intake_income_support(enrollment_id, values):
+    return _upsert_intake_income_support_impl(enrollment_id, values)
+
+
+def recalculate_intake_income_support(enrollment_id):
+    return _recalculate_intake_income_support_impl(enrollment_id)
 
 
 def _load_current_enrollment(resident_id: int, shelter: str):
