@@ -66,7 +66,9 @@ def _local_day(dt_str: str | None) -> str | None:
 
 
 def _cleanup_transport_requests(shelter: str) -> None:
-    cutoff_iso = (datetime.utcnow() - timedelta(hours=48)).replace(microsecond=0).isoformat()
+    cutoff_iso = (
+        datetime.now(UTC) - timedelta(hours=48)
+    ).replace(microsecond=0).isoformat()
 
     db_execute(
         """
@@ -330,7 +332,15 @@ def staff_transport_schedule(req_id: int):
           AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
           AND status = ?
         """,
-        ("scheduled", utcnow_iso(), staff_id, staff_notes or None, req_id, shelter, "pending"),
+        (
+            "scheduled",
+            utcnow_iso(),
+            staff_id,
+            staff_notes or None,
+            req_id,
+            shelter,
+            "pending",
+        ),
     )
 
     log_action("transport", req_id, shelter, staff_id, "approve", "Transport request approved")
