@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
@@ -12,6 +12,7 @@ from routes.case_management_parts.helpers import (
     placeholder,
     shelter_equals_sql,
 )
+from routes.case_management_parts.ua_log_validation import validate_ua_log_form
 
 
 def _resident_case_redirect(resident_id: int):
@@ -20,11 +21,6 @@ def _resident_case_redirect(resident_id: int):
 
 def _ua_log_redirect(resident_id: int):
     return redirect(url_for("case_management.ua_log", resident_id=resident_id))
-
-
-def _clean(value: str | None) -> str | None:
-    value = (value or "").strip()
-    return value or None
 
 
 def _quick_add_requested() -> bool:
@@ -112,46 +108,52 @@ def add_ua_log_view(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    ua_date = _clean(request.form.get("ua_date"))
-    result = _clean(request.form.get("result"))
-    substances_detected = _clean(request.form.get("substances_detected"))
-    notes = _clean(request.form.get("notes"))
-
-    if not ua_date:
-        flash("UA date is required.", "error")
+    values, errors = validate_ua_log_form(request.form)
+    if errors:
+        for error in errors:
+            flash(error, "error")
         return _post_submit_redirect(resident_id)
 
     now = utcnow_iso()
     ph = placeholder()
 
-    db_execute(
-        f"""
-        INSERT INTO resident_ua_log
-        (
-            resident_id,
-            enrollment_id,
-            ua_date,
-            result,
-            substances_detected,
-            administered_by_staff_user_id,
-            notes,
-            created_at,
-            updated_at
+    try:
+        db_execute(
+            f"""
+            INSERT INTO resident_ua_log
+            (
+                resident_id,
+                enrollment_id,
+                ua_date,
+                result,
+                substances_detected,
+                administered_by_staff_user_id,
+                notes,
+                created_at,
+                updated_at
+            )
+            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+            """,
+            (
+                resident_id,
+                resident.get("enrollment_id"),
+                values["ua_date"],
+                values["result"],
+                values["substances_detected"],
+                session.get("staff_user_id"),
+                values["notes"],
+                now,
+                now,
+            ),
         )
-        VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
-        """,
-        (
+    except Exception:
+        current_app.logger.exception(
+            "Failed to add UA log for resident_id=%s enrollment_id=%s",
             resident_id,
             resident.get("enrollment_id"),
-            ua_date,
-            result,
-            substances_detected,
-            session.get("staff_user_id"),
-            notes,
-            now,
-            now,
-        ),
-    )
+        )
+        flash("Unable to add UA log entry. Please try again or contact an administrator.", "error")
+        return _post_submit_redirect(resident_id)
 
     flash("UA log entry added.", "success")
     return _resident_case_redirect(resident_id)
@@ -199,41 +201,49 @@ def edit_ua_log_view(resident_id: int, ua_id: int):
             ua_row=ua_row,
         )
 
-    ua_date = _clean(request.form.get("ua_date"))
-    result = _clean(request.form.get("result"))
-    substances_detected = _clean(request.form.get("substances_detected"))
-    notes = _clean(request.form.get("notes"))
-
-    if not ua_date:
-        flash("UA date is required.", "error")
+    values, errors = validate_ua_log_form(request.form)
+    if errors:
+        for error in errors:
+            flash(error, "error")
         return redirect(
             url_for("case_management.edit_ua_log", resident_id=resident_id, ua_id=ua_id)
         )
 
     now = utcnow_iso()
 
-    db_execute(
-        f"""
-        UPDATE resident_ua_log
-        SET
-            ua_date = {ph},
-            result = {ph},
-            substances_detected = {ph},
-            notes = {ph},
-            updated_at = {ph}
-        WHERE id = {ph}
-          AND resident_id = {ph}
-        """,
-        (
-            ua_date,
-            result,
-            substances_detected,
-            notes,
-            now,
+    try:
+        db_execute(
+            f"""
+            UPDATE resident_ua_log
+            SET
+                ua_date = {ph},
+                result = {ph},
+                substances_detected = {ph},
+                notes = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
+              AND resident_id = {ph}
+            """,
+            (
+                values["ua_date"],
+                values["result"],
+                values["substances_detected"],
+                values["notes"],
+                now,
+                ua_id,
+                resident_id,
+            ),
+        )
+    except Exception:
+        current_app.logger.exception(
+            "Failed to edit ua_id=%s resident_id=%s",
             ua_id,
             resident_id,
-        ),
-    )
+        )
+        flash("Unable to update UA log entry. Please try again or contact an administrator.", "error")
+        return redirect(
+            url_for("case_management.edit_ua_log", resident_id=resident_id, ua_id=ua_id)
+        )
 
     flash("UA log entry updated.", "success")
     return _resident_case_redirect(resident_id)
