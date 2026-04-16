@@ -7,7 +7,9 @@ def _login_staff(
     shelter: str = "abba",
     staff_user_id: int = 7,
     role: str = "case_manager",
-) -> None:
+) -> str:
+    csrf_token = "test-csrf-token"
+
     with client.session_transaction() as session:
         session.clear()
         session["role"] = role
@@ -16,7 +18,10 @@ def _login_staff(
         session["shelter"] = shelter
         session["allowed_shelters"] = [shelter]
         session["_fresh"] = True
+        session["_csrf_token"] = csrf_token
         session.modified = True
+
+    return csrf_token
 
 
 def test_to_chicago_handles_blank_and_invalid():
@@ -226,24 +231,29 @@ def test_print_renders_filtered_rows_and_escapes_html(client, monkeypatch):
 def test_schedule_requires_case_manager_or_above(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client, role="staff")
+    csrf_token = _login_staff(client, role="staff")
 
     monkeypatch.setattr(module, "_can_manage_transport", lambda: False)
 
     response = client.post(
         "/staff/transport/5/schedule",
-        data={},
+        data={"_csrf_token": csrf_token},
         follow_redirects=False,
     )
 
     assert response.status_code == 302
-    assert "/staff/login" in response.headers["Location"]
+    assert "/staff/attendance" in response.headers["Location"]
 
 
 def test_schedule_updates_request_logs_and_redirects(client, monkeypatch):
     import routes.transport as module
 
-    _login_staff(client, shelter="abba", staff_user_id=42, role="case_manager")
+    csrf_token = _login_staff(
+        client,
+        shelter="abba",
+        staff_user_id=42,
+        role="case_manager",
+    )
 
     cleanup_calls: list[str] = []
     execute_calls: list[tuple[str, tuple[object, ...]]] = []
@@ -265,7 +275,10 @@ def test_schedule_updates_request_logs_and_redirects(client, monkeypatch):
 
     response = client.post(
         "/staff/transport/5/schedule",
-        data={"staff_notes": "Driver assigned"},
+        data={
+            "_csrf_token": csrf_token,
+            "staff_notes": "Driver assigned",
+        },
         follow_redirects=False,
     )
 
@@ -359,3 +372,4 @@ def test_cleanup_transport_requests_uses_sqlite_placeholder(monkeypatch):
     assert second_params[0] == "abba"
     assert second_params[1] == "scheduled"
     assert second_params[2]
+    
