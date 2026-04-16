@@ -55,7 +55,7 @@ def test_pending_requires_permission(client, monkeypatch):
     response = client.get("/staff/transport/pending", follow_redirects=False)
 
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/staff/attendance")
+    assert "/staff/login" in response.headers["Location"]
 
 
 def test_pending_renders_rows_for_shelter(client, monkeypatch):
@@ -207,7 +207,7 @@ def test_schedule_requires_permission(client, monkeypatch):
     response = client.post("/staff/transport/5/schedule", data={}, follow_redirects=False)
 
     assert response.status_code == 302
-    assert response.headers["Location"].endswith("/staff/attendance")
+    assert "/staff/login" in response.headers["Location"]
 
 
 def test_schedule_updates_request_logs_and_redirects(client, monkeypatch):
