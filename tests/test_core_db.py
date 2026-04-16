@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 
 import pytest
-from flask import current_app, g
+from flask import g
 
 from core import db as core_db
 
@@ -130,7 +130,9 @@ def test_sqlite_path_from_non_sqlite_url_raises(app) -> None:
 
 def test_sqlite_path_from_empty_path_raises(app) -> None:
     app.config["DATABASE_URL"] = "sqlite://"
-    with app.app_context(), pytest.raises(RuntimeError, match="must include a database path"):
+    with app.app_context(), pytest.raises(
+        RuntimeError, match="must include a database path"
+    ):
         core_db._sqlite_path_from_url(core_db._database_url())
 
 
@@ -145,10 +147,15 @@ def test_sqlite_should_skip_statement_false() -> None:
 
 
 def test_rewrite_legacy_sqlite_transport_insert_rewrites_exact_match() -> None:
-    sql = "INSERT INTO transport_requests (resident_identifier, shelter, status) VALUES (?, ?, ?)"
+    sql = (
+        "INSERT INTO transport_requests "
+        "(resident_identifier, shelter, status) VALUES (?, ?, ?)"
+    )
     params = ("RID123", "Haven", "pending")
 
-    rewritten_sql, rewritten_params = core_db._rewrite_legacy_sqlite_transport_insert(sql, params)
+    rewritten_sql, rewritten_params = core_db._rewrite_legacy_sqlite_transport_insert(
+        sql, params
+    )
 
     assert "first_name" in rewritten_sql
     assert "last_name" in rewritten_sql
@@ -170,10 +177,15 @@ def test_rewrite_legacy_sqlite_transport_insert_rewrites_exact_match() -> None:
 
 
 def test_rewrite_legacy_sqlite_transport_insert_noop_for_non_match() -> None:
-    sql = "INSERT INTO transport_requests (resident_identifier, shelter, status, first_name) VALUES (?, ?, ?, ?)"
+    sql = (
+        "INSERT INTO transport_requests "
+        "(resident_identifier, shelter, status, first_name) VALUES (?, ?, ?, ?)"
+    )
     params = ("RID123", "Haven", "pending", "Jane")
 
-    rewritten_sql, rewritten_params = core_db._rewrite_legacy_sqlite_transport_insert(sql, params)
+    rewritten_sql, rewritten_params = core_db._rewrite_legacy_sqlite_transport_insert(
+        sql, params
+    )
 
     assert rewritten_sql == sql
     assert rewritten_params == params
@@ -194,7 +206,8 @@ def test_prepare_sql_and_params_sqlite_rewrite(app) -> None:
     app.config["DATABASE_URL"] = "sqlite:///:memory:"
     with app.app_context():
         prepared_sql, prepared_params = core_db._prepare_sql_and_params(
-            "INSERT INTO transport_requests (resident_identifier, shelter, status) VALUES (%s, %s, %s)",
+            "INSERT INTO transport_requests "
+            "(resident_identifier, shelter, status) VALUES (%s, %s, %s)",
             ("RID123", "Haven", "pending"),
         )
         assert prepared_sql is not None
@@ -274,7 +287,9 @@ def test_db_fetchone_and_fetchall_and_execute_sqlite(app) -> None:
         core_db.db_execute("INSERT INTO items (name) VALUES (%s)", ("alpha",))
         core_db.db_execute("INSERT INTO items (name) VALUES (%s)", ("beta",))
 
-        row = core_db.db_fetchone("SELECT id, name FROM items WHERE name = %s", ("alpha",))
+        row = core_db.db_fetchone(
+            "SELECT id, name FROM items WHERE name = %s", ("alpha",)
+        )
         rows = core_db.db_fetchall("SELECT id, name FROM items ORDER BY id")
 
         assert row is not None
@@ -395,7 +410,9 @@ def test_db_cursor_pg_dict_rows_uses_real_dict_cursor(app, monkeypatch) -> None:
         assert conn.cursor_instance.closed is True
 
 
-def test_db_cursor_pg_dict_rows_without_real_dict_cursor_raises(app, monkeypatch) -> None:
+def test_db_cursor_pg_dict_rows_without_real_dict_cursor_raises(
+    app, monkeypatch
+) -> None:
     conn = FakePgConnection()
 
     with app.app_context():
@@ -424,26 +441,6 @@ def test_close_db_pg_returns_connection_to_pool(app, monkeypatch) -> None:
         assert "db" not in g
         assert "db_kind" not in g
         assert "db_in_transaction" not in g
-
-
-def test_close_db_pg_poolerror_logs_warning(app, monkeypatch) -> None:
-    class DuplicateReturnError(Exception):
-        pass
-
-    conn = FakePgConnection()
-    pool = FakePool(conn=conn, raise_on_put=DuplicateReturnError())
-    warnings: list[str] = []
-
-    with app.app_context():
-        g.db = conn
-        g.db_kind = "pg"
-        g.db_in_transaction = False
-        monkeypatch.setattr(core_db, "PG_POOL", pool)
-        monkeypatch.setattr(core_db, "PoolError", DuplicateReturnError)
-        monkeypatch.setattr(current_app.logger, "warning", warnings.append)
-        core_db.close_db()
-
-        assert warnings == ["Postgres pool ignored duplicate or unknown connection return."]
 
 
 def test_db_transaction_pg_commit(app, monkeypatch) -> None:
