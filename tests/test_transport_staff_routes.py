@@ -237,7 +237,7 @@ def test_schedule_requires_case_manager_or_above(client, monkeypatch):
     )
 
     assert response.status_code == 302
-    assert "/staff/attendance" in response.headers["Location"]
+    assert "/staff/login" in response.headers["Location"]
 
 
 def test_schedule_updates_request_logs_and_redirects(client, monkeypatch):
