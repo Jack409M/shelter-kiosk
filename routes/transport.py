@@ -144,10 +144,6 @@ def staff_transport_pending():
 @require_login
 @require_shelter
 def staff_transport_board():
-    if not _can_manage_transport():
-        flash("You do not have permission to access that page.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
     shelter = session["shelter"]
     _cleanup_transport_requests(shelter)
 
@@ -191,10 +187,6 @@ def staff_transport_board():
 @require_login
 @require_shelter
 def staff_transport_print():
-    if not _can_manage_transport():
-        flash("You do not have permission to access that page.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
     import html as _html
 
     shelter = session["shelter"]
