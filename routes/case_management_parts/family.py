@@ -4,7 +4,7 @@ from datetime import datetime
 
 from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
-from core.db import db_execute, db_fetchall, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.runtime import init_db
 from db.schema_people import ensure_resident_child_income_supports_table
 from routes.case_management_parts.family_validation import (
@@ -264,8 +264,7 @@ def _upsert_child_income_support(
                 monthly_amount,
                 (notes or "").strip() or None,
                 now,
-                existing["id"],
-            ),
+                existing["id"]),
         )
         return
 
@@ -393,84 +392,85 @@ def family_intake_view(resident_id: int):
         now = datetime.utcnow().isoformat()
 
         try:
-            db_execute(
-                f"""
-                INSERT INTO resident_children
-                (
-                    resident_id,
-                    child_name,
-                    birth_year,
-                    relationship,
-                    living_status,
-                    receives_survivor_benefit,
-                    survivor_benefit_amount,
-                    survivor_benefit_notes,
-                    is_active,
-                    created_at,
-                    updated_at
-                )
-                VALUES
-                (
-                    {ph},
-                    {ph},
-                    {ph},
-                    {ph},
-                    {ph},
-                    {ph},
-                    {ph},
-                    {ph},
-                    TRUE,
-                    {ph},
-                    {ph}
-                )
-                """,
-                (
-                    resident_id,
-                    validated["child_name"],
-                    validated["birth_year"],
-                    validated["relationship"],
-                    validated["living_status"],
-                    validated["receives_survivor_benefit"],
-                    validated["survivor_benefit_amount"],
-                    validated["survivor_benefit_notes"],
-                    now,
-                    now,
-                ),
-            )
-
-            child_row = db_fetchone(
-                f"""
-                SELECT id
-                FROM resident_children
-                WHERE resident_id = {ph}
-                  AND LOWER(child_name) = LOWER({ph})
-                  AND (
-                        (birth_year IS NULL AND {ph} IS NULL)
-                        OR birth_year = {ph}
-                      )
-                  AND is_active = TRUE
-                ORDER BY id DESC
-                LIMIT 1
-                """,
-                (
-                    resident_id,
-                    validated["child_name"],
-                    validated["birth_year"],
-                    validated["birth_year"],
-                ),
-            )
-
-            if child_row:
-                _sync_child_support_records(
-                    child_id=child_row["id"],
-                    receives_survivor_benefit=validated["receives_survivor_benefit"],
-                    survivor_benefit_amount=validated["survivor_benefit_amount"],
-                    survivor_benefit_notes=validated["survivor_benefit_notes"],
-                    child_support_amount=validated["child_support_amount"],
-                    child_support_notes=validated["child_support_notes"],
+            with db_transaction():
+                db_execute(
+                    f"""
+                    INSERT INTO resident_children
+                    (
+                        resident_id,
+                        child_name,
+                        birth_year,
+                        relationship,
+                        living_status,
+                        receives_survivor_benefit,
+                        survivor_benefit_amount,
+                        survivor_benefit_notes,
+                        is_active,
+                        created_at,
+                        updated_at
+                    )
+                    VALUES
+                    (
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        {ph},
+                        TRUE,
+                        {ph},
+                        {ph}
+                    )
+                    """,
+                    (
+                        resident_id,
+                        validated["child_name"],
+                        validated["birth_year"],
+                        validated["relationship"],
+                        validated["living_status"],
+                        validated["receives_survivor_benefit"],
+                        validated["survivor_benefit_amount"],
+                        validated["survivor_benefit_notes"],
+                        now,
+                        now,
+                    ),
                 )
 
-            _recalculate_current_enrollment_income_support(resident_id)
+                child_row = db_fetchone(
+                    f"""
+                    SELECT id
+                    FROM resident_children
+                    WHERE resident_id = {ph}
+                      AND LOWER(child_name) = LOWER({ph})
+                      AND (
+                            (birth_year IS NULL AND {ph} IS NULL)
+                            OR birth_year = {ph}
+                          )
+                      AND is_active = TRUE
+                    ORDER BY id DESC
+                    LIMIT 1
+                    """,
+                    (
+                        resident_id,
+                        validated["child_name"],
+                        validated["birth_year"],
+                        validated["birth_year"],
+                    ),
+                )
+
+                if child_row:
+                    _sync_child_support_records(
+                        child_id=child_row["id"],
+                        receives_survivor_benefit=validated["receives_survivor_benefit"],
+                        survivor_benefit_amount=validated["survivor_benefit_amount"],
+                        survivor_benefit_notes=validated["survivor_benefit_notes"],
+                        child_support_amount=validated["child_support_amount"],
+                        child_support_notes=validated["child_support_notes"],
+                    )
+
+                _recalculate_current_enrollment_income_support(resident_id)
         except Exception as exc:
             if _is_unique_constraint_error(exc):
                 return _render_family_intake_error(
@@ -551,43 +551,44 @@ def edit_child_view(child_id: int):
             return redirect(url_for("case_management.edit_child", child_id=child_id))
 
         try:
-            db_execute(
-                f"""
-                UPDATE resident_children
-                SET
-                    child_name = {ph},
-                    birth_year = {ph},
-                    relationship = {ph},
-                    living_status = {ph},
-                    receives_survivor_benefit = {ph},
-                    survivor_benefit_amount = {ph},
-                    survivor_benefit_notes = {ph},
-                    updated_at = {ph}
-                WHERE id = {ph}
-                """,
-                (
-                    validated["child_name"],
-                    validated["birth_year"],
-                    validated["relationship"],
-                    validated["living_status"],
-                    validated["receives_survivor_benefit"],
-                    validated["survivor_benefit_amount"],
-                    validated["survivor_benefit_notes"],
-                    datetime.utcnow().isoformat(),
-                    child_id,
-                ),
-            )
+            with db_transaction():
+                db_execute(
+                    f"""
+                    UPDATE resident_children
+                    SET
+                        child_name = {ph},
+                        birth_year = {ph},
+                        relationship = {ph},
+                        living_status = {ph},
+                        receives_survivor_benefit = {ph},
+                        survivor_benefit_amount = {ph},
+                        survivor_benefit_notes = {ph},
+                        updated_at = {ph}
+                    WHERE id = {ph}
+                    """,
+                    (
+                        validated["child_name"],
+                        validated["birth_year"],
+                        validated["relationship"],
+                        validated["living_status"],
+                        validated["receives_survivor_benefit"],
+                        validated["survivor_benefit_amount"],
+                        validated["survivor_benefit_notes"],
+                        datetime.utcnow().isoformat(),
+                        child_id,
+                    ),
+                )
 
-            _sync_child_support_records(
-                child_id=child_id,
-                receives_survivor_benefit=validated["receives_survivor_benefit"],
-                survivor_benefit_amount=validated["survivor_benefit_amount"],
-                survivor_benefit_notes=validated["survivor_benefit_notes"],
-                child_support_amount=validated["child_support_amount"],
-                child_support_notes=validated["child_support_notes"],
-            )
+                _sync_child_support_records(
+                    child_id=child_id,
+                    receives_survivor_benefit=validated["receives_survivor_benefit"],
+                    survivor_benefit_amount=validated["survivor_benefit_amount"],
+                    survivor_benefit_notes=validated["survivor_benefit_notes"],
+                    child_support_amount=validated["child_support_amount"],
+                    child_support_notes=validated["child_support_notes"],
+                )
 
-            _recalculate_current_enrollment_income_support(resident_id)
+                _recalculate_current_enrollment_income_support(resident_id)
         except Exception as exc:
             if _is_unique_constraint_error(exc):
                 flash("This child already exists for this resident.", "error")
@@ -629,36 +630,37 @@ def delete_child_view(child_id: int):
     try:
         now = datetime.utcnow().isoformat()
 
-        db_execute(
-            f"""
-            UPDATE resident_children
-            SET
-                is_active = FALSE,
-                updated_at = {ph}
-            WHERE id = {ph}
-            """,
-            (
-                now,
-                child_id,
-            ),
-        )
+        with db_transaction():
+            db_execute(
+                f"""
+                UPDATE resident_children
+                SET
+                    is_active = FALSE,
+                    updated_at = {ph}
+                WHERE id = {ph}
+                """,
+                (
+                    now,
+                    child_id,
+                ),
+            )
 
-        db_execute(
-            f"""
-            UPDATE resident_child_income_supports
-            SET
-                is_active = FALSE,
-                updated_at = {ph}
-            WHERE child_id = {ph}
-              AND COALESCE(is_active, TRUE) = TRUE
-            """,
-            (
-                now,
-                child_id,
-            ),
-        )
+            db_execute(
+                f"""
+                UPDATE resident_child_income_supports
+                SET
+                    is_active = FALSE,
+                    updated_at = {ph}
+                WHERE child_id = {ph}
+                  AND COALESCE(is_active, TRUE) = TRUE
+                """,
+                (
+                    now,
+                    child_id,
+                ),
+            )
 
-        _recalculate_current_enrollment_income_support(resident_id)
+            _recalculate_current_enrollment_income_support(resident_id)
     except Exception:
         current_app.logger.exception(
             "Failed to delete child_id=%s resident_id=%s",
