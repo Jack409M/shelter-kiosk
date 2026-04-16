@@ -79,10 +79,7 @@ def test_unhandled_exception_is_logged(app, client, caplog):
     assert response.status_code == 500
 
     messages = [record.getMessage() for record in caplog.records]
-    assert any(
-        "Unhandled exception" in message or "Internal server error" in message
-        for message in messages
-    )
+    assert any("request_failed" in message for message in messages)
 
 
 def test_health_ready_failure_is_logged(client, monkeypatch, caplog):
