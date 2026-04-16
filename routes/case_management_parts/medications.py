@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import date
-
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
@@ -14,6 +12,7 @@ from routes.case_management_parts.helpers import (
     placeholder,
     shelter_equals_sql,
 )
+from routes.case_management_parts.medications_validation import validate_medication_form
 
 
 def _resident_case_redirect(resident_id: int):
@@ -22,24 +21,6 @@ def _resident_case_redirect(resident_id: int):
 
 def _medications_redirect(resident_id: int):
     return redirect(url_for("case_management.medications", resident_id=resident_id))
-
-
-def _clean(value: str | None) -> str | None:
-    cleaned = (value or "").strip()
-    return cleaned or None
-
-
-def _parse_iso_date(value: str | None) -> str | None:
-    cleaned = _clean(value)
-    if not cleaned:
-        return None
-
-    try:
-        date.fromisoformat(cleaned)
-    except ValueError:
-        return None
-
-    return cleaned
 
 
 def _quick_add_requested() -> bool:
@@ -77,46 +58,6 @@ def _resident_context(resident_id: int):
     resident = dict(resident)
     resident["enrollment_id"] = fetch_current_enrollment_id_for_resident(resident_id)
     return resident
-
-
-def _validate_medication_form():
-    medication_name = _clean(request.form.get("medication_name"))
-    dosage = _clean(request.form.get("dosage"))
-    frequency = _clean(request.form.get("frequency"))
-    purpose = _clean(request.form.get("purpose"))
-    prescribed_by = _clean(request.form.get("prescribed_by"))
-    started_on_raw = request.form.get("started_on")
-    ended_on_raw = request.form.get("ended_on")
-    notes = _clean(request.form.get("notes"))
-    is_active = (request.form.get("is_active") or "").strip().lower() == "yes"
-
-    started_on = _parse_iso_date(started_on_raw)
-    ended_on = _parse_iso_date(ended_on_raw)
-
-    if not medication_name:
-        return None, "Medication name is required."
-
-    if started_on_raw and not started_on:
-        return None, "Started on must be a valid date."
-
-    if ended_on_raw and not ended_on:
-        return None, "Ended on must be a valid date."
-
-    if started_on and ended_on and ended_on < started_on:
-        return None, "Ended on cannot be earlier than started on."
-
-    data = {
-        "medication_name": medication_name,
-        "dosage": dosage,
-        "frequency": frequency,
-        "purpose": purpose,
-        "prescribed_by": prescribed_by,
-        "started_on": started_on,
-        "ended_on": ended_on,
-        "is_active": is_active,
-        "notes": notes,
-    }
-    return data, None
 
 
 def medication_form_view(resident_id: int):
@@ -174,7 +115,7 @@ def add_medication_view(resident_id: int):
         flash("Resident not found.", "error")
         return redirect(url_for("case_management.index"))
 
-    data, error = _validate_medication_form()
+    data, error = validate_medication_form(request.form)
     if error:
         flash(error, "error")
         return _post_submit_redirect(resident_id)
@@ -283,7 +224,7 @@ def edit_medication_view(resident_id: int, medication_id: int):
             medication=medication,
         )
 
-    data, error = _validate_medication_form()
+    data, error = validate_medication_form(request.form)
     if error:
         flash(error, "error")
         return redirect(
