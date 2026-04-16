@@ -5,7 +5,11 @@ from datetime import datetime
 from typing import Any
 
 from core.db import db_execute, db_fetchone, db_transaction
-from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident, placeholder
+from routes.case_management_parts.helpers import (
+    assert_enrollment_belongs_to_resident,
+    fetch_current_enrollment_for_resident,
+    placeholder,
+)
 from routes.case_management_parts.intake_drafts import _complete_intake_draft, _save_intake_draft
 from routes.case_management_parts.intake_income_support import (
     load_intake_income_support,
@@ -258,6 +262,12 @@ def update_intake(
     enrollment_id: int,
     data: dict[str, Any],
 ) -> IntakeUpdateResult:
+    # Enforce integrity BEFORE reading or writing
+    assert_enrollment_belongs_to_resident(
+        enrollment_id=enrollment_id,
+        resident_id=resident_id,
+    )
+
     existing_intake = latest_intake_for_enrollment(enrollment_id)
     if not existing_intake:
         raise LookupError("No intake assessment found for update.")
