@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import init_db
+from routes.case_management_parts.followups_validation import validate_followup_form
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
     clean,
@@ -112,35 +113,6 @@ def _load_followup_form_data(enrollment_id: int, followup_type: str) -> dict[str
         "sober_at_followup": "yes" if int(_row_value(row, "sober_at_followup", 4) or 0) else "no",
         "notes": _row_value(row, "notes", 5) or "",
     }
-
-
-def _validate_followup_form(form: Any, followup_type: str) -> tuple[dict[str, Any], list[str]]:
-    data = {
-        "followup_date": clean(form.get("followup_date")),
-        "followup_type": followup_type,
-        "income_at_followup": clean(form.get("income_at_followup")),
-        "sober_at_followup": clean(form.get("sober_at_followup")),
-        "notes": clean(form.get("notes")),
-    }
-
-    errors: list[str] = []
-
-    followup_date = parse_iso_date(data["followup_date"])
-    if data["followup_date"] and followup_date is None:
-        errors.append("Follow up date must be a valid date.")
-    data["followup_date"] = followup_date.isoformat() if followup_date else utcnow_iso()[:10]
-
-    income = parse_money(data["income_at_followup"])
-    if data["income_at_followup"] and income is None:
-        errors.append("Income at Follow Up must be a valid number.")
-    if income is not None and income < 0:
-        errors.append("Income at Follow Up cannot be negative.")
-    data["income_at_followup"] = income
-
-    if data["sober_at_followup"] not in {None, "", "yes", "no"}:
-        errors.append("Sober at Follow Up must be Yes or No.")
-
-    return data, errors
 
 
 def _upsert_followup(enrollment_id: int, data: dict[str, Any]) -> None:
@@ -280,7 +252,7 @@ def submit_followup_view(resident_id: int, followup_type: str):
 
     enrollment_id = enrollment["id"] if isinstance(enrollment, dict) else enrollment[0]
 
-    data, errors = _validate_followup_form(request.form, followup_type)
+    data, errors = validate_followup_form(request.form, followup_type)
 
     if errors:
         for error in errors:
@@ -296,7 +268,26 @@ def submit_followup_view(resident_id: int, followup_type: str):
             form_data=data,
         )
 
-    _upsert_followup(enrollment_id, data)
+    try:
+        _upsert_followup(enrollment_id, data)
+    except Exception as exc:
+        current_app.logger.exception(
+            "followup_save_failed resident_id=%s enrollment_id=%s followup_type=%s exception_type=%s",
+            resident_id,
+            enrollment_id,
+            followup_type,
+            type(exc).__name__,
+        )
+        flash("Unable to save follow up. Please try again or contact an administrator.", "error")
+        return render_template(
+            "case_management/followup_assessment.html",
+            resident=resident,
+            enrollment=enrollment,
+            enrollment_id=enrollment_id,
+            followup_type=followup_type,
+            followup_type_label=ALLOWED_FOLLOWUP_TYPES[followup_type],
+            form_data=data,
+        )
 
     flash(f"{ALLOWED_FOLLOWUP_TYPES[followup_type]} saved successfully.", "success")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
