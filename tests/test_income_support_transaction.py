@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import pytest
-
 from core.db import db_fetchone
 
 
 def test_income_support_atomic_rollback(client, monkeypatch):
     import routes.case_management_parts.income_support as income_support_module
 
-    # --- Setup session ---
     with client.session_transaction() as session:
         session["staff_user_id"] = 1
         session["username"] = "case_manager"
@@ -17,15 +14,14 @@ def test_income_support_atomic_rollback(client, monkeypatch):
         session["allowed_shelters"] = ["abba"]
         session["_csrf_token"] = "test-csrf"
 
-    # --- Disable admin lock ---
     import core.auth as auth_module
+
     monkeypatch.setattr(
         auth_module,
         "db_fetchone",
         lambda *args, **kwargs: {"admin_login_only_mode": False},
     )
 
-    # --- Mock resident + enrollment ---
     monkeypatch.setattr(
         income_support_module,
         "_load_resident_in_scope",
@@ -37,7 +33,6 @@ def test_income_support_atomic_rollback(client, monkeypatch):
         lambda resident_id, shelter: {"id": 999},
     )
 
-    # --- Valid form ---
     monkeypatch.setattr(
         income_support_module,
         "validate_income_support_form",
@@ -59,26 +54,21 @@ def test_income_support_atomic_rollback(client, monkeypatch):
         ),
     )
 
-    # --- Let upsert succeed ---
-    real_upsert = income_support_module.upsert_intake_income_support
-
-    # --- Force failure AFTER upsert ---
     monkeypatch.setattr(
         income_support_module,
         "_sync_resident_income_snapshot",
         lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("forced failure")),
     )
 
-    # --- Execute request ---
     client.post(
         "/staff/case-management/1/income-support",
         data={"_csrf_token": "test-csrf"},
     )
 
-    # --- Verify NOTHING persisted ---
-    row = db_fetchone(
-        "SELECT * FROM intake_income_supports WHERE enrollment_id = ?",
-        (999,),
-    )
+    with client.application.app_context():
+        row = db_fetchone(
+            "SELECT * FROM intake_income_supports WHERE enrollment_id = ?",
+            (999,),
+        )
 
     assert row is None, "Transaction should have rolled back but data was committed"
