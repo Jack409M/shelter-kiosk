@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from routes.case_management_parts.recovery_profile import _validate_recovery_profile_form
+from routes.case_management_parts.recovery_profile_validation import (
+    validate_recovery_profile_form,
+)
 
 
 def test_recovery_profile_rejects_step_above_twelve():
-    data, errors = _validate_recovery_profile_form(
+    data, errors = validate_recovery_profile_form(
         {
             "step_current": "13",
         }
@@ -17,7 +19,7 @@ def test_recovery_profile_rejects_step_above_twelve():
 
 
 def test_recovery_profile_rejects_invalid_monthly_income():
-    _, errors = _validate_recovery_profile_form(
+    _, errors = validate_recovery_profile_form(
         {
             "monthly_income": "abc",
         }
@@ -27,7 +29,7 @@ def test_recovery_profile_rejects_invalid_monthly_income():
 
 
 def test_recovery_profile_requires_employer_fields_when_employed():
-    _, errors = _validate_recovery_profile_form(
+    _, errors = validate_recovery_profile_form(
         {
             "employment_status_current": "employed",
         }
@@ -38,7 +40,7 @@ def test_recovery_profile_requires_employer_fields_when_employed():
 
 
 def test_recovery_profile_requires_reason_when_unemployed():
-    _, errors = _validate_recovery_profile_form(
+    _, errors = validate_recovery_profile_form(
         {
             "employment_status_current": "unemployed",
         }
@@ -48,7 +50,7 @@ def test_recovery_profile_requires_reason_when_unemployed():
 
 
 def test_recovery_profile_normalizes_unemployed_side_fields():
-    data, errors = _validate_recovery_profile_form(
+    data, errors = validate_recovery_profile_form(
         {
             "employment_status_current": "unemployed",
             "unemployment_reason": "Looking for work",
@@ -68,7 +70,7 @@ def test_recovery_profile_normalizes_unemployed_side_fields():
 
 
 def test_recovery_profile_normalizes_supervisor_phone_digits():
-    data, errors = _validate_recovery_profile_form(
+    data, errors = validate_recovery_profile_form(
         {
             "employment_status_current": "employed",
             "employer_name": "Test Employer",
@@ -82,7 +84,7 @@ def test_recovery_profile_normalizes_supervisor_phone_digits():
 
 
 def test_recovery_profile_rejects_short_supervisor_phone():
-    _, errors = _validate_recovery_profile_form(
+    _, errors = validate_recovery_profile_form(
         {
             "employment_status_current": "employed",
             "employer_name": "Test Employer",
@@ -97,7 +99,7 @@ def test_recovery_profile_rejects_short_supervisor_phone():
 def test_recovery_profile_rejects_future_sobriety_date():
     future_date = (date.today() + timedelta(days=1)).isoformat()
 
-    _, errors = _validate_recovery_profile_form(
+    _, errors = validate_recovery_profile_form(
         {
             "sobriety_date": future_date,
         }
@@ -107,7 +109,7 @@ def test_recovery_profile_rejects_future_sobriety_date():
 
 
 def test_recovery_profile_rejects_invalid_date_order():
-    _, errors = _validate_recovery_profile_form(
+    _, errors = validate_recovery_profile_form(
         {
             "current_job_start_date": "2026-01-01",
             "continuous_employment_start_date": "2026-02-01",
