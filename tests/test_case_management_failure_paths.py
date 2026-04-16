@@ -251,3 +251,222 @@ def test_budget_session_edit_failure_logs_and_redirects(client, monkeypatch, cap
     assert "/staff/case-management/1/budget-sessions/9/edit" in response.headers["Location"]
     messages = [record.getMessage() for record in caplog.records]
     assert any("budget_session_edit_failed" in message for message in messages)
+
+
+def test_medication_add_failure_logs_and_redirects(client, monkeypatch, caplog):
+    import routes.case_management_parts.medications as medications_module
+
+    _disable_admin_only_mode(monkeypatch)
+    _set_case_manager_session(client)
+    csrf_token = _set_csrf_token(client)
+
+    monkeypatch.setattr(medications_module, "init_db", lambda: None)
+    monkeypatch.setattr(
+        medications_module,
+        "_resident_context",
+        lambda resident_id: {"id": resident_id, "enrollment_id": 7},
+    )
+    monkeypatch.setattr(
+        medications_module,
+        "validate_medication_form",
+        lambda form: (
+            {
+                "medication_name": "Med A",
+                "dosage": "5mg",
+                "frequency": "daily",
+                "purpose": "purpose",
+                "prescribed_by": "doctor",
+                "started_on": "2026-04-16",
+                "ended_on": None,
+                "is_active": True,
+                "notes": "note",
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(
+        medications_module,
+        "db_execute",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("insert fail")),
+    )
+
+    with caplog.at_level(logging.ERROR):
+        response = client.post(
+            "/staff/case-management/1/medications",
+            data={"_csrf_token": csrf_token},
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 302
+    assert "/staff/case-management/1/medications" in response.headers["Location"]
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("Failed to add medication" in message for message in messages)
+
+
+def test_medication_edit_failure_logs_and_redirects(client, monkeypatch, caplog):
+    import routes.case_management_parts.medications as medications_module
+
+    _disable_admin_only_mode(monkeypatch)
+    _set_case_manager_session(client)
+    csrf_token = _set_csrf_token(client)
+
+    monkeypatch.setattr(medications_module, "init_db", lambda: None)
+    monkeypatch.setattr(
+        medications_module,
+        "_resident_context",
+        lambda resident_id: {"id": resident_id, "enrollment_id": 7},
+    )
+    monkeypatch.setattr(
+        medications_module,
+        "db_fetchone",
+        lambda *args, **kwargs: {
+            "id": 9,
+            "resident_id": 1,
+            "medication_name": "Med A",
+            "dosage": "5mg",
+            "frequency": "daily",
+            "purpose": "purpose",
+            "prescribed_by": "doctor",
+            "started_on": "2026-04-16",
+            "ended_on": None,
+            "is_active": True,
+            "notes": "note",
+        },
+    )
+    monkeypatch.setattr(
+        medications_module,
+        "validate_medication_form",
+        lambda form: (
+            {
+                "medication_name": "Med A",
+                "dosage": "5mg",
+                "frequency": "daily",
+                "purpose": "purpose",
+                "prescribed_by": "doctor",
+                "started_on": "2026-04-16",
+                "ended_on": None,
+                "is_active": True,
+                "notes": "note",
+            },
+            None,
+        ),
+    )
+    monkeypatch.setattr(
+        medications_module,
+        "db_execute",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("update fail")),
+    )
+
+    with caplog.at_level(logging.ERROR):
+        response = client.post(
+            "/staff/case-management/1/medications/9/edit",
+            data={"_csrf_token": csrf_token},
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 302
+    assert "/staff/case-management/1/medications/9/edit" in response.headers["Location"]
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("Failed to edit medication_id" in message for message in messages)
+
+
+def test_ua_log_add_failure_logs_and_redirects(client, monkeypatch, caplog):
+    import routes.case_management_parts.ua_log as ua_log_module
+
+    _disable_admin_only_mode(monkeypatch)
+    _set_case_manager_session(client)
+    csrf_token = _set_csrf_token(client)
+
+    monkeypatch.setattr(ua_log_module, "init_db", lambda: None)
+    monkeypatch.setattr(
+        ua_log_module,
+        "_resident_context",
+        lambda resident_id: {"id": resident_id, "enrollment_id": 7},
+    )
+    monkeypatch.setattr(
+        ua_log_module,
+        "validate_ua_log_form",
+        lambda form: (
+            {
+                "ua_date": "2026-04-16",
+                "result": "negative",
+                "substances_detected": None,
+                "notes": "note",
+            },
+            [],
+        ),
+    )
+    monkeypatch.setattr(
+        ua_log_module,
+        "db_execute",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("insert fail")),
+    )
+
+    with caplog.at_level(logging.ERROR):
+        response = client.post(
+            "/staff/case-management/1/ua-log",
+            data={"_csrf_token": csrf_token},
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 302
+    assert "/staff/case-management/1/ua-log" in response.headers["Location"]
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("Failed to add UA log" in message for message in messages)
+
+
+def test_ua_log_edit_failure_logs_and_redirects(client, monkeypatch, caplog):
+    import routes.case_management_parts.ua_log as ua_log_module
+
+    _disable_admin_only_mode(monkeypatch)
+    _set_case_manager_session(client)
+    csrf_token = _set_csrf_token(client)
+
+    monkeypatch.setattr(ua_log_module, "init_db", lambda: None)
+    monkeypatch.setattr(
+        ua_log_module,
+        "_resident_context",
+        lambda resident_id: {"id": resident_id, "enrollment_id": 7},
+    )
+    monkeypatch.setattr(
+        ua_log_module,
+        "db_fetchone",
+        lambda *args, **kwargs: {
+            "id": 9,
+            "resident_id": 1,
+            "ua_date": "2026-04-16",
+            "result": "negative",
+            "substances_detected": None,
+            "notes": "note",
+        },
+    )
+    monkeypatch.setattr(
+        ua_log_module,
+        "validate_ua_log_form",
+        lambda form: (
+            {
+                "ua_date": "2026-04-16",
+                "result": "negative",
+                "substances_detected": None,
+                "notes": "note",
+            },
+            [],
+        ),
+    )
+    monkeypatch.setattr(
+        ua_log_module,
+        "db_execute",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("update fail")),
+    )
+
+    with caplog.at_level(logging.ERROR):
+        response = client.post(
+            "/staff/case-management/1/ua-log/9/edit",
+            data={"_csrf_token": csrf_token},
+            follow_redirects=False,
+        )
+
+    assert response.status_code == 302
+    assert "/staff/case-management/1/ua-log/9/edit" in response.headers["Location"]
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("Failed to edit ua_id" in message for message in messages)
