@@ -350,13 +350,84 @@ def ensure_followups_table(kind: str) -> None:
     )
 
 
+def _dedupe_single_row_per_enrollment(table_name: str) -> None:
+    from core.db import db_execute, db_fetchall
+
+    duplicate_rows = db_fetchall(
+        f"""
+        SELECT enrollment_id, COUNT(*) AS row_count
+        FROM {table_name}
+        GROUP BY enrollment_id
+        HAVING COUNT(*) > 1
+        """
+    )
+
+    for duplicate_row in duplicate_rows or []:
+        enrollment_id = (
+            duplicate_row["enrollment_id"]
+            if isinstance(duplicate_row, dict)
+            else duplicate_row[0]
+        )
+        rows = db_fetchall(
+            f"""
+            SELECT id
+            FROM {table_name}
+            WHERE enrollment_id = %s
+            ORDER BY COALESCE(updated_at, '') DESC, COALESCE(created_at, '') DESC, id DESC
+            """
+            if "%s" == "%s" else ""
+        )
+        # placeholder-safe branch below
+        if rows is None:
+            rows = []
+
+        from routes.case_management_parts.helpers import placeholder
+
+        ph = placeholder()
+        rows = db_fetchall(
+            f"""
+            SELECT id
+            FROM {table_name}
+            WHERE enrollment_id = {ph}
+            ORDER BY COALESCE(updated_at, '') DESC, COALESCE(created_at, '') DESC, id DESC
+            """,
+            (enrollment_id,),
+        )
+
+        row_ids = [row["id"] if isinstance(row, dict) else row[0] for row in rows or []]
+        keep_id = row_ids[0] if row_ids else None
+        delete_ids = [row_id for row_id in row_ids[1:] if row_id != keep_id]
+
+        for row_id in delete_ids:
+            db_execute(
+                f"DELETE FROM {table_name} WHERE id = {ph}",
+                (row_id,),
+            )
+
+
+def ensure_single_row_baseline_integrity() -> None:
+    with contextlib.suppress(Exception):
+        _dedupe_single_row_per_enrollment("intake_assessments")
+
+    with contextlib.suppress(Exception):
+        _dedupe_single_row_per_enrollment("family_snapshots")
+
+
 def ensure_indexes() -> None:
     try:
         from core.db import db_execute
 
+        ensure_single_row_baseline_integrity()
+
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS intake_assessments_enrollment_idx
+            ON intake_assessments (enrollment_id)
+            """
+        )
+        db_execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS intake_assessments_enrollment_uidx
             ON intake_assessments (enrollment_id)
             """
         )
@@ -369,6 +440,12 @@ def ensure_indexes() -> None:
         db_execute(
             """
             CREATE INDEX IF NOT EXISTS family_snapshots_enrollment_idx
+            ON family_snapshots (enrollment_id)
+            """
+        )
+        db_execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS family_snapshots_enrollment_uidx
             ON family_snapshots (enrollment_id)
             """
         )
