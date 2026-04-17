@@ -18,6 +18,12 @@ def _median_or_none(values: list[float]) -> float | None:
 
 
 def _employment_income_guidance(shelter: str, placeholder: str) -> dict:
+    graduate_dwc_filter = (
+        "COALESCE(ea.graduate_dwc, FALSE) = TRUE"
+        if placeholder == "%s"
+        else "COALESCE(ea.graduate_dwc, 0) = 1"
+    )
+
     rows = db_fetchall(
         f"""
         SELECT
@@ -33,7 +39,7 @@ def _employment_income_guidance(shelter: str, placeholder: str) -> dict:
         WHERE LOWER(COALESCE(pe.shelter, '')) = {placeholder}
           AND COALESCE(ea.exit_category, '') = 'Successful Completion'
           AND COALESCE(ea.exit_reason, '') = 'Program Graduated'
-          AND COALESCE(ea.graduate_dwc, 0) = 1
+          AND {graduate_dwc_filter}
         ORDER BY pe.id ASC, COALESCE(f.followup_date, '') DESC
         """,
         (shelter,),
