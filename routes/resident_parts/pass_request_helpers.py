@@ -345,17 +345,17 @@ def validate_pass_request_form(
 
     if form.pass_type in {"pass", "overnight"}:
         if not form.start_at_raw or not form.end_at_raw:
-            errors.append("Leave date and time and return date and time are required.")
+            errors.append("Start date and time and end date and time are required.")
         else:
             try:
                 local_start = datetime.fromisoformat(form.start_at_raw).replace(tzinfo=CHICAGO_TZ)
                 local_end = datetime.fromisoformat(form.end_at_raw).replace(tzinfo=CHICAGO_TZ)
 
                 if local_end <= local_start:
-                    errors.append("Return time must be after leave time.")
+                    errors.append("End time must be after start time.")
 
                 if local_start < now_local:
-                    errors.append("Leave time cannot be in the past.")
+                    errors.append("Start time cannot be in the past.")
 
                 if form.pass_type == "pass" and local_start.date() != local_end.date():
                     errors.append("A normal Pass must begin and end on the same day.")
@@ -376,7 +376,7 @@ def validate_pass_request_form(
                     local_end.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
                 )
             except Exception:
-                errors.append("Invalid leave or return date and time.")
+                errors.append("Invalid start or end date and time.")
 
     elif form.pass_type == "special":
         if not form.start_date_raw or not form.end_date_raw:
