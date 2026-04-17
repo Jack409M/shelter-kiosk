@@ -11,8 +11,10 @@
           </p>
 
           <div class="cmx-meta">
+            <span class="cmx-pill"><strong>Workspace:</strong>&nbsp;Current Resident</span>
             <span class="cmx-pill"><strong>Shelter:</strong>&nbsp;{{ shelter | shelter if shelter else "—" }}</span>
             <span class="cmx-pill"><strong>Status:</strong>&nbsp;{{ "Active" if resident_active else "Inactive" }}</span>
+            <span class="cmx-pill"><strong>Program:</strong>&nbsp;{{ header_program_status or "—" }}</span>
             <span class="cmx-pill"><strong>Entry Date:</strong>&nbsp;{{ enrollment_entry_date or "—" }}</span>
             <span class="cmx-pill"><strong>Last Meeting:</strong>&nbsp;{{ last_meeting_date or "—" }}</span>
             <span class="cmx-pill"><strong>Next Appointment:</strong>&nbsp;{{ next_appt or "—" }}</span>
@@ -45,21 +47,17 @@
   </div>
 
   <div class="cmx-card cmx-actions">
-    <button type="submit" class="cmx-btn cmx-btn-full" form="meeting-workspace-form">
-      Save Meeting
-    </button>
+    <button type="submit" class="cmx-btn cmx-btn-full" form="meeting-workspace-form">Save Meeting</button>
+    <button type="submit" class="cmx-btn-muted cmx-btn-full" form="profile-editor-form">Save Profile</button>
 
-    <button type="submit" class="cmx-btn-muted cmx-btn-full" form="profile-editor-form">
-      Save Profile
-    </button>
-
-    <div class="cmx-draft">
-      Draft protection active for this resident
+    <div class="cmx-appt">
+      <strong>Primary Actions</strong><br>
+      Save today’s contact note from the workspace and save active resident facts from the profile editor.
     </div>
 
     <div class="cmx-appt">
-      <strong>Meeting Reports</strong><br>
-      Saved meeting reports are available from <strong>Meeting History</strong> below.
+      <strong>Lifecycle Pages</strong><br>
+      Promotion Review and Exit and Follow Up will be separated into their own dedicated spaces.
     </div>
   </div>
 </header>
