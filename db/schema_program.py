@@ -14,6 +14,23 @@ from core.db import db_execute
 from .schema_helpers import create_table
 
 
+def ensure_program_enrollment_columns(kind: str) -> None:
+    if kind == "pg":
+        statements = [
+            "ALTER TABLE program_enrollments ADD COLUMN IF NOT EXISTS rad_complete BOOLEAN",
+            "ALTER TABLE program_enrollments ADD COLUMN IF NOT EXISTS rad_completed_date TEXT",
+        ]
+    else:
+        statements = [
+            "ALTER TABLE program_enrollments ADD COLUMN rad_complete INTEGER",
+            "ALTER TABLE program_enrollments ADD COLUMN rad_completed_date TEXT",
+        ]
+
+    for statement in statements:
+        with contextlib.suppress(Exception):
+            db_execute(statement)
+
+
 def ensure_program_enrollments_table(kind: str) -> None:
     create_table(
         kind,
@@ -26,6 +43,8 @@ def ensure_program_enrollments_table(kind: str) -> None:
             exit_date TEXT,
             program_status TEXT NOT NULL DEFAULT 'active',
             case_manager_id INTEGER,
+            rad_complete INTEGER,
+            rad_completed_date TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             FOREIGN KEY (resident_id) REFERENCES residents(id)
@@ -40,11 +59,15 @@ def ensure_program_enrollments_table(kind: str) -> None:
             exit_date TEXT,
             program_status TEXT NOT NULL DEFAULT 'active',
             case_manager_id INTEGER,
+            rad_complete BOOLEAN,
+            rad_completed_date TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """,
     )
+
+    ensure_program_enrollment_columns(kind)
 
 
 def ensure_user_dashboard_favorites_table(kind: str) -> None:
