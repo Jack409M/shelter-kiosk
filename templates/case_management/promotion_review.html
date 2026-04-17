@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    {% include "case_management/partials/resident_case/_workspace_header.html" %}
+
+    <div class="cmx-workspace-nav cmx-card">
+      <a class="cmx-workspace-tab" href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}">Workspace</a>
+      <a class="cmx-workspace-tab is-active">Promotion Review</a>
+      <span class="cmx-workspace-tab is-disabled">Exit and Follow Up</span>
+    </div>
+
+    <main class="cmx-workspace-main">
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <h2 class="cmx-section-title">Promotion Snapshot</h2>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3">
+          <div class="cmx-stat"><div>{{ recovery_snapshot.program_level or '—' }}</div><div>Level</div></div>
+          <div class="cmx-stat"><div>{{ recovery_snapshot.days_on_level or '—' }}</div><div>Days on Level</div></div>
+          <div class="cmx-stat"><div>{{ recovery_snapshot.days_sober_today or '—' }}</div><div>Days Sober</div></div>
+        </div>
+      </section>
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <h2 class="cmx-section-title">Criteria Breakdown</h2>
+        </div>
+
+        {% set pr = recovery_snapshot.promotion_readiness %}
+        <div class="cmx-stack">
+          {% for c in pr.checks %}
+            <div class="cmx-row-block">
+              <span>{{ c.label }}</span>
+              <span>{% if c.ok %}✔{% else %}✖{% endif %}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <h2 class="cmx-section-title">Decision</h2>
+        </div>
+
+        <form method="post">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+          <div class="cmx-grid cmx-grid-2">
+            <div class="cmx-field">
+              <label>Review Date</label>
+              <input type="date" name="meeting_date" required>
+            </div>
+
+            <div class="cmx-field">
+              <label>Ready for Next Level</label>
+              <select name="ready_for_next_level">
+                <option value="">Select</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="cmx-field">
+            <label>Recommended Next Level</label>
+            <input type="text" name="recommended_next_level">
+          </div>
+
+          <div class="cmx-field">
+            <label>Blockers</label>
+            <textarea name="blocker_reason"></textarea>
+          </div>
+
+          <div class="cmx-field">
+            <label>Override or Exception</label>
+            <textarea name="override_or_exception"></textarea>
+          </div>
+
+          <div class="cmx-field">
+            <label>Staff Rationale</label>
+            <textarea name="staff_review_note"></textarea>
+          </div>
+
+          <div class="cmx-button-row">
+            <button class="cmx-btn" type="submit">Save Promotion Review</button>
+          </div>
+        </form>
+      </section>
+
+    </main>
+  </div>
+</div>
+{% endblock %}
