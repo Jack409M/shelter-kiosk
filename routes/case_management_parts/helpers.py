@@ -36,7 +36,7 @@ def normalize_shelter_name(value: object | None) -> str:
 
 
 def shelter_equals_sql(column_name: str) -> str:
-    return f"LOWER(COALESCE({column_name}, '')) = {placeholder()}"
+    return f"LOWER(COALESCE({column_name}::text, '')) = LOWER({placeholder()})"
 
 
 def current_enrollment_order_sql(alias: str = "") -> str:
