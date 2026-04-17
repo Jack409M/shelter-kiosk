@@ -4,7 +4,7 @@ from datetime import datetime
 
 from flask import flash, redirect, request, session, url_for
 
-from core.db import db_execute, db_fetchone
+from core.db import db_execute, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
@@ -78,6 +78,13 @@ def _load_enrollment_context_for_shelter(resident_id: int, shelter: str) -> dict
     }
 
 
+def _initial_rad_values_for_new_enrollment(shelter: str) -> tuple[int | None, str | None]:
+    shelter_key = normalize_shelter_name(shelter)
+    if shelter_key == "haven":
+        return 0, None
+    return None, None
+
+
 def create_enrollment_view(resident_id: int):
     shelter = normalize_shelter_name(session.get("shelter"))
     ph = placeholder()
@@ -117,36 +124,51 @@ def create_enrollment_view(resident_id: int):
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     now = utcnow_iso()
+    rad_complete, rad_completed_date = _initial_rad_values_for_new_enrollment(shelter)
 
-    db_execute(
-        f"""
-        INSERT INTO program_enrollments
-        (
-            resident_id,
-            shelter,
-            entry_date,
-            exit_date,
-            program_status,
-            case_manager_id,
-            created_at,
-            updated_at
+    with db_transaction():
+        db_execute(
+            f"""
+            INSERT INTO program_enrollments
+            (
+                resident_id,
+                shelter,
+                entry_date,
+                exit_date,
+                program_status,
+                case_manager_id,
+                rad_complete,
+                rad_completed_date,
+                created_at,
+                updated_at
+            )
+            VALUES
+            (
+                {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
+            )
+            """,
+            (
+                resident_id,
+                shelter,
+                entry_date,
+                None,
+                "active",
+                session.get("staff_user_id"),
+                rad_complete,
+                rad_completed_date,
+                now,
+                now,
+            ),
         )
-        VALUES
-        (
-            {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}
+
+        db_execute(
+            f"""
+            UPDATE residents
+            SET is_active = TRUE
+            WHERE id = {ph}
+            """,
+            (resident_id,),
         )
-        """,
-        (
-            resident_id,
-            shelter,
-            entry_date,
-            None,
-            "active",
-            session.get("staff_user_id"),
-            now,
-            now,
-        ),
-    )
 
     flash("Program enrollment started.", "ok")
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
