@@ -1,23 +1,26 @@
+{% set recent_notes = notes[:5] if notes else [] %}
+
 <div class="cmx-card">
   <div class="cmx-section-head">
     <div>
-      <h2 class="cmx-section-title">Saved Meeting Reports</h2>
+      <h2 class="cmx-section-title">Recent Activity</h2>
       <div class="cmx-section-subtitle">
-        Review prior case manager meetings, reopen a saved record, or print the formal report for any completed meeting.
+        Review the most recent saved case manager meetings, reopen a record quickly, or print a formal report when needed.
       </div>
     </div>
     <span class="cmx-inline-pill">
-      {{ notes|length }} meetings
+      {{ recent_notes|length }} recent
     </span>
   </div>
 
-  {% if notes %}
+  {% if recent_notes %}
+    {% set notes = recent_notes %}
     {% include "case_management/partials/resident_case/_workspace_note_history.html" %}
   {% else %}
     <div class="cmx-panel-soft">
-      <div class="cmx-text-card-title">No saved meeting reports yet</div>
+      <div class="cmx-text-card-title">No recent activity yet</div>
       <div class="cmx-summary-text">
-        No completed case manager meetings are on file for this resident yet. Once a meeting is saved, it will appear here and can be reopened, edited, or printed as a formal progress report.
+        No completed case manager meetings are on file for this resident yet. Once a meeting is saved, the most recent activity will appear here for quick review.
       </div>
     </div>
   {% endif %}
