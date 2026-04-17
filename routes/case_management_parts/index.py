@@ -1,40 +1,14 @@
 from __future__ import annotations
 
-from flask import current_app, flash, g, redirect, render_template, request, session, url_for
+from flask import flash, g, redirect, render_template, request, session, url_for
 
-from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_fetchall
 from core.runtime import init_db
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
-    fetch_current_enrollment_for_resident,
     normalize_shelter_name,
     shelter_equals_sql,
 )
-from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
-from routes.inspection_v2 import build_inspection_stability_snapshot
-from routes.rent_tracking import build_rent_stability_snapshot
-
-
-def _to_float(value) -> float:
-    try:
-        if value in (None, ""):
-            return 0.0
-        return float(value)
-    except Exception:
-        return 0.0
-
-
-def _to_bool_or_none(value):
-    if value is None:
-        return None
-    if isinstance(value, bool):
-        return value
-    if value in {1, "1", "true", "True", "yes", "Yes", "on"}:
-        return True
-    if value in {0, "0", "false", "False", "no", "No", "off"}:
-        return False
-    return bool(value)
 
 
 def _require_case_manager_access():
@@ -61,185 +35,6 @@ def _active_sql_literal() -> str:
 
 def _db_placeholder() -> str:
     return "%s" if g.get("db_kind") == "pg" else "?"
-
-
-def _build_engagement_score(recovery_snapshot: dict | None) -> float | None:
-    snapshot = recovery_snapshot or {}
-
-    score = 0.0
-    signal_count = 0
-
-    employment_status = str(snapshot.get("employment_status_current") or "").strip().lower()
-    if employment_status:
-        signal_count += 1
-        if employment_status == "employed":
-            score += 40.0
-
-    sponsor_active = _to_bool_or_none(snapshot.get("sponsor_active"))
-    if sponsor_active is not None:
-        signal_count += 1
-        if sponsor_active:
-            score += 30.0
-
-    step_work_active = _to_bool_or_none(snapshot.get("step_work_active"))
-    if step_work_active is not None:
-        signal_count += 1
-        if step_work_active:
-            score += 20.0
-
-    program_level_raw = str(snapshot.get("program_level") or "").strip()
-    if program_level_raw:
-        signal_count += 1
-        try:
-            program_level = int(program_level_raw)
-        except Exception:
-            program_level = None
-
-        if program_level is not None:
-            if program_level >= 3:
-                score += 10.0
-            elif program_level == 2:
-                score += 5.0
-
-    if signal_count == 0:
-        return None
-
-    return round(min(score, 100.0), 1)
-
-
-def _build_pending_readiness(detail: str | None = None) -> dict:
-    return {
-        "score": None,
-        "score_display": "—",
-        "label": "Pending",
-        "tone": "pending",
-        "detail": detail or "Waiting for enough scoring data to calculate a readiness score.",
-    }
-
-
-def _build_readiness_band(score: int) -> tuple[str, str]:
-    if score >= 80:
-        return "Doing Great", "great"
-    if score >= 50:
-        return "Struggling", "struggling"
-    return "Failing", "failing"
-
-
-def _safe_snapshot(name: str, resident_id: int, loader, fallback):
-    try:
-        return loader()
-    except Exception:
-        current_app.logger.exception(
-            "case_management_index_snapshot_failed resident_id=%s module=%s",
-            resident_id,
-            name,
-        )
-        return fallback
-
-
-def _build_readiness_score(resident_id: int, shelter: str) -> dict:
-    enrollment = _safe_snapshot(
-        "current_enrollment",
-        resident_id,
-        lambda: fetch_current_enrollment_for_resident(
-            resident_id,
-            shelter=shelter,
-            columns="""
-                id,
-                entry_date
-            """,
-        ),
-        None,
-    )
-    enrollment_id = enrollment.get("id") if enrollment else None
-    enrollment_entry_date = enrollment.get("entry_date") if enrollment else None
-
-    attendance_snapshot = _safe_snapshot(
-        "attendance_hours_snapshot",
-        resident_id,
-        lambda: build_attendance_hours_snapshot(
-            resident_id=resident_id,
-            shelter=shelter,
-            enrollment_entry_date=enrollment_entry_date,
-        ),
-        {
-            "eligible_weeks_count": 0,
-            "average_percent": 0.0,
-        },
-    )
-    inspection_snapshot = _safe_snapshot(
-        "inspection_snapshot",
-        resident_id,
-        lambda: build_inspection_stability_snapshot(
-            resident_id,
-            shelter=shelter,
-        ),
-        {
-            "inspection_count": 0,
-            "average_score": 0.0,
-        },
-    )
-    rent_snapshot = _safe_snapshot(
-        "rent_snapshot",
-        resident_id,
-        lambda: build_rent_stability_snapshot(resident_id),
-        {
-            "average_score": 0.0,
-            "month_rows": [],
-        },
-    )
-    recovery_snapshot = _safe_snapshot(
-        "recovery_snapshot",
-        resident_id,
-        lambda: load_recovery_snapshot(resident_id, enrollment_id),
-        {},
-    )
-
-    weighted_total = 0.0
-    weight_used = 0.0
-    detail_parts: list[str] = []
-
-    attendance_weeks = int(attendance_snapshot.get("eligible_weeks_count") or 0)
-    if attendance_weeks > 0:
-        attendance_score = _to_float(attendance_snapshot.get("average_percent"))
-        weighted_total += attendance_score * 0.40
-        weight_used += 0.40
-        detail_parts.append(f"Attendance {attendance_score:.1f}")
-
-    inspection_count = int(inspection_snapshot.get("inspection_count") or 0)
-    if inspection_count > 0:
-        inspection_score = _to_float(inspection_snapshot.get("average_score"))
-        weighted_total += inspection_score * 0.25
-        weight_used += 0.25
-        detail_parts.append(f"Inspection {inspection_score:.1f}")
-
-    rent_month_rows = rent_snapshot.get("month_rows") or []
-    rent_has_history = any(_to_float(row.get("score")) > 0 for row in rent_month_rows)
-    if rent_has_history:
-        rent_score = _to_float(rent_snapshot.get("average_score"))
-        weighted_total += rent_score * 0.20
-        weight_used += 0.20
-        detail_parts.append(f"Rent {rent_score:.1f}")
-
-    engagement_score = _build_engagement_score(recovery_snapshot)
-    if engagement_score is not None:
-        weighted_total += engagement_score * 0.15
-        weight_used += 0.15
-        detail_parts.append(f"Recovery Engagement {engagement_score:.1f}")
-
-    if weight_used == 0:
-        return _build_pending_readiness()
-
-    score = int(round(weighted_total / weight_used))
-    label, tone = _build_readiness_band(score)
-
-    return {
-        "score": score,
-        "score_display": str(score),
-        "label": label,
-        "tone": tone,
-        "detail": " | ".join(detail_parts) if detail_parts else "Composite readiness score",
-    }
 
 
 def _load_resident_rows_for_index(shelter: str, show: str):
@@ -279,12 +74,7 @@ def _load_resident_rows_for_index(shelter: str, show: str):
 
 def _build_index_residents(shelter: str, show: str) -> list[dict]:
     resident_rows = _load_resident_rows_for_index(shelter, show)
-    residents = [dict(row) for row in resident_rows]
-
-    for resident in residents:
-        resident["readiness"] = _build_readiness_score(resident["id"], shelter)
-
-    return residents
+    return [dict(row) for row in resident_rows]
 
 
 def _load_intake_drafts(shelter: str):
