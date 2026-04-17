@@ -38,7 +38,7 @@ def progress_report_print_view(resident_id: int, update_id: int):
         flash("Resident not found.", "error")
         return _redirect_case_index()
 
-    enrollment = load_current_enrollment(resident_id)
+    enrollment = load_current_enrollment(resident_id, shelter)
     enrollment_id = enrollment["id"] if enrollment else None
 
     if not enrollment_id:
