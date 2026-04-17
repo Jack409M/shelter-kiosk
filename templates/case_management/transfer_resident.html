@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="cmx-card">
+  <h2>Transfer Resident</h2>
+
+  <div style="margin-bottom:16px;">
+    <strong>{{ resident.first_name }} {{ resident.last_name }}</strong>
+  </div>
+
+  <form method="post">
+    <div class="cmx-field">
+      <label>Current Shelter</label>
+      <input type="text" value="{{ enrollment.shelter }}" readonly>
+    </div>
+
+    <div class="cmx-field">
+      <label>Transfer To Shelter</label>
+      <select name="target_shelter">
+        <option value="">Select shelter</option>
+        {% for opt in shelter_options %}
+          <option value="{{ opt.value }}" {% if form_data.get('target_shelter') == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="cmx-field">
+      <label>Transfer Date</label>
+      <input type="date" name="transfer_date" value="{{ form_data.get('transfer_date') or '' }}">
+    </div>
+
+    <div style="margin-top:16px;">
+      <button class="cmx-btn" type="submit">Transfer Resident</button>
+      <a href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" class="cmx-btn" style="background:#ccc;">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
