@@ -18,6 +18,7 @@ def test_expected_blueprints_are_registered(app):
         "case_management",
         "public",
         "resident_requests",
+        "resident_portal",
     }
 
     registered = set(app.blueprints.keys())
