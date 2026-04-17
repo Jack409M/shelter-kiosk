@@ -66,6 +66,10 @@ from routes.case_management_parts.progress_report import progress_report_print_v
 from routes.case_management_parts.promotion_review import promotion_review_view
 from routes.case_management_parts.recovery_profile import update_recovery_profile_view
 from routes.case_management_parts.resident_case import resident_case_view
+from routes.case_management_parts.transfer import (
+    submit_transfer_resident_view,
+    transfer_resident_form_view,
+)
 from routes.case_management_parts.ua_log import add_ua_log_view, edit_ua_log_view, ua_log_view
 from routes.case_management_parts.update import add_case_note_view, edit_case_note_view
 
@@ -211,6 +215,18 @@ def exit_assessment(resident_id: int):
 @_view
 def submit_exit_assessment(resident_id: int):
     return submit_exit_assessment_view(resident_id)
+
+
+@case_management.get("/<int:resident_id>/transfer")
+@_view
+def transfer_resident_form(resident_id: int):
+    return transfer_resident_form_view(resident_id)
+
+
+@case_management.post("/<int:resident_id>/transfer")
+@_view
+def submit_transfer_resident(resident_id: int):
+    return submit_transfer_resident_view(resident_id)
 
 
 @case_management.get("/<int:resident_id>/followup/<string:followup_type>")
