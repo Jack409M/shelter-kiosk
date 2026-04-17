@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint
+from flask import Blueprint, redirect, url_for
 
 from core.auth import require_login, require_shelter
 from routes.attendance_parts.board import (
@@ -129,24 +129,63 @@ def staff_pass_detail(pass_id: int):
 
 
 @attendance.route("/staff/passes/<int:pass_id>/approve", methods=["POST"])
-@attendance.route("/staff/passes/approve/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
 def staff_pass_approve(pass_id: int):
     return staff_pass_approve_view(pass_id)
 
 
+@attendance.route("/staff/passes/approve/<int:pass_id>", methods=["POST"])
+@require_login
+@require_shelter
+def staff_pass_approve_legacy_post(pass_id: int):
+    return staff_pass_approve_view(pass_id)
+
+
+@attendance.route("/staff/passes/approve/<int:pass_id>", methods=["GET"])
+@require_login
+@require_shelter
+def staff_pass_approve_legacy_get(pass_id: int):
+    return redirect(url_for("attendance.staff_pass_detail", pass_id=pass_id), code=303)
+
+
 @attendance.route("/staff/passes/<int:pass_id>/deny", methods=["POST"])
-@attendance.route("/staff/passes/deny/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
 def staff_pass_deny(pass_id: int):
     return staff_pass_deny_view(pass_id)
 
 
+@attendance.route("/staff/passes/deny/<int:pass_id>", methods=["POST"])
+@require_login
+@require_shelter
+def staff_pass_deny_legacy_post(pass_id: int):
+    return staff_pass_deny_view(pass_id)
+
+
+@attendance.route("/staff/passes/deny/<int:pass_id>", methods=["GET"])
+@require_login
+@require_shelter
+def staff_pass_deny_legacy_get(pass_id: int):
+    return redirect(url_for("attendance.staff_pass_detail", pass_id=pass_id), code=303)
+
+
 @attendance.route("/staff/passes/<int:pass_id>/check-in", methods=["POST"])
-@attendance.route("/staff/passes/check-in/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
 def staff_pass_check_in(pass_id: int):
     return staff_pass_check_in_view(pass_id)
+
+
+@attendance.route("/staff/passes/check-in/<int:pass_id>", methods=["POST"])
+@require_login
+@require_shelter
+def staff_pass_check_in_legacy_post(pass_id: int):
+    return staff_pass_check_in_view(pass_id)
+
+
+@attendance.route("/staff/passes/check-in/<int:pass_id>", methods=["GET"])
+@require_login
+@require_shelter
+def staff_pass_check_in_legacy_get(pass_id: int):
+    return redirect(url_for("attendance.staff_pass_detail", pass_id=pass_id), code=303)
