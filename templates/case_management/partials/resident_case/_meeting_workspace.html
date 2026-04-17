@@ -1,9 +1,9 @@
 <div class="cmx-card" style="background:#f4f8ff; border:1px solid #c9d8f0;">
   <div class="cmx-section-head">
     <div>
-      <h2 class="cmx-section-title">Meeting Workspace</h2>
+      <h2 class="cmx-section-title">Current Contact Note</h2>
       <div class="cmx-section-subtitle">
-        Use this section for today’s meeting only. Changes here are saved only when you click <strong>Save Meeting</strong>.
+        Use this section for today’s resident contact only. Save the narrative, services provided today, needs worked today, barriers, and next steps here.
       </div>
     </div>
 
@@ -22,9 +22,14 @@
     <input type="hidden" name="updated_grit" value="{{ meeting_defaults.updated_grit if meeting_defaults.updated_grit is not none else '' }}">
     <input type="hidden" name="parenting_class_completed" value="{{ meeting_defaults.parenting_class_completed if meeting_defaults.parenting_class_completed else '' }}">
     <input type="hidden" name="warrants_or_fines_paid" value="{{ meeting_defaults.warrants_or_fines_paid if meeting_defaults.warrants_or_fines_paid else '' }}">
+    <input type="hidden" name="ready_for_next_level" value="{{ meeting_defaults.ready_for_next_level if meeting_defaults.ready_for_next_level else '' }}">
+    <input type="hidden" name="recommended_next_level" value="{{ meeting_defaults.recommended_next_level if meeting_defaults.recommended_next_level else '' }}">
+    <input type="hidden" name="blocker_reason" value="{{ meeting_defaults.blocker_reason if meeting_defaults.blocker_reason else '' }}">
+    <input type="hidden" name="override_or_exception" value="{{ meeting_defaults.override_or_exception if meeting_defaults.override_or_exception else '' }}">
+    <input type="hidden" name="staff_review_note" value="{{ meeting_defaults.staff_review_note if meeting_defaults.staff_review_note else '' }}">
 
     <div style="margin:0 0 16px 0; padding:10px 12px; background:#ffffff; border:1px solid #d8e3f4; border-radius:12px; color:#48617d; font-size:0.9rem; font-weight:600;">
-      Save Meeting records today’s narrative note, services provided, needs worked on today, and advancement review.
+      Save Meeting records today’s resident contact, services provided, open needs worked, current concerns, and next action plan.
     </div>
 
     <div class="cmx-grid cmx-grid-3">
@@ -35,13 +40,9 @@
 
       <div class="cmx-field">
         <label>Official Next Appointment</label>
-        <input
-          type="text"
-          value="{{ next_appt if next_appt and next_appt != '—' else 'No upcoming appointment scheduled' }}"
-          readonly
-        >
+        <input type="text" value="{{ next_appt if next_appt and next_appt != '—' else 'No upcoming appointment scheduled' }}" readonly>
         <div class="cmx-muted">
-          Use <strong>Schedule Appointment</strong> below to create or update the official appointment record with date and time.
+          Use <strong>Schedule Appointment</strong> in Support Actions to create or update the official appointment record.
         </div>
       </div>
 
@@ -74,10 +75,19 @@
       </div>
     </div>
 
-    <div class="cmx-text-card" style="margin-top:16px; background:#ffffff;">
-      <div class="cmx-text-card-title">Meeting Overview</div>
-      <div class="cmx-field">
-        <textarea name="overall_summary" rows="4" placeholder="Short overall meeting overview for quick reference">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea>
+    <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
+      <div class="cmx-text-card" style="background:#ffffff;">
+        <div class="cmx-text-card-title">Meeting Overview</div>
+        <div class="cmx-field">
+          <textarea name="overall_summary" rows="4" placeholder="Short overall meeting overview for quick reference">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="cmx-text-card" style="background:#ffffff;">
+        <div class="cmx-text-card-title">Barriers And Concerns</div>
+        <div class="cmx-field">
+          <textarea name="setbacks_or_incidents" rows="4" placeholder="Record setbacks, incidents, or current concerns from today">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
+        </div>
       </div>
     </div>
 
@@ -159,157 +169,11 @@
       </div>
     </div>
 
-    <div class="cmx-grid cmx-grid-2" style="margin-top:22px;">
-      <div class="cmx-panel-soft" style="background:#ffffff;">
-        <div class="cmx-panel-head">
-          <h3>Program Snapshot</h3>
-          <span>Current status</span>
-        </div>
-
-        <div class="cmx-stack">
-          <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Level</span><span>{{ rs_level or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Level Start Date</span><span>{{ rs_level_start_date or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Days On Level</span><span>{{ rs_days_on_level if rs_days_on_level is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Days Sober</span><span>{{ rs_days_sober_today if rs_days_sober_today is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Drug Of Choice</span><span>{{ rs_drug_of_choice or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Employment Status</span><span>{{ rs_employment_status or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Monthly Income</span><span>{{ rs_income if rs_income is not none else "—" }}</span></div>
-        </div>
-      </div>
-
-      <div class="cmx-panel-soft" style="background:#ffffff;">
-        <div class="cmx-panel-head">
-          <h3>Advancement Review</h3>
-          <span>Saved with meeting</span>
-        </div>
-
-        {% set pr = recovery_snapshot.get("promotion_readiness", {}) %}
-        {% set rad_classes_attended = recovery_snapshot.get("rad_classes_attended", 0) %}
-        {% set rad_completed = recovery_snapshot.get("rad_completed") %}
-        {% set rad_completed_at = recovery_snapshot.get("rad_completed_at") %}
-
-        <div style="margin:0 0 14px 0; padding:12px; border-radius:12px; border:1px solid #d8e3f4; background:#f8fbff;">
-          <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
-            <div style="font-weight:700; color:#31465f;">Current Promotion Readiness</div>
-            {% if pr.ready %}
-              <span style="background:#dcefe1; border:1px solid #9bc8a6; padding:4px 10px; border-radius:999px; font-weight:700; color:#1f6b33;">
-                READY
-              </span>
-            {% else %}
-              <span style="background:#fdecec; border:1px solid #d38a8a; padding:4px 10px; border-radius:999px; font-weight:700; color:#8a1f1f;">
-                NOT READY
-              </span>
-            {% endif %}
-          </div>
-
-          {% if pr.checks %}
-            <div class="cmx-stack">
-              {% for c in pr.checks %}
-                <div class="cmx-row-block">
-                  <span>{{ c.label }}</span>
-                  <span>
-                    {% if c.ok %}
-                      ✔
-                    {% else %}
-                      ✖
-                    {% endif %}
-                    {% if c.detail %}
-                      ({{ c.detail }})
-                    {% endif %}
-                  </span>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="cmx-muted">Promotion readiness is not available yet.</div>
-          {% endif %}
-
-          {% if not pr.ready and pr.blockers %}
-            <div style="margin-top:10px; font-size:12px; color:#8a1f1f;">
-              Blockers: {{ pr.blockers | join(", ") }}
-            </div>
-          {% endif %}
-        </div>
-
-        <div style="margin:0 0 14px 0; padding:12px; border-radius:12px; border:1px solid #d8e3f4; background:#f8fbff;">
-          <div style="display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
-            <div style="font-weight:700; color:#31465f;">RAD Progress</div>
-            {% if rad_completed %}
-              <span style="background:#dcefe1; border:1px solid #9bc8a6; padding:4px 10px; border-radius:999px; font-weight:700; color:#1f6b33;">
-                COMPLETE
-              </span>
-            {% else %}
-              <span style="background:#fff3c7; border:1px solid #ddc56d; padding:4px 10px; border-radius:999px; font-weight:700; color:#7a6500;">
-                IN PROGRESS
-              </span>
-            {% endif %}
-          </div>
-
-          <div class="cmx-stack">
-            <div class="cmx-row-block">
-              <span>RAD Classes Or Days</span>
-              <span>{{ rad_classes_attended }} / 30</span>
-            </div>
-            <div class="cmx-row-block">
-              <span>RAD Complete</span>
-              <span>{{ "Yes" if rad_completed else "No" }}</span>
-            </div>
-            <div class="cmx-row-block">
-              <span>Completed At</span>
-              <span>{{ rad_completed_at or "—" }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="cmx-grid cmx-grid-2">
-          <div class="cmx-field">
-            <label>Ready For Next Level</label>
-            <select name="ready_for_next_level">
-              <option value="" {% if not meeting_defaults.ready_for_next_level %}selected{% endif %}>—</option>
-              <option value="yes" {% if meeting_defaults.ready_for_next_level == "yes" %}selected{% endif %}>Yes</option>
-              <option value="no" {% if meeting_defaults.ready_for_next_level == "no" %}selected{% endif %}>No</option>
-            </select>
-          </div>
-
-          <div class="cmx-field">
-            <label>Recommended Next Level</label>
-            <input type="text" name="recommended_next_level" value="{{ meeting_defaults.recommended_next_level if meeting_defaults.recommended_next_level else '' }}" placeholder="Optional">
-          </div>
-        </div>
-
-        <div class="cmx-field" style="margin-top:12px;">
-          <label>Barrier To Advancement</label>
-          <textarea name="blocker_reason" rows="3" placeholder="Record what is currently preventing advancement">{{ meeting_defaults.blocker_reason if meeting_defaults.blocker_reason else '' }}</textarea>
-        </div>
-
-        <div class="cmx-field" style="margin-top:12px;">
-          <label>Override Or Exception</label>
-          <textarea name="override_or_exception" rows="3" placeholder="Record any approved exception or override">{{ meeting_defaults.override_or_exception if meeting_defaults.override_or_exception else '' }}</textarea>
-        </div>
-
-        <div class="cmx-field" style="margin-top:12px;">
-          <label>Staff Review Note</label>
-          <textarea name="staff_review_note" rows="3" placeholder="Record professional recommendation or rationale">{{ meeting_defaults.staff_review_note if meeting_defaults.staff_review_note else '' }}</textarea>
-        </div>
-
-        <div class="cmx-field" style="margin-top:12px;">
-          <label>Barriers And Concerns</label>
-          <textarea name="setbacks_or_incidents" rows="3" placeholder="Record setbacks, incidents, or current concerns">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea>
-        </div>
-
-        <div class="cmx-button-row" style="margin-top:12px;">
-          <a class="cmx-btn-muted" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id, next=url_for('case_management.resident_case', resident_id=resident_id)) }}">
-            Transfer Shelter
-          </a>
-        </div>
-      </div>
-    </div>
-
     <div class="cmx-button-row" style="margin-top:18px;">
       <button type="submit" class="cmx-btn">Save Meeting</button>
+      <a class="cmx-btn-muted" href="{{ url_for('residents.staff_resident_transfer', resident_id=resident_id, next=url_for('case_management.resident_case', resident_id=resident_id)) }}">
+        Transfer Shelter
+      </a>
     </div>
   </form>
 </div>
