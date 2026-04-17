@@ -8,11 +8,74 @@
 <div class="cmx-page">
   <div class="cmx-shell">
 
-    {% include "case_management/partials/resident_case/_workspace_header.html" %}
+    <header class="cmx-header">
+      <div class="cmx-card cmx-header-main">
+        <div class="cmx-header-row">
+          <div class="cmx-person">
+            <div class="cmx-avatar">
+              {{ ((resident.first_name or "R")[:1] ~ (resident.last_name or "")[:1])|upper }}
+            </div>
+
+            <div style="min-width:0; flex:1;">
+              <h1 class="cmx-title">Promotion Review</h1>
+              <p class="cmx-subtitle">
+                {{ resident.last_name }}, {{ resident.first_name }}
+                {% if resident.resident_identifier %}
+                  • Resident ID: {{ resident.resident_identifier }}
+                {% endif %}
+              </p>
+
+              <div class="cmx-meta">
+                <span class="cmx-pill"><strong>Shelter:</strong>&nbsp;{{ resident.shelter | shelter if resident.shelter else "—" }}</span>
+                <span class="cmx-pill"><strong>Program Status:</strong>&nbsp;{{ enrollment.program_status or "—" }}</span>
+                <span class="cmx-pill"><strong>Entry Date:</strong>&nbsp;{{ enrollment.entry_date or "—" }}</span>
+                <span class="cmx-pill"><strong>Current Level:</strong>&nbsp;{{ recovery_snapshot.program_level or "—" }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="cmx-stats">
+            <div class="cmx-stat">
+              <div class="cmx-stat-value">{{ recovery_snapshot.days_on_level if recovery_snapshot.days_on_level is not none else "—" }}</div>
+              <div class="cmx-stat-label">Days on Level</div>
+            </div>
+
+            <div class="cmx-stat">
+              <div class="cmx-stat-value">{{ recovery_snapshot.days_sober_today if recovery_snapshot.days_sober_today is not none else "—" }}</div>
+              <div class="cmx-stat-label">Days Sober</div>
+            </div>
+
+            <div class="cmx-stat">
+              <div class="cmx-stat-value">{{ attendance_hours_snapshot.attendance_percentage if attendance_hours_snapshot and attendance_hours_snapshot.attendance_percentage is not none else "—" }}</div>
+              <div class="cmx-stat-label">Attendance %</div>
+            </div>
+
+            <div class="cmx-stat">
+              <div class="cmx-stat-value">{% if has_disciplinary_block %}Blocked{% else %}Clear{% endif %}</div>
+              <div class="cmx-stat-label">Discipline</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmx-card cmx-actions">
+        <a href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" class="cmx-btn cmx-btn-full">Back to Workspace</a>
+
+        <div class="cmx-appt">
+          <strong>Decision Page</strong><br>
+          Use this page to review promotion readiness and save the advancement decision separately from the daily workspace.
+        </div>
+
+        <div class="cmx-appt">
+          <strong>Current Phase</strong><br>
+          This page currently supports snapshot review and promotion decision entry. Decision history and apply confirmation will be added next.
+        </div>
+      </div>
+    </header>
 
     <div class="cmx-workspace-nav cmx-card">
       <a class="cmx-workspace-tab" href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}">Workspace</a>
-      <a class="cmx-workspace-tab is-active">Promotion Review</a>
+      <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">Promotion Review</a>
       <span class="cmx-workspace-tab is-disabled">Exit and Follow Up</span>
     </div>
 
@@ -24,9 +87,37 @@
         </div>
 
         <div class="cmx-grid cmx-grid-3">
-          <div class="cmx-stat"><div>{{ recovery_snapshot.program_level or '—' }}</div><div>Level</div></div>
-          <div class="cmx-stat"><div>{{ recovery_snapshot.days_on_level or '—' }}</div><div>Days on Level</div></div>
-          <div class="cmx-stat"><div>{{ recovery_snapshot.days_sober_today or '—' }}</div><div>Days Sober</div></div>
+          <div class="cmx-stat">
+            <div>{{ recovery_snapshot.program_level or "—" }}</div>
+            <div>Level</div>
+          </div>
+          <div class="cmx-stat">
+            <div>{{ recovery_snapshot.days_on_level if recovery_snapshot.days_on_level is not none else "—" }}</div>
+            <div>Days on Level</div>
+          </div>
+          <div class="cmx-stat">
+            <div>{{ recovery_snapshot.days_sober_today if recovery_snapshot.days_sober_today is not none else "—" }}</div>
+            <div>Days Sober</div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
+          <div class="cmx-row-block">
+            <span>Attendance Percentage</span>
+            <span>{{ attendance_hours_snapshot.attendance_percentage if attendance_hours_snapshot and attendance_hours_snapshot.attendance_percentage is not none else "—" }}</span>
+          </div>
+          <div class="cmx-row-block">
+            <span>Rent Status</span>
+            <span>{{ rent_snapshot.status_label if rent_snapshot and rent_snapshot.status_label else "—" }}</span>
+          </div>
+          <div class="cmx-row-block">
+            <span>Inspection Trend</span>
+            <span>{{ inspection_snapshot.status_label if inspection_snapshot and inspection_snapshot.status_label else "—" }}</span>
+          </div>
+          <div class="cmx-row-block">
+            <span>Employment Status</span>
+            <span>{{ recovery_snapshot.employment_status_display or "—" }}</span>
+          </div>
         </div>
       </section>
 
@@ -37,13 +128,62 @@
 
         {% set pr = recovery_snapshot.promotion_readiness %}
         <div class="cmx-stack">
-          {% for c in pr.checks %}
-            <div class="cmx-row-block">
-              <span>{{ c.label }}</span>
-              <span>{% if c.ok %}✔{% else %}✖{% endif %}</span>
-            </div>
-          {% endfor %}
+          {% if pr and pr.checks %}
+            {% for c in pr.checks %}
+              <div class="cmx-row-block">
+                <span>{{ c.label }}</span>
+                <span>{% if c.ok %}✔{% else %}✖{% endif %}</span>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="cmx-empty">No promotion readiness criteria are available yet.</div>
+          {% endif %}
         </div>
+
+        {% if has_disciplinary_block and disciplinary_flags %}
+          <div class="cmx-alert cmx-alert-warn" style="margin-top:16px;">
+            <strong>Active restriction:</strong>
+            {{ disciplinary_flags | join(", ") }}
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <h2 class="cmx-section-title">Most Recent Saved Review</h2>
+        </div>
+
+        {% if latest_review %}
+          <div class="cmx-grid cmx-grid-2">
+            <div class="cmx-row-block">
+              <span>Review Date</span>
+              <span>{{ latest_review.meeting_date or "—" }}</span>
+            </div>
+            <div class="cmx-row-block">
+              <span>Recommended Level</span>
+              <span>{{ latest_review.recommended_next_level or "—" }}</span>
+            </div>
+          </div>
+
+          <div class="cmx-stack" style="margin-top:16px;">
+            <div class="cmx-field">
+              <label>Blocker Reason</label>
+              <div class="cmx-readonly">{{ latest_review.blocker_reason or "—" }}</div>
+            </div>
+
+            <div class="cmx-field">
+              <label>Override or Exception</label>
+              <div class="cmx-readonly">{{ latest_review.override_or_exception or "—" }}</div>
+            </div>
+
+            <div class="cmx-field">
+              <label>Staff Review Note</label>
+              <div class="cmx-readonly">{{ latest_review.staff_review_note or "—" }}</div>
+            </div>
+          </div>
+        {% else %}
+          <div class="cmx-empty">No promotion review has been saved yet.</div>
+        {% endif %}
       </section>
 
       <section class="cmx-card">
@@ -88,6 +228,16 @@
           <div class="cmx-field">
             <label>Staff Rationale</label>
             <textarea name="staff_review_note"></textarea>
+          </div>
+
+          <div class="cmx-field">
+            <label>Summary Notes</label>
+            <textarea name="notes"></textarea>
+          </div>
+
+          <div class="cmx-field">
+            <label>Setbacks or Incidents</label>
+            <textarea name="setbacks_or_incidents"></textarea>
           </div>
 
           <div class="cmx-button-row">
