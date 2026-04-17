@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, g, redirect, render_template, request, session, url_for
+from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
 from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_fetchall
@@ -107,13 +107,13 @@ def _build_engagement_score(recovery_snapshot: dict | None) -> float | None:
     return round(min(score, 100.0), 1)
 
 
-def _build_pending_readiness() -> dict:
+def _build_pending_readiness(detail: str | None = None) -> dict:
     return {
         "score": None,
         "score_display": "—",
         "label": "Pending",
         "tone": "pending",
-        "detail": "Waiting for enough scoring data to calculate a readiness score.",
+        "detail": detail or "Waiting for enough scoring data to calculate a readiness score.",
     }
 
 
@@ -125,29 +125,75 @@ def _build_readiness_band(score: int) -> tuple[str, str]:
     return "Failing", "failing"
 
 
+def _safe_snapshot(name: str, resident_id: int, loader, fallback):
+    try:
+        return loader()
+    except Exception:
+        current_app.logger.exception(
+            "case_management_index_snapshot_failed resident_id=%s module=%s",
+            resident_id,
+            name,
+        )
+        return fallback
+
+
 def _build_readiness_score(resident_id: int, shelter: str) -> dict:
-    enrollment = fetch_current_enrollment_for_resident(
+    enrollment = _safe_snapshot(
+        "current_enrollment",
         resident_id,
-        shelter=shelter,
-        columns="""
-            id,
-            entry_date
-        """,
+        lambda: fetch_current_enrollment_for_resident(
+            resident_id,
+            shelter=shelter,
+            columns="""
+                id,
+                entry_date
+            """,
+        ),
+        None,
     )
     enrollment_id = enrollment.get("id") if enrollment else None
     enrollment_entry_date = enrollment.get("entry_date") if enrollment else None
 
-    attendance_snapshot = build_attendance_hours_snapshot(
-        resident_id=resident_id,
-        shelter=shelter,
-        enrollment_entry_date=enrollment_entry_date,
-    )
-    inspection_snapshot = build_inspection_stability_snapshot(
+    attendance_snapshot = _safe_snapshot(
+        "attendance_hours_snapshot",
         resident_id,
-        shelter=shelter,
+        lambda: build_attendance_hours_snapshot(
+            resident_id=resident_id,
+            shelter=shelter,
+            enrollment_entry_date=enrollment_entry_date,
+        ),
+        {
+            "eligible_weeks_count": 0,
+            "average_percent": 0.0,
+        },
     )
-    rent_snapshot = build_rent_stability_snapshot(resident_id)
-    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
+    inspection_snapshot = _safe_snapshot(
+        "inspection_snapshot",
+        resident_id,
+        lambda: build_inspection_stability_snapshot(
+            resident_id,
+            shelter=shelter,
+        ),
+        {
+            "inspection_count": 0,
+            "average_score": 0.0,
+        },
+    )
+    rent_snapshot = _safe_snapshot(
+        "rent_snapshot",
+        resident_id,
+        lambda: build_rent_stability_snapshot(resident_id),
+        {
+            "average_score": 0.0,
+            "month_rows": [],
+        },
+    )
+    recovery_snapshot = _safe_snapshot(
+        "recovery_snapshot",
+        resident_id,
+        lambda: load_recovery_snapshot(resident_id, enrollment_id),
+        {},
+    )
 
     weighted_total = 0.0
     weight_used = 0.0
