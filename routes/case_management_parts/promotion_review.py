@@ -12,6 +12,13 @@ from routes.case_management_parts.helpers import case_manager_allowed, normalize
 from routes.case_management_parts.progress_report_loaders import load_case_manager_name
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
 from routes.case_management_parts.resident_case_discipline import load_active_writeup_restrictions
+from routes.case_management_parts.resident_case_employment import (
+    build_employment_income_snapshot,
+    build_employment_stability_snapshot,
+    load_employment_income_defaults,
+    resolve_employment_status_snapshot,
+)
+from routes.case_management_parts.resident_case_enrollment_context import load_enrollment_context
 from routes.case_management_parts.resident_case_scope import load_current_enrollment, load_resident_in_scope
 from routes.case_management_parts.update_note_helpers import collect_note_form_values
 from routes.inspection_v2 import build_inspection_stability_snapshot
@@ -79,6 +86,40 @@ def _normalized_level_text(value: object) -> str | None:
         return None
     digits = "".join(ch for ch in text if ch.isdigit())
     return digits or text
+
+
+
+def _load_employment_income_settings(shelter: str) -> dict:
+    ph = placeholder()
+    defaults = load_employment_income_defaults()
+
+    try:
+        row = db_fetchone(
+            f"""
+            SELECT
+                employment_income_module_enabled,
+                employment_income_graduation_minimum,
+                employment_income_band_green_min,
+                employment_income_band_yellow_min,
+                employment_income_band_orange_min,
+                employment_income_band_red_max
+            FROM shelter_operation_settings
+            WHERE LOWER(COALESCE(shelter, '')) = {ph}
+            LIMIT 1
+            """,
+            (shelter,),
+        )
+    except Exception:
+        row = None
+
+    if not row:
+        return defaults
+
+    resolved = dict(defaults)
+    for key in resolved:
+        if row.get(key) is not None:
+            resolved[key] = row.get(key)
+    return resolved
 
 
 
@@ -334,6 +375,7 @@ def promotion_review_view(resident_id: int):
         flash("Promotion review saved.", "success")
         return redirect(url_for("case_management.promotion_review", resident_id=resident_id, saved=1))
 
+    enrollment_context = load_enrollment_context(enrollment_id)
     recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
     attendance_snapshot = build_attendance_hours_snapshot(
         resident_id=resident_id,
@@ -346,6 +388,28 @@ def promotion_review_view(resident_id: int):
     latest_review = _load_latest_promotion_review(enrollment_id)
     promotion_history = _load_promotion_audit_history(enrollment_id)
 
+    employment_income_settings = _load_employment_income_settings(shelter)
+    intake_income_support = enrollment_context.get("intake_income_support") or {}
+    monthly_income_for_display = intake_income_support.get("weighted_stable_income")
+    if monthly_income_for_display in (None, ""):
+        monthly_income_for_display = intake_income_support.get("total_cash_support")
+    if monthly_income_for_display in (None, ""):
+        intake_assessment = enrollment_context.get("intake_assessment") or {}
+        monthly_income_for_display = intake_assessment.get("income_at_entry")
+
+    employment_income_snapshot = build_employment_income_snapshot(
+        monthly_income_for_display,
+        employment_income_settings,
+    )
+    employment_status_snapshot = resolve_employment_status_snapshot(
+        recovery_snapshot,
+        enrollment_context.get("intake_assessment"),
+    )
+    employment_stability_snapshot = build_employment_stability_snapshot(
+        recovery_snapshot,
+        employment_status_snapshot=employment_status_snapshot,
+    )
+
     return render_template(
         "case_management/promotion_review.html",
         resident=resident,
@@ -354,6 +418,9 @@ def promotion_review_view(resident_id: int):
         attendance_hours_snapshot=attendance_snapshot,
         inspection_snapshot=inspection_snapshot,
         rent_snapshot=rent_snapshot,
+        employment_income_snapshot=employment_income_snapshot,
+        employment_status_snapshot=employment_status_snapshot,
+        employment_stability_snapshot=employment_stability_snapshot,
         disciplinary_flags=disciplinary_flags,
         has_disciplinary_block=len(disciplinary_flags) > 0,
         latest_review=latest_review,
