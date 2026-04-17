@@ -69,6 +69,8 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
         ) or config.get("apartment_size_snapshot")
 
         enrollment = _program_enrollment_for_month(resident_id, shelter, rent_year, rent_month)
+        resolved_enrollment_id = enrollment["id"] if enrollment else None
+        entry_enrollment_id = (existing.get("enrollment_id") if existing else None) or resolved_enrollment_id
 
         carry_forward_enabled = _bool_value(settings.get("rent_carry_forward_enabled", True))
         prior_balance = _latest_prior_balance(
@@ -119,7 +121,8 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                 (
                     """
                     UPDATE resident_rent_sheet_entries
-                    SET shelter_snapshot = %s,
+                    SET enrollment_id = %s,
+                        shelter_snapshot = %s,
                         resident_name_snapshot = %s,
                         level_snapshot = %s,
                         apartment_number_snapshot = %s,
@@ -150,7 +153,8 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     if g.get("db_kind") == "pg"
                     else """
                     UPDATE resident_rent_sheet_entries
-                    SET shelter_snapshot = ?,
+                    SET enrollment_id = ?,
+                        shelter_snapshot = ?,
                         resident_name_snapshot = ?,
                         level_snapshot = ?,
                         apartment_number_snapshot = ?,
@@ -180,6 +184,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     """
                 ),
                 (
+                    entry_enrollment_id,
                     shelter,
                     resident_name,
                     config.get("level_snapshot"),
@@ -218,6 +223,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     INSERT INTO resident_rent_sheet_entries (
                         sheet_id,
                         resident_id,
+                        enrollment_id,
                         shelter_snapshot,
                         resident_name_snapshot,
                         level_snapshot,
@@ -246,13 +252,14 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                         created_at,
                         updated_at
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     if g.get("db_kind") == "pg"
                     else """
                     INSERT INTO resident_rent_sheet_entries (
                         sheet_id,
                         resident_id,
+                        enrollment_id,
                         shelter_snapshot,
                         resident_name_snapshot,
                         level_snapshot,
@@ -281,12 +288,13 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                         created_at,
                         updated_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """
                 ),
                 (
                     sheet["id"],
                     resident_id,
+                    entry_enrollment_id,
                     shelter,
                     resident_name,
                     config.get("level_snapshot"),
@@ -404,6 +412,7 @@ def _post_monthly_charge_ledger_entries(
 
     for entry in entries:
         resident_id = entry["resident_id"]
+        entry_enrollment_id = entry.get("enrollment_id")
         sheet_entry_id = entry["id"]
 
         prior_balance = round(_float_value(entry.get("prior_balance")), 2)
@@ -453,6 +462,7 @@ def _post_monthly_charge_ledger_entries(
             if not existing_prior:
                 _insert_rent_ledger_entry(
                     resident_id=resident_id,
+                    enrollment_id=entry_enrollment_id,
                     shelter=shelter,
                     entry_date=charge_date,
                     entry_type="charge",
@@ -494,6 +504,7 @@ def _post_monthly_charge_ledger_entries(
             if not existing_charge:
                 _insert_rent_ledger_entry(
                     resident_id=resident_id,
+                    enrollment_id=entry_enrollment_id,
                     shelter=shelter,
                     entry_date=charge_date,
                     entry_type="charge",
@@ -535,6 +546,7 @@ def _post_monthly_charge_ledger_entries(
             if not existing_adjustment_charge:
                 _insert_rent_ledger_entry(
                     resident_id=resident_id,
+                    enrollment_id=entry_enrollment_id,
                     shelter=shelter,
                     entry_date=charge_date,
                     entry_type="adjustment",
@@ -575,6 +587,7 @@ def _post_monthly_charge_ledger_entries(
             if not existing_adjustment_credit:
                 _insert_rent_ledger_entry(
                     resident_id=resident_id,
+                    enrollment_id=entry_enrollment_id,
                     shelter=shelter,
                     entry_date=charge_date,
                     entry_type="credit",
@@ -620,6 +633,7 @@ def _post_monthly_charge_ledger_entries(
             if not existing_late_fee:
                 _insert_rent_ledger_entry(
                     resident_id=resident_id,
+                    enrollment_id=entry_enrollment_id,
                     shelter=shelter,
                     entry_date=late_fee_info["posting_date"],
                     entry_type="late_fee",
@@ -670,6 +684,7 @@ def _reconcile_payment_ledger_entry(
     rent_month: int,
 ) -> None:
     sheet_entry_id = entry["id"]
+    entry_enrollment_id = entry.get("enrollment_id")
     amount_paid_total = round(_float_value(entry.get("amount_paid")), 2)
     already_posted = _ledger_payment_total_for_sheet_entry(resident_id, sheet_entry_id)
     missing_payment = round(amount_paid_total - already_posted, 2)
@@ -684,6 +699,7 @@ def _reconcile_payment_ledger_entry(
 
     _insert_rent_ledger_entry(
         resident_id=resident_id,
+        enrollment_id=entry_enrollment_id,
         shelter=shelter,
         entry_date=payment_entry_date,
         entry_type="payment",
@@ -785,6 +801,7 @@ def register_routes(rent_tracking):
                 for entry in fresh_entries:
                     entry_id = entry["id"]
                     resident_id = entry["resident_id"]
+                    entry_enrollment_id = entry.get("enrollment_id")
 
                     payment_received = round(
                         max(0.0, _float_value(request.form.get(f"payment_received_{entry_id}"))),
@@ -911,6 +928,7 @@ def register_routes(rent_tracking):
                         payment_entry_date = paid_date or today_iso
                         _insert_rent_ledger_entry(
                             resident_id=resident_id,
+                            enrollment_id=entry_enrollment_id,
                             shelter=shelter,
                             entry_date=payment_entry_date,
                             entry_type="payment",
@@ -1165,4 +1183,3 @@ def register_routes(rent_tracking):
             ledger_entries=ledger_entries,
             ledger_summary=ledger_summary,
         )
-
