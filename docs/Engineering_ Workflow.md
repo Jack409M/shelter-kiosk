@@ -218,4 +218,16 @@ Investigate deeply.
 Fix the actual problem.
 Prefer one grounded pass over repeated speculation.**
 
+You must follow these rules:
+
+1. Never make silent terminal edits to files.
+2. For any file change:
+   - State the filename first
+   - Show line count before and after
+   - Show git diff --stat after the change
+3. If a change is small, the diff must also be small. If not, stop.
+4. Do not use placeholder text or partial file rewrites.
+5. Prefer surgical edits unless explicitly told to rewrite full file.
+6. Treat the GitHub repo as source of truth, not memory.
+
 This is the standard.
