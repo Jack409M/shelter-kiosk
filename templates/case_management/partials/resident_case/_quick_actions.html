@@ -1,8 +1,8 @@
-<div class="cmx-quick-grid">
+<div id="support-actions-anchor" class="cmx-quick-grid">
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Schedule Appointment</h3>
-      <div class="cmx-quick-subtitle">Create the official appointment record with both date and time from the resident workspace.</div>
+      <div class="cmx-quick-subtitle">Create the official appointment record without leaving the resident workspace.</div>
     </div>
 
     <form method="post" action="{{ url_for('case_management.add_appointment', resident_id=resident_id) }}">
@@ -34,7 +34,7 @@
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Quick Add UA</h3>
-      <div class="cmx-quick-subtitle">Record a UA from this page without leaving the resident workspace.</div>
+      <div class="cmx-quick-subtitle">Record a UA result from the resident workspace.</div>
     </div>
 
     <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident_id) }}">
@@ -75,65 +75,19 @@
     </form>
   </div>
 
-  {% set rent_card_style = "background:#f3dede; border:1px solid #d88484;" if rent_snapshot and rent_snapshot['band_key'] == 'red' else (rent_snapshot['card_style'] if rent_snapshot else "") %}
-  {% set rent_value_style = rent_snapshot['value_style'] if rent_snapshot else "font-weight:700;" %}
-  {% set inspection_card_style = "background:#f3dede; border:1px solid #d88484;" if inspection_snapshot and inspection_snapshot['band_key'] == 'red' else (inspection_snapshot['card_style'] if inspection_snapshot else "") %}
-  {% set inspection_value_style = inspection_snapshot['value_style'] if inspection_snapshot else "font-weight:700;" %}
-
-  <div class="cmx-card cmx-quick-card" style="padding:12px;">
-    <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">
-      <div style="{{ rent_card_style }} border-radius:14px; padding:12px; min-width:0;">
-        <div>
-          <h3 class="cmx-quick-title" style="font-size:0.94rem; margin-bottom:2px;">Rent Score</h3>
-          <div class="cmx-quick-subtitle" style="font-size:0.78rem; line-height:1.25;">
-            9 month weighted rent stability score. Current open month excluded.
-          </div>
-        </div>
-
-        <div style="display:flex; align-items:baseline; gap:4px; margin-top:8px; margin-bottom:10px;">
-          <span style="font-size:26px; line-height:1; {{ rent_value_style }}">{{ rent_snapshot['average_score_display'] if rent_snapshot else "—" }}</span>
-          <span style="font-size:15px; font-weight:700;">%</span>
-        </div>
-
-        <div class="cmx-button-row" style="margin-top:0;">
-  <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}" style="padding:9px 12px; font-size:0.88rem;">View Rent Summary</a>
-  <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_ledger', resident_id=resident_id) }}" style="padding:9px 12px; font-size:0.88rem;">View Rent Ledger</a>
-</div>
-      </div>
-
-      <div style="{{ inspection_card_style }} border-radius:14px; padding:12px; min-width:0;">
-        <div>
-          <h3 class="cmx-quick-title" style="font-size:0.94rem; margin-bottom:2px;">Living Area Score</h3>
-          <div class="cmx-quick-subtitle" style="font-size:0.78rem; line-height:1.25;">
-            {{ inspection_snapshot['lookback_months'] if inspection_snapshot else 9 }} month weighted living area stability score. Current open month excluded.
-          </div>
-        </div>
-
-        <div style="display:flex; align-items:baseline; gap:4px; margin-top:8px; margin-bottom:10px;">
-          <span style="font-size:26px; line-height:1; {{ inspection_value_style }}">{{ inspection_snapshot['average_score_display'] if inspection_snapshot else "—" }}</span>
-          <span style="font-size:15px; font-weight:700;">%</span>
-        </div>
-
-        <div class="cmx-button-row" style="margin-top:0;">
-          <a class="cmx-btn" href="{{ url_for('inspection_v2.resident_inspection_history', resident_id=resident_id) }}" style="padding:9px 12px; font-size:0.88rem;">View Inspection History</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="cmx-card cmx-quick-card">
     <div>
       <h3 class="cmx-quick-title">Write Ups</h3>
-      <div class="cmx-quick-subtitle">Create and review resident write ups from the case manager workspace.</div>
+      <div class="cmx-quick-subtitle">Open the resident write up workspace for behavior, safety, room, or program concerns.</div>
     </div>
 
     <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Status</span><span>Open, Resolved, Dismissed</span></div>
-      <div class="cmx-row-block"><span>Use</span><span>Behavior, safety, room, and program concerns</span></div>
+      <div class="cmx-row-block"><span>Current Restriction</span><span>{{ 'Yes' if has_disciplinary_block else 'No' }}</span></div>
+      <div class="cmx-row-block"><span>Open Area</span><span>Resident specific write ups</span></div>
     </div>
 
     <div class="cmx-button-row" style="margin-top:12px;">
-      <a class="cmx-btn" href="{{ url_for('writeups.writeups_list', resident_id=resident_id) }}">Open Write Ups</a>
+      <a class="cmx-btn" href="{{ url_for('writeups.resident_writeups', resident_id=resident_id) }}">Open Write Ups</a>
     </div>
   </div>
 
