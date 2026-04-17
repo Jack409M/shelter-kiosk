@@ -10,6 +10,7 @@
 {% set blockers = pr.get("blockers", []) %}
 {% set current_level = recovery_snapshot.program_level or "—" %}
 {% set ready_now = pr.get("ready") %}
+{% set can_apply = latest_review and latest_review.recommended_next_level %}
 
 <div class="cmx-page">
   <div class="cmx-shell">
@@ -29,14 +30,22 @@
       <section class="cmx-card">
         <h2 class="cmx-section-title">Apply Promotion</h2>
 
+        <div class="cmx-stack" style="margin-top:12px; margin-bottom:16px;">
+          <div class="cmx-row-block"><span>Current Level</span><span>{{ current_level }}</span></div>
+          <div class="cmx-row-block"><span>Recommended Next Level</span><span>{{ latest_review.recommended_next_level if latest_review and latest_review.recommended_next_level else "—" }}</span></div>
+          <div class="cmx-row-block"><span>Latest Review Date</span><span>{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else "—" }}</span></div>
+        </div>
+
+        {% if not can_apply %}
+          <div class="cmx-empty" style="margin-bottom:10px;">
+            Save a promotion review with a recommended level before applying.
+          </div>
+        {% endif %}
+
         <form method="post">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="form_action" value="apply_promotion">
-
-          <div class="cmx-field">
-            <label>Recommended Next Level</label>
-            <input type="text" name="recommended_next_level" required>
-          </div>
+          <input type="hidden" name="meeting_date" value="{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '' }}">
 
           <div class="cmx-field">
             <label>
@@ -46,7 +55,7 @@
           </div>
 
           <div class="cmx-button-row">
-            <button class="cmx-btn" type="submit">Apply Promotion</button>
+            <button class="cmx-btn" type="submit" {% if not can_apply %}disabled{% endif %}>Apply Promotion</button>
           </div>
         </form>
       </section>
