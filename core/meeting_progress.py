@@ -76,7 +76,7 @@ def _fetch_recovery_meeting_rows(
             params.append(parsed_start.isoformat() + "T00:00:00")
 
     recovery_meeting_filter = (
-        "COALESCE(is_recovery_meeting, FALSE) = TRUE"
+        "LOWER(COALESCE(is_recovery_meeting::text, 'false')) IN ('true', 't', '1', 'yes', 'y', 'on')"
         if ph == "%s"
         else "COALESCE(is_recovery_meeting, 0) = 1"
     )
