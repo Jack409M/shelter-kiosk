@@ -260,15 +260,21 @@ def promotion_review_view(resident_id: int):
 
         if form_action == "apply_promotion":
             confirmed = (request.form.get("confirm_apply_promotion") or "").strip().lower() in {"1", "true", "yes", "on"}
-            target_level = _normalized_level_text(values.get("recommended_next_level"))
+            latest_review = _load_latest_promotion_review(enrollment_id)
             current_level = _normalized_level_text(resident.get("program_level"))
+
+            if not latest_review:
+                flash("You must save a promotion review before applying promotion.", "error")
+                return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
+
+            target_level = _normalized_level_text(latest_review.get("recommended_next_level"))
 
             if not confirmed:
                 flash("Confirm the promotion before applying it.", "error")
                 return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
             if not target_level:
-                flash("Recommended next level is required before applying promotion.", "error")
+                flash("Latest review does not include a recommended next level.", "error")
                 return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
             if current_level and target_level == current_level:
@@ -277,6 +283,8 @@ def promotion_review_view(resident_id: int):
 
             now = utcnow_iso()
             action_items = f"Applied promotion from level {current_level or 'unknown'} to level {target_level}."
+            apply_values = dict(values)
+            apply_values["recommended_next_level"] = target_level
             try:
                 with db_transaction():
                     _apply_promotion_to_resident(
@@ -287,7 +295,7 @@ def promotion_review_view(resident_id: int):
                     _insert_promotion_review(
                         enrollment_id=enrollment_id,
                         staff_user_id=staff_user_id,
-                        values=values,
+                        values=apply_values,
                         now=now,
                         action_items=action_items,
                     )
