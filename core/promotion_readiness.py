@@ -36,8 +36,7 @@ def build_promotion_readiness(snapshot: dict[str, Any]) -> dict[str, Any]:
     no_writeups_last_30_days = snapshot.get("no_writeups_last_30_days")
     writeups_last_30_days = snapshot.get("writeups_last_30_days", 0)
 
-    # --- RAD placeholder ---
-    rad_complete = snapshot.get("rad_complete")  # you will wire later
+    rad_complete = _bool(snapshot.get("rad_complete"))
 
     checks = []
 
@@ -49,10 +48,6 @@ def build_promotion_readiness(snapshot: dict[str, Any]) -> dict[str, Any]:
                 "detail": detail,
             }
         )
-
-    # -------------------------
-    # LEVEL LOGIC
-    # -------------------------
 
     if level == 1:
         add("30 Days in Program", days_on_level >= 30, f"{days_on_level} days")
