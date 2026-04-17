@@ -1,0 +1,104 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <header class="cmx-header">
+      <div class="cmx-card cmx-header-main">
+        <h1 class="cmx-title">Exit And Follow Up</h1>
+        <p class="cmx-subtitle">{{ resident.last_name }}, {{ resident.first_name }}</p>
+      </div>
+
+      <div class="cmx-card cmx-actions">
+        <a href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" class="cmx-btn cmx-btn-full">
+          Back to Workspace
+        </a>
+      </div>
+    </header>
+
+    <div class="cmx-workspace-nav cmx-card">
+      <a class="cmx-workspace-tab" href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}">Workspace</a>
+      <a class="cmx-workspace-tab" href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">Promotion Review</a>
+      <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.exit_followup', resident_id=resident.id) }}">Exit and Follow Up</a>
+    </div>
+
+    <main class="cmx-workspace-main">
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <h2 class="cmx-section-title">Exit Summary</h2>
+        </div>
+
+        {% if exit_assessment %}
+          <div class="cmx-grid cmx-grid-2">
+            <div class="cmx-row-block"><span>Exit Category</span><span>{{ exit_assessment.exit_category or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Exit Reason</span><span>{{ exit_assessment.exit_reason or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Exit Date</span><span>{{ exit_assessment.date_exit_dwc or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Graduated</span><span>{{ exit_assessment.date_graduated or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Left AMA</span><span>{{ "Yes" if exit_assessment.leave_ama else "No" }}</span></div>
+            <div class="cmx-row-block"><span>Destination</span><span>{{ exit_assessment.leave_ama_destination or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Income At Exit</span><span>{{ exit_assessment.income_at_exit or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Education</span><span>{{ exit_assessment.education_at_exit or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Grit At Exit</span><span>{{ exit_assessment.grit_at_exit or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Car Obtained</span><span>{{ "Yes" if exit_assessment.received_car else "No" }}</span></div>
+          </div>
+
+          <div class="cmx-button-row" style="margin-top:16px;">
+            <a class="cmx-btn" href="{{ url_for('case_management.exit_assessment', resident_id=resident.id) }}">Edit Exit</a>
+          </div>
+        {% else %}
+          <div class="cmx-empty">No exit record found.</div>
+        {% endif %}
+      </section>
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <h2 class="cmx-section-title">6 Month Follow Up</h2>
+        </div>
+
+        {% if followup_6_month %}
+          <div class="cmx-stack">
+            <div class="cmx-row-block"><span>Date</span><span>{{ followup_6_month.followup_date or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Income</span><span>{{ followup_6_month.income_at_followup or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Sober</span><span>{{ "Yes" if followup_6_month.sober_at_followup else "No" }}</span></div>
+            <div class="cmx-row-block"><span>Notes</span><span>{{ followup_6_month.notes or "—" }}</span></div>
+          </div>
+
+          <div class="cmx-button-row" style="margin-top:16px;">
+            <a class="cmx-btn" href="{{ url_for('case_management.followup_form', resident_id=resident.id, followup_type='6_month') }}">Edit 6 Month Follow Up</a>
+          </div>
+        {% else %}
+          <div class="cmx-empty">No 6 month follow up recorded.</div>
+        {% endif %}
+      </section>
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <h2 class="cmx-section-title">1 Year Follow Up</h2>
+        </div>
+
+        {% if followup_1_year %}
+          <div class="cmx-stack">
+            <div class="cmx-row-block"><span>Date</span><span>{{ followup_1_year.followup_date or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Income</span><span>{{ followup_1_year.income_at_followup or "—" }}</span></div>
+            <div class="cmx-row-block"><span>Sober</span><span>{{ "Yes" if followup_1_year.sober_at_followup else "No" }}</span></div>
+            <div class="cmx-row-block"><span>Notes</span><span>{{ followup_1_year.notes or "—" }}</span></div>
+          </div>
+
+          <div class="cmx-button-row" style="margin-top:16px;">
+            <a class="cmx-btn" href="{{ url_for('case_management.followup_form', resident_id=resident.id, followup_type='1_year') }}">Edit 1 Year Follow Up</a>
+          </div>
+        {% else %}
+          <div class="cmx-empty">No 1 year follow up recorded.</div>
+        {% endif %}
+      </section>
+
+    </main>
+  </div>
+</div>
+{% endblock %}
