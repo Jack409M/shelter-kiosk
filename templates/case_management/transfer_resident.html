@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
 
 {% block content %}
 <div class="cmx-card">
@@ -9,6 +9,8 @@
   </div>
 
   <form method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
     <div class="cmx-field">
       <label>Current Shelter</label>
       <input type="text" value="{{ enrollment.shelter }}" readonly>
