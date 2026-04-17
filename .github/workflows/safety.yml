@@ -1,0 +1,28 @@
+name: Safety Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile all Python files
+        run: python -m compileall routes core db app.py
+
+      - name: Block placeholder text
+        run: |
+          if grep -R "\[RESTORED FULL FILE CONTENT\|\[TRUNCATED FOR BREVITY" .; then
+            echo "Placeholder text detected"
+            exit 1
+          fi
