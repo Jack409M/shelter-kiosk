@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from flask import has_request_context, session
+
+from core.audit import log_action
 from core.db import db_execute, db_fetchone, db_transaction
 from routes.case_management_parts.helpers import (
     assert_enrollment_belongs_to_resident,
@@ -55,6 +58,30 @@ class IntakeCreateResult:
 class IntakeUpdateResult:
     resident_id: int
     enrollment_id: int
+
+
+def _audit_staff_user_id() -> int | None:
+    if not has_request_context():
+        return None
+
+    raw_staff_user_id = session.get("staff_user_id")
+    if raw_staff_user_id in (None, ""):
+        return None
+
+    try:
+        return int(raw_staff_user_id)
+    except (TypeError, ValueError):
+        return None
+
+
+def _audit_shelter(default: str | None = None) -> str | None:
+    if has_request_context():
+        shelter = (session.get("shelter") or "").strip() or None
+        if shelter:
+            return shelter
+
+    cleaned_default = (default or "").strip()
+    return cleaned_default or None
 
 
 def duplicate_identity(duplicate: Any) -> tuple[str | None, str, str]:
@@ -222,6 +249,20 @@ def create_intake(
         if draft_id is not None:
             _complete_intake_draft(draft_id)
 
+    log_action(
+        "intake",
+        enrollment_id,
+        _audit_shelter(current_shelter),
+        _audit_staff_user_id(),
+        "create",
+        {
+            "resident_id": new_resident_id,
+            "enrollment_id": enrollment_id,
+            "resident_identifier": resident_identifier,
+            "draft_completed": 1 if draft_id is not None else 0,
+        },
+    )
+
     return IntakeCreateResult(
         resident_id=new_resident_id,
         resident_identifier=resident_identifier,
@@ -253,6 +294,19 @@ def create_intake_for_existing_resident(
         if draft_id is not None:
             _complete_intake_draft(draft_id)
 
+    log_action(
+        "intake",
+        enrollment_id,
+        _audit_shelter(current_shelter),
+        _audit_staff_user_id(),
+        "create_existing_resident",
+        {
+            "resident_id": existing_resident_id,
+            "enrollment_id": enrollment_id,
+            "draft_completed": 1 if draft_id is not None else 0,
+        },
+    )
+
     return enrollment_id
 
 
@@ -263,7 +317,7 @@ def update_intake(
     data: dict[str, Any],
 ) -> IntakeUpdateResult:
     # Enforce integrity BEFORE reading or writing
-    assert_enrollment_belongs_to_resident(
+    enrollment_row = assert_enrollment_belongs_to_resident(
         enrollment_id=enrollment_id,
         resident_id=resident_id,
     )
@@ -479,6 +533,23 @@ def update_intake(
             enrollment_id,
             selected_need_keys=data.get("entry_need_keys", []),
         )
+
+    enrollment_shelter = (
+        enrollment_row.get("shelter") if isinstance(enrollment_row, dict) else None
+    )
+    log_action(
+        "intake",
+        enrollment_id,
+        _audit_shelter(enrollment_shelter),
+        _audit_staff_user_id(),
+        "update",
+        {
+            "resident_id": resident_id,
+            "enrollment_id": enrollment_id,
+            "need_key_count": len(data.get("entry_need_keys", [])),
+            "program_status": data.get("program_status") or "",
+        },
+    )
 
     return IntakeUpdateResult(
         resident_id=resident_id,
