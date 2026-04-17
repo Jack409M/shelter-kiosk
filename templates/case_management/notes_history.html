@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <div class="cmx-card">
+      <h1 class="cmx-title">Progress Notes — {{ first_name }} {{ last_name }}</h1>
+      <div class="cmx-subtitle">Full case manager history with complete narrative detail</div>
+    </div>
+
+    <div class="cmx-card">
+      {% if notes %}
+        <div class="cmx-stack">
+          {% for note in notes %}
+            <div class="cmx-card">
+
+              <div class="cmx-row-block">
+                <strong>{{ note.meeting_date or "—" }}</strong>
+                <span>
+                  <a href="{{ url_for('case_management.edit_case_note', resident_id=resident_id, update_id=note.id) }}">Edit</a> |
+                  <a href="{{ url_for('case_management.progress_report_print', resident_id=resident_id, update_id=note.id) }}" target="_blank">Print</a>
+                </span>
+              </div>
+
+              <div class="cmx-summary-text">{{ note.overall_summary or note.notes or "No summary available." }}</div>
+
+              <details style="margin-top:10px;">
+                <summary class="cmx-muted">View Full Note</summary>
+                <div style="margin-top:10px;">
+                  {% include "case_management/partials/resident_case/_progress_note_content.html" %}
+                </div>
+              </details>
+
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="cmx-muted">No progress notes found.</p>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}
