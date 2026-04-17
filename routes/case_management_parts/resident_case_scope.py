@@ -18,7 +18,9 @@ def load_current_enrollment(resident_id: int, shelter: str):
             shelter,
             program_status,
             entry_date,
-            exit_date
+            exit_date,
+            rad_complete,
+            rad_completed_date
         FROM program_enrollments
         WHERE resident_id = {ph}
           AND {shelter_equals_sql("shelter")}
