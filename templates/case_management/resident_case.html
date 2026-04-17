@@ -78,6 +78,12 @@
 
       {% include "case_management/partials/resident_case/_workspace_header.html" %}
 
+      <div class="cmx-workspace-nav cmx-card no-print">
+        <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Workspace</a>
+        <span class="cmx-workspace-tab is-disabled">Promotion Review</span>
+        <span class="cmx-workspace-tab is-disabled">Exit and Follow Up</span>
+      </div>
+
       {% if is_deceased_case %}
         <div class="cmx-card" style="margin-bottom:18px; border:1px solid #f1b5b5; background:#fff7f7;">
           <div style="padding:16px 18px;">
@@ -85,7 +91,7 @@
               <div>
                 <h2 class="cmx-section-title" style="color:#8b1e1e;">Death In Program</h2>
                 <div class="cmx-section-subtitle" style="color:#7a2e2e;">
-                  This resident was closed as Administrative Exit — Deceased. Normal program actions are suppressed on this workspace.
+                  This resident was closed as Administrative Exit — Deceased. Active workspace actions are suppressed and the resident should be managed from the future Exit and Follow Up space.
                 </div>
               </div>
             </div>
@@ -100,42 +106,60 @@
         </div>
       {% endif %}
 
-      <main class="cmx-layout">
-        <section class="cmx-main">
-
-          {% if not is_deceased_case %}
-            <div style="border-radius:18px; background:#e2ecfb; padding:14px; border:1px solid #b7cbee; margin-bottom:18px;">
-              <div class="cmx-section-head" style="margin-bottom:12px;">
-                <div>
-                  <h2 class="cmx-section-title">Today’s Meeting</h2>
-                  <div class="cmx-section-subtitle">
-                    Save today’s meeting narrative, services, need work, and advancement review here.
-                  </div>
+      <main class="cmx-workspace-main">
+        {% if not is_deceased_case %}
+          <section class="cmx-card">
+            <div class="cmx-section-head">
+              <div>
+                <h2 class="cmx-section-title">Current Contact Note</h2>
+                <div class="cmx-section-subtitle">
+                  Record today’s resident contact, services provided, needs worked, and current action plan.
                 </div>
               </div>
-              {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
             </div>
+            {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
+          </section>
 
+          <section class="cmx-card">
+            <div class="cmx-section-head">
+              <div>
+                <h2 class="cmx-section-title">Current Program Profile</h2>
+                <div class="cmx-section-subtitle">
+                  Maintain the resident’s active recovery profile, level, step, sobriety details, and current support status.
+                </div>
+              </div>
+            </div>
+            {% include "case_management/partials/resident_case/_profile_editor.html" %}
+          </section>
+
+          <section class="cmx-card no-print">
+            <div class="cmx-section-head">
+              <div>
+                <h2 class="cmx-section-title">Support Actions</h2>
+                <div class="cmx-section-subtitle">
+                  Use quick forms and module links for core case manager actions without leaving the active workspace.
+                </div>
+              </div>
+            </div>
             {% include "case_management/partials/resident_case/_quick_actions.html" %}
+          </section>
+        {% endif %}
 
-            <div style="border-radius:18px; background:#eadcf8; padding:14px; border:1px solid #ccb4e8; margin-top:18px; margin-bottom:18px;">
-              <div class="cmx-section-head" style="margin-bottom:12px;">
-                <div>
-                  <h2 class="cmx-section-title">Resident Profile</h2>
-                  <div class="cmx-section-subtitle">
-                    Update recovery, sobriety, sponsor, employment, and income here. These changes save only with <strong>Save Profile</strong>.
-                  </div>
-                </div>
+        <section class="cmx-card">
+          <div class="cmx-section-head">
+            <div>
+              <h2 class="cmx-section-title">Support Status</h2>
+              <div class="cmx-section-subtitle">
+                Compact readouts for resident stability, restrictions, health, family, and supporting modules.
               </div>
-              {% include "case_management/partials/resident_case/_profile_editor.html" %}
             </div>
-          {% endif %}
-
-          {% include "case_management/partials/resident_case/_meeting_history.html" %}
-          {% include "case_management/partials/resident_case/_exit_panels.html" %}
+          </div>
+          {% include "case_management/partials/resident_case/_snapshot_rail.html" %}
         </section>
 
-        {% include "case_management/partials/resident_case/_snapshot_rail.html" %}
+        <section class="cmx-card">
+          {% include "case_management/partials/resident_case/_meeting_history.html" %}
+        </section>
       </main>
 
     {% endif %}
