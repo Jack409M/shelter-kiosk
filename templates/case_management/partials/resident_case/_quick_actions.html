@@ -77,6 +77,22 @@
 
   <div class="cmx-card cmx-quick-card">
     <div>
+      <h3 class="cmx-quick-title">Transfer Resident</h3>
+      <div class="cmx-quick-subtitle">Move this resident to another shelter without using promotion or exit.</div>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Current Shelter</span><span>{{ resident.shelter or '—' }}</span></div>
+      <div class="cmx-row-block"><span>Workflow</span><span>Close current enrollment and create a new active enrollment</span></div>
+    </div>
+
+    <div class="cmx-button-row" style="margin-top:12px;">
+      <a class="cmx-btn" href="{{ url_for('case_management.transfer_resident_form', resident_id=resident_id) }}">Open Transfer</a>
+    </div>
+  </div>
+
+  <div class="cmx-card cmx-quick-card">
+    <div>
       <h3 class="cmx-quick-title">Write Ups</h3>
       <div class="cmx-quick-subtitle">Open the resident write up workspace for behavior, safety, room, or program concerns.</div>
     </div>
