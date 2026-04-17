@@ -123,6 +123,34 @@ def _load_employment_income_settings(shelter: str) -> dict:
 
 
 
+def _build_hard_blockers(*, blockers: list[str], has_disciplinary_block: bool, disciplinary_flags: list[str], rent_snapshot: dict | None, employment_income_snapshot: dict | None, employment_stability_snapshot: dict | None) -> list[str]:
+    hard_blockers = list(blockers or [])
+
+    if has_disciplinary_block and disciplinary_flags:
+        hard_blockers.append("Active disciplinary restriction blocks promotion.")
+
+    if rent_snapshot and not rent_snapshot.get("passes_graduation"):
+        hard_blockers.append(
+            f"Rent stability below graduation threshold of {rent_snapshot.get('graduation_target', 95)}."
+        )
+
+    if employment_income_snapshot and not employment_income_snapshot.get("meets_goal"):
+        hard_blockers.append("Adjusted weighted income is below the graduation minimum.")
+
+    if employment_stability_snapshot and not employment_stability_snapshot.get("passes"):
+        hard_blockers.append("Employment stability is below the original job stability threshold.")
+
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for item in hard_blockers:
+        text = str(item or "").strip()
+        if text and text not in seen:
+            seen.add(text)
+            deduped.append(text)
+    return deduped
+
+
+
 def _load_latest_promotion_review(enrollment_id: int):
     ph = placeholder()
     return db_fetchone(
@@ -410,6 +438,16 @@ def promotion_review_view(resident_id: int):
         employment_status_snapshot=employment_status_snapshot,
     )
 
+    pr = recovery_snapshot.get("promotion_readiness") or {}
+    hard_blockers = _build_hard_blockers(
+        blockers=list(pr.get("blockers", []) or []),
+        has_disciplinary_block=len(disciplinary_flags) > 0,
+        disciplinary_flags=disciplinary_flags,
+        rent_snapshot=rent_snapshot,
+        employment_income_snapshot=employment_income_snapshot,
+        employment_stability_snapshot=employment_stability_snapshot,
+    )
+
     return render_template(
         "case_management/promotion_review.html",
         resident=resident,
@@ -423,6 +461,7 @@ def promotion_review_view(resident_id: int):
         employment_stability_snapshot=employment_stability_snapshot,
         disciplinary_flags=disciplinary_flags,
         has_disciplinary_block=len(disciplinary_flags) > 0,
+        hard_blockers=hard_blockers,
         latest_review=latest_review,
         promotion_history=promotion_history,
         saved=request.args.get("saved") == "1",
