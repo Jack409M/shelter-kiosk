@@ -61,6 +61,7 @@ from routes.case_management_parts.medications import (
     medication_form_view,
 )
 from routes.case_management_parts.progress_report import progress_report_print_view
+from routes.case_management_parts.promotion_review import promotion_review_view
 from routes.case_management_parts.recovery_profile import update_recovery_profile_view
 from routes.case_management_parts.resident_case import resident_case_view
 from routes.case_management_parts.ua_log import add_ua_log_view, edit_ua_log_view, ua_log_view
@@ -250,6 +251,12 @@ def update_recovery_profile(resident_id: int):
 @_view
 def income_support(resident_id: int):
     return income_support_view(resident_id)
+
+
+@case_management.get("/<int:resident_id>/promotion-review")
+@_view
+def promotion_review(resident_id: int):
+    return promotion_review_view(resident_id)
 
 
 @case_management.get("/<int:resident_id>/medications")
