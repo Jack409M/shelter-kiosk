@@ -63,7 +63,10 @@ def load_enrollment_baseline(enrollment_id: int | None) -> Row:
     row: Row = (
         db_fetchone(
             f"""
-        SELECT entry_date
+        SELECT
+            entry_date,
+            rad_complete,
+            rad_completed_date
         FROM program_enrollments
         WHERE id = {ph}
         LIMIT 1
