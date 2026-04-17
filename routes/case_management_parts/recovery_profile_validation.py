@@ -36,6 +36,8 @@ def _build_recovery_profile_data(form: Mapping[str, Any]) -> dict[str, Any]:
         "treatment_graduation_date": clean(form.get("treatment_graduation_date")),
         "drug_of_choice": clean(form.get("drug_of_choice")),
         "employment_notes": clean(form.get("employment_notes")),
+        "rad_complete": form.get("rad_complete"),
+        "rad_completed_date": clean(form.get("rad_completed_date")),
         "employment_status_current": clean(form.get("employment_status_current")),
         "employer_name": clean(form.get("employer_name")),
         "employment_type_current": clean(form.get("employment_type_current")),
@@ -163,6 +165,22 @@ def _validate_employment_date_order(data: dict[str, Any], errors: list[str]) -> 
         errors.append("Previous Job End Date cannot be after Current Job Start Date.")
 
 
+def _validate_rad_fields(data: dict[str, Any], errors: list[str]) -> None:
+    data["rad_complete"] = _yes_no_to_bool(clean(data.get("rad_complete")))
+    rad_completed_date = _validate_optional_date_field(
+        data,
+        "rad_completed_date",
+        "RAD Completed Date",
+        errors,
+    )
+
+    if data["rad_complete"] is True and rad_completed_date is None:
+        errors.append("RAD Completed Date is required when RAD Complete is Yes.")
+
+    if data["rad_complete"] is not True:
+        data["rad_completed_date"] = None
+
+
 def validate_recovery_profile_form(form: Mapping[str, Any]) -> tuple[dict[str, Any], list[str]]:
     data = _build_recovery_profile_data(form)
     errors: list[str] = []
@@ -203,5 +221,6 @@ def validate_recovery_profile_form(form: Mapping[str, Any]) -> tuple[dict[str, A
     _validate_supervisor_phone(data, errors)
     _validate_employment_fields(data, errors)
     _validate_employment_date_order(data, errors)
+    _validate_rad_fields(data, errors)
 
     return data, errors
