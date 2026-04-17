@@ -15,6 +15,8 @@
   {% set resolved_level_start_date = rs_level_start_date or enrollment_entry_date or "" %}
   {% set resolved_sobriety_date = rs_sobriety_date or intake_sobriety_date or enrollment_entry_date or "" %}
   {% set resolved_treatment_graduation_date = rs_treatment_graduation_date or intake_treatment_grad_date or "" %}
+  {% set resolved_rad_complete = enrollment.get("rad_complete") if enrollment else none %}
+  {% set resolved_rad_completed_date = enrollment.get("rad_completed_date") if enrollment else "" %}
   {% set eis = employment_income_snapshot if employment_income_snapshot is defined else {} %}
   {% set ess = employment_stability_snapshot if employment_stability_snapshot is defined else {} %}
   {% set resolved_employment_status = employment_status_snapshot if employment_status_snapshot is defined else (rs_employment_status or "") %}
@@ -139,6 +141,26 @@
         <div class="cmx-field">
           <label>Recovery Notes</label>
           <textarea name="employment_notes" rows="4">{{ rs_employment_notes or '' }}</textarea>
+        </div>
+      </div>
+
+      <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">RAD Complete</div>
+          <div class="cmx-field">
+            <select name="rad_complete">
+              <option value="" {% if resolved_rad_complete is none %}selected{% endif %}>—</option>
+              <option value="yes" {% if resolved_rad_complete is sameas true or resolved_rad_complete == 1 %}selected{% endif %}>Yes</option>
+              <option value="no" {% if resolved_rad_complete is sameas false or resolved_rad_complete == 0 %}selected{% endif %}>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cmx-field-card">
+          <div class="cmx-field-card-label">RAD Completed Date</div>
+          <div class="cmx-field">
+            <input type="date" name="rad_completed_date" value="{{ resolved_rad_completed_date or '' }}">
+          </div>
         </div>
       </div>
     </div>
