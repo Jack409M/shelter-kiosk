@@ -80,7 +80,7 @@
 
       <div class="cmx-workspace-nav cmx-card no-print">
         <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Workspace</a>
-        <span class="cmx-workspace-tab is-disabled">Promotion Review</span>
+        <a class="cmx-workspace-tab" href="{{ url_for('case_management.promotion_review', resident_id=resident_id) }}">Promotion Review</a>
         <span class="cmx-workspace-tab is-disabled">Exit and Follow Up</span>
       </div>
 
