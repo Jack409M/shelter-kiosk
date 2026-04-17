@@ -1,4 +1,11 @@
-<aside class="cmx-side">
+{% set pr = recovery_snapshot.get("promotion_readiness", {}) if recovery_snapshot else {} %}
+{% set meeting_status = recovery_snapshot.get("meeting_status_label", "Not Started") if recovery_snapshot else "Not Started" %}
+{% set total_meetings = recovery_snapshot.get("total_meetings", 0) if recovery_snapshot else 0 %}
+{% set meetings_this_week = recovery_snapshot.get("meetings_this_week", 0) if recovery_snapshot else 0 %}
+{% set rad_classes_attended = recovery_snapshot.get("rad_classes_attended", 0) if recovery_snapshot else 0 %}
+{% set rad_completed = recovery_snapshot.get("rad_completed") if recovery_snapshot else none %}
+
+<div class="cmx-grid cmx-grid-2">
   {% if has_disciplinary_block %}
     <div class="cmx-card" style="background:#fff2f2; border:1px solid #d38a8a;">
       <div class="cmx-side-card-head">
@@ -7,22 +14,10 @@
       </div>
 
       <div class="cmx-stack">
-        {% for item in disciplinary_flags %}
-          <div
-            class="cmx-chip-block"
-            style="border:1px solid #d38a8a; background:#fff7f7;"
-          >
-            <div style="font-weight:700; color:#8a1f1f;">
-              {{ item.label }}
-            </div>
-            <div style="margin-top:4px; font-size:13px; color:#6f1c1c;">
-              {{ item.detail }}
-            </div>
-            {% if item.summary %}
-              <div style="margin-top:6px; font-size:12px; color:#6b5560;">
-                {{ item.summary }}
-              </div>
-            {% endif %}
+        {% for item in disciplinary_flags[:3] %}
+          <div class="cmx-chip-block" style="border:1px solid #d38a8a; background:#fff7f7;">
+            <div style="font-weight:700; color:#8a1f1f;">{{ item.label }}</div>
+            <div style="margin-top:4px; font-size:13px; color:#6f1c1c;">{{ item.detail }}</div>
           </div>
         {% endfor %}
       </div>
@@ -35,21 +30,163 @@
 
   <div class="cmx-card">
     <div class="cmx-side-card-head">
-      <h3>Case Snapshot</h3>
-      {% if not is_deceased_case %}
-        <a class="cmx-side-action" href="#meeting-workspace-form">Today’s Meeting</a>
+      <h3>Meeting Progress</h3>
+      <a class="cmx-side-action" href="#case-note-scroll-lane">History</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Status</span><span>{{ meeting_status }}</span></div>
+      <div class="cmx-row-block"><span>Total Meetings</span><span>{{ total_meetings }}</span></div>
+      <div class="cmx-row-block"><span>This Week</span><span>{{ meetings_this_week }}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card" style="background:#f5f7fb; border:1px solid #cfd8e3;">
+    <div class="cmx-side-card-head">
+      <h3>Promotion Readiness</h3>
+      <span class="cmx-side-action" style="cursor:default;">Future Page</span>
+    </div>
+
+    <div style="margin-bottom:10px;">
+      {% if pr.ready %}
+        <span style="background:#dcefe1; border:1px solid #9bc8a6; padding:4px 10px; border-radius:999px; font-weight:700; color:#1f6b33;">
+          READY
+        </span>
+      {% else %}
+        <span style="background:#fdecec; border:1px solid #d38a8a; padding:4px 10px; border-radius:999px; font-weight:700; color:#8a1f1f;">
+          NOT READY
+        </span>
       {% endif %}
     </div>
 
     <div class="cmx-stack">
+      {% for c in pr.checks[:4] if pr.checks %}
+        <div class="cmx-row-block">
+          <span>{{ c.label }}</span>
+          <span>{% if c.ok %}✔{% else %}✖{% endif %}</span>
+        </div>
+      {% endfor %}
+      <div class="cmx-row-block"><span>RAD</span><span>{% if rad_completed %}Complete{% else %}{{ rad_classes_attended }}/30{% endif %}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card" style="{{ attendance_hours_snapshot['card_style'] }}">
+    <div class="cmx-side-card-head">
+      <h3>Attendance Hours</h3>
+      <a class="cmx-side-action" href="#support-actions-anchor">Quick Actions</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Average</span><span style="{{ attendance_hours_snapshot['value_style'] }}">{{ attendance_hours_snapshot['average_percent_display'] }}</span></div>
+      <div class="cmx-row-block"><span>Pass Threshold</span><span>{{ attendance_hours_snapshot['weighted_pass_threshold'] }}%</span></div>
+      <div class="cmx-row-block"><span>Current Status</span><span>{{ attendance_hours_snapshot['current_week_status_label'] }}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card" style="{{ rent_snapshot['card_style'] }}">
+    <div class="cmx-side-card-head">
+      <h3>Rent Stability</h3>
+      <a class="cmx-side-action" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}">History</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Average</span><span style="{{ rent_snapshot['value_style'] }}">{{ rent_snapshot['average_score_display'] }}</span></div>
+      <div class="cmx-row-block"><span>Graduation Target</span><span>95+</span></div>
+      <div class="cmx-row-block"><span>Ready</span><span>{{ "Yes" if rent_snapshot['passes_graduation'] else "No" }}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card" style="{{ inspection_snapshot['card_style'] }}">
+    <div class="cmx-side-card-head">
+      <h3>Living Area Stability</h3>
+      <a class="cmx-side-action" href="{{ url_for('inspection_v2.resident_inspection_history', resident_id=resident_id) }}">History</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Average</span><span style="{{ inspection_snapshot['value_style'] }}">{{ inspection_snapshot['average_score_display'] }}</span></div>
+      <div class="cmx-row-block"><span>Threshold</span><span>{{ inspection_snapshot['passing_threshold'] }}</span></div>
+      <div class="cmx-row-block"><span>Goal Met</span><span>{{ "Yes" if inspection_snapshot['passes_goal'] else "No" }}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Current Needs</h3>
+      {% if not is_deceased_case %}
+        <a class="cmx-side-action" href="#meeting-workspace-form">Work In Meeting</a>
+      {% endif %}
+    </div>
+
+    {% if open_needs %}
+      <div class="cmx-stack">
+        <div class="cmx-row-block"><span>Open Needs</span><span>{{ open_needs|length }}</span></div>
+        {% for need in open_needs[:3] %}
+          <div class="cmx-chip-block">{{ need["need_label"] }}</div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="cmx-muted">No open needs are currently on file.</p>
+    {% endif %}
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Appointments</h3>
+      <a class="cmx-side-action" href="#case-note-scroll-lane">Meeting History</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Last Meeting</span><span>{{ last_meeting_date or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Next Appointment</span><span>{{ next_appt or "—" }}</span></div>
+    </div>
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Health</h3>
+      <a class="cmx-side-action" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">Medication List</a>
+    </div>
+
+    <div class="cmx-stack">
+      <div class="cmx-row-block"><span>Active Medications</span><span>{{ rs_medications|length }}</span></div>
+      <div class="cmx-row-block"><span>Recent UA Entries</span><span>{{ rs_ua_rows|length }}</span></div>
+    </div>
+
+    <div class="cmx-button-row" style="margin-top:12px;">
+      <a class="cmx-btn-muted" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">UA History</a>
+    </div>
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Family and Children</h3>
+      <a class="cmx-side-action" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>
+    </div>
+
+    {% if children %}
+      <div class="cmx-stack">
+        <div class="cmx-row-block"><span>Active Children</span><span>{{ children|length }}</span></div>
+        {% set latest_child = children[0] %}
+        <div class="cmx-chip-block">
+          <strong>{{ latest_child["child_name"] or "Unnamed child" }}</strong>
+          {% if latest_child.services and latest_child.services[0]["service_type_display"] %}
+            <br>{{ latest_child.services[0]["service_type_display"] }}
+          {% endif %}
+        </div>
+      </div>
+    {% else %}
+      <p class="cmx-muted">No child records are on file.</p>
+    {% endif %}
+  </div>
+
+  <div class="cmx-card">
+    <div class="cmx-side-card-head">
+      <h3>Case Controls</h3>
+    </div>
+
+    <div class="cmx-stack">
       <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Level</span><span>{{ rs_level or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Step</span><span>{{ rs_step if rs_step is not none and rs_step != "" else "—" }}</span></div>
-      <div class="cmx-row-block"><span>Open Needs</span><span>{{ header_open_needs_count }}</span></div>
-      <div class="cmx-row-block"><span>Days Sober</span><span>{{ rs_days_sober_today if rs_days_sober_today is not none else "—" }}</span></div>
-      <div class="cmx-row-block"><span>Sobriety Date</span><span>{{ rs_sobriety_date or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Sponsor</span><span>{{ rs_sponsor or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Employment</span><span>{{ rs_employment_status or "—" }}</span></div>
+      <div class="cmx-row-block"><span>Resident Status</span><span>{{ "Active" if resident_active else "Inactive" }}</span></div>
       {% if is_deceased_case %}
         <div class="cmx-row-block"><span>Exit Reason</span><span>{{ exit_reason or "Deceased" }}</span></div>
       {% endif %}
@@ -75,437 +212,4 @@
       </div>
     {% endif %}
   </div>
-
-  {% set mp = recovery_snapshot.get("meeting_progress", {}) if recovery_snapshot else {} %}
-  {% set meeting_status = recovery_snapshot.get("meeting_status_label", "Not Started") %}
-  {% set completed_90 = recovery_snapshot.get("completed_90_in_90") %}
-  {% set completed_116 = recovery_snapshot.get("completed_116_meetings") %}
-  {% set completed_168 = recovery_snapshot.get("completed_168_meetings") %}
-  {% set weekly_required = recovery_snapshot.get("required_weekly_meetings") %}
-  {% set weekly_met = recovery_snapshot.get("weekly_requirement_met") %}
-  {% set pace_display = recovery_snapshot.get("pace_percent_display", "0.0%") %}
-  {% set total_meetings = recovery_snapshot.get("total_meetings", 0) %}
-  {% set meetings_this_week = recovery_snapshot.get("meetings_this_week", 0) %}
-  {% set meetings_last_30_days = recovery_snapshot.get("meetings_last_30_days", 0) %}
-  {% set days_in_program = recovery_snapshot.get("days_in_program", 0) %}
-  {% set expected_meetings_so_far = recovery_snapshot.get("expected_meetings_so_far", 0) %}
-  {% set projected_90_day_total = recovery_snapshot.get("projected_90_day_total", 0) %}
-  {% set meetings_remaining_to_90 = recovery_snapshot.get("meetings_remaining_to_90", 0) %}
-  {% set meeting_weekly_rows = recovery_snapshot.get("meeting_weekly_rows", []) %}
-  {% set has_meeting_data = recovery_snapshot.get("has_meeting_data", False) %}
-
-  {% if completed_90 %}
-    {% set meeting_card_style = "background:#eef8f0; border:1px solid #9bc8a6;" %}
-    {% set meeting_pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#dcefe1; border:1px solid #9bc8a6; color:#1f6b33; font-weight:700; font-size:12px; line-height:1;" %}
-    {% set meeting_value_style = "color:#1f6b33; font-weight:700;" %}
-  {% elif has_meeting_data %}
-    {% set meeting_card_style = "background:#fff3c7; border:1px solid #ddc56d;" %}
-    {% set meeting_pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#fff3c7; border:1px solid #ddc56d; color:#7a6500; font-weight:700; font-size:12px; line-height:1;" %}
-    {% set meeting_value_style = "color:#7a6500; font-weight:700;" %}
-  {% else %}
-    {% set meeting_card_style = "background:#eef2f6; border:1px solid #c7d2de;" %}
-    {% set meeting_pill_style = "display:inline-flex; align-items:center; justify-content:center; min-width:48px; padding:4px 10px; border-radius:999px; background:#eef2f6; border:1px solid #c7d2de; color:#46607a; font-weight:700; font-size:12px; line-height:1;" %}
-    {% set meeting_value_style = "color:#46607a; font-weight:700;" %}
-  {% endif %}
-
-  <div class="cmx-card" style="{{ meeting_card_style }}">
-    <div class="cmx-side-card-head">
-      <h3>Meeting Progress</h3>
-      <a class="cmx-side-action" href="#meeting-progress-weekly-detail">Weekly Detail</a>
-    </div>
-
-    <div style="margin-bottom:10px;">
-      <span style="{{ meeting_pill_style }}">{{ meeting_status }}</span>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block">
-        <span>Total Meetings</span>
-        <span style="{{ meeting_value_style }}">{{ total_meetings }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>This Week</span>
-        <span>{{ meetings_this_week }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>Last 30 Days</span>
-        <span>{{ meetings_last_30_days }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>Days In Program</span>
-        <span>{{ days_in_program }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>Expected So Far</span>
-        <span>{{ expected_meetings_so_far }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>90 In 90 Pace</span>
-        <span style="{{ meeting_value_style }}">{{ pace_display }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>Projected 90 Day Total</span>
-        <span>{{ projected_90_day_total }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>Remaining To 90</span>
-        <span>{{ meetings_remaining_to_90 }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>90 Meetings Complete</span>
-        <span>{{ "Yes" if completed_90 else "No" }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>116 Meetings Complete</span>
-        <span>{{ "Yes" if completed_116 else "No" }}</span>
-      </div>
-
-      <div class="cmx-row-block">
-        <span>168 Meetings Complete</span>
-        <span>{{ "Yes" if completed_168 else "No" }}</span>
-      </div>
-
-      {% if weekly_required %}
-        <div class="cmx-row-block">
-          <span>Weekly Requirement</span>
-          <span>{{ meetings_this_week }} / {{ weekly_required }}</span>
-        </div>
-        <div class="cmx-row-block">
-          <span>Weekly Requirement Met</span>
-          <span>
-            {% if weekly_met is sameas true %}
-              Yes
-            {% elif weekly_met is sameas false %}
-              No
-            {% else %}
-              —
-            {% endif %}
-          </span>
-        </div>
-      {% endif %}
-    </div>
-
-    <div style="margin-top:10px; font-size:12px; color:#666;">
-      Haven promotion and pass review can now use real meeting counts instead of note text.
-    </div>
-
-    <div id="meeting-progress-weekly-detail" style="margin-top:12px;">
-      <details>
-        <summary style="cursor:pointer; font-weight:700;">Show weekly meeting totals</summary>
-
-        {% if meeting_weekly_rows %}
-          <div style="margin-top:10px; display:grid; gap:8px;">
-            {% for week in meeting_weekly_rows[:12] %}
-              <div
-                class="cmx-chip-block"
-                style="border:1px solid #d9dee7; background:#fff;"
-              >
-                <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
-                  <div>
-                    <strong>Week starting {{ week.get("week_start") or "—" }}</strong>
-                  </div>
-                  <div style="text-align:right;">
-                    <strong>{{ week.get("meeting_count", 0) }}</strong><br>
-                    <span style="font-size:12px;">meetings</span>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="cmx-muted" style="margin-top:10px;">No recovery meeting entries are available yet.</p>
-        {% endif %}
-      </details>
-    </div>
-  </div>
-
-  {% set pr = recovery_snapshot.get("promotion_readiness", {}) %}
-
-  <div class="cmx-card" style="background:#f5f7fb; border:1px solid #cfd8e3;">
-    <div class="cmx-side-card-head">
-      <h3>Promotion Readiness</h3>
-    </div>
-
-    <div style="margin-bottom:10px;">
-      {% if pr.ready %}
-        <span style="background:#dcefe1; border:1px solid #9bc8a6; padding:4px 10px; border-radius:999px; font-weight:700; color:#1f6b33;">
-          READY FOR PROMOTION
-        </span>
-      {% else %}
-        <span style="background:#fdecec; border:1px solid #d38a8a; padding:4px 10px; border-radius:999px; font-weight:700; color:#8a1f1f;">
-          NOT READY
-        </span>
-      {% endif %}
-    </div>
-
-    <div class="cmx-stack">
-      {% for c in pr.checks %}
-        <div class="cmx-row-block">
-          <span>{{ c.label }}</span>
-          <span>
-            {% if c.ok %}
-              ✔
-            {% else %}
-              ✖
-            {% endif %}
-            {% if c.detail %}
-              ({{ c.detail }})
-            {% endif %}
-          </span>
-        </div>
-      {% endfor %}
-    </div>
-
-    {% if not pr.ready and pr.blockers %}
-      <div style="margin-top:10px; font-size:12px; color:#8a1f1f;">
-        Blockers: {{ pr.blockers | join(", ") }}
-      </div>
-    {% endif %}
-  </div>
-
-  <div class="cmx-card" style="{{ attendance_hours_snapshot['card_style'] }}">
-    <div class="cmx-side-card-head">
-      <h3>Attendance Hours</h3>
-      <a class="cmx-side-action" href="#attendance-hours-weekly-detail">Weekly Detail</a>
-    </div>
-
-    <div style="margin-bottom:10px;">
-      <span style="{{ attendance_hours_snapshot['pill_style'] }}">{{ attendance_hours_snapshot['band_label'] }}</span>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block">
-        <span>9 Month Weighted Average</span>
-        <span style="{{ attendance_hours_snapshot['value_style'] }}">{{ attendance_hours_snapshot['average_percent_display'] }}</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Weighted Pass</span>
-        <span>{{ "Yes" if attendance_hours_snapshot['weighted_passes'] else "No" }}</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Pass Threshold</span>
-        <span>{{ attendance_hours_snapshot['weighted_pass_threshold'] }}%</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Eligible Weeks Used</span>
-        <span>{{ attendance_hours_snapshot['eligible_weeks_count'] }}</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Weeks Excluded Before Entry</span>
-        <span>{{ attendance_hours_snapshot['excluded_pre_entry_weeks_count'] }}</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Most Recent Completed Week</span>
-        <span>{{ attendance_hours_snapshot['current_week_status_label'] }}</span>
-      </div>
-    </div>
-
-    <div style="margin-top:10px; font-size:12px; color:#666;">
-      {{ attendance_hours_snapshot['average_label'] }}
-    </div>
-
-    <div id="attendance-hours-weekly-detail" style="margin-top:12px;">
-      <details>
-        <summary style="cursor:pointer; font-weight:700;">Show weekly progress hours and grade</summary>
-
-        {% if attendance_hours_snapshot['weekly_rows'] %}
-          <div style="margin-top:10px; display:grid; gap:8px;">
-            {% for week in attendance_hours_snapshot['weekly_rows'] %}
-              <div
-                class="cmx-chip-block"
-                style="
-                  border:1px solid #d9dee7;
-                  background:#fff;
-                  {% if week.get('status_class') == 'pass' %}
-                    border-color:#9bc8a6; background:#eef8f0;
-                  {% else %}
-                    border-color:#e2a0a0; background:#fff0f0;
-                  {% endif %}
-                "
-              >
-                <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
-                  <div>
-                    <strong>{{ week.get("week_label") or "Week" }}</strong><br>
-                    <span style="font-size:12px; color:#666;">
-                      {% if week.get("included_in_average") %}
-                        Included in 9 month average
-                      {% else %}
-                        Excluded because resident was not yet in program
-                      {% endif %}
-                    </span>
-                  </div>
-                  <div style="text-align:right;">
-                    <strong>{{ week.get("percent_grade_display") or "—" }}</strong><br>
-                    <span style="font-size:12px;">{{ week.get("status_label") or "—" }}</span>
-                  </div>
-                </div>
-
-                <div style="margin-top:8px; display:grid; gap:4px;">
-                  <div class="cmx-row-block">
-                    <span>Productive</span>
-                    <span>{{ week.get("productive_hours", 0) }} / {{ week.get("productive_required_hours", 35) }}</span>
-                  </div>
-                  <div class="cmx-row-block">
-                    <span>Work</span>
-                    <span>{{ week.get("work_hours", 0) }} / {{ week.get("work_required_hours", 29) }}</span>
-                  </div>
-                  {% if week.get("short_text") %}
-                    <div style="font-size:12px; color:#666;">{{ week.get("short_text") }}</div>
-                  {% endif %}
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        {% else %}
-          <p class="cmx-muted" style="margin-top:10px;">No weekly attendance hour detail is available yet.</p>
-        {% endif %}
-      </details>
-    </div>
-  </div>
-
-  <div class="cmx-card" style="{{ rent_snapshot['card_style'] }}">
-    <div class="cmx-side-card-head">
-      <h3>Rent Stability</h3>
-      <a class="cmx-side-action" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}">View History</a>
-    </div>
-
-    <div style="margin-bottom:10px;">
-      <span style="{{ rent_snapshot['pill_style'] }}">{{ rent_snapshot['band_label'] }}</span>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block">
-        <span>9 Month Weighted Average</span>
-        <span style="{{ rent_snapshot['value_style'] }}">{{ rent_snapshot['average_score_display'] }}</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Graduation Target</span>
-        <span>95+</span>
-      </div>
-      <div class="cmx-row-block">
-        <span>Graduation Ready</span>
-        <span>{{ "Yes" if rent_snapshot['passes_graduation'] else "No" }}</span>
-      </div>
-    </div>
-
-    <div style="margin-top:10px; font-size:12px; color:#666;">
-      Based on the last {{ rent_snapshot['lookback_months'] }} completed months.
-    </div>
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Open Needs</h3>
-      {% if not is_deceased_case %}
-        <a class="cmx-side-action" href="#meeting-workspace-form">Work In Meeting</a>
-      {% endif %}
-    </div>
-
-    {% if open_needs %}
-      <div class="cmx-stack">
-        {% for need in open_needs[:6] %}
-          <div class="cmx-row-block">
-            <span>{{ need["need_label"] }}</span>
-            <span>Open</span>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="cmx-muted">
-        {% if is_deceased_case %}
-          Open needs are not active because this case is closed as deceased.
-        {% else %}
-          All identified intake needs have been resolved or no open needs are currently on file.
-        {% endif %}
-      </p>
-    {% endif %}
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Appointments And Meetings</h3>
-      <a class="cmx-side-action" href="#case-note-scroll-lane">Meeting History</a>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Last Meeting</span><span>{{ last_meeting_date or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Next Appointment</span><span>{{ next_appt or "—" }}</span></div>
-    </div>
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Recent UA</h3>
-      <a class="cmx-side-action" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">View History</a>
-    </div>
-
-    {% if rs_ua_rows %}
-      <div class="cmx-stack">
-        {% for row in rs_ua_rows[:3] %}
-          <div class="cmx-row-block">
-            <span>{{ row["ua_date"] or "—" }}</span>
-            <span>{{ row["result_display"] or "—" }}</span>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="cmx-muted">No UA entries are recorded for this resident.</p>
-    {% endif %}
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Active Medications</h3>
-      <a class="cmx-side-action" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">View All</a>
-    </div>
-
-    {% if rs_medications %}
-      <div class="cmx-stack">
-        {% for med in rs_medications[:4] %}
-          <div class="cmx-row-block">
-            <span>{{ med["medication_name"] or "Medication" }}</span>
-            <span>{{ med["dosage"] or "—" }}</span>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="cmx-muted">No active medications are recorded.</p>
-    {% endif %}
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Children</h3>
-      <a class="cmx-side-action" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>
-    </div>
-
-    {% if children %}
-      <div class="cmx-stack">
-        <div class="cmx-row-block">
-          <span>Active Children</span>
-          <span>{{ children|length }}</span>
-        </div>
-
-        {% set latest_child = children[0] %}
-        <div class="cmx-chip-block">
-          <strong>Latest child record</strong><br>
-          {{ latest_child["child_name"] or "Unnamed child" }}
-          {% if latest_child.services and latest_child.services[0]["service_type_display"] %}
-            <br>{{ latest_child.services[0]["service_type_display"] }}
-          {% endif %}
-        </div>
-      </div>
-    {% else %}
-      <p class="cmx-muted">No child records are on file.</p>
-    {% endif %}
-  </div>
-</aside>
+</div>
