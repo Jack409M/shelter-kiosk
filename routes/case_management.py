@@ -15,6 +15,7 @@ from routes.case_management_parts.budget_sessions import (
     edit_budget_session_view,
 )
 from routes.case_management_parts.exit import exit_assessment_form_view, submit_exit_assessment_view
+from routes.case_management_parts.exit_followup import exit_followup_view
 from routes.case_management_parts.family import (
     child_services_view,
     delete_child_service_view,
@@ -356,6 +357,12 @@ def progress_report_print(resident_id: int, update_id: int):
 @_view
 def promotion_review(resident_id: int):
     return promotion_review_view(resident_id)
+
+
+@case_management.get("/<int:resident_id>/exit-followup")
+@_view
+def exit_followup(resident_id: int):
+    return exit_followup_view(resident_id)
 
 
 @case_management.get("/<int:resident_id>/notes-history")
