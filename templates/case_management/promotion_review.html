@@ -2,33 +2,387 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
+<style>
+  .cmx-promo-banner {
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid #9bc8a6;
+    background: #eef8f0;
+    color: #1f6b33;
+    font-weight: 700;
+  }
+
+  .cmx-promo-summary,
+  .cmx-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .cmx-promo-card,
+  .cmx-metric-box {
+    border: 1px solid #d9e1ea;
+    border-radius: 14px;
+    padding: 14px 16px;
+    background: #fff;
+  }
+
+  .cmx-promo-card-title,
+  .cmx-metric-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #5d6776;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+
+  .cmx-promo-card-value,
+  .cmx-metric-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #223a5e;
+    line-height: 1.1;
+  }
+
+  .cmx-promo-card-sub,
+  .cmx-metric-sub {
+    margin-top: 6px;
+    font-size: 0.88rem;
+    color: #5d6776;
+    line-height: 1.45;
+  }
+
+  .cmx-grade-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+    padding: 12px 0;
+    border-bottom: 1px solid #e7edf3;
+  }
+
+  .cmx-grade-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .cmx-grade-label {
+    font-weight: 700;
+    color: #223a5e;
+  }
+
+  .cmx-grade-detail {
+    margin-top: 4px;
+    font-size: 0.88rem;
+    color: #5d6776;
+  }
+
+  .cmx-grade-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .cmx-grade-pass {
+    background: #dcefe1;
+    border: 1px solid #9bc8a6;
+    color: #1f6b33;
+  }
+
+  .cmx-grade-fail {
+    background: #ffd6d6;
+    border: 1px solid #e2a0a0;
+    color: #9a1f1f;
+  }
+
+  .cmx-promo-readonly {
+    min-height: 44px;
+    border: 1px solid #d9e1ea;
+    border-radius: 10px;
+    background: #f9fbfd;
+    padding: 10px 12px;
+    color: #223a5e;
+    white-space: pre-wrap;
+  }
+
+  .cmx-hard-blockers {
+    border: 2px solid #d9534f;
+    margin-bottom: 16px;
+  }
+
+  .cmx-hard-blocker-item {
+    background: #fdecea;
+    border: 1px solid #e0a1a1;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+
+  .cmx-hard-clear {
+    background: #e8f5e9;
+    border: 1px solid #a5d6a7;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .cmx-promo-summary,
+    .cmx-metric-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
 {% endblock %}
 
 {% block content %}
 {% set pr = recovery_snapshot.promotion_readiness or {} %}
 {% set checks = pr.get("checks", []) %}
+{% set blockers = pr.get("blockers", []) %}
 {% set current_level = recovery_snapshot.program_level or "—" %}
 {% set ready_now = pr.get("ready") %}
+{% set can_apply = latest_review and latest_review.recommended_next_level %}
 
 <div class="cmx-page">
   <div class="cmx-shell">
 
-    <section class="cmx-card" style="border:2px solid #d9534f; margin-bottom:16px;">
-      <h2 class="cmx-section-title">Hard Blockers</h2>
+    {% if saved %}
+      <div class="cmx-promo-banner">Promotion review saved successfully.</div>
+    {% endif %}
+    {% if applied %}
+      <div class="cmx-promo-banner">Promotion applied successfully.</div>
+    {% endif %}
 
-      {% if hard_blockers %}
-        {% for b in hard_blockers %}
-          <div style="background:#fdecea; border:1px solid #e0a1a1; padding:10px; border-radius:8px; margin-bottom:8px;">
-            <strong style="color:#9a1f1f;">BLOCKER:</strong> {{ b }}
+    <div class="cmx-workspace-nav cmx-card">
+      <a class="cmx-workspace-tab" href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}">Workspace</a>
+      <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">Promotion Review</a>
+      <a class="cmx-workspace-tab" href="{{ url_for('case_management.exit_followup', resident_id=resident.id) }}">Exit and Follow Up</a>
+    </div>
+
+    <main class="cmx-workspace-main">
+
+      <section class="cmx-card cmx-hard-blockers">
+        <h2 class="cmx-section-title">Hard Blockers</h2>
+
+        {% if hard_blockers %}
+          {% for b in hard_blockers %}
+            <div class="cmx-hard-blocker-item">
+              <strong style="color:#9a1f1f;">BLOCKER:</strong> {{ b }}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="cmx-hard-clear">
+            <strong style="color:#2e7d32;">CLEAR:</strong> No hard blockers present.
           </div>
-        {% endfor %}
-      {% else %}
-        <div style="background:#e8f5e9; border:1px solid #a5d6a7; padding:10px; border-radius:8px;">
-          <strong style="color:#2e7d32;">CLEAR:</strong> No hard blockers present.
-        </div>
-      {% endif %}
-    </section>
+        {% endif %}
+      </section>
 
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <div>
+            <h2 class="cmx-section-title">Promotion Summary</h2>
+            <div class="cmx-section-subtitle">Promotion readiness signals using the original grading models.</div>
+          </div>
+        </div>
+
+        <div class="cmx-promo-summary">
+          <div class="cmx-promo-card">
+            <div class="cmx-promo-card-title">Current Level</div>
+            <div class="cmx-promo-card-value">{{ current_level }}</div>
+            <div class="cmx-promo-card-sub">Current resident program level.</div>
+          </div>
+
+          <div class="cmx-promo-card">
+            <div class="cmx-promo-card-title">Engine Decision</div>
+            <div class="cmx-promo-card-value">{% if ready_now %}Ready{% else %}Not Ready{% endif %}</div>
+            <div class="cmx-promo-card-sub">{{ checks|length }} readiness checks reviewed.</div>
+          </div>
+
+          <div class="cmx-promo-card" style="{{ employment_income_snapshot.card_style if employment_income_snapshot.card_style is defined else '' }}">
+            <div class="cmx-promo-card-title">Adjusted Weighted Income</div>
+            <div class="cmx-promo-card-value">{{ employment_income_snapshot.readiness_percent_display }}</div>
+            <div class="cmx-promo-card-sub">
+              Weighted stable income: {{ '$%.2f'|format(employment_income_snapshot.income_value) if employment_income_snapshot.income_value is not none else '—' }}<br>
+              Graduation minimum: {{ '$%.2f'|format(employment_income_snapshot.graduation_minimum) }}
+            </div>
+          </div>
+
+          <div class="cmx-promo-card" style="{{ employment_stability_snapshot.card_style }}">
+            <div class="cmx-promo-card-title">Employment Stability</div>
+            <div class="cmx-promo-card-value">{{ employment_stability_snapshot.label }}</div>
+            <div class="cmx-promo-card-sub">
+              Status: {{ employment_status_snapshot|replace('_', ' ')|title if employment_status_snapshot else '—' }}<br>
+              Upward protected: {{ 'Yes' if employment_stability_snapshot.upward_protected else 'No' }}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <div>
+            <h2 class="cmx-section-title">Functions And Grades</h2>
+            <div class="cmx-section-subtitle">Criterion by criterion grading from the promotion readiness engine.</div>
+          </div>
+        </div>
+
+        {% if checks %}
+          {% for c in checks %}
+            <div class="cmx-grade-row">
+              <div>
+                <div class="cmx-grade-label">{{ c.label }}</div>
+                {% if c.detail %}
+                  <div class="cmx-grade-detail">{{ c.detail }}</div>
+                {% endif %}
+              </div>
+              <span class="cmx-grade-pill {% if c.ok %}cmx-grade-pass{% else %}cmx-grade-fail{% endif %}">{% if c.ok %}Pass{% else %}Fail{% endif %}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="cmx-empty">No promotion readiness criteria were returned for this resident.</div>
+        {% endif %}
+
+        {% if blockers %}
+          <div class="cmx-stack" style="margin-top:14px;">
+            {% for blocker in blockers %}
+              <div class="cmx-row-block">
+                <span>{{ blocker }}</span>
+                <span class="cmx-grade-pill cmx-grade-fail">Open</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <div>
+            <h2 class="cmx-section-title">Operational Scorecards</h2>
+            <div class="cmx-section-subtitle">Original color banded models restored for promotion decisions.</div>
+          </div>
+        </div>
+
+        <div class="cmx-metric-grid">
+          <div class="cmx-metric-box" style="{{ attendance_hours_snapshot.card_style if attendance_hours_snapshot else '' }}">
+            <div class="cmx-metric-label">Attendance</div>
+            <div class="cmx-metric-value" style="{{ attendance_hours_snapshot.value_style if attendance_hours_snapshot else '' }}">{{ attendance_hours_snapshot.average_percent_display if attendance_hours_snapshot else '—' }}</div>
+            <div class="cmx-metric-sub">
+              Band: {{ attendance_hours_snapshot.band_label if attendance_hours_snapshot else '—' }}<br>
+              Current week: {{ attendance_hours_snapshot.current_week_percent_display if attendance_hours_snapshot else '—' }} • {{ attendance_hours_snapshot.current_week_status_label if attendance_hours_snapshot else '—' }}
+            </div>
+          </div>
+
+          <div class="cmx-metric-box" style="{{ rent_snapshot.card_style if rent_snapshot else '' }}">
+            <div class="cmx-metric-label">Rent Stability</div>
+            <div class="cmx-metric-value" style="{{ rent_snapshot.value_style if rent_snapshot else '' }}">{{ rent_snapshot.average_score_display if rent_snapshot else '—' }}</div>
+            <div class="cmx-metric-sub">
+              Band: {{ rent_snapshot.band_label if rent_snapshot else '—' }}<br>
+              Graduation target: {{ rent_snapshot.graduation_target if rent_snapshot else '—' }}<br>
+              Ready: {{ 'Yes' if rent_snapshot and rent_snapshot.passes_graduation else 'No' }}
+            </div>
+          </div>
+
+          <div class="cmx-metric-box" style="{{ inspection_snapshot.card_style if inspection_snapshot else '' }}">
+            <div class="cmx-metric-label">Inspection Stability</div>
+            <div class="cmx-metric-value" style="{{ inspection_snapshot.value_style if inspection_snapshot else '' }}">{{ inspection_snapshot.average_score_display if inspection_snapshot else '—' }}</div>
+            <div class="cmx-metric-sub">
+              Band: {{ inspection_snapshot.band_label if inspection_snapshot else '—' }}<br>
+              Threshold: {{ inspection_snapshot.passing_threshold if inspection_snapshot else '—' }}<br>
+              Goal met: {{ 'Yes' if inspection_snapshot and inspection_snapshot.passes_goal else 'No' }}
+            </div>
+          </div>
+
+          <div class="cmx-metric-box" style="{{ employment_stability_snapshot.card_style }}">
+            <div class="cmx-metric-label">Employment Stability</div>
+            <div class="cmx-metric-value">{{ employment_stability_snapshot.label }}</div>
+            <div class="cmx-metric-sub">
+              Current job days: {{ employment_stability_snapshot.current_job_days if employment_stability_snapshot.current_job_days is not none else '—' }}<br>
+              Continuous days: {{ employment_stability_snapshot.continuous_days if employment_stability_snapshot.continuous_days is not none else '—' }}<br>
+              Gap days: {{ employment_stability_snapshot.gap_days if employment_stability_snapshot.gap_days is not none else '—' }}
+            </div>
+          </div>
+
+          <div class="cmx-metric-box" style="{{ employment_income_snapshot.card_style if employment_income_snapshot.card_style is defined else 'background:#fff; border:1px solid #d9e1ea;' }}">
+            <div class="cmx-metric-label">Adjusted Weighted Income</div>
+            <div class="cmx-metric-value">{{ employment_income_snapshot.readiness_percent_display }}</div>
+            <div class="cmx-metric-sub">
+              Weighted stable income: {{ '$%.2f'|format(employment_income_snapshot.income_value) if employment_income_snapshot.income_value is not none else '—' }}<br>
+              Graduation minimum: {{ '$%.2f'|format(employment_income_snapshot.graduation_minimum) }}<br>
+              Meets goal: {{ 'Yes' if employment_income_snapshot.meets_goal else 'No' }}
+            </div>
+          </div>
+
+          <div class="cmx-metric-box">
+            <div class="cmx-metric-label">Disciplinary Status</div>
+            <div class="cmx-metric-value">{% if has_disciplinary_block %}Blocked{% else %}Clear{% endif %}</div>
+            <div class="cmx-metric-sub">
+              {% if has_disciplinary_block %}
+                {{ disciplinary_flags|length }} active restriction{{ '' if disciplinary_flags|length == 1 else 's' }}
+              {% else %}
+                No active restrictions.
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cmx-card">
+        <h2 class="cmx-section-title">Apply Promotion</h2>
+
+        <div class="cmx-stack" style="margin-top:12px; margin-bottom:16px;">
+          <div class="cmx-row-block"><span>Current Level</span><span>{{ current_level }}</span></div>
+          <div class="cmx-row-block"><span>Recommended Next Level</span><span>{{ latest_review.recommended_next_level if latest_review and latest_review.recommended_next_level else '—' }}</span></div>
+          <div class="cmx-row-block"><span>Latest Review Date</span><span>{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '—' }}</span></div>
+        </div>
+
+        {% if not can_apply %}
+          <div class="cmx-empty" style="margin-bottom:10px;">Save a promotion review with a recommended level before applying.</div>
+        {% endif %}
+
+        <form method="post">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="form_action" value="apply_promotion">
+          <input type="hidden" name="meeting_date" value="{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '' }}">
+
+          <div class="cmx-field">
+            <label>
+              <input type="checkbox" name="confirm_apply_promotion">
+              Confirm promotion action (this will update the resident level)
+            </label>
+          </div>
+
+          <div class="cmx-button-row">
+            <button class="cmx-btn" type="submit" {% if not can_apply %}disabled{% endif %}>Apply Promotion</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="cmx-card">
+        <h2 class="cmx-section-title">Promotion History</h2>
+
+        {% if promotion_history %}
+          <div class="cmx-stack">
+            {% for h in promotion_history %}
+              <div class="cmx-row-block">
+                <span>{{ h.meeting_date or h.created_at }} • {{ h.staff_name }}</span>
+                <span>{% if h.is_apply_action %}Applied{% else %}Review{% endif %}</span>
+              </div>
+              <div class="cmx-promo-readonly">{{ h.action_items or h.notes or h.staff_review_note or '—' }}</div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="cmx-empty">No promotion history yet.</div>
+        {% endif %}
+      </section>
+
+    </main>
   </div>
 </div>
 {% endblock %}
