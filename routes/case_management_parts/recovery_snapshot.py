@@ -74,7 +74,7 @@ def load_recovery_snapshot(
             "sponsor_active": resident.get("sponsor_active"),
             "step_work_active": resident.get("step_work_active"),
             "monthly_income": resident.get("monthly_income"),
-            "rad_complete": resident.get("rad_completed"),
+            "rad_complete": enrollment_baseline.get("rad_complete"),
             "writeups_last_30_days": writeups_last_30_days,
             "no_writeups_last_30_days": writeups_last_30_days == 0,
         }
