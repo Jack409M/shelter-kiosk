@@ -60,14 +60,13 @@ from routes.case_management_parts.medications import (
     edit_medication_view,
     medication_form_view,
 )
+from routes.case_management_parts.notes_history import notes_history_view
 from routes.case_management_parts.progress_report import progress_report_print_view
+from routes.case_management_parts.promotion_review import promotion_review_view
 from routes.case_management_parts.recovery_profile import update_recovery_profile_view
 from routes.case_management_parts.resident_case import resident_case_view
 from routes.case_management_parts.ua_log import add_ua_log_view, edit_ua_log_view, ua_log_view
 from routes.case_management_parts.update import add_case_note_view, edit_case_note_view
-
-# ✅ ADD THIS IMPORT
-from routes.case_management_parts.notes_history import notes_history_view
 
 
 def _view(view_func):
@@ -353,7 +352,12 @@ def progress_report_print(resident_id: int, update_id: int):
     return progress_report_print_view(resident_id, update_id)
 
 
-# ✅ ADD THIS ROUTE
+@case_management.route("/<int:resident_id>/promotion-review", methods=["GET", "POST"])
+@_view
+def promotion_review(resident_id: int):
+    return promotion_review_view(resident_id)
+
+
 @case_management.get("/<int:resident_id>/notes-history")
 @_view
 def notes_history(resident_id: int):
