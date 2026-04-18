@@ -104,6 +104,42 @@ def _parse_entry_date(value: str | None) -> date | None:
             return None
 
 
+def _safe_float(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except Exception:
+        return None
+    if parsed <= 0:
+        return None
+    return parsed
+
+
+def _normalized_hours_for_row(row: dict[str, Any]) -> float | None:
+    logged_hours = _safe_float(row.get("logged_hours"))
+    if logged_hours is not None:
+        return round(logged_hours, 4)
+
+    start_local = row.get("obligation_start_local")
+    planned_end_local = row.get("obligation_end_local")
+    actual_end_local = row.get("actual_obligation_end_local")
+    end_local = actual_end_local or planned_end_local
+
+    if not start_local or not end_local:
+        return None
+    if end_local <= start_local:
+        return None
+
+    duration_hours = round((end_local - start_local).total_seconds() / 3600.0, 4)
+    if duration_hours <= 0:
+        return None
+
+    return duration_hours
+
+
+def _row_week_anchor_local(row: dict[str, Any]) -> datetime | None:
+    return row.get("obligation_start_local") or row.get("event_time_local")
+
+
 def _completed_week_windows(
     lookback_weeks: int = ATTENDANCE_LOOKBACK_WEEKS,
 ) -> list[dict[str, Any]]:
@@ -155,19 +191,9 @@ def _summarize_rows(
 
     for row in rows or []:
         destination = (row.get("destination") or "").strip()
+        duration_hours = _normalized_hours_for_row(row)
 
-        start_local = row.get("obligation_start_local")
-        planned_end_local = row.get("obligation_end_local")
-        actual_end_local = row.get("actual_obligation_end_local")
-        end_local = actual_end_local or planned_end_local
-
-        if not start_local or not end_local:
-            continue
-        if end_local <= start_local:
-            continue
-
-        duration_hours = round((end_local - start_local).total_seconds() / 3600.0, 4)
-        if duration_hours <= 0:
+        if duration_hours is None:
             continue
 
         category = category_map.get(destination)
@@ -266,35 +292,59 @@ def _fetch_attendance_rows_for_window(
         """
         SELECT
             id,
+            event_type,
+            event_time,
             destination,
             obligation_start_time,
             obligation_end_time,
-            actual_obligation_end_time
+            actual_obligation_end_time,
+            logged_hours
         FROM attendance_events
         WHERE resident_id = %s
           AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(%s))
-          AND event_type = %s
-          AND obligation_start_time IS NOT NULL
-          AND obligation_start_time >= %s
-          AND obligation_start_time < %s
-        ORDER BY obligation_start_time ASC, id ASC
+          AND (
+                (
+                    event_type = %s
+                    AND obligation_start_time IS NOT NULL
+                    AND obligation_start_time >= %s
+                    AND obligation_start_time < %s
+                )
+             OR (
+                    event_type = %s
+                    AND event_time >= %s
+                    AND event_time < %s
+                )
+          )
+        ORDER BY event_time ASC, id ASC
         """
         if g.get("db_kind") == "pg"
         else """
         SELECT
             id,
+            event_type,
+            event_time,
             destination,
             obligation_start_time,
             obligation_end_time,
-            actual_obligation_end_time
+            actual_obligation_end_time,
+            logged_hours
         FROM attendance_events
         WHERE resident_id = ?
           AND LOWER(TRIM(COALESCE(shelter, ''))) = LOWER(TRIM(?))
-          AND event_type = ?
-          AND obligation_start_time IS NOT NULL
-          AND obligation_start_time >= ?
-          AND obligation_start_time < ?
-        ORDER BY obligation_start_time ASC, id ASC
+          AND (
+                (
+                    event_type = ?
+                    AND obligation_start_time IS NOT NULL
+                    AND obligation_start_time >= ?
+                    AND obligation_start_time < ?
+                )
+             OR (
+                    event_type = ?
+                    AND event_time >= ?
+                    AND event_time < ?
+                )
+          )
+        ORDER BY event_time ASC, id ASC
         """
     )
 
@@ -304,6 +354,9 @@ def _fetch_attendance_rows_for_window(
             resident_id,
             shelter,
             "check_out",
+            start_utc_iso,
+            end_utc_iso,
+            "resident_daily_log",
             start_utc_iso,
             end_utc_iso,
         ),
@@ -316,12 +369,16 @@ def _fetch_attendance_rows_for_window(
         else:
             normalized = {
                 "id": row[0],
-                "destination": row[1],
-                "obligation_start_time": row[2],
-                "obligation_end_time": row[3],
-                "actual_obligation_end_time": row[4],
+                "event_type": row[1],
+                "event_time": row[2],
+                "destination": row[3],
+                "obligation_start_time": row[4],
+                "obligation_end_time": row[5],
+                "actual_obligation_end_time": row[6],
+                "logged_hours": row[7],
             }
 
+        normalized["event_time_local"] = _utc_iso_to_local(normalized.get("event_time"))
         normalized["obligation_start_local"] = _utc_iso_to_local(
             normalized.get("obligation_start_time")
         )
@@ -404,10 +461,10 @@ def build_attendance_hours_snapshot(
 
     rows_by_week: dict[str, list[dict[str, Any]]] = {}
     for row in all_rows:
-        start_local = row.get("obligation_start_local")
-        if not start_local:
+        week_anchor = _row_week_anchor_local(row)
+        if not week_anchor:
             continue
-        week_key = _start_of_week_local(start_local).date().isoformat()
+        week_key = _start_of_week_local(week_anchor).date().isoformat()
         rows_by_week.setdefault(week_key, []).append(row)
 
     entry_date = _parse_entry_date(enrollment_entry_date)
