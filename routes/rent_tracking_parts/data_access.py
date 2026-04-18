@@ -5,6 +5,10 @@ from flask import g, session
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import assert_enrollment_belongs_to_resident
+from routes.resident_parts.resident_transfer_helpers import (
+    available_apartment_options_for_shelter,
+    normalize_apartment_number_local,
+)
 
 from .dates import _current_year_month, _month_label, _today_chicago
 from .utils import _float_value, _placeholder
@@ -22,6 +26,31 @@ def _active_residents_for_shelter(shelter: str):
         """,
         (shelter,),
     )
+
+
+def _available_rent_setup_apartment_options(
+    shelter: str, resident_id: int | None = None
+) -> list[str]:
+    normalized_shelter = (shelter or "").strip().lower()
+    available = list(available_apartment_options_for_shelter(normalized_shelter))
+
+    if resident_id is None:
+        return available
+
+    active_config = _active_rent_config_for_resident(resident_id, normalized_shelter)
+    current_apartment = normalize_apartment_number_local(
+        normalized_shelter,
+        (active_config or {}).get("apartment_number_snapshot") if active_config else None,
+    )
+
+    if current_apartment and current_apartment not in available:
+        available.append(current_apartment)
+
+    def _sort_key(value: str):
+        text = str(value)
+        return (0, int(text)) if text.isdigit() else (1, text)
+
+    return sorted(available, key=_sort_key)
 
 
 def _active_rent_config_for_resident(resident_id: int, shelter: str):
@@ -660,3 +689,4 @@ def _ledger_balance_breakdown_for_resident(resident_id: int) -> dict:
         "current_credit": summary["current_credit"],
         "current_balance": summary["current_balance"],
     }
+    
