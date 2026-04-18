@@ -20,6 +20,7 @@ from .calculations import (
 )
 from .data_access import (
     _active_residents_for_shelter,
+    _available_rent_setup_apartment_options,
     _ensure_default_rent_config,
     _history_rows_for_resident,
     _insert_rent_ledger_entry,
@@ -1024,7 +1025,7 @@ def register_routes(rent_tracking):
             (resident_id, shelter),
         )
 
-        apartment_options = _apartment_options_for_shelter(shelter)
+        apartment_options = _available_rent_setup_apartment_options(shelter, resident_id)
 
         if request.method == "POST":
             level_snapshot = (request.form.get("level_snapshot") or "").strip() or None
