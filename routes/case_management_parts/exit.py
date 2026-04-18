@@ -294,6 +294,22 @@ def _upsert_exit_assessment(enrollment_id: int, data: dict[str, Any]) -> None:
     )
 
 
+def _release_active_rent_config(resident_id: int, shelter: str, exit_date: str) -> None:
+    ph = placeholder()
+    now = utcnow_iso()
+    db_execute(
+        f"""
+        UPDATE resident_rent_configs
+        SET effective_end_date = {ph},
+            updated_at = {ph}
+        WHERE resident_id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+          AND COALESCE(effective_end_date, '') = ''
+        """,
+        (exit_date, now, resident_id, shelter),
+    )
+
+
 def _close_enrollment_and_resident(
     enrollment_id: int,
     resident_id: int,
@@ -301,6 +317,7 @@ def _close_enrollment_and_resident(
 ) -> None:
     ph = placeholder()
     now = utcnow_iso()
+    shelter = normalize_shelter_name(session.get("shelter"))
 
     db_execute(
         f"""
@@ -312,6 +329,9 @@ def _close_enrollment_and_resident(
         """,
         (data["date_exit_dwc"], now, enrollment_id),
     )
+
+    if shelter:
+        _release_active_rent_config(resident_id, shelter, data["date_exit_dwc"])
 
     active_other = db_fetchone(
         f"""
