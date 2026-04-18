@@ -51,62 +51,51 @@ def _active_checkout_categories_for_shelter(shelter: str) -> list[dict[str, Any]
     return categories
 
 
-def _active_aa_na_child_options_for_shelter(shelter: str) -> list[dict[str, Any]]:
-    shelter_key = (shelter or "").strip().lower()
-    rows = load_active_kiosk_activity_child_options_for_shelter(
-        shelter_key,
-        AA_NA_PARENT_ACTIVITY_KEY,
-    )
-
-    options: list[dict[str, Any]] = []
-    for row in rows or []:
-        option_label = str(row.get("option_label") or "").strip()
-        if not option_label:
-            continue
-        options.append(dict(row))
-
-    return options
-
-
-def _active_volunteer_child_options_for_shelter(shelter: str) -> list[dict[str, Any]]:
-    shelter_key = (shelter or "").strip().lower()
-    rows = load_active_kiosk_activity_child_options_for_shelter(
-        shelter_key,
-        VOLUNTEER_PARENT_ACTIVITY_KEY,
-    )
-
-    options: list[dict[str, Any]] = []
-    for row in rows or []:
-        option_label = str(row.get("option_label") or "").strip()
-        if not option_label:
-            continue
-        options.append(dict(row))
-
-    return options
-
-
-def _checkin_template_context(
-    *,
+def _active_child_options_by_parent_for_shelter(
     shelter: str,
-    actual_end_required: bool,
-    prior_activity_label: str,
-    resident_code_value: str = "",
-) -> dict[str, Any]:
-    return {
-        "shelter": shelter,
-        "actual_end_required": actual_end_required,
-        "prior_activity_label": prior_activity_label,
-        "resident_code_value": resident_code_value,
+    checkout_categories: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    shelter_key = (shelter or "").strip().lower()
+    parent_keys = {
+        str(item.get("activity_key") or "").strip()
+        for item in checkout_categories
+        if str(item.get("activity_key") or "").strip()
     }
+
+    child_options_by_parent: dict[str, list[dict[str, Any]]] = {}
+    for parent_key in sorted(parent_keys):
+        rows = load_active_kiosk_activity_child_options_for_shelter(
+            shelter_key,
+            parent_key,
+        )
+
+        options: list[dict[str, Any]] = []
+        for row in rows or []:
+            option_label = str(row.get("option_label") or "").strip()
+            if not option_label:
+                continue
+            options.append(dict(row))
+
+        if options:
+            child_options_by_parent[parent_key] = options
+
+    return child_options_by_parent
 
 
 def _checkout_template_context(
     *,
     shelter: str,
     checkout_categories: list[dict[str, Any]],
-    aa_na_child_options: list[dict[str, Any]],
-    volunteer_child_options: list[dict[str, Any]],
+    child_options_by_parent: dict[str, list[dict[str, Any]]],
 ) -> dict[str, Any]:
+    aa_na_child_options = child_options_by_parent.get(AA_NA_PARENT_ACTIVITY_KEY, [])
+    volunteer_child_options = child_options_by_parent.get(VOLUNTEER_PARENT_ACTIVITY_KEY, [])
+
+    child_option_labels_by_parent = {
+        parent_key: [str(item.get("option_label") or "").strip() for item in rows if str(item.get("option_label") or "").strip()]
+        for parent_key, rows in child_options_by_parent.items()
+    }
+
     return {
         "shelter": shelter,
         "checkout_categories": checkout_categories,
@@ -116,6 +105,7 @@ def _checkout_template_context(
         "volunteer_parent_activity_key": VOLUNTEER_PARENT_ACTIVITY_KEY,
         "volunteer_parent_activity_label": VOLUNTEER_PARENT_ACTIVITY_LABEL,
         "volunteer_child_options": volunteer_child_options,
+        "child_option_labels_by_parent": child_option_labels_by_parent,
     }
 
 
@@ -173,12 +163,10 @@ def _render_checkin(
 ) -> tuple[str, int] | str:
     rendered = render_template(
         "kiosk_checkin.html",
-        **_checkin_template_context(
-            shelter=shelter,
-            actual_end_required=actual_end_required,
-            prior_activity_label=prior_activity_label,
-            resident_code_value=resident_code_value,
-        ),
+        shelter=shelter,
+        actual_end_required=actual_end_required,
+        prior_activity_label=prior_activity_label,
+        resident_code_value=resident_code_value,
     )
     if status_code == 200:
         return rendered
@@ -189,8 +177,7 @@ def _render_checkout(
     *,
     shelter: str,
     checkout_categories: list[dict[str, Any]],
-    aa_na_child_options: list[dict[str, Any]],
-    volunteer_child_options: list[dict[str, Any]],
+    child_options_by_parent: dict[str, list[dict[str, Any]]],
     status_code: int = 200,
 ) -> tuple[str, int] | str:
     rendered = render_template(
@@ -198,8 +185,7 @@ def _render_checkout(
         **_checkout_template_context(
             shelter=shelter,
             checkout_categories=checkout_categories,
-            aa_na_child_options=aa_na_child_options,
-            volunteer_child_options=volunteer_child_options,
+            child_options_by_parent=child_options_by_parent,
         ),
     )
     if status_code == 200:
@@ -545,8 +531,10 @@ def kiosk_checkout(shelter: str):
     try:
         kiosk_enabled = _kiosk_enabled()
         checkout_categories = _active_checkout_categories_for_shelter(shelter_key)
-        aa_na_child_options = _active_aa_na_child_options_for_shelter(shelter_key)
-        volunteer_child_options = _active_volunteer_child_options_for_shelter(shelter_key)
+        child_options_by_parent = _active_child_options_by_parent_for_shelter(
+            shelter_key,
+            checkout_categories,
+        )
     except Exception:
         current_app.logger.exception(
             "Failed to load kiosk checkout dependencies for shelter=%s", shelter_key
@@ -560,8 +548,7 @@ def kiosk_checkout(shelter: str):
         return _render_checkout(
             shelter=display_shelter,
             checkout_categories=checkout_categories,
-            aa_na_child_options=aa_na_child_options,
-            volunteer_child_options=volunteer_child_options,
+            child_options_by_parent=child_options_by_parent,
         )
 
     resident_code = str(request.form.get("resident_code") or "").strip()
@@ -571,6 +558,7 @@ def kiosk_checkout(shelter: str):
     volunteer_community_service_option = str(
         request.form.get("volunteer_community_service_option") or ""
     ).strip()
+    child_option_value = str(request.form.get("child_option_value") or "").strip()
 
     start_time_hour = str(request.form.get("start_time_hour") or "").strip()
     start_time_minute = str(request.form.get("start_time_minute") or "").strip()
@@ -599,8 +587,7 @@ def kiosk_checkout(shelter: str):
             render_response=_render_checkout(
                 shelter=display_shelter,
                 checkout_categories=checkout_categories,
-                aa_na_child_options=aa_na_child_options,
-                volunteer_child_options=volunteer_child_options,
+                child_options_by_parent=child_options_by_parent,
                 status_code=429,
             ),
         )
@@ -615,8 +602,7 @@ def kiosk_checkout(shelter: str):
             render_response=_render_checkout(
                 shelter=display_shelter,
                 checkout_categories=checkout_categories,
-                aa_na_child_options=aa_na_child_options,
-                volunteer_child_options=volunteer_child_options,
+                child_options_by_parent=child_options_by_parent,
                 status_code=429,
             ),
         )
@@ -634,8 +620,7 @@ def kiosk_checkout(shelter: str):
             render_response=_render_checkout(
                 shelter=display_shelter,
                 checkout_categories=checkout_categories,
-                aa_na_child_options=aa_na_child_options,
-                volunteer_child_options=volunteer_child_options,
+                child_options_by_parent=child_options_by_parent,
                 status_code=429,
             ),
         )
@@ -648,8 +633,7 @@ def kiosk_checkout(shelter: str):
             render_response=_render_checkout(
                 shelter=display_shelter,
                 checkout_categories=checkout_categories,
-                aa_na_child_options=aa_na_child_options,
-                volunteer_child_options=volunteer_child_options,
+                child_options_by_parent=child_options_by_parent,
                 status_code=429,
             ),
         )
@@ -661,6 +645,7 @@ def kiosk_checkout(shelter: str):
         aa_na_meeting_1=aa_na_meeting_1,
         aa_na_meeting_2=aa_na_meeting_2,
         volunteer_community_service_option=volunteer_community_service_option,
+        child_option_value=child_option_value,
         start_time_hour=start_time_hour,
         start_time_minute=start_time_minute,
         start_time_ampm=start_time_ampm,
@@ -672,8 +657,7 @@ def kiosk_checkout(shelter: str):
         expected_back_ampm=expected_back_ampm,
         note=note,
         checkout_categories=checkout_categories,
-        aa_na_child_options=aa_na_child_options,
-        volunteer_child_options=volunteer_child_options,
+        child_options_by_parent=child_options_by_parent,
         aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
         volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
     )
@@ -702,8 +686,7 @@ def kiosk_checkout(shelter: str):
         return _render_checkout(
             shelter=display_shelter,
             checkout_categories=checkout_categories,
-            aa_na_child_options=aa_na_child_options,
-            volunteer_child_options=volunteer_child_options,
+            child_options_by_parent=child_options_by_parent,
             status_code=service_result.status_code,
         )
 
@@ -721,6 +704,7 @@ def kiosk_checkout(shelter: str):
             f"meeting_count={service_result.meeting_count} "
             f"is_recovery_meeting={service_result.is_recovery_meeting_value} "
             f"volunteer_option={service_result.volunteer_community_service_option or ''} "
+            f"child_option={service_result.child_option_value or ''} "
             f"start={service_result.obligation_start_value or ''} "
             f"end={service_result.obligation_end_value or ''} "
             f"expected_back={service_result.expected_back_value or ''}"
