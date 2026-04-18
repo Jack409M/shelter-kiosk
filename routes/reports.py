@@ -520,6 +520,42 @@ def _load_activity_category_registry() -> dict[str, dict[str, dict]]:
     return registry
 
 
+def _parse_activity_note_value(note_text: str, prefixes: list[str]) -> str:
+    for segment in (note_text or "").split(" | "):
+        cleaned = segment.strip()
+        if not cleaned:
+            continue
+        for prefix in prefixes:
+            if cleaned.startswith(prefix):
+                return cleaned[len(prefix) :].strip()
+    return ""
+
+
+def _activity_source_label(event_type: str) -> str:
+    if (event_type or "").strip() == "resident_daily_log":
+        return "Resident Daily Log"
+    return "Kiosk Check Out"
+
+
+def _activity_detail_label(row: dict) -> str:
+    note_text = str(row.get("note") or "")
+    destination = (row.get("destination") or "").strip() or "Uncategorized"
+    meeting_1 = _parse_activity_note_value(note_text, ["Meeting 1:"])
+    meeting_2 = _parse_activity_note_value(note_text, ["Meeting 2:"])
+    volunteer_detail = _parse_activity_note_value(note_text, ["Volunteer or Community Service:"])
+    generic_detail = _parse_activity_note_value(note_text, ["Activity Detail:"])
+
+    if meeting_1 and meeting_2:
+        return f"{meeting_1} + {meeting_2}"
+    if meeting_1:
+        return meeting_1
+    if volunteer_detail:
+        return volunteer_detail
+    if generic_detail:
+        return generic_detail
+    return destination
+
+
 def _fetch_activity_report_rows() -> list[dict]:
     rows = db_fetchall(
         _activity_report_sql(
@@ -531,6 +567,7 @@ def _fetch_activity_report_rows() -> list[dict]:
                 ae.event_type,
                 ae.event_time,
                 ae.destination,
+                ae.note,
                 ae.obligation_start_time,
                 ae.obligation_end_time,
                 ae.actual_obligation_end_time,
@@ -553,6 +590,7 @@ def _fetch_activity_report_rows() -> list[dict]:
                 ae.event_type,
                 ae.event_time,
                 ae.destination,
+                ae.note,
                 ae.obligation_start_time,
                 ae.obligation_end_time,
                 ae.actual_obligation_end_time,
@@ -579,6 +617,8 @@ def _fetch_activity_report_rows() -> list[dict]:
         item["obligation_start_local"] = _utc_iso_to_local(item.get("obligation_start_time"))
         item["obligation_end_local"] = _utc_iso_to_local(item.get("obligation_end_time"))
         item["actual_obligation_end_local"] = _utc_iso_to_local(item.get("actual_obligation_end_time"))
+        item["source_label"] = _activity_source_label(str(item.get("event_type") or ""))
+        item["detail_label"] = _activity_detail_label(item)
         normalized_rows.append(item)
 
     return normalized_rows
@@ -614,8 +654,9 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
     shelter_rows: dict[str, dict] = {}
     resident_rows: dict[tuple[str, int], dict] = {}
     category_rows: dict[tuple[str, str], dict] = {}
-
-    all_categories_seen: set[str] = set()
+    source_rows: dict[str, dict] = {}
+    detail_rows: dict[tuple[str, str, str], dict] = {}
+    recent_activity_rows: list[dict] = []
 
     for row in attendance_rows:
         shelter_key = row.get("shelter_key") or ""
@@ -636,7 +677,8 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
             bucket_key = "older"
 
         category_label = (row.get("destination") or "").strip() or "Uncategorized"
-        all_categories_seen.add(category_label)
+        detail_label = (row.get("detail_label") or "").strip() or category_label
+        source_label = (row.get("source_label") or "").strip() or "Unknown"
         category_meta = category_registry.get(shelter_key, {}).get(
             category_label,
             {
@@ -686,11 +728,53 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
         )
         _merge_activity_metrics(category_bucket, hours, meetings, bucket_key, category_meta)
 
+        source_bucket = source_rows.setdefault(
+            source_label,
+            {
+                "source_label": source_label,
+                **_empty_activity_metrics(),
+            },
+        )
+        _merge_activity_metrics(source_bucket, hours, meetings, bucket_key, category_meta)
+
+        detail_bucket = detail_rows.setdefault(
+            (shelter_key, category_label, detail_label),
+            {
+                "detail_label": detail_label,
+                "category_label": category_label,
+                "shelter_key": shelter_key,
+                "shelter_label": _activity_report_shelter_label(shelter_key),
+                "source_label": source_label,
+                **_empty_activity_metrics(),
+            },
+        )
+        _merge_activity_metrics(detail_bucket, hours, meetings, bucket_key, category_meta)
+
+        recent_activity_rows.append(
+            {
+                "resident_name": resident_name,
+                "shelter_label": _activity_report_shelter_label(shelter_key),
+                "source_label": source_label,
+                "category_label": category_label,
+                "detail_label": detail_label,
+                "event_time_local": row.get("event_time_local"),
+                "event_time_label": row.get("event_time_local").strftime("%b %d, %Y %I:%M %p")
+                if row.get("event_time_local")
+                else "",
+                "hours": round(hours, 2),
+                "meetings": meetings,
+            }
+        )
+
     for bucket in shelter_rows.values():
         _finalize_activity_metrics(bucket)
     for bucket in resident_rows.values():
         _finalize_activity_metrics(bucket)
     for bucket in category_rows.values():
+        _finalize_activity_metrics(bucket)
+    for bucket in source_rows.values():
+        _finalize_activity_metrics(bucket)
+    for bucket in detail_rows.values():
         _finalize_activity_metrics(bucket)
 
     shelter_summary_rows = _sorted_activity_rows(list(shelter_rows.values()), sort_by, "shelter_label")
@@ -702,11 +786,30 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
             str(item.get("category_label") or "").lower(),
         ),
     )
+    source_summary_rows = sorted(
+        list(source_rows.values()),
+        key=lambda item: str(item.get("source_label") or "").lower(),
+    )
+    detail_breakdown_rows = sorted(
+        list(detail_rows.values()),
+        key=lambda item: (
+            str(item.get("shelter_label") or "").lower(),
+            str(item.get("category_label") or "").lower(),
+            str(item.get("detail_label") or "").lower(),
+        ),
+    )
+    recent_activity_rows = sorted(
+        recent_activity_rows,
+        key=lambda item: item.get("event_time_local") or datetime.min.replace(tzinfo=CHICAGO_TZ),
+        reverse=True,
+    )[:50]
 
     grand_totals = {
         "shelter_count": len(shelter_summary_rows),
         "resident_count": len(resident_detail_rows),
         "category_count": len(category_detail_rows),
+        "detail_count": len(detail_breakdown_rows),
+        "source_count": len(source_summary_rows),
         **_empty_activity_metrics(),
     }
 
@@ -736,6 +839,9 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
         "shelter_summary_rows": shelter_summary_rows,
         "resident_detail_rows": resident_detail_rows,
         "category_detail_rows": category_detail_rows,
+        "source_summary_rows": source_summary_rows,
+        "detail_breakdown_rows": detail_breakdown_rows,
+        "recent_activity_rows": recent_activity_rows,
         "grand_totals": grand_totals,
         "current_week_label": f"This Week So Far ({this_week_start.strftime('%b %d, %Y')} through today)",
         "last_week_label": f"Last Week ({last_week_start.strftime('%b %d, %Y')} to {(this_week_start - timedelta(days=1)).strftime('%b %d, %Y')})",
