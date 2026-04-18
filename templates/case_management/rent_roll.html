@@ -30,6 +30,7 @@
                 <th>Manual Override</th>
                 <th>Auto Rule Rate</th>
                 <th>Exempt</th>
+                <th>Account</th>
                 <th>Setup</th>
               </tr>
             </thead>
@@ -49,6 +50,9 @@
                   <td>${{ '%.2f'|format(row['manual_monthly_rent'] or 0) }}</td>
                   <td>${{ '%.2f'|format(row['auto_monthly_rent'] or 0) }}</td>
                   <td>{{ 'Yes' if row['is_exempt'] else 'No' }}</td>
+                  <td>
+                    <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_account', resident_id=row['resident_id']) }}">Open Account</a>
+                  </td>
                   <td>
                     <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_config', resident_id=row['resident_id']) }}">Edit Rent</a>
                   </td>
