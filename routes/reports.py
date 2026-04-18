@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import math
+from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 from statistics import median
+from zoneinfo import ZoneInfo
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 from core.audit import log_action
 from core.auth import require_login, require_roles, require_shelter
 from core.db import db_execute, db_fetchall
+from core.kiosk_activity_categories import (
+    VOLUNTEER_PARENT_ACTIVITY_KEY,
+    load_kiosk_activity_categories_for_shelter,
+)
 from core.metrics_registry import PROGRAM_METRICS
 from core.program_statistics import get_dashboard_statistics
 from core.runtime import init_db
@@ -30,6 +37,24 @@ _ALLOWED_DATE_RANGES = {
 
 _DASHBOARD_KEY = "demographics_dashboard"
 _MAX_FAVORITES = 6
+_ACTIVITY_REPORT_SHELTERS = [
+    ("abba", "Abba House"),
+    ("haven", "Haven House"),
+    ("gratitude", "Gratitude House"),
+]
+_ACTIVITY_SORT_OPTIONS = {
+    "shelter": "Shelter",
+    "resident": "Resident",
+    "this_week_hours": "This Week Hours",
+    "last_week_hours": "Last Week Hours",
+    "all_time_hours": "All Time Hours",
+    "this_week_meetings": "This Week Meetings",
+    "last_week_meetings": "Last Week Meetings",
+    "all_time_meetings": "All Time Meetings",
+    "volunteer_hours": "Volunteer Hours",
+    "productive_hours": "Productive Hours",
+    "work_hours": "Work Hours",
+}
 
 _DEFAULT_TOP_METRIC_KEYS = [
     "women_served",
@@ -39,6 +64,8 @@ _DEFAULT_TOP_METRIC_KEYS = [
     "graduates",
     "avg_stay",
 ]
+
+CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
 def _clean_scope(value: str | None) -> str:
@@ -79,6 +106,24 @@ def _clean_iso_date(value: str | None) -> str | None:
         return None
 
     return text
+
+
+def _clean_activity_report_shelter(value: str | None) -> str:
+    cleaned = (value or "all").strip().lower()
+    if cleaned in {"all", "abba", "haven", "gratitude"}:
+        return cleaned
+    return "all"
+
+
+def _clean_activity_report_sort(value: str | None) -> str:
+    cleaned = (value or "shelter").strip().lower()
+    if cleaned in _ACTIVITY_SORT_OPTIONS:
+        return cleaned
+    return "shelter"
+
+
+def _activity_report_sql(pg_sql: str, sqlite_sql: str) -> str:
+    return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
 
 
 def _current_staff_user_id() -> int | None:
@@ -322,6 +367,381 @@ def _sort_income_band_key(label: str) -> int:
     return order.get(label, 99)
 
 
+def _normalize_shelter_key(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+def _activity_report_shelter_label(value: str | None) -> str:
+    key = _normalize_shelter_key(value)
+    for shelter_key, shelter_label in _ACTIVITY_REPORT_SHELTERS:
+        if key == shelter_key:
+            return shelter_label
+    return (value or "").strip() or "Unknown"
+
+
+def _utc_iso_to_local(dt_iso: str | None) -> datetime | None:
+    raw_value = (dt_iso or "").strip()
+    if not raw_value:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(raw_value)
+    except Exception:
+        return None
+
+    try:
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(CHICAGO_TZ)
+    except Exception:
+        return None
+
+
+def _start_of_week_local(any_local_dt: datetime) -> datetime:
+    return (any_local_dt - timedelta(days=any_local_dt.weekday())).replace(
+        hour=0,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+
+
+def _safe_float(value) -> float | None:
+    try:
+        parsed = float(value)
+    except Exception:
+        return None
+    if parsed <= 0:
+        return None
+    return parsed
+
+
+def _normalized_hours_for_activity_row(row: dict) -> float | None:
+    logged_hours = _safe_float(row.get("logged_hours"))
+    if logged_hours is not None:
+        return round(logged_hours, 4)
+
+    start_local = row.get("obligation_start_local")
+    planned_end_local = row.get("obligation_end_local")
+    actual_end_local = row.get("actual_obligation_end_local")
+    end_local = actual_end_local or planned_end_local
+
+    if not start_local or not end_local:
+        return None
+    if end_local <= start_local:
+        return None
+
+    duration_hours = round((end_local - start_local).total_seconds() / 3600.0, 4)
+    if duration_hours <= 0:
+        return None
+
+    return duration_hours
+
+
+def _row_week_anchor_local(row: dict) -> datetime | None:
+    return row.get("obligation_start_local") or row.get("event_time_local")
+
+
+def _empty_activity_metrics() -> dict[str, float | int]:
+    return {
+        "this_week_hours": 0.0,
+        "last_week_hours": 0.0,
+        "all_time_hours": 0.0,
+        "this_week_meetings": 0,
+        "last_week_meetings": 0,
+        "all_time_meetings": 0,
+        "volunteer_hours": 0.0,
+        "productive_hours": 0.0,
+        "work_hours": 0.0,
+    }
+
+
+def _merge_activity_metrics(target: dict, hours: float, meetings: int, bucket_key: str, meta: dict) -> None:
+    target["all_time_hours"] += hours
+    target["all_time_meetings"] += meetings
+
+    if bucket_key == "this_week":
+        target["this_week_hours"] += hours
+        target["this_week_meetings"] += meetings
+    elif bucket_key == "last_week":
+        target["last_week_hours"] += hours
+        target["last_week_meetings"] += meetings
+
+    if meta.get("is_volunteer"):
+        target["volunteer_hours"] += hours
+    if meta.get("counts_as_productive"):
+        target["productive_hours"] += hours
+    if meta.get("counts_as_work"):
+        target["work_hours"] += hours
+
+
+def _finalize_activity_metrics(target: dict) -> None:
+    for key in [
+        "this_week_hours",
+        "last_week_hours",
+        "all_time_hours",
+        "volunteer_hours",
+        "productive_hours",
+        "work_hours",
+    ]:
+        target[key] = round(float(target.get(key, 0.0) or 0.0), 2)
+
+    for key in [
+        "this_week_meetings",
+        "last_week_meetings",
+        "all_time_meetings",
+    ]:
+        target[key] = int(target.get(key, 0) or 0)
+
+
+def _load_activity_category_registry() -> dict[str, dict[str, dict]]:
+    registry: dict[str, dict[str, dict]] = {}
+
+    for shelter_key, _shelter_label in _ACTIVITY_REPORT_SHELTERS:
+        rows = load_kiosk_activity_categories_for_shelter(shelter_key)
+        shelter_registry: dict[str, dict] = {}
+
+        for row in rows or []:
+            activity_label = (row.get("activity_label") or "").strip()
+            if not activity_label:
+                continue
+            if not row.get("active"):
+                continue
+
+            shelter_registry[activity_label] = {
+                "counts_as_work": bool(row.get("counts_as_work_hours")),
+                "counts_as_productive": bool(row.get("counts_as_productive_hours")),
+                "is_volunteer": (row.get("activity_key") or "").strip()
+                == VOLUNTEER_PARENT_ACTIVITY_KEY,
+            }
+
+        registry[shelter_key] = shelter_registry
+
+    return registry
+
+
+def _fetch_activity_report_rows() -> list[dict]:
+    rows = db_fetchall(
+        _activity_report_sql(
+            """
+            SELECT
+                ae.id,
+                ae.resident_id,
+                ae.shelter,
+                ae.event_type,
+                ae.event_time,
+                ae.destination,
+                ae.obligation_start_time,
+                ae.obligation_end_time,
+                ae.actual_obligation_end_time,
+                ae.logged_hours,
+                ae.meeting_count,
+                r.first_name,
+                r.last_name,
+                r.is_active
+            FROM attendance_events ae
+            LEFT JOIN residents r
+              ON r.id = ae.resident_id
+            WHERE ae.event_type IN (%s, %s)
+            ORDER BY ae.event_time DESC, ae.id DESC
+            """,
+            """
+            SELECT
+                ae.id,
+                ae.resident_id,
+                ae.shelter,
+                ae.event_type,
+                ae.event_time,
+                ae.destination,
+                ae.obligation_start_time,
+                ae.obligation_end_time,
+                ae.actual_obligation_end_time,
+                ae.logged_hours,
+                ae.meeting_count,
+                r.first_name,
+                r.last_name,
+                r.is_active
+            FROM attendance_events ae
+            LEFT JOIN residents r
+              ON r.id = ae.resident_id
+            WHERE ae.event_type IN (?, ?)
+            ORDER BY ae.event_time DESC, ae.id DESC
+            """,
+        ),
+        ("check_out", "resident_daily_log"),
+    )
+
+    normalized_rows: list[dict] = []
+    for row in rows or []:
+        item = dict(row)
+        item["shelter_key"] = _normalize_shelter_key(item.get("shelter"))
+        item["event_time_local"] = _utc_iso_to_local(item.get("event_time"))
+        item["obligation_start_local"] = _utc_iso_to_local(item.get("obligation_start_time"))
+        item["obligation_end_local"] = _utc_iso_to_local(item.get("obligation_end_time"))
+        item["actual_obligation_end_local"] = _utc_iso_to_local(item.get("actual_obligation_end_time"))
+        normalized_rows.append(item)
+
+    return normalized_rows
+
+
+def _sorted_activity_rows(rows: list[dict], sort_by: str, default_label_key: str) -> list[dict]:
+    if sort_by in {"shelter", "resident"}:
+        return sorted(
+            rows,
+            key=lambda item: (
+                str(item.get(default_label_key) or "").lower(),
+                str(item.get("shelter_label") or "").lower(),
+            ),
+        )
+
+    return sorted(
+        rows,
+        key=lambda item: (
+            -(float(item.get(sort_by, 0.0) or 0.0)),
+            str(item.get(default_label_key) or "").lower(),
+        ),
+    )
+
+
+def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> dict:
+    category_registry = _load_activity_category_registry()
+    attendance_rows = _fetch_activity_report_rows()
+
+    now_local = datetime.now(CHICAGO_TZ)
+    this_week_start = _start_of_week_local(now_local)
+    last_week_start = this_week_start - timedelta(days=7)
+
+    shelter_rows: dict[str, dict] = {}
+    resident_rows: dict[tuple[str, int], dict] = {}
+    category_rows: dict[tuple[str, str], dict] = {}
+
+    all_categories_seen: set[str] = set()
+
+    for row in attendance_rows:
+        shelter_key = row.get("shelter_key") or ""
+        if shelter_key not in {item[0] for item in _ACTIVITY_REPORT_SHELTERS}:
+            continue
+        if selected_shelter != "all" and shelter_key != selected_shelter:
+            continue
+
+        week_anchor = _row_week_anchor_local(row)
+        if not week_anchor:
+            continue
+
+        if week_anchor >= this_week_start:
+            bucket_key = "this_week"
+        elif week_anchor >= last_week_start:
+            bucket_key = "last_week"
+        else:
+            bucket_key = "older"
+
+        category_label = (row.get("destination") or "").strip() or "Uncategorized"
+        all_categories_seen.add(category_label)
+        category_meta = category_registry.get(shelter_key, {}).get(
+            category_label,
+            {
+                "counts_as_work": False,
+                "counts_as_productive": False,
+                "is_volunteer": False,
+            },
+        )
+
+        hours = _normalized_hours_for_activity_row(row) or 0.0
+        meetings = int(row.get("meeting_count") or 0)
+
+        shelter_bucket = shelter_rows.setdefault(
+            shelter_key,
+            {
+                "shelter_key": shelter_key,
+                "shelter_label": _activity_report_shelter_label(shelter_key),
+                **_empty_activity_metrics(),
+            },
+        )
+        _merge_activity_metrics(shelter_bucket, hours, meetings, bucket_key, category_meta)
+
+        resident_id = int(row.get("resident_id") or 0)
+        resident_name = " ".join(
+            part for part in [row.get("first_name"), row.get("last_name")] if part
+        ).strip() or f"Resident {resident_id}"
+        resident_bucket = resident_rows.setdefault(
+            (shelter_key, resident_id),
+            {
+                "resident_id": resident_id,
+                "resident_name": resident_name,
+                "shelter_key": shelter_key,
+                "shelter_label": _activity_report_shelter_label(shelter_key),
+                **_empty_activity_metrics(),
+            },
+        )
+        _merge_activity_metrics(resident_bucket, hours, meetings, bucket_key, category_meta)
+
+        category_bucket = category_rows.setdefault(
+            (shelter_key, category_label),
+            {
+                "category_label": category_label,
+                "shelter_key": shelter_key,
+                "shelter_label": _activity_report_shelter_label(shelter_key),
+                **_empty_activity_metrics(),
+            },
+        )
+        _merge_activity_metrics(category_bucket, hours, meetings, bucket_key, category_meta)
+
+    for bucket in shelter_rows.values():
+        _finalize_activity_metrics(bucket)
+    for bucket in resident_rows.values():
+        _finalize_activity_metrics(bucket)
+    for bucket in category_rows.values():
+        _finalize_activity_metrics(bucket)
+
+    shelter_summary_rows = _sorted_activity_rows(list(shelter_rows.values()), sort_by, "shelter_label")
+    resident_detail_rows = _sorted_activity_rows(list(resident_rows.values()), sort_by, "resident_name")
+    category_detail_rows = sorted(
+        list(category_rows.values()),
+        key=lambda item: (
+            str(item.get("shelter_label") or "").lower(),
+            str(item.get("category_label") or "").lower(),
+        ),
+    )
+
+    grand_totals = {
+        "shelter_count": len(shelter_summary_rows),
+        "resident_count": len(resident_detail_rows),
+        "category_count": len(category_detail_rows),
+        **_empty_activity_metrics(),
+    }
+
+    for row in shelter_summary_rows:
+        for metric_key in _empty_activity_metrics().keys():
+            grand_totals[metric_key] += row.get(metric_key, 0)
+
+    _finalize_activity_metrics(grand_totals)
+
+    return {
+        "selected_shelter": selected_shelter,
+        "selected_shelter_label": "All Shelters"
+        if selected_shelter == "all"
+        else _activity_report_shelter_label(selected_shelter),
+        "sort_by": sort_by,
+        "sort_options": [
+            {"value": key, "label": label}
+            for key, label in _ACTIVITY_SORT_OPTIONS.items()
+        ],
+        "shelter_options": [
+            {"value": "all", "label": "All Shelters"},
+            *[
+                {"value": shelter_key, "label": shelter_label}
+                for shelter_key, shelter_label in _ACTIVITY_REPORT_SHELTERS
+            ],
+        ],
+        "shelter_summary_rows": shelter_summary_rows,
+        "resident_detail_rows": resident_detail_rows,
+        "category_detail_rows": category_detail_rows,
+        "grand_totals": grand_totals,
+        "current_week_label": f"This Week So Far ({this_week_start.strftime('%b %d, %Y')} through today)",
+        "last_week_label": f"Last Week ({last_week_start.strftime('%b %d, %Y')} to {(this_week_start - timedelta(days=1)).strftime('%b %d, %Y')})",
+    }
+
+
 def _fetch_graduation_income_study_rows(scope: str, start_date: str | None, end_date: str | None) -> list[dict]:
     scope_filter_sql = ""
     params: list = []
@@ -545,6 +965,24 @@ def reports_index():
     return render_template(
         "reports/index.html",
         title="Reports",
+    )
+
+
+@reports.route("/staff/reports/activity-engagement", methods=["GET"])
+@require_login
+@require_shelter
+@require_roles("admin", "shelter_director", "case_manager", "demographics_viewer")
+def activity_engagement_report():
+    init_db()
+
+    selected_shelter = _clean_activity_report_shelter(request.args.get("shelter"))
+    sort_by = _clean_activity_report_sort(request.args.get("sort_by"))
+    report = _build_activity_engagement_report(selected_shelter=selected_shelter, sort_by=sort_by)
+
+    return render_template(
+        "reports/activity_engagement.html",
+        title="Activity Engagement Report",
+        report=report,
     )
 
 
