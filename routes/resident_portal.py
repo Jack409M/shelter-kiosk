@@ -16,6 +16,7 @@ from core.kiosk_activity_categories import (
 from core.pass_retention import run_pass_retention_cleanup_for_shelter
 from core.pass_rules import CHICAGO_TZ, pass_type_label
 from core.helpers import utcnow_iso
+from core.resident_portal_service import chi_today_str, complete_chore, get_today_chores
 from routes.attendance_parts.helpers import to_local
 
 resident_portal = Blueprint("resident_portal", __name__)
@@ -447,7 +448,7 @@ def home():
         active_pass = _load_active_pass_item(resident_id, shelter)
         notification_items = _load_recent_notification_items(resident_id, shelter)
         transport_items = _load_recent_transport_items(resident_identifier, shelter)
-        chores: list[dict[str, Any]] = []
+        chores = get_today_chores(resident_id) if resident_id is not None else []
 
         return render_template(
             "resident_home.html",
@@ -687,12 +688,15 @@ def resident_daily_log():
         return _resident_signin_redirect()
 
 
-@resident_portal.route("/resident/chores")
+@resident_portal.route("/resident/chores", methods=["GET", "POST"])
 @require_resident
 def resident_chores():
+    resident_id = None
     shelter = ""
 
     try:
+        resident_id_raw = session.get("resident_id")
+        resident_id = int(resident_id_raw) if resident_id_raw not in (None, "") else None
         shelter = str(session.get("resident_shelter") or "").strip()
 
         get_db()
@@ -700,10 +704,35 @@ def resident_chores():
         if shelter:
             run_pass_retention_cleanup_for_shelter(shelter)
 
-        return render_template("resident_chores.html")
+        if resident_id is None:
+            return _resident_signin_redirect()
+
+        if request.method == "POST":
+            assignment_id = _clean_text(request.form.get("assignment_id"))
+            result = complete_chore(resident_id, assignment_id)
+
+            if not result.found:
+                flash("Chore assignment not found.", "error")
+            elif result.already_completed:
+                flash("That chore was already completed.", "ok")
+            elif result.completed:
+                flash("Chore marked completed.", "success")
+            else:
+                flash("Unable to complete that chore.", "error")
+
+            return redirect(url_for("resident_portal.resident_chores"))
+
+        chores = get_today_chores(resident_id)
+
+        return render_template(
+            "resident/chores.html",
+            chores=chores,
+            today=chi_today_str(),
+        )
     except Exception as exc:
         current_app.logger.exception(
-            "resident_portal_chores_failed shelter=%s exception_type=%s",
+            "resident_portal_chores_failed resident_id=%s shelter=%s exception_type=%s",
+            resident_id if resident_id is not None else "unknown",
             shelter or "unknown",
             type(exc).__name__,
         )
