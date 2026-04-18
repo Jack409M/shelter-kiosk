@@ -41,6 +41,10 @@ def build_promotion_readiness(snapshot: dict[str, Any]) -> dict[str, Any]:
             "checks": [],
             "ready": False,
             "blockers": ["No promotion policy defined for this level."],
+            "recommendation": "needs_review",
+            "recommendation_label": "No policy configured",
+            "policy_title": None,
+            "manual_requirements": [],
         }
 
     days_on_level = snapshot.get("days_on_level") or 0
@@ -55,15 +59,17 @@ def build_promotion_readiness(snapshot: dict[str, Any]) -> dict[str, Any]:
 
     meets_work_requirement = snapshot.get("meets_work_requirement")
     meets_productive_requirement = snapshot.get("meets_productive_requirement")
+    work_hours_last_week = snapshot.get("work_hours_last_week")
+    productive_hours_last_week = snapshot.get("productive_hours_last_week")
+    work_required_hours = snapshot.get("work_required_hours")
+    productive_required_hours = snapshot.get("productive_required_hours")
 
     system_rules = policy.get("system_requirements", {})
 
-    # Minimum days requirement
     min_days = policy.get("minimum_days_on_level")
     if min_days:
         add("Minimum Days on Level", days_on_level >= min_days, f"{days_on_level}/{min_days} days")
 
-    # System rule checks
     if system_rules.get("rad_complete"):
         add("RAD Complete", rad_complete is True, "")
 
@@ -100,28 +106,45 @@ def build_promotion_readiness(snapshot: dict[str, Any]) -> dict[str, Any]:
         add("Income Established", monthly_income not in (None, "", 0), "")
 
     if system_rules.get("work_hours_required"):
+        detail = ""
+        if work_hours_last_week is not None and work_required_hours is not None:
+            detail = f"{work_hours_last_week}/{work_required_hours}"
         add(
             "Weekly Work Hours Requirement",
             meets_work_requirement is True,
-            "",
+            detail,
         )
 
     if system_rules.get("productive_hours_required"):
+        detail = ""
+        if productive_hours_last_week is not None and productive_required_hours is not None:
+            detail = f"{productive_hours_last_week}/{productive_required_hours}"
         add(
             "Weekly Productive Hours Requirement",
             meets_productive_requirement is True,
-            "",
+            detail,
         )
 
     ready = all(c["ok"] for c in checks) if checks else False
-
     blockers = [c["label"] for c in checks if not c["ok"]]
+
+    if ready:
+        recommendation = "ready"
+        recommendation_label = "Appears aligned with standard program expectations"
+    elif len(blockers) >= 3:
+        recommendation = "high_concern"
+        recommendation_label = "Multiple concerns require strong case manager review"
+    else:
+        recommendation = "needs_review"
+        recommendation_label = "Some expectations are not yet met and should be reviewed"
 
     return {
         "level": level,
         "checks": checks,
         "ready": ready,
         "blockers": blockers,
+        "recommendation": recommendation,
+        "recommendation_label": recommendation_label,
         "policy_title": policy.get("title"),
         "manual_requirements": policy.get("manual_requirements", []),
     }
