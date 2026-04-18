@@ -6,7 +6,7 @@ from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import assert_enrollment_belongs_to_resident
 
-from .dates import _month_label, _today_chicago
+from .dates import _current_year_month, _month_label, _today_chicago
 from .utils import _float_value, _placeholder
 
 
@@ -14,10 +14,10 @@ def _active_residents_for_shelter(shelter: str):
     ph = _placeholder()
     return db_fetchall(
         f"""
-        SELECT id, first_name, last_name, shelter
+        SELECT id, first_name, last_name, shelter, is_active
         FROM residents
         WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND is_active = {("TRUE" if g.get("db_kind") == "pg" else "1")}
+          AND is_active = {('TRUE' if g.get('db_kind') == 'pg' else '1')}
         ORDER BY last_name ASC, first_name ASC
         """,
         (shelter,),
@@ -133,6 +133,11 @@ def _program_enrollment_for_month(
     return dict(row) if row else None
 
 
+def _current_program_enrollment_for_resident(resident_id: int, shelter: str) -> dict | None:
+    rent_year, rent_month = _current_year_month()
+    return _program_enrollment_for_month(resident_id, shelter, rent_year, rent_month)
+
+
 def _latest_prior_balance(
     resident_id: int, shelter: str, carry_forward_enabled: bool, rent_year: int, rent_month: int
 ) -> float:
@@ -246,7 +251,7 @@ def _resident_for_shelter(resident_id: int, shelter: str):
     ph = _placeholder()
     row = db_fetchone(
         f"""
-        SELECT id, first_name, last_name, shelter
+        SELECT id, first_name, last_name, shelter, is_active
         FROM residents
         WHERE id = {ph}
           AND LOWER(COALESCE(shelter, '')) = {ph}
@@ -261,7 +266,7 @@ def _resident_any_shelter(resident_id: int):
     ph = _placeholder()
     row = db_fetchone(
         f"""
-        SELECT id, first_name, last_name, shelter
+        SELECT id, first_name, last_name, shelter, is_active
         FROM residents
         WHERE id = {ph}
         LIMIT 1
@@ -282,6 +287,7 @@ def _ledger_balance_before_entry(resident_id: int) -> float:
         SELECT balance_after
         FROM resident_rent_ledger_entries
         WHERE resident_id = {ph}
+          AND COALESCE(voided, {('FALSE' if g.get('db_kind') == 'pg' else '0')}) = {('FALSE' if g.get('db_kind') == 'pg' else '0')}
         ORDER BY entry_date DESC, created_at DESC, id DESC
         LIMIT 1
         """,
@@ -306,6 +312,13 @@ def _insert_rent_ledger_entry(
     source_code: str | None = None,
     source_reference: str | None = None,
     notes: str | None = None,
+    payment_method: str | None = None,
+    check_or_money_order_number: str | None = None,
+    charge_category: str | None = None,
+    charge_reference: str | None = None,
+    voided: bool = False,
+    void_reason: str | None = None,
+    entered_by_staff_user_id: int | None = None,
 ) -> int | None:
     if enrollment_id is not None:
         assert_enrollment_belongs_to_resident(
@@ -319,6 +332,7 @@ def _insert_rent_ledger_entry(
     balance_after = round(
         balance_before + _float_value(debit_amount) - _float_value(credit_amount), 2
     )
+    acting_staff_user_id = entered_by_staff_user_id or session.get("staff_user_id")
 
     if g.get("db_kind") == "pg":
         row = db_fetchone(
@@ -340,11 +354,18 @@ def _insert_rent_ledger_entry(
                 source_code,
                 source_reference,
                 notes,
+                payment_method,
+                check_or_money_order_number,
+                charge_category,
+                charge_reference,
+                voided,
+                void_reason,
+                entered_by_staff_user_id,
                 created_by_staff_user_id,
                 created_at,
                 updated_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
             """,
             (
@@ -364,6 +385,13 @@ def _insert_rent_ledger_entry(
                 source_code,
                 source_reference,
                 notes,
+                payment_method,
+                check_or_money_order_number,
+                charge_category,
+                charge_reference,
+                voided,
+                void_reason,
+                acting_staff_user_id,
                 session.get("staff_user_id"),
                 now,
                 now,
@@ -390,11 +418,18 @@ def _insert_rent_ledger_entry(
             source_code,
             source_reference,
             notes,
+            payment_method,
+            check_or_money_order_number,
+            charge_category,
+            charge_reference,
+            voided,
+            void_reason,
+            entered_by_staff_user_id,
             created_by_staff_user_id,
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             resident_id,
@@ -413,6 +448,13 @@ def _insert_rent_ledger_entry(
             source_code,
             source_reference,
             notes,
+            payment_method,
+            check_or_money_order_number,
+            charge_category,
+            charge_reference,
+            1 if voided else 0,
+            void_reason,
+            acting_staff_user_id,
             session.get("staff_user_id"),
             now,
             now,
@@ -433,6 +475,93 @@ def _insert_rent_ledger_entry(
     return row["id"] if row else None
 
 
+def _post_resident_payment(
+    *,
+    resident_id: int,
+    shelter: str,
+    amount: float,
+    payment_date: str,
+    payment_method: str,
+    instrument_number: str,
+    notes: str | None = None,
+) -> int | None:
+    enrollment = _current_program_enrollment_for_resident(resident_id, shelter)
+    return _insert_rent_ledger_entry(
+        resident_id=resident_id,
+        enrollment_id=enrollment.get("id") if enrollment else None,
+        shelter=shelter,
+        entry_date=payment_date,
+        entry_type="payment",
+        description="Rent payment received",
+        debit_amount=0.0,
+        credit_amount=round(_float_value(amount), 2),
+        source_code="rent_payment_manual",
+        source_reference=f"manual-payment:{payment_date}:{utcnow_iso()}",
+        notes=notes,
+        payment_method=payment_method,
+        check_or_money_order_number=instrument_number,
+        entered_by_staff_user_id=session.get("staff_user_id"),
+    )
+
+
+def _post_resident_charge(
+    *,
+    resident_id: int,
+    shelter: str,
+    amount: float,
+    charge_date: str,
+    charge_category: str,
+    description: str,
+    charge_reference: str | None = None,
+    notes: str | None = None,
+) -> int | None:
+    enrollment = _current_program_enrollment_for_resident(resident_id, shelter)
+    return _insert_rent_ledger_entry(
+        resident_id=resident_id,
+        enrollment_id=enrollment.get("id") if enrollment else None,
+        shelter=shelter,
+        entry_date=charge_date,
+        entry_type="charge",
+        description=description,
+        debit_amount=round(_float_value(amount), 2),
+        credit_amount=0.0,
+        source_code=f"manual_charge_{charge_category}",
+        source_reference=f"manual-charge:{charge_date}:{utcnow_iso()}",
+        notes=notes,
+        charge_category=charge_category,
+        charge_reference=charge_reference,
+        entered_by_staff_user_id=session.get("staff_user_id"),
+    )
+
+
+def _post_resident_credit(
+    *,
+    resident_id: int,
+    shelter: str,
+    amount: float,
+    credit_date: str,
+    credit_category: str,
+    description: str,
+    notes: str | None = None,
+) -> int | None:
+    enrollment = _current_program_enrollment_for_resident(resident_id, shelter)
+    return _insert_rent_ledger_entry(
+        resident_id=resident_id,
+        enrollment_id=enrollment.get("id") if enrollment else None,
+        shelter=shelter,
+        entry_date=credit_date,
+        entry_type="credit",
+        description=description,
+        debit_amount=0.0,
+        credit_amount=round(_float_value(amount), 2),
+        source_code=f"manual_credit_{credit_category}",
+        source_reference=f"manual-credit:{credit_date}:{utcnow_iso()}",
+        notes=notes,
+        charge_category=credit_category,
+        entered_by_staff_user_id=session.get("staff_user_id"),
+    )
+
+
 def _ledger_entries_for_resident(resident_id: int):
     ph = _placeholder()
     rows = db_fetchall(
@@ -444,6 +573,7 @@ def _ledger_entries_for_resident(resident_id: int):
         FROM resident_rent_ledger_entries l
         JOIN residents r ON r.id = l.resident_id
         WHERE l.resident_id = {ph}
+          AND COALESCE(l.voided, {('FALSE' if g.get('db_kind') == 'pg' else '0')}) = {('FALSE' if g.get('db_kind') == 'pg' else '0')}
         ORDER BY l.entry_date ASC, l.created_at ASC, l.id ASC
         """,
         (resident_id,),
@@ -486,4 +616,47 @@ def _ledger_summary_for_resident(resident_id: int) -> dict:
         "current_balance": net_balance,
         "current_credit": round(abs(net_balance), 2) if net_balance < 0 else 0.0,
         "current_due": round(net_balance, 2) if net_balance > 0 else 0.0,
+    }
+
+
+def _ledger_balance_breakdown_for_resident(resident_id: int) -> dict:
+    entries = _ledger_entries_for_resident(resident_id)
+
+    monthly_rent = 0.0
+    late_fees = 0.0
+    extra_charges = 0.0
+    refunds_and_credits = 0.0
+    payments_received = 0.0
+
+    for entry in entries:
+        debit_amount = _float_value(entry.get("debit_amount"))
+        credit_amount = _float_value(entry.get("credit_amount"))
+        source_code = str(entry.get("source_code") or "").strip()
+        charge_category = str(entry.get("charge_category") or "").strip().lower()
+        entry_type = str(entry.get("entry_type") or "").strip().lower()
+
+        if debit_amount > 0:
+            if source_code == "monthly_rent_charge":
+                monthly_rent += debit_amount
+            elif source_code == "late_fee_charge" or entry_type == "late_fee":
+                late_fees += debit_amount
+            else:
+                extra_charges += debit_amount
+
+        if credit_amount > 0:
+            if entry_type == "payment":
+                payments_received += credit_amount
+            else:
+                refunds_and_credits += credit_amount
+
+    summary = _ledger_summary_for_resident(resident_id)
+    return {
+        "monthly_rent": round(monthly_rent, 2),
+        "late_fees": round(late_fees, 2),
+        "extra_charges": round(extra_charges, 2),
+        "refunds_and_credits": round(refunds_and_credits, 2),
+        "payments_received": round(payments_received, 2),
+        "current_due": summary["current_due"],
+        "current_credit": summary["current_credit"],
+        "current_balance": summary["current_balance"],
     }
