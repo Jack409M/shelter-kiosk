@@ -62,7 +62,6 @@
               value="{{ item_label }}"
               data-activity-key="{{ item_key }}"
               data-is-aa-na-meeting="{{ '1' if item_key == aa_na_parent_activity_key else '0' }}"
-              data-is-volunteer-community-service="{{ '1' if item_key == volunteer_parent_activity_key else '0' }}"
               {% if selected_activity == item_label %}selected{% endif %}
             >
               {{ item_label }}
@@ -124,21 +123,14 @@
         </select>
       </div>
 
-      <div id="volunteer_wrap" class="hidden" style="margin-bottom: 14px;">
-        <label for="volunteer_community_service_option" style="display:block; font-weight:600; margin-bottom:6px;">Volunteer or Community Service</label>
+      <div id="child_option_wrap" class="hidden" style="margin-bottom: 14px;">
+        <label for="child_option_value" style="display:block; font-weight:600; margin-bottom:6px;">Activity Detail</label>
         <select
-          id="volunteer_community_service_option"
-          name="volunteer_community_service_option"
+          id="child_option_value"
+          name="child_option_value"
           style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
         >
-          <option value="">Select location</option>
-          {% set selected_volunteer_option = request.form.get('volunteer_community_service_option', '') %}
-          {% for item in volunteer_child_options %}
-            {% set option_label = item.get('option_label', '') %}
-            <option value="{{ option_label }}" {% if selected_volunteer_option == option_label %}selected{% endif %}>
-              {{ option_label }}
-            </option>
-          {% endfor %}
+          <option value="">Select detail</option>
         </select>
       </div>
 
@@ -166,19 +158,51 @@
 </style>
 
 <script>
+  const childOptionLabelsByParent = {{ child_option_labels_by_parent | tojson }};
+  const initialChildOptionValue = {{ request.form.get('child_option_value', '') | tojson }};
+
+  function setChildOptions(selectElement, optionLabels, selectedValue) {
+    if (!selectElement) {
+      return;
+    }
+
+    const currentValue = typeof selectedValue === "string" ? selectedValue : "";
+    selectElement.innerHTML = "";
+
+    const placeholderOption = document.createElement("option");
+    placeholderOption.value = "";
+    placeholderOption.textContent = "Select detail";
+    selectElement.appendChild(placeholderOption);
+
+    (optionLabels || []).forEach(function (label) {
+      const option = document.createElement("option");
+      option.value = label;
+      option.textContent = label;
+      if (label === currentValue) {
+        option.selected = true;
+      }
+      selectElement.appendChild(option);
+    });
+
+    if (!currentValue) {
+      selectElement.value = "";
+    }
+  }
+
   function toggleDailyLogFields() {
     const activity = document.getElementById("activity_category");
     const selectedOption = activity && activity.selectedOptions.length
       ? activity.selectedOptions[0]
       : null;
 
+    const selectedActivityKey = selectedOption
+      && selectedOption.dataset
+      ? selectedOption.dataset.activityKey || ""
+      : "";
+
     const isAaNaMeeting = selectedOption
       && selectedOption.dataset
       && selectedOption.dataset.isAaNaMeeting === "1";
-
-    const isVolunteerCommunityService = selectedOption
-      && selectedOption.dataset
-      && selectedOption.dataset.isVolunteerCommunityService === "1";
 
     const hoursWrap = document.getElementById("hours_wrap");
     const hoursInput = document.getElementById("hours");
@@ -188,8 +212,15 @@
     const meeting1 = document.getElementById("aa_na_meeting_1");
     const meeting2 = document.getElementById("aa_na_meeting_2");
 
-    const volunteerWrap = document.getElementById("volunteer_wrap");
-    const volunteerSelect = document.getElementById("volunteer_community_service_option");
+    const childWrap = document.getElementById("child_option_wrap");
+    const childSelect = document.getElementById("child_option_value");
+
+    const childLabels = childOptionLabelsByParent[selectedActivityKey] || [];
+    const shouldShowChildOptions = !isAaNaMeeting && childLabels.length > 0;
+    const currentChildValue = childSelect ? childSelect.value : "";
+    const selectedChildValue = childLabels.includes(currentChildValue)
+      ? currentChildValue
+      : initialChildOptionValue;
 
     if (hoursWrap) {
       hoursWrap.classList.toggle("hidden", isAaNaMeeting);
@@ -217,13 +248,14 @@
       meeting2.value = "";
     }
 
-    if (volunteerWrap) {
-      volunteerWrap.classList.toggle("hidden", !isVolunteerCommunityService);
+    if (childWrap) {
+      childWrap.classList.toggle("hidden", !shouldShowChildOptions);
     }
-    if (volunteerSelect) {
-      volunteerSelect.required = isVolunteerCommunityService;
-      if (!isVolunteerCommunityService) {
-        volunteerSelect.value = "";
+    if (childSelect) {
+      setChildOptions(childSelect, childLabels, shouldShowChildOptions ? selectedChildValue : "");
+      childSelect.required = shouldShowChildOptions;
+      if (!shouldShowChildOptions) {
+        childSelect.value = "";
       }
     }
   }
