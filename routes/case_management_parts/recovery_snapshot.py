@@ -4,6 +4,7 @@ from typing import Any
 
 from core.meeting_progress import calculate_meeting_progress
 from core.promotion_readiness import build_promotion_readiness
+from core.attendance_hours import calculate_prior_week_attendance_hours
 from routes.case_management_parts.helpers import (
     fetch_current_enrollment_id_for_resident,
     normalize_shelter_name,
@@ -64,6 +65,11 @@ def load_recovery_snapshot(
         level_value=resident.get("program_level"),
     )
 
+    attendance_snapshot = calculate_prior_week_attendance_hours(
+        resident_id=resident_id,
+        shelter=str(resident.get("shelter") or ""),
+    )
+
     writeups_last_30_days = count_writeups_last_30_days(writeup_rows)
 
     promotion_readiness = build_promotion_readiness(
@@ -77,6 +83,13 @@ def load_recovery_snapshot(
             "rad_complete": enrollment_baseline.get("rad_complete"),
             "writeups_last_30_days": writeups_last_30_days,
             "no_writeups_last_30_days": writeups_last_30_days == 0,
+            "work_hours_last_week": attendance_snapshot.get("work_hours"),
+            "productive_hours_last_week": attendance_snapshot.get("productive_hours"),
+            "work_required_hours": attendance_snapshot.get("work_required_hours"),
+            "productive_required_hours": attendance_snapshot.get("productive_required_hours"),
+            "meets_work_requirement": attendance_snapshot.get("meets_work_requirement"),
+            "meets_productive_requirement": attendance_snapshot.get("meets_productive_requirement"),
+            "passes_attendance_requirement": attendance_snapshot.get("passes_requirement"),
         }
     )
 
