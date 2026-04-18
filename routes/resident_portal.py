@@ -6,7 +6,7 @@ from typing import Any
 from flask import Blueprint, current_app, g, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
-from core.db import db_fetchall, get_db
+from core.db import db_fetchall, db_fetchone, get_db
 from core.pass_retention import run_pass_retention_cleanup_for_shelter
 from core.pass_rules import CHICAGO_TZ, pass_type_label
 from core.helpers import utcnow_iso
@@ -29,6 +29,46 @@ def _sql(pg_sql: str, sqlite_sql: str) -> str:
 
 def _clean_text(value: object) -> str:
     return str(value or "").strip()
+
+
+def _safe_int(value: object) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed <= 0:
+        return None
+    return parsed
+
+
+# 🔴 NEW — load real program level
+def _load_resident_level(resident_id: int | None) -> int:
+    if resident_id is None:
+        return 0
+
+    row = db_fetchone(
+        _sql(
+            """
+            SELECT program_level
+            FROM residents
+            WHERE id = %s
+            """,
+            """
+            SELECT program_level
+            FROM residents
+            WHERE id = ?
+            """,
+        ),
+        (resident_id,),
+    )
+
+    if not row:
+        return 0
+
+    try:
+        return int(row.get("program_level") or 0)
+    except Exception:
+        return 0
 
 
 def _hydrate_pass_item(row: dict[str, Any]) -> dict[str, Any]:
@@ -194,107 +234,81 @@ def _load_active_pass_item(resident_id: int | None, shelter: str) -> dict[str, A
     return _hydrate_pass_item(rows[0])
 
 
-def _load_recent_notification_items(resident_id: int | None, shelter: str) -> list[dict[str, Any]]:
-    if resident_id is None or not shelter:
-        return []
+# 🔴 NEW ROUTE — Level 5 Hours Page
+@resident_portal.route("/resident/hours", methods=["GET", "POST"])
+@require_resident
+def resident_hours():
+    try:
+        resident_id = _safe_int(session.get("resident_id"))
+        shelter = _clean_text(session.get("resident_shelter"))
 
-    rows = db_fetchall(
-        _sql(
-            """
-            SELECT
-                id,
-                title,
-                message,
-                is_read,
-                created_at,
-                related_pass_id,
-                notification_type
-            FROM resident_notifications
-            WHERE resident_id = %s
-              AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-            ORDER BY created_at DESC, id DESC
-            LIMIT 5
-            """,
-            """
-            SELECT
-                id,
-                title,
-                message,
-                is_read,
-                created_at,
-                related_pass_id,
-                notification_type
-            FROM resident_notifications
-            WHERE resident_id = ?
-              AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
-            ORDER BY created_at DESC, id DESC
-            LIMIT 5
-            """,
-        ),
-        (resident_id, shelter),
-    )
+        get_db()
 
-    items: list[dict[str, Any]] = []
-    for row in rows:
-        item = dict(row)
-        item["created_at_local"] = to_local(item.get("created_at"))
-        item["is_unread"] = str(item.get("is_read") or "0").strip() in {"0", "False", "false", ""}
-        items.append(item)
-    return items
+        level = _load_resident_level(resident_id)
 
+        # 🔴 Gate Level 5+
+        if level < 5:
+            return redirect(url_for("resident_portal.home"))
 
-def _load_recent_transport_items(resident_identifier: str, shelter: str) -> list[dict[str, Any]]:
-    if not resident_identifier or not shelter:
-        return []
+        if request.method == "POST":
+            now_iso = utcnow_iso()
 
-    rows = db_fetchall(
-        _sql(
-            """
-            SELECT
-                id,
-                needed_at,
-                destination,
-                status,
-                reason,
-                resident_notes,
-                submitted_at,
-                scheduled_at,
-                staff_notes
-            FROM transport_requests
-            WHERE resident_identifier = %s
-              AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-            ORDER BY submitted_at DESC, id DESC
-            LIMIT 5
-            """,
-            """
-            SELECT
-                id,
-                needed_at,
-                destination,
-                status,
-                reason,
-                resident_notes,
-                submitted_at,
-                scheduled_at,
-                staff_notes
-            FROM transport_requests
-            WHERE resident_identifier = ?
-              AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
-            ORDER BY submitted_at DESC, id DESC
-            LIMIT 5
-            """,
-        ),
-        (resident_identifier, shelter),
-    )
+            # simple 8 hour submission
+            db_execute(
+                _sql(
+                    """
+                    INSERT INTO attendance_events (
+                        resident_id,
+                        shelter,
+                        event_type,
+                        event_time,
+                        staff_user_id,
+                        note,
+                        obligation_start_time,
+                        obligation_end_time,
+                        meeting_count,
+                        is_recovery_meeting
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    """
+                    INSERT INTO attendance_events (
+                        resident_id,
+                        shelter,
+                        event_type,
+                        event_time,
+                        staff_user_id,
+                        note,
+                        obligation_start_time,
+                        obligation_end_time,
+                        meeting_count,
+                        is_recovery_meeting
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                ),
+                (
+                    resident_id,
+                    shelter,
+                    "obligation_complete",
+                    now_iso,
+                    None,
+                    "Resident submitted 8 hours",
+                    None,
+                    None,
+                    0,
+                    0,
+                ),
+            )
 
-    items: list[dict[str, Any]] = []
-    for row in rows:
-        item = dict(row)
-        item["needed_at_local"] = to_local(item.get("needed_at"))
-        item["submitted_at_local"] = to_local(item.get("submitted_at"))
-        item["scheduled_at_local"] = to_local(item.get("scheduled_at"))
-        items.append(item)
-    return items
+            return redirect(url_for("resident_portal.home"))
+
+        return render_template("resident_hours.html")
+
+    except Exception as exc:
+        current_app.logger.exception("resident_hours_failed")
+        _clear_resident_session()
+        return _resident_signin_redirect()
 
 
 @resident_portal.route("/resident/home")
@@ -314,51 +328,20 @@ def home():
         if shelter:
             run_pass_retention_cleanup_for_shelter(shelter)
 
+        # 🔴 load level for template
+        level = _load_resident_level(resident_id)
+
         pass_items = _load_recent_pass_items(resident_id, shelter)
         active_pass = _load_active_pass_item(resident_id, shelter)
-        notification_items = _load_recent_notification_items(resident_id, shelter)
-        transport_items = _load_recent_transport_items(resident_identifier, shelter)
-        chores: list[dict[str, Any]] = []
 
         return render_template(
             "resident_home.html",
-            recent_items=pass_items,
             pass_items=pass_items,
             active_pass=active_pass,
-            notification_items=notification_items,
-            transport_items=transport_items,
-            chores=chores,
+            resident_level=level,
         )
+
     except Exception as exc:
-        current_app.logger.exception(
-            "resident_portal_home_failed resident_id=%s shelter=%s exception_type=%s",
-            resident_id if resident_id is not None else "unknown",
-            shelter or "unknown",
-            type(exc).__name__,
-        )
-        _clear_resident_session()
-        return _resident_signin_redirect()
-
-
-@resident_portal.route("/resident/chores")
-@require_resident
-def resident_chores():
-    shelter = ""
-
-    try:
-        shelter = str(session.get("resident_shelter") or "").strip()
-
-        get_db()
-
-        if shelter:
-            run_pass_retention_cleanup_for_shelter(shelter)
-
-        return render_template("resident_chores.html")
-    except Exception as exc:
-        current_app.logger.exception(
-            "resident_portal_chores_failed shelter=%s exception_type=%s",
-            shelter or "unknown",
-            type(exc).__name__,
-        )
+        current_app.logger.exception("resident_portal_home_failed")
         _clear_resident_session()
         return _resident_signin_redirect()
