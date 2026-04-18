@@ -1,0 +1,263 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="resident-portal">
+  <div class="resident-home-card" style="max-width: 720px; margin: 0 auto;">
+    <h1 class="resident-portal-title">Daily Log</h1>
+    <p>Log your daily activities using the same activity structure used by kiosk checkout.</p>
+
+    <div class="portal-actions" style="margin-bottom: 16px;">
+      <a class="portal-btn portal-btn-light" href="{{ url_for('resident_portal.home') }}">
+        Back to Home
+      </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="resident-status-list" style="margin-bottom: 16px;">
+          {% for category, message in messages %}
+            <li class="resident-status-item">
+              <div class="resident-status-row">
+                <span class="status-badge status-{{ category }}">{{ category.replace('_', ' ') }}</span>
+              </div>
+              <div class="resident-status-row resident-status-main">
+                {{ message }}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="kiosk-form" autocomplete="off">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div style="margin-bottom: 14px;">
+        <label for="log_date" style="display:block; font-weight:600; margin-bottom:6px;">Log Date</label>
+        <input
+          id="log_date"
+          name="log_date"
+          type="date"
+          value="{{ request.form.get('log_date', '') }}"
+          required
+          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
+        >
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label for="activity_category" style="display:block; font-weight:600; margin-bottom:6px;">Activity Category</label>
+        <select
+          id="activity_category"
+          name="activity_category"
+          required
+          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
+        >
+          <option value="">Select activity category</option>
+          {% set selected_activity = request.form.get('activity_category', '') %}
+          {% for item in checkout_categories %}
+            {% set item_label = item.get('activity_label', '') %}
+            {% set item_key = item.get('activity_key', '') %}
+            <option
+              value="{{ item_label }}"
+              data-activity-key="{{ item_key }}"
+              data-is-aa-na-meeting="{{ '1' if item_key == aa_na_parent_activity_key else '0' }}"
+              data-is-volunteer-community-service="{{ '1' if item_key == volunteer_parent_activity_key else '0' }}"
+              {% if selected_activity == item_label %}selected{% endif %}
+            >
+              {{ item_label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="hours_wrap" style="margin-bottom: 14px;">
+        <label for="hours" style="display:block; font-weight:600; margin-bottom:6px;">Hours</label>
+        <input
+          id="hours"
+          name="hours"
+          type="number"
+          min="0"
+          step="0.25"
+          inputmode="decimal"
+          value="{{ request.form.get('hours', '') }}"
+          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
+        >
+        <div style="font-size:14px; color:#666; margin-top:6px;">
+          Enter hours for productive, volunteer, or employment related activity.
+        </div>
+      </div>
+
+      <div id="aa_na_meeting_1_wrap" class="hidden" style="margin-bottom: 14px;">
+        <label for="aa_na_meeting_1" style="display:block; font-weight:600; margin-bottom:6px;">Meeting 1</label>
+        <select
+          id="aa_na_meeting_1"
+          name="aa_na_meeting_1"
+          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
+        >
+          <option value="">Select first meeting</option>
+          {% set selected_meeting_1 = request.form.get('aa_na_meeting_1', '') %}
+          {% for item in aa_na_child_options %}
+            {% set option_label = item.get('option_label', '') %}
+            <option value="{{ option_label }}" {% if selected_meeting_1 == option_label %}selected{% endif %}>
+              {{ option_label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="aa_na_meeting_2_wrap" class="hidden" style="margin-bottom: 14px;">
+        <label for="aa_na_meeting_2" style="display:block; font-weight:600; margin-bottom:6px;">Meeting 2</label>
+        <select
+          id="aa_na_meeting_2"
+          name="aa_na_meeting_2"
+          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
+        >
+          <option value="">Optional second meeting</option>
+          {% set selected_meeting_2 = request.form.get('aa_na_meeting_2', '') %}
+          {% for item in aa_na_child_options %}
+            {% set option_label = item.get('option_label', '') %}
+            <option value="{{ option_label }}" {% if selected_meeting_2 == option_label %}selected{% endif %}>
+              {{ option_label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="volunteer_wrap" class="hidden" style="margin-bottom: 14px;">
+        <label for="volunteer_community_service_option" style="display:block; font-weight:600; margin-bottom:6px;">Volunteer or Community Service</label>
+        <select
+          id="volunteer_community_service_option"
+          name="volunteer_community_service_option"
+          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
+        >
+          <option value="">Select location</option>
+          {% set selected_volunteer_option = request.form.get('volunteer_community_service_option', '') %}
+          {% for item in volunteer_child_options %}
+            {% set option_label = item.get('option_label', '') %}
+            <option value="{{ option_label }}" {% if selected_volunteer_option == option_label %}selected{% endif %}>
+              {{ option_label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label for="note" style="display:block; font-weight:600; margin-bottom:6px;">Note</label>
+        <textarea
+          id="note"
+          name="note"
+          rows="3"
+          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
+        >{{ request.form.get('note', '') }}</textarea>
+      </div>
+
+      <button class="portal-btn" type="submit" style="width:100%;">
+        Submit Daily Log
+      </button>
+    </form>
+  </div>
+</div>
+
+<style>
+  .hidden {
+    display: none;
+  }
+</style>
+
+<script>
+  function toggleDailyLogFields() {
+    const activity = document.getElementById("activity_category");
+    const selectedOption = activity && activity.selectedOptions.length
+      ? activity.selectedOptions[0]
+      : null;
+
+    const isAaNaMeeting = selectedOption
+      && selectedOption.dataset
+      && selectedOption.dataset.isAaNaMeeting === "1";
+
+    const isVolunteerCommunityService = selectedOption
+      && selectedOption.dataset
+      && selectedOption.dataset.isVolunteerCommunityService === "1";
+
+    const hoursWrap = document.getElementById("hours_wrap");
+    const hoursInput = document.getElementById("hours");
+
+    const meeting1Wrap = document.getElementById("aa_na_meeting_1_wrap");
+    const meeting2Wrap = document.getElementById("aa_na_meeting_2_wrap");
+    const meeting1 = document.getElementById("aa_na_meeting_1");
+    const meeting2 = document.getElementById("aa_na_meeting_2");
+
+    const volunteerWrap = document.getElementById("volunteer_wrap");
+    const volunteerSelect = document.getElementById("volunteer_community_service_option");
+
+    if (hoursWrap) {
+      hoursWrap.classList.toggle("hidden", isAaNaMeeting);
+    }
+    if (hoursInput) {
+      hoursInput.required = !isAaNaMeeting;
+      if (isAaNaMeeting) {
+        hoursInput.value = "";
+      }
+    }
+
+    if (meeting1Wrap) {
+      meeting1Wrap.classList.toggle("hidden", !isAaNaMeeting);
+    }
+    if (meeting2Wrap) {
+      meeting2Wrap.classList.toggle("hidden", !isAaNaMeeting);
+    }
+    if (meeting1) {
+      meeting1.required = isAaNaMeeting;
+      if (!isAaNaMeeting) {
+        meeting1.value = "";
+      }
+    }
+    if (meeting2 && !isAaNaMeeting) {
+      meeting2.value = "";
+    }
+
+    if (volunteerWrap) {
+      volunteerWrap.classList.toggle("hidden", !isVolunteerCommunityService);
+    }
+    if (volunteerSelect) {
+      volunteerSelect.required = isVolunteerCommunityService;
+      if (!isVolunteerCommunityService) {
+        volunteerSelect.value = "";
+      }
+    }
+  }
+
+  function preventDuplicateMeetingChoice() {
+    const meeting1 = document.getElementById("aa_na_meeting_1");
+    const meeting2 = document.getElementById("aa_na_meeting_2");
+
+    if (!meeting1 || !meeting2) {
+      return;
+    }
+
+    if (meeting1.value && meeting2.value && meeting1.value === meeting2.value) {
+      meeting2.value = "";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const activity = document.getElementById("activity_category");
+    const meeting1 = document.getElementById("aa_na_meeting_1");
+    const meeting2 = document.getElementById("aa_na_meeting_2");
+
+    if (activity) {
+      activity.addEventListener("change", toggleDailyLogFields);
+    }
+    if (meeting1) {
+      meeting1.addEventListener("change", preventDuplicateMeetingChoice);
+    }
+    if (meeting2) {
+      meeting2.addEventListener("change", preventDuplicateMeetingChoice);
+    }
+
+    toggleDailyLogFields();
+  });
+</script>
+
+{% endblock %}
