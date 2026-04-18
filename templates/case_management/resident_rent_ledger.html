@@ -2,7 +2,46 @@
 
 {% block extra_head %}
 <style>
-/* keep existing styles unchanged */
+  .account-summary-grid {
+    display:grid;
+    grid-template-columns:repeat(4, minmax(160px, 1fr));
+    gap:16px;
+  }
+  .account-action-grid {
+    display:grid;
+    grid-template-columns:repeat(3, minmax(260px, 1fr));
+    gap:16px;
+  }
+  .account-action-card {
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--bg-soft);
+    padding:14px;
+  }
+  .account-action-card h3 {
+    margin:0 0 10px 0;
+    font-size:18px;
+  }
+  .account-action-card form {
+    display:grid;
+    gap:10px;
+  }
+  .account-action-card input,
+  .account-action-card select,
+  .account-action-card textarea {
+    width:100%;
+  }
+  .account-help {
+    font-size:13px;
+    color:var(--text-muted);
+    line-height:1.4;
+  }
+  @media (max-width: 980px) {
+    .account-summary-grid,
+    .account-action-grid {
+      grid-template-columns:1fr;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -17,9 +56,7 @@
 
     <div class="cmx-card">
       {% set balance = ledger_summary['current_balance'] or 0 %}
-
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
-
+      <div class="account-summary-grid">
         <div>
           <strong>Current Balance</strong><br>
           {% if balance < 0 %}
@@ -51,9 +88,72 @@
             Paid
           {% endif %}
         </div>
-
       </div>
     </div>
+
+    {% if show_payment_form %}
+    <div class="cmx-card">
+      <div class="account-action-grid">
+        <div class="account-action-card">
+          <h3>Post Payment</h3>
+          <form method="POST" action="{{ url_for('rent_tracking.resident_rent_post_payment', resident_id=resident['id']) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="number" step="0.01" min="0.01" name="amount" placeholder="Amount" required>
+            <input type="date" name="payment_date" value="{{ (now().date().isoformat() if now is defined else '') }}" required>
+            <select name="payment_method" required>
+              <option value="">Select payment method</option>
+              {% for m in payment_method_options %}
+                <option value="{{ m }}">{{ m }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="instrument_number" placeholder="Check or money order number" required>
+            <textarea name="notes" rows="2" placeholder="Optional note"></textarea>
+            <button type="submit" class="cmx-btn">Post Payment</button>
+          </form>
+        </div>
+
+        <div class="account-action-card">
+          <h3>Add Charge</h3>
+          <form method="POST" action="{{ url_for('rent_tracking.resident_rent_post_charge', resident_id=resident['id']) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="number" step="0.01" min="0.01" name="amount" placeholder="Amount" required>
+            <input type="date" name="charge_date" value="{{ (now().date().isoformat() if now is defined else '') }}" required>
+            <select name="charge_category" required>
+              <option value="">Select charge category</option>
+              {% for category in charge_category_options %}
+                <option value="{{ category }}">{{ category|replace('_', ' ')|title }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="charge_reference" placeholder="Reference or receipt number">
+            <input type="text" name="description" placeholder="Charge description" required>
+            <textarea name="notes" rows="2" placeholder="Optional note"></textarea>
+            <button type="submit" class="cmx-btn">Add Charge</button>
+          </form>
+        </div>
+
+        <div class="account-action-card">
+          <h3>Add Credit Or Refund</h3>
+          <form method="POST" action="{{ url_for('rent_tracking.resident_rent_post_credit', resident_id=resident['id']) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="number" step="0.01" min="0.01" name="amount" placeholder="Amount" required>
+            <input type="date" name="credit_date" value="{{ (now().date().isoformat() if now is defined else '') }}" required>
+            <select name="credit_category" required>
+              <option value="">Select credit category</option>
+              {% for category in credit_category_options %}
+                <option value="{{ category }}">{{ category|replace('_', ' ')|title }}</option>
+              {% endfor %}
+            </select>
+            <input type="text" name="description" placeholder="Credit or refund description" required>
+            <textarea name="notes" rows="2" placeholder="Optional note"></textarea>
+            <button type="submit" class="cmx-btn">Add Credit</button>
+          </form>
+          <div class="account-help" style="margin-top:10px;">
+            Refunds are only allowed when the account is actually in credit.
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <div class="ledger-transactions-card">
       <div class="ledger-transactions-head">
