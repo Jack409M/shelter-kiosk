@@ -39,6 +39,7 @@ class CheckoutResult:
     meeting_count: int = 0
     is_recovery_meeting_value: int = 0
     volunteer_community_service_option: str = ""
+    child_option_value: str = ""
     obligation_start_value: str | None = None
     obligation_end_value: str | None = None
     expected_back_value: str | None = None
@@ -424,6 +425,7 @@ def handle_checkout(
     aa_na_meeting_1: str,
     aa_na_meeting_2: str,
     volunteer_community_service_option: str,
+    child_option_value: str,
     start_time_hour: str,
     start_time_minute: str,
     start_time_ampm: str,
@@ -435,14 +437,14 @@ def handle_checkout(
     expected_back_ampm: str,
     note: str,
     checkout_categories: list[dict[str, Any]],
-    aa_na_child_options: list[dict[str, Any]],
-    volunteer_child_options: list[dict[str, Any]],
+    child_options_by_parent: dict[str, list[dict[str, Any]]],
     aa_na_parent_activity_key: str,
     volunteer_parent_activity_key: str,
 ) -> CheckoutResult:
     normalized_shelter = _normalize_shelter(shelter)
     normalized_code = _clean_text(resident_code)
     normalized_destination = _clean_text(destination)
+    normalized_child_option_value = _clean_text(child_option_value)
 
     errors: list[str] = []
 
@@ -470,37 +472,41 @@ def handle_checkout(
         _clean_text(selected_category.get("activity_key")) if selected_category else ""
     )
 
-    child_option_labels = {
-        _clean_text(item.get("option_label"))
-        for item in aa_na_child_options
-        if _clean_text(item.get("option_label"))
-    }
-
-    volunteer_option_labels = {
-        _clean_text(item.get("option_label"))
-        for item in volunteer_child_options
-        if _clean_text(item.get("option_label"))
-    }
-
     is_aa_na_meeting = selected_activity_key == aa_na_parent_activity_key
     is_volunteer_community_service = selected_activity_key == volunteer_parent_activity_key
+
+    selected_child_rows = child_options_by_parent.get(selected_activity_key, [])
+    selected_child_option_labels = {
+        _clean_text(item.get("option_label"))
+        for item in selected_child_rows
+        if _clean_text(item.get("option_label"))
+    }
+    has_generic_child_options = bool(selected_child_option_labels)
 
     if is_aa_na_meeting:
         if not aa_na_meeting_1:
             errors.append("Meeting 1 is required for AA or NA Meeting.")
-        elif aa_na_meeting_1 not in child_option_labels:
+        elif aa_na_meeting_1 not in selected_child_option_labels:
             errors.append("Please select a valid Meeting 1 option.")
 
-        if aa_na_meeting_2 and aa_na_meeting_2 not in child_option_labels:
+        if aa_na_meeting_2 and aa_na_meeting_2 not in selected_child_option_labels:
             errors.append("Please select a valid Meeting 2 option.")
 
         if aa_na_meeting_1 and aa_na_meeting_2 and aa_na_meeting_1 == aa_na_meeting_2:
             errors.append("Meeting 1 and Meeting 2 cannot be the same.")
 
+    elif has_generic_child_options:
+        if not normalized_child_option_value:
+            errors.append("Activity detail is required.")
+        elif normalized_child_option_value not in selected_child_option_labels:
+            errors.append("Please select a valid activity detail option.")
+
+    selected_volunteer_option = ""
     if is_volunteer_community_service:
-        if not volunteer_community_service_option:
+        selected_volunteer_option = volunteer_community_service_option or normalized_child_option_value
+        if not selected_volunteer_option:
             errors.append("Volunteer or Community Service selection is required.")
-        elif volunteer_community_service_option not in volunteer_option_labels:
+        elif selected_volunteer_option not in selected_child_option_labels:
             errors.append("Please select a valid Volunteer or Community Service option.")
 
     expected_back_value: str | None = None
@@ -580,6 +586,12 @@ def handle_checkout(
 
         is_recovery_meeting_value = 1
 
+    final_child_option_value = ""
+    if is_volunteer_community_service:
+        final_child_option_value = selected_volunteer_option
+    elif has_generic_child_options:
+        final_child_option_value = normalized_child_option_value
+
     note_parts: list[str] = []
 
     if normalized_destination:
@@ -591,8 +603,10 @@ def handle_checkout(
     if is_aa_na_meeting and aa_na_meeting_2:
         note_parts.append(f"Meeting 2: {aa_na_meeting_2}")
 
-    if is_volunteer_community_service and volunteer_community_service_option:
-        note_parts.append(f"Volunteer or Community Service: {volunteer_community_service_option}")
+    if is_volunteer_community_service and final_child_option_value:
+        note_parts.append(f"Volunteer or Community Service: {final_child_option_value}")
+    elif final_child_option_value:
+        note_parts.append(f"Activity Detail: {final_child_option_value}")
 
     if requires_approved_pass and active_pass:
         pass_id = active_pass.get("id")
@@ -666,7 +680,8 @@ def handle_checkout(
         aa_na_meeting_2=aa_na_meeting_2,
         meeting_count=meeting_count,
         is_recovery_meeting_value=is_recovery_meeting_value,
-        volunteer_community_service_option=volunteer_community_service_option,
+        volunteer_community_service_option=selected_volunteer_option,
+        child_option_value=final_child_option_value,
         obligation_start_value=obligation_start_value,
         obligation_end_value=obligation_end_value,
         expected_back_value=expected_back_value,
