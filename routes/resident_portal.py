@@ -122,42 +122,59 @@ def _load_daily_log_categories(shelter: str) -> list[dict[str, Any]]:
     return categories
 
 
-def _load_aa_na_child_options(shelter: str) -> list[dict[str, Any]]:
+def _load_child_options_by_parent(shelter: str, checkout_categories: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
     if not shelter:
-        return []
+        return {}
 
-    rows = load_active_kiosk_activity_child_options_for_shelter(
-        shelter,
-        AA_NA_PARENT_ACTIVITY_KEY,
-    )
-    options: list[dict[str, Any]] = []
+    parent_keys = {
+        _clean_text(item.get("activity_key"))
+        for item in checkout_categories
+        if _clean_text(item.get("activity_key"))
+    }
 
-    for row in rows or []:
-        item = dict(row)
-        if not _clean_text(item.get("option_label")):
-            continue
-        options.append(item)
+    child_options_by_parent: dict[str, list[dict[str, Any]]] = {}
+    for parent_key in sorted(parent_keys):
+        rows = load_active_kiosk_activity_child_options_for_shelter(shelter, parent_key)
+        options: list[dict[str, Any]] = []
 
-    return options
+        for row in rows or []:
+            item = dict(row)
+            if not _clean_text(item.get("option_label")):
+                continue
+            options.append(item)
+
+        if options:
+            child_options_by_parent[parent_key] = options
+
+    return child_options_by_parent
 
 
-def _load_volunteer_child_options(shelter: str) -> list[dict[str, Any]]:
-    if not shelter:
-        return []
+def _daily_log_template_context(
+    *,
+    shelter: str,
+    resident_level: int,
+    checkout_categories: list[dict[str, Any]],
+    child_options_by_parent: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    aa_na_child_options = child_options_by_parent.get(AA_NA_PARENT_ACTIVITY_KEY, [])
+    child_option_labels_by_parent = {
+        parent_key: [
+            _clean_text(item.get("option_label"))
+            for item in rows
+            if _clean_text(item.get("option_label"))
+        ]
+        for parent_key, rows in child_options_by_parent.items()
+    }
 
-    rows = load_active_kiosk_activity_child_options_for_shelter(
-        shelter,
-        VOLUNTEER_PARENT_ACTIVITY_KEY,
-    )
-    options: list[dict[str, Any]] = []
-
-    for row in rows or []:
-        item = dict(row)
-        if not _clean_text(item.get("option_label")):
-            continue
-        options.append(item)
-
-    return options
+    return {
+        "shelter": shelter,
+        "resident_level": resident_level,
+        "checkout_categories": checkout_categories,
+        "aa_na_parent_activity_key": AA_NA_PARENT_ACTIVITY_KEY,
+        "aa_na_child_options": aa_na_child_options,
+        "volunteer_parent_activity_key": VOLUNTEER_PARENT_ACTIVITY_KEY,
+        "child_option_labels_by_parent": child_option_labels_by_parent,
+    }
 
 
 def _hydrate_pass_item(row: dict[str, Any]) -> dict[str, Any]:
@@ -492,8 +509,7 @@ def resident_daily_log():
             return redirect(url_for("resident_portal.home"))
 
         checkout_categories = _load_daily_log_categories(shelter)
-        aa_na_child_options = _load_aa_na_child_options(shelter)
-        volunteer_child_options = _load_volunteer_child_options(shelter)
+        child_options_by_parent = _load_child_options_by_parent(shelter, checkout_categories)
 
         if request.method == "POST":
             log_date = _clean_text(request.form.get("log_date"))
@@ -501,7 +517,10 @@ def resident_daily_log():
             hours_raw = request.form.get("hours")
             aa_na_meeting_1 = _clean_text(request.form.get("aa_na_meeting_1"))
             aa_na_meeting_2 = _clean_text(request.form.get("aa_na_meeting_2"))
-            volunteer_option = _clean_text(request.form.get("volunteer_community_service_option"))
+            child_option_value = _clean_text(
+                request.form.get("child_option_value")
+                or request.form.get("volunteer_community_service_option")
+            )
             note = _clean_text(request.form.get("note"))
 
             errors: list[str] = []
@@ -528,28 +547,23 @@ def resident_daily_log():
             )
 
             is_aa_na = selected_activity_key == AA_NA_PARENT_ACTIVITY_KEY
-            is_volunteer = selected_activity_key == VOLUNTEER_PARENT_ACTIVITY_KEY
-
-            aa_na_option_labels = {
+            selected_child_rows = child_options_by_parent.get(selected_activity_key, [])
+            selected_child_option_labels = {
                 _clean_text(item.get("option_label"))
-                for item in aa_na_child_options
+                for item in selected_child_rows
                 if _clean_text(item.get("option_label"))
             }
-            volunteer_option_labels = {
-                _clean_text(item.get("option_label"))
-                for item in volunteer_child_options
-                if _clean_text(item.get("option_label"))
-            }
+            has_generic_child_options = bool(selected_child_option_labels)
 
             hours_value = _safe_float(hours_raw)
 
             if is_aa_na:
                 if not aa_na_meeting_1:
                     errors.append("Meeting 1 is required.")
-                elif aa_na_meeting_1 not in aa_na_option_labels:
+                elif aa_na_meeting_1 not in selected_child_option_labels:
                     errors.append("Please select a valid Meeting 1 option.")
 
-                if aa_na_meeting_2 and aa_na_meeting_2 not in aa_na_option_labels:
+                if aa_na_meeting_2 and aa_na_meeting_2 not in selected_child_option_labels:
                     errors.append("Please select a valid Meeting 2 option.")
 
                 if aa_na_meeting_1 and aa_na_meeting_2 and aa_na_meeting_1 == aa_na_meeting_2:
@@ -558,24 +572,23 @@ def resident_daily_log():
                 if hours_value is None:
                     errors.append("Valid hours are required.")
 
-            if is_volunteer:
-                if not volunteer_option:
-                    errors.append("Volunteer selection is required.")
-                elif volunteer_option not in volunteer_option_labels:
-                    errors.append("Please select a valid Volunteer or Community Service option.")
+            if not is_aa_na and has_generic_child_options:
+                if not child_option_value:
+                    errors.append("Activity detail is required.")
+                elif child_option_value not in selected_child_option_labels:
+                    errors.append("Please select a valid activity detail option.")
 
             if errors:
                 for err in errors:
                     flash(err, "error")
                 return render_template(
                     "resident_daily_log.html",
-                    shelter=shelter,
-                    resident_level=resident_level,
-                    checkout_categories=checkout_categories,
-                    aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
-                    aa_na_child_options=aa_na_child_options,
-                    volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
-                    volunteer_child_options=volunteer_child_options,
+                    **_daily_log_template_context(
+                        shelter=shelter,
+                        resident_level=resident_level,
+                        checkout_categories=checkout_categories,
+                        child_options_by_parent=child_options_by_parent,
+                    ),
                 ), 400
 
             meeting_count = 0
@@ -594,8 +607,11 @@ def resident_daily_log():
 
             note_parts: list[str] = []
 
-            if is_volunteer and volunteer_option:
-                note_parts.append(f"Volunteer or Community Service: {volunteer_option}")
+            if not is_aa_na and child_option_value:
+                if selected_activity_key == VOLUNTEER_PARENT_ACTIVITY_KEY:
+                    note_parts.append(f"Volunteer or Community Service: {child_option_value}")
+                else:
+                    note_parts.append(f"Activity Detail: {child_option_value}")
 
             if note:
                 note_parts.append(note)
@@ -669,13 +685,12 @@ def resident_daily_log():
 
         return render_template(
             "resident_daily_log.html",
-            shelter=shelter,
-            resident_level=resident_level,
-            checkout_categories=checkout_categories,
-            aa_na_parent_activity_key=AA_NA_PARENT_ACTIVITY_KEY,
-            aa_na_child_options=aa_na_child_options,
-            volunteer_parent_activity_key=VOLUNTEER_PARENT_ACTIVITY_KEY,
-            volunteer_child_options=volunteer_child_options,
+            **_daily_log_template_context(
+                shelter=shelter,
+                resident_level=resident_level,
+                checkout_categories=checkout_categories,
+                child_options_by_parent=child_options_by_parent,
+            ),
         )
     except Exception as exc:
         current_app.logger.exception(
