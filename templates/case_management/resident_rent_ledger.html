@@ -405,16 +405,23 @@
         </div>
 
         <div class="ledger-summary-card">
-          <span class="ledger-summary-label">Current Balance Due</span>
-          <div class="ledger-summary-value {% if (ledger_summary['current_due'] or 0) > 0 %}ledger-debit{% else %}ledger-neutral{% endif %}">
-            ${{ '%.2f'|format(ledger_summary['current_due'] or 0) }}
+          <span class="ledger-summary-label">Current Signed Balance</span>
+          {% set signed_balance = ledger_summary['current_balance'] or 0 %}
+          <div class="ledger-summary-value {% if signed_balance < 0 %}ledger-credit{% elif signed_balance > 0 %}ledger-debit{% else %}ledger-neutral{% endif %}">
+            {% if signed_balance < 0 %}-{% endif %}${{ '%.2f'|format((signed_balance * -1) if signed_balance < 0 else signed_balance) }}
           </div>
         </div>
 
         <div class="ledger-summary-card">
-          <span class="ledger-summary-label">Current Credit</span>
-          <div class="ledger-summary-value {% if (ledger_summary['current_credit'] or 0) > 0 %}ledger-credit{% else %}ledger-neutral{% endif %}">
-            ${{ '%.2f'|format(ledger_summary['current_credit'] or 0) }}
+          <span class="ledger-summary-label">Status</span>
+          <div class="ledger-summary-value {% if signed_balance < 0 %}ledger-credit{% elif signed_balance > 0 %}ledger-debit{% else %}ledger-neutral{% endif %}">
+            {% if signed_balance < 0 %}
+              Credit balance
+            {% elif signed_balance > 0 %}
+              Balance due
+            {% else %}
+              Paid in full
+            {% endif %}
           </div>
         </div>
       </div>
@@ -497,7 +504,7 @@
                   <td class="ledger-col-balance">
                     {% set balance_after = entry['balance_after'] or 0 %}
                     {% if balance_after < 0 %}
-                      <span class="ledger-credit">Credit ${{ '%.2f'|format(balance_after * -1) }}</span>
+                      <span class="ledger-credit">-${{ '%.2f'|format(balance_after * -1) }}</span>
                     {% elif balance_after > 0 %}
                       <span class="ledger-debit">${{ '%.2f'|format(balance_after) }}</span>
                     {% else %}
