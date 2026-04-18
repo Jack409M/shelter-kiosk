@@ -168,7 +168,6 @@
                 data-activity-key="{{ item_key }}"
                 data-requires-approved-pass="{{ '1' if item.get('requires_approved_pass') else '0' }}"
                 data-is-aa-na-meeting="{{ '1' if item_key == aa_na_parent_activity_key else '0' }}"
-                data-is-volunteer-community-service="{{ '1' if item_key == volunteer_parent_activity_key else '0' }}"
                 {% if selected_destination == item_label %}selected{% endif %}
               >
                 {{ item_label }}
@@ -205,17 +204,10 @@
           </select>
         </div>
 
-        <div id="volunteer_community_service_wrap" class="hidden">
-          <label for="volunteer_community_service_option">Volunteer or Community Service</label>
-          <select id="volunteer_community_service_option" name="volunteer_community_service_option" autocomplete="off">
-            <option value="">Select location</option>
-            {% set selected_volunteer_option = request.form.get('volunteer_community_service_option', '') %}
-            {% for item in volunteer_child_options %}
-              {% set option_label = item.get('option_label', '') %}
-              <option value="{{ option_label }}" {% if selected_volunteer_option == option_label %}selected{% endif %}>
-                {{ option_label }}
-              </option>
-            {% endfor %}
+        <div id="generic_child_option_wrap" class="hidden">
+          <label for="child_option_value">Activity Detail</label>
+          <select id="child_option_value" name="child_option_value" autocomplete="off">
+            <option value="">Select detail</option>
           </select>
         </div>
 
@@ -339,6 +331,37 @@
   </div>
 
   <script>
+    const childOptionLabelsByParent = {{ child_option_labels_by_parent | tojson }};
+    const initialGenericChildValue = {{ request.form.get('child_option_value', request.form.get('volunteer_community_service_option', '')) | tojson }};
+
+    function setSelectOptions(selectElement, optionLabels, selectedValue) {
+      if (!selectElement) {
+        return;
+      }
+
+      const currentValue = typeof selectedValue === "string" ? selectedValue : "";
+      selectElement.innerHTML = "";
+
+      const placeholderOption = document.createElement("option");
+      placeholderOption.value = "";
+      placeholderOption.textContent = "Select detail";
+      selectElement.appendChild(placeholderOption);
+
+      (optionLabels || []).forEach(function (label) {
+        const option = document.createElement("option");
+        option.value = label;
+        option.textContent = label;
+        if (label === currentValue) {
+          option.selected = true;
+        }
+        selectElement.appendChild(option);
+      });
+
+      if (!currentValue) {
+        selectElement.value = "";
+      }
+    }
+
     function toggleExpectedBackTime() {
       const destination = document.getElementById("destination");
 
@@ -347,8 +370,8 @@
       const aaNaMeeting1 = document.getElementById("aa_na_meeting_1");
       const aaNaMeeting2 = document.getElementById("aa_na_meeting_2");
 
-      const volunteerWrap = document.getElementById("volunteer_community_service_wrap");
-      const volunteerSelect = document.getElementById("volunteer_community_service_option");
+      const genericChildWrap = document.getElementById("generic_child_option_wrap");
+      const genericChildSelect = document.getElementById("child_option_value");
 
       const startWrap = document.getElementById("start_time_wrap");
       const endWrap = document.getElementById("end_time_wrap");
@@ -371,6 +394,11 @@
         ? destination.selectedOptions[0]
         : null;
 
+      const selectedActivityKey = selectedOption
+        && selectedOption.dataset
+        ? selectedOption.dataset.activityKey || ""
+        : "";
+
       const requiresApprovedPass = selectedOption
         && selectedOption.dataset
         && selectedOption.dataset.requiresApprovedPass === "1";
@@ -379,9 +407,12 @@
         && selectedOption.dataset
         && selectedOption.dataset.isAaNaMeeting === "1";
 
-      const isVolunteerCommunityService = selectedOption
-        && selectedOption.dataset
-        && selectedOption.dataset.isVolunteerCommunityService === "1";
+      const childLabels = childOptionLabelsByParent[selectedActivityKey] || [];
+      const shouldShowGenericChild = !isAaNaMeeting && childLabels.length > 0;
+      const currentGenericValue = genericChildSelect ? genericChildSelect.value : "";
+      const selectedGenericValue = childLabels.includes(currentGenericValue)
+        ? currentGenericValue
+        : initialGenericChildValue;
 
       if (aaNaMeeting1Wrap) {
         aaNaMeeting1Wrap.classList.toggle("hidden", !isAaNaMeeting);
@@ -402,14 +433,15 @@
         aaNaMeeting2.value = "";
       }
 
-      if (volunteerWrap) {
-        volunteerWrap.classList.toggle("hidden", !isVolunteerCommunityService);
+      if (genericChildWrap) {
+        genericChildWrap.classList.toggle("hidden", !shouldShowGenericChild);
       }
 
-      if (volunteerSelect) {
-        volunteerSelect.required = isVolunteerCommunityService;
-        if (!isVolunteerCommunityService) {
-          volunteerSelect.value = "";
+      if (genericChildSelect) {
+        setSelectOptions(genericChildSelect, childLabels, shouldShowGenericChild ? selectedGenericValue : "");
+        genericChildSelect.required = shouldShowGenericChild;
+        if (!shouldShowGenericChild) {
+          genericChildSelect.value = "";
         }
       }
 
