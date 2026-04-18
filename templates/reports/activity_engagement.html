@@ -1,0 +1,146 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="reports-header card">
+    <div>
+      <h1>Activity Engagement Report</h1>
+      <p class="reports-subtitle">
+        {{ report.current_week_label }} • {{ report.last_week_label }}
+      </p>
+    </div>
+  </div>
+
+  <form method="get" class="card" style="margin-bottom:16px;">
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+      <div>
+        <label>Shelter</label>
+        <select name="shelter">
+          {% for opt in report.shelter_options %}
+            <option value="{{ opt.value }}" {% if opt.value == report.selected_shelter %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label>Sort By</label>
+        <select name="sort_by">
+          {% for opt in report.sort_options %}
+            <option value="{{ opt.value }}" {% if opt.value == report.sort_by %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <button class="btn btn-primary" type="submit">Apply</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h2>Shelter Summary</h2>
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>Shelter</th>
+          <th>This Week Hours</th>
+          <th>Last Week Hours</th>
+          <th>All Time Hours</th>
+          <th>This Week Meetings</th>
+          <th>Last Week Meetings</th>
+          <th>All Time Meetings</th>
+          <th>Volunteer</th>
+          <th>Productive</th>
+          <th>Work</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.shelter_summary_rows %}
+        <tr>
+          <td>{{ row.shelter_label }}</td>
+          <td>{{ row.this_week_hours }}</td>
+          <td>{{ row.last_week_hours }}</td>
+          <td>{{ row.all_time_hours }}</td>
+          <td>{{ row.this_week_meetings }}</td>
+          <td>{{ row.last_week_meetings }}</td>
+          <td>{{ row.all_time_meetings }}</td>
+          <td>{{ row.volunteer_hours }}</td>
+          <td>{{ row.productive_hours }}</td>
+          <td>{{ row.work_hours }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h2>Resident Detail</h2>
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>Resident</th>
+          <th>Shelter</th>
+          <th>This Week Hours</th>
+          <th>Last Week Hours</th>
+          <th>All Time Hours</th>
+          <th>This Week Meetings</th>
+          <th>Last Week Meetings</th>
+          <th>All Time Meetings</th>
+          <th>Volunteer</th>
+          <th>Productive</th>
+          <th>Work</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.resident_detail_rows %}
+        <tr>
+          <td>{{ row.resident_name }}</td>
+          <td>{{ row.shelter_label }}</td>
+          <td>{{ row.this_week_hours }}</td>
+          <td>{{ row.last_week_hours }}</td>
+          <td>{{ row.all_time_hours }}</td>
+          <td>{{ row.this_week_meetings }}</td>
+          <td>{{ row.last_week_meetings }}</td>
+          <td>{{ row.all_time_meetings }}</td>
+          <td>{{ row.volunteer_hours }}</td>
+          <td>{{ row.productive_hours }}</td>
+          <td>{{ row.work_hours }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Category Breakdown</h2>
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>Shelter</th>
+          <th>Category</th>
+          <th>This Week Hours</th>
+          <th>Last Week Hours</th>
+          <th>All Time Hours</th>
+          <th>This Week Meetings</th>
+          <th>Last Week Meetings</th>
+          <th>All Time Meetings</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.category_detail_rows %}
+        <tr>
+          <td>{{ row.shelter_label }}</td>
+          <td>{{ row.category_label }}</td>
+          <td>{{ row.this_week_hours }}</td>
+          <td>{{ row.last_week_hours }}</td>
+          <td>{{ row.all_time_hours }}</td>
+          <td>{{ row.this_week_meetings }}</td>
+          <td>{{ row.last_week_meetings }}</td>
+          <td>{{ row.all_time_meetings }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
