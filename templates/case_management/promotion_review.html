@@ -3,39 +3,16 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
 <style>
-  .cmx-recommendation {
-    margin-bottom: 16px;
-    padding: 12px 14px;
-    border-radius: 12px;
-    font-weight: 600;
-  }
-
-  .cmx-recommendation.ready {
-    background: #e8f7ec;
-    border: 1px solid #9bc8a6;
-    color: #1f6b33;
-  }
-
-  .cmx-recommendation.needs_review {
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
-    color: #8a5a00;
-  }
-
-  .cmx-recommendation.high_concern {
-    background: #fdecea;
-    border: 1px solid #e2a0a0;
-    color: #9a1f1f;
-  }
+  .cmx-recommendation { padding: 12px; border-radius: 10px; margin-bottom: 12px; font-weight: 600; }
+  .ready { background:#e8f7ec; }
+  .needs_review { background:#fff4e5; }
+  .high_concern { background:#fdecea; }
 </style>
 {% endblock %}
 
 {% block content %}
 {% set pr = recovery_snapshot.promotion_readiness or {} %}
 {% set checks = pr.get("checks", []) %}
-{% set recommendation = pr.get("recommendation") %}
-{% set recommendation_label = pr.get("recommendation_label") %}
-{% set current_level = recovery_snapshot.program_level or "—" %}
 
 <div class="cmx-page">
   <div class="cmx-shell">
@@ -43,52 +20,58 @@
     <main class="cmx-workspace-main">
 
       <section class="cmx-card">
-        <h2 class="cmx-section-title">Program Review</h2>
+        <h2>Program Review</h2>
 
-        <div class="cmx-recommendation {{ recommendation }}">
-          System Recommendation: {{ recommendation_label }}
+        <div class="cmx-recommendation {{ pr.recommendation }}">
+          {{ pr.recommendation_label }}
         </div>
 
         {% for c in checks %}
           <div class="cmx-grade-row">
-            <div>
-              <div class="cmx-grade-label">{{ c.label }}</div>
-              {% if c.detail %}
-                <div class="cmx-grade-detail">{{ c.detail }}</div>
-              {% endif %}
-            </div>
-            <span class="cmx-grade-pill {% if c.ok %}cmx-grade-pass{% else %}cmx-grade-fail{% endif %}">
-              {% if c.ok %}Met{% else %}Needs Review{% endif %}
-            </span>
+            <div>{{ c.label }} {% if c.detail %}({{ c.detail }}){% endif %}</div>
+            <div>{% if c.ok %}✔{% else %}Needs Review{% endif %}</div>
           </div>
         {% endfor %}
-
       </section>
 
       <section class="cmx-card">
-        <h2 class="cmx-section-title">Case Manager Decision</h2>
+        <h2>Case Manager Decision</h2>
 
         <form method="post">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="meeting_date" value="{{ now().date() }}">
 
-          <div class="cmx-field">
-            <label>Decision</label>
-            <select name="decision">
-              <option value="ready">Approve Promotion</option>
-              <option value="not_ready">Not Ready</option>
-              <option value="exception">Approve with Exception</option>
-            </select>
-          </div>
+          <label>Recommended Next Level</label>
+          <input name="recommended_next_level">
 
-          <div class="cmx-field">
-            <label>Decision Notes</label>
-            <textarea name="decision_notes"></textarea>
-          </div>
+          <label>Decision</label>
+          <select name="decision">
+            <option value="ready">Approve</option>
+            <option value="not_ready">Not Ready</option>
+            <option value="exception">Approve with Exception</option>
+          </select>
 
-          <div class="cmx-button-row">
-            <button class="cmx-btn" type="submit">Save Decision</button>
-          </div>
+          <label>Notes</label>
+          <textarea name="decision_notes"></textarea>
+
+          <button type="submit">Save Review</button>
         </form>
+      </section>
+
+      <section class="cmx-card">
+        <h2>Apply Promotion</h2>
+        <form method="post">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="form_action" value="apply_promotion">
+          <button type="submit">Apply Promotion</button>
+        </form>
+      </section>
+
+      <section class="cmx-card">
+        <h2>History</h2>
+        {% for h in promotion_history %}
+          <div>{{ h.created_at }} - {{ h.staff_name }}</div>
+        {% endfor %}
       </section>
 
     </main>
