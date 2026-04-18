@@ -29,6 +29,8 @@ from .data_access import (
     _ledger_entries_for_resident,
     _ledger_summary_for_resident,
     _load_sheet_entries,
+    _post_resident_charge,
+    _post_resident_credit,
     _post_resident_payment,
     _program_enrollment_for_month,
     _resident_any_shelter,
@@ -770,145 +772,7 @@ def register_routes(rent_tracking):
         )
 
         if request.method == "POST":
-            today_iso = _today_chicago().date().isoformat()
-
-            with db_transaction():
-                fresh_entries = _load_sheet_entries(sheet["id"])
-
-                for entry in fresh_entries:
-                    entry_id = entry["id"]
-                    resident_id = entry["resident_id"]
-                    entry_enrollment_id = entry.get("enrollment_id")
-
-                    payment_received = round(max(0.0, _float_value(request.form.get(f"payment_received_{entry_id}"))), 2)
-                    existing_amount_paid = round(_float_value(entry.get("amount_paid")), 2)
-                    amount_paid = round(existing_amount_paid + payment_received, 2)
-
-                    paid_date = (request.form.get(f"paid_date_{entry_id}") or "").strip() or None
-                    manual_adjustment = round(_float_value(request.form.get(f"manual_adjustment_{entry_id}")), 2)
-                    approved_late_arrangement = (request.form.get(f"approved_late_arrangement_{entry_id}") or "").strip().lower() == "yes"
-
-                    subtotal_due = round(_float_value(entry.get("prior_balance")) + _float_value(entry.get("prorated_charge")) + manual_adjustment, 2)
-                    is_exempt = str(entry.get("status") or "").strip() == "Exempt"
-                    late_fee_charge, _late_fee_note = _calculate_late_fee(
-                        settings=settings,
-                        shelter=shelter,
-                        rent_year=rent_year,
-                        rent_month=rent_month,
-                        subtotal_due=subtotal_due,
-                        paid_date=paid_date,
-                        approved_late_arrangement=approved_late_arrangement,
-                        is_exempt=is_exempt,
-                        today_date=_today_chicago().date(),
-                    )
-                    total_due = 0.0 if is_exempt else round(subtotal_due + late_fee_charge, 2)
-                    current_charge = 0.0 if is_exempt else round(_float_value(entry.get("prorated_charge")) + manual_adjustment, 2)
-                    remaining_balance = 0.0 if is_exempt else round(total_due - amount_paid, 2)
-                    status = _derive_status(total_due, amount_paid, paid_date, is_exempt, late_fee_charge)
-                    compliance_score = _score_for_status(settings, status)
-                    calculation_notes = (entry.get("calculation_notes") or "").strip()
-                    now = utcnow_iso()
-
-                    db_execute(
-                        (
-                            """
-                            UPDATE resident_rent_sheet_entries
-                            SET current_charge = %s,
-                                total_due = %s,
-                                amount_paid = %s,
-                                remaining_balance = %s,
-                                status = %s,
-                                compliance_score = %s,
-                                paid_date = %s,
-                                notes = %s,
-                                late_fee_charge = %s,
-                                manual_adjustment = %s,
-                                approved_late_arrangement = %s,
-                                calculation_notes = %s,
-                                updated_by_staff_user_id = %s,
-                                updated_at = %s
-                            WHERE id = %s
-                            """
-                            if g.get("db_kind") == "pg"
-                            else """
-                            UPDATE resident_rent_sheet_entries
-                            SET current_charge = ?,
-                                total_due = ?,
-                                amount_paid = ?,
-                                remaining_balance = ?,
-                                status = ?,
-                                compliance_score = ?,
-                                paid_date = ?,
-                                notes = ?,
-                                late_fee_charge = ?,
-                                manual_adjustment = ?,
-                                approved_late_arrangement = ?,
-                                calculation_notes = ?,
-                                updated_by_staff_user_id = ?,
-                                updated_at = ?
-                            WHERE id = ?
-                            """
-                        ),
-                        (
-                            current_charge,
-                            total_due,
-                            amount_paid,
-                            remaining_balance,
-                            status,
-                            compliance_score,
-                            paid_date,
-                            None,
-                            late_fee_charge,
-                            manual_adjustment,
-                            approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
-                            calculation_notes,
-                            session.get("staff_user_id"),
-                            now,
-                            entry_id,
-                        ),
-                    )
-
-                    updated_entry = dict(entry)
-                    updated_entry["amount_paid"] = amount_paid
-                    updated_entry["paid_date"] = paid_date
-                    updated_entry["manual_adjustment"] = manual_adjustment
-                    updated_entry["late_fee_charge"] = late_fee_charge
-                    updated_entry["current_charge"] = current_charge
-                    updated_entry["total_due"] = total_due
-                    updated_entry["remaining_balance"] = remaining_balance
-                    updated_entry["status"] = status
-                    updated_entry["approved_late_arrangement"] = approved_late_arrangement
-
-                    if payment_received > 0:
-                        payment_entry_date = paid_date or today_iso
-                        _insert_rent_ledger_entry(
-                            resident_id=resident_id,
-                            enrollment_id=entry_enrollment_id,
-                            shelter=shelter,
-                            entry_date=payment_entry_date,
-                            entry_type="payment",
-                            description="Rent payment received",
-                            debit_amount=0.0,
-                            credit_amount=payment_received,
-                            related_sheet_id=sheet["id"],
-                            related_sheet_entry_id=entry_id,
-                            related_month_year=rent_year,
-                            related_month_month=rent_month,
-                            source_code="rent_payment",
-                            source_reference=f"{rent_year:04d}-{rent_month:02d}:{entry_id}:{now}",
-                            notes=None,
-                        )
-
-                    _reconcile_payment_ledger_entry(
-                        resident_id=resident_id,
-                        shelter=shelter,
-                        sheet=sheet,
-                        entry=updated_entry,
-                        rent_year=rent_year,
-                        rent_month=rent_month,
-                    )
-
-            flash("Rent payment sheet saved.", "ok")
+            flash("Payments are now locked to Resident Account.", "error")
             return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
 
         repaired_entries = _load_sheet_entries(sheet["id"])
@@ -976,6 +840,8 @@ def register_routes(rent_tracking):
             balance_breakdown=balance_breakdown,
             show_payment_form=True,
             payment_method_options=["Check", "Money Order"],
+            charge_category_options=["cleaning_fee", "lost_key", "maintenance", "other"],
+            credit_category_options=["refund", "proration_credit", "other_credit"],
         )
 
     @rent_tracking.route("/resident/<int:resident_id>/account/post-payment", methods=["POST"])
@@ -1022,6 +888,105 @@ def register_routes(rent_tracking):
         )
 
         flash("Payment posted.", "ok")
+        return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+    @rent_tracking.route("/resident/<int:resident_id>/account/post-charge", methods=["POST"])
+    @require_login
+    @require_shelter
+    def resident_rent_post_charge(resident_id: int):
+        if not _allowed(session):
+            flash("Case manager, shelter director, or admin access required.", "error")
+            return redirect(url_for("attendance.staff_attendance"))
+
+        _ensure_tables()
+        resident = _resident_any_shelter(resident_id)
+        if not resident:
+            flash("Resident not found.", "error")
+            return redirect(url_for("rent_tracking.rent_roll"))
+
+        shelter = _normalize_shelter_name(resident.get("shelter"))
+        amount = round(_float_value(request.form.get("amount")), 2)
+        charge_date = (request.form.get("charge_date") or "").strip() or _today_chicago().date().isoformat()
+        charge_category = (request.form.get("charge_category") or "").strip()
+        charge_reference = (request.form.get("charge_reference") or "").strip() or None
+        description = (request.form.get("description") or "").strip()
+        notes = (request.form.get("notes") or "").strip() or None
+
+        if amount <= 0:
+            flash("Charge amount must be greater than zero.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        if charge_category not in {"cleaning_fee", "lost_key", "maintenance", "other"}:
+            flash("Select a valid charge category.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        if not description:
+            flash("Charge description is required.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        _post_resident_charge(
+            resident_id=resident_id,
+            shelter=shelter,
+            amount=amount,
+            charge_date=charge_date,
+            charge_category=charge_category,
+            description=description,
+            charge_reference=charge_reference,
+            notes=notes,
+        )
+
+        flash("Charge posted.", "ok")
+        return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+    @rent_tracking.route("/resident/<int:resident_id>/account/post-credit", methods=["POST"])
+    @require_login
+    @require_shelter
+    def resident_rent_post_credit(resident_id: int):
+        if not _allowed(session):
+            flash("Case manager, shelter director, or admin access required.", "error")
+            return redirect(url_for("attendance.staff_attendance"))
+
+        _ensure_tables()
+        resident = _resident_any_shelter(resident_id)
+        if not resident:
+            flash("Resident not found.", "error")
+            return redirect(url_for("rent_tracking.rent_roll"))
+
+        ledger_summary = _ledger_summary_for_resident(resident_id)
+        shelter = _normalize_shelter_name(resident.get("shelter"))
+        amount = round(_float_value(request.form.get("amount")), 2)
+        credit_date = (request.form.get("credit_date") or "").strip() or _today_chicago().date().isoformat()
+        credit_category = (request.form.get("credit_category") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        notes = (request.form.get("notes") or "").strip() or None
+
+        if amount <= 0:
+            flash("Credit amount must be greater than zero.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        if credit_category not in {"refund", "proration_credit", "other_credit"}:
+            flash("Select a valid credit category.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        if not description:
+            flash("Credit description is required.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        if credit_category == "refund" and (ledger_summary.get("current_balance") or 0) >= 0:
+            flash("Refund can only be posted when the account is actually in credit.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        _post_resident_credit(
+            resident_id=resident_id,
+            shelter=shelter,
+            amount=amount,
+            credit_date=credit_date,
+            credit_category=credit_category,
+            description=description,
+            notes=notes,
+        )
+
+        flash("Credit posted.", "ok")
         return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
 
     @rent_tracking.route("/resident/<int:resident_id>/config", methods=["GET", "POST"])
@@ -1209,4 +1174,6 @@ def register_routes(rent_tracking):
             balance_breakdown=balance_breakdown,
             show_payment_form=False,
             payment_method_options=["Check", "Money Order"],
+            charge_category_options=["cleaning_fee", "lost_key", "maintenance", "other"],
+            credit_category_options=["refund", "proration_credit", "other_credit"],
         )
