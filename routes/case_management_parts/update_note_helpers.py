@@ -37,6 +37,22 @@ def collect_note_form_values(form) -> dict[str, Any]:
     override_or_exception = clean_text(form.get("override_or_exception"))
     staff_review_note = clean_text(form.get("staff_review_note"))
 
+    decision = clean_text(form.get("decision")).lower()
+    decision_notes = clean_text(form.get("decision_notes"))
+    if decision:
+        if decision == "ready":
+            ready_for_next_level = True
+            if decision_notes and not staff_review_note:
+                staff_review_note = decision_notes
+        elif decision == "not_ready":
+            ready_for_next_level = False
+            if decision_notes and not blocker_reason:
+                blocker_reason = decision_notes
+        elif decision == "exception":
+            ready_for_next_level = True
+            if decision_notes and not override_or_exception:
+                override_or_exception = decision_notes
+
     updated_grit_raw = clean_text(form.get("updated_grit"))
     updated_grit = parse_grit(updated_grit_raw)
     parenting_class_completed = yes_no_to_int(form.get("parenting_class_completed"))
