@@ -25,9 +25,11 @@ from .data_access import (
     _insert_rent_ledger_entry,
     _insert_sheet,
     _latest_prior_balance,
+    _ledger_balance_breakdown_for_resident,
     _ledger_entries_for_resident,
     _ledger_summary_for_resident,
     _load_sheet_entries,
+    _post_resident_payment,
     _program_enrollment_for_month,
     _resident_any_shelter,
     _resident_for_shelter,
@@ -87,7 +89,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
             existing.get("approved_late_arrangement") if existing else False
         )
         manual_adjustment = _float_value(existing.get("manual_adjustment") if existing else 0)
-        amount_paid = _float_value(existing.get("amount_paid") if existing else 0)
+        amount_paid = _float_value(existing.get("amount_paid")) if existing else 0
         paid_date = (existing.get("paid_date") if existing else None) or None
         notes = None
 
@@ -207,9 +209,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     proration["prorated_charge"],
                     late_fee_charge,
                     manual_adjustment,
-                    approved_late_arrangement
-                    if g.get("db_kind") == "pg"
-                    else (1 if approved_late_arrangement else 0),
+                    approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
                     "\n".join([note for note in calculation_notes if note]),
                     session.get("staff_user_id"),
                     now,
@@ -317,9 +317,7 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     proration["prorated_charge"],
                     late_fee_charge,
                     manual_adjustment,
-                    approved_late_arrangement
-                    if g.get("db_kind") == "pg"
-                    else (1 if approved_late_arrangement else 0),
+                    approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
                     "\n".join([note for note in calculation_notes if note]),
                     session.get("staff_user_id"),
                     now,
@@ -357,9 +355,7 @@ def _group_entries_for_payment_page(shelter: str, entries: list[dict]) -> list[d
         ]
 
     apartment_order = _apartment_options_for_shelter(shelter_key)
-    grouped_map: dict[str, list[dict]] = {
-        apartment_number: [] for apartment_number in apartment_order
-    }
+    grouped_map: dict[str, list[dict]] = {apartment_number: [] for apartment_number in apartment_order}
     unassigned_entries: list[dict] = []
 
     for entry in entries:
@@ -603,11 +599,7 @@ def _post_monthly_charge_ledger_entries(
                     notes=None,
                 )
 
-        if (
-            late_fee_info["is_postable"]
-            and late_fee_info["amount"] > 0
-            and late_fee_info["posting_date"]
-        ):
+        if late_fee_info["is_postable"] and late_fee_info["amount"] > 0 and late_fee_info["posting_date"]:
             existing_late_fee = db_fetchone(
                 (
                     """
@@ -674,15 +666,7 @@ def _ledger_payment_total_for_sheet_entry(resident_id: int, sheet_entry_id: int)
     return round(_float_value(row.get("total_paid") if row else 0), 2)
 
 
-def _reconcile_payment_ledger_entry(
-    *,
-    resident_id: int,
-    shelter: str,
-    sheet: dict,
-    entry: dict,
-    rent_year: int,
-    rent_month: int,
-) -> None:
+def _reconcile_payment_ledger_entry(*, resident_id: int, shelter: str, sheet: dict, entry: dict, rent_year: int, rent_month: int) -> None:
     sheet_entry_id = entry["id"]
     entry_enrollment_id = entry.get("enrollment_id")
     amount_paid_total = round(_float_value(entry.get("amount_paid")), 2)
@@ -692,9 +676,7 @@ def _reconcile_payment_ledger_entry(
     if missing_payment <= 0:
         return
 
-    payment_entry_date = (
-        entry.get("paid_date") or ""
-    ).strip() or _today_chicago().date().isoformat()
+    payment_entry_date = (entry.get("paid_date") or "").strip() or _today_chicago().date().isoformat()
     stamp = utcnow_iso()
 
     _insert_rent_ledger_entry(
@@ -732,17 +714,14 @@ def register_routes(rent_tracking):
         rows = []
         for resident in _active_residents_for_shelter(shelter):
             config = _ensure_default_rent_config(resident["id"], shelter)
-            apartment_number_snapshot = _normalize_apartment_number(
-                shelter, config.get("apartment_number_snapshot")
-            )
-            apartment_size_snapshot = _derive_apartment_size_from_assignment(
-                shelter, apartment_number_snapshot
-            ) or config.get("apartment_size_snapshot")
+            apartment_number_snapshot = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
+            apartment_size_snapshot = _derive_apartment_size_from_assignment(shelter, apartment_number_snapshot) or config.get("apartment_size_snapshot")
             config["apartment_number_snapshot"] = apartment_number_snapshot
             config["apartment_size_snapshot"] = apartment_size_snapshot
 
             auto_rent, auto_note = _derive_base_monthly_rent(settings, shelter, config)
             manual_override = _float_value(config.get("monthly_rent"))
+            ledger_summary = _ledger_summary_for_resident(resident["id"])
             rows.append(
                 {
                     "resident_id": resident["id"],
@@ -755,16 +734,14 @@ def register_routes(rent_tracking):
                     "auto_monthly_rent": auto_rent,
                     "rent_source_note": auto_note,
                     "is_exempt": _bool_value(config.get("is_exempt")),
+                    "current_due": ledger_summary.get("current_due", 0.0),
+                    "current_credit": ledger_summary.get("current_credit", 0.0),
                 }
             )
 
         rows.sort(key=lambda row: row["resident_name"].lower())
 
-        return render_template(
-            "case_management/rent_roll.html",
-            shelter=shelter,
-            rows=rows,
-        )
+        return render_template("case_management/rent_roll.html", shelter=shelter, rows=rows)
 
     @rent_tracking.route("/entry", methods=["GET", "POST"])
     @require_login
@@ -803,27 +780,15 @@ def register_routes(rent_tracking):
                     resident_id = entry["resident_id"]
                     entry_enrollment_id = entry.get("enrollment_id")
 
-                    payment_received = round(
-                        max(0.0, _float_value(request.form.get(f"payment_received_{entry_id}"))),
-                        2,
-                    )
+                    payment_received = round(max(0.0, _float_value(request.form.get(f"payment_received_{entry_id}"))), 2)
                     existing_amount_paid = round(_float_value(entry.get("amount_paid")), 2)
                     amount_paid = round(existing_amount_paid + payment_received, 2)
 
                     paid_date = (request.form.get(f"paid_date_{entry_id}") or "").strip() or None
-                    manual_adjustment = round(
-                        _float_value(request.form.get(f"manual_adjustment_{entry_id}")), 2
-                    )
-                    approved_late_arrangement = (
-                        request.form.get(f"approved_late_arrangement_{entry_id}") or ""
-                    ).strip().lower() == "yes"
+                    manual_adjustment = round(_float_value(request.form.get(f"manual_adjustment_{entry_id}")), 2)
+                    approved_late_arrangement = (request.form.get(f"approved_late_arrangement_{entry_id}") or "").strip().lower() == "yes"
 
-                    subtotal_due = round(
-                        _float_value(entry.get("prior_balance"))
-                        + _float_value(entry.get("prorated_charge"))
-                        + manual_adjustment,
-                        2,
-                    )
+                    subtotal_due = round(_float_value(entry.get("prior_balance")) + _float_value(entry.get("prorated_charge")) + manual_adjustment, 2)
                     is_exempt = str(entry.get("status") or "").strip() == "Exempt"
                     late_fee_charge, _late_fee_note = _calculate_late_fee(
                         settings=settings,
@@ -837,17 +802,9 @@ def register_routes(rent_tracking):
                         today_date=_today_chicago().date(),
                     )
                     total_due = 0.0 if is_exempt else round(subtotal_due + late_fee_charge, 2)
-                    current_charge = (
-                        0.0
-                        if is_exempt
-                        else round(
-                            _float_value(entry.get("prorated_charge")) + manual_adjustment, 2
-                        )
-                    )
+                    current_charge = 0.0 if is_exempt else round(_float_value(entry.get("prorated_charge")) + manual_adjustment, 2)
                     remaining_balance = 0.0 if is_exempt else round(total_due - amount_paid, 2)
-                    status = _derive_status(
-                        total_due, amount_paid, paid_date, is_exempt, late_fee_charge
-                    )
+                    status = _derive_status(total_due, amount_paid, paid_date, is_exempt, late_fee_charge)
                     compliance_score = _score_for_status(settings, status)
                     calculation_notes = (entry.get("calculation_notes") or "").strip()
                     now = utcnow_iso()
@@ -903,9 +860,7 @@ def register_routes(rent_tracking):
                             None,
                             late_fee_charge,
                             manual_adjustment,
-                            approved_late_arrangement
-                            if g.get("db_kind") == "pg"
-                            else (1 if approved_late_arrangement else 0),
+                            approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
                             calculation_notes,
                             session.get("staff_user_id"),
                             now,
@@ -954,9 +909,7 @@ def register_routes(rent_tracking):
                     )
 
             flash("Rent payment sheet saved.", "ok")
-            return redirect(
-                url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month)
-            )
+            return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
 
         repaired_entries = _load_sheet_entries(sheet["id"])
         with db_transaction():
@@ -983,6 +936,94 @@ def register_routes(rent_tracking):
             month_label=_month_label(rent_year, rent_month),
         )
 
+    @rent_tracking.route("/resident/<int:resident_id>/account", methods=["GET"])
+    @require_login
+    @require_shelter
+    def resident_rent_account(resident_id: int):
+        if not _allowed(session):
+            flash("Case manager, shelter director, or admin access required.", "error")
+            return redirect(url_for("attendance.staff_attendance"))
+
+        _ensure_tables()
+        resident = _resident_any_shelter(resident_id)
+        if not resident:
+            flash("Resident not found.", "error")
+            return redirect(url_for("rent_tracking.rent_roll"))
+
+        shelter = _normalize_shelter_name(resident.get("shelter"))
+        if shelter:
+            rent_year, rent_month = _current_year_month()
+            sheet, settings = _ensure_sheet_for_month(shelter, rent_year, rent_month)
+            entries = _load_sheet_entries(sheet["id"])
+            _post_monthly_charge_ledger_entries(
+                shelter=shelter,
+                rent_year=rent_year,
+                rent_month=rent_month,
+                sheet=sheet,
+                entries=entries,
+                settings=settings,
+            )
+
+        ledger_entries = _ledger_entries_for_resident(resident_id)
+        ledger_summary = _ledger_summary_for_resident(resident_id)
+        balance_breakdown = _ledger_balance_breakdown_for_resident(resident_id)
+
+        return render_template(
+            "case_management/resident_rent_ledger.html",
+            resident=resident,
+            ledger_entries=ledger_entries,
+            ledger_summary=ledger_summary,
+            balance_breakdown=balance_breakdown,
+            show_payment_form=True,
+            payment_method_options=["Check", "Money Order"],
+        )
+
+    @rent_tracking.route("/resident/<int:resident_id>/account/post-payment", methods=["POST"])
+    @require_login
+    @require_shelter
+    def resident_rent_post_payment(resident_id: int):
+        if not _allowed(session):
+            flash("Case manager, shelter director, or admin access required.", "error")
+            return redirect(url_for("attendance.staff_attendance"))
+
+        _ensure_tables()
+        resident = _resident_any_shelter(resident_id)
+        if not resident:
+            flash("Resident not found.", "error")
+            return redirect(url_for("rent_tracking.rent_roll"))
+
+        shelter = _normalize_shelter_name(resident.get("shelter"))
+        amount = round(_float_value(request.form.get("amount")), 2)
+        payment_date = (request.form.get("payment_date") or "").strip() or _today_chicago().date().isoformat()
+        payment_method = (request.form.get("payment_method") or "").strip()
+        instrument_number = (request.form.get("instrument_number") or "").strip()
+        notes = (request.form.get("notes") or "").strip() or None
+
+        if amount <= 0:
+            flash("Payment amount must be greater than zero.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        if payment_method not in {"Check", "Money Order"}:
+            flash("Payment method must be Check or Money Order.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        if not instrument_number:
+            flash("Check or Money Order number is required.", "error")
+            return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
+        _post_resident_payment(
+            resident_id=resident_id,
+            shelter=shelter,
+            amount=amount,
+            payment_date=payment_date,
+            payment_method=payment_method,
+            instrument_number=instrument_number,
+            notes=notes,
+        )
+
+        flash("Payment posted.", "ok")
+        return redirect(url_for("rent_tracking.resident_rent_account", resident_id=resident_id))
+
     @rent_tracking.route("/resident/<int:resident_id>/config", methods=["GET", "POST"])
     @require_login
     @require_shelter
@@ -1001,13 +1042,8 @@ def register_routes(rent_tracking):
             return redirect(url_for("rent_tracking.rent_roll"))
 
         config = _ensure_default_rent_config(resident_id, shelter)
-        config["apartment_number_snapshot"] = _normalize_apartment_number(
-            shelter, config.get("apartment_number_snapshot")
-        )
-        config["apartment_size_snapshot"] = _derive_apartment_size_from_assignment(
-            shelter,
-            config.get("apartment_number_snapshot"),
-        ) or config.get("apartment_size_snapshot")
+        config["apartment_number_snapshot"] = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
+        config["apartment_size_snapshot"] = _derive_apartment_size_from_assignment(shelter, config.get("apartment_number_snapshot")) or config.get("apartment_size_snapshot")
 
         auto_monthly_rent, auto_rent_note = _derive_base_monthly_rent(settings, shelter, config)
 
@@ -1027,21 +1063,13 @@ def register_routes(rent_tracking):
 
         if request.method == "POST":
             level_snapshot = (request.form.get("level_snapshot") or "").strip() or None
-            apartment_number_snapshot = _normalize_apartment_number(
-                shelter,
-                request.form.get("apartment_number_snapshot"),
-            )
-            apartment_size_snapshot = _derive_apartment_size_from_assignment(
-                shelter,
-                apartment_number_snapshot,
-            )
+            apartment_number_snapshot = _normalize_apartment_number(shelter, request.form.get("apartment_number_snapshot"))
+            apartment_size_snapshot = _derive_apartment_size_from_assignment(shelter, apartment_number_snapshot)
             monthly_rent = _float_value(request.form.get("monthly_rent"))
             is_exempt = (request.form.get("is_exempt") or "no").strip().lower() == "yes"
             from .dates import _today_chicago as _today_local
 
-            effective_start_date = (
-                request.form.get("effective_start_date") or _today_local().date().isoformat()
-            ).strip()
+            effective_start_date = (request.form.get("effective_start_date") or _today_local().date().isoformat()).strip()
             now = utcnow_iso()
 
             db_execute(
@@ -1153,12 +1181,7 @@ def register_routes(rent_tracking):
         rows = _history_rows_for_resident(resident_id)
         rent_snapshot = build_rent_stability_snapshot(resident_id)
 
-        return render_template(
-            "case_management/resident_rent_history.html",
-            resident=resident,
-            rows=rows,
-            rent_snapshot=rent_snapshot,
-        )
+        return render_template("case_management/resident_rent_history.html", resident=resident, rows=rows, rent_snapshot=rent_snapshot)
 
     @rent_tracking.get("/resident/<int:resident_id>/ledger")
     @require_login
@@ -1176,10 +1199,14 @@ def register_routes(rent_tracking):
 
         ledger_entries = _ledger_entries_for_resident(resident_id)
         ledger_summary = _ledger_summary_for_resident(resident_id)
+        balance_breakdown = _ledger_balance_breakdown_for_resident(resident_id)
 
         return render_template(
             "case_management/resident_rent_ledger.html",
             resident=resident,
             ledger_entries=ledger_entries,
             ledger_summary=ledger_summary,
+            balance_breakdown=balance_breakdown,
+            show_payment_form=False,
+            payment_method_options=["Check", "Money Order"],
         )
