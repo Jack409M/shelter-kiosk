@@ -153,6 +153,22 @@ def _validate_transfer_form(enrollment, form) -> tuple[dict[str, str | None], li
 
 
 
+def _release_old_rent_assignment(resident_id: int, current_shelter: str, transfer_date: str, now: str) -> None:
+    ph = placeholder()
+    db_execute(
+        f"""
+        UPDATE resident_rent_configs
+        SET effective_end_date = {ph},
+            updated_at = {ph}
+        WHERE resident_id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+          AND COALESCE(effective_end_date, '') = ''
+        """,
+        (transfer_date, now, resident_id, current_shelter),
+    )
+
+
+
 def _apply_transfer(
     *,
     resident_id: int,
@@ -167,6 +183,7 @@ def _apply_transfer(
     new_case_manager_id = session.get("staff_user_id") or current_case_manager_id
     rad_complete = _row_value(current_enrollment, "rad_complete")
     rad_completed_date = _row_value(current_enrollment, "rad_completed_date")
+    current_shelter = normalize_shelter_name(_row_value(current_enrollment, "shelter", ""))
 
     db_execute(
         f"""
@@ -178,6 +195,9 @@ def _apply_transfer(
         """,
         (transfer_date, now, enrollment_id),
     )
+
+    if current_shelter:
+        _release_old_rent_assignment(resident_id, current_shelter, transfer_date, now)
 
     db_execute(
         f"""
