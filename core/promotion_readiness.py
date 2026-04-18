@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.promotion_policy import load_promotion_policy_for_level
+
 
 def _bool(val):
     if val is None:
@@ -20,23 +22,7 @@ def _level_number(level_value: str | None) -> int:
 
 def build_promotion_readiness(snapshot: dict[str, Any]) -> dict[str, Any]:
     level = _level_number(snapshot.get("program_level"))
-
-    days_on_level = snapshot.get("days_on_level") or 0
-
-    total_meetings = snapshot.get("total_meetings", 0)
-    meetings_this_week = snapshot.get("meetings_this_week", 0)
-    completed_90 = snapshot.get("completed_90_in_90")
-    completed_116 = snapshot.get("completed_116_meetings")
-    completed_168 = snapshot.get("completed_168_meetings")
-
-    sponsor_active = _bool(snapshot.get("sponsor_active"))
-    step_active = _bool(snapshot.get("step_work_active"))
-
-    monthly_income = snapshot.get("monthly_income")
-    no_writeups_last_30_days = snapshot.get("no_writeups_last_30_days")
-    writeups_last_30_days = snapshot.get("writeups_last_30_days", 0)
-
-    rad_complete = _bool(snapshot.get("rad_complete"))
+    policy = load_promotion_policy_for_level(level)
 
     checks = []
 
@@ -44,73 +30,90 @@ def build_promotion_readiness(snapshot: dict[str, Any]) -> dict[str, Any]:
         checks.append(
             {
                 "label": label,
-                "ok": ok,
+                "ok": bool(ok),
                 "detail": detail,
             }
         )
 
-    if level == 1:
-        add("30 Days in Program", days_on_level >= 30, f"{days_on_level} days")
+    if not policy:
+        return {
+            "level": level,
+            "checks": [],
+            "ready": False,
+            "blockers": ["No promotion policy defined for this level."],
+        }
+
+    days_on_level = snapshot.get("days_on_level") or 0
+    total_meetings = snapshot.get("total_meetings", 0)
+    meetings_this_week = snapshot.get("meetings_this_week", 0)
+    sponsor_active = _bool(snapshot.get("sponsor_active"))
+    step_active = _bool(snapshot.get("step_work_active"))
+    monthly_income = snapshot.get("monthly_income")
+    no_writeups_last_30_days = snapshot.get("no_writeups_last_30_days")
+    writeups_last_30_days = snapshot.get("writeups_last_30_days", 0)
+    rad_complete = _bool(snapshot.get("rad_complete"))
+
+    meets_work_requirement = snapshot.get("meets_work_requirement")
+    meets_productive_requirement = snapshot.get("meets_productive_requirement")
+
+    system_rules = policy.get("system_requirements", {})
+
+    # Minimum days requirement
+    min_days = policy.get("minimum_days_on_level")
+    if min_days:
+        add("Minimum Days on Level", days_on_level >= min_days, f"{days_on_level}/{min_days} days")
+
+    # System rule checks
+    if system_rules.get("rad_complete"):
         add("RAD Complete", rad_complete is True, "")
+
+    if system_rules.get("sponsor_active"):
         add("Sponsor Active", sponsor_active is True, "")
+
+    if system_rules.get("step_work_active"):
         add("Step Work Active", step_active is True, "")
+
+    if system_rules.get("no_writeups_last_30_days"):
         add(
             "No Write Ups in 30 Days",
             no_writeups_last_30_days is True,
             f"{writeups_last_30_days} in last 30 days",
         )
 
-        ready = all(c["ok"] for c in checks)
-
-    elif level == 2:
-        add("90 Meetings", completed_90 is True, f"{total_meetings}/90")
-        add("Sponsor Active", sponsor_active is True, "")
-        add("Step Work Active", step_active is True, "")
+    if system_rules.get("total_meetings_required"):
+        required = system_rules.get("total_meetings_required")
         add(
-            "No Write Ups in 30 Days",
-            no_writeups_last_30_days is True,
-            f"{writeups_last_30_days} in last 30 days",
+            f"{required} Meetings",
+            total_meetings >= required,
+            f"{total_meetings}/{required}",
         )
 
-        ready = all(c["ok"] for c in checks)
-
-    elif level == 3:
-        add("116 Meetings", completed_116 is True, f"{total_meetings}/116")
+    if system_rules.get("weekly_meetings_required"):
+        required = system_rules.get("weekly_meetings_required")
         add(
-            "Weekly Meetings (6)",
-            snapshot.get("weekly_requirement_met") is True,
-            f"{meetings_this_week}/6",
-        )
-        add("Sponsor Active", sponsor_active is True, "")
-        add("Step Work Active", step_active is True, "")
-        add(
-            "No Write Ups in 30 Days",
-            no_writeups_last_30_days is True,
-            f"{writeups_last_30_days} in last 30 days",
+            f"Weekly Meetings ({required})",
+            meetings_this_week >= required,
+            f"{meetings_this_week}/{required}",
         )
 
-        ready = all(c["ok"] for c in checks)
-
-    elif level == 4:
-        add("168 Meetings", completed_168 is True, f"{total_meetings}/168")
-        add(
-            "Weekly Meetings (5)",
-            snapshot.get("weekly_requirement_met") is True,
-            f"{meetings_this_week}/5",
-        )
-        add("Sponsor Active", sponsor_active is True, "")
-        add("Step Work Active", step_active is True, "")
+    if system_rules.get("income_required"):
         add("Income Established", monthly_income not in (None, "", 0), "")
+
+    if system_rules.get("work_hours_required"):
         add(
-            "No Write Ups in 30 Days",
-            no_writeups_last_30_days is True,
-            f"{writeups_last_30_days} in last 30 days",
+            "Weekly Work Hours Requirement",
+            meets_work_requirement is True,
+            "",
         )
 
-        ready = all(c["ok"] for c in checks)
+    if system_rules.get("productive_hours_required"):
+        add(
+            "Weekly Productive Hours Requirement",
+            meets_productive_requirement is True,
+            "",
+        )
 
-    else:
-        ready = False
+    ready = all(c["ok"] for c in checks) if checks else False
 
     blockers = [c["label"] for c in checks if not c["ok"]]
 
@@ -119,4 +122,6 @@ def build_promotion_readiness(snapshot: dict[str, Any]) -> dict[str, Any]:
         "checks": checks,
         "ready": ready,
         "blockers": blockers,
+        "policy_title": policy.get("title"),
+        "manual_requirements": policy.get("manual_requirements", []),
     }
