@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="reports-page">
-  <div class="reports-header card">
+  <div class="reports-header card report-screen-only">
     <div>
       <h1>Activity Engagement Report</h1>
       <p class="reports-subtitle">
@@ -11,7 +11,7 @@
     </div>
   </div>
 
-  <form method="get" class="card" style="margin-bottom:16px;">
+  <form method="get" class="card report-screen-only" style="margin-bottom:16px;">
     <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
       <div>
         <label>Shelter</label>
@@ -34,8 +34,194 @@
       <div>
         <button class="btn btn-primary" type="submit">Apply</button>
       </div>
+
+      <div>
+        <button class="btn" type="button" onclick="window.print()">Save Board PDF</button>
+      </div>
     </div>
   </form>
+
+  <section class="card board-report-card board-print-only" style="margin-bottom:16px;">
+    <div class="board-report-head">
+      <div>
+        <div class="board-eyebrow">Board Report</div>
+        <h1>Activity Engagement Summary</h1>
+        <div class="board-subtitle">
+          {{ report.selected_shelter_label }} • {{ report.current_week_label }} • {{ report.last_week_label }}
+        </div>
+      </div>
+      <div class="board-generated">
+        Generated from live Shelter Kiosk activity data.
+      </div>
+    </div>
+
+    <div class="board-grid board-grid-5">
+      <div class="stat-card">
+        <div class="stat-label">Shelters</div>
+        <div class="stat-value">{{ report.grand_totals.shelter_count }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Residents</div>
+        <div class="stat-value">{{ report.grand_totals.resident_count }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Categories</div>
+        <div class="stat-value">{{ report.grand_totals.category_count }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Detail Types</div>
+        <div class="stat-value">{{ report.grand_totals.detail_count }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Sources</div>
+        <div class="stat-value">{{ report.grand_totals.source_count }}</div>
+      </div>
+    </div>
+
+    <div class="board-grid board-grid-6" style="margin-top:16px;">
+      <div class="stat-card">
+        <div class="stat-label">This Week Hours</div>
+        <div class="stat-value">{{ report.grand_totals.this_week_hours }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last Week Hours</div>
+        <div class="stat-value">{{ report.grand_totals.last_week_hours }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">All Time Hours</div>
+        <div class="stat-value">{{ report.grand_totals.all_time_hours }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Volunteer Hours</div>
+        <div class="stat-value">{{ report.grand_totals.volunteer_hours }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Productive Hours</div>
+        <div class="stat-value">{{ report.grand_totals.productive_hours }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Work Hours</div>
+        <div class="stat-value">{{ report.grand_totals.work_hours }}</div>
+      </div>
+    </div>
+
+    <div class="board-two-col" style="margin-top:18px;">
+      <div>
+        <h2>Source Summary</h2>
+        <table class="compact board-table">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>All Time Hours</th>
+              <th>All Time Meetings</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.source_summary_rows %}
+            <tr>
+              <td>{{ row.source_label }}</td>
+              <td>{{ row.all_time_hours }}</td>
+              <td>{{ row.all_time_meetings }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3">No activity found for this filter.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h2>Top Categories</h2>
+        <table class="compact board-table">
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>All Time Hours</th>
+              <th>All Time Meetings</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.category_detail_rows[:8] %}
+            <tr>
+              <td>{{ row.category_label }}</td>
+              <td>{{ row.all_time_hours }}</td>
+              <td>{{ row.all_time_meetings }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3">No category totals found for this filter.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="board-two-col" style="margin-top:18px;">
+      <div>
+        <h2>Top Activity Details</h2>
+        <table class="compact board-table">
+          <thead>
+            <tr>
+              <th>Detail</th>
+              <th>Category</th>
+              <th>All Time Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.detail_breakdown_rows[:10] %}
+            <tr>
+              <td>{{ row.detail_label }}</td>
+              <td>{{ row.category_label }}</td>
+              <td>{{ row.all_time_hours }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3">No detail rows found for this filter.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <h2>Top Residents By Hours</h2>
+        <table class="compact board-table">
+          <thead>
+            <tr>
+              <th>Resident</th>
+              <th>Shelter</th>
+              <th>All Time Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.resident_detail_rows[:10] %}
+            <tr>
+              <td>{{ row.resident_name }}</td>
+              <td>{{ row.shelter_label }}</td>
+              <td>{{ row.all_time_hours }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3">No resident activity found for this filter.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="board-notes" style="margin-top:18px;">
+      <h2>Board Notes</h2>
+      <ul>
+        <li>This summary is generated from live kiosk checkout and resident daily log records.</li>
+        <li>Hours reflect logged hours when entered directly, or scheduled obligation duration when direct hours are not stored.</li>
+        <li>Meetings reflect structured recovery meeting counts recorded during activity logging.</li>
+      </ul>
+    </div>
+  </section>
 
   <div class="card" style="margin-bottom:16px;">
     <h2>Program Totals</h2>
@@ -343,11 +529,129 @@
     line-height: 1.1;
   }
 
+  .board-report-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    padding: 22px;
+  }
+
+  .board-report-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+
+  .board-eyebrow {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .board-subtitle,
+  .board-generated {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .board-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .board-grid-5 {
+    grid-template-columns: repeat(5, minmax(140px, 1fr));
+  }
+
+  .board-grid-6 {
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+  }
+
+  .board-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .board-table th,
+  .board-table td {
+    font-size: 13px;
+  }
+
+  .board-notes ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+
+  .board-notes li {
+    margin-bottom: 6px;
+  }
+
+  .board-print-only {
+    display: none;
+  }
+
   @media (max-width: 900px) {
     .reports-page table.compact {
       display: block;
       overflow-x: auto;
       white-space: nowrap;
+    }
+
+    .board-grid-5,
+    .board-grid-6,
+    .board-two-col {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media print {
+    body {
+      background: #fff;
+    }
+
+    .report-screen-only,
+    .reports-page > .card:not(.board-report-card) {
+      display: none !important;
+    }
+
+    .board-print-only {
+      display: block !important;
+    }
+
+    .board-report-card {
+      border: none;
+      box-shadow: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .board-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .board-table th,
+    .board-table td {
+      border: 1px solid #cfcfcf;
+      padding: 6px 8px;
+      white-space: normal;
+    }
+
+    .stat-card {
+      break-inside: avoid;
+    }
+
+    @page {
+      margin: 0.5in;
+      size: letter portrait;
     }
   }
 </style>
