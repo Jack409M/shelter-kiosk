@@ -1,6 +1,25 @@
 from __future__ import annotations
 
+from core.kiosk_activity_categories import LOCKED_PARENT_ACTIVITY_DEFINITIONS
+
 from .settings_store import _currency, _default_labels_text
+
+
+def _kiosk_child_option_sections() -> list[dict]:
+    sections: list[dict] = []
+    for activity_key, activity_label in LOCKED_PARENT_ACTIVITY_DEFINITIONS.items():
+        sections.append(
+            {
+                "key": f"kiosk_child_options__{activity_key}",
+                "title": f"{activity_label} Options",
+                "summary": f"Child dropdown choices shown when {activity_label} is selected.",
+                "type": "form",
+                "parent_key": "kiosk_settings",
+                "activity_key": activity_key,
+                "activity_label": activity_label,
+            }
+        )
+    return sections
 
 
 def _configuration_sections() -> list[dict]:
@@ -52,8 +71,7 @@ def _configuration_sections() -> list[dict]:
             "type": "group",
             "children": [
                 "kiosk_activity_categories",
-                "kiosk_aa_na_meeting_options",
-                "kiosk_volunteer_community_service_options",
+                *[section["key"] for section in _kiosk_child_option_sections()],
             ],
         },
     ]
@@ -144,20 +162,7 @@ def _configuration_leaf_sections() -> list[dict]:
             "type": "form",
             "parent_key": "kiosk_settings",
         },
-        {
-            "key": "kiosk_aa_na_meeting_options",
-            "title": "AA or NA Meeting Options",
-            "summary": "Child dropdown choices shown only when AA or NA Meeting is selected.",
-            "type": "form",
-            "parent_key": "kiosk_settings",
-        },
-        {
-            "key": "kiosk_volunteer_community_service_options",
-            "title": "Volunteer or Community Service Options",
-            "summary": "Child dropdown choices shown only when Volunteer or Community Service is selected.",
-            "type": "form",
-            "parent_key": "kiosk_settings",
-        },
+        *_kiosk_child_option_sections(),
     ]
 
 
