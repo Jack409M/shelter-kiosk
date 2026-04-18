@@ -132,7 +132,8 @@ def ensure_attendance_events_table(kind: str) -> None:
             meeting_count INTEGER NOT NULL DEFAULT 0,
             meeting_1 TEXT,
             meeting_2 TEXT,
-            is_recovery_meeting INTEGER NOT NULL DEFAULT 0
+            is_recovery_meeting INTEGER NOT NULL DEFAULT 0,
+            logged_hours REAL
         )
         """,
         """
@@ -152,7 +153,8 @@ def ensure_attendance_events_table(kind: str) -> None:
             meeting_count INTEGER NOT NULL DEFAULT 0,
             meeting_1 TEXT,
             meeting_2 TEXT,
-            is_recovery_meeting INTEGER NOT NULL DEFAULT 0
+            is_recovery_meeting INTEGER NOT NULL DEFAULT 0,
+            logged_hours DOUBLE PRECISION
         )
         """,
     )
@@ -169,6 +171,7 @@ def ensure_attendance_event_columns(kind: str) -> None:
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS meeting_1 TEXT",
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS meeting_2 TEXT",
             "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS is_recovery_meeting INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS logged_hours DOUBLE PRECISION",
         ]
     else:
         statements = [
@@ -180,6 +183,7 @@ def ensure_attendance_event_columns(kind: str) -> None:
             "ALTER TABLE attendance_events ADD COLUMN meeting_1 TEXT",
             "ALTER TABLE attendance_events ADD COLUMN meeting_2 TEXT",
             "ALTER TABLE attendance_events ADD COLUMN is_recovery_meeting INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE attendance_events ADD COLUMN logged_hours REAL",
         ]
 
     for statement in statements:
