@@ -1,30 +1,98 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="budget-edit-page">
-  <section class="budget-card">
-    <h1>{{ budget_row['budget_month_label'] }}</h1>
+<div style="max-width:1200px; margin:0 auto;">
 
-    <a class="app-btn-pill app-btn-pill-light" href="{{ url_for('case_management.budget_sessions', resident_id=resident['id']) }}">
-      Back to Budget Months
-    </a>
-  </section>
+  <h2>{{ budget_row.budget_month_label }}</h2>
 
   <form method="post">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    {% for item in budget_line_items %}
-      <div>
-        <strong>{{ item.line_label }}</strong>
-
-        <input type="number" step="0.01" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}">
-        <input type="number" step="0.01" name="actual_amount_{{ item.id }}" value="{{ item.actual_amount or '' }}">
+    <!-- TOP SUMMARY -->
+    <div style="display:flex; gap:20px; margin-bottom:20px;">
+      <div style="flex:1; padding:15px; border:1px solid #ddd;">
+        <strong>Income</strong><br>
+        ${{ '%.2f'|format(total_income) }}
       </div>
-    {% endfor %}
+      <div style="flex:1; padding:15px; border:1px solid #ddd;">
+        <strong>Expenses</strong><br>
+        ${{ '%.2f'|format(total_expenses) }}
+      </div>
+      <div style="flex:1; padding:15px; border:1px solid #ddd;">
+        <strong>Balance</strong><br>
+        <span style="color: {{ 'red' if balance < 0 else 'green' }};">
+          ${{ '%.2f'|format(balance) }}
+        </span>
+      </div>
+    </div>
 
-    <button class="app-btn-pill app-btn-pill-dark" type="submit">
-      Save Budget
-    </button>
+    <!-- INCOME -->
+    <div style="margin-bottom:20px;">
+      <h3>Income</h3>
+      {% for item in income_items %}
+        <div style="display:flex; gap:10px; margin-bottom:8px;">
+          <div style="flex:2;">{{ item.line_label }}</div>
+          <div style="flex:1;">
+            <input type="text" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount }}">
+          </div>
+          <div style="flex:1;">
+            <input type="text" name="actual_amount_{{ item.id }}" value="{{ item.actual_amount }}">
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- EXPENSES -->
+    <div style="display:flex; gap:30px;">
+
+      <div style="flex:1;">
+        <table style="width:100%;">
+          <tr>
+            <th align="left">Expense</th>
+            <th>Budget</th>
+            <th>Total</th>
+            <th>Difference</th>
+          </tr>
+          {% for item in expense_left_items %}
+          <tr>
+            <td>{{ item.line_label }}</td>
+            <td><input type="text" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount }}" style="width:80px;"></td>
+            <td>${{ '%.2f'|format(item.actual_amount) }}</td>
+            <td style="color: {{ 'red' if item.difference_amount > 0 else 'green' if item.difference_amount < 0 else '#333' }};">
+              {{ item.difference_text }}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+
+      <div style="flex:1;">
+        <table style="width:100%;">
+          <tr>
+            <th align="left">Expense</th>
+            <th>Budget</th>
+            <th>Total</th>
+            <th>Difference</th>
+          </tr>
+          {% for item in expense_right_items %}
+          <tr>
+            <td>{{ item.line_label }}</td>
+            <td><input type="text" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount }}" style="width:80px;"></td>
+            <td>${{ '%.2f'|format(item.actual_amount) }}</td>
+            <td style="color: {{ 'red' if item.difference_amount > 0 else 'green' if item.difference_amount < 0 else '#333' }};">
+              {{ item.difference_text }}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+
+    </div>
+
+    <div style="margin-top:20px;">
+      <button type="submit">Save Budget</button>
+    </div>
   </form>
+
 </div>
 {% endblock %}
