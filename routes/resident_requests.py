@@ -29,7 +29,6 @@ from routes.resident_parts.consent import (
 )
 from routes.resident_parts.helpers import parse_dt as _parse_dt
 from routes.resident_parts.pass_request import resident_pass_request_view
-from routes.resident_portal import home as resident_portal_home_view
 
 resident_requests = Blueprint("resident_requests", __name__)
 
@@ -210,7 +209,7 @@ def resident_signin():
 
 @resident_requests.get("/resident/home")
 def resident_home_compat():
-    return resident_portal_home_view()
+    return redirect(url_for("resident_portal.home"))
 
 
 @resident_requests.get("/resident/logout")
