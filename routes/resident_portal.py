@@ -6,7 +6,7 @@ from typing import Any
 from flask import Blueprint, current_app, flash, g, redirect, render_template, request, session, url_for
 
 from core.access import require_resident
-from core.db import db_execute, db_fetchall, db_fetchone, get_db
+from core.db import db_execute, db_fetchall, db_fetchone, db_transaction, get_db
 from core.kiosk_activity_categories import (
     AA_NA_PARENT_ACTIVITY_KEY,
     VOLUNTEER_PARENT_ACTIVITY_KEY,
@@ -486,6 +486,181 @@ def _load_recent_transport_items(resident_identifier: str, shelter: str) -> list
     return items
 
 
+def _load_current_budget_session(resident_id: int | None) -> dict[str, Any] | None:
+    if resident_id is None:
+        return None
+
+    row = db_fetchone(
+        _sql(
+            """
+            SELECT *
+            FROM resident_budget_sessions
+            WHERE resident_id = %s
+            ORDER BY COALESCE(session_date, '') DESC, id DESC
+            LIMIT 1
+            """,
+            """
+            SELECT *
+            FROM resident_budget_sessions
+            WHERE resident_id = ?
+            ORDER BY COALESCE(session_date, '') DESC, id DESC
+            LIMIT 1
+            """,
+        ),
+        (resident_id,),
+    )
+    return dict(row) if row else None
+
+
+def _load_budget_line_items_with_status(budget_id: int | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if budget_id is None:
+        return [], []
+
+    rows = db_fetchall(
+        _sql(
+            """
+            SELECT
+                li.id,
+                li.line_group,
+                li.line_key,
+                li.line_label,
+                li.projected_amount,
+                li.actual_amount,
+                li.sort_order,
+                COALESCE(SUM(CASE WHEN COALESCE(t.is_deleted, FALSE) = FALSE THEN t.amount ELSE 0 END), 0) AS transaction_total
+            FROM resident_budget_line_items li
+            LEFT JOIN resident_budget_transactions t
+              ON t.line_item_id = li.id
+            WHERE li.budget_session_id = %s
+              AND COALESCE(li.is_active, TRUE) = TRUE
+            GROUP BY li.id, li.line_group, li.line_key, li.line_label, li.projected_amount, li.actual_amount, li.sort_order
+            ORDER BY li.line_group ASC, li.sort_order ASC, li.id ASC
+            """,
+            """
+            SELECT
+                li.id,
+                li.line_group,
+                li.line_key,
+                li.line_label,
+                li.projected_amount,
+                li.actual_amount,
+                li.sort_order,
+                COALESCE(SUM(CASE WHEN COALESCE(t.is_deleted, 0) = 0 THEN t.amount ELSE 0 END), 0) AS transaction_total
+            FROM resident_budget_line_items li
+            LEFT JOIN resident_budget_transactions t
+              ON t.line_item_id = li.id
+            WHERE li.budget_session_id = ?
+              AND COALESCE(li.is_active, 1) = 1
+            GROUP BY li.id, li.line_group, li.line_key, li.line_label, li.projected_amount, li.actual_amount, li.sort_order
+            ORDER BY li.line_group ASC, li.sort_order ASC, li.id ASC
+            """,
+        ),
+        (budget_id,),
+    )
+
+    income_items: list[dict[str, Any]] = []
+    expense_items: list[dict[str, Any]] = []
+
+    for row in rows:
+        item = dict(row)
+        projected_amount = item.get("projected_amount")
+        actual_amount = item.get("actual_amount")
+        transaction_total = item.get("transaction_total")
+
+        projected_value = float(projected_amount) if projected_amount is not None else 0.0
+        actual_value = float(actual_amount) if actual_amount is not None else 0.0
+        transaction_value = float(transaction_total) if transaction_total is not None else 0.0
+        effective_actual = transaction_value if transaction_value > 0 else actual_value
+        remaining = projected_value - effective_actual
+
+        if projected_value <= 0:
+            status = "neutral"
+        elif remaining < 0:
+            status = "red"
+        elif projected_value > 0 and (effective_actual / projected_value) >= 0.8:
+            status = "yellow"
+        else:
+            status = "green"
+
+        item["projected_value"] = round(projected_value, 2)
+        item["actual_value"] = round(effective_actual, 2)
+        item["remaining"] = round(remaining, 2)
+        item["status"] = status
+
+        if str(item.get("line_group") or "").strip().lower() == "income":
+            income_items.append(item)
+        else:
+            expense_items.append(item)
+
+    return income_items, expense_items
+
+
+def _load_recent_budget_transactions(budget_id: int | None, limit: int = 10) -> list[dict[str, Any]]:
+    if budget_id is None:
+        return []
+
+    rows = db_fetchall(
+        _sql(
+            """
+            SELECT
+                t.id,
+                t.transaction_date,
+                t.amount,
+                t.merchant_or_note,
+                li.line_label
+            FROM resident_budget_transactions t
+            LEFT JOIN resident_budget_line_items li
+              ON li.id = t.line_item_id
+            WHERE t.budget_session_id = %s
+              AND COALESCE(t.is_deleted, FALSE) = FALSE
+            ORDER BY t.transaction_date DESC, t.id DESC
+            LIMIT %s
+            """,
+            """
+            SELECT
+                t.id,
+                t.transaction_date,
+                t.amount,
+                t.merchant_or_note,
+                li.line_label
+            FROM resident_budget_transactions t
+            LEFT JOIN resident_budget_line_items li
+              ON li.id = t.line_item_id
+            WHERE t.budget_session_id = ?
+              AND COALESCE(t.is_deleted, 0) = 0
+            ORDER BY t.transaction_date DESC, t.id DESC
+            LIMIT ?
+            """,
+        ),
+        (budget_id, limit),
+    )
+    return [dict(row) for row in rows]
+
+
+def _load_budget_line_item_lookup(budget_id: int | None) -> dict[int, dict[str, Any]]:
+    if budget_id is None:
+        return {}
+
+    rows = db_fetchall(
+        _sql(
+            """
+            SELECT id, line_group, line_label, actual_amount
+            FROM resident_budget_line_items
+            WHERE budget_session_id = %s
+              AND COALESCE(is_active, TRUE) = TRUE
+            """,
+            """
+            SELECT id, line_group, line_label, actual_amount
+            FROM resident_budget_line_items
+            WHERE budget_session_id = ?
+              AND COALESCE(is_active, 1) = 1
+            """,
+        ),
+        (budget_id,),
+    )
+    return {int(row["id"]): dict(row) for row in rows}
+
+
 @resident_portal.route("/resident/home")
 @require_resident
 def home():
@@ -738,6 +913,164 @@ def resident_daily_log():
     except Exception as exc:
         current_app.logger.exception(
             "resident_daily_log_failed resident_id=%s shelter=%s exception_type=%s",
+            resident_id if resident_id is not None else "unknown",
+            shelter or "unknown",
+            type(exc).__name__,
+        )
+        _clear_resident_session()
+        return _resident_signin_redirect()
+
+
+@resident_portal.route("/resident/budget", methods=["GET", "POST"])
+@require_resident
+def resident_budget():
+    resident_id = None
+    shelter = ""
+
+    try:
+        resident_id_raw = session.get("resident_id")
+        resident_id = int(resident_id_raw) if resident_id_raw not in (None, "") else None
+        shelter = str(session.get("resident_shelter") or "").strip()
+
+        get_db()
+
+        if shelter:
+            run_pass_retention_cleanup_for_shelter(shelter)
+
+        if resident_id is None:
+            return _resident_signin_redirect()
+
+        budget = _load_current_budget_session(resident_id)
+        budget_id = _safe_int(budget.get("id")) if budget else None
+        line_item_lookup = _load_budget_line_item_lookup(budget_id)
+
+        if request.method == "POST":
+            if not budget or budget_id is None:
+                flash("No active budget found. Please see your case manager.", "error")
+                return redirect(url_for("resident_portal.resident_budget"))
+
+            transaction_date = _clean_text(request.form.get("transaction_date"))
+            line_item_id = _safe_int(request.form.get("line_item_id"))
+            amount_raw = request.form.get("amount")
+            merchant_or_note = _clean_text(request.form.get("merchant_or_note"))
+
+            errors: list[str] = []
+            if not transaction_date:
+                errors.append("Transaction date is required.")
+            elif len(transaction_date) != 10:
+                errors.append("Transaction date must be valid.")
+
+            amount = None
+            try:
+                amount = float(str(amount_raw or "").replace("$", "").replace(",", "").strip())
+            except ValueError:
+                amount = None
+
+            if amount is None or amount <= 0:
+                errors.append("Amount must be greater than zero.")
+
+            selected_item = line_item_lookup.get(line_item_id or 0)
+            if not selected_item:
+                errors.append("Please select a valid budget category.")
+            elif str(selected_item.get("line_group") or "").strip().lower() != "expense":
+                errors.append("Spending can only be logged to an expense category.")
+
+            if errors:
+                for error in errors:
+                    flash(error, "error")
+            else:
+                now = utcnow_iso()
+                current_actual = selected_item.get("actual_amount")
+                current_actual_value = float(current_actual) if current_actual is not None else 0.0
+
+                with db_transaction():
+                    db_execute(
+                        _sql(
+                            """
+                            INSERT INTO resident_budget_transactions (
+                                budget_session_id,
+                                resident_id,
+                                enrollment_id,
+                                line_item_id,
+                                transaction_date,
+                                amount,
+                                merchant_or_note,
+                                entered_by_role,
+                                entered_by_resident_id,
+                                created_at,
+                                updated_at,
+                                is_deleted
+                            )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            """,
+                            """
+                            INSERT INTO resident_budget_transactions (
+                                budget_session_id,
+                                resident_id,
+                                enrollment_id,
+                                line_item_id,
+                                transaction_date,
+                                amount,
+                                merchant_or_note,
+                                entered_by_role,
+                                entered_by_resident_id,
+                                created_at,
+                                updated_at,
+                                is_deleted
+                            )
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                        ),
+                        (
+                            budget_id,
+                            resident_id,
+                            budget.get("enrollment_id"),
+                            line_item_id,
+                            transaction_date,
+                            round(amount, 2),
+                            merchant_or_note or None,
+                            "resident",
+                            resident_id,
+                            now,
+                            now,
+                            0 if g.get("db_kind") == "sqlite" else False,
+                        ),
+                    )
+
+                    db_execute(
+                        _sql(
+                            """
+                            UPDATE resident_budget_line_items
+                            SET actual_amount = %s,
+                                updated_at = %s
+                            WHERE id = %s
+                            """,
+                            """
+                            UPDATE resident_budget_line_items
+                            SET actual_amount = ?,
+                                updated_at = ?
+                            WHERE id = ?
+                            """,
+                        ),
+                        (round(current_actual_value + amount, 2), now, line_item_id),
+                    )
+
+                flash("Purchase added.", "success")
+                return redirect(url_for("resident_portal.resident_budget"))
+
+        income_items, expense_items = _load_budget_line_items_with_status(budget_id)
+        recent_transactions = _load_recent_budget_transactions(budget_id)
+
+        return render_template(
+            "resident/budget.html",
+            budget=budget,
+            income_items=income_items,
+            expense_items=expense_items,
+            recent_transactions=recent_transactions,
+        )
+    except Exception as exc:
+        current_app.logger.exception(
+            "resident_budget_failed resident_id=%s shelter=%s exception_type=%s",
             resident_id if resident_id is not None else "unknown",
             shelter or "unknown",
             type(exc).__name__,
