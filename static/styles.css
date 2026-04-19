@@ -452,6 +452,98 @@ input[type="submit"].btn-warning:active {
   -webkit-text-fill-color: currentColor !important;
 }
 
+.app-btn-pill,
+.app-btn-pill:visited,
+button.app-btn-pill,
+input[type="submit"].app-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+.app-btn-pill:hover,
+.app-btn-pill:focus,
+.app-btn-pill:active,
+button.app-btn-pill:hover,
+button.app-btn-pill:focus,
+button.app-btn-pill:active,
+input[type="submit"].app-btn-pill:hover,
+input[type="submit"].app-btn-pill:focus,
+input[type="submit"].app-btn-pill:active {
+  transform: translateY(-1px);
+  color: inherit;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+.app-btn-pill-dark,
+.app-btn-pill-dark:visited,
+.app-btn-pill-dark:hover,
+.app-btn-pill-dark:focus,
+.app-btn-pill-dark:active,
+button.app-btn-pill-dark,
+button.app-btn-pill-dark:hover,
+button.app-btn-pill-dark:focus,
+button.app-btn-pill-dark:active,
+input[type="submit"].app-btn-pill-dark,
+input[type="submit"].app-btn-pill-dark:hover,
+input[type="submit"].app-btn-pill-dark:focus,
+input[type="submit"].app-btn-pill-dark:active {
+  background: #11385f;
+  border-color: #11385f;
+  color: #ffffff !important;
+  -webkit-text-fill-color: currentColor !important;
+  box-shadow: 0 8px 18px rgba(17, 56, 95, 0.18);
+}
+
+.app-btn-pill-light,
+.app-btn-pill-light:visited,
+.app-btn-pill-light:hover,
+.app-btn-pill-light:focus,
+.app-btn-pill-light:active,
+button.app-btn-pill-light,
+button.app-btn-pill-light:hover,
+button.app-btn-pill-light:focus,
+button.app-btn-pill-light:active,
+input[type="submit"].app-btn-pill-light,
+input[type="submit"].app-btn-pill-light:hover,
+input[type="submit"].app-btn-pill-light:focus,
+input[type="submit"].app-btn-pill-light:active {
+  background: #f5f8fb;
+  border-color: #cfdae5;
+  color: #102033 !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+.app-btn-pill-outline,
+.app-btn-pill-outline:visited,
+.app-btn-pill-outline:hover,
+.app-btn-pill-outline:focus,
+.app-btn-pill-outline:active,
+button.app-btn-pill-outline,
+button.app-btn-pill-outline:hover,
+button.app-btn-pill-outline:focus,
+button.app-btn-pill-outline:active,
+input[type="submit"].app-btn-pill-outline,
+input[type="submit"].app-btn-pill-outline:hover,
+input[type="submit"].app-btn-pill-outline:focus,
+input[type="submit"].app-btn-pill-outline:active {
+  background: #ffffff;
+  border-color: #b8cade;
+  color: #11385f !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
 /* =========================================================
    Legacy Grid Helpers
 ========================================================= */
