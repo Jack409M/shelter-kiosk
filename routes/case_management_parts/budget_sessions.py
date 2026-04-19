@@ -97,6 +97,75 @@ def _create_default_line_items(budget_id: int, now: str):
         )
 
 
+def _copy_forward_previous_budget(budget_id: int, resident_id: int, enrollment_id: int | None, budget_month: str | None, now: str):
+    if not enrollment_id or not budget_month:
+        return
+
+    previous_budget = db_fetchone(
+        """
+        SELECT id
+        FROM resident_budget_sessions
+        WHERE resident_id = ?
+          AND enrollment_id = ?
+          AND id <> ?
+          AND budget_month IS NOT NULL
+          AND budget_month < ?
+        ORDER BY budget_month DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, enrollment_id, budget_id, budget_month),
+    )
+    if not previous_budget:
+        return
+
+    previous_items = db_fetchall(
+        """
+        SELECT line_key, projected_amount, actual_amount
+        FROM resident_budget_line_items
+        WHERE budget_session_id = ?
+          AND COALESCE(is_active, TRUE) = TRUE
+        """,
+        (previous_budget["id"],),
+    )
+    if not previous_items:
+        return
+
+    previous_by_key = {
+        str(item.get("line_key") or "").strip(): item
+        for item in previous_items
+        if str(item.get("line_key") or "").strip()
+    }
+
+    current_items = db_fetchall(
+        """
+        SELECT id, line_group, line_key
+        FROM resident_budget_line_items
+        WHERE budget_session_id = ?
+          AND COALESCE(is_active, TRUE) = TRUE
+        """,
+        (budget_id,),
+    )
+
+    for item in current_items or []:
+        line_key = str(item.get("line_key") or "").strip()
+        previous = previous_by_key.get(line_key)
+        if not previous:
+            continue
+
+        previous_projected = previous.get("projected_amount")
+        projected_amount = float(previous_projected) if previous_projected not in (None, "") else None
+
+        actual_amount = None
+        if str(item.get("line_group") or "").strip().lower() == "income":
+            previous_actual = previous.get("actual_amount")
+            actual_amount = float(previous_actual) if previous_actual not in (None, "") else None
+
+        db_execute(
+            "UPDATE resident_budget_line_items SET projected_amount = ?, actual_amount = ?, updated_at = ? WHERE id = ?",
+            (projected_amount, actual_amount, now, item["id"]),
+        )
+
+
 def _prefill_income_from_source(budget_id: int, enrollment_id: int | None, now: str):
     if not enrollment_id:
         return
@@ -217,6 +286,13 @@ def add_budget_session_view(resident_id: int):
         row = db_fetchone("SELECT id FROM resident_budget_sessions WHERE resident_id=? ORDER BY id DESC LIMIT 1", (resident_id,))
         bid = row["id"]
         _create_default_line_items(bid, now)
+        _copy_forward_previous_budget(
+            bid,
+            resident_id=resident_id,
+            enrollment_id=resident.get("enrollment_id"),
+            budget_month=data.get("budget_month"),
+            now=now,
+        )
         _prefill_income_from_source(bid, resident.get("enrollment_id"), now)
 
     return redirect(url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=bid))
