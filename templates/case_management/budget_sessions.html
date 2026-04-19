@@ -1,430 +1,60 @@
 {% extends "layout.html" %}
 
-{% block extra_head %}
-<style>
-  .budget-page {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 16px 0 40px;
-    display: grid;
-    gap: 18px;
-  }
-
-  .budget-card {
-    background: #ffffff;
-    border: 1px solid #d9e3ec;
-    border-radius: 24px;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-    padding: 20px;
-  }
-
-  .budget-hero {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  .budget-eyebrow {
-    margin: 0 0 8px;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #66788a;
-  }
-
-  .budget-title {
-    margin: 0;
-    font-size: 30px;
-    line-height: 1.1;
-    color: #102033;
-  }
-
-  .budget-subtitle {
-    margin: 10px 0 0;
-    max-width: 760px;
-    font-size: 15px;
-    line-height: 1.5;
-    color: #516273;
-  }
-
-  .budget-hero-links {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .budget-link-btn,
-  .budget-primary-btn,
-  .budget-secondary-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 46px;
-    padding: 0 18px;
-    border-radius: 999px;
-    font-weight: 800;
-    font-size: 14px;
-    text-decoration: none;
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-  }
-
-  .budget-link-btn:hover,
-  .budget-primary-btn:hover,
-  .budget-secondary-btn:hover {
-    transform: translateY(-1px);
-  }
-
-  .budget-link-btn {
-    background: #f5f8fb;
-    color: #102033;
-    border: 1px solid #cfdae5;
-  }
-
-  .budget-primary-btn {
-    border: none;
-    background: #11385f;
-    color: #ffffff;
-    box-shadow: 0 8px 18px rgba(17, 56, 95, 0.18);
-  }
-
-  .budget-secondary-btn {
-    background: #ffffff;
-    color: #11385f;
-    border: 1px solid #b8cade;
-  }
-
-  .budget-top-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.95fr);
-    gap: 18px;
-  }
-
-  .budget-current-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 30px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: #eaf4ec;
-    color: #1f6a33;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .budget-current-month {
-    margin: 14px 0 8px;
-    font-size: 28px;
-    line-height: 1.1;
-    color: #102033;
-  }
-
-  .budget-current-copy {
-    margin: 0;
-    color: #5a6b7d;
-    font-size: 15px;
-    line-height: 1.5;
-  }
-
-  .budget-current-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 18px;
-  }
-
-  .budget-create-title {
-    margin: 0;
-    font-size: 22px;
-    color: #102033;
-  }
-
-  .budget-create-copy {
-    margin: 10px 0 0;
-    color: #5a6b7d;
-    font-size: 14px;
-    line-height: 1.55;
-  }
-
-  .budget-create-meta {
-    margin-top: 14px;
-    padding: 14px;
-    border-radius: 18px;
-    background: #f7fafc;
-    border: 1px solid #e3ebf2;
-  }
-
-  .budget-create-meta-label {
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #698094;
-    margin-bottom: 4px;
-  }
-
-  .budget-create-meta-value {
-    font-size: 20px;
-    font-weight: 800;
-    color: #102033;
-  }
-
-  .budget-create-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: 16px;
-  }
-
-  .budget-section-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 14px;
-  }
-
-  .budget-section-title {
-    margin: 0;
-    font-size: 24px;
-    color: #102033;
-  }
-
-  .budget-section-copy {
-    color: #5a6b7d;
-    font-size: 14px;
-  }
-
-  .budget-month-list {
-    display: grid;
-    gap: 12px;
-  }
-
-  .budget-month-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 18px;
-    border-radius: 18px;
-    background: #ffffff;
-    border: 1px solid #dde6ee;
-  }
-
-  .budget-month-main {
-    min-width: 0;
-  }
-
-  .budget-month-name {
-    margin: 0;
-    font-size: 18px;
-    color: #102033;
-  }
-
-  .budget-month-meta {
-    margin-top: 6px;
-    color: #627385;
-    font-size: 14px;
-  }
-
-  .budget-month-badges {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-  }
-
-  .budget-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: 28px;
-    padding: 0 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .budget-badge.current {
-    background: #eaf4ec;
-    color: #1f6a33;
-  }
-
-  .budget-badge.past {
-    background: #edf4fb;
-    color: #285b86;
-  }
-
-  .budget-empty {
-    padding: 18px;
-    border-radius: 18px;
-    border: 1px dashed #c8d5e0;
-    background: #fbfdff;
-    color: #5d6d7d;
-    font-size: 15px;
-    line-height: 1.55;
-  }
-
-  @media (max-width: 900px) {
-    .budget-top-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .budget-title {
-      font-size: 26px;
-    }
-
-    .budget-current-month,
-    .budget-create-title,
-    .budget-section-title {
-      font-size: 22px;
-    }
-
-    .budget-month-row {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-
-    .budget-current-actions,
-    .budget-create-actions,
-    .budget-hero-links {
-      width: 100%;
-    }
-
-    .budget-link-btn,
-    .budget-primary-btn,
-    .budget-secondary-btn {
-      width: 100%;
-    }
-  }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="budget-page">
   <section class="budget-card">
-    <div class="budget-hero">
-      <div>
-        <p class="budget-eyebrow">Monthly Budgeting</p>
-        <h1 class="budget-title">
-          {{ resident['first_name'] }} {{ resident['last_name'] }} Budget
-        </h1>
-        <p class="budget-subtitle">
-          One budget per month. The current month is always shown first. Creating the next month is one tap.
-        </p>
-      </div>
+    <h1 class="budget-title">
+      {{ resident['first_name'] }} {{ resident['last_name'] }} Budget
+    </h1>
 
-      <div class="budget-hero-links">
-        <a class="budget-link-btn" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
-          Back to Workspace
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <section class="budget-top-grid">
-    <div class="budget-card">
-      {% if current_budget %}
-        <div class="budget-current-label">Current Month</div>
-        <h2 class="budget-current-month">{{ current_budget['budget_month_label'] }}</h2>
-        <p class="budget-current-copy">
-          This is the live month case managers should open first. Past months stay below for quick reference.
-        </p>
-
-        <div class="budget-current-actions">
-          <a
-            class="budget-primary-btn"
-            href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=current_budget['id']) }}"
-          >
-            Open {{ current_budget['budget_month_label'] }}
-          </a>
-        </div>
-      {% else %}
-        <div class="budget-current-label">No Budget Yet</div>
-        <h2 class="budget-current-month">Start the first month</h2>
-        <p class="budget-current-copy">
-          This resident does not have a monthly budget yet. Create one below.
-        </p>
-      {% endif %}
-    </div>
-
-    <div class="budget-card">
-      <h2 class="budget-create-title">{{ suggested_action_label }}</h2>
-      <p class="budget-create-copy">{{ suggested_help_text }}</p>
-
-      <div class="budget-create-meta">
-        <div class="budget-create-meta-label">Next Budget Month</div>
-        <div class="budget-create-meta-value">{{ suggested_budget_month_label }}</div>
-      </div>
-
-      <form method="post" action="{{ url_for('case_management.add_budget_session', resident_id=resident['id']) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="session_date" value="{{ suggested_session_date }}">
-        <input type="hidden" name="budget_month" value="{{ suggested_budget_month }}">
-        <div class="budget-create-actions">
-          <button class="budget-primary-btn" type="submit">{{ suggested_action_label }}</button>
-        </div>
-      </form>
-    </div>
+    <a class="app-btn-pill app-btn-pill-light" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">
+      Back to Workspace
+    </a>
   </section>
 
   <section class="budget-card">
-    <div class="budget-section-head">
-      <div>
-        <h2 class="budget-section-title">All Budget Months</h2>
-        <div class="budget-section-copy">
-          Current month first. Past months underneath.
-        </div>
-      </div>
-    </div>
+    {% if current_budget %}
+      <div class="budget-current-label">Current Month</div>
+      <h2>{{ current_budget['budget_month_label'] }}</h2>
 
-    {% if all_budget_rows %}
-      <div class="budget-month-list">
-        {% for row in all_budget_rows %}
-          <article class="budget-month-row">
-            <div class="budget-month-main">
-              <h3 class="budget-month-name">{{ row['budget_month_label'] }}</h3>
-              <div class="budget-month-meta">
-                {% if row['session_date'] %}
-                  Session date: {{ row['session_date'] }}
-                {% else %}
-                  Session date missing
-                {% endif %}
-              </div>
-
-              <div class="budget-month-badges">
-                {% if row['is_current'] %}
-                  <span class="budget-badge current">Current</span>
-                {% else %}
-                  <span class="budget-badge past">Past</span>
-                {% endif %}
-              </div>
-            </div>
-
-            <a
-              class="budget-secondary-btn"
-              href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id']) }}"
-            >
-              Open Budget
-            </a>
-          </article>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="budget-empty">
-        No monthly budgets exist yet for this resident.
-      </div>
+      <a
+        class="app-btn-pill app-btn-pill-dark"
+        href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=current_budget['id']) }}"
+      >
+        Open {{ current_budget['budget_month_label'] }}
+      </a>
     {% endif %}
+  </section>
+
+  <section class="budget-card">
+    <h2>{{ suggested_action_label }}</h2>
+
+    <form method="post" action="{{ url_for('case_management.add_budget_session', resident_id=resident['id']) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="session_date" value="{{ suggested_session_date }}">
+      <input type="hidden" name="budget_month" value="{{ suggested_budget_month }}">
+
+      <button class="app-btn-pill app-btn-pill-dark" type="submit">
+        {{ suggested_action_label }}
+      </button>
+    </form>
+  </section>
+
+  <section class="budget-card">
+    <h2>All Budget Months</h2>
+
+    {% for row in all_budget_rows %}
+      <div>
+        <strong>{{ row['budget_month_label'] }}</strong>
+
+        <a
+          class="app-btn-pill app-btn-pill-outline"
+          href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id']) }}"
+        >
+          Open Budget
+        </a>
+      </div>
+    {% endfor %}
   </section>
 </div>
 {% endblock %}
