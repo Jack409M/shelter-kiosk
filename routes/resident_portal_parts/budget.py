@@ -42,14 +42,48 @@ def resident_budget():
         line_item_lookup = _load_budget_line_item_lookup(budget_id)
 
         if request.method == "POST":
-            if not budget or budget_id is None:
-                flash("No active budget found. Please see your case manager.", "error")
+            action = _clean_text(request.form.get("action"))
+            now = utcnow_iso()
+
+            if action == "delete_transaction":
+                tx_id = _safe_int(request.form.get("transaction_id"))
+                if tx_id:
+                    with db_transaction():
+                        db_execute(
+                            _sql(
+                                "UPDATE resident_budget_transactions SET is_deleted = TRUE, deleted_at = %s, deleted_by_role = %s, deleted_by_resident_id = %s WHERE id = %s",
+                                "UPDATE resident_budget_transactions SET is_deleted = 1, deleted_at = ?, deleted_by_role = ?, deleted_by_resident_id = ? WHERE id = ?",
+                            ),
+                            (now, "resident", resident_id, tx_id),
+                        )
+                    flash("Transaction removed.", "success")
                 return redirect(url_for("resident_portal.resident_budget"))
 
-            if not line_item_lookup:
-                _ensure_budget_line_items_exist(budget_id)
-                line_item_lookup = _load_budget_line_item_lookup(budget_id)
+            if action == "edit_transaction":
+                tx_id = _safe_int(request.form.get("transaction_id"))
+                amount_raw = request.form.get("amount")
+                merchant = _clean_text(request.form.get("merchant_or_note"))
 
+                try:
+                    amount = float(str(amount_raw or "").replace("$", "").replace(",", "").strip())
+                except Exception:
+                    amount = None
+
+                if tx_id and amount and amount > 0:
+                    with db_transaction():
+                        db_execute(
+                            _sql(
+                                "UPDATE resident_budget_transactions SET amount = %s, merchant_or_note = %s, edited_at = %s, edited_by_role = %s, edited_by_resident_id = %s WHERE id = %s",
+                                "UPDATE resident_budget_transactions SET amount = ?, merchant_or_note = ?, edited_at = ?, edited_by_role = ?, edited_by_resident_id = ? WHERE id = ?",
+                            ),
+                            (round(amount, 2), merchant or None, now, "resident", resident_id, tx_id),
+                        )
+                    flash("Transaction updated.", "success")
+                else:
+                    flash("Invalid transaction update.", "error")
+                return redirect(url_for("resident_portal.resident_budget"))
+
+            # default = add
             transaction_date = _clean_text(request.form.get("transaction_date"))
             line_item_id = _safe_int(request.form.get("line_item_id"))
             amount_raw = request.form.get("amount")
@@ -57,12 +91,9 @@ def resident_budget():
 
             errors: list[str] = []
 
-            if not transaction_date:
-                errors.append("Transaction date is required.")
-            elif len(transaction_date) != 10:
+            if not transaction_date or len(transaction_date) != 10:
                 errors.append("Transaction date must be valid.")
 
-            amount = None
             try:
                 amount = float(str(amount_raw or "").replace("$", "").replace(",", "").strip())
             except ValueError:
@@ -72,56 +103,18 @@ def resident_budget():
                 errors.append("Amount must be greater than zero.")
 
             selected_item = line_item_lookup.get(line_item_id or 0)
-            if not selected_item:
-                errors.append("Please select a valid budget category.")
-            elif str(selected_item.get("line_group") or "").strip().lower() != "expense":
-                errors.append("Spending can only be logged to an expense category.")
+            if not selected_item or str(selected_item.get("line_group") or "").strip().lower() != "expense":
+                errors.append("Please select a valid expense category.")
 
             if errors:
                 for error in errors:
                     flash(error, "error")
             else:
-                now = utcnow_iso()
-                current_actual = selected_item.get("actual_amount")
-                current_actual_value = float(current_actual) if current_actual is not None else 0.0
-
                 with db_transaction():
                     db_execute(
                         _sql(
-                            """
-                            INSERT INTO resident_budget_transactions (
-                                budget_session_id,
-                                resident_id,
-                                enrollment_id,
-                                line_item_id,
-                                transaction_date,
-                                amount,
-                                merchant_or_note,
-                                entered_by_role,
-                                entered_by_resident_id,
-                                created_at,
-                                updated_at,
-                                is_deleted
-                            )
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                            """,
-                            """
-                            INSERT INTO resident_budget_transactions (
-                                budget_session_id,
-                                resident_id,
-                                enrollment_id,
-                                line_item_id,
-                                transaction_date,
-                                amount,
-                                merchant_or_note,
-                                entered_by_role,
-                                entered_by_resident_id,
-                                created_at,
-                                updated_at,
-                                is_deleted
-                            )
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """,
+                            "INSERT INTO resident_budget_transactions (budget_session_id, resident_id, enrollment_id, line_item_id, transaction_date, amount, merchant_or_note, entered_by_role, entered_by_resident_id, created_at, updated_at, is_deleted) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                            "INSERT INTO resident_budget_transactions (budget_session_id, resident_id, enrollment_id, line_item_id, transaction_date, amount, merchant_or_note, entered_by_role, entered_by_resident_id, created_at, updated_at, is_deleted) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                         ),
                         (
                             budget_id,
@@ -139,37 +132,14 @@ def resident_budget():
                         ),
                     )
 
-                    db_execute(
-                        _sql(
-                            """
-                            UPDATE resident_budget_line_items
-                            SET actual_amount = %s,
-                                updated_at = %s
-                            WHERE id = %s
-                            """,
-                            """
-                            UPDATE resident_budget_line_items
-                            SET actual_amount = ?,
-                                updated_at = ?
-                            WHERE id = ?
-                            """,
-                        ),
-                        (round(current_actual_value + amount, 2), now, line_item_id),
-                    )
-
                 flash("Purchase added.", "success")
                 return redirect(url_for("resident_portal.resident_budget"))
 
         income_items, expense_items = _load_budget_line_items_with_status(budget_id)
         recent_transactions = _load_recent_budget_transactions(budget_id)
 
-        total_budgeted = 0.0
-        total_spent = 0.0
-
-        for item in expense_items:
-            total_budgeted += item.get("projected_value", 0.0)
-            total_spent += item.get("actual_value", 0.0)
-
+        total_budgeted = sum(item.get("projected_value", 0.0) for item in expense_items)
+        total_spent = sum(item.get("actual_value", 0.0) for item in expense_items)
         total_remaining = total_budgeted - total_spent
 
         return render_template(
