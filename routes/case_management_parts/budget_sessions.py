@@ -14,11 +14,14 @@ from routes.case_management_parts.helpers import (
     placeholder,
     shelter_equals_sql,
 )
+from routes.case_management_parts.intake_income_support import load_intake_income_support
 
 _DEFAULT_LINE_ITEMS = (
     ("income", "net_employment", "Net Employment"),
-    ("income", "net_ss_ssi_ssdi", "Net SS SSI SSDI"),
+    ("income", "net_ss_ssi_ssdi", "SS SSI SSDI Survivor Benefits"),
+    ("income", "tanf", "TANF"),
     ("income", "child_support", "Child Support"),
+    ("income", "alimony", "Alimony"),
     ("income", "cash_gift", "Cash Gift"),
     ("income", "other_income", "Other"),
     ("expense", "rent", "Rent"),
@@ -91,6 +94,47 @@ def _create_default_line_items(budget_id: int, now: str):
         db_execute(
             f"INSERT INTO resident_budget_line_items (budget_session_id,line_group,line_key,line_label,sort_order,is_resident_visible,is_active,created_at,updated_at) VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})",
             (budget_id, grp, key, label, idx, True, True, now, now),
+        )
+
+
+def _prefill_income_from_source(budget_id: int, enrollment_id: int | None, now: str):
+    if not enrollment_id:
+        return
+
+    income = load_intake_income_support(enrollment_id) or {}
+
+    employment_total = (
+        float(income.get("employment_income_1") or 0)
+        + float(income.get("employment_income_2") or 0)
+        + float(income.get("employment_income_3") or 0)
+    )
+    ssi_survivor_total = float(income.get("ssi_ssdi_income") or 0) + float(income.get("survivor_benefit_total") or 0)
+    tanf_total = float(income.get("tanf_income") or 0)
+    child_support_total = float(income.get("child_support_total") or income.get("child_support_income") or 0)
+    alimony_total = float(income.get("alimony_income") or 0)
+    other_total = float(income.get("other_income") or 0)
+
+    mapping = {
+        "net_employment": employment_total,
+        "net_ss_ssi_ssdi": ssi_survivor_total,
+        "tanf": tanf_total,
+        "child_support": child_support_total,
+        "alimony": alimony_total,
+        "other_income": other_total,
+    }
+
+    rows = db_fetchall(
+        "SELECT id, line_key FROM resident_budget_line_items WHERE budget_session_id = ? AND line_group = 'income'",
+        (budget_id,),
+    )
+
+    for row in rows or []:
+        key = str(row.get("line_key") or "").strip()
+        if key not in mapping:
+            continue
+        db_execute(
+            "UPDATE resident_budget_line_items SET projected_amount = ?, updated_at = ? WHERE id = ?",
+            (round(mapping[key], 2), now, row["id"]),
         )
 
 
@@ -173,6 +217,7 @@ def add_budget_session_view(resident_id: int):
         row = db_fetchone("SELECT id FROM resident_budget_sessions WHERE resident_id=? ORDER BY id DESC LIMIT 1", (resident_id,))
         bid = row["id"]
         _create_default_line_items(bid, now)
+        _prefill_income_from_source(bid, resident.get("enrollment_id"), now)
 
     return redirect(url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=bid))
 
