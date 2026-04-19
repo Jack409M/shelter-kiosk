@@ -9,6 +9,7 @@ from core.db import db_fetchone
 from core.kiosk_activity_categories import (
     AA_NA_PARENT_ACTIVITY_KEY,
     AA_NA_PARENT_ACTIVITY_LABEL,
+    LOCKED_PARENT_ACTIVITY_DEFINITIONS,
     VOLUNTEER_PARENT_ACTIVITY_KEY,
     VOLUNTEER_PARENT_ACTIVITY_LABEL,
     load_active_kiosk_activity_child_options_for_shelter,
@@ -18,6 +19,14 @@ from core.kiosk_service import handle_checkin, handle_checkout
 from core.runtime import get_all_shelters, get_client_ip, init_db
 
 kiosk = Blueprint("kiosk", __name__)
+
+LEGACY_ACTIVITY_LABEL_TO_PARENT_ACTIVITY_KEY = {
+    "rad": "program",
+    "doctor appointment": "medical_health",
+    "counseling": "medical_health",
+    "school": "education",
+    "legal obligation": "legal",
+}
 
 
 def _kiosk_enabled() -> bool:
@@ -35,18 +44,59 @@ def _resolve_shelter_or_404(shelter: str) -> str | None:
     )
 
 
+def _normalized_checkout_category_row(row: dict[str, Any]) -> dict[str, Any] | None:
+    item = dict(row)
+    activity_label = str(item.get("activity_label") or "").strip()
+    if not activity_label:
+        return None
+
+    activity_key = str(item.get("activity_key") or "").strip()
+    normalized_label = activity_label.lower()
+    legacy_parent_key = LEGACY_ACTIVITY_LABEL_TO_PARENT_ACTIVITY_KEY.get(normalized_label, "")
+
+    if legacy_parent_key:
+        item["activity_key"] = legacy_parent_key
+        item["activity_label"] = LOCKED_PARENT_ACTIVITY_DEFINITIONS.get(
+            legacy_parent_key,
+            activity_label,
+        )
+        return item
+
+    if activity_key in LOCKED_PARENT_ACTIVITY_DEFINITIONS:
+        item["activity_label"] = LOCKED_PARENT_ACTIVITY_DEFINITIONS[activity_key]
+        return item
+
+    for locked_parent_key, locked_parent_label in LOCKED_PARENT_ACTIVITY_DEFINITIONS.items():
+        if normalized_label == locked_parent_label.lower():
+            item["activity_key"] = locked_parent_key
+            item["activity_label"] = locked_parent_label
+            return item
+
+    return item
+
+
 def _active_checkout_categories_for_shelter(shelter: str) -> list[dict[str, Any]]:
     shelter_key = (shelter or "").strip().lower()
     rows = load_kiosk_activity_categories_for_shelter(shelter_key)
 
     categories: list[dict[str, Any]] = []
+    seen_tokens: set[str] = set()
     for row in rows or []:
-        label = str(row.get("activity_label") or "").strip()
+        item = _normalized_checkout_category_row(row)
+        if not item:
+            continue
+
+        label = str(item.get("activity_label") or "").strip()
         if not label:
             continue
-        if not row.get("active"):
+        if not item.get("active"):
             continue
-        categories.append(dict(row))
+
+        token = str(item.get("activity_key") or "").strip().lower() or label.lower()
+        if token in seen_tokens:
+            continue
+        seen_tokens.add(token)
+        categories.append(item)
 
     return categories
 
