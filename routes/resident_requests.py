@@ -34,6 +34,13 @@ resident_requests = Blueprint("resident_requests", __name__)
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
+ALLOWED_RESIDENT_NEXT_PATHS = {
+    "/pass-request",
+    "/transport",
+    "/resident/home",
+    "/resident/chores",
+}
+
 
 def _client_ip() -> str:
     return (request.remote_addr or "").strip() or "unknown"
@@ -47,20 +54,11 @@ def _resident_session_text(key: str) -> str:
     return str(session.get(key) or "").strip()
 
 
-def _allowed_resident_next_urls() -> set[str]:
-    return {
-        url_for("resident_requests.resident_pass_request"),
-        url_for("resident_requests.resident_transport"),
-        url_for("resident_portal.home"),
-        url_for("resident_portal.resident_chores"),
-    }
-
-
 def _safe_next_url(candidate: str) -> str:
     next_url = (candidate or "").strip()
-    if next_url in _allowed_resident_next_urls():
+    if next_url in ALLOWED_RESIDENT_NEXT_PATHS:
         return next_url
-    return url_for("resident_portal.home")
+    return "/resident/home"
 
 
 def _signin_next_url() -> str:
@@ -157,7 +155,7 @@ def resident_signin():
     next_url = _signin_next_url()
 
     if request.method == "GET":
-        return render_template("resident_signin.html")
+        return render_template("resident_signin.html", next=next_url)
 
     ip = _client_ip()
     resident_code = (request.form.get("resident_code") or "").strip()
@@ -173,7 +171,7 @@ def resident_signin():
             f"ip={ip} resident_code={safe_code} next={next_url}",
         )
         flash("Too many sign in attempts. Please wait a few minutes and try again.", "error")
-        return render_template("resident_signin.html"), 429
+        return render_template("resident_signin.html", next=next_url), 429
 
     row = _load_resident_by_code(resident_code)
 
@@ -187,7 +185,7 @@ def resident_signin():
             f"reason=invalid_resident_code ip={ip} resident_code={safe_code} next={next_url}",
         )
         flash("Invalid Resident Code.", "error")
-        return render_template("resident_signin.html"), 401
+        return render_template("resident_signin.html", next=next_url), 401
 
     shelter = ((row.get("shelter") if isinstance(row, dict) else row[1]) or "").strip()
 
