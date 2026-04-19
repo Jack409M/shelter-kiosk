@@ -31,6 +31,7 @@ def ensure_resident_budget_session_budget_columns(kind: str) -> None:
             "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS amount_left_for_abba DOUBLE PRECISION",
             "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS client_signed_at TEXT",
             "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS staff_signed_at TEXT",
+            "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE",
         ]
     else:
         statements = [
@@ -48,6 +49,7 @@ def ensure_resident_budget_session_budget_columns(kind: str) -> None:
             "ALTER TABLE resident_budget_sessions ADD COLUMN amount_left_for_abba REAL",
             "ALTER TABLE resident_budget_sessions ADD COLUMN client_signed_at TEXT",
             "ALTER TABLE resident_budget_sessions ADD COLUMN staff_signed_at TEXT",
+            "ALTER TABLE resident_budget_sessions ADD COLUMN is_active INTEGER DEFAULT 0",
         ]
 
     for statement in statements:
@@ -110,6 +112,14 @@ def ensure_budget_transactions_table(kind: str) -> None:
             entered_by_role TEXT,
             entered_by_staff_user_id INTEGER,
             entered_by_resident_id INTEGER,
+            edited_at TEXT,
+            edited_by_role TEXT,
+            edited_by_staff_user_id INTEGER,
+            edited_by_resident_id INTEGER,
+            deleted_at TEXT,
+            deleted_by_role TEXT,
+            deleted_by_staff_user_id INTEGER,
+            deleted_by_resident_id INTEGER,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -132,12 +142,48 @@ def ensure_budget_transactions_table(kind: str) -> None:
             entered_by_role TEXT,
             entered_by_staff_user_id INTEGER,
             entered_by_resident_id INTEGER,
+            edited_at TEXT,
+            edited_by_role TEXT,
+            edited_by_staff_user_id INTEGER,
+            edited_by_resident_id INTEGER,
+            deleted_at TEXT,
+            deleted_by_role TEXT,
+            deleted_by_staff_user_id INTEGER,
+            deleted_by_resident_id INTEGER,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             is_deleted BOOLEAN NOT NULL DEFAULT FALSE
         )
         """,
     )
+
+    audit_statements = []
+    if kind == "pg":
+        audit_statements = [
+            "ALTER TABLE resident_budget_transactions ADD COLUMN IF NOT EXISTS edited_at TEXT",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN IF NOT EXISTS edited_by_role TEXT",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN IF NOT EXISTS edited_by_staff_user_id INTEGER",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN IF NOT EXISTS edited_by_resident_id INTEGER",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN IF NOT EXISTS deleted_at TEXT",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN IF NOT EXISTS deleted_by_role TEXT",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN IF NOT EXISTS deleted_by_staff_user_id INTEGER",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN IF NOT EXISTS deleted_by_resident_id INTEGER",
+        ]
+    else:
+        audit_statements = [
+            "ALTER TABLE resident_budget_transactions ADD COLUMN edited_at TEXT",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN edited_by_role TEXT",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN edited_by_staff_user_id INTEGER",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN edited_by_resident_id INTEGER",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN deleted_at TEXT",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN deleted_by_role TEXT",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN deleted_by_staff_user_id INTEGER",
+            "ALTER TABLE resident_budget_transactions ADD COLUMN deleted_by_resident_id INTEGER",
+        ]
+
+    for statement in audit_statements:
+        with contextlib.suppress(Exception):
+            db_execute(statement)
 
 
 def ensure_budget_assistance_table(kind: str) -> None:
@@ -245,6 +291,10 @@ def ensure_indexes() -> None:
         ON resident_budget_line_items (budget_session_id, sort_order)
         """,
         """
+        CREATE INDEX IF NOT EXISTS resident_budget_line_items_session_key_idx
+        ON resident_budget_line_items (budget_session_id, line_key)
+        """,
+        """
         CREATE INDEX IF NOT EXISTS resident_budget_transactions_session_idx
         ON resident_budget_transactions (budget_session_id)
         """,
@@ -263,6 +313,14 @@ def ensure_indexes() -> None:
         """
         CREATE INDEX IF NOT EXISTS resident_budget_transactions_date_idx
         ON resident_budget_transactions (transaction_date)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS resident_budget_transactions_session_date_idx
+        ON resident_budget_transactions (budget_session_id, transaction_date)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS resident_budget_transactions_session_deleted_idx
+        ON resident_budget_transactions (budget_session_id, is_deleted)
         """,
         """
         CREATE INDEX IF NOT EXISTS resident_budget_goal_details_session_idx
