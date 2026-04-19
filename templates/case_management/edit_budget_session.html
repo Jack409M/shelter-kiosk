@@ -19,14 +19,79 @@
   <form method="post" action="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=budget_row['id']) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <label><strong>Session Date</strong></label>
-    <input type="date" name="session_date" value="{{ budget_row['session_date'] or '' }}" required>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+      <div>
+        <label><strong>Session Date</strong></label>
+        <input type="date" name="session_date" value="{{ budget_row['session_date'] or '' }}" required>
+      </div>
+      <div>
+        <label><strong>Budget Month</strong></label>
+        <input type="month" name="budget_month" value="{{ budget_row['budget_month'] or '' }}">
+      </div>
+    </div>
 
-    <label><strong>Notes</strong></label>
+    <h3 style="margin-top:20px;">Income Summary</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+      <div>
+        <label><strong>Projected Total Income</strong></label>
+        <input type="text" name="projected_total_income" value="{{ budget_row['projected_total_income'] or '' }}">
+      </div>
+      <div>
+        <label><strong>Actual Total Income</strong></label>
+        <input type="text" name="actual_total_income" value="{{ budget_row['actual_total_income'] or '' }}">
+      </div>
+      <div>
+        <label><strong>House Contribution Amount</strong></label>
+        <input type="text" name="house_contribution_amount" value="{{ budget_row['house_contribution_amount'] or '' }}">
+      </div>
+      <div>
+        <label><strong>Personal Amount</strong></label>
+        <input type="text" name="personal_amount" value="{{ budget_row['personal_amount'] or '' }}">
+      </div>
+    </div>
+
+    <h3 style="margin-top:20px;">Expense Summary</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+      <div>
+        <label><strong>Projected Total Expenses</strong></label>
+        <input type="text" name="projected_total_expenses" value="{{ budget_row['projected_total_expenses'] or '' }}">
+      </div>
+      <div>
+        <label><strong>Actual Total Expenses</strong></label>
+        <input type="text" name="actual_total_expenses" value="{{ budget_row['actual_total_expenses'] or '' }}">
+      </div>
+      <div>
+        <label><strong>Projected Remaining Income</strong></label>
+        <input type="text" name="projected_remaining_income" value="{{ budget_row['projected_remaining_income'] or '' }}">
+      </div>
+      <div>
+        <label><strong>Actual Remaining Income</strong></label>
+        <input type="text" name="actual_remaining_income" value="{{ budget_row['actual_remaining_income'] or '' }}">
+      </div>
+    </div>
+
+    <h3 style="margin-top:20px;">Savings</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+      <div>
+        <label><strong>Last Month Savings</strong></label>
+        <input type="text" name="last_month_savings" value="{{ budget_row['last_month_savings'] or '' }}">
+      </div>
+      <div>
+        <label><strong>This Month Savings</strong></label>
+        <input type="text" name="this_month_savings" value="{{ budget_row['this_month_savings'] or '' }}">
+      </div>
+      <div>
+        <label><strong>Amount Left for Abba</strong></label>
+        <input type="text" name="amount_left_for_abba" value="{{ budget_row['amount_left_for_abba'] or '' }}">
+      </div>
+    </div>
+
+    <label style="margin-top:20px;"><strong>Notes</strong></label>
     <textarea name="notes" rows="4">{{ budget_row['notes'] or '' }}</textarea>
 
-    <div style="margin-top:10px;">
+    <div style="margin-top:16px;">
       <button type="submit">Save Changes</button>
     </div>
   </form>
 </div>
+{% endblock %}
