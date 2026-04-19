@@ -13,18 +13,82 @@
 </div>
 
 <div class="card">
-  <h2>Add Budget Session</h2>
+  <h2>Create Monthly Budget Session</h2>
 
   <form method="post" action="{{ url_for('case_management.add_budget_session', resident_id=resident['id']) }}">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <label><strong>Session Date</strong></label>
-    <input type="date" name="session_date" required>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+      <div>
+        <label><strong>Session Date</strong></label>
+        <input type="date" name="session_date" required>
+      </div>
+      <div>
+        <label><strong>Budget Month</strong></label>
+        <input type="month" name="budget_month">
+      </div>
+    </div>
 
-    <label><strong>Notes</strong></label>
-    <textarea name="notes" rows="3"></textarea>
+    <h3 style="margin-top:20px;">Income Summary</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+      <div>
+        <label><strong>Projected Total Income</strong></label>
+        <input type="text" name="projected_total_income" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div>
+        <label><strong>Actual Total Income</strong></label>
+        <input type="text" name="actual_total_income" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div>
+        <label><strong>House Contribution Amount</strong></label>
+        <input type="text" name="house_contribution_amount" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div>
+        <label><strong>Personal Amount</strong></label>
+        <input type="text" name="personal_amount" inputmode="decimal" placeholder="0.00">
+      </div>
+    </div>
 
-    <div style="margin-top:10px;">
+    <h3 style="margin-top:20px;">Expense Summary</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+      <div>
+        <label><strong>Projected Total Expenses</strong></label>
+        <input type="text" name="projected_total_expenses" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div>
+        <label><strong>Actual Total Expenses</strong></label>
+        <input type="text" name="actual_total_expenses" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div>
+        <label><strong>Projected Remaining Income</strong></label>
+        <input type="text" name="projected_remaining_income" inputmode="decimal" placeholder="Auto if blank">
+      </div>
+      <div>
+        <label><strong>Actual Remaining Income</strong></label>
+        <input type="text" name="actual_remaining_income" inputmode="decimal" placeholder="Auto if blank">
+      </div>
+    </div>
+
+    <h3 style="margin-top:20px;">Savings</h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+      <div>
+        <label><strong>Last Month Savings</strong></label>
+        <input type="text" name="last_month_savings" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div>
+        <label><strong>This Month Savings</strong></label>
+        <input type="text" name="this_month_savings" inputmode="decimal" placeholder="0.00">
+      </div>
+      <div>
+        <label><strong>Amount Left for Abba</strong></label>
+        <input type="text" name="amount_left_for_abba" inputmode="decimal" placeholder="0.00">
+      </div>
+    </div>
+
+    <label style="margin-top:20px;"><strong>Notes</strong></label>
+    <textarea name="notes" rows="4" placeholder="Session notes, barriers, coaching context, or follow up reminders"></textarea>
+
+    <div style="margin-top:16px;">
       <button type="submit">Save Budget Session</button>
     </div>
   </form>
@@ -37,7 +101,10 @@
     <table>
       <thead>
         <tr>
-          <th>Date</th>
+          <th>Session Date</th>
+          <th>Budget Month</th>
+          <th>Projected Income</th>
+          <th>Actual Income</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -45,6 +112,9 @@
         {% for row in budget_rows %}
           <tr>
             <td>{{ row["session_date"] or "—" }}</td>
+            <td>{{ row["budget_month"] or "—" }}</td>
+            <td>{{ row["projected_total_income"] if row["projected_total_income"] is not none else "—" }}</td>
+            <td>{{ row["actual_total_income"] if row["actual_total_income"] is not none else "—" }}</td>
             <td>
               <a class="btn btn-sm" href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id']) }}">
                 Edit
