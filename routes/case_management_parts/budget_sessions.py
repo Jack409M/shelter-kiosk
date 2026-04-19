@@ -279,7 +279,7 @@ def add_budget_session_view(resident_id: int):
         db_execute("UPDATE resident_budget_sessions SET is_active = FALSE WHERE resident_id = ?", (resident_id,))
 
         db_execute(
-            f"INSERT INTO resident_budget_sessions (resident_id,enrollment_id,session_date,budget_month,staff_user_id,notes,created_at,updated_at,is_active) VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},1)",
+            f"INSERT INTO resident_budget_sessions (resident_id,enrollment_id,session_date,budget_month,staff_user_id,notes,created_at,updated_at,is_active) VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},TRUE)",
             (resident_id, resident.get("enrollment_id"), data["session_date"], data["budget_month"], session.get("staff_user_id"), data["notes"], now, now),
         )
 
