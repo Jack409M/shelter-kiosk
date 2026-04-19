@@ -149,6 +149,14 @@ def add_budget_session_view(resident_id: int):
             flash(e, "error")
         return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
 
+    duplicate = db_fetchone(
+        "SELECT id FROM resident_budget_sessions WHERE resident_id = ? AND enrollment_id = ? AND budget_month = ? LIMIT 1",
+        (resident_id, resident.get("enrollment_id"), data["budget_month"]),
+    )
+    if duplicate:
+        flash("A budget for that month already exists for this resident.", "error")
+        return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
+
     now = utcnow_iso()
     ph = placeholder()
 
