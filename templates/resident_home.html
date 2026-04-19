@@ -30,10 +30,13 @@
       Request Transportation
     </a>
 
+    <!-- FIX: Budget available to ALL residents -->
+    <a class="portal-btn" href="{{ url_for('resident_portal.resident_budget') }}">
+      Budget
+    </a>
+
+    <!-- Daily Log still gated -->
     {% if resident_level|default(0)|int >= 5 %}
-      <a class="portal-btn" href="{{ url_for('resident_portal.resident_budget') }}">
-        Budget
-      </a>
       <a class="portal-btn" href="{{ url_for('resident_portal.resident_daily_log') }}">
         Daily Log
       </a>
