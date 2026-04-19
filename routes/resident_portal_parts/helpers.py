@@ -516,11 +516,79 @@ def _load_recent_transport_items(resident_identifier: str, shelter: str) -> list
     return items
 
 
+def _ensure_budget_session_active_column() -> None:
+    if g.get("db_kind") == "pg":
+        db_execute(
+            """
+            ALTER TABLE resident_budget_sessions
+            ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE
+            """
+        )
+        return
+
+    columns = db_fetchall("PRAGMA table_info(resident_budget_sessions)")
+    if any(str(col.get("name") or "").strip().lower() == "is_active" for col in columns):
+        return
+
+    db_execute(
+        """
+        ALTER TABLE resident_budget_sessions
+        ADD COLUMN is_active INTEGER DEFAULT 0
+        """
+    )
+
+
+def _set_active_budget_session_for_resident(resident_id: int, budget_id: int) -> None:
+    _ensure_budget_session_active_column()
+
+    db_execute(
+        _sql(
+            "UPDATE resident_budget_sessions SET is_active = FALSE WHERE resident_id = %s",
+            "UPDATE resident_budget_sessions SET is_active = 0 WHERE resident_id = ?",
+        ),
+        (resident_id,),
+    )
+
+    db_execute(
+        _sql(
+            "UPDATE resident_budget_sessions SET is_active = TRUE WHERE id = %s",
+            "UPDATE resident_budget_sessions SET is_active = 1 WHERE id = ?",
+        ),
+        (budget_id,),
+    )
+
+
 def _load_current_budget_session(resident_id: int | None) -> dict[str, Any] | None:
     if resident_id is None:
         return None
 
-    row = db_fetchone(
+    _ensure_budget_session_active_column()
+
+    active_row = db_fetchone(
+        _sql(
+            """
+            SELECT *
+            FROM resident_budget_sessions
+            WHERE resident_id = %s
+              AND COALESCE(is_active, FALSE) = TRUE
+            ORDER BY COALESCE(session_date, '') DESC, id DESC
+            LIMIT 1
+            """,
+            """
+            SELECT *
+            FROM resident_budget_sessions
+            WHERE resident_id = ?
+              AND COALESCE(is_active, 0) = 1
+            ORDER BY COALESCE(session_date, '') DESC, id DESC
+            LIMIT 1
+            """,
+        ),
+        (resident_id,),
+    )
+    if active_row:
+        return dict(active_row)
+
+    latest_row = db_fetchone(
         _sql(
             """
             SELECT *
@@ -539,7 +607,16 @@ def _load_current_budget_session(resident_id: int | None) -> dict[str, Any] | No
         ),
         (resident_id,),
     )
-    return dict(row) if row else None
+    if not latest_row:
+        return None
+
+    latest = dict(latest_row)
+    latest_id = _safe_int(latest.get("id"))
+    if latest_id is not None:
+        _set_active_budget_session_for_resident(resident_id, latest_id)
+        latest["is_active"] = True
+
+    return latest
 
 
 def _ensure_budget_line_items_exist(budget_id: int | None) -> None:
