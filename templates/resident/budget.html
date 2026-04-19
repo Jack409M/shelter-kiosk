@@ -1,49 +1,125 @@
 {% extends "layout.html" %}
 
 {% block content %}
-
 <div class="resident-portal">
-
   <h1 class="resident-portal-title">My Budget</h1>
 
+  <div class="portal-actions" style="margin-bottom:16px;">
+    <a class="portal-btn portal-btn-light" href="{{ url_for('resident_portal.home') }}">
+      Back to Home
+    </a>
+  </div>
+
   {% if not budget %}
-    <p>No budget has been created for you yet. Please see your case manager.</p>
+    <section class="resident-home-card">
+      <h3>No Budget Yet</h3>
+      <p>Your case manager has not created a budget for you yet.</p>
+    </section>
   {% else %}
 
-    <div class="resident-home-card">
-      <h3>Budget Month: {{ budget['budget_month'] or 'Current' }}</h3>
-    </div>
-
     <section class="resident-home-card">
-      <h3>Income</h3>
-      <ul class="resident-status-list">
-        {% for item in income_items %}
-          <li class="resident-status-item">
-            <div class="resident-status-main">
-              {{ item['line_label'] }}
-            </div>
-            <div>
-              {{ item['remaining'] }} left
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
+      <h3>Budget Month</h3>
+      <p>{{ budget['budget_month'] or budget['session_date'] or 'Current' }}</p>
     </section>
 
     <section class="resident-home-card">
-      <h3>Expenses</h3>
-      <ul class="resident-status-list">
-        {% for item in expense_items %}
-          <li class="resident-status-item">
-            <div class="resident-status-main">
-              {{ item['line_label'] }}
-            </div>
-            <div>
-              {{ item['remaining'] }} left
-            </div>
-          </li>
-        {% endfor %}
-      </ul>
+      <h3>Add Spending</h3>
+      <form method="post" action="{{ url_for('resident_portal.resident_budget') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+        <label><strong>Date</strong></label>
+        <input type="date" name="transaction_date" required>
+
+        <label><strong>Category</strong></label>
+        <select name="line_item_id" required>
+          <option value="">Select a category</option>
+          {% for item in expense_items %}
+            <option value="{{ item['id'] }}">{{ item['line_label'] }}</option>
+          {% endfor %}
+        </select>
+
+        <label><strong>Amount</strong></label>
+        <input type="text" name="amount" inputmode="decimal" placeholder="0.00" required>
+
+        <label><strong>Store or Note</strong></label>
+        <input type="text" name="merchant_or_note" placeholder="Walmart, gas, bus fare, toiletries">
+
+        <div style="margin-top:12px;">
+          <button class="portal-btn" type="submit">Add Purchase</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="resident-home-card">
+      <h3>Expense Categories</h3>
+
+      {% if expense_items %}
+        <ul class="resident-status-list">
+          {% for item in expense_items %}
+
+            {% if item['status'] == 'green' %}
+              {% set pill_style = 'background:#dff5e1; color:#1f6b2a; border:1px solid #98d3a0;' %}
+            {% elif item['status'] == 'yellow' %}
+              {% set pill_style = 'background:#fff3cd; color:#8a6d1f; border:1px solid #f0d98a;' %}
+            {% elif item['status'] == 'red' %}
+              {% set pill_style = 'background:#f8d7da; color:#842029; border:1px solid #e3a7ad;' %}
+            {% else %}
+              {% set pill_style = 'background:#ececec; color:#555; border:1px solid #d5d5d5;' %}
+            {% endif %}
+
+            <li class="resident-status-item">
+              <div class="resident-status-row">
+                <span class="active-pill" style="{{ pill_style }}">{{ item['status'] }}</span>
+              </div>
+
+              <div class="resident-status-row resident-status-main">
+                <strong>{{ item['line_label'] }}</strong>
+              </div>
+
+              <div class="resident-status-row">Budgeted: {{ '%.2f'|format(item['projected_value']) }}</div>
+              <div class="resident-status-row">Spent: {{ '%.2f'|format(item['actual_value']) }}</div>
+
+              <div class="resident-status-row">
+                {% if item['remaining'] >= 0 %}
+                  Remaining: {{ '%.2f'|format(item['remaining']) }}
+                {% else %}
+                  Over by: {{ '%.2f'|format(item['remaining']|abs) }}
+                {% endif %}
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No expense categories available.</p>
+      {% endif %}
+    </section>
+
+    <section class="resident-home-card">
+      <h3>Recent Spending</h3>
+
+      {% if recent_transactions %}
+        <ul class="resident-status-list">
+          {% for item in recent_transactions %}
+            <li class="resident-status-item">
+              <div class="resident-status-row resident-status-main">
+                <strong>{{ item['line_label'] or 'Category' }}</strong>
+              </div>
+
+              <div class="resident-status-row">
+                {{ item['transaction_date'] }} — {{ '%.2f'|format(item['amount'] or 0) }}
+              </div>
+
+              {% if item['merchant_or_note'] %}
+                <div class="resident-status-row resident-status-destination">
+                  {{ item['merchant_or_note'] }}
+                </div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No purchases recorded yet.</p>
+      {% endif %}
     </section>
 
   {% endif %}
