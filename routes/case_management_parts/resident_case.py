@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from flask import current_app, flash, redirect, render_template, session, url_for
 
 from core.attendance_hours import build_attendance_hours_snapshot
@@ -120,6 +123,18 @@ def _default_attendance_hours_snapshot() -> dict:
 
 
 
+def _default_budget_summary() -> dict:
+    return {
+        "budget_month": None,
+        "has_budget": False,
+        "total_budgeted": 0.0,
+        "total_spent": 0.0,
+        "total_remaining": 0.0,
+        "expense_count": 0,
+    }
+
+
+
 def _safe_load(name: str, loader, fallback):
     try:
         return loader()
@@ -163,6 +178,59 @@ def _load_employment_income_settings(shelter: str) -> dict:
         if row.get(key) is not None:
             resolved[key] = row.get(key)
     return resolved
+
+
+
+def _load_current_budget_summary(resident_id: int, enrollment_id: int | None) -> dict:
+    if not resident_id or not enrollment_id:
+        return _default_budget_summary()
+
+    current_month = datetime.now(ZoneInfo("America/Chicago")).strftime("%Y-%m")
+    ph = placeholder()
+
+    budget_row = db_fetchone(
+        f"""
+        SELECT id, budget_month
+        FROM resident_budget_sessions
+        WHERE resident_id = {ph}
+          AND enrollment_id = {ph}
+          AND budget_month = {ph}
+        LIMIT 1
+        """,
+        (resident_id, enrollment_id, current_month),
+    )
+    if not budget_row:
+        return {
+            **_default_budget_summary(),
+            "budget_month": current_month,
+        }
+
+    budget_id = budget_row["id"]
+    totals = db_fetchone(
+        f"""
+        SELECT
+            COUNT(*) AS expense_count,
+            COALESCE(SUM(CASE WHEN line_group = 'expense' THEN COALESCE(projected_amount, 0) ELSE 0 END), 0) AS total_budgeted,
+            COALESCE(SUM(CASE WHEN line_group = 'expense' THEN COALESCE(actual_amount, 0) ELSE 0 END), 0) AS total_spent
+        FROM resident_budget_line_items
+        WHERE budget_session_id = {ph}
+          AND line_group = 'expense'
+          AND COALESCE(is_active, TRUE) = TRUE
+        """,
+        (budget_id,),
+    ) or {}
+
+    total_budgeted = float(totals.get("total_budgeted") or 0.0)
+    total_spent = float(totals.get("total_spent") or 0.0)
+
+    return {
+        "budget_month": budget_row.get("budget_month") or current_month,
+        "has_budget": True,
+        "total_budgeted": round(total_budgeted, 2),
+        "total_spent": round(total_spent, 2),
+        "total_remaining": round(total_budgeted - total_spent, 2),
+        "expense_count": int(totals.get("expense_count") or 0),
+    }
 
 
 
@@ -238,6 +306,12 @@ def _build_context(
         employment_status_snapshot=employment_status_snapshot,
     )
 
+    budget_summary = _safe_load(
+        "budget_summary",
+        lambda: _load_current_budget_summary(resident["id"], enrollment_id),
+        _default_budget_summary,
+    )
+
     return {
         "resident": resident,
         "enrollment": enrollment,
@@ -265,6 +339,7 @@ def _build_context(
         "employment_income_snapshot": employment_income_snapshot,
         "employment_status_snapshot": employment_status_snapshot,
         "employment_stability_snapshot": employment_stability_snapshot,
+        "budget_summary": budget_summary,
         "is_deceased_case": enrollment_context["is_deceased_case"],
         "disciplinary_flags": disciplinary_flags,
         "has_disciplinary_block": len(disciplinary_flags) > 0,
