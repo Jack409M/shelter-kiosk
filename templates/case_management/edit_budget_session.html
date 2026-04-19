@@ -3,7 +3,7 @@
 {% block extra_head %}
 <style>
   .budget-edit-shell {
-    max-width: 880px;
+    max-width: 920px;
     margin: 0 auto;
     display: grid;
     gap: 16px;
@@ -15,70 +15,260 @@
     padding: 18px;
     box-shadow: 0 8px 24px rgba(20,35,50,0.05);
   }
+  .budget-edit-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
   .budget-edit-title {
     margin: 0;
-    font-size: 22px;
+    font-size: 24px;
+    color: #13212f;
+  }
+  .budget-edit-subtitle {
+    margin: 6px 0 0;
+    color: #5c6d7d;
+  }
+  .budget-back-link {
+    color: #13212f;
+    text-decoration: none;
+    font-weight: 700;
+  }
+  .budget-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .budget-summary-tile {
+    background: #f7fafc;
+    border: 1px solid #e5edf3;
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .budget-summary-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6f8193;
+    margin-bottom: 6px;
+  }
+  .budget-summary-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #13212f;
+  }
+  .budget-summary-good {
+    color: #1f6b33;
+  }
+  .budget-summary-bad {
+    color: #8a1f1f;
+  }
+  .budget-edit-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .budget-edit-section-copy {
+    color: #5c6d7d;
+    font-size: 14px;
   }
   .budget-line-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    padding: 10px 0;
+    gap: 14px;
+    padding: 12px 0;
     border-bottom: 1px solid #eef2f6;
   }
   .budget-line-item:last-child {
     border-bottom: none;
   }
+  .budget-line-main {
+    min-width: 0;
+  }
   .budget-line-label {
-    font-weight: 700;
+    font-weight: 800;
+    color: #13212f;
+  }
+  .budget-line-status {
+    margin-top: 4px;
+    font-size: 13px;
+    color: #5c6d7d;
+  }
+  .budget-line-status.good {
+    color: #1f6b33;
+  }
+  .budget-line-status.bad {
+    color: #8a1f1f;
   }
   .budget-line-inputs {
     display: flex;
-    gap: 6px;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .budget-input-wrap {
+    display: grid;
+    gap: 4px;
+  }
+  .budget-input-wrap span {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6f8193;
   }
   .budget-line-inputs input {
-    width: 90px;
-    padding: 6px 8px;
-    border-radius: 8px;
+    width: 104px;
+    padding: 8px 10px;
+    border-radius: 10px;
     border: 1px solid #ccd8e2;
+    background: #ffffff;
+  }
+  .budget-notes {
+    width: 100%;
+    min-height: 110px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid #ccd8e2;
+    box-sizing: border-box;
+    font: inherit;
+  }
+  .budget-save-row {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .budget-save-btn {
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: none;
+    background: #13212f;
+    color: #ffffff;
+    font-weight: 800;
+    cursor: pointer;
   }
 </style>
 {% endblock %}
 
 {% block content %}
+{% set income_items = budget_line_items | selectattr('line_group', 'equalto', 'income') | list %}
+{% set expense_items = budget_line_items | selectattr('line_group', 'equalto', 'expense') | list %}
+{% set totals = namespace(income_plan=0.0, income_actual=0.0, expense_plan=0.0, expense_actual=0.0) %}
+{% for item in income_items %}
+  {% set totals.income_plan = totals.income_plan + (item.projected_amount or 0) %}
+  {% set totals.income_actual = totals.income_actual + (item.actual_amount or 0) %}
+{% endfor %}
+{% for item in expense_items %}
+  {% set totals.expense_plan = totals.expense_plan + (item.projected_amount or 0) %}
+  {% set totals.expense_actual = totals.expense_actual + (item.actual_amount or 0) %}
+{% endfor %}
+{% set planned_remaining = totals.income_plan - totals.expense_plan %}
+{% set actual_remaining = totals.income_actual - totals.expense_actual %}
+
 <div class="budget-edit-shell">
   <div class="budget-edit-card">
-    <h1>{{ budget_row['budget_month'] }}</h1>
-    <p>
-      <a href="{{ url_for('case_management.budget_sessions', resident_id=resident['id']) }}">← Back</a>
-    </p>
+    <div class="budget-edit-hero">
+      <div>
+        <a class="budget-back-link" href="{{ url_for('case_management.budget_sessions', resident_id=resident['id']) }}">← Back to Budget Months</a>
+        <h1 class="budget-edit-title" style="margin-top:10px;">{{ budget_row['budget_month'] or 'Monthly Budget' }}</h1>
+        <p class="budget-edit-subtitle">Edit one month at a time. Income should start from the structured income source. Expenses should reflect the actual monthly plan.</p>
+      </div>
+      <div>
+        <a class="budget-back-link" href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}">Back to Workspace</a>
+      </div>
+    </div>
+
+    <div class="budget-summary-grid">
+      <div class="budget-summary-tile">
+        <div class="budget-summary-label">Planned Income</div>
+        <div class="budget-summary-value">${{ '%.2f'|format(totals.income_plan) }}</div>
+      </div>
+      <div class="budget-summary-tile">
+        <div class="budget-summary-label">Planned Expenses</div>
+        <div class="budget-summary-value">${{ '%.2f'|format(totals.expense_plan) }}</div>
+      </div>
+      <div class="budget-summary-tile">
+        <div class="budget-summary-label">Planned Remaining</div>
+        <div class="budget-summary-value {{ 'budget-summary-good' if planned_remaining >= 0 else 'budget-summary-bad' }}">${{ '%.2f'|format(planned_remaining) }}</div>
+      </div>
+      <div class="budget-summary-tile">
+        <div class="budget-summary-label">Actual Remaining</div>
+        <div class="budget-summary-value {{ 'budget-summary-good' if actual_remaining >= 0 else 'budget-summary-bad' }}">${{ '%.2f'|format(actual_remaining) }}</div>
+      </div>
+    </div>
   </div>
 
   <form method="post">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
     <div class="budget-edit-card">
-      <h2 class="budget-edit-title">Income</h2>
-      {% for item in budget_line_items if item.line_group == 'income' %}
+      <div class="budget-edit-section-head">
+        <div>
+          <h2 class="budget-edit-title">Income</h2>
+          <div class="budget-edit-section-copy">These lines should reflect the real income sources already stored in the system.</div>
+        </div>
+      </div>
+
+      {% for item in income_items %}
+        {% set projected = item.projected_amount or 0 %}
+        {% set actual = item.actual_amount or 0 %}
         <div class="budget-line-item">
-          <div class="budget-line-label">{{ item.line_label }}</div>
+          <div class="budget-line-main">
+            <div class="budget-line-label">{{ item.line_label }}</div>
+            <div class="budget-line-status">Planned ${{ '%.2f'|format(projected) }} · Actual ${{ '%.2f'|format(actual) }}</div>
+          </div>
           <div class="budget-line-inputs">
-            <input name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}" placeholder="Plan">
-            <input name="actual_amount_{{ item.id }}" value="{{ item.actual_amount or '' }}" placeholder="Actual">
+            <label class="budget-input-wrap">
+              <span>Plan</span>
+              <input name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}" placeholder="0.00">
+            </label>
+            <label class="budget-input-wrap">
+              <span>Actual</span>
+              <input name="actual_amount_{{ item.id }}" value="{{ item.actual_amount or '' }}" placeholder="0.00">
+            </label>
           </div>
         </div>
       {% endfor %}
     </div>
 
     <div class="budget-edit-card">
-      <h2 class="budget-edit-title">Expenses</h2>
-      {% for item in budget_line_items if item.line_group == 'expense' %}
+      <div class="budget-edit-section-head">
+        <div>
+          <h2 class="budget-edit-title">Expenses</h2>
+          <div class="budget-edit-section-copy">Ordered from essential needs toward less essential spending so the most important decisions are always first.</div>
+        </div>
+      </div>
+
+      {% for item in expense_items %}
+        {% set projected = item.projected_amount or 0 %}
+        {% set actual = item.actual_amount or 0 %}
+        {% set remaining = projected - actual %}
         <div class="budget-line-item">
-          <div class="budget-line-label">{{ item.line_label }}</div>
+          <div class="budget-line-main">
+            <div class="budget-line-label">{{ item.line_label }}</div>
+            {% if projected > 0 and remaining < 0 %}
+              <div class="budget-line-status bad">Over by ${{ '%.2f'|format(remaining|abs) }}</div>
+            {% elif projected > 0 %}
+              <div class="budget-line-status good">Remaining ${{ '%.2f'|format(remaining) }}</div>
+            {% else %}
+              <div class="budget-line-status">No planned amount yet</div>
+            {% endif %}
+          </div>
           <div class="budget-line-inputs">
-            <input name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}" placeholder="Plan">
-            <input name="actual_amount_{{ item.id }}" value="{{ item.actual_amount or '' }}" placeholder="Actual">
+            <label class="budget-input-wrap">
+              <span>Plan</span>
+              <input name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}" placeholder="0.00">
+            </label>
+            <label class="budget-input-wrap">
+              <span>Actual</span>
+              <input name="actual_amount_{{ item.id }}" value="{{ item.actual_amount or '' }}" placeholder="0.00">
+            </label>
           </div>
         </div>
       {% endfor %}
@@ -86,11 +276,11 @@
 
     <div class="budget-edit-card">
       <label><strong>Notes</strong></label>
-      <textarea name="notes" style="width:100%; min-height:100px;">{{ budget_row.notes or '' }}</textarea>
+      <textarea class="budget-notes" name="notes">{{ budget_row.notes or '' }}</textarea>
     </div>
 
-    <div>
-      <button type="submit">Save</button>
+    <div class="budget-save-row">
+      <button class="budget-save-btn" type="submit">Save Budget</button>
     </div>
   </form>
 </div>
