@@ -25,14 +25,10 @@ def _resident_context(resident_id: int):
 
     resident = db_fetchone(
         f"""
-        SELECT
-            r.id,
-            r.first_name,
-            r.last_name,
-            r.shelter
-        FROM residents r
-        WHERE r.id = {ph}
-          AND {shelter_equals_sql("r.shelter")}
+        SELECT id, first_name, last_name, shelter
+        FROM residents
+        WHERE id = {ph}
+          AND {shelter_equals_sql("shelter")}
         LIMIT 1
         """,
         (resident_id, shelter),
@@ -62,10 +58,7 @@ def budget_sessions_view(resident_id: int):
 
     budget_rows = db_fetchall(
         f"""
-        SELECT
-            id,
-            session_date,
-            notes
+        SELECT id, session_date, budget_month, projected_total_income, actual_total_income
         FROM resident_budget_sessions
         WHERE resident_id = {ph}
         ORDER BY session_date DESC, id DESC
@@ -102,40 +95,53 @@ def add_budget_session_view(resident_id: int):
     now = utcnow_iso()
     ph = placeholder()
 
-    try:
-        db_execute(
-            f"""
-            INSERT INTO resident_budget_sessions
-            (
-                resident_id,
-                enrollment_id,
-                session_date,
-                staff_user_id,
-                notes,
-                created_at,
-                updated_at
-            )
-            VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph})
-            """,
-            (
-                resident_id,
-                resident.get("enrollment_id"),
-                data["session_date"],
-                session.get("staff_user_id"),
-                data["notes"],
-                now,
-                now,
-            ),
+    db_execute(
+        f"""
+        INSERT INTO resident_budget_sessions (
+            resident_id,
+            enrollment_id,
+            session_date,
+            budget_month,
+            projected_total_income,
+            actual_total_income,
+            projected_total_expenses,
+            actual_total_expenses,
+            projected_remaining_income,
+            actual_remaining_income,
+            last_month_savings,
+            this_month_savings,
+            house_contribution_amount,
+            personal_amount,
+            amount_left_for_abba,
+            staff_user_id,
+            notes,
+            created_at,
+            updated_at
         )
-    except Exception as exc:
-        current_app.logger.exception(
-            "budget_session_add_failed resident_id=%s enrollment_id=%s exception_type=%s",
+        VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
+        """,
+        (
             resident_id,
             resident.get("enrollment_id"),
-            type(exc).__name__,
-        )
-        flash("Unable to add budget session. Please try again or contact an administrator.", "error")
-        return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
+            data["session_date"],
+            data["budget_month"],
+            data["projected_total_income"],
+            data["actual_total_income"],
+            data["projected_total_expenses"],
+            data["actual_total_expenses"],
+            data["projected_remaining_income"],
+            data["actual_remaining_income"],
+            data["last_month_savings"],
+            data["this_month_savings"],
+            data["house_contribution_amount"],
+            data["personal_amount"],
+            data["amount_left_for_abba"],
+            session.get("staff_user_id"),
+            data["notes"],
+            now,
+            now,
+        ),
+    )
 
     flash("Budget session added.", "success")
     return _resident_case_redirect(resident_id)
@@ -157,14 +163,9 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
 
     budget_row = db_fetchone(
         f"""
-        SELECT
-            id,
-            resident_id,
-            session_date,
-            notes
+        SELECT *
         FROM resident_budget_sessions
-        WHERE id = {ph}
-          AND resident_id = {ph}
+        WHERE id = {ph} AND resident_id = {ph}
         LIMIT 1
         """,
         (budget_id, resident_id),
@@ -186,50 +187,51 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
     if errors:
         for error in errors:
             flash(error, "error")
-        return redirect(
-            url_for(
-                "case_management.edit_budget_session",
-                resident_id=resident_id,
-                budget_id=budget_id,
-            )
-        )
+        return redirect(url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id))
 
     now = utcnow_iso()
 
-    try:
-        db_execute(
-            f"""
-            UPDATE resident_budget_sessions
-            SET
-                session_date = {ph},
-                notes = {ph},
-                updated_at = {ph}
-            WHERE id = {ph}
-              AND resident_id = {ph}
-            """,
-            (
-                data["session_date"],
-                data["notes"],
-                now,
-                budget_id,
-                resident_id,
-            ),
-        )
-    except Exception as exc:
-        current_app.logger.exception(
-            "budget_session_edit_failed resident_id=%s budget_id=%s exception_type=%s",
-            resident_id,
+    db_execute(
+        f"""
+        UPDATE resident_budget_sessions
+        SET
+            session_date = {ph},
+            budget_month = {ph},
+            projected_total_income = {ph},
+            actual_total_income = {ph},
+            projected_total_expenses = {ph},
+            actual_total_expenses = {ph},
+            projected_remaining_income = {ph},
+            actual_remaining_income = {ph},
+            last_month_savings = {ph},
+            this_month_savings = {ph},
+            house_contribution_amount = {ph},
+            personal_amount = {ph},
+            amount_left_for_abba = {ph},
+            notes = {ph},
+            updated_at = {ph}
+        WHERE id = {ph} AND resident_id = {ph}
+        """,
+        (
+            data["session_date"],
+            data["budget_month"],
+            data["projected_total_income"],
+            data["actual_total_income"],
+            data["projected_total_expenses"],
+            data["actual_total_expenses"],
+            data["projected_remaining_income"],
+            data["actual_remaining_income"],
+            data["last_month_savings"],
+            data["this_month_savings"],
+            data["house_contribution_amount"],
+            data["personal_amount"],
+            data["amount_left_for_abba"],
+            data["notes"],
+            now,
             budget_id,
-            type(exc).__name__,
-        )
-        flash("Unable to update budget session. Please try again or contact an administrator.", "error")
-        return redirect(
-            url_for(
-                "case_management.edit_budget_session",
-                resident_id=resident_id,
-                budget_id=budget_id,
-            )
-        )
+            resident_id,
+        ),
+    )
 
     flash("Budget session updated.", "success")
     return _resident_case_redirect(resident_id)
