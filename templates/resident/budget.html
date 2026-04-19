@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+<div class="resident-portal">
+
+  <h1 class="resident-portal-title">My Budget</h1>
+
+  {% if not budget %}
+    <p>No budget has been created for you yet. Please see your case manager.</p>
+  {% else %}
+
+    <div class="resident-home-card">
+      <h3>Budget Month: {{ budget['budget_month'] or 'Current' }}</h3>
+    </div>
+
+    <section class="resident-home-card">
+      <h3>Income</h3>
+      <ul class="resident-status-list">
+        {% for item in income_items %}
+          <li class="resident-status-item">
+            <div class="resident-status-main">
+              {{ item['line_label'] }}
+            </div>
+            <div>
+              {{ item['remaining'] }} left
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="resident-home-card">
+      <h3>Expenses</h3>
+      <ul class="resident-status-list">
+        {% for item in expense_items %}
+          <li class="resident-status-item">
+            <div class="resident-status-main">
+              {{ item['line_label'] }}
+            </div>
+            <div>
+              {{ item['remaining'] }} left
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+  {% endif %}
+
+</div>
+
+{% endblock %}
