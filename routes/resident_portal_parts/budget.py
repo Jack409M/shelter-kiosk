@@ -163,12 +163,24 @@ def resident_budget():
         income_items, expense_items = _load_budget_line_items_with_status(budget_id)
         recent_transactions = _load_recent_budget_transactions(budget_id)
 
+        total_budgeted = 0.0
+        total_spent = 0.0
+
+        for item in expense_items:
+            total_budgeted += item.get("projected_value", 0.0)
+            total_spent += item.get("actual_value", 0.0)
+
+        total_remaining = total_budgeted - total_spent
+
         return render_template(
             "resident/budget.html",
             budget=budget,
             income_items=income_items,
             expense_items=expense_items,
             recent_transactions=recent_transactions,
+            total_budgeted=round(total_budgeted, 2),
+            total_spent=round(total_spent, 2),
+            total_remaining=round(total_remaining, 2),
         )
     except Exception as exc:
         current_app.logger.exception(
