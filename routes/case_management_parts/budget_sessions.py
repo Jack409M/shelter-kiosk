@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import current_app, flash, redirect, render_template, request, session, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
+from core.budget_registry import iter_budget_line_item_definitions, is_budget_expense_key
 from routes.case_management_parts.budget_sessions_validation import validate_budget_session_form
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
@@ -18,39 +19,6 @@ from routes.case_management_parts.helpers import (
     shelter_equals_sql,
 )
 from routes.case_management_parts.intake_income_support import load_intake_income_support
-
-_DEFAULT_LINE_ITEMS = (
-    ("income", "net_employment", "Net Employment"),
-    ("income", "net_ss_ssi_ssdi", "SS SSI SSDI Survivor Benefits"),
-    ("income", "tanf", "TANF"),
-    ("income", "child_support", "Child Support"),
-    ("income", "alimony", "Alimony"),
-    ("income", "cash_gift", "Cash Gift"),
-    ("income", "other_income", "Other"),
-    ("expense", "rent", "Rent"),
-    ("expense", "soap_hygiene", "Soap Hygiene"),
-    ("expense", "cigarettes", "Cigarettes"),
-    ("expense", "prescription", "Prescription"),
-    ("expense", "hospital_doctor", "Hospital Dr."),
-    ("expense", "dental", "Dental"),
-    ("expense", "cell_phone", "Cell Phone"),
-    ("expense", "car_payment", "Car Payment"),
-    ("expense", "car_insurance", "Car Insurance"),
-    ("expense", "car_maintenance", "Car Maintenance"),
-    ("expense", "gasoline", "Gasoline"),
-    ("expense", "bus_taxi_lyft_uber", "Bus Taxi Lyft Uber"),
-    ("expense", "probation_fees", "Probation Fees"),
-    ("expense", "court_fees", "Court Fees"),
-    ("expense", "driver_license_surcharge", "Driver License Surcharge"),
-    ("expense", "student_loan", "Student Loan"),
-    ("expense", "loan_payment", "Loan Payment"),
-    ("expense", "child_care", "Child Care"),
-    ("expense", "tithe", "Tithe"),
-    ("expense", "entertainment", "Entertainment"),
-    ("expense", "streamed_media", "Streamed Media"),
-    ("expense", "bank_fees", "Bank Fees"),
-    ("expense", "savings", "Savings"),
-)
 
 
 def _ensure_budget_session_active_column():
@@ -95,7 +63,7 @@ def _create_default_line_items(budget_id: int, now: str):
     if existing:
         return
 
-    for idx, (grp, key, label) in enumerate(_DEFAULT_LINE_ITEMS, start=1):
+    for idx, item in enumerate(iter_budget_line_item_definitions(), start=1):
         db_execute(
             f"""
             INSERT INTO resident_budget_line_items
@@ -112,7 +80,17 @@ def _create_default_line_items(budget_id: int, now: str):
             )
             VALUES ({ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph},{ph})
             """,
-            (budget_id, grp, key, label, idx, True, True, now, now),
+            (
+                budget_id,
+                item["line_group"],
+                item["line_key"],
+                item["line_label"],
+                idx,
+                item.get("is_resident_visible", True),
+                True,
+                now,
+                now,
+            ),
         )
 
 
@@ -198,15 +176,11 @@ def _build_budget_page_context(resident_id: int) -> dict:
     if current_row:
         suggested_budget_month = _next_month_text(current_row.get("budget_month"))
         suggested_action_label = f"Create { _format_budget_month(suggested_budget_month) } Budget"
-        suggested_help_text = (
-            "This creates the next month, copies last month’s planned expenses, reloads income from the system, and clears actual amounts."
-        )
+        suggested_help_text = "Creates next month with projected expenses copied and income refreshed."
     else:
         suggested_budget_month = utcnow_iso()[:7]
         suggested_action_label = f"Create { _format_budget_month(suggested_budget_month) } Budget"
-        suggested_help_text = (
-            "Start the first monthly budget for this resident. Future months will copy forward planned expenses automatically."
-        )
+        suggested_help_text = "Start first monthly budget."
 
     return {
         "all_budget_rows": all_rows,
@@ -252,51 +226,41 @@ def _copy_forward_previous_budget(
         SELECT line_key, line_group, projected_amount
         FROM resident_budget_line_items
         WHERE budget_session_id = ?
-          AND COALESCE(is_active, TRUE) = TRUE
         """,
         (previous_budget["id"],),
     )
-    if not previous_items:
-        return
 
     previous_expense_by_key = {
         str(item.get("line_key") or "").strip(): item
         for item in previous_items
         if str(item.get("line_group") or "").strip().lower() == "expense"
-        and str(item.get("line_key") or "").strip()
     }
 
     current_items = db_fetchall(
         """
-        SELECT id, line_group, line_key
+        SELECT id, line_key
         FROM resident_budget_line_items
         WHERE budget_session_id = ?
-          AND COALESCE(is_active, TRUE) = TRUE
         """,
         (budget_id,),
     )
 
     for item in current_items or []:
-        current_group = str(item.get("line_group") or "").strip().lower()
-        if current_group != "expense":
+        line_key = str(item.get("line_key") or "").strip()
+        if not is_budget_expense_key(line_key):
             continue
 
-        line_key = str(item.get("line_key") or "").strip()
         previous = previous_expense_by_key.get(line_key)
         if not previous:
             continue
 
-        previous_projected = previous.get("projected_amount")
-        projected_amount = (
-            round(float(previous_projected), 2)
-            if previous_projected not in (None, "")
-            else None
-        )
+        projected = previous.get("projected_amount")
+        projected_amount = round(float(projected), 2) if projected not in (None, "") else None
 
         db_execute(
             """
             UPDATE resident_budget_line_items
-            SET projected_amount = ?, actual_amount = NULL, updated_at = ?
+            SET projected_amount = ?, updated_at = ?
             WHERE id = ?
             """,
             (projected_amount, now, item["id"]),
@@ -306,28 +270,16 @@ def _copy_forward_previous_budget(
 def _prefill_income_from_source(budget_id: int, enrollment_id: int | None, now: str):
     income = load_intake_income_support(enrollment_id) or {}
 
-    employment_total = (
-        float(income.get("employment_income_1") or 0)
-        + float(income.get("employment_income_2") or 0)
-        + float(income.get("employment_income_3") or 0)
-    )
-    ssi_survivor_total = float(income.get("ssi_ssdi_income") or 0) + float(
-        income.get("survivor_benefit_total") or 0
-    )
-    tanf_total = float(income.get("tanf_income") or 0)
-    child_support_total = float(
-        income.get("child_support_total") or income.get("child_support_income") or 0
-    )
-    alimony_total = float(income.get("alimony_income") or 0)
-    other_total = float(income.get("other_income") or 0)
-
     mapping = {
-        "net_employment": round(employment_total, 2),
-        "net_ss_ssi_ssdi": round(ssi_survivor_total, 2),
-        "tanf": round(tanf_total, 2),
-        "child_support": round(child_support_total, 2),
-        "alimony": round(alimony_total, 2),
-        "other_income": round(other_total, 2),
+        "net_employment": float(income.get("employment_income_1") or 0)
+        + float(income.get("employment_income_2") or 0)
+        + float(income.get("employment_income_3") or 0),
+        "net_ss_ssi_ssdi": float(income.get("ssi_ssdi_income") or 0)
+        + float(income.get("survivor_benefit_total") or 0),
+        "tanf": float(income.get("tanf_income") or 0),
+        "child_support": float(income.get("child_support_total") or 0),
+        "alimony": float(income.get("alimony_income") or 0),
+        "other_income": float(income.get("other_income") or 0),
     }
 
     rows = db_fetchall(
@@ -336,7 +288,6 @@ def _prefill_income_from_source(budget_id: int, enrollment_id: int | None, now: 
         FROM resident_budget_line_items
         WHERE budget_session_id = ?
           AND line_group = 'income'
-        ORDER BY sort_order, id
         """,
         (budget_id,),
     )
@@ -347,28 +298,39 @@ def _prefill_income_from_source(budget_id: int, enrollment_id: int | None, now: 
         db_execute(
             """
             UPDATE resident_budget_line_items
-            SET projected_amount = ?, actual_amount = NULL, updated_at = ?
+            SET projected_amount = ?, updated_at = ?
             WHERE id = ?
             """,
-            (projected_amount, now, row["id"]),
+            (round(projected_amount, 2) if projected_amount else None, now, row["id"]),
         )
 
 
 def _load_line_items(budget_id: int):
-    ph = placeholder()
-    return db_fetchall(
-        f"""
-        SELECT *
-        FROM resident_budget_line_items
-        WHERE budget_session_id = {ph}
-        ORDER BY sort_order, id
+    rows = db_fetchall(
+        """
+        SELECT li.*, COALESCE(SUM(CASE WHEN t.is_deleted = FALSE THEN t.amount ELSE 0 END),0) AS txn_total
+        FROM resident_budget_line_items li
+        LEFT JOIN resident_budget_transactions t ON t.line_item_id = li.id
+        WHERE li.budget_session_id = ?
+        GROUP BY li.id
+        ORDER BY li.sort_order, li.id
         """,
         (budget_id,),
     )
 
+    items = []
+    for row in rows or []:
+        item = dict(row)
+        if is_budget_expense_key(item.get("line_key")):
+            item["actual_amount"] = float(item.get("txn_total") or 0)
+            item["actual_editable"] = False
+        else:
+            item["actual_editable"] = True
+        items.append(item)
+    return items
+
 
 def _update_line_items(budget_id: int, now: str):
-    ph = placeholder()
     items = _load_line_items(budget_id)
 
     for item in items:
@@ -377,18 +339,26 @@ def _update_line_items(budget_id: int, now: str):
         act = request.form.get(f"actual_amount_{pid}")
 
         proj_val = parse_money(proj) if proj else None
-        act_val = parse_money(act) if act else None
 
-        db_execute(
-            f"""
-            UPDATE resident_budget_line_items
-            SET projected_amount = {ph},
-                actual_amount = {ph},
-                updated_at = {ph}
-            WHERE id = {ph}
-            """,
-            (proj_val, act_val, now, pid),
-        )
+        if is_budget_expense_key(item.get("line_key")):
+            db_execute(
+                """
+                UPDATE resident_budget_line_items
+                SET projected_amount = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (proj_val, now, pid),
+            )
+        else:
+            act_val = parse_money(act) if act else None
+            db_execute(
+                """
+                UPDATE resident_budget_line_items
+                SET projected_amount = ?, actual_amount = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (proj_val, act_val, now, pid),
+            )
 
 
 def budget_sessions_view(resident_id: int):
