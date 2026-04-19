@@ -21,167 +21,9 @@
   {% set ess = employment_stability_snapshot if employment_stability_snapshot is defined else {} %}
   {% set resolved_employment_status = employment_status_snapshot if employment_status_snapshot is defined else (rs_employment_status or "") %}
   {% set iis = intake_income_support if intake_income_support is defined and intake_income_support else {} %}
+  {% set bs = budget_summary if budget_summary is defined else {} %}
 
-  {% if eis.get("band_key") == "green" %}
-    {% set income_field_card_style = "background:#e3efe7; border:1px solid #98baa3;" %}
-  {% elif eis.get("band_key") == "yellow" %}
-    {% set income_field_card_style = "background:#fff4cf; border:1px solid #dec66f;" %}
-  {% elif eis.get("band_key") == "orange" %}
-    {% set income_field_card_style = "background:#ffe3c7; border:1px solid #d9a06a;" %}
-  {% elif eis.get("band_key") == "red" %}
-    {% set income_field_card_style = "background:#f6dada; border:1px solid #d38b8b;" %}
-  {% else %}
-    {% set income_field_card_style = "" %}
-  {% endif %}
-
-  <form id="profile-editor-form" method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-    <div class="cmx-panel-soft">
-      <div class="cmx-panel-head">
-        <h3>Recovery Profile</h3>
-        <span>Program and sobriety</span>
-      </div>
-
-      <div class="cmx-grid cmx-grid-4">
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Program Level</div>
-          <div class="cmx-field">
-            <input type="text" name="program_level" value="{{ resolved_program_level }}" placeholder="Current level">
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Entry Date</div>
-          <div class="cmx-field">
-            <input type="text" value="{{ enrollment_entry_date or '—' }}" readonly>
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Level Start Date</div>
-          <div class="cmx-field">
-            <input type="date" name="level_start_date" value="{{ resolved_level_start_date }}">
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Days On Level</div>
-          <div class="cmx-field">
-            <input type="text" value="{{ rs_days_on_level if rs_days_on_level is not none else '—' }} (derived)" readonly>
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Step</div>
-          <div class="cmx-field">
-            <input type="number" min="1" max="12" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Sponsor Name</div>
-          <div class="cmx-field">
-            <input type="text" name="sponsor_name" value="{{ rs_sponsor or '' }}">
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Sponsor Active</div>
-          <div class="cmx-field">
-            <select name="sponsor_active">
-              <option value="" {% if rs.get('sponsor_active') is none %}selected{% endif %}>—</option>
-              <option value="yes" {% if rs.get('sponsor_active') is sameas true or rs.get('sponsor_active') == 1 %}selected{% endif %}>Yes</option>
-              <option value="no" {% if rs.get('sponsor_active') is sameas false or rs.get('sponsor_active') == 0 %}selected{% endif %}>No</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Step Work Active</div>
-          <div class="cmx-field">
-            <select name="step_work_active">
-              <option value="" {% if rs.get('step_work_active') is none %}selected{% endif %}>—</option>
-              <option value="yes" {% if rs.get('step_work_active') is sameas true or rs.get('step_work_active') == 1 %}selected{% endif %}>Yes</option>
-              <option value="no" {% if rs.get('step_work_active') is sameas false or rs.get('step_work_active') == 0 %}selected{% endif %}>No</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="cmx-grid cmx-grid-3" style="margin-top:16px;">
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Sobriety Date</div>
-          <div class="cmx-field">
-            <input type="date" name="sobriety_date" value="{{ resolved_sobriety_date }}">
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Days Sober</div>
-          <div class="cmx-field">
-            <input type="text" value="{{ rs_days_sober_today if rs_days_sober_today is not none else '—' }} (derived)" readonly>
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Treatment Graduation Date</div>
-          <div class="cmx-field">
-            <input type="date" name="treatment_graduation_date" value="{{ resolved_treatment_graduation_date }}">
-          </div>
-        </div>
-      </div>
-
-      <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
-        <div class="cmx-field">
-          <label>Drug Of Choice</label>
-          <input type="text" name="drug_of_choice" value="{{ rs_drug_of_choice or '' }}">
-        </div>
-
-        <div class="cmx-field">
-          <label>Recovery Notes</label>
-          <textarea name="employment_notes" rows="4">{{ rs_employment_notes or '' }}</textarea>
-        </div>
-      </div>
-
-      <div class="cmx-grid cmx-grid-2" style="margin-top:16px;">
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">RAD Complete</div>
-          <div class="cmx-field">
-            <select name="rad_complete">
-              <option value="" {% if resolved_rad_complete is none %}selected{% endif %}>—</option>
-              <option value="yes" {% if resolved_rad_complete is sameas true or resolved_rad_complete == 1 %}selected{% endif %}>Yes</option>
-              <option value="no" {% if resolved_rad_complete is sameas false or resolved_rad_complete == 0 %}selected{% endif %}>No</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="cmx-field-card">
-          <div class="cmx-field-card-label">RAD Completed Date</div>
-          <div class="cmx-field">
-            <input type="date" name="rad_completed_date" value="{{ resolved_rad_completed_date or '' }}">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="cmx-panel-soft" style="margin-top:20px;">
-      <div class="cmx-panel-head">
-        <h3>Employment and Income Support</h3>
-        <span>Summary only on this page</span>
-      </div>
-
-      <input type="hidden" name="employment_status_current" value="{{ resolved_employment_status or '' }}">
-      <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
-      <input type="hidden" name="employment_type_current" value="{{ rs.get('employment_type_current') or '' }}">
-      <input type="hidden" name="monthly_income" value="{{ eis.get('income_value') if eis.get('income_value') is not none else '' }}">
-      <input type="hidden" name="current_job_start_date" value="{{ rs.get('current_job_start_date') or '' }}">
-      <input type="hidden" name="previous_job_end_date" value="{{ rs.get('previous_job_end_date') or '' }}">
-      <input type="hidden" name="upward_job_change" value="{% if rs.get('upward_job_change') is sameas true or rs.get('upward_job_change') == 1 %}yes{% elif rs.get('upward_job_change') is sameas false or rs.get('upward_job_change') == 0 %}no{% endif %}">
-      <input type="hidden" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
-      <input type="hidden" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
-      <input type="hidden" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
-      <input type="hidden" name="job_change_notes" value="{{ rs.get('job_change_notes') or '' }}">
+  ...
 
       <div class="cmx-grid cmx-grid-3">
         <div class="cmx-field-card">
@@ -201,92 +43,30 @@
           <div class="cmx-field">
             <input type="text" value="{{ '$%.2f'|format(eis.get('income_value')) if eis.get('income_value') is not none else '—' }}" readonly>
           </div>
-          {% if eis.get("module_enabled", True) %}
-            <div style="margin-top:8px; font-size:12px; color:#53687c;">
-              Graduation minimum: {{ "$%.2f"|format(eis.get("graduation_minimum", 1200.0)) }}
-            </div>
-          {% endif %}
         </div>
 
         <div class="cmx-field-card">
-          <div class="cmx-field-card-label">Detailed Management</div>
-          <div class="cmx-field" style="display:flex; align-items:flex-end; height:100%;">
-            <a class="cmx-btn" href="{{ url_for('case_management.income_support', resident_id=resident_id) }}">Manage Employment and Income</a>
-          </div>
-        </div>
-      </div>
-
-      <div class="cmx-grid cmx-grid-4" style="margin-top:16px;">
-        <div class="cmx-row-block">
-          <span>Total Cash Support</span>
-          <span>{{ "$%.2f"|format(iis.get('total_cash_support')) if iis.get('total_cash_support') is not none else "—" }}</span>
-        </div>
-        <div class="cmx-row-block">
-          <span>TANF Weight</span>
-          <span>
-            {% if iis.get('tanf_weight_applied') is not none %}
-              {{ "%.2f"|format(iis.get('tanf_weight_applied')) }}
+          <div class="cmx-field-card-label">Budget This Month</div>
+          <div class="cmx-stack">
+            {% if bs.get('has_budget') %}
+              <div class="cmx-row-block"><span>Budgeted</span><span>${{ '%.2f'|format(bs.get('total_budgeted')) }}</span></div>
+              <div class="cmx-row-block"><span>Spent</span><span>${{ '%.2f'|format(bs.get('total_spent')) }}</span></div>
+              <div class="cmx-row-block"><span>Remaining</span>
+                <span style="color: {{ '#1f6b33' if bs.get('total_remaining') >= 0 else '#8a1f1f' }}; font-weight:700;">
+                  ${{ '%.2f'|format(bs.get('total_remaining')) }}
+                </span>
+              </div>
             {% else %}
-              —
+              <div class="cmx-muted">No budget for {{ bs.get('budget_month') }}</div>
             {% endif %}
-          </span>
-        </div>
-        <div class="cmx-row-block">
-          <span>Child Support Weighted</span>
-          <span>{{ "$%.2f"|format(iis.get('child_support_weighted_total')) if iis.get('child_support_weighted_total') is not none else "—" }}</span>
-        </div>
-        <div class="cmx-row-block">
-          <span>Survivor Weighted</span>
-          <span>{{ "$%.2f"|format(iis.get('survivor_benefit_weighted_total')) if iis.get('survivor_benefit_weighted_total') is not none else "—" }}</span>
-        </div>
-      </div>
-
-      <div style="{{ ess.get('card_style', 'background:#eef2f6; border:1px solid #c7d2de;') }} border-radius:16px; padding:14px; margin-top:16px;">
-        <div class="cmx-section-head" style="margin-bottom:8px;">
-          <div>
-            <h3 class="cmx-section-title">Employment Stability Readout</h3>
-            <div class="cmx-section-subtitle">
-              Pass if currently employed and either {{ ess.get('current_job_days_min', 90) }} or more days at current job or {{ ess.get('continuous_days_min', 180) }} or more days of continuous employment.
-            </div>
-          </div>
-          <div>
-            <span style="display:inline-flex; align-items:center; justify-content:center; padding:5px 10px; border-radius:999px; background:#ffffffaa; border:1px solid #c4d1dc; font-weight:700;">
-              {{ ess.get('label', '—') }}
-            </span>
           </div>
         </div>
-
-        <div class="cmx-grid cmx-grid-4">
-          <div class="cmx-row-block"><span>Current Job Days</span><span>{{ ess.get('current_job_days') if ess.get('current_job_days') is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Continuous Days</span><span>{{ ess.get('continuous_days') if ess.get('continuous_days') is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Gap Days</span><span>{{ ess.get('gap_days') if ess.get('gap_days') is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Upward Move Protected</span><span>{{ "Yes" if ess.get('upward_protected') else "No" }}</span></div>
-        </div>
       </div>
-    </div>
 
-    {% if intake_assessment %}
-      <div class="cmx-panel-soft" style="margin-top:20px;">
-        <div class="cmx-panel-head">
-          <h3>Intake Reference</h3>
-          <span>Read only baseline</span>
-        </div>
-
-        <div class="cmx-grid cmx-grid-2">
-          <div class="cmx-row-block"><span>Entry Date</span><span>{{ enrollment_entry_date or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Intake Grit</span><span>{{ intake_assessment["grit_score"] if intake_assessment["grit_score"] is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Sobriety Date At Intake</span><span>{{ intake_assessment.get("sobriety_date") or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Treatment Date At Intake</span><span>{{ intake_assessment.get("treatment_grad_date") or "—" }}</span></div>
-          <div class="cmx-row-block"><span>Dental Need At Entry</span><span>{{ "Yes" if intake_assessment["dental_need_at_entry"] else "No" if intake_assessment["dental_need_at_entry"] is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Vision Need At Entry</span><span>{{ "Yes" if intake_assessment["vision_need_at_entry"] else "No" if intake_assessment["vision_need_at_entry"] is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Parenting Class Needed</span><span>{{ "Yes" if intake_assessment["parenting_class_needed"] else "No" if intake_assessment["parenting_class_needed"] is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Warrants Unpaid</span><span>{{ "Yes" if intake_assessment["warrants_unpaid"] else "No" if intake_assessment["warrants_unpaid"] is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Mental Health Need At Entry</span><span>{{ "Yes" if intake_assessment["mental_health_need_at_entry"] else "No" if intake_assessment["mental_health_need_at_entry"] is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Medical Need At Entry</span><span>{{ "Yes" if intake_assessment["medical_need_at_entry"] else "No" if intake_assessment["medical_need_at_entry"] is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Driver’s License At Entry</span><span>{{ "Yes" if intake_assessment["has_drivers_license"] else "No" if intake_assessment["has_drivers_license"] is not none else "—" }}</span></div>
-          <div class="cmx-row-block"><span>Social Security Card At Entry</span><span>{{ "Yes" if intake_assessment["has_social_security_card"] else "No" if intake_assessment["has_social_security_card"] is not none else "—" }}</span></div>
-        </div>
+      <div class="cmx-button-row" style="margin-top:12px;">
+        <a class="cmx-btn" href="{{ url_for('case_management.income_support', resident_id=resident_id) }}">Manage Employment and Income</a>
+        <a class="cmx-btn-secondary" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}">Open Budget</a>
       </div>
-    {% endif %}
-  </form>
+
+      ...
 </div>
