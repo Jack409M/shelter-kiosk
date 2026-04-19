@@ -321,13 +321,91 @@ def _load_line_items(budget_id: int):
     items = []
     for row in rows or []:
         item = dict(row)
+        projected_amount = float(item.get("projected_amount") or 0)
         if is_budget_expense_key(item.get("line_key")):
-            item["actual_amount"] = float(item.get("txn_total") or 0)
+            total_amount = float(item.get("txn_total") or 0)
+            difference_amount = round(total_amount - projected_amount, 2)
+            item["actual_amount"] = round(total_amount, 2)
             item["actual_editable"] = False
         else:
+            total_amount = float(item.get("actual_amount") or 0)
+            difference_amount = round(total_amount - projected_amount, 2)
             item["actual_editable"] = True
+
+        item["projected_amount"] = round(projected_amount, 2) if projected_amount else 0.0
+        item["difference_amount"] = difference_amount
+        item["difference_text"] = _format_difference_text(difference_amount)
+        item["difference_class"] = _difference_class(difference_amount)
         items.append(item)
     return items
+
+
+def _format_difference_text(amount: float) -> str:
+    rounded = round(float(amount or 0), 2)
+    if rounded > 0:
+        return f"${rounded:,.2f} Over"
+    if rounded < 0:
+        return f"${abs(rounded):,.2f} Under"
+    return "$0.00"
+
+
+def _difference_class(amount: float) -> str:
+    rounded = round(float(amount or 0), 2)
+    if rounded > 0:
+        return "over"
+    if rounded < 0:
+        return "under"
+    return "even"
+
+
+def _split_expense_items(expense_items: list[dict]) -> tuple[list[dict], list[dict]]:
+    midpoint = (len(expense_items) + 1) // 2
+    return expense_items[:midpoint], expense_items[midpoint:]
+
+
+def _load_recent_budget_transactions(budget_id: int, limit: int = 8) -> list[dict]:
+    rows = db_fetchall(
+        """
+        SELECT
+            t.id,
+            t.transaction_date,
+            t.amount,
+            t.merchant_or_note,
+            li.line_label
+        FROM resident_budget_transactions t
+        LEFT JOIN resident_budget_line_items li ON li.id = t.line_item_id
+        WHERE t.budget_session_id = ?
+          AND COALESCE(t.is_deleted, FALSE) = FALSE
+        ORDER BY t.transaction_date DESC, t.id DESC
+        LIMIT ?
+        """,
+        (budget_id, limit),
+    )
+    return [dict(row) for row in rows or []]
+
+
+def _build_budget_editor_context(budget_id: int) -> dict:
+    items = _load_line_items(budget_id)
+    income_items = [item for item in items if str(item.get("line_group") or "").strip().lower() == "income"]
+    expense_items = [item for item in items if str(item.get("line_group") or "").strip().lower() == "expense"]
+    expense_left_items, expense_right_items = _split_expense_items(expense_items)
+
+    total_income = round(sum(float(item.get("projected_amount") or 0) for item in income_items), 2)
+    total_expenses = round(sum(float(item.get("actual_amount") or 0) for item in expense_items), 2)
+    balance = round(total_income - total_expenses, 2)
+
+    recent_transactions = _load_recent_budget_transactions(budget_id)
+
+    return {
+        "budget_line_items": items,
+        "income_items": income_items,
+        "expense_left_items": expense_left_items,
+        "expense_right_items": expense_right_items,
+        "total_income": total_income,
+        "total_expenses": total_expenses,
+        "balance": balance,
+        "recent_transactions": recent_transactions,
+    }
 
 
 def _update_line_items(budget_id: int, now: str):
@@ -528,13 +606,16 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
             )
         )
 
-    items = _load_line_items(budget_id)
     page_context = _build_budget_page_context(resident_id)
+    editor_context = _build_budget_editor_context(budget_id)
+
+    budget_row = dict(row)
+    budget_row["budget_month_label"] = _format_budget_month(budget_row.get("budget_month"))
 
     return render_template(
         "case_management/edit_budget_session.html",
         resident=resident,
-        budget_row=dict(row),
-        budget_line_items=items,
+        budget_row=budget_row,
         **page_context,
+        **editor_context,
     )
