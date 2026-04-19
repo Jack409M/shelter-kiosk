@@ -31,6 +31,9 @@
     </a>
 
     {% if resident_level|default(0)|int >= 5 %}
+      <a class="portal-btn" href="{{ url_for('resident_portal.resident_budget') }}">
+        Budget
+      </a>
       <a class="portal-btn" href="{{ url_for('resident_portal.resident_daily_log') }}">
         Daily Log
       </a>
@@ -42,18 +45,6 @@
   </div>
 
   <div class="resident-home-sections">
-
-    {% if resident_level|default(0)|int >= 5 %}
-      <section class="resident-home-card">
-        <h3>Level {{ resident_level }} Daily Log</h3>
-        <p>Log your daily activities, hours, volunteer time, employment time, and meetings.</p>
-        <div class="portal-actions" style="margin-top:12px;">
-          <a class="portal-btn" href="{{ url_for('resident_portal.resident_daily_log') }}">
-            Open Daily Log
-          </a>
-        </div>
-      </section>
-    {% endif %}
 
     <section class="resident-home-card">
       <h3>Notifications</h3>
