@@ -15,9 +15,23 @@ from core.runtime import init_db
 # public_consent_pages.py
 # resident_consent_flow.py
 
+ALLOWED_RESIDENT_NEXT_PATHS = {
+    "/pass-request",
+    "/transport",
+    "/resident/home",
+    "/resident/chores",
+}
+
 
 def _client_ip() -> str:
     return (request.remote_addr or "").strip() or "unknown"
+
+
+def _safe_next_url(candidate: str) -> str:
+    next_url = (candidate or "").strip()
+    if next_url in ALLOWED_RESIDENT_NEXT_PATHS:
+        return next_url
+    return "/resident/home"
 
 
 def sms_consent_public_alias_view():
@@ -67,17 +81,7 @@ def sms_consent_view():
 def resident_consent_view():
     init_db()
 
-    next_url = (request.args.get("next") or request.form.get("next") or "").strip()
-
-    allowed_next = {
-        url_for("resident_requests.resident_pass_request"),
-        url_for("resident_requests.resident_transport"),
-        url_for("resident_portal.home"),
-        url_for("resident_portal.resident_chores"),
-    }
-
-    if next_url not in allowed_next:
-        next_url = url_for("resident_portal.home")
+    next_url = _safe_next_url(request.args.get("next") or request.form.get("next") or "")
 
     resident_id = session.get("resident_id")
     resident_identifier = (session.get("resident_identifier") or "").strip()
