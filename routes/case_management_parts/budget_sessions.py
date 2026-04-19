@@ -176,7 +176,7 @@ def budget_sessions_view(resident_id: int):
         return redirect(url_for("case_management.index"))
 
     rows = db_fetchall(
-        "SELECT * FROM resident_budget_sessions WHERE resident_id=? ORDER BY COALESCE(is_active,0) DESC, id DESC",
+        "SELECT * FROM resident_budget_sessions WHERE resident_id=? ORDER BY is_active DESC NULLS LAST, id DESC",
         (resident_id,),
     )
 
