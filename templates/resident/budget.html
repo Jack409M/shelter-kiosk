@@ -18,6 +18,13 @@
   {% else %}
 
     <section class="resident-home-card">
+      <h3>Budget Summary</h3>
+      <div class="resident-status-row"><strong>Total Budget:</strong> {{ '%.2f'|format(total_budgeted or 0) }}</div>
+      <div class="resident-status-row"><strong>Total Spent:</strong> {{ '%.2f'|format(total_spent or 0) }}</div>
+      <div class="resident-status-row"><strong>Remaining:</strong> {{ '%.2f'|format(total_remaining or 0) }}</div>
+    </section>
+
+    <section class="resident-home-card">
       <h3>Budget Month</h3>
       <p>{{ budget['budget_month'] or budget['session_date'] or 'Current' }}</p>
     </section>
