@@ -160,7 +160,7 @@ header.top,
   background: #ffffff;
   border: 1px solid rgba(15, 47, 87, 0.18);
   color: var(--text);
-  -webkit-text-fill-color: var(--text);
+  -webkit-text-fill-color: currentColor;
   cursor: pointer;
 }
 
@@ -193,7 +193,7 @@ header.top,
   border-radius: 10px;
   background: transparent;
   color: var(--text);
-  -webkit-text-fill-color: var(--text);
+  -webkit-text-fill-color: currentColor;
   cursor: pointer;
 }
 
@@ -311,8 +311,8 @@ input[type="submit"] {
   background: #fff;
 
   cursor: pointer;
-  color: #111;
-  -webkit-text-fill-color: #111;
+  color: var(--text);
+  -webkit-text-fill-color: currentColor;
 }
 
 button:hover,
@@ -321,8 +321,8 @@ button:active,
 input[type="submit"]:hover,
 input[type="submit"]:focus,
 input[type="submit"]:active {
-  color: #111;
-  -webkit-text-fill-color: #111;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
 }
 
 input[type="submit"] {
@@ -339,8 +339,8 @@ input[type="submit"] {
   background: #fff;
 
   cursor: pointer;
-  color: #111;
-  -webkit-text-fill-color: #111;
+  color: var(--text);
+  -webkit-text-fill-color: currentColor;
 
   font-size: 13px;
   line-height: 1;
@@ -351,8 +351,8 @@ input[type="submit"] {
 .btn:focus,
 .btn:active,
 .btn:visited {
-  color: #111;
-  -webkit-text-fill-color: #111;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
 }
 
 .btn-top {
@@ -374,7 +374,7 @@ input[type="submit"].btn-dark:focus,
 input[type="submit"].btn-dark:active {
   background: #1f2f3f;
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
 .btn-light,
@@ -392,7 +392,7 @@ input[type="submit"].btn-light:focus,
 input[type="submit"].btn-light:active {
   background: #ffffff;
   color: #111111 !important;
-  -webkit-text-fill-color: #111111 !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
 .btn-primary,
@@ -411,7 +411,7 @@ input[type="submit"].btn-primary:active {
   background: #2563eb;
   border-color: #1d4ed8;
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
 .btn-success,
@@ -430,7 +430,7 @@ input[type="submit"].btn-success:active {
   background: #16a34a;
   border-color: #15803d;
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
 .btn-warning,
@@ -449,7 +449,7 @@ input[type="submit"].btn-warning:active {
   background: #fef3c7;
   border-color: #f59e0b;
   color: #7c2d12 !important;
-  -webkit-text-fill-color: #7c2d12 !important;
+  -webkit-text-fill-color: currentColor !important;
 }
 
 /* =========================================================
@@ -572,14 +572,14 @@ table.compact thead th {
   display: block;
   width: 100%;
   color: #111;
-  -webkit-text-fill-color: #111;
+  -webkit-text-fill-color: currentColor;
   white-space: normal;
 }
 
 .check-text {
   display: inline;
   color: #111;
-  -webkit-text-fill-color: #111;
+  -webkit-text-fill-color: currentColor;
 }
 
 /* =========================================================
