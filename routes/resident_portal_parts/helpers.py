@@ -3,14 +3,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from flask import current_app, g, redirect, request, session, url_for
+from flask import g, redirect, request, session, url_for
 
+from core.budget_registry import iter_budget_line_item_definitions, is_budget_expense_key
 from core.db import db_execute, db_fetchall, db_fetchone, get_db
 from core.helpers import utcnow_iso
 from core.kiosk_activity_categories import (
     AA_NA_PARENT_ACTIVITY_KEY,
-    VOLUNTEER_PARENT_ACTIVITY_KEY,
     LOCKED_PARENT_ACTIVITY_DEFINITIONS,
+    VOLUNTEER_PARENT_ACTIVITY_KEY,
     load_active_kiosk_activity_child_options_for_shelter,
     load_kiosk_activity_categories_for_shelter,
 )
@@ -25,37 +26,6 @@ LEGACY_ACTIVITY_LABEL_TO_PARENT_ACTIVITY_KEY = {
     "school": "education",
     "legal obligation": "legal",
 }
-
-RESIDENT_BUDGET_DEFAULT_LINE_ITEMS = (
-    ("income", "net_employment", "Net Employment"),
-    ("income", "net_ss_ssi_ssdi", "Net SS SSI SSDI"),
-    ("income", "child_support", "Child Support"),
-    ("income", "cash_gift", "Cash Gift"),
-    ("income", "other_income", "Other"),
-    ("expense", "rent", "Rent"),
-    ("expense", "soap_hygiene", "Soap Hygiene"),
-    ("expense", "cigarettes", "Cigarettes"),
-    ("expense", "prescription", "Prescription"),
-    ("expense", "hospital_doctor", "Hospital Dr."),
-    ("expense", "dental", "Dental"),
-    ("expense", "cell_phone", "Cell Phone"),
-    ("expense", "car_payment", "Car Payment"),
-    ("expense", "car_insurance", "Car Insurance"),
-    ("expense", "car_maintenance", "Car Maintenance"),
-    ("expense", "gasoline", "Gasoline"),
-    ("expense", "bus_taxi_lyft_uber", "Bus Taxi Lyft Uber"),
-    ("expense", "probation_fees", "Probation Fees"),
-    ("expense", "court_fees", "Court Fees"),
-    ("expense", "driver_license_surcharge", "Driver License Surcharge"),
-    ("expense", "student_loan", "Student Loan"),
-    ("expense", "loan_payment", "Loan Payment"),
-    ("expense", "child_care", "Child Care"),
-    ("expense", "tithe", "Tithe"),
-    ("expense", "entertainment", "Entertainment"),
-    ("expense", "streamed_media", "Streamed Media"),
-    ("expense", "bank_fees", "Bank Fees"),
-    ("expense", "savings", "Savings"),
-)
 
 
 def _clear_resident_session() -> None:
@@ -143,22 +113,11 @@ def _load_resident_program_level(resident_id: int | None) -> int:
 
     row = db_fetchone(
         _sql(
-            """
-            SELECT program_level
-            FROM residents
-            WHERE id = %s
-            LIMIT 1
-            """,
-            """
-            SELECT program_level
-            FROM residents
-            WHERE id = ?
-            LIMIT 1
-            """,
+            "SELECT program_level FROM residents WHERE id = %s LIMIT 1",
+            "SELECT program_level FROM residents WHERE id = ? LIMIT 1",
         ),
         (resident_id,),
     )
-
     if not row:
         return 0
 
@@ -186,7 +145,6 @@ def _load_daily_log_categories(shelter: str) -> list[dict[str, Any]]:
         if token in seen:
             continue
         seen.add(token)
-
         categories.append(item)
 
     return categories
@@ -212,9 +170,8 @@ def _load_child_options_by_parent(
 
         for row in rows or []:
             item = dict(row)
-            if not _clean_text(item.get("option_label")):
-                continue
-            options.append(item)
+            if _clean_text(item.get("option_label")):
+                options.append(item)
 
         if options:
             child_options_by_parent[parent_key] = options
@@ -274,10 +231,8 @@ def _pass_item_is_active(item: dict[str, Any]) -> bool:
 
     if start_at and end_at:
         return start_at <= now_iso <= end_at
-
     if start_date and end_date:
         return start_date <= today_iso <= end_date
-
     return False
 
 
@@ -288,57 +243,28 @@ def _load_recent_pass_items(resident_id: int | None, shelter: str) -> list[dict[
     rows = db_fetchall(
         _sql(
             """
-            SELECT
-                rp.id,
-                rp.pass_type,
-                rp.status,
-                rp.start_at,
-                rp.end_at,
-                rp.start_date,
-                rp.end_date,
-                rp.destination,
-                rp.reason,
-                rp.resident_notes,
-                rp.staff_notes,
-                rp.created_at,
-                rp.approved_at,
-                rprd.request_date
+            SELECT rp.id, rp.pass_type, rp.status, rp.start_at, rp.end_at, rp.start_date, rp.end_date,
+                   rp.destination, rp.reason, rp.resident_notes, rp.staff_notes, rp.created_at, rp.approved_at,
+                   rprd.request_date
             FROM resident_passes rp
-            LEFT JOIN resident_pass_request_details rprd
-              ON rprd.pass_id = rp.id
-            WHERE rp.resident_id = %s
-              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
+            LEFT JOIN resident_pass_request_details rprd ON rprd.pass_id = rp.id
+            WHERE rp.resident_id = %s AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
             ORDER BY rp.created_at DESC, rp.id DESC
             LIMIT 5
             """,
             """
-            SELECT
-                rp.id,
-                rp.pass_type,
-                rp.status,
-                rp.start_at,
-                rp.end_at,
-                rp.start_date,
-                rp.end_date,
-                rp.destination,
-                rp.reason,
-                rp.resident_notes,
-                rp.staff_notes,
-                rp.created_at,
-                rp.approved_at,
-                rprd.request_date
+            SELECT rp.id, rp.pass_type, rp.status, rp.start_at, rp.end_at, rp.start_date, rp.end_date,
+                   rp.destination, rp.reason, rp.resident_notes, rp.staff_notes, rp.created_at, rp.approved_at,
+                   rprd.request_date
             FROM resident_passes rp
-            LEFT JOIN resident_pass_request_details rprd
-              ON rprd.pass_id = rp.id
-            WHERE rp.resident_id = ?
-              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
+            LEFT JOIN resident_pass_request_details rprd ON rprd.pass_id = rp.id
+            WHERE rp.resident_id = ? AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
             ORDER BY rp.created_at DESC, rp.id DESC
             LIMIT 5
             """,
         ),
         (resident_id, shelter),
     )
-
     return [_hydrate_pass_item(row) for row in rows]
 
 
@@ -348,24 +274,11 @@ def _load_active_pass_item(resident_id: int | None, shelter: str) -> dict[str, A
 
     now_iso = utcnow_iso()
     today_iso = now_iso[:10]
-
     rows = db_fetchall(
         _sql(
             """
-            SELECT
-                rp.id,
-                rp.pass_type,
-                rp.status,
-                rp.start_at,
-                rp.end_at,
-                rp.start_date,
-                rp.end_date,
-                rp.destination,
-                rp.reason,
-                rp.resident_notes,
-                rp.staff_notes,
-                rp.created_at,
-                rp.approved_at
+            SELECT rp.id, rp.pass_type, rp.status, rp.start_at, rp.end_at, rp.start_date, rp.end_date,
+                   rp.destination, rp.reason, rp.resident_notes, rp.staff_notes, rp.created_at, rp.approved_at
             FROM resident_passes rp
             WHERE rp.resident_id = %s
               AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
@@ -378,20 +291,8 @@ def _load_active_pass_item(resident_id: int | None, shelter: str) -> dict[str, A
             LIMIT 1
             """,
             """
-            SELECT
-                rp.id,
-                rp.pass_type,
-                rp.status,
-                rp.start_at,
-                rp.end_at,
-                rp.start_date,
-                rp.end_date,
-                rp.destination,
-                rp.reason,
-                rp.resident_notes,
-                rp.staff_notes,
-                rp.created_at,
-                rp.approved_at
+            SELECT rp.id, rp.pass_type, rp.status, rp.start_at, rp.end_at, rp.start_date, rp.end_date,
+                   rp.destination, rp.reason, rp.resident_notes, rp.staff_notes, rp.created_at, rp.approved_at
             FROM resident_passes rp
             WHERE rp.resident_id = ?
               AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
@@ -406,7 +307,6 @@ def _load_active_pass_item(resident_id: int | None, shelter: str) -> dict[str, A
         ),
         (resident_id, shelter, now_iso, now_iso, today_iso, today_iso),
     )
-
     if not rows:
         return None
 
@@ -419,36 +319,8 @@ def _load_recent_notification_items(resident_id: int | None, shelter: str) -> li
 
     rows = db_fetchall(
         _sql(
-            """
-            SELECT
-                id,
-                title,
-                message,
-                is_read,
-                created_at,
-                related_pass_id,
-                notification_type
-            FROM resident_notifications
-            WHERE resident_id = %s
-              AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-            ORDER BY created_at DESC, id DESC
-            LIMIT 5
-            """,
-            """
-            SELECT
-                id,
-                title,
-                message,
-                is_read,
-                created_at,
-                related_pass_id,
-                notification_type
-            FROM resident_notifications
-            WHERE resident_id = ?
-              AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
-            ORDER BY created_at DESC, id DESC
-            LIMIT 5
-            """,
+            "SELECT id, title, message, is_read, created_at, related_pass_id, notification_type FROM resident_notifications WHERE resident_id = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s)) ORDER BY created_at DESC, id DESC LIMIT 5",
+            "SELECT id, title, message, is_read, created_at, related_pass_id, notification_type FROM resident_notifications WHERE resident_id = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?)) ORDER BY created_at DESC, id DESC LIMIT 5",
         ),
         (resident_id, shelter),
     )
@@ -468,40 +340,8 @@ def _load_recent_transport_items(resident_identifier: str, shelter: str) -> list
 
     rows = db_fetchall(
         _sql(
-            """
-            SELECT
-                id,
-                needed_at,
-                destination,
-                status,
-                reason,
-                resident_notes,
-                submitted_at,
-                scheduled_at,
-                staff_notes
-            FROM transport_requests
-            WHERE resident_identifier = %s
-              AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
-            ORDER BY submitted_at DESC, id DESC
-            LIMIT 5
-            """,
-            """
-            SELECT
-                id,
-                needed_at,
-                destination,
-                status,
-                reason,
-                resident_notes,
-                submitted_at,
-                scheduled_at,
-                staff_notes
-            FROM transport_requests
-            WHERE resident_identifier = ?
-              AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
-            ORDER BY submitted_at DESC, id DESC
-            LIMIT 5
-            """,
+            "SELECT id, needed_at, destination, status, reason, resident_notes, submitted_at, scheduled_at, staff_notes FROM transport_requests WHERE resident_identifier = %s AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s)) ORDER BY submitted_at DESC, id DESC LIMIT 5",
+            "SELECT id, needed_at, destination, status, reason, resident_notes, submitted_at, scheduled_at, staff_notes FROM transport_requests WHERE resident_identifier = ? AND LOWER(TRIM(shelter)) = LOWER(TRIM(?)) ORDER BY submitted_at DESC, id DESC LIMIT 5",
         ),
         (resident_identifier, shelter),
     )
@@ -518,44 +358,14 @@ def _load_recent_transport_items(resident_identifier: str, shelter: str) -> list
 
 def _ensure_budget_session_active_column() -> None:
     if g.get("db_kind") == "pg":
-        db_execute(
-            """
-            ALTER TABLE resident_budget_sessions
-            ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE
-            """
-        )
+        db_execute("ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE")
         return
 
     columns = db_fetchall("PRAGMA table_info(resident_budget_sessions)")
     if any(str(col.get("name") or "").strip().lower() == "is_active" for col in columns):
         return
 
-    db_execute(
-        """
-        ALTER TABLE resident_budget_sessions
-        ADD COLUMN is_active INTEGER DEFAULT 0
-        """
-    )
-
-
-def _set_active_budget_session_for_resident(resident_id: int, budget_id: int) -> None:
-    _ensure_budget_session_active_column()
-
-    db_execute(
-        _sql(
-            "UPDATE resident_budget_sessions SET is_active = FALSE WHERE resident_id = %s",
-            "UPDATE resident_budget_sessions SET is_active = 0 WHERE resident_id = ?",
-        ),
-        (resident_id,),
-    )
-
-    db_execute(
-        _sql(
-            "UPDATE resident_budget_sessions SET is_active = TRUE WHERE id = %s",
-            "UPDATE resident_budget_sessions SET is_active = 1 WHERE id = ?",
-        ),
-        (budget_id,),
-    )
+    db_execute("ALTER TABLE resident_budget_sessions ADD COLUMN is_active INTEGER DEFAULT 0")
 
 
 def _load_current_budget_session(resident_id: int | None) -> dict[str, Any] | None:
@@ -566,22 +376,8 @@ def _load_current_budget_session(resident_id: int | None) -> dict[str, Any] | No
 
     active_row = db_fetchone(
         _sql(
-            """
-            SELECT *
-            FROM resident_budget_sessions
-            WHERE resident_id = %s
-              AND COALESCE(is_active, FALSE) = TRUE
-            ORDER BY COALESCE(session_date, '') DESC, id DESC
-            LIMIT 1
-            """,
-            """
-            SELECT *
-            FROM resident_budget_sessions
-            WHERE resident_id = ?
-              AND COALESCE(is_active, 0) = 1
-            ORDER BY COALESCE(session_date, '') DESC, id DESC
-            LIMIT 1
-            """,
+            "SELECT * FROM resident_budget_sessions WHERE resident_id = %s AND COALESCE(is_active, FALSE) = TRUE ORDER BY COALESCE(session_date, '') DESC, id DESC LIMIT 1",
+            "SELECT * FROM resident_budget_sessions WHERE resident_id = ? AND COALESCE(is_active, 0) = 1 ORDER BY COALESCE(session_date, '') DESC, id DESC LIMIT 1",
         ),
         (resident_id,),
     )
@@ -590,33 +386,12 @@ def _load_current_budget_session(resident_id: int | None) -> dict[str, Any] | No
 
     latest_row = db_fetchone(
         _sql(
-            """
-            SELECT *
-            FROM resident_budget_sessions
-            WHERE resident_id = %s
-            ORDER BY COALESCE(session_date, '') DESC, id DESC
-            LIMIT 1
-            """,
-            """
-            SELECT *
-            FROM resident_budget_sessions
-            WHERE resident_id = ?
-            ORDER BY COALESCE(session_date, '') DESC, id DESC
-            LIMIT 1
-            """,
+            "SELECT * FROM resident_budget_sessions WHERE resident_id = %s ORDER BY COALESCE(session_date, '') DESC, id DESC LIMIT 1",
+            "SELECT * FROM resident_budget_sessions WHERE resident_id = ? ORDER BY COALESCE(session_date, '') DESC, id DESC LIMIT 1",
         ),
         (resident_id,),
     )
-    if not latest_row:
-        return None
-
-    latest = dict(latest_row)
-    latest_id = _safe_int(latest.get("id"))
-    if latest_id is not None:
-        _set_active_budget_session_for_resident(resident_id, latest_id)
-        latest["is_active"] = True
-
-    return latest
+    return dict(latest_row) if latest_row else None
 
 
 def _ensure_budget_line_items_exist(budget_id: int | None) -> None:
@@ -625,18 +400,8 @@ def _ensure_budget_line_items_exist(budget_id: int | None) -> None:
 
     existing = db_fetchone(
         _sql(
-            """
-            SELECT id
-            FROM resident_budget_line_items
-            WHERE budget_session_id = %s
-            LIMIT 1
-            """,
-            """
-            SELECT id
-            FROM resident_budget_line_items
-            WHERE budget_session_id = ?
-            LIMIT 1
-            """,
+            "SELECT id FROM resident_budget_line_items WHERE budget_session_id = %s LIMIT 1",
+            "SELECT id FROM resident_budget_line_items WHERE budget_session_id = ? LIMIT 1",
         ),
         (budget_id,),
     )
@@ -644,39 +409,33 @@ def _ensure_budget_line_items_exist(budget_id: int | None) -> None:
         return
 
     now = utcnow_iso()
-    for sort_order, (line_group, line_key, line_label) in enumerate(RESIDENT_BUDGET_DEFAULT_LINE_ITEMS, start=1):
+    for sort_order, item in enumerate(iter_budget_line_item_definitions(), start=1):
         db_execute(
             _sql(
                 """
                 INSERT INTO resident_budget_line_items (
-                    budget_session_id,
-                    line_group,
-                    line_key,
-                    line_label,
-                    sort_order,
-                    is_resident_visible,
-                    is_active,
-                    created_at,
-                    updated_at
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    budget_session_id, line_group, line_key, line_label, sort_order,
+                    is_resident_visible, is_active, created_at, updated_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 """
                 INSERT INTO resident_budget_line_items (
-                    budget_session_id,
-                    line_group,
-                    line_key,
-                    line_label,
-                    sort_order,
-                    is_resident_visible,
-                    is_active,
-                    created_at,
-                    updated_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    budget_session_id, line_group, line_key, line_label, sort_order,
+                    is_resident_visible, is_active, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
             ),
-            (budget_id, line_group, line_key, line_label, sort_order, True, True, now, now),
+            (
+                budget_id,
+                item["line_group"],
+                item["line_key"],
+                item["line_label"],
+                sort_order,
+                bool(item.get("is_resident_visible", True)),
+                True,
+                now,
+                now,
+            ),
         )
 
 
@@ -687,38 +446,20 @@ def _load_budget_line_items_with_status(budget_id: int | None) -> tuple[list[dic
     rows = db_fetchall(
         _sql(
             """
-            SELECT
-                li.id,
-                li.line_group,
-                li.line_key,
-                li.line_label,
-                li.projected_amount,
-                li.actual_amount,
-                li.sort_order,
-                COALESCE(SUM(CASE WHEN COALESCE(t.is_deleted, FALSE) = FALSE THEN t.amount ELSE 0 END), 0) AS transaction_total
+            SELECT li.id, li.line_group, li.line_key, li.line_label, li.projected_amount, li.actual_amount, li.sort_order,
+                   COALESCE(SUM(CASE WHEN COALESCE(t.is_deleted, FALSE) = FALSE THEN t.amount ELSE 0 END), 0) AS transaction_total
             FROM resident_budget_line_items li
-            LEFT JOIN resident_budget_transactions t
-              ON t.line_item_id = li.id
-            WHERE li.budget_session_id = %s
-              AND COALESCE(li.is_active, TRUE) = TRUE
+            LEFT JOIN resident_budget_transactions t ON t.line_item_id = li.id
+            WHERE li.budget_session_id = %s AND COALESCE(li.is_active, TRUE) = TRUE
             GROUP BY li.id, li.line_group, li.line_key, li.line_label, li.projected_amount, li.actual_amount, li.sort_order
             ORDER BY li.line_group ASC, li.sort_order ASC, li.id ASC
             """,
             """
-            SELECT
-                li.id,
-                li.line_group,
-                li.line_key,
-                li.line_label,
-                li.projected_amount,
-                li.actual_amount,
-                li.sort_order,
-                COALESCE(SUM(CASE WHEN COALESCE(t.is_deleted, 0) = 0 THEN t.amount ELSE 0 END), 0) AS transaction_total
+            SELECT li.id, li.line_group, li.line_key, li.line_label, li.projected_amount, li.actual_amount, li.sort_order,
+                   COALESCE(SUM(CASE WHEN COALESCE(t.is_deleted, 0) = 0 THEN t.amount ELSE 0 END), 0) AS transaction_total
             FROM resident_budget_line_items li
-            LEFT JOIN resident_budget_transactions t
-              ON t.line_item_id = li.id
-            WHERE li.budget_session_id = ?
-              AND COALESCE(li.is_active, 1) = 1
+            LEFT JOIN resident_budget_transactions t ON t.line_item_id = li.id
+            WHERE li.budget_session_id = ? AND COALESCE(li.is_active, 1) = 1
             GROUP BY li.id, li.line_group, li.line_key, li.line_label, li.projected_amount, li.actual_amount, li.sort_order
             ORDER BY li.line_group ASC, li.sort_order ASC, li.id ASC
             """,
@@ -731,27 +472,27 @@ def _load_budget_line_items_with_status(budget_id: int | None) -> tuple[list[dic
 
     for row in rows:
         item = dict(row)
-        projected_amount = item.get("projected_amount")
-        actual_amount = item.get("actual_amount")
-        transaction_total = item.get("transaction_total")
+        projected_value = float(item.get("projected_amount") or 0)
+        transaction_value = float(item.get("transaction_total") or 0)
+        stored_actual_value = float(item.get("actual_amount") or 0)
 
-        projected_value = float(projected_amount) if projected_amount is not None else 0.0
-        actual_value = float(actual_amount) if actual_amount is not None else 0.0
-        transaction_value = float(transaction_total) if transaction_total is not None else 0.0
-        effective_actual = transaction_value if transaction_value > 0 else actual_value
-        remaining = projected_value - effective_actual
+        if is_budget_expense_key(item.get("line_key")):
+            actual_value = transaction_value
+        else:
+            actual_value = stored_actual_value
 
+        remaining = projected_value - actual_value
         if projected_value <= 0:
             status = "neutral"
         elif remaining < 0:
             status = "red"
-        elif projected_value > 0 and (effective_actual / projected_value) >= 0.8:
+        elif projected_value > 0 and (actual_value / projected_value) >= 0.8:
             status = "yellow"
         else:
             status = "green"
 
         item["projected_value"] = round(projected_value, 2)
-        item["actual_value"] = round(effective_actual, 2)
+        item["actual_value"] = round(actual_value, 2)
         item["remaining"] = round(remaining, 2)
         item["status"] = status
 
@@ -770,32 +511,20 @@ def _load_recent_budget_transactions(budget_id: int | None, limit: int = 10) -> 
     rows = db_fetchall(
         _sql(
             """
-            SELECT
-                t.id,
-                t.transaction_date,
-                t.amount,
-                t.merchant_or_note,
-                li.line_label
+            SELECT t.id, t.transaction_date, t.amount, t.merchant_or_note, t.line_item_id, li.line_label,
+                   t.edited_at, t.deleted_at
             FROM resident_budget_transactions t
-            LEFT JOIN resident_budget_line_items li
-              ON li.id = t.line_item_id
-            WHERE t.budget_session_id = %s
-              AND COALESCE(t.is_deleted, FALSE) = FALSE
+            LEFT JOIN resident_budget_line_items li ON li.id = t.line_item_id
+            WHERE t.budget_session_id = %s AND COALESCE(t.is_deleted, FALSE) = FALSE
             ORDER BY t.transaction_date DESC, t.id DESC
             LIMIT %s
             """,
             """
-            SELECT
-                t.id,
-                t.transaction_date,
-                t.amount,
-                t.merchant_or_note,
-                li.line_label
+            SELECT t.id, t.transaction_date, t.amount, t.merchant_or_note, t.line_item_id, li.line_label,
+                   t.edited_at, t.deleted_at
             FROM resident_budget_transactions t
-            LEFT JOIN resident_budget_line_items li
-              ON li.id = t.line_item_id
-            WHERE t.budget_session_id = ?
-              AND COALESCE(t.is_deleted, 0) = 0
+            LEFT JOIN resident_budget_line_items li ON li.id = t.line_item_id
+            WHERE t.budget_session_id = ? AND COALESCE(t.is_deleted, 0) = 0
             ORDER BY t.transaction_date DESC, t.id DESC
             LIMIT ?
             """,
@@ -811,18 +540,8 @@ def _load_budget_line_item_lookup(budget_id: int | None) -> dict[int, dict[str, 
 
     rows = db_fetchall(
         _sql(
-            """
-            SELECT id, line_group, line_label, actual_amount
-            FROM resident_budget_line_items
-            WHERE budget_session_id = %s
-              AND COALESCE(is_active, TRUE) = TRUE
-            """,
-            """
-            SELECT id, line_group, line_label, actual_amount
-            FROM resident_budget_line_items
-            WHERE budget_session_id = ?
-              AND COALESCE(is_active, 1) = 1
-            """,
+            "SELECT id, budget_session_id, line_group, line_key, line_label FROM resident_budget_line_items WHERE budget_session_id = %s AND COALESCE(is_active, TRUE) = TRUE",
+            "SELECT id, budget_session_id, line_group, line_key, line_label FROM resident_budget_line_items WHERE budget_session_id = ? AND COALESCE(is_active, 1) = 1",
         ),
         (budget_id,),
     )
@@ -830,15 +549,10 @@ def _load_budget_line_item_lookup(budget_id: int | None) -> dict[int, dict[str, 
 
 
 def _load_resident_session_context() -> tuple[int | None, str, str]:
-    resident_id = None
-    shelter = ""
-    resident_identifier = ""
-
     resident_id_raw = session.get("resident_id")
     resident_id = int(resident_id_raw) if resident_id_raw not in (None, "") else None
     shelter = str(session.get("resident_shelter") or "").strip()
     resident_identifier = str(session.get("resident_identifier") or "").strip()
-
     return resident_id, shelter, resident_identifier
 
 
@@ -846,7 +560,6 @@ def _prepare_resident_request_context() -> tuple[int | None, str, str]:
     resident_id, shelter, resident_identifier = _load_resident_session_context()
 
     get_db()
-
     if shelter:
         run_pass_retention_cleanup_for_shelter(shelter)
 
