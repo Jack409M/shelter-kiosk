@@ -23,8 +23,8 @@ jobs:
       - name: Block placeholder text
         run: |
           if grep -R \
+            --exclude=safety.yml \
             --exclude-dir=.git \
-            --exclude=.github/workflows/safety.yml \
             "\[RESTORED FULL FILE CONTENT\|\[TRUNCATED FOR BREVITY" .; then
             echo "Placeholder text detected"
             exit 1
