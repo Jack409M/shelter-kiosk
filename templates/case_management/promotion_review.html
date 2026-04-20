@@ -308,21 +308,21 @@
             <div class="cmx-promo-card-sub">{{ checks|length }} system checks reviewed.</div>
           </div>
 
-          <div class="cmx-promo-card" style="{{ employment_income_snapshot.card_style if employment_income_snapshot.card_style is defined else '' }}">
+          <div class="cmx-promo-card" style="{{ employment_income_snapshot.card_style if employment_income_snapshot and employment_income_snapshot.card_style is defined else '' }}">
             <div class="cmx-promo-card-title">Adjusted Weighted Income</div>
-            <div class="cmx-promo-card-value">{{ employment_income_snapshot.readiness_percent_display }}</div>
+            <div class="cmx-promo-card-value">{{ employment_income_snapshot.readiness_percent_display if employment_income_snapshot else '—' }}</div>
             <div class="cmx-promo-card-sub">
-              Weighted stable income: {{ '$%.2f'|format(employment_income_snapshot.income_value) if employment_income_snapshot.income_value is not none else '—' }}<br>
-              Graduation minimum: {{ '$%.2f'|format(employment_income_snapshot.graduation_minimum) }}
+              Weighted stable income: {{ '$%.2f'|format(employment_income_snapshot.income_value) if employment_income_snapshot and employment_income_snapshot.income_value is not none else '—' }}<br>
+              Graduation minimum: {{ '$%.2f'|format(employment_income_snapshot.graduation_minimum) if employment_income_snapshot and employment_income_snapshot.graduation_minimum is not none else '—' }}
             </div>
           </div>
 
-          <div class="cmx-promo-card" style="{{ employment_stability_snapshot.card_style }}">
+          <div class="cmx-promo-card" style="{{ employment_stability_snapshot.card_style if employment_stability_snapshot and employment_stability_snapshot.card_style is defined else '' }}">
             <div class="cmx-promo-card-title">Employment Stability</div>
-            <div class="cmx-promo-card-value">{{ employment_stability_snapshot.label }}</div>
+            <div class="cmx-promo-card-value">{{ employment_stability_snapshot.label if employment_stability_snapshot and employment_stability_snapshot.label is defined else '—' }}</div>
             <div class="cmx-promo-card-sub">
               Status: {{ employment_status_snapshot|replace('_', ' ')|title if employment_status_snapshot else '—' }}<br>
-              Upward protected: {{ 'Yes' if employment_stability_snapshot.upward_protected else 'No' }}
+              Upward protected: {{ 'Yes' if employment_stability_snapshot and employment_stability_snapshot.upward_protected else 'No' }}
             </div>
           </div>
         </div>
@@ -375,52 +375,63 @@
         </div>
 
         <div class="cmx-metric-grid">
-          <div class="cmx-metric-box" style="{{ attendance_hours_snapshot.card_style if attendance_hours_snapshot else '' }}">
+          <div class="cmx-metric-box" style="{{ attendance_hours_snapshot.card_style if attendance_hours_snapshot and attendance_hours_snapshot.card_style is defined else '' }}">
             <div class="cmx-metric-label">Attendance</div>
-            <div class="cmx-metric-value" style="{{ attendance_hours_snapshot.value_style if attendance_hours_snapshot else '' }}">{{ attendance_hours_snapshot.average_percent_display if attendance_hours_snapshot else '—' }}</div>
+            <div class="cmx-metric-value" style="{{ attendance_hours_snapshot.value_style if attendance_hours_snapshot and attendance_hours_snapshot.value_style is defined else '' }}">{{ attendance_hours_snapshot.average_percent_display if attendance_hours_snapshot and attendance_hours_snapshot.average_percent_display is defined else '—' }}</div>
             <div class="cmx-metric-sub">
-              Band: {{ attendance_hours_snapshot.band_label if attendance_hours_snapshot else '—' }}<br>
-              Current week: {{ attendance_hours_snapshot.current_week_percent_display if attendance_hours_snapshot else '—' }} • {{ attendance_hours_snapshot.current_week_status_label if attendance_hours_snapshot else '—' }}
+              Band: {{ attendance_hours_snapshot.band_label if attendance_hours_snapshot and attendance_hours_snapshot.band_label is defined else '—' }}<br>
+              Current week: {{ attendance_hours_snapshot.current_week_percent_display if attendance_hours_snapshot and attendance_hours_snapshot.current_week_percent_display is defined else '—' }} • {{ attendance_hours_snapshot.current_week_status_label if attendance_hours_snapshot and attendance_hours_snapshot.current_week_status_label is defined else '—' }}
             </div>
           </div>
 
-          <div class="cmx-metric-box" style="{{ rent_snapshot.card_style if rent_snapshot else '' }}">
+          <div class="cmx-metric-box" style="{{ rent_snapshot.card_style if rent_snapshot and rent_snapshot.card_style is defined else '' }}">
             <div class="cmx-metric-label">Rent Stability</div>
-            <div class="cmx-metric-value" style="{{ rent_snapshot.value_style if rent_snapshot else '' }}">{{ rent_snapshot.average_score_display if rent_snapshot else '—' }}</div>
+            <div class="cmx-metric-value" style="{{ rent_snapshot.value_style if rent_snapshot and rent_snapshot.value_style is defined else '' }}">{{ rent_snapshot.average_score_display if rent_snapshot and rent_snapshot.average_score_display is defined else '—' }}</div>
             <div class="cmx-metric-sub">
-              Band: {{ rent_snapshot.band_label if rent_snapshot else '—' }}<br>
-              Graduation target: {{ rent_snapshot.graduation_target if rent_snapshot else '—' }}<br>
+              Band: {{ rent_snapshot.band_label if rent_snapshot and rent_snapshot.band_label is defined else '—' }}<br>
+              Graduation target: {{ rent_snapshot.graduation_target if rent_snapshot and rent_snapshot.graduation_target is defined else '—' }}<br>
               In standard range: {{ 'Yes' if rent_snapshot and rent_snapshot.passes_graduation else 'No' }}
             </div>
           </div>
 
-          <div class="cmx-metric-box" style="{{ inspection_snapshot.card_style if inspection_snapshot else '' }}">
+          <div class="cmx-metric-box" style="{{ inspection_snapshot.card_style if inspection_snapshot and inspection_snapshot.card_style is defined else '' }}">
             <div class="cmx-metric-label">Inspection Stability</div>
-            <div class="cmx-metric-value" style="{{ inspection_snapshot.value_style if inspection_snapshot else '' }}">{{ inspection_snapshot.average_score_display if inspection_snapshot else '—' }}</div>
+            <div class="cmx-metric-value" style="{{ inspection_snapshot.value_style if inspection_snapshot and inspection_snapshot.value_style is defined else '' }}">{{ inspection_snapshot.average_score_display if inspection_snapshot and inspection_snapshot.average_score_display is defined else '—' }}</div>
             <div class="cmx-metric-sub">
-              Band: {{ inspection_snapshot.band_label if inspection_snapshot else '—' }}<br>
-              Threshold: {{ inspection_snapshot.passing_threshold if inspection_snapshot else '—' }}<br>
+              Band: {{ inspection_snapshot.band_label if inspection_snapshot and inspection_snapshot.band_label is defined else '—' }}<br>
+              Threshold: {{ inspection_snapshot.passing_threshold if inspection_snapshot and inspection_snapshot.passing_threshold is defined else '—' }}<br>
               In standard range: {{ 'Yes' if inspection_snapshot and inspection_snapshot.passes_goal else 'No' }}
             </div>
           </div>
 
-          <div class="cmx-metric-box" style="{{ employment_stability_snapshot.card_style }}">
+          <div class="cmx-metric-box" style="{{ employment_stability_snapshot.card_style if employment_stability_snapshot and employment_stability_snapshot.card_style is defined else '' }}">
             <div class="cmx-metric-label">Employment Stability</div>
-            <div class="cmx-metric-value">{{ employment_stability_snapshot.label }}</div>
+            <div class="cmx-metric-value">{{ employment_stability_snapshot.label if employment_stability_snapshot and employment_stability_snapshot.label is defined else '—' }}</div>
             <div class="cmx-metric-sub">
-              Current job days: {{ employment_stability_snapshot.current_job_days if employment_stability_snapshot.current_job_days is not none else '—' }}<br>
-              Continuous days: {{ employment_stability_snapshot.continuous_days if employment_stability_snapshot.continuous_days is not none else '—' }}<br>
-              Gap days: {{ employment_stability_snapshot.gap_days if employment_stability_snapshot.gap_days is not none else '—' }}
+              Current job days: {{ employment_stability_snapshot.current_job_days if employment_stability_snapshot and employment_stability_snapshot.current_job_days is not none else '—' }}<br>
+              Continuous days: {{ employment_stability_snapshot.continuous_days if employment_stability_snapshot and employment_stability_snapshot.continuous_days is not none else '—' }}<br>
+              Gap days: {{ employment_stability_snapshot.gap_days if employment_stability_snapshot and employment_stability_snapshot.gap_days is not none else '—' }}
             </div>
           </div>
 
-          <div class="cmx-metric-box" style="{{ employment_income_snapshot.card_style if employment_income_snapshot.card_style is defined else 'background:#fff; border:1px solid #d9e1ea;' }}">
+          <div class="cmx-metric-box" style="{{ employment_income_snapshot.card_style if employment_income_snapshot and employment_income_snapshot.card_style is defined else 'background:#fff; border:1px solid #d9e1ea;' }}">
             <div class="cmx-metric-label">Adjusted Weighted Income</div>
-            <div class="cmx-metric-value">{{ employment_income_snapshot.readiness_percent_display }}</div>
+            <div class="cmx-metric-value">{{ employment_income_snapshot.readiness_percent_display if employment_income_snapshot and employment_income_snapshot.readiness_percent_display is defined else '—' }}</div>
             <div class="cmx-metric-sub">
-              Weighted stable income: {{ '$%.2f'|format(employment_income_snapshot.income_value) if employment_income_snapshot.income_value is not none else '—' }}<br>
-              Graduation minimum: {{ '$%.2f'|format(employment_income_snapshot.graduation_minimum) }}<br>
-              Meets standard: {{ 'Yes' if employment_income_snapshot.meets_goal else 'No' }}
+              Weighted stable income: {{ '$%.2f'|format(employment_income_snapshot.income_value) if employment_income_snapshot and employment_income_snapshot.income_value is not none else '—' }}<br>
+              Graduation minimum: {{ '$%.2f'|format(employment_income_snapshot.graduation_minimum) if employment_income_snapshot and employment_income_snapshot.graduation_minimum is not none else '—' }}<br>
+              Meets standard: {{ 'Yes' if employment_income_snapshot and employment_income_snapshot.meets_goal else 'No' }}
+            </div>
+          </div>
+
+          <div class="cmx-metric-box" style="{{ budget_score_snapshot.card_style if budget_score_snapshot and budget_score_snapshot.card_style is defined else '' }}">
+            <div class="cmx-metric-label">Budget Performance</div>
+            <div class="cmx-metric-value" style="{{ budget_score_snapshot.value_style if budget_score_snapshot and budget_score_snapshot.value_style is defined else '' }}">
+              {{ budget_score_snapshot.average_score_display if budget_score_snapshot and budget_score_snapshot.average_score_display is defined else '—' }}
+            </div>
+            <div class="cmx-metric-sub">
+              Band: {{ budget_score_snapshot.band_label if budget_score_snapshot and budget_score_snapshot.band_label is defined else '—' }}<br>
+              Months counted: {{ budget_score_snapshot.eligible_month_count if budget_score_snapshot and budget_score_snapshot.eligible_month_count is not none else '0' }}
             </div>
           </div>
 
