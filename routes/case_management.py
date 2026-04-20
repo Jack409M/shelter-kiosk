@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint
+from flask import Blueprint, current_app, flash, redirect, url_for
 
 from core.auth import require_login, require_shelter
 from routes.case_management_parts.actions import (
@@ -339,7 +339,12 @@ def budget_sessions(resident_id: int):
 @case_management.post("/<int:resident_id>/budget-sessions")
 @_view
 def add_budget_session(resident_id: int):
-    return add_budget_session_view(resident_id)
+    try:
+        return add_budget_session_view(resident_id)
+    except Exception:
+        current_app.logger.exception("budget_session_add_failed resident_id=%s", resident_id)
+        flash("Failed to create budget session.", "error")
+        return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
 
 
 @case_management.route(
@@ -347,7 +352,22 @@ def add_budget_session(resident_id: int):
 )
 @_view
 def edit_budget_session(resident_id: int, budget_id: int):
-    return edit_budget_session_view(resident_id, budget_id)
+    try:
+        return edit_budget_session_view(resident_id, budget_id)
+    except Exception:
+        current_app.logger.exception(
+            "budget_session_edit_failed resident_id=%s budget_id=%s",
+            resident_id,
+            budget_id,
+        )
+        flash("Failed to update budget session.", "error")
+        return redirect(
+            url_for(
+                "case_management.edit_budget_session",
+                resident_id=resident_id,
+                budget_id=budget_id,
+            )
+        )
 
 
 @case_management.post("/<int:resident_id>/budget-sessions/<int:budget_id>/delete")
