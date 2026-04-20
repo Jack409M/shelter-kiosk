@@ -29,8 +29,8 @@ def _require_pass_access() -> None:
 
 def _redirect(target: str, pass_id: int | None = None):
     if pass_id is not None:
-        return redirect(url_for(target, pass_id=pass_id))
-    return redirect(url_for(target))
+        return redirect(url_for(target, pass_id=pass_id), code=302)
+    return redirect(url_for(target), code=302)
 
 
 def _resident_id_or_none(value: Any) -> int | None:
