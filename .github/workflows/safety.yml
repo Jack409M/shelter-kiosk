@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -22,7 +22,10 @@ jobs:
 
       - name: Block placeholder text
         run: |
-          if grep -R "\[RESTORED FULL FILE CONTENT\|\[TRUNCATED FOR BREVITY" .; then
+          if grep -R \
+            --exclude-dir=.git \
+            --exclude=.github/workflows/safety.yml \
+            "\[RESTORED FULL FILE CONTENT\|\[TRUNCATED FOR BREVITY" .; then
             echo "Placeholder text detected"
             exit 1
           fi
