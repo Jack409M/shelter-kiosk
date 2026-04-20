@@ -32,10 +32,9 @@ def home():
 
         resident_level = _load_resident_program_level(resident_id)
 
-        loader = getattr(portal, "_load_recent_pass_items", None)
-        if callable(loader):
-            pass_items = loader(resident_id, shelter)
-        else:
+        try:
+            pass_items = portal._load_recent_pass_items(resident_id, shelter)
+        except Exception:
             pass_items = _load_recent_pass_items_helper(resident_id, shelter)
 
         active_pass = _load_active_pass_item(resident_id, shelter)
