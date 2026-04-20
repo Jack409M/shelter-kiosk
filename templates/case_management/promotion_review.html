@@ -331,6 +331,44 @@
       <section class="cmx-card">
         <div class="cmx-section-head">
           <div>
+            <h2 class="cmx-section-title">Program Review</h2>
+            <div class="cmx-section-subtitle">Fact based review of measurable program expectations.</div>
+          </div>
+        </div>
+
+        {% if checks %}
+          {% for c in checks %}
+            <div class="cmx-grade-row">
+              <div>
+                <div class="cmx-grade-label">{{ c.label }}</div>
+                {% if c.detail %}
+                  <div class="cmx-grade-detail">{{ c.detail }}</div>
+                {% endif %}
+              </div>
+              <span class="cmx-grade-pill {% if c.ok %}cmx-grade-pass{% else %}cmx-grade-fail{% endif %}">
+                {% if c.ok %}Met{% else %}Needs Review{% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="cmx-empty">No promotion review checks were returned for this resident.</div>
+        {% endif %}
+
+        {% if manual_requirements %}
+          <div style="margin-top:16px;">
+            <div class="cmx-grade-label">Manual Case Manager Review Items</div>
+            <ul class="cmx-manual-list">
+              {% for item in manual_requirements %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="cmx-card">
+        <div class="cmx-section-head">
+          <div>
             <h2 class="cmx-section-title">Operational Scorecards</h2>
             <div class="cmx-section-subtitle">Supporting scorecards remain advisory and inform the case manager decision.</div>
           </div>
@@ -386,17 +424,6 @@
             </div>
           </div>
 
-          <div class="cmx-metric-box" style="{{ budget_score_snapshot.card_style if budget_score_snapshot else '' }}">
-            <div class="cmx-metric-label">Budget Performance</div>
-            <div class="cmx-metric-value" style="{{ budget_score_snapshot.value_style if budget_score_snapshot else '' }}">
-              {{ budget_score_snapshot.average_score_display if budget_score_snapshot else '—' }}
-            </div>
-            <div class="cmx-metric-sub">
-              Band: {{ budget_score_snapshot.band_label if budget_score_snapshot else '—' }}<br>
-              Months counted: {{ budget_score_snapshot.eligible_month_count if budget_score_snapshot else '0' }}
-            </div>
-          </div>
-
           <div class="cmx-metric-box">
             <div class="cmx-metric-label">Disciplinary Status</div>
             <div class="cmx-metric-value">{% if has_disciplinary_block %}Review Needed{% else %}Clear{% endif %}</div>
@@ -409,44 +436,6 @@
             </div>
           </div>
         </div>
-      </section>
-
-      <section class="cmx-card">
-        <div class="cmx-section-head">
-          <div>
-            <h2 class="cmx-section-title">Program Review</h2>
-            <div class="cmx-section-subtitle">Fact based review of measurable program expectations.</div>
-          </div>
-        </div>
-
-        {% if checks %}
-          {% for c in checks %}
-            <div class="cmx-grade-row">
-              <div>
-                <div class="cmx-grade-label">{{ c.label }}</div>
-                {% if c.detail %}
-                  <div class="cmx-grade-detail">{{ c.detail }}</div>
-                {% endif %}
-              </div>
-              <span class="cmx-grade-pill {% if c.ok %}cmx-grade-pass{% else %}cmx-grade-fail{% endif %}">
-                {% if c.ok %}Met{% else %}Needs Review{% endif %}
-              </span>
-            </div>
-          {% endfor %}
-        {% else %}
-          <div class="cmx-empty">No promotion review checks were returned for this resident.</div>
-        {% endif %}
-
-        {% if manual_requirements %}
-          <div style="margin-top:16px;">
-            <div class="cmx-grade-label">Manual Case Manager Review Items</div>
-            <ul class="cmx-manual-list">
-              {% for item in manual_requirements %}
-                <li>{{ item }}</li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% endif %}
       </section>
 
       <section class="cmx-card">
