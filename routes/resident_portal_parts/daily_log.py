@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import suppress
+
 from flask import current_app, flash, redirect, render_template, request, url_for
 
 from core.access import require_resident
@@ -41,10 +43,8 @@ def resident_daily_log():
         child_options_by_parent = _load_child_options_by_parent(shelter, checkout_categories)
 
         if request.method == "POST":
-            try:
+            with suppress(Exception):
                 db_execute("ALTER TABLE attendance_events ADD COLUMN logged_hours REAL")
-            except Exception:
-                pass
 
             log_date = _clean_text(request.form.get("log_date"))
             activity_category = _clean_text(request.form.get("activity_category"))
