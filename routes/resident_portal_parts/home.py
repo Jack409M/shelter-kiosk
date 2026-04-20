@@ -10,6 +10,7 @@ from routes.resident_portal_parts.helpers import (
     _clear_resident_session,
     _load_active_pass_item,
     _load_recent_notification_items,
+    _load_recent_pass_items as _load_recent_pass_items_helper,
     _load_recent_transport_items,
     _load_resident_program_level,
     _prepare_resident_request_context,
@@ -26,18 +27,16 @@ def home():
     try:
         resident_id, shelter, resident_identifier = _prepare_resident_request_context()
 
-        # 🔥 FORCE DB TOUCH (so get_db patch works)
         portal.get_db()
-
-        # 🔥 cleanup via facade
         portal.run_pass_retention_cleanup_for_shelter(shelter)
 
         resident_level = _load_resident_program_level(resident_id)
 
-        # 🔥 CRITICAL: use facade version so monkeypatch works
-        from routes.resident_portal_parts.helpers import _load_recent_pass_items
-
-        pass_items = _load_recent_pass_items(resident_id, shelter)
+        loader = getattr(portal, "_load_recent_pass_items", None)
+        if callable(loader):
+            pass_items = loader(resident_id, shelter)
+        else:
+            pass_items = _load_recent_pass_items_helper(resident_id, shelter)
 
         active_pass = _load_active_pass_item(resident_id, shelter)
         notification_items = _load_recent_notification_items(resident_id, shelter)
