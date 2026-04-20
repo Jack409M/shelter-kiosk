@@ -4,7 +4,8 @@ from flask import current_app, render_template
 
 from core.access import require_resident
 from core.resident_portal_service import get_today_chores
-from routes.resident_portal import resident_portal, run_pass_retention_cleanup_for_shelter
+from routes.resident_portal import resident_portal
+import routes.resident_portal as portal
 from routes.resident_portal_parts.helpers import (
     _clear_resident_session,
     _load_active_pass_item,
@@ -26,7 +27,7 @@ def home():
     try:
         resident_id, shelter, resident_identifier = _prepare_resident_request_context()
 
-        run_pass_retention_cleanup_for_shelter(shelter)
+        portal.run_pass_retention_cleanup_for_shelter(shelter)
 
         resident_level = _load_resident_program_level(resident_id)
         pass_items = _load_recent_pass_items(resident_id, shelter)
