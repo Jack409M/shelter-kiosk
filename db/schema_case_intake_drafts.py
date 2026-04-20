@@ -49,7 +49,7 @@ def ensure_intake_drafts_table(kind: str) -> None:
     )
 
 
-def ensure_intake_drafts_columns() -> None:
+def ensure_intake_drafts_columns(kind: str) -> None:
     statements = [
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS resident_id INTEGER",
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS enrollment_id INTEGER",
@@ -57,7 +57,12 @@ def ensure_intake_drafts_columns() -> None:
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'draft'",
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS resident_name TEXT",
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS entry_date TEXT",
-        "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS draft_data TEXT",
+        (
+            "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS draft_data JSONB "
+            "DEFAULT '{}'::jsonb"
+            if kind == "pg"
+            else "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS draft_data TEXT"
+        ),
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS form_payload TEXT",
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER",
         "ALTER TABLE intake_drafts ADD COLUMN IF NOT EXISTS created_at TEXT",
@@ -67,6 +72,17 @@ def ensure_intake_drafts_columns() -> None:
     for statement in statements:
         with contextlib.suppress(Exception):
             db_execute(statement)
+
+    if kind == "pg":
+        with contextlib.suppress(Exception):
+            db_execute(
+                """
+                UPDATE intake_drafts
+                SET draft_data = '{}'::jsonb
+                WHERE draft_data IS NULL
+                """
+            )
+        return
 
     with contextlib.suppress(Exception):
         db_execute(
@@ -150,4 +166,4 @@ def ensure_case_intake_drafts_indexes() -> None:
 
 def ensure_tables(kind: str) -> None:
     ensure_intake_drafts_table(kind)
-    ensure_intake_drafts_columns()
+    ensure_intake_drafts_columns(kind)
