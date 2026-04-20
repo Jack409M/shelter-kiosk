@@ -145,6 +145,9 @@ def resident_daily_log():
             if note:
                 note_parts.append(note)
 
+            if hours_value is not None:
+                note_parts.append(f"Hours: {hours_value}")
+
             full_note = " | ".join(note_parts) if note_parts else None
 
             db_execute(
@@ -164,10 +167,9 @@ def resident_daily_log():
                         meeting_count,
                         meeting_1,
                         meeting_2,
-                        is_recovery_meeting,
-                        logged_hours
+                        is_recovery_meeting
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     """
                     INSERT INTO attendance_events (
@@ -184,10 +186,9 @@ def resident_daily_log():
                         meeting_count,
                         meeting_1,
                         meeting_2,
-                        is_recovery_meeting,
-                        logged_hours
+                        is_recovery_meeting
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                 ),
                 (
@@ -205,7 +206,6 @@ def resident_daily_log():
                     meeting_1_value,
                     meeting_2_value,
                     is_recovery,
-                    hours_value,
                 ),
             )
 
