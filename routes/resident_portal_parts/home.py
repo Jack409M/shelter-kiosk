@@ -35,7 +35,9 @@ def home():
         resident_level = _load_resident_program_level(resident_id)
 
         # 🔥 CRITICAL: use facade version so monkeypatch works
-        pass_items = portal._load_recent_pass_items(resident_id, shelter)
+        from routes.resident_portal_parts.helpers import _load_recent_pass_items
+
+        pass_items = _load_recent_pass_items(resident_id, shelter)
 
         active_pass = _load_active_pass_item(resident_id, shelter)
         notification_items = _load_recent_notification_items(resident_id, shelter)
