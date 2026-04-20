@@ -8,6 +8,7 @@ from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
+from routes.case_management_parts.budget_scoring import load_budget_score_snapshot
 from routes.case_management_parts.helpers import case_manager_allowed, normalize_shelter_name, placeholder
 from routes.case_management_parts.progress_report_loaders import load_case_manager_name
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
@@ -415,6 +416,7 @@ def promotion_review_view(resident_id: int):
     disciplinary_flags = load_active_writeup_restrictions(resident_id)
     latest_review = _load_latest_promotion_review(enrollment_id)
     promotion_history = _load_promotion_audit_history(enrollment_id)
+    budget_score_snapshot = load_budget_score_snapshot(resident_id)
 
     employment_income_settings = _load_employment_income_settings(shelter)
     intake_income_support = enrollment_context.get("intake_income_support") or {}
@@ -464,6 +466,7 @@ def promotion_review_view(resident_id: int):
         hard_blockers=hard_blockers,
         latest_review=latest_review,
         promotion_history=promotion_history,
+        budget_score_snapshot=budget_score_snapshot,
         saved=request.args.get("saved") == "1",
         applied=request.args.get("applied") == "1",
     )
