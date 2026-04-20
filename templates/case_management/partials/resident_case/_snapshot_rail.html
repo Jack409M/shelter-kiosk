@@ -2,6 +2,7 @@
 
 <div class="cmx-grid cmx-grid-2">
 
+  <!-- Budget Performance -->
   <div class="cmx-card" style="{{ budget_score.card_style if budget_score.card_style else '' }}">
     <div class="cmx-side-card-head">
       <h3>Budget Performance</h3>
@@ -25,4 +26,39 @@
     </div>
   </div>
 
-  <!-- existing content below remains unchanged -->
+  <!-- Rent -->
+  <div class="cmx-card" style="{{ rent_snapshot.card_style }}">
+    <div class="cmx-side-card-head">
+      <h3>Rent Stability</h3>
+    </div>
+    <div class="cmx-row-block">
+      <span>Score</span>
+      <span style="{{ rent_snapshot.value_style }}">{{ rent_snapshot.average_score_display }}</span>
+    </div>
+  </div>
+
+  <!-- Inspection -->
+  <div class="cmx-card" style="{{ inspection_snapshot.card_style }}">
+    <div class="cmx-side-card-head">
+      <h3>Inspection</h3>
+    </div>
+    <div class="cmx-row-block">
+      <span>Score</span>
+      <span style="{{ inspection_snapshot.value_style }}">{{ inspection_snapshot.average_score_display }}</span>
+    </div>
+  </div>
+
+  <!-- Attendance -->
+  <div class="cmx-card" style="{{ attendance_hours_snapshot.card_style }}">
+    <div class="cmx-side-card-head">
+      <h3>Attendance</h3>
+    </div>
+    <div class="cmx-row-block">
+      <span>Average</span>
+      <span style="{{ attendance_hours_snapshot.value_style }}">
+        {{ attendance_hours_snapshot.average_percent_display }}
+      </span>
+    </div>
+  </div>
+
+</div>
