@@ -125,7 +125,7 @@ def staff_pass_approve_view(pass_id: int):
     flash(message, category)
 
     redirect_target, redirect_kwargs = build_pass_action_redirect_target(target, pass_id=pass_id)
-    return redirect(url_for(redirect_target, **redirect_kwargs), code=303)
+    return redirect(url_for(redirect_target, **redirect_kwargs), code=302)
 
 
 def staff_pass_deny_view(pass_id: int):
@@ -141,7 +141,7 @@ def staff_pass_deny_view(pass_id: int):
         staff_name=action_context.staff_name,
     )
     flash(message, category)
-    return redirect(url_for(target), code=303)
+    return redirect(url_for(target), code=302)
 
 
 def staff_pass_check_in_view(pass_id: int):
@@ -156,4 +156,4 @@ def staff_pass_check_in_view(pass_id: int):
         staff_id=action_context.staff_id,
     )
     flash(message, category)
-    return redirect(url_for(target), code=303)
+    return redirect(url_for(target), code=302)
