@@ -33,6 +33,7 @@ BUDGET_LINE_ITEM_REGISTRY: tuple[dict[str, object], ...] = (
     {"line_group": "expense", "line_key": "streamed_media", "line_label": "Streamed Media", "is_resident_visible": True},
     {"line_group": "expense", "line_key": "bank_fees", "line_label": "Bank Fees", "is_resident_visible": True},
     {"line_group": "expense", "line_key": "savings", "line_label": "Savings", "is_resident_visible": True},
+    {"line_group": "expense", "line_key": "other_expense", "line_label": "Other", "is_resident_visible": True},
 )
 
 
