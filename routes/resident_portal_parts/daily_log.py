@@ -167,9 +167,10 @@ def resident_daily_log():
                         meeting_count,
                         meeting_1,
                         meeting_2,
-                        is_recovery_meeting
+                        is_recovery_meeting,
+                        logged_hours
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     """
                     INSERT INTO attendance_events (
@@ -186,9 +187,10 @@ def resident_daily_log():
                         meeting_count,
                         meeting_1,
                         meeting_2,
-                        is_recovery_meeting
+                        is_recovery_meeting,
+                        logged_hours
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                 ),
                 (
@@ -206,6 +208,7 @@ def resident_daily_log():
                     meeting_1_value,
                     meeting_2_value,
                     is_recovery,
+                    hours_value,
                 ),
             )
 
