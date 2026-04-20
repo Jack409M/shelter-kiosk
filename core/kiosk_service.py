@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timezone
 from datetime import date as date_cls
-from datetime import datetime, time as time_cls, timezone
+from datetime import time as time_cls
 from typing import Any, Final
 from zoneinfo import ZoneInfo
 
 from core.db import db_execute, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 
-
 CHICAGO_TZ: Final[ZoneInfo] = ZoneInfo("America/Chicago")
-UTC: Final[timezone] = timezone.utc
+UTC: Final[timezone] = UTC
 
 
 @dataclass(slots=True)
