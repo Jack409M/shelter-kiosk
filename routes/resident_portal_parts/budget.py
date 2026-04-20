@@ -133,6 +133,7 @@ def resident_budget():
             _ensure_budget_line_items_exist(budget_id)
 
         line_item_lookup = _load_budget_line_item_lookup(budget_id)
+        selected_line_item_id = _safe_int(request.args.get("line_item_id"))
 
         if request.method == "POST":
             if not budget or budget_id is None:
@@ -146,12 +147,12 @@ def resident_budget():
                 tx_id = _safe_int(request.form.get("transaction_id"))
                 if not tx_id:
                     flash("Transaction not found.", "error")
-                    return redirect(url_for("resident_portal.resident_budget"))
+                    return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
 
                 transaction_row = _load_owned_transaction(tx_id, budget_id, resident_id)
                 if not transaction_row:
                     flash("Transaction not found for this budget.", "error")
-                    return redirect(url_for("resident_portal.resident_budget"))
+                    return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
 
                 with db_transaction():
                     db_execute(
@@ -162,18 +163,18 @@ def resident_budget():
                         (now, "resident", resident_id, now, tx_id),
                     )
                 flash("Transaction removed.", "success")
-                return redirect(url_for("resident_portal.resident_budget"))
+                return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
 
             if action == "edit_transaction":
                 tx_id = _safe_int(request.form.get("transaction_id"))
                 if not tx_id:
                     flash("Transaction not found.", "error")
-                    return redirect(url_for("resident_portal.resident_budget"))
+                    return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
 
                 transaction_row = _load_owned_transaction(tx_id, budget_id, resident_id)
                 if not transaction_row:
                     flash("Transaction not found for this budget.", "error")
-                    return redirect(url_for("resident_portal.resident_budget"))
+                    return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
 
                 transaction_date = _clean_text(request.form.get("transaction_date"))
                 line_item_id = _safe_int(request.form.get("line_item_id"))
@@ -191,7 +192,7 @@ def resident_budget():
                 if errors:
                     for error in errors:
                         flash(error, "error")
-                    return redirect(url_for("resident_portal.resident_budget"))
+                    return redirect(url_for("resident_portal.resident_budget", line_item_id=line_item_id or transaction_row["line_item_id"]) + "#transaction-entry")
 
                 with db_transaction():
                     db_execute(
@@ -234,7 +235,7 @@ def resident_budget():
                         ),
                     )
                 flash("Transaction updated.", "success")
-                return redirect(url_for("resident_portal.resident_budget"))
+                return redirect(url_for("resident_portal.resident_budget", line_item_id=line_item_id) + "#transaction-entry")
 
             transaction_date = _clean_text(request.form.get("transaction_date"))
             line_item_id = _safe_int(request.form.get("line_item_id"))
@@ -252,64 +253,65 @@ def resident_budget():
             if errors:
                 for error in errors:
                     flash(error, "error")
-            else:
-                with db_transaction():
-                    db_execute(
-                        _sql(
-                            """
-                            INSERT INTO resident_budget_transactions (
-                                budget_session_id,
-                                resident_id,
-                                enrollment_id,
-                                line_item_id,
-                                transaction_date,
-                                amount,
-                                merchant_or_note,
-                                entered_by_role,
-                                entered_by_resident_id,
-                                created_at,
-                                updated_at,
-                                is_deleted
-                            )
-                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                            """,
-                            """
-                            INSERT INTO resident_budget_transactions (
-                                budget_session_id,
-                                resident_id,
-                                enrollment_id,
-                                line_item_id,
-                                transaction_date,
-                                amount,
-                                merchant_or_note,
-                                entered_by_role,
-                                entered_by_resident_id,
-                                created_at,
-                                updated_at,
-                                is_deleted
-                            )
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-                            """,
-                        ),
-                        (
-                            budget_id,
+                return redirect(url_for("resident_portal.resident_budget", line_item_id=line_item_id) + "#transaction-entry")
+
+            with db_transaction():
+                db_execute(
+                    _sql(
+                        """
+                        INSERT INTO resident_budget_transactions (
+                            budget_session_id,
                             resident_id,
-                            budget.get("enrollment_id"),
+                            enrollment_id,
                             line_item_id,
                             transaction_date,
                             amount,
-                            merchant_or_note or None,
-                            "resident",
+                            merchant_or_note,
+                            entered_by_role,
+                            entered_by_resident_id,
+                            created_at,
+                            updated_at,
+                            is_deleted
+                        )
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        """,
+                        """
+                        INSERT INTO resident_budget_transactions (
+                            budget_session_id,
                             resident_id,
-                            now,
-                            now,
-                            False,
-                        ),
-                    )
-                flash("Purchase added.", "success")
-                return redirect(url_for("resident_portal.resident_budget"))
+                            enrollment_id,
+                            line_item_id,
+                            transaction_date,
+                            amount,
+                            merchant_or_note,
+                            entered_by_role,
+                            entered_by_resident_id,
+                            created_at,
+                            updated_at,
+                            is_deleted
+                        )
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                        """,
+                    ),
+                    (
+                        budget_id,
+                        resident_id,
+                        budget.get("enrollment_id"),
+                        line_item_id,
+                        transaction_date,
+                        amount,
+                        merchant_or_note or None,
+                        "resident",
+                        resident_id,
+                        now,
+                        now,
+                        False,
+                    ),
+                )
+            flash("Purchase added.", "success")
+            return redirect(url_for("resident_portal.resident_budget", line_item_id=line_item_id) + "#transaction-entry")
 
-        income_items, expense_items = _load_budget_line_items_with_status(budget_id)
+        _income_items, expense_items = _load_budget_line_items_with_status(budget_id)
         recent_transactions = _load_recent_budget_transactions(budget_id)
 
         total_budgeted = sum(item.get("projected_value", 0.0) for item in expense_items)
@@ -317,10 +319,14 @@ def resident_budget():
         total_remaining = total_budgeted - total_spent
         month_start, month_end = _budget_month_bounds(budget)
 
+        if selected_line_item_id is None and expense_items:
+            selected_line_item_id = expense_items[0]["id"]
+
+        selected_line_item = next((item for item in expense_items if int(item.get("id") or 0) == int(selected_line_item_id or 0)), None)
+
         return render_template(
             "resident/budget.html",
             budget=budget,
-            income_items=income_items,
             expense_items=expense_items,
             recent_transactions=recent_transactions,
             total_budgeted=round(total_budgeted, 2),
@@ -328,6 +334,8 @@ def resident_budget():
             total_remaining=round(total_remaining, 2),
             budget_month_start=month_start,
             budget_month_end=month_end,
+            selected_line_item=selected_line_item,
+            selected_line_item_id=selected_line_item_id,
         )
     except Exception as exc:
         current_app.logger.exception(
