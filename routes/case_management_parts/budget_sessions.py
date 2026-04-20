@@ -54,16 +54,50 @@ def _resident_context(resident_id: int):
     return resident
 
 
+def _set_active_budget_session_for_resident(resident_id: int, budget_id: int | None):
+    db_execute("UPDATE resident_budget_sessions SET is_active = FALSE WHERE resident_id = ?", (resident_id,))
+    if budget_id is not None:
+        db_execute("UPDATE resident_budget_sessions SET is_active = TRUE WHERE id = ?", (budget_id,))
+
+
 def _create_default_line_items(budget_id: int, now: str):
     ph = placeholder()
-    existing = db_fetchone(
-        f"SELECT id FROM resident_budget_line_items WHERE budget_session_id = {ph} LIMIT 1",
+    existing_rows = db_fetchall(
+        f"SELECT id, line_key FROM resident_budget_line_items WHERE budget_session_id = {ph}",
         (budget_id,),
     )
-    if existing:
-        return
+    existing_by_key = {
+        str(row.get("line_key") or "").strip(): dict(row)
+        for row in (existing_rows or [])
+        if str(row.get("line_key") or "").strip()
+    }
 
     for idx, item in enumerate(iter_budget_line_item_definitions(), start=1):
+        line_key = str(item["line_key"])
+        existing = existing_by_key.get(line_key)
+        if existing:
+            db_execute(
+                """
+                UPDATE resident_budget_line_items
+                SET line_group = ?,
+                    line_label = ?,
+                    sort_order = ?,
+                    is_resident_visible = ?,
+                    is_active = TRUE,
+                    updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    item["line_group"],
+                    item["line_label"],
+                    idx,
+                    item.get("is_resident_visible", True),
+                    now,
+                    existing["id"],
+                ),
+            )
+            continue
+
         db_execute(
             f"""
             INSERT INTO resident_budget_line_items
@@ -122,6 +156,12 @@ def _next_month_text(month_text: str | None) -> str:
     return f"{year:04d}-{month:02d}"
 
 
+def _is_future_budget_month(month_text: str | None) -> bool:
+    if not month_text:
+        return False
+    return str(month_text).strip() > utcnow_iso()[:7]
+
+
 def _load_budget_rows_for_resident(resident_id: int) -> list[dict]:
     rows = db_fetchall(
         """
@@ -157,6 +197,7 @@ def _decorate_budget_rows(rows: list[dict]) -> tuple[list[dict], dict | None, li
         item = dict(row)
         item["budget_month_label"] = _format_budget_month(item.get("budget_month"))
         item["is_current"] = item["id"] == current_row_id
+        item["is_future_budget"] = _is_future_budget_month(item.get("budget_month"))
 
         if item["is_current"] and current_row is None:
             current_row = item
@@ -454,6 +495,7 @@ def _build_budget_editor_context(budget_id: int, budget_month: str | None) -> di
         "transaction_expense_items": transaction_expense_items,
         "budget_month_start": month_start,
         "budget_month_end": month_end,
+        "can_edit_expense_budget": _is_future_budget_month(budget_month),
     }
 
 
@@ -526,6 +568,37 @@ def _update_income_line_items_only(budget_id: int, now: str):
             WHERE id = ?
             """,
             (proj_val, act_val, now, pid),
+        )
+
+
+def _update_all_editable_line_items(budget_id: int, now: str):
+    items = _load_line_items(budget_id)
+
+    for item in items:
+        pid = item["id"]
+        proj = request.form.get(f"projected_amount_{pid}")
+        proj_val = parse_money(proj) if proj else None
+
+        if str(item.get("line_group") or "").strip().lower() == "income":
+            act = request.form.get(f"actual_amount_{pid}")
+            act_val = parse_money(act) if act else None
+            db_execute(
+                """
+                UPDATE resident_budget_line_items
+                SET projected_amount = ?, actual_amount = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (proj_val, act_val, now, pid),
+            )
+            continue
+
+        db_execute(
+            """
+            UPDATE resident_budget_line_items
+            SET projected_amount = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (proj_val, now, pid),
         )
 
 
@@ -651,6 +724,42 @@ def add_budget_session_view(resident_id: int):
     )
 
 
+def delete_budget_session_view(resident_id: int, budget_id: int):
+    init_db()
+    if not case_manager_allowed():
+        return _resident_case_redirect(resident_id)
+
+    resident = _resident_context(resident_id)
+    if not resident:
+        return redirect(url_for("case_management.index"))
+
+    row = db_fetchone(
+        "SELECT id, is_active FROM resident_budget_sessions WHERE id = ? AND resident_id = ? LIMIT 1",
+        (budget_id, resident_id),
+    )
+    if not row:
+        flash("Budget month not found for this resident.", "error")
+        return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
+
+    with db_transaction():
+        db_execute("DELETE FROM resident_budget_sessions WHERE id = ?", (budget_id,))
+
+        remaining = db_fetchone(
+            """
+            SELECT id
+            FROM resident_budget_sessions
+            WHERE resident_id = ?
+            ORDER BY CASE WHEN budget_month IS NULL THEN 1 ELSE 0 END, budget_month DESC, id DESC
+            LIMIT 1
+            """,
+            (resident_id,),
+        )
+        _set_active_budget_session_for_resident(resident_id, remaining["id"] if remaining else None)
+
+    flash("Budget month deleted.", "success")
+    return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
+
+
 def edit_budget_session_view(resident_id: int, budget_id: int):
     init_db()
     if not case_manager_allowed():
@@ -681,6 +790,7 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
     if request.method == "POST":
         action = clean(request.form.get("action"))
         line_item_lookup = _load_budget_line_item_lookup(budget_id)
+        can_edit_expense_budget = _is_future_budget_month(budget_row.get("budget_month"))
 
         if action == "add_transaction":
             transaction_date = clean(request.form.get("transaction_date"))
@@ -733,9 +843,7 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
                         ),
                     )
                 flash("Transaction added.", "success")
-            return redirect(
-                url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id)
-            )
+            return redirect(url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id))
 
         if action == "edit_transaction":
             transaction_id = int(request.form.get("transaction_id") or 0) or None
@@ -747,9 +855,7 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
             transaction_row = _load_staff_transaction(transaction_id or 0, budget_id, resident_id)
             if not transaction_row:
                 flash("Transaction not found for this budget month.", "error")
-                return redirect(
-                    url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id)
-                )
+                return redirect(url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id))
 
             errors, amount = _validate_transaction_inputs(
                 budget_row=budget_row,
@@ -789,9 +895,7 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
                         ),
                     )
                 flash("Transaction updated.", "success")
-            return redirect(
-                url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id)
-            )
+            return redirect(url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id))
 
         if action == "delete_transaction":
             transaction_id = int(request.form.get("transaction_id") or 0) or None
@@ -813,11 +917,15 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
                         (now, "staff", session.get("staff_user_id"), now, transaction_id),
                     )
                 flash("Transaction deleted.", "success")
-            return redirect(
-                url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id)
-            )
+            return redirect(url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id))
 
-        _update_income_line_items_only(budget_id, now)
+        if can_edit_expense_budget:
+            _update_all_editable_line_items(budget_id, now)
+            flash("Budget updated.", "success")
+        else:
+            _update_income_line_items_only(budget_id, now)
+            flash("Income updated.", "success")
+
         db_execute(
             """
             UPDATE resident_budget_sessions
@@ -826,14 +934,7 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
             """,
             (clean(request.form.get("notes")), now, budget_id),
         )
-        flash("Income updated.", "success")
-        return redirect(
-            url_for(
-                "case_management.edit_budget_session",
-                resident_id=resident_id,
-                budget_id=budget_id,
-            )
-        )
+        return redirect(url_for("case_management.edit_budget_session", resident_id=resident_id, budget_id=budget_id))
 
     page_context = _build_budget_page_context(resident_id)
     editor_context = _build_budget_editor_context(budget_id, budget_row.get("budget_month"))
