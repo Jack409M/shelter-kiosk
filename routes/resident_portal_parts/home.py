@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from flask import current_app
 
+import routes.resident_portal as portal
 from core.access import require_resident
 from core.resident_portal_service import get_today_chores
-import routes.resident_portal as portal
 from routes.resident_portal import resident_portal
 from routes.resident_portal_parts.helpers import (
     _clear_resident_session,
