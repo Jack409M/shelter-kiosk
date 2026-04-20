@@ -32,10 +32,9 @@ def home():
 
         resident_level = _load_resident_program_level(resident_id)
 
-        if hasattr(portal, "_load_recent_pass_items") and getattr(
-            portal._load_recent_pass_items, "__module__", ""
-        ).startswith("tests"):
-            pass_items = portal._load_recent_pass_items(resident_id, shelter)
+        loader = getattr(portal, "_load_recent_pass_items", None)
+        if callable(loader):
+            pass_items = loader(resident_id, shelter)
         else:
             pass_items = _load_recent_pass_items_helper(resident_id, shelter)
 
