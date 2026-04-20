@@ -93,4 +93,4 @@ budget = _IMPORTED_PARTS["budget"]
 
 # 🔥 REQUIRED TEST HOOK
 def _load_recent_pass_items(*args, **kwargs):
-    return _IMPORTED_PARTS["home"]._load_recent_pass_items(*args, **kwargs)
+    return _IMPORTED_PARTS["home"]._load_recent_pass_items_helper(*args, **kwargs)
