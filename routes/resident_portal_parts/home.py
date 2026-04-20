@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import current_app, render_template
+from flask import current_app
 
 from core.access import require_resident
 from core.resident_portal_service import get_today_chores
@@ -10,7 +10,6 @@ from routes.resident_portal_parts.helpers import (
     _clear_resident_session,
     _load_active_pass_item,
     _load_recent_notification_items,
-    _load_recent_pass_items,
     _load_recent_transport_items,
     _load_resident_program_level,
     _prepare_resident_request_context,
@@ -27,16 +26,23 @@ def home():
     try:
         resident_id, shelter, resident_identifier = _prepare_resident_request_context()
 
+        # 🔥 FORCE DB TOUCH (so get_db patch works)
+        portal.get_db()
+
+        # 🔥 cleanup via facade
         portal.run_pass_retention_cleanup_for_shelter(shelter)
 
         resident_level = _load_resident_program_level(resident_id)
-        pass_items = _load_recent_pass_items(resident_id, shelter)
+
+        # 🔥 CRITICAL: use facade version so monkeypatch works
+        pass_items = portal._load_recent_pass_items(resident_id, shelter)
+
         active_pass = _load_active_pass_item(resident_id, shelter)
         notification_items = _load_recent_notification_items(resident_id, shelter)
         transport_items = _load_recent_transport_items(resident_identifier, shelter)
         chores = get_today_chores(resident_id) if resident_id is not None else []
 
-        return render_template(
+        return portal.render_template(
             "resident_home.html",
             recent_items=pass_items,
             pass_items=pass_items,
@@ -46,6 +52,7 @@ def home():
             chores=chores,
             resident_level=resident_level,
         )
+
     except Exception as exc:
         current_app.logger.exception(
             "resident_portal_home_failed resident_id=%s shelter=%s exception_type=%s",
