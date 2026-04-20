@@ -425,7 +425,9 @@ def handle_checkout(
     aa_na_meeting_1: str,
     aa_na_meeting_2: str,
     volunteer_community_service_option: str,
-    child_option_value: str,
+    aa_na_child_options: list[dict[str, Any]] | None = None,
+    volunteer_child_options: list[dict[str, Any]] | None = None,
+    child_option_value: str = "",
     start_time_hour: str,
     start_time_minute: str,
     start_time_ampm: str,
@@ -437,10 +439,16 @@ def handle_checkout(
     expected_back_ampm: str,
     note: str,
     checkout_categories: list[dict[str, Any]],
-    child_options_by_parent: dict[str, list[dict[str, Any]]],
+    child_options_by_parent: dict[str, list[dict[str, Any]]] | None = None,
     aa_na_parent_activity_key: str,
     volunteer_parent_activity_key: str,
 ) -> CheckoutResult:
+    if child_options_by_parent is None:
+        child_options_by_parent = {
+            aa_na_parent_activity_key: aa_na_child_options or [],
+            volunteer_parent_activity_key: volunteer_child_options or [],
+        }
+
     normalized_shelter = _normalize_shelter(shelter)
     normalized_code = _clean_text(resident_code)
     normalized_destination = _clean_text(destination)
