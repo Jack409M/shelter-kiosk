@@ -378,26 +378,28 @@ def ensure_recovery_profile_columns(kind: str) -> None:
         with contextlib.suppress(Exception):
             db_execute(statement)
 
-    with contextlib.suppress(Exception):
-        db_execute(
-            """
-            UPDATE residents
-            SET step_current = aa_step_current
-            WHERE step_current IS NULL
-              AND aa_step_current IS NOT NULL
-            """
-        )
+    if column_exists(kind, "residents", "aa_step_current"):
+        with contextlib.suppress(Exception):
+            db_execute(
+                """
+                UPDATE residents
+                SET step_current = aa_step_current
+                WHERE step_current IS NULL
+                  AND aa_step_current IS NOT NULL
+                """
+            )
 
-    with contextlib.suppress(Exception):
-        db_execute(
-            """
-            UPDATE residents
-            SET step_changed_at = aa_step_changed_at
-            WHERE (step_changed_at IS NULL OR step_changed_at = '')
-              AND aa_step_changed_at IS NOT NULL
-              AND aa_step_changed_at <> ''
-            """
-        )
+    if column_exists(kind, "residents", "aa_step_changed_at"):
+        with contextlib.suppress(Exception):
+            db_execute(
+                """
+                UPDATE residents
+                SET step_changed_at = aa_step_changed_at
+                WHERE (step_changed_at IS NULL OR step_changed_at = '')
+                  AND aa_step_changed_at IS NOT NULL
+                  AND aa_step_changed_at <> ''
+                """
+            )
 
 
 def ensure_reporting_columns(kind: str) -> None:
