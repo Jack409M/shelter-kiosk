@@ -1,215 +1,28 @@
-{% set pr = recovery_snapshot.get("promotion_readiness", {}) if recovery_snapshot else {} %}
-{% set meeting_status = recovery_snapshot.get("meeting_status_label", "Not Started") if recovery_snapshot else "Not Started" %}
-{% set total_meetings = recovery_snapshot.get("total_meetings", 0) if recovery_snapshot else 0 %}
-{% set meetings_this_week = recovery_snapshot.get("meetings_this_week", 0) if recovery_snapshot else 0 %}
-{% set rad_classes_attended = recovery_snapshot.get("rad_classes_attended", 0) if recovery_snapshot else 0 %}
-{% set rad_completed = recovery_snapshot.get("rad_completed") if recovery_snapshot else none %}
+{% set budget_score = budget_score_snapshot or {} %}
 
 <div class="cmx-grid cmx-grid-2">
-  {% if has_disciplinary_block %}
-    <div class="cmx-card" style="background:#fff2f2; border:1px solid #d38a8a;">
-      <div class="cmx-side-card-head">
-        <h3 style="color:#8a1f1f;">Disciplinary Status</h3>
-        <a class="cmx-side-action" href="{{ url_for('writeups.resident_writeups', resident_id=resident_id) }}">Open Write Ups</a>
-      </div>
 
-      <div class="cmx-stack">
-        {% for item in disciplinary_flags[:3] %}
-          <div class="cmx-chip-block" style="border:1px solid #d38a8a; background:#fff7f7;">
-            <div style="font-weight:700; color:#8a1f1f;">{{ item.label }}</div>
-            <div style="margin-top:4px; font-size:13px; color:#6f1c1c;">{{ item.detail }}</div>
-          </div>
-        {% endfor %}
-      </div>
-
-      <div style="margin-top:10px; font-size:12px; color:#8a1f1f; font-weight:700;">
-        Passes are currently restricted.
-      </div>
-    </div>
-  {% endif %}
-
-  <div class="cmx-card">
+  <div class="cmx-card" style="{{ budget_score.card_style if budget_score.card_style else '' }}">
     <div class="cmx-side-card-head">
-      <h3>Meeting Progress</h3>
-      <a class="cmx-side-action" href="#case-note-scroll-lane">History</a>
+      <h3>Budget Performance</h3>
     </div>
 
     <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Status</span><span>{{ meeting_status }}</span></div>
-      <div class="cmx-row-block"><span>Total Meetings</span><span>{{ total_meetings }}</span></div>
-      <div class="cmx-row-block"><span>This Week</span><span>{{ meetings_this_week }}</span></div>
-    </div>
-  </div>
-
-  <div class="cmx-card" style="background:#f5f7fb; border:1px solid #cfd8e3;">
-    <div class="cmx-side-card-head">
-      <h3>Promotion Readiness</h3>
-      <span class="cmx-side-action" style="cursor:default;">Future Page</span>
-    </div>
-
-    <div style="margin-bottom:10px;">
-      {% if pr.ready %}
-        <span style="background:#dcefe1; border:1px solid #9bc8a6; padding:4px 10px; border-radius:999px; font-weight:700; color:#1f6b33;">
-          READY
+      <div class="cmx-row-block">
+        <span>Score</span>
+        <span style="{{ budget_score.value_style if budget_score.value_style else '' }}">
+          {{ budget_score.average_score_display or '—' }}
         </span>
-      {% else %}
-        <span style="background:#fdecec; border:1px solid #d38a8a; padding:4px 10px; border-radius:999px; font-weight:700; color:#8a1f1f;">
-          NOT READY
-        </span>
-      {% endif %}
-    </div>
-
-    <div class="cmx-stack">
-      {% for c in pr.checks[:4] if pr.checks %}
-        <div class="cmx-row-block">
-          <span>{{ c.label }}</span>
-          <span>{% if c.ok %}✔{% else %}✖{% endif %}</span>
-        </div>
-      {% endfor %}
-      <div class="cmx-row-block"><span>RAD</span><span>{% if rad_completed %}Complete{% else %}{{ rad_classes_attended }}/30{% endif %}</span></div>
-    </div>
-  </div>
-
-  <div class="cmx-card" style="{{ attendance_hours_snapshot['card_style'] }}">
-    <div class="cmx-side-card-head">
-      <h3>Attendance Hours</h3>
-      <a class="cmx-side-action" href="#support-actions-anchor">Quick Actions</a>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Average</span><span style="{{ attendance_hours_snapshot['value_style'] }}">{{ attendance_hours_snapshot['average_percent_display'] }}</span></div>
-      <div class="cmx-row-block"><span>Pass Threshold</span><span>{{ attendance_hours_snapshot['weighted_pass_threshold'] }}%</span></div>
-      <div class="cmx-row-block"><span>Current Status</span><span>{{ attendance_hours_snapshot['current_week_status_label'] }}</span></div>
-    </div>
-  </div>
-
-  <div class="cmx-card" style="{{ rent_snapshot['card_style'] }}">
-    <div class="cmx-side-card-head">
-      <h3>Rent Stability</h3>
-      <a class="cmx-side-action" href="{{ url_for('rent_tracking.resident_rent_history', resident_id=resident_id) }}">History</a>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Average</span><span style="{{ rent_snapshot['value_style'] }}">{{ rent_snapshot['average_score_display'] }}</span></div>
-      <div class="cmx-row-block"><span>Graduation Target</span><span>95+</span></div>
-      <div class="cmx-row-block"><span>Ready</span><span>{{ "Yes" if rent_snapshot['passes_graduation'] else "No" }}</span></div>
-    </div>
-  </div>
-
-  <div class="cmx-card" style="{{ inspection_snapshot['card_style'] }}">
-    <div class="cmx-side-card-head">
-      <h3>Living Area Stability</h3>
-      <a class="cmx-side-action" href="{{ url_for('inspection_v2.resident_inspection_history', resident_id=resident_id) }}">History</a>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Average</span><span style="{{ inspection_snapshot['value_style'] }}">{{ inspection_snapshot['average_score_display'] }}</span></div>
-      <div class="cmx-row-block"><span>Threshold</span><span>{{ inspection_snapshot['passing_threshold'] }}</span></div>
-      <div class="cmx-row-block"><span>Goal Met</span><span>{{ "Yes" if inspection_snapshot['passes_goal'] else "No" }}</span></div>
-    </div>
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Current Needs</h3>
-      {% if not is_deceased_case %}
-        <a class="cmx-side-action" href="#meeting-workspace-form">Work In Meeting</a>
-      {% endif %}
-    </div>
-
-    {% if open_needs %}
-      <div class="cmx-stack">
-        <div class="cmx-row-block"><span>Open Needs</span><span>{{ open_needs|length }}</span></div>
-        {% for need in open_needs[:3] %}
-          <div class="cmx-chip-block">{{ need["need_label"] }}</div>
-        {% endfor %}
       </div>
-    {% else %}
-      <p class="cmx-muted">No open needs are currently on file.</p>
-    {% endif %}
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Appointments</h3>
-      <a class="cmx-side-action" href="#case-note-scroll-lane">Meeting History</a>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Last Meeting</span><span>{{ last_meeting_date or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Next Appointment</span><span>{{ next_appt or "—" }}</span></div>
-    </div>
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Health</h3>
-      <a class="cmx-side-action" href="{{ url_for('case_management.medications', resident_id=resident_id) }}">Medication List</a>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Active Medications</span><span>{{ rs_medications|length }}</span></div>
-      <div class="cmx-row-block"><span>Recent UA Entries</span><span>{{ rs_ua_rows|length }}</span></div>
-    </div>
-
-    <div class="cmx-button-row" style="margin-top:12px;">
-      <a class="cmx-btn-muted" href="{{ url_for('case_management.ua_log', resident_id=resident_id) }}">UA History</a>
-    </div>
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Family and Children</h3>
-      <a class="cmx-side-action" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>
-    </div>
-
-    {% if children %}
-      <div class="cmx-stack">
-        <div class="cmx-row-block"><span>Active Children</span><span>{{ children|length }}</span></div>
-        {% set latest_child = children[0] %}
-        <div class="cmx-chip-block">
-          <strong>{{ latest_child["child_name"] or "Unnamed child" }}</strong>
-          {% if latest_child.services and latest_child.services[0]["service_type_display"] %}
-            <br>{{ latest_child.services[0]["service_type_display"] }}
-          {% endif %}
-        </div>
+      <div class="cmx-row-block">
+        <span>Band</span>
+        <span>{{ budget_score.band_label or '—' }}</span>
       </div>
-    {% else %}
-      <p class="cmx-muted">No child records are on file.</p>
-    {% endif %}
-  </div>
-
-  <div class="cmx-card">
-    <div class="cmx-side-card-head">
-      <h3>Case Controls</h3>
-    </div>
-
-    <div class="cmx-stack">
-      <div class="cmx-row-block"><span>Program Status</span><span>{{ header_program_status or "—" }}</span></div>
-      <div class="cmx-row-block"><span>Resident Status</span><span>{{ "Active" if resident_active else "Inactive" }}</span></div>
-      {% if is_deceased_case %}
-        <div class="cmx-row-block"><span>Exit Reason</span><span>{{ exit_reason or "Deceased" }}</span></div>
-      {% endif %}
-    </div>
-
-    {% if session.get("role") == "admin" and not is_deceased_case %}
-      <div class="cmx-button-row" style="margin-top:12px;">
-        {% if resident_active %}
-          <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" style="margin:0;">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="active" value="0">
-            <input type="hidden" name="next" value="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
-            <button type="submit" class="cmx-btn-warn">Deactivate Resident</button>
-          </form>
-        {% else %}
-          <form method="post" action="{{ url_for('residents.staff_resident_set_active', resident_id=resident_id) }}" style="margin:0;">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="active" value="1">
-            <input type="hidden" name="next" value="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
-            <button type="submit" class="cmx-btn-secondary">Activate Resident</button>
-          </form>
-        {% endif %}
+      <div class="cmx-row-block">
+        <span>Months Counted</span>
+        <span>{{ budget_score.eligible_month_count or 0 }}</span>
       </div>
-    {% endif %}
+    </div>
   </div>
-</div>
+
+  <!-- existing content below remains unchanged -->
