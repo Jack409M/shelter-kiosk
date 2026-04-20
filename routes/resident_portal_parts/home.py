@@ -32,10 +32,7 @@ def home():
 
         resident_level = _load_resident_program_level(resident_id)
 
-        try:
-            pass_items = portal._load_recent_pass_items(resident_id, shelter)
-        except Exception:
-            pass_items = _load_recent_pass_items_helper(resident_id, shelter)
+        pass_items = portal._load_recent_pass_items(resident_id, shelter)
 
         active_pass = _load_active_pass_item(resident_id, shelter)
         notification_items = _load_recent_notification_items(resident_id, shelter)
