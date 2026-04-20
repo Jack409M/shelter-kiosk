@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
 from core.db import db_fetchall
 from core.helpers import utcnow_iso
 

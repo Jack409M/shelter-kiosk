@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROUTES_DIR = Path("routes/case_management_parts")
 TESTS_DIR = Path("tests")
 

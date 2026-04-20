@@ -5,7 +5,10 @@ from flask import flash, redirect, render_template, session, url_for
 from core.runtime import init_db
 from routes.case_management_parts.helpers import case_manager_allowed, normalize_shelter_name
 from routes.case_management_parts.resident_case_enrollment_context import load_case_history
-from routes.case_management_parts.resident_case_scope import load_current_enrollment, load_resident_in_scope
+from routes.case_management_parts.resident_case_scope import (
+    load_current_enrollment,
+    load_resident_in_scope,
+)
 
 
 def _require_case_manager_access():

@@ -3,6 +3,11 @@ from __future__ import annotations
 from flask import current_app, flash, redirect, render_template, request, url_for
 
 from core.access import require_resident
+from core.db import db_execute
+from core.kiosk_activity_categories import (
+    AA_NA_PARENT_ACTIVITY_KEY,
+    VOLUNTEER_PARENT_ACTIVITY_KEY,
+)
 from routes.resident_portal import resident_portal
 from routes.resident_portal_parts.helpers import (
     _clean_text,
@@ -15,12 +20,7 @@ from routes.resident_portal_parts.helpers import (
     _prepare_resident_request_context,
     _resident_signin_redirect,
     _safe_float,
-)
-from core.db import db_execute
-from routes.resident_portal_parts.helpers import _sql
-from core.kiosk_activity_categories import (
-    AA_NA_PARENT_ACTIVITY_KEY,
-    VOLUNTEER_PARENT_ACTIVITY_KEY,
+    _sql,
 )
 
 

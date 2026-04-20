@@ -4,7 +4,7 @@ from datetime import datetime
 
 from flask import flash, redirect, render_template, request, session, url_for
 
-from core.budget_registry import iter_budget_line_item_definitions, is_budget_expense_key
+from core.budget_registry import is_budget_expense_key, iter_budget_line_item_definitions
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
@@ -526,9 +526,8 @@ def _validate_transaction_inputs(
         errors.append("Expense category does not belong to this budget month.")
 
     month_start, month_end = _budget_month_bounds(budget_row.get("budget_month"))
-    if parsed_date is not None and month_start and month_end:
-        if not (month_start <= transaction_date <= month_end):
-            errors.append(f"Transaction date must stay inside this budget month. Allowed range: {month_start} to {month_end}.")
+    if parsed_date is not None and month_start and month_end and not (month_start <= transaction_date <= month_end):
+        errors.append(f"Transaction date must stay inside this budget month. Allowed range: {month_start} to {month_end}.")
 
     return errors, round(amount, 2) if amount is not None else None
 

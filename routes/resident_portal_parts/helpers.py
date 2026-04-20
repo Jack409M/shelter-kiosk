@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from flask import g, redirect, request, session, url_for
 
-from core.budget_registry import iter_budget_line_item_definitions, is_budget_expense_key
+from core.budget_registry import is_budget_expense_key, iter_budget_line_item_definitions
 from core.db import db_execute, db_fetchall, db_fetchone, get_db
 from core.helpers import utcnow_iso
 from core.kiosk_activity_categories import (
@@ -103,7 +103,7 @@ def _daily_log_event_time_iso(log_date_text: str) -> str | None:
         return None
 
     local_dt = parsed_date.replace(hour=12, minute=0, second=0, microsecond=0, tzinfo=CHICAGO_TZ)
-    utc_dt = local_dt.astimezone(timezone.utc).replace(tzinfo=None)
+    utc_dt = local_dt.astimezone(UTC).replace(tzinfo=None)
     return utc_dt.isoformat(timespec="seconds")
 
 

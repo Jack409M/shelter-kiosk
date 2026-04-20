@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.attendance_hours import calculate_prior_week_attendance_hours
 from core.meeting_progress import calculate_meeting_progress
 from core.promotion_readiness import build_promotion_readiness
-from core.attendance_hours import calculate_prior_week_attendance_hours
 from routes.case_management_parts.helpers import (
     fetch_current_enrollment_id_for_resident,
     normalize_shelter_name,

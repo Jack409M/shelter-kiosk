@@ -10,11 +10,8 @@ from core.runtime import init_db
 from routes.case_management_parts.followups_validation import validate_followup_form
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
-    clean,
     fetch_current_enrollment_for_resident,
     normalize_shelter_name,
-    parse_iso_date,
-    parse_money,
     placeholder,
     shelter_equals_sql,
     yes_no_to_int,

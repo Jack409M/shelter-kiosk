@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from core.runtime import init_db
 from core.db import db_execute, db_fetchone
+from core.runtime import init_db
 
 
 def _set_csrf_token(client, token: str = "test-csrf-token") -> str:

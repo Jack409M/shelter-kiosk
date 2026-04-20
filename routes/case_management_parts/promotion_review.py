@@ -9,7 +9,11 @@ from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
 from routes.case_management_parts.budget_scoring import load_budget_score_snapshot
-from routes.case_management_parts.helpers import case_manager_allowed, normalize_shelter_name, placeholder
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    normalize_shelter_name,
+    placeholder,
+)
 from routes.case_management_parts.progress_report_loaders import load_case_manager_name
 from routes.case_management_parts.recovery_snapshot import load_recovery_snapshot
 from routes.case_management_parts.resident_case_discipline import load_active_writeup_restrictions
@@ -20,11 +24,13 @@ from routes.case_management_parts.resident_case_employment import (
     resolve_employment_status_snapshot,
 )
 from routes.case_management_parts.resident_case_enrollment_context import load_enrollment_context
-from routes.case_management_parts.resident_case_scope import load_current_enrollment, load_resident_in_scope
+from routes.case_management_parts.resident_case_scope import (
+    load_current_enrollment,
+    load_resident_in_scope,
+)
 from routes.case_management_parts.update_note_helpers import collect_note_form_values
 from routes.inspection_v2 import build_inspection_stability_snapshot
 from routes.rent_tracking import build_rent_stability_snapshot
-
 
 _NOTE_INSERT_COLUMNS = (
     "enrollment_id",

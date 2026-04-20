@@ -9,7 +9,6 @@ from core.helpers import utcnow_iso
 
 from .kiosk_activity_category_defaults import KIOSK_ACTIVITY_CATEGORY_SEEDS
 
-
 AA_NA_PARENT_ACTIVITY_KEY = "aa_na_meeting"
 AA_NA_PARENT_ACTIVITY_LABEL = "AA or NA Meeting"
 

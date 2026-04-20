@@ -4,9 +4,9 @@ from __future__ import annotations
 def test_critical_modules_expose_required_entrypoints():
     import core.app_factory as app_factory
     import core.intake_service as intake_service
-    import routes.resident_portal as resident_portal
     import routes.case_management_parts.family as family
     import routes.case_management_parts.update as update
+    import routes.resident_portal as resident_portal
 
     # App factory must always expose create_app and blueprint registration
     assert hasattr(app_factory, "create_app")

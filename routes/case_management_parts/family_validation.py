@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date, datetime
-from typing import Any, Mapping
+from typing import Any
 
 from routes.case_management_parts.helpers import (
     clean,
@@ -28,9 +29,8 @@ def _validate_birth_year(value: str | None, errors: list[str]) -> int | None:
         errors.append("Birth Year must be a valid number.")
         return None
 
-    if parsed is not None:
-        if parsed < 1900 or parsed > CURRENT_YEAR:
-            errors.append("Birth Year must be a reasonable year.")
+    if parsed is not None and (parsed < 1900 or parsed > CURRENT_YEAR):
+        errors.append("Birth Year must be a reasonable year.")
     return parsed
 
 

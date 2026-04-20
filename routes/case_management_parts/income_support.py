@@ -11,18 +11,21 @@ from routes.case_management_parts.helpers import (
     placeholder,
     shelter_equals_sql,
 )
+from routes.case_management_parts.income_state_sync import (
+    sync_resident_income_snapshot as _shared_sync_resident_income_snapshot,
+)
 from routes.case_management_parts.income_support_validation import (
     validate_income_support_form,
 )
 from routes.case_management_parts.intake_income_support import (
     load_intake_income_support,
+)
+from routes.case_management_parts.intake_income_support import (
     recalculate_intake_income_support as _recalculate_intake_income_support_impl,
+)
+from routes.case_management_parts.intake_income_support import (
     upsert_intake_income_support as _upsert_intake_income_support_impl,
 )
-from routes.case_management_parts.income_state_sync import (
-    sync_resident_income_snapshot as _shared_sync_resident_income_snapshot,
-)
-
 
 # --- compatibility layer for tests and legacy monkeypatch targets ---
 

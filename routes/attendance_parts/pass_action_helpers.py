@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 from flask import current_app, g
@@ -287,14 +288,12 @@ def send_approval_sms_if_possible(pass_id: int, shelter: str) -> None:
     try:
         send_sms(phone, build_approval_sms(sms_context))
     except Exception:
-        try:
+        with contextlib.suppress(Exception):
             current_app.logger.exception(
                 "pass approval sms failed pass_id=%s shelter=%s",
                 pass_id,
                 shelter,
             )
-        except Exception:
-            pass
 
 
 def apply_pass_approval(

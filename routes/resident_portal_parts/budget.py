@@ -81,9 +81,8 @@ def _validate_transaction_inputs(
         errors.append("Budget category does not belong to this budget month.")
 
     month_start, month_end = _budget_month_bounds(budget)
-    if parsed_date is not None and month_start and month_end:
-        if not (month_start <= transaction_date <= month_end):
-            errors.append(f"Transaction date must stay inside this budget month. Allowed range: {month_start} to {month_end}.")
+    if parsed_date is not None and month_start and month_end and not (month_start <= transaction_date <= month_end):
+        errors.append(f"Transaction date must stay inside this budget month. Allowed range: {month_start} to {month_end}.")
 
     return errors, (round(amount, 2) if amount is not None else None), selected_item
 

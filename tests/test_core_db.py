@@ -420,9 +420,8 @@ def test_db_cursor_pg_dict_rows_without_real_dict_cursor_raises(
         monkeypatch.setattr(core_db, "get_db", lambda: conn)
         monkeypatch.setattr(core_db, "RealDictCursor", None)
 
-        with pytest.raises(RuntimeError, match="RealDictCursor is unavailable"):
-            with core_db._db_cursor(dict_rows=True):
-                pass
+        with pytest.raises(RuntimeError, match="RealDictCursor is unavailable"), core_db._db_cursor(dict_rows=True):
+            pass
 
 
 def test_close_db_pg_returns_connection_to_pool(app, monkeypatch) -> None:

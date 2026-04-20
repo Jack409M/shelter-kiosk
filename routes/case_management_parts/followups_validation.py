@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import clean, parse_iso_date, parse_money

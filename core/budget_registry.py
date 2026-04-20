@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 BUDGET_LINE_ITEM_REGISTRY: tuple[dict[str, object], ...] = (
     {"line_group": "income", "line_key": "net_employment", "line_label": "Net Employment", "is_resident_visible": True},

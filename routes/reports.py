@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import math
-from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from statistics import median
 from zoneinfo import ZoneInfo
@@ -18,7 +16,6 @@ from core.kiosk_activity_categories import (
 from core.metrics_registry import PROGRAM_METRICS
 from core.program_statistics import get_dashboard_statistics
 from core.runtime import init_db
-
 
 reports = Blueprint("reports", __name__)
 
@@ -814,7 +811,7 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
     }
 
     for row in shelter_summary_rows:
-        for metric_key in _empty_activity_metrics().keys():
+        for metric_key in _empty_activity_metrics():
             grand_totals[metric_key] += row.get(metric_key, 0)
 
     _finalize_activity_metrics(grand_totals)

@@ -661,7 +661,6 @@ def _ledger_balance_breakdown_for_resident(resident_id: int) -> dict:
         debit_amount = _float_value(entry.get("debit_amount"))
         credit_amount = _float_value(entry.get("credit_amount"))
         source_code = str(entry.get("source_code") or "").strip()
-        charge_category = str(entry.get("charge_category") or "").strip().lower()
         entry_type = str(entry.get("entry_type") or "").strip().lower()
 
         if debit_amount > 0:

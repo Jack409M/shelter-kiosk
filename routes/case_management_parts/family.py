@@ -13,7 +13,6 @@ from routes.case_management_parts.family_validation import (
 )
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
-    clean,
     fetch_current_enrollment_for_resident,
     normalize_shelter_name,
     placeholder,
