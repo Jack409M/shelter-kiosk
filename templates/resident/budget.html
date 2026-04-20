@@ -1,100 +1,91 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="resident-portal">
-  <h1 class="resident-portal-title">My Budget</h1>
+<div style="max-width:900px; margin:0 auto;">
 
-  <div class="portal-actions" style="margin-bottom:16px;">
-    <a class="portal-btn portal-btn-light" href="{{ url_for('resident_portal.home') }}">
-      Back to Home
-    </a>
-  </div>
+  <h2>My Budget</h2>
 
   {% if not budget %}
-    <section class="resident-home-card">
-      <h3>No Budget Yet</h3>
-      <p>Your case manager has not created a budget for you yet.</p>
-    </section>
+    <p>No budget available. See your case manager.</p>
   {% else %}
 
-    <section class="resident-home-card">
-      <h3>Budget Summary</h3>
-      <div><strong>Total Budget:</strong> {{ '%.2f'|format(total_budgeted or 0) }}</div>
-      <div><strong>Total Spent:</strong> {{ '%.2f'|format(total_spent or 0) }}</div>
-      <div><strong>Remaining:</strong> {{ '%.2f'|format(total_remaining or 0) }}</div>
-    </section>
+  <!-- SUMMARY -->
+  <div style="margin-bottom:20px;">
+    <strong>Total Budget:</strong> ${{ '%.2f'|format(total_budgeted) }}<br>
+    <strong>Total Spent:</strong> ${{ '%.2f'|format(total_spent) }}<br>
+    <strong>Remaining:</strong>
+    <span style="color: {{ 'red' if total_remaining < 0 else 'green' }}; font-weight:bold;">
+      ${{ '%.2f'|format(total_remaining) }}
+    </span>
+  </div>
 
-    <section class="resident-home-card">
-      <h3>Budget Month</h3>
-      <p>{{ budget['budget_month'] }}</p>
-      {% if budget_month_start and budget_month_end %}
-        <p style="color:#666;">Allowed dates: {{ budget_month_start }} to {{ budget_month_end }}</p>
-      {% endif %}
-    </section>
+  <!-- EXPENSE TABLE -->
+  <div style="margin-bottom:30px;">
+    <table style="width:100%; border-collapse:collapse;">
+      <tr>
+        <th align="left">Expense</th>
+        <th>Budget</th>
+        <th>Total</th>
+        <th>Difference</th>
+      </tr>
+      {% for item in expense_items %}
+      <tr style="cursor:pointer; border-top:1px solid #eee;"
+          onclick="window.location='{{ url_for('resident_portal.resident_budget', line_item_id=item.id) }}#transaction-entry'">
+        <td>{{ item.line_label }}</td>
+        <td>${{ '%.2f'|format(item.projected_value or 0) }}</td>
+        <td>${{ '%.2f'|format(item.actual_value or 0) }}</td>
+        <td style="font-weight:bold; color: {{ 'red' if item.actual_value > item.projected_value else 'green' }};">
+          ${{ '%.2f'|format((item.actual_value or 0) - (item.projected_value or 0)) }}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
 
-    <section class="resident-home-card">
-      <h3>Add Spending</h3>
+  <!-- TRANSACTION ENTRY -->
+  <div id="transaction-entry">
+    <h3>{{ selected_line_item.line_label if selected_line_item else 'Add Transaction' }}</h3>
+
+    <form method="post" style="margin-bottom:15px;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="line_item_id" value="{{ selected_line_item_id }}">
+
+      <input type="date" name="transaction_date" value="{{ budget_month_start or '' }}">
+      <input type="text" name="amount" placeholder="Amount">
+      <input type="text" name="merchant_or_note" placeholder="Note">
+
+      <button type="submit">Add</button>
+    </form>
+
+    <h4>Recent Transactions</h4>
+
+    {% for tx in recent_transactions %}
+    <div style="border:1px solid #ddd; padding:8px; margin-bottom:8px;">
+      {{ tx.line_label }} | {{ tx.transaction_date }} | ${{ '%.2f'|format(tx.amount) }}<br>
+
       <form method="post">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="edit_transaction">
+        <input type="hidden" name="transaction_id" value="{{ tx.id }}">
 
-        <label>Date</label>
-        <input type="date" name="transaction_date" required>
+        <input type="date" name="transaction_date" value="{{ tx.transaction_date }}">
+        <input type="text" name="amount" value="{{ tx.amount }}">
+        <input type="text" name="merchant_or_note" value="{{ tx.merchant_or_note }}">
+        <input type="hidden" name="line_item_id" value="{{ selected_line_item_id }}">
 
-        <label>Category</label>
-        <select name="line_item_id" required>
-          <option value="">Select</option>
-          {% for item in expense_items %}
-            <option value="{{ item['id'] }}">{{ item['line_label'] }}</option>
-          {% endfor %}
-        </select>
-
-        <label>Amount</label>
-        <input type="text" name="amount" required>
-
-        <label>Note</label>
-        <input type="text" name="merchant_or_note">
-
-        <button type="submit">Add</button>
+        <button type="submit">Update</button>
       </form>
-    </section>
 
-    <section class="resident-home-card">
-      <h3>Recent Spending</h3>
+      <form method="post">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="delete_transaction">
+        <input type="hidden" name="transaction_id" value="{{ tx.id }}">
+        <button type="submit">Delete</button>
+      </form>
+    </div>
+    {% endfor %}
 
-      {% for tx in recent_transactions %}
-        <div style="border:1px solid #ddd; padding:10px; margin-bottom:10px;">
-          <strong>{{ tx['line_label'] }}</strong><br>
-          {{ tx['transaction_date'] }} — {{ '%.2f'|format(tx['amount']) }}<br>
-          {{ tx['merchant_or_note'] }}
-
-          <form method="post" style="margin-top:8px;">
-            <input type="hidden" name="action" value="edit_transaction">
-            <input type="hidden" name="transaction_id" value="{{ tx['id'] }}">
-
-            <input type="date" name="transaction_date" value="{{ tx['transaction_date'] }}">
-            <input type="text" name="amount" value="{{ tx['amount'] }}">
-            <input type="text" name="merchant_or_note" value="{{ tx['merchant_or_note'] }}">
-
-            <select name="line_item_id">
-              {% for item in expense_items %}
-                <option value="{{ item['id'] }}" {% if item['line_label'] == tx['line_label'] %}selected{% endif %}>
-                  {{ item['line_label'] }}
-                </option>
-              {% endfor %}
-            </select>
-
-            <button type="submit">Update</button>
-          </form>
-
-          <form method="post">
-            <input type="hidden" name="action" value="delete_transaction">
-            <input type="hidden" name="transaction_id" value="{{ tx['id'] }}">
-            <button type="submit">Delete</button>
-          </form>
-        </div>
-      {% endfor %}
-
-    </section>
+  </div>
 
   {% endif %}
 
