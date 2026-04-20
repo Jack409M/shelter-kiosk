@@ -124,6 +124,13 @@ def _load_employment_income_settings(shelter: str) -> dict:
 
 
 
+def _stable_snapshot(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    return {}
+
+
+
 def _build_hard_blockers(*, blockers: list[str], has_disciplinary_block: bool, disciplinary_flags: list[str], rent_snapshot: dict | None, employment_income_snapshot: dict | None, employment_stability_snapshot: dict | None) -> list[str]:
     hard_blockers = list(blockers or [])
 
@@ -405,18 +412,20 @@ def promotion_review_view(resident_id: int):
         return redirect(url_for("case_management.promotion_review", resident_id=resident_id, saved=1))
 
     enrollment_context = load_enrollment_context(enrollment_id)
-    recovery_snapshot = load_recovery_snapshot(resident_id, enrollment_id)
-    attendance_snapshot = build_attendance_hours_snapshot(
-        resident_id=resident_id,
-        shelter=shelter,
-        enrollment_entry_date=enrollment.get("entry_date"),
+    recovery_snapshot = _stable_snapshot(load_recovery_snapshot(resident_id, enrollment_id))
+    attendance_snapshot = _stable_snapshot(
+        build_attendance_hours_snapshot(
+            resident_id=resident_id,
+            shelter=shelter,
+            enrollment_entry_date=enrollment.get("entry_date"),
+        )
     )
-    inspection_snapshot = build_inspection_stability_snapshot(resident_id, shelter=shelter)
-    rent_snapshot = build_rent_stability_snapshot(resident_id)
+    inspection_snapshot = _stable_snapshot(build_inspection_stability_snapshot(resident_id, shelter=shelter))
+    rent_snapshot = _stable_snapshot(build_rent_stability_snapshot(resident_id))
     disciplinary_flags = load_active_writeup_restrictions(resident_id)
     latest_review = _load_latest_promotion_review(enrollment_id)
     promotion_history = _load_promotion_audit_history(enrollment_id)
-    budget_score_snapshot = load_budget_score_snapshot(resident_id)
+    budget_score_snapshot = _stable_snapshot(load_budget_score_snapshot(resident_id))
 
     employment_income_settings = _load_employment_income_settings(shelter)
     intake_income_support = enrollment_context.get("intake_income_support") or {}
@@ -427,17 +436,21 @@ def promotion_review_view(resident_id: int):
         intake_assessment = enrollment_context.get("intake_assessment") or {}
         monthly_income_for_display = intake_assessment.get("income_at_entry")
 
-    employment_income_snapshot = build_employment_income_snapshot(
-        monthly_income_for_display,
-        employment_income_settings,
+    employment_income_snapshot = _stable_snapshot(
+        build_employment_income_snapshot(
+            monthly_income_for_display,
+            employment_income_settings,
+        )
     )
     employment_status_snapshot = resolve_employment_status_snapshot(
         recovery_snapshot,
         enrollment_context.get("intake_assessment"),
     )
-    employment_stability_snapshot = build_employment_stability_snapshot(
-        recovery_snapshot,
-        employment_status_snapshot=employment_status_snapshot,
+    employment_stability_snapshot = _stable_snapshot(
+        build_employment_stability_snapshot(
+            recovery_snapshot,
+            employment_status_snapshot=employment_status_snapshot,
+        )
     )
 
     pr = recovery_snapshot.get("promotion_readiness") or {}
