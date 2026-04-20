@@ -125,6 +125,12 @@
                 <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
                 <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
                 <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+                {% if inspection_sheet_url %}
+                  <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
+                {% endif %}
+                {% if rent_roll_url %}
+                  <a href="{{ rent_roll_url }}">Rent Roll</a>
+                {% endif %}
               </div>
             </div>
 
@@ -171,14 +177,8 @@
                   {% if operations_settings_url %}
                     <a href="{{ operations_settings_url }}">Configurations</a>
                   {% endif %}
-                  {% if rent_roll_url %}
-                    <a href="{{ rent_roll_url }}">Rent Roll</a>
-                  {% endif %}
                   {% if rent_entry_url %}
                     <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
-                  {% endif %}
-                  {% if inspection_sheet_url %}
-                    <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
                   {% endif %}
                   <a href="{{ url_for('admin.admin_users') }}">Users</a>
                   <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
