@@ -97,6 +97,7 @@
     <h3>Transactions</h3>
 
     <form method="post" style="margin-bottom:15px;">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="add_transaction">
 
       <input type="date" name="transaction_date">
@@ -131,6 +132,7 @@
         <td>{{ tx.merchant_or_note }}</td>
         <td>
           <form method="post" style="display:inline;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="delete_transaction">
             <input type="hidden" name="transaction_id" value="{{ tx.id }}">
             <button type="submit">Delete</button>
