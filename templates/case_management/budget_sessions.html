@@ -44,15 +44,20 @@
     <h2>All Budget Months</h2>
 
     {% for row in all_budget_rows %}
-      <div>
+      <div style="display:flex; gap:10px; align-items:center;">
         <strong>{{ row['budget_month_label'] }}</strong>
 
         <a
           class="app-btn-pill app-btn-pill-outline"
           href="{{ url_for('case_management.edit_budget_session', resident_id=resident['id'], budget_id=row['id']) }}"
         >
-          Open Budget
+          Open
         </a>
+
+        <form method="post" action="{{ url_for('case_management.delete_budget_session', resident_id=resident['id'], budget_id=row['id']) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button class="app-btn-pill" type="submit">Delete</button>
+        </form>
       </div>
     {% endfor %}
   </section>
