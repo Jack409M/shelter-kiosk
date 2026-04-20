@@ -1,16 +1,15 @@
 from __future__ import annotations
 
+import routes.resident_portal as portal
 from flask import current_app
 
 from core.access import require_resident
 from core.resident_portal_service import get_today_chores
 from routes.resident_portal import resident_portal
-import routes.resident_portal as portal
 from routes.resident_portal_parts.helpers import (
     _clear_resident_session,
     _load_active_pass_item,
     _load_recent_notification_items,
-    _load_recent_pass_items as _load_recent_pass_items_helper,
     _load_recent_transport_items,
     _load_resident_program_level,
     _prepare_resident_request_context,
