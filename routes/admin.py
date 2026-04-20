@@ -169,3 +169,5 @@ def admin_clear_demo_data():
 @require_shelter
 def admin_run_pass_cleanup():
     return run_pass_cleanup()
+
+
