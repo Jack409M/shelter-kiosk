@@ -49,6 +49,7 @@ def staff_attendance():
 @attendance.route("/staff/attendance/<int:resident_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance_check_in(resident_id: int):
     return staff_attendance_check_in_view(resident_id)
 
@@ -56,6 +57,7 @@ def staff_attendance_check_in(resident_id: int):
 @attendance.route("/staff/attendance/check-out", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance_check_out_global():
     return staff_attendance_check_out_global_view()
 
@@ -63,6 +65,7 @@ def staff_attendance_check_out_global():
 @attendance.route("/staff/attendance/<int:resident_id>/edit-open")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance_edit_open(resident_id: int):
     return staff_attendance_edit_open_view(resident_id)
 
@@ -70,6 +73,7 @@ def staff_attendance_edit_open(resident_id: int):
 @attendance.route("/staff/attendance/<int:resident_id>/edit-open", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance_edit_open_submit(resident_id: int):
     return staff_attendance_edit_open_submit_view(resident_id)
 
@@ -77,6 +81,7 @@ def staff_attendance_edit_open_submit(resident_id: int):
 @attendance.route("/staff/attendance/<int:resident_id>/edit-last")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance_edit_last(resident_id: int):
     return staff_attendance_edit_last_view(resident_id)
 
@@ -84,6 +89,7 @@ def staff_attendance_edit_last(resident_id: int):
 @attendance.route("/staff/attendance/<int:resident_id>/edit-last", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance_edit_last_submit(resident_id: int):
     return staff_attendance_edit_last_submit_view(resident_id)
 
@@ -91,6 +97,7 @@ def staff_attendance_edit_last_submit(resident_id: int):
 @attendance.route("/staff/attendance/resident/<int:resident_id>/print")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance_resident_print(resident_id: int):
     return staff_attendance_resident_print_view(resident_id)
 
@@ -98,6 +105,7 @@ def staff_attendance_resident_print(resident_id: int):
 @attendance.route("/staff/attendance/print_today")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance_print_today():
     return staff_attendance_print_today_view()
 
@@ -105,6 +113,7 @@ def staff_attendance_print_today():
 @attendance.route("/staff/passes/pending")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_passes_pending():
     return staff_passes_pending_view()
 
@@ -112,6 +121,7 @@ def staff_passes_pending():
 @attendance.route("/staff/passes/approved")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_passes_approved():
     return staff_passes_approved_view()
 
@@ -119,6 +129,7 @@ def staff_passes_approved():
 @attendance.route("/staff/passes/away-now")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_passes_away_now():
     return staff_passes_away_now_view()
 
@@ -126,6 +137,7 @@ def staff_passes_away_now():
 @attendance.route("/staff/passes/overdue")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_passes_overdue():
     return staff_passes_overdue_view()
 
@@ -133,6 +145,7 @@ def staff_passes_overdue():
 @attendance.route("/staff/passes/<int:pass_id>")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_detail(pass_id: int):
     return staff_pass_detail_view(pass_id)
 
@@ -140,6 +153,7 @@ def staff_pass_detail(pass_id: int):
 @attendance.route("/staff/passes/<int:pass_id>/approve", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_approve(pass_id: int):
     return staff_pass_approve_view(pass_id)
 
@@ -147,6 +161,7 @@ def staff_pass_approve(pass_id: int):
 @attendance.route("/staff/passes/approve/<int:pass_id>", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_approve_legacy_post(pass_id: int):
     return staff_pass_approve_view(pass_id)
 
@@ -154,6 +169,7 @@ def staff_pass_approve_legacy_post(pass_id: int):
 @attendance.route("/staff/passes/approve/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_approve_legacy_get(pass_id: int):
     return staff_pass_approve_view(pass_id)
 
@@ -161,6 +177,7 @@ def staff_pass_approve_legacy_get(pass_id: int):
 @attendance.route("/staff/passes/<int:pass_id>/deny", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_deny(pass_id: int):
     return staff_pass_deny_view(pass_id)
 
@@ -168,6 +185,7 @@ def staff_pass_deny(pass_id: int):
 @attendance.route("/staff/passes/deny/<int:pass_id>", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_deny_legacy_post(pass_id: int):
     return staff_pass_deny_view(pass_id)
 
@@ -175,6 +193,7 @@ def staff_pass_deny_legacy_post(pass_id: int):
 @attendance.route("/staff/passes/deny/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_deny_legacy_get(pass_id: int):
     return staff_pass_deny_view(pass_id)
 
@@ -182,6 +201,7 @@ def staff_pass_deny_legacy_get(pass_id: int):
 @attendance.route("/staff/passes/<int:pass_id>/check-in", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_check_in(pass_id: int):
     return staff_pass_check_in_view(pass_id)
 
@@ -189,6 +209,7 @@ def staff_pass_check_in(pass_id: int):
 @attendance.route("/staff/passes/check-in/<int:pass_id>", methods=["POST"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_check_in_legacy_post(pass_id: int):
     return staff_pass_check_in_view(pass_id)
 
@@ -196,5 +217,6 @@ def staff_pass_check_in_legacy_post(pass_id: int):
 @attendance.route("/staff/passes/check-in/<int:pass_id>", methods=["GET"])
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_check_in_legacy_get(pass_id: int):
     return staff_pass_check_in_view(pass_id)
