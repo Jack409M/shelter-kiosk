@@ -359,9 +359,6 @@ def staff_select_shelter():
     if nxt and nxt.startswith("/staff"):
         return redirect(nxt)
 
-    if session.get("role") == "admin":
-        return redirect(url_for("admin.admin_dashboard"))
-
     if session.get("role") == "demographics_viewer":
         return redirect(url_for("reports.reports_index"))
 
