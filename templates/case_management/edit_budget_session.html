@@ -5,9 +5,9 @@
   <h2>{{ budget_row.budget_month_label }}</h2>
 
   <div style="display:flex; gap:20px; margin-bottom:20px;">
-    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Income</strong><br>${{ '%.2f'|format(total_income) }}</div>
-    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Expenses</strong><br>${{ '%.2f'|format(total_expenses) }}</div>
-    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Balance</strong><br><span style="color: {{ 'red' if balance < 0 else 'green' }};">${{ '%.2f'|format(balance) }}</span></div>
+    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Projected Budget Income</strong><br>${{ '%.2f'|format(total_income) }}</div>
+    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Actual Expenses</strong><br>${{ '%.2f'|format(total_expenses) }}</div>
+    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Remaining Budget</strong><br><span style="color: {{ 'red' if balance < 0 else 'green' }};">${{ '%.2f'|format(balance) }}</span></div>
   </div>
 
   <form method="post">
