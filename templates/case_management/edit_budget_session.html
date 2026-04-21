@@ -2,7 +2,12 @@
 
 {% block content %}
 <div style="max-width:1200px; margin:0 auto;">
-  <h2>{{ budget_row.budget_month_label }}</h2>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:20px;">
+    <h2 style="margin:0;">{{ budget_row.budget_month_label }}</h2>
+    <a href="{{ url_for('case_management.print_budget', resident_id=resident.id, budget_id=budget_row.id) }}" target="_blank" rel="noopener">
+      <button type="button">Print Budget</button>
+    </a>
+  </div>
 
   <div style="display:flex; gap:20px; margin-bottom:20px;">
     <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Projected Budget Income</strong><br>${{ '%.2f'|format(total_income) }}</div>
