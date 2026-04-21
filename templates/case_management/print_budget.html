@@ -7,103 +7,197 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 40px;
+            margin: 48px 56px;
             color: #1f2d3d;
+            background: #ffffff;
         }
 
         h1 {
-            margin-bottom: 5px;
+            margin: 0;
+            font-size: 34px;
+            font-weight: 700;
         }
 
         .top-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
+            align-items: flex-start;
+            gap: 40px;
+            margin-bottom: 56px;
         }
 
         .summary-box {
-            border: 1px solid #ccc;
-            padding: 10px 15px;
-            width: 250px;
+            width: 530px;
+            border: 1px solid #d8dee8;
+            border-bottom: none;
         }
 
-        .summary-box div {
+        .summary-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 5px;
+            align-items: center;
+            min-height: 56px;
+            padding: 0 18px;
+            border-bottom: 1px solid #d8dee8;
+            font-size: 18px;
+        }
+
+        .summary-value {
+            font-weight: 700;
         }
 
         .section-title {
-            margin-top: 25px;
-            margin-bottom: 10px;
-            font-weight: bold;
-            font-size: 18px;
+            margin: 0 0 18px 0;
+            font-weight: 700;
+            font-size: 26px;
         }
 
         .income-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 56px;
+            margin-bottom: 38px;
         }
 
-        .income-item {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 1px solid #eee;
-            padding: 4px 0;
-        }
-
-        table {
+        .income-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            table-layout: fixed;
         }
 
-        th, td {
-            border: 1px solid #ccc;
-            padding: 6px;
+        .income-table td {
+            border: 1px solid #d8dee8;
+            padding: 0;
+            height: 52px;
+            font-size: 18px;
+        }
+
+        .income-label {
+            padding: 0 14px;
+            width: 72%;
+        }
+
+        .income-value-cell {
+            width: 28%;
+            padding: 6px 10px !important;
+        }
+
+        .value-box {
+            border: 2px solid #8f98a3;
+            border-radius: 4px;
+            background: #ffffff;
+            height: 40px;
+            line-height: 40px;
+            padding: 0 12px;
+            text-align: left;
+            font-size: 18px;
+            color: #2a3440;
+        }
+
+        .expense-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 4px;
+        }
+
+        .expense-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .expense-table th,
+        .expense-table td {
+            border: 1px solid #d8dee8;
+            padding: 10px 10px;
+            font-size: 16px;
+        }
+
+        .expense-table th {
+            background: #ffffff;
+            font-weight: 700;
             text-align: left;
         }
 
-        th {
-            background: #f5f5f5;
+        .expense-table td.money,
+        .expense-table th.money {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .month-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 48px;
+        }
+
+        .month-line {
+            flex: 1;
+            border-top: 1px solid #d8dee8;
+            height: 1px;
         }
 
         .month {
+            font-size: 28px;
+            font-weight: 700;
             text-align: center;
-            margin-top: 30px;
-            font-size: 20px;
-            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .no-print {
+            margin-bottom: 24px;
+        }
+
+        .no-print button {
+            padding: 10px 16px;
+            font-size: 15px;
+            border: 1px solid #b8c0ca;
+            background: #ffffff;
+            cursor: pointer;
         }
 
         @media print {
-            button {
-                display: none;
+            @page {
+                size: portrait;
+                margin: 0.5in;
+            }
+
+            body {
+                margin: 0;
+                background: #ffffff;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .no-print {
+                display: none !important;
             }
         }
     </style>
 </head>
 
 <body>
-
-    <h1>{{ resident_name }}</h1>
+    <div class="no-print">
+        <button type="button" onclick="window.print()">Print</button>
+    </div>
 
     <div class="top-row">
-        <div></div>
+        <h1>{{ resident_name }}</h1>
 
         <div class="summary-box">
-            <div>
+            <div class="summary-row">
                 <span>Projected Budget Income</span>
-                <span>${{ '%.2f'|format(total_income) }}</span>
+                <span class="summary-value">${{ '%.2f'|format(total_income or 0) }}</span>
             </div>
-            <div>
+            <div class="summary-row">
                 <span>Actual Expenses</span>
-                <span>${{ '%.2f'|format(total_expenses) }}</span>
+                <span class="summary-value">${{ '%.2f'|format(total_expenses or 0) }}</span>
             </div>
-            <div>
+            <div class="summary-row">
                 <span>Remaining Budget</span>
-                <span>${{ '%.2f'|format(balance) }}</span>
+                <span class="summary-value">${{ '%.2f'|format(balance or 0) }}</span>
             </div>
         </div>
     </div>
@@ -111,44 +205,75 @@
     <div class="section-title">Income</div>
 
     <div class="income-grid">
-        <div>
+        <table class="income-table">
             {% for item in income_left %}
-            <div class="income-item">
-                <span>{{ item.label }}</span>
-                <span>${{ '%.2f'|format(item.amount or 0) }}</span>
-            </div>
+            <tr>
+                <td class="income-label">{{ item.label }}</td>
+                <td class="income-value-cell">
+                    <div class="value-box">${{ '%.2f'|format(item.amount or 0) }}</div>
+                </td>
+            </tr>
             {% endfor %}
-        </div>
+        </table>
 
-        <div>
+        <table class="income-table">
             {% for item in income_right %}
-            <div class="income-item">
-                <span>{{ item.label }}</span>
-                <span>${{ '%.2f'|format(item.amount or 0) }}</span>
-            </div>
+            <tr>
+                <td class="income-label">{{ item.label }}</td>
+                <td class="income-value-cell">
+                    <div class="value-box">${{ '%.2f'|format(item.amount or 0) }}</div>
+                </td>
+            </tr>
             {% endfor %}
-        </div>
+        </table>
     </div>
 
-    <table>
-        <tr>
-            <th>Expense</th>
-            <th>Budget</th>
-            <th>Total</th>
-            <th>Difference</th>
-        </tr>
+    {% set split_index = ((expenses|length + 1) // 2) %}
+    {% set expenses_left = expenses[:split_index] %}
+    {% set expenses_right = expenses[split_index:] %}
 
-        {% for item in expenses %}
-        <tr>
-            <td>{{ item.label }}</td>
-            <td>${{ '%.2f'|format(item.budget or 0) }}</td>
-            <td>${{ '%.2f'|format(item.actual or 0) }}</td>
-            <td>${{ '%.2f'|format(item.diff or 0) }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+    <div class="expense-grid">
+        <table class="expense-table">
+            <tr>
+                <th style="width: 56%;">Expense</th>
+                <th class="money" style="width: 14%;">Budget</th>
+                <th class="money" style="width: 14%;">Total</th>
+                <th class="money" style="width: 16%;">Difference</th>
+            </tr>
 
-    <div class="month">{{ budget_month }}</div>
+            {% for item in expenses_left %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="money">${{ '%.2f'|format(item.budget or 0) }}</td>
+                <td class="money">${{ '%.2f'|format(item.actual or 0) }}</td>
+                <td class="money"><strong>${{ '%.2f'|format(item.diff or 0) }}</strong></td>
+            </tr>
+            {% endfor %}
+        </table>
 
+        <table class="expense-table">
+            <tr>
+                <th style="width: 56%;">Expense</th>
+                <th class="money" style="width: 14%;">Budget</th>
+                <th class="money" style="width: 14%;">Total</th>
+                <th class="money" style="width: 16%;">Difference</th>
+            </tr>
+
+            {% for item in expenses_right %}
+            <tr>
+                <td>{{ item.label }}</td>
+                <td class="money">${{ '%.2f'|format(item.budget or 0) }}</td>
+                <td class="money">${{ '%.2f'|format(item.actual or 0) }}</td>
+                <td class="money"><strong>${{ '%.2f'|format(item.diff or 0) }}</strong></td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <div class="month-row">
+        <div class="month-line"></div>
+        <div class="month">{{ budget_month }}</div>
+        <div class="month-line"></div>
+    </div>
 </body>
 </html>
