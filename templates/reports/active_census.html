@@ -1,0 +1,149 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315o') }}">
+{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="reports-header card">
+    <div>
+      <h1>Active Census Report</h1>
+      <p class="reports-subtitle">
+        {{ report.scope_label }} • Active residents as of {{ report.as_of_date }}
+      </p>
+    </div>
+  </div>
+
+  <form method="get" class="card" style="margin-bottom:16px;">
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:end;">
+      <div>
+        <label>Scope</label>
+        <select name="scope">
+          {% for opt in report.scope_options %}
+            <option value="{{ opt.value }}" {% if opt.value == report.scope %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <button class="btn btn-primary" type="submit">Apply</button>
+      </div>
+
+      <div>
+        <button class="btn" type="button" onclick="window.print()">Save Board PDF</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h2>Program Snapshot</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Active Residents</div>
+        <div class="stat-value">{{ report.total_occupied }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Capacity</div>
+        <div class="stat-value">{{ report.total_capacity }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Open Spaces</div>
+        <div class="stat-value">{{ report.total_open_spaces }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Occupancy Rate</div>
+        <div class="stat-value">{{ report.total_occupancy_rate }}%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Average Days In Program</div>
+        <div class="stat-value">{{ report.average_days_in_program }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Longest Stay (Days)</div>
+        <div class="stat-value">{{ report.longest_stay_days }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <h2>Shelter Capacity</h2>
+    <div class="capacity-bars">
+      {% for item in report.shelter_rows %}
+        <div class="capacity-row">
+          <div class="capacity-header">
+            <div class="capacity-name">{{ item.label }}</div>
+            <div class="capacity-meta">
+              {{ item.occupied_display }} / {{ item.capacity }} occupied • {{ item.open_spaces_display }} open • {{ item.occupancy_rate }}%
+            </div>
+          </div>
+
+          <div class="capacity-bar-wrap">
+            <div class="capacity-bar" style="width: {{ item.occupancy_rate }}%;"></div>
+          </div>
+        </div>
+      {% else %}
+        <div class="distribution-empty">No capacity data available.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Active Resident Roster</h2>
+    <table class="compact">
+      <thead>
+        <tr>
+          <th>Resident</th>
+          <th>ID</th>
+          <th>Shelter</th>
+          <th>Entry Date</th>
+          <th>Days In Program</th>
+          <th>Level</th>
+          <th>RAD</th>
+          <th>Case Manager</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.resident_rows %}
+        <tr>
+          <td>{{ row.resident_name }}</td>
+          <td>{{ row.resident_display_id }}</td>
+          <td>{{ row.shelter_label }}</td>
+          <td>{{ row.entry_date }}</td>
+          <td>{{ row.days_in_program }}</td>
+          <td>{{ row.program_level }}</td>
+          <td>{{ row.rad_status }}</td>
+          <td>{{ row.case_manager_label }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8">No active residents found for this scope.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .stat-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-soft);
+    padding: 12px 14px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+  }
+</style>
+{% endblock %}
