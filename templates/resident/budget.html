@@ -5,6 +5,13 @@
 
   <h2>My Budget</h2>
 
+  <div style="margin: 0 0 16px 0;">
+    <a href="{{ url_for('resident_portal.home') }}"
+       style="display:inline-block; padding:10px 14px; background:#444; color:#fff; text-decoration:none; border-radius:8px;">
+      Back to Main Screen
+    </a>
+  </div>
+
   {% if not budget %}
     <p>No budget available. See your case manager.</p>
   {% else %}
