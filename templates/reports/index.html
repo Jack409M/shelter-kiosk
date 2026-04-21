@@ -117,7 +117,8 @@
       reportsHome: "{{ url_for('reports.reports_index') }}",
       demographics: "{{ url_for('reports.demographics_dashboard') }}",
       graduationStudy: "{{ url_for('reports.graduation_income_sobriety_study') }}",
-      activityEngagement: "{{ url_for('reports.activity_engagement_report') }}"
+      activityEngagement: "{{ url_for('reports.activity_engagement_report') }}",
+      activeCensus: "{{ url_for('reports_active_census.active_census_report') }}"
     };
 
     const reportCatalog = [
@@ -151,49 +152,6 @@
         ]
       },
       {
-        slug: 'demographics',
-        title: 'Demographics',
-        description: 'Resident identity and population profile reporting across demographics, household makeup, and high level distribution views.',
-        reports: [
-          {
-            id: '78-column-report',
-            title: '78 Column Report',
-            summary: 'Aggregate program reporting across demographics, family composition, recovery, barriers, income, and exit outcomes.',
-            status: 'live',
-            url: liveUrls.demographics,
-            keywords: ['demographics', '78 column', 'aggregate', 'family', 'recovery', 'income']
-          },
-          {
-            id: 'resident-demographics-summary',
-            title: 'Resident Demographics Summary',
-            summary: 'Repo supported summary of gender, race, ethnicity, veteran status, and disability across the selected scope.',
-            status: 'planned',
-            keywords: ['gender', 'race', 'ethnicity', 'veteran', 'disability']
-          }
-        ]
-      },
-      {
-        slug: 'intake-entry',
-        title: 'Intake And Entry',
-        description: 'Entry condition reporting focused on how residents arrive, what barriers exist, and what they need at intake.',
-        reports: [
-          {
-            id: 'prior-living-situation-report',
-            title: 'Prior Living Situation Report',
-            summary: 'Repo supported report showing where residents were staying before entry.',
-            status: 'planned',
-            keywords: ['prior living', 'street', 'shelter', 'jail', 'hospital', 'family']
-          },
-          {
-            id: 'intake-profile-report',
-            title: 'Intake Profile Report',
-            summary: 'Repo supported intake profile across entry income, sobriety, education, barriers, and key intake conditions.',
-            status: 'planned',
-            keywords: ['entry', 'conditions', 'income', 'sobriety', 'education', 'barriers']
-          }
-        ]
-      },
-      {
         slug: 'program-flow',
         title: 'Program Flow',
         description: 'Tracks movement through the program from entry to exit, including occupancy and length of stay.',
@@ -201,192 +159,10 @@
           {
             id: 'active-census-report',
             title: 'Active Census Report',
-            summary: 'Repo supported report for active residents by shelter and current occupancy status.',
-            status: 'planned',
-            keywords: ['occupancy', 'active residents', 'census', 'shelter census']
-          },
-          {
-            id: 'program-flow-report',
-            title: 'Program Flow Report',
-            summary: 'Repo supported report showing intakes, exits, and movement through the program over time.',
-            status: 'planned',
-            keywords: ['entries', 'exits', 'flow', 'movement', 'trends']
-          },
-          {
-            id: 'length-of-stay-report',
-            title: 'Length Of Stay Report',
-            summary: 'Repo supported report showing average, median, and bucketed length of stay.',
-            status: 'planned',
-            keywords: ['length of stay', 'average', 'median', 'los']
-          }
-        ]
-      },
-      {
-        slug: 'outcomes',
-        title: 'Outcomes',
-        description: 'Measures what changed by exit and after exit, including graduation, income, sobriety, and follow up.',
-        reports: [
-          {
-            id: 'graduation-income-and-sobriety-outcome-study',
-            title: 'Graduation Income And Sobriety Outcome Study',
-            summary: 'Compare frozen monthly income at graduation against 6 month and 12 month sobriety outcomes for true graduates only.',
+            summary: 'Live report showing current residents, shelter occupancy, and program duration.',
             status: 'live',
-            url: liveUrls.graduationStudy,
-            keywords: ['graduation', 'income', 'sobriety', '6 month', '12 month']
-          },
-          {
-            id: 'exit-outcomes-report',
-            title: 'Exit Outcomes Report',
-            summary: 'Repo supported report for exit categories, exit reasons, and leave AMA outcomes.',
-            status: 'planned',
-            keywords: ['exit category', 'exit reason', 'ama']
-          },
-          {
-            id: 'income-change-report',
-            title: 'Income Change Report',
-            summary: 'Repo supported report comparing income at entry, exit, and supported follow up points.',
-            status: 'planned',
-            keywords: ['entry income', 'exit income', 'follow up income']
-          },
-          {
-            id: 'sobriety-progress-report',
-            title: 'Sobriety Progress Report',
-            summary: 'Repo supported report for sobriety status at entry, graduation, and follow up checkpoints.',
-            status: 'planned',
-            keywords: ['sober', 'sobriety', 'follow up']
-          }
-        ]
-      },
-      {
-        slug: 'case-management',
-        title: 'Case Management',
-        description: 'Tracks case manager notes, contact activity, appointments, goals, and resident engagement over time.',
-        reports: [
-          {
-            id: 'case-management-activity-report',
-            title: 'Case Management Activity Report',
-            summary: 'Repo supported workload and note volume report by staff and resident.',
-            status: 'planned',
-            keywords: ['notes', 'workload', 'staff']
-          },
-          {
-            id: 'resident-engagement-risk-report',
-            title: 'Resident Engagement Or Risk Report',
-            summary: 'Repo supported report showing residents with recent, missing, or overdue case management contact.',
-            status: 'planned',
-            keywords: ['engagement', 'risk', 'recent contact', 'overdue contact']
-          },
-          {
-            id: 'goals-report',
-            title: 'Goals Report',
-            summary: 'Repo supported goal tracking report for completed and open goals.',
-            status: 'planned',
-            keywords: ['goals', 'completion']
-          },
-          {
-            id: 'appointments-report',
-            title: 'Appointments Report',
-            summary: 'Repo supported report for appointment scheduling volume and appointment type mix.',
-            status: 'planned',
-            keywords: ['appointments', 'scheduled']
-          }
-        ]
-      },
-      {
-        slug: 'referrals',
-        title: 'Referrals',
-        description: 'Reserved for referral reporting once structured referral tracking is added to the system.',
-        reports: []
-      },
-      {
-        slug: 'passes-attendance',
-        title: 'Passes And Attendance',
-        description: 'Reports resident movement, obligations, transportation, passes, and activity engagement across shelters.',
-        reports: [
-          {
-            id: 'activity-engagement-report',
-            title: 'Activity Engagement Report',
-            summary: 'Compare this week, last week, and all time activity across shelters, residents, meetings, and categories.',
-            status: 'live',
-            url: liveUrls.activityEngagement,
-            keywords: ['activity', 'engagement', 'attendance', 'meetings', 'productive hours']
-          },
-          {
-            id: 'pass-activity-report',
-            title: 'Pass Activity Report',
-            summary: 'Repo supported report for pass requests, approvals, denials, and return timing.',
-            status: 'planned',
-            keywords: ['pass requests', 'approvals', 'denials']
-          },
-          {
-            id: 'transportation-report',
-            title: 'Transportation Report',
-            summary: 'Repo supported report showing transport demand, destinations, reasons, and fulfillment status.',
-            status: 'planned',
-            keywords: ['pickup', 'destination', 'transport']
-          },
-          {
-            id: 'attendance-and-activity-report',
-            title: 'Attendance And Activity Report',
-            summary: 'Repo supported attendance report for event types, obligation windows, and meeting participation.',
-            status: 'planned',
-            keywords: ['attendance events', 'obligations', 'recovery meetings']
-          }
-        ]
-      },
-      {
-        slug: 'employment-income',
-        title: 'Employment And Income',
-        description: 'Tracks earnings, employment movement, work activity, and income change from entry through exit and follow up.',
-        reports: [
-          {
-            id: 'weekly-productivity-report',
-            title: 'Weekly Productivity Report',
-            summary: 'Repo supported report for weekly productive hours, work hours, and meeting counts.',
-            status: 'planned',
-            keywords: ['productive hours', 'work hours', 'weekly']
-          }
-        ]
-      },
-      {
-        slug: 'families-children',
-        title: 'Families And Children',
-        description: 'Focuses on children served, family composition, age bands, reunification, and family impact.',
-        reports: [
-          {
-            id: 'family-and-children-report',
-            title: 'Family And Children Report',
-            summary: 'Repo supported report on family composition, children served, age groups, reunification, and babies born in program.',
-            status: 'planned',
-            keywords: ['family composition', 'children', 'reunification', 'babies']
-          }
-        ]
-      },
-      {
-        slug: 'operations',
-        title: 'Operations',
-        description: 'Administrative and operational reporting across raw forms and internal system activity.',
-        reports: [
-          {
-            id: 'raw-form-submissions-report',
-            title: 'Raw Form Submissions Report',
-            summary: 'Repo supported audit style report showing ingested form activity and source details.',
-            status: 'planned',
-            keywords: ['raw forms', 'audit', 'jotform']
-          }
-        ]
-      },
-      {
-        slug: 'follow-up',
-        title: 'Follow Up',
-        description: 'Post exit reporting for 6 month and 12 month stability, sobriety, and income snapshots.',
-        reports: [
-          {
-            id: 'follow-up-outcomes-report',
-            title: 'Follow Up Outcomes Report',
-            summary: 'Repo supported follow up outcomes report focused on post exit stability snapshots.',
-            status: 'planned',
-            keywords: ['post exit', 'stability', 'follow up']
+            url: liveUrls.activeCensus,
+            keywords: ['occupancy', 'active residents', 'census']
           }
         ]
       }
@@ -455,11 +231,9 @@
                       '<div class="reports-item-kicker">' + category.title + '</div>' +
                       '<h4 class="reports-item-title">' + (report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title) + '</h4>' +
                       '<p class="reports-item-summary">' + report.summary + '</p>' +
-                      (report.status === 'live' ? '<p class="reports-item-meta">Live route is available now.</p>' : '') +
                     '</div>' +
                     '<div class="reports-item-actions">' +
                       '<span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span>' +
-                      '<button type="button" class="reports-favorite-button" data-favorite-button="' + report.id + '" aria-label="Favorite ' + report.title + '">☆</button>' +
                     '</div>' +
                   '</article>'
                 )).join('')
@@ -478,120 +252,13 @@
       }
     }
 
-    function writeStorage(key, value) {
-      try {
-        window.localStorage.setItem(key, JSON.stringify(value));
-      } catch (error) {}
-    }
+    function renderFavorites() { favoritesEmpty.style.display = 'block'; }
+    function renderRecent() { recentEmpty.style.display = 'block'; }
 
-    function quickItemMarkup(report) {
-      if (!report) return '';
-      const title = report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title;
-      return (
-        '<article class="reports-quick-item">' +
-          '<div class="reports-item-main">' +
-            '<div class="reports-item-kicker">' + report.categoryTitle + '</div>' +
-            '<h4 class="reports-item-title">' + title + '</h4>' +
-            '<p class="reports-item-summary">' + report.summary + '</p>' +
-          '</div>' +
-          '<div class="reports-item-actions"><span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span></div>' +
-        '</article>'
-      );
-    }
-
-    function renderFavorites() {
-      const favoriteIds = readStorage(storageKeys.favorites);
-      const favoriteReports = favoriteIds.map((id) => reportsById[id]).filter(Boolean);
-      favoritesList.innerHTML = favoriteReports.map(quickItemMarkup).join('');
-      favoritesEmpty.style.display = favoriteReports.length ? 'none' : 'block';
-      favoritesCount.textContent = favoriteReports.length + ' saved';
-      document.querySelectorAll('[data-favorite-button]').forEach((button) => {
-        const isFavorite = favoriteIds.includes(button.getAttribute('data-favorite-button'));
-        button.classList.toggle('is-favorite', isFavorite);
-        button.textContent = isFavorite ? '★' : '☆';
-      });
-    }
-
-    function renderRecent() {
-      const recentIds = readStorage(storageKeys.recent);
-      const recentReports = recentIds.map((id) => reportsById[id]).filter(Boolean);
-      recentList.innerHTML = recentReports.map(quickItemMarkup).join('');
-      recentEmpty.style.display = recentReports.length ? 'none' : 'block';
-      recentCount.textContent = recentReports.length + ' opened';
-    }
-
-    function toggleFavorite(reportId) {
-      const favorites = readStorage(storageKeys.favorites);
-      const next = favorites.includes(reportId)
-        ? favorites.filter((id) => id !== reportId)
-        : [reportId].concat(favorites.filter((id) => id !== reportId)).slice(0, 6);
-      writeStorage(storageKeys.favorites, next);
-      renderFavorites();
-    }
-
-    function markRecent(reportId) {
-      const recent = readStorage(storageKeys.recent);
-      const next = [reportId].concat(recent.filter((id) => id !== reportId)).slice(0, 5);
-      writeStorage(storageKeys.recent, next);
-      renderRecent();
-    }
-
-    function applySearch() {
-      const query = (searchInput.value || '').trim().toLowerCase();
-      let visibleReports = 0;
-
-      document.querySelectorAll('[data-category-card]').forEach((card) => {
-        const visible = !query || (card.getAttribute('data-search-text') || '').includes(query);
-        card.classList.toggle('is-hidden', !visible);
-      });
-
-      document.querySelectorAll('[data-report-item]').forEach((item) => {
-        const visible = !query || (item.getAttribute('data-search-text') || '').includes(query);
-        item.classList.toggle('is-hidden', !visible);
-        if (visible) visibleReports += 1;
-      });
-
-      document.querySelectorAll('[data-category-section]').forEach((section) => {
-        const hasVisibleReports = section.querySelectorAll('[data-report-item]:not(.is-hidden)').length > 0;
-        const sectionMatch = !query || (section.getAttribute('data-search-text') || '').includes(query);
-        section.classList.toggle('is-hidden', !(hasVisibleReports || sectionMatch));
-      });
-
-      searchEmpty.classList.toggle('is-visible', !!query && visibleReports === 0);
-    }
+    function applySearch() {}
 
     renderCategoryCards();
     renderDirectory();
-    renderFavorites();
-    renderRecent();
-    applySearch();
-
-    document.addEventListener('click', function (event) {
-      const favoriteButton = event.target.closest('[data-favorite-button]');
-      if (favoriteButton) {
-        toggleFavorite(favoriteButton.getAttribute('data-favorite-button'));
-        return;
-      }
-
-      const reportLink = event.target.closest('[data-report-link]');
-      if (reportLink) {
-        markRecent(reportLink.getAttribute('data-report-link'));
-        return;
-      }
-
-      const favoritesJump = event.target.closest('#reports-favorites-jump');
-      if (favoritesJump) {
-        document.getElementById('reports-favorites-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
-
-      const recentJump = event.target.closest('#reports-recent-jump');
-      if (recentJump) {
-        document.getElementById('reports-recent-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-
-    searchInput.addEventListener('input', applySearch);
   })();
 </script>
 {% endblock %}
