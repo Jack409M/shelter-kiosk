@@ -46,6 +46,7 @@
       {% set endpoint = request.endpoint or '' %}
       {% set is_resident_signin_page = endpoint in ['resident_signin', 'resident_portal.signin'] %}
       {% set is_public_home = endpoint == 'public.public_home' %}
+      {% set is_resident_home = endpoint == 'resident_portal.home' %}
       {% set show_logged_out_nav = (not session.get('staff_user_id')) and (not session.get('resident_id')) and (not is_resident_signin_page) and (not is_public_home) %}
 
       {% set residents_url = safe_url_for('residents.staff_residents') %}
@@ -77,6 +78,11 @@
               <a href="{{ calendar_url }}">Calendar</a>
             {% endif %}
             <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
+          {% elif session.get("resident_id") %}
+            {% if not is_resident_home %}
+              <a href="{{ url_for('resident_portal.home') }}">Back to Home</a>
+            {% endif %}
+            <a href="{{ url_for('resident_requests.resident_logout') }}">Sign Out</a>
           {% elif show_logged_out_nav %}
             <a href="{{ url_for('resident_requests.resident_signin') }}">Resident Sign In</a>
             <a href="{{ url_for('auth.staff_login') }}">Staff Login</a>
@@ -190,6 +196,11 @@
             <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
             <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
 
+          {% elif session.get("resident_id") %}
+            {% if not is_resident_home %}
+              <a href="{{ url_for('resident_portal.home') }}">Back to Home</a>
+            {% endif %}
+            <a href="{{ url_for('resident_requests.resident_logout') }}">Sign Out</a>
           {% elif show_logged_out_nav %}
             <a href="{{ url_for('resident_requests.resident_signin') }}">Resident Sign In</a>
             <a href="{{ url_for('auth.staff_login') }}">Staff Login</a>
