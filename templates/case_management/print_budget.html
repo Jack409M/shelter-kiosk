@@ -7,27 +7,35 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 48px 56px;
+            margin: 28px 34px;
             color: #1f2d3d;
             background: #ffffff;
         }
 
         h1 {
             margin: 0;
-            font-size: 34px;
+            font-size: 28px;
             font-weight: 700;
+            line-height: 1.05;
         }
 
         .top-row {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            gap: 40px;
-            margin-bottom: 56px;
+            gap: 28px;
+            margin-bottom: 28px;
+        }
+
+        .name-block {
+            width: 230px;
+            flex: 0 0 230px;
+            padding-top: 4px;
         }
 
         .summary-box {
-            width: 530px;
+            flex: 1;
+            max-width: 560px;
             border: 1px solid #d8dee8;
             border-bottom: none;
         }
@@ -36,27 +44,29 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            min-height: 56px;
-            padding: 0 18px;
+            min-height: 44px;
+            padding: 4px 16px;
             border-bottom: 1px solid #d8dee8;
-            font-size: 18px;
+            font-size: 14px;
         }
 
         .summary-value {
             font-weight: 700;
+            white-space: nowrap;
+            padding-left: 12px;
         }
 
         .section-title {
-            margin: 0 0 18px 0;
+            margin: 0 0 10px 0;
             font-weight: 700;
-            font-size: 26px;
+            font-size: 18px;
         }
 
         .income-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 56px;
-            margin-bottom: 38px;
+            gap: 18px;
+            margin-bottom: 18px;
         }
 
         .income-table {
@@ -68,37 +78,39 @@
         .income-table td {
             border: 1px solid #d8dee8;
             padding: 0;
-            height: 52px;
-            font-size: 18px;
+            height: 32px;
+            font-size: 12px;
         }
 
         .income-label {
-            padding: 0 14px;
-            width: 72%;
+            padding: 6px 10px;
+            width: 70%;
+            line-height: 1.1;
         }
 
         .income-value-cell {
-            width: 28%;
-            padding: 6px 10px !important;
+            width: 30%;
+            padding: 4px 6px !important;
         }
 
         .value-box {
-            border: 2px solid #8f98a3;
+            border: 2px solid #9aa3ad;
             border-radius: 4px;
             background: #ffffff;
-            height: 40px;
-            line-height: 40px;
-            padding: 0 12px;
+            height: 26px;
+            line-height: 26px;
+            padding: 0 8px;
             text-align: left;
-            font-size: 18px;
+            font-size: 11px;
             color: #2a3440;
+            white-space: nowrap;
         }
 
         .expense-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 4px;
+            gap: 18px;
+            margin-top: 2px;
         }
 
         .expense-table {
@@ -110,14 +122,17 @@
         .expense-table th,
         .expense-table td {
             border: 1px solid #d8dee8;
-            padding: 10px 10px;
-            font-size: 16px;
+            padding: 7px 8px;
+            font-size: 11px;
+            line-height: 1.05;
         }
 
         .expense-table th {
             background: #ffffff;
             font-weight: 700;
             text-align: left;
+            white-space: nowrap;
+            font-size: 10px;
         }
 
         .expense-table td.money,
@@ -126,11 +141,23 @@
             white-space: nowrap;
         }
 
+        .expense-name {
+            width: 50%;
+        }
+
+        .expense-col {
+            width: 16%;
+        }
+
+        .diff-col {
+            width: 18%;
+        }
+
         .month-row {
             display: flex;
             align-items: center;
-            gap: 20px;
-            margin-top: 48px;
+            gap: 16px;
+            margin-top: 28px;
         }
 
         .month-line {
@@ -140,19 +167,19 @@
         }
 
         .month {
-            font-size: 28px;
+            font-size: 18px;
             font-weight: 700;
             text-align: center;
             white-space: nowrap;
         }
 
         .no-print {
-            margin-bottom: 24px;
+            margin-bottom: 14px;
         }
 
         .no-print button {
-            padding: 10px 16px;
-            font-size: 15px;
+            padding: 8px 12px;
+            font-size: 14px;
             border: 1px solid #b8c0ca;
             background: #ffffff;
             cursor: pointer;
@@ -161,7 +188,13 @@
         @media print {
             @page {
                 size: portrait;
-                margin: 0.5in;
+                margin: 0.35in;
+            }
+
+            html,
+            body {
+                width: 100%;
+                height: auto;
             }
 
             body {
@@ -174,6 +207,22 @@
             .no-print {
                 display: none !important;
             }
+
+            .top-row,
+            .income-grid,
+            .expense-grid,
+            .month-row {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            table,
+            tr,
+            td,
+            th {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
         }
     </style>
 </head>
@@ -184,7 +233,9 @@
     </div>
 
     <div class="top-row">
-        <h1>{{ resident_name }}</h1>
+        <div class="name-block">
+            <h1>{{ resident_name }}</h1>
+        </div>
 
         <div class="summary-box">
             <div class="summary-row">
@@ -235,10 +286,10 @@
     <div class="expense-grid">
         <table class="expense-table">
             <tr>
-                <th style="width: 56%;">Expense</th>
-                <th class="money" style="width: 14%;">Budget</th>
-                <th class="money" style="width: 14%;">Total</th>
-                <th class="money" style="width: 16%;">Difference</th>
+                <th class="expense-name">Expense</th>
+                <th class="money expense-col">Bdgt</th>
+                <th class="money expense-col">Act</th>
+                <th class="money diff-col">Diff</th>
             </tr>
 
             {% for item in expenses_left %}
@@ -253,10 +304,10 @@
 
         <table class="expense-table">
             <tr>
-                <th style="width: 56%;">Expense</th>
-                <th class="money" style="width: 14%;">Budget</th>
-                <th class="money" style="width: 14%;">Total</th>
-                <th class="money" style="width: 16%;">Difference</th>
+                <th class="expense-name">Expense</th>
+                <th class="money expense-col">Bdgt</th>
+                <th class="money expense-col">Act</th>
+                <th class="money diff-col">Diff</th>
             </tr>
 
             {% for item in expenses_right %}
