@@ -1,68 +1,464 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="reports-page">
+<div class="reports-page reports-directory-page">
+  <style>
+    .reports-directory-page { gap: 18px; }
+    .reports-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); gap: 14px; align-items: end; }
+    .reports-toolbar-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+    .reports-search-group { display: grid; gap: 6px; }
+    .reports-search-group label { font-size: 12px; font-weight: 700; color: rgba(0,0,0,0.72); }
+    .reports-search-input { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #b9c2cc; border-radius: 10px; background: #fff; }
+    .reports-chip-button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 14px; border: 1px solid #cfd7e2; border-radius: 10px; background: #fff; color: #17324d; font-weight: 700; text-decoration: none; cursor: pointer; }
+    .reports-chip-button.is-muted { color: rgba(0,0,0,0.72); font-weight: 600; }
+    .reports-quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .reports-quick-list, .reports-directory-list, .reports-directory-stack, .reports-category-grid { display: grid; gap: 12px; }
+    .reports-quick-item, .reports-directory-item, .reports-category-card { border: 1px solid #d7dce2; border-radius: 12px; background: rgba(255,255,255,0.92); }
+    .reports-quick-item, .reports-directory-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; }
+    .reports-category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .reports-category-card { padding: 16px; }
+    .reports-category-card h3, .reports-directory-section-head h3, .reports-item-title { margin: 0; }
+    .reports-category-description, .reports-item-summary { margin: 6px 0 0 0; color: rgba(0,0,0,0.72); line-height: 1.45; }
+    .reports-category-count { display: inline-flex; align-items: center; width: fit-content; min-height: 26px; padding: 0 10px; border-radius: 999px; background: #eef3f8; color: #23405d; font-size: 12px; font-weight: 700; margin-top: 10px; }
+    .reports-category-examples { margin: 10px 0 0 0; padding-left: 18px; color: rgba(0,0,0,0.68); line-height: 1.45; }
+    .reports-category-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+    .reports-directory-item.is-hidden, .reports-category-card.is-hidden, .reports-category-section.is-hidden { display: none; }
+    .reports-item-main { min-width: 0; flex: 1 1 auto; }
+    .reports-item-kicker { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(0,0,0,0.58); }
+    .reports-item-title a { color: inherit; text-decoration: none; }
+    .reports-item-title a:hover { text-decoration: underline; }
+    .reports-item-meta { margin: 8px 0 0 0; font-size: 12px; color: rgba(0,0,0,0.58); }
+    .reports-item-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 0 0 auto; }
+    .reports-favorite-button { min-width: 42px; min-height: 42px; border: 1px solid #d5dce6; border-radius: 10px; background: #fff; color: rgba(0,0,0,0.45); font-size: 18px; line-height: 1; cursor: pointer; }
+    .reports-favorite-button.is-favorite { color: #b38b00; border-color: rgba(179,139,0,0.35); background: #fff9e3; }
+    .reports-status-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; background: #eef3f8; color: #23405d; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .reports-status-pill.is-live { background: #e8f7ee; color: #1b6b3f; }
+    .reports-status-pill.is-planned { background: #f3f4f6; color: #616b76; }
+    .reports-directory-section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .reports-directory-section-count { font-size: 12px; color: rgba(0,0,0,0.58); font-weight: 700; }
+    .reports-empty-state { padding: 18px; border: 1px dashed #c7d1dd; border-radius: 10px; background: rgba(255,255,255,0.72); color: rgba(0,0,0,0.68); }
+    .reports-search-empty { display: none; }
+    .reports-search-empty.is-visible { display: block; }
+    .reports-section-anchor { scroll-margin-top: 90px; }
+    @media (max-width: 1100px) { .reports-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 900px) { .reports-toolbar, .reports-quick-grid { grid-template-columns: 1fr; } .reports-toolbar-actions { justify-content: flex-start; } }
+    @media (max-width: 640px) { .reports-category-grid { grid-template-columns: 1fr; } .reports-directory-item, .reports-quick-item { flex-direction: column; } .reports-item-actions { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; } }
+  </style>
+
   <div class="reports-header card">
-    <div>
-      <h1>Reports</h1>
-      <p class="reports-subtitle">
-        Select a report to view.
-      </p>
+    <div class="reports-toolbar">
+      <div>
+        <h1>Reports</h1>
+        <p class="reports-subtitle">Choose a reporting area, reopen a saved favorite, or search across the full report directory.</p>
+      </div>
+      <div class="reports-toolbar-actions">
+        <div class="reports-search-group" style="min-width:min(100%, 360px);">
+          <label for="reports-search-input">Search Reports</label>
+          <input id="reports-search-input" class="reports-search-input" type="search" placeholder="Search by report name, keyword, or category" autocomplete="off">
+        </div>
+        <button type="button" class="reports-chip-button is-muted" id="reports-favorites-jump">Favorites</button>
+        <button type="button" class="reports-chip-button is-muted" id="reports-recent-jump">Recent</button>
+      </div>
     </div>
   </div>
 
-  <section class="card section-card">
+  <section class="card section-card reports-section-anchor" id="reports-quick-access">
     <div class="section-head">
-      <h2>Available Reports</h2>
+      <div>
+        <h2>Quick Access</h2>
+        <p class="section-note">Favorites and recent reports are saved in this browser to speed up repeat use.</p>
+      </div>
     </div>
-
-    <div class="two-col-grid">
-      <div class="subsection">
-        <h3>78 Column Report</h3>
-        <p>
-          Aggregate program reporting across demographics, family composition,
-          recovery, barriers, income, and exit outcomes.
-        </p>
-        <p>
-          <a class="btn btn-primary" href="{{ url_for('reports.demographics_dashboard') }}">
-            Open 78 Column Report
-          </a>
-        </p>
+    <div class="reports-quick-grid">
+      <div class="subsection reports-section-anchor" id="reports-favorites-section">
+        <div class="reports-directory-section-head">
+          <h3>Favorites</h3>
+          <span class="reports-directory-section-count" id="reports-favorites-count">0 saved</span>
+        </div>
+        <div class="reports-quick-list" id="reports-favorites-list"></div>
+        <div class="reports-empty-state" id="reports-favorites-empty">No favorite reports yet. Use the star button in the directory below to pin the reports people open most.</div>
       </div>
-
-      <div class="subsection">
-        <h3>Graduation Income And Sobriety Outcome Study</h3>
-        <p>
-          Compare frozen monthly income at graduation against 6 month and 12 month
-          sobriety outcomes for true graduates only.
-        </p>
-        <p>
-          <a class="btn btn-primary" href="{{ url_for('reports.graduation_income_sobriety_study') }}">
-            Open Special Study
-          </a>
-        </p>
-      </div>
-
-      <div class="subsection">
-        <h3>Activity Engagement Report</h3>
-        <p>
-          Compare this week, last week, and all time activity across shelters,
-          residents, meetings, and categories.
-        </p>
-        <p>
-          <a class="btn btn-primary" href="{{ url_for('reports.activity_engagement_report') }}">
-            Open Activity Report
-          </a>
-        </p>
-      </div>
-
-      <div class="subsection">
-        <h3>DB Stats</h3>
-        <p>
-          Coming soon.
-        </p>
+      <div class="subsection reports-section-anchor" id="reports-recent-section">
+        <div class="reports-directory-section-head">
+          <h3>Recent</h3>
+          <span class="reports-directory-section-count" id="reports-recent-count">0 opened</span>
+        </div>
+        <div class="reports-quick-list" id="reports-recent-list"></div>
+        <div class="reports-empty-state" id="reports-recent-empty">No recent reports yet. Opening any live report from this page will place it here automatically.</div>
       </div>
     </div>
   </section>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <div>
+        <h2>Browse By Category</h2>
+        <p class="section-note">Start with the reporting area, then open the specific report from the directory below.</p>
+      </div>
+    </div>
+    <div class="reports-category-grid" id="reports-category-grid"></div>
+    <div class="reports-empty-state reports-search-empty" id="reports-search-empty">No report categories or directory items matched that search.</div>
+  </section>
+
+  <section class="card section-card reports-section-anchor" id="reports-directory">
+    <div class="section-head">
+      <div>
+        <h2>Full Report Directory</h2>
+        <p class="section-note">This directory is organized for growth. It can hold current reports and future reports without turning into a flat wall of links.</p>
+      </div>
+    </div>
+    <div class="reports-directory-stack" id="reports-directory-stack"></div>
+  </section>
 </div>
+
+<script>
+  (function () {
+    const liveUrls = {
+      reportsHome: "{{ url_for('reports.reports_index') }}",
+      demographics: "{{ url_for('reports.demographics_dashboard') }}",
+      graduationStudy: "{{ url_for('reports.graduation_income_sobriety_study') }}",
+      activityEngagement: "{{ url_for('reports.activity_engagement_report') }}"
+    };
+
+    const categories = [
+      {
+        slug: 'overview',
+        title: 'Overview',
+        description: 'Entry point for high level reporting, quick access, and summary views used most often.',
+        reports: [
+          { id: 'reports-home-directory', title: 'Reports Home Directory', summary: 'Main reports landing page with category browsing, search, favorites, and recent report access.', status: 'live', url: liveUrls.reportsHome, keywords: ['overview', 'landing', 'directory', 'quick access'] },
+          { id: 'program-snapshot-dashboard', title: 'Program Snapshot Dashboard', summary: 'Planned summary dashboard for high level intake, census, exits, and trend indicators.', status: 'planned', keywords: ['overview', 'dashboard', 'snapshot', 'metrics'] },
+          { id: 'key-metrics-favorites', title: 'Key Metrics Favorites', summary: 'Planned quick dashboard for the small set of reports or stats leadership opens most often.', status: 'planned', keywords: ['overview', 'favorites', 'metrics', 'dashboard'] }
+        ]
+      },
+      {
+        slug: 'demographics',
+        title: 'Demographics',
+        description: 'Population profile reporting across resident identity, household makeup, and demographic distributions.',
+        reports: [
+          { id: '78-column-report', title: '78 Column Report', summary: 'Aggregate program reporting across demographics, family composition, recovery, barriers, income, and exit outcomes.', status: 'live', url: liveUrls.demographics, keywords: ['demographics', '78 column', 'aggregate', 'family', 'recovery', 'income'] },
+          { id: 'resident-demographics-summary', title: 'Resident Demographics Summary', summary: 'Planned summary view of gender, race, ethnicity, veteran status, and disability across the selected scope.', status: 'planned', keywords: ['gender', 'race', 'ethnicity', 'veteran', 'disability'] },
+          { id: 'age-distribution', title: 'Age Distribution', summary: 'Planned age band reporting built from birth year and enrollment scope.', status: 'planned', keywords: ['age', 'birth year', 'age bands'] },
+          { id: 'race-ethnicity-breakdown', title: 'Race And Ethnicity Breakdown', summary: 'Planned focused view of race and ethnicity distributions for board and grant reporting.', status: 'planned', keywords: ['race', 'ethnicity'] },
+          { id: 'veteran-and-disability-summary', title: 'Veteran And Disability Summary', summary: 'Planned report for veteran status and disability type reporting.', status: 'planned', keywords: ['veteran', 'disability'] }
+        ]
+      },
+      {
+        slug: 'intake-entry',
+        title: 'Intake And Entry',
+        description: 'Entry condition reporting focused on how residents arrive, what barriers exist, and what they need first.',
+        reports: [
+          { id: 'intake-profile', title: 'Intake Profile', summary: 'Planned report summarizing entry condition data including income, sobriety, education, and barriers.', status: 'planned', keywords: ['entry', 'conditions', 'income', 'sobriety', 'education', 'barriers'] },
+          { id: 'prior-living-situation', title: 'Prior Living Situation', summary: 'Planned report showing where residents were staying before entry.', status: 'planned', keywords: ['street', 'shelter', 'jail', 'hospital', 'family'] },
+          { id: 'entry-barriers-summary', title: 'Entry Barriers Summary', summary: 'Planned report focused on barriers to stability present at intake.', status: 'planned', keywords: ['felony', 'probation', 'drug court', 'warrants'] },
+          { id: 'ace-and-grit-snapshot', title: 'ACE And Grit Snapshot', summary: 'Planned intake snapshot for ACE and grit scoring distribution.', status: 'planned', keywords: ['ace', 'grit', 'trauma', 'resilience'] },
+          { id: 'entry-income-components', title: 'Entry Income Components', summary: 'Planned report showing what income sources residents had at entry.', status: 'planned', keywords: ['employment', 'ssi', 'ssdi', 'tanf', 'child support', 'alimony'] },
+          { id: 'entry-needs-summary', title: 'Entry Needs Summary', summary: 'Planned report for official needs selected at intake, including benefits screening triggers.', status: 'planned', keywords: ['needs', 'snap', 'benefits', 'screening'] }
+        ]
+      },
+      {
+        slug: 'program-flow',
+        title: 'Program Flow',
+        description: 'Tracks movement through the program from entry to exit, including occupancy and length of stay.',
+        reports: [
+          { id: 'active-census', title: 'Active Census', summary: 'Planned report for active residents by shelter and current occupancy status.', status: 'planned', keywords: ['occupancy', 'active residents', 'shelter census'] },
+          { id: 'intakes-over-time', title: 'Intakes Over Time', summary: 'Planned trend view of program entry volume over time.', status: 'planned', keywords: ['entries', 'trends', 'month', 'week'] },
+          { id: 'exits-over-time', title: 'Exits Over Time', summary: 'Planned trend view of exits and program movement over time.', status: 'planned', keywords: ['exits', 'trends'] },
+          { id: 'length-of-stay', title: 'Length Of Stay', summary: 'Planned report showing average, median, and bucketed length of stay.', status: 'planned', keywords: ['average', 'median', 'los'] },
+          { id: 'program-turnover', title: 'Program Turnover', summary: 'Planned retention and turnover view for enrollment movement.', status: 'planned', keywords: ['turnover', 'retention'] },
+          { id: 'bed-utilization', title: 'Bed Utilization', summary: 'Planned utilization report comparing occupancy against configured capacity.', status: 'planned', keywords: ['bed', 'capacity', 'utilization'] }
+        ]
+      },
+      {
+        slug: 'outcomes',
+        title: 'Outcomes',
+        description: 'Measures what changed by exit and after exit, including graduation, income, sobriety, and follow up.',
+        reports: [
+          { id: 'graduation-income-and-sobriety-outcome-study', title: 'Graduation Income And Sobriety Outcome Study', summary: 'Compare frozen monthly income at graduation against 6 month and 12 month sobriety outcomes for true graduates only.', status: 'live', url: liveUrls.graduationStudy, keywords: ['graduation', 'income', 'sobriety', '6 month', '12 month'] },
+          { id: 'exit-outcomes', title: 'Exit Outcomes', summary: 'Planned report for exit categories, exit reasons, and leave AMA outcomes.', status: 'planned', keywords: ['exit category', 'exit reason', 'ama'] },
+          { id: 'income-change', title: 'Income Change', summary: 'Planned report comparing income at entry, exit, and selected follow up points.', status: 'planned', keywords: ['entry income', 'exit income', 'follow up income'] },
+          { id: 'sobriety-progression', title: 'Sobriety Progression', summary: 'Planned report for sobriety status at entry, graduation, and follow up checkpoints.', status: 'planned', keywords: ['sober', 'sobriety', 'follow up'] },
+          { id: 'follow-up-outcomes', title: 'Follow Up Outcomes', summary: 'Planned follow up outcomes report focused on post exit stability snapshots.', status: 'planned', keywords: ['post exit', 'stability', 'follow up'] }
+        ]
+      },
+      {
+        slug: 'case-management',
+        title: 'Case Management',
+        description: 'Tracks case manager notes, contact activity, appointments, goals, and resident engagement over time.',
+        reports: [
+          { id: 'case-manager-activity', title: 'Case Manager Activity', summary: 'Planned workload and note volume report by staff and resident.', status: 'planned', keywords: ['notes', 'workload', 'staff'] },
+          { id: 'contact-frequency', title: 'Contact Frequency', summary: 'Planned report showing residents with recent or overdue contact activity.', status: 'planned', keywords: ['recent contact', 'overdue contact'] },
+          { id: 'goals-completion', title: 'Goals Completion', summary: 'Planned goal tracking report for completed and open goals.', status: 'planned', keywords: ['goals', 'completion'] },
+          { id: 'appointments-scheduled', title: 'Appointments Scheduled', summary: 'Planned report for appointment scheduling volume and appointment type mix.', status: 'planned', keywords: ['appointments', 'scheduled'] }
+        ]
+      },
+      {
+        slug: 'referrals',
+        title: 'Referrals',
+        description: 'Reserved for referral and external service coordination reporting once structured referral tracking is added.',
+        reports: [
+          { id: 'referrals-made', title: 'Referrals Made', summary: 'Planned report for referrals made once structured referral tracking is added.', status: 'planned', keywords: ['referrals made', 'counseling', 'transportation'] },
+          { id: 'referral-categories', title: 'Referral Categories', summary: 'Planned category level report showing what referral needs appear most often.', status: 'planned', keywords: ['categories', 'counseling', 'dental', 'legal'] },
+          { id: 'partner-agencies', title: 'Partner Agencies', summary: 'Planned report for referral destinations and outside partner agency usage.', status: 'planned', keywords: ['partner agencies', 'providers'] },
+          { id: 'service-connection-outcomes', title: 'Service Connection Outcomes', summary: 'Planned referral follow through and service connection report.', status: 'planned', keywords: ['connection', 'outcomes', 'success'] }
+        ]
+      },
+      {
+        slug: 'passes-attendance',
+        title: 'Passes And Attendance',
+        description: 'Reports resident movement, obligations, transportation, passes, and activity engagement across shelters.',
+        reports: [
+          { id: 'activity-engagement-report', title: 'Activity Engagement Report', summary: 'Compare this week, last week, and all time activity across shelters, residents, meetings, and categories.', status: 'live', url: liveUrls.activityEngagement, keywords: ['activity', 'engagement', 'attendance', 'meetings', 'productive hours'] },
+          { id: 'pass-activity', title: 'Pass Activity', summary: 'Planned report for pass requests, approvals, denials, and return timing.', status: 'planned', keywords: ['pass requests', 'approvals', 'denials'] },
+          { id: 'attendance-events', title: 'Attendance Events', summary: 'Planned detailed attendance report for event types, obligation windows, and meetings attended.', status: 'planned', keywords: ['attendance events', 'obligations', 'recovery meetings'] },
+          { id: 'transportation-requests', title: 'Transportation Requests', summary: 'Planned report showing transport demand, destinations, and fulfillment status.', status: 'planned', keywords: ['pickup', 'destination', 'transport'] },
+          { id: 'meeting-attendance-breakdown', title: 'Meeting Attendance Breakdown', summary: 'Planned meeting count and recovery meeting participation report.', status: 'planned', keywords: ['aa', 'na', 'meeting count'] }
+        ]
+      },
+      {
+        slug: 'employment-income',
+        title: 'Employment And Income',
+        description: 'Tracks earnings, employment movement, work activity, and income change from entry through exit and follow up.',
+        reports: [
+          { id: 'employment-status-summary', title: 'Employment Status Summary', summary: 'Planned report for employment status, employer, and job type distribution.', status: 'planned', keywords: ['employment status', 'employer', 'job type'] },
+          { id: 'weekly-productivity', title: 'Weekly Productivity', summary: 'Planned report for weekly productive hours, work hours, and meeting counts.', status: 'planned', keywords: ['productive hours', 'work hours', 'weekly'] },
+          { id: 'income-snapshot-by-shelter', title: 'Income Snapshot By Shelter', summary: 'Planned point in time income reporting broken down by shelter.', status: 'planned', keywords: ['income', 'shelter'] },
+          { id: 'graduation-income-bands', title: 'Graduation Income Bands', summary: 'Planned banded income report at graduation or exit.', status: 'planned', keywords: ['graduation income', 'bands'] }
+        ]
+      },
+      {
+        slug: 'families-children',
+        title: 'Families And Children',
+        description: 'Focuses on children served, family composition, age bands, reunification, and family impact.',
+        reports: [
+          { id: 'family-composition', title: 'Family Composition', summary: 'Planned report on family composition and household structure in program.', status: 'planned', keywords: ['family composition', 'household'] },
+          { id: 'children-served', title: 'Children Served', summary: 'Planned child focused report for age groups and counts served.', status: 'planned', keywords: ['children', 'age groups'] },
+          { id: 'reunification-summary', title: 'Reunification Summary', summary: 'Planned report for children reunited while in program.', status: 'planned', keywords: ['reunification', 'kids reunited'] },
+          { id: 'healthy-babies-born', title: 'Healthy Babies Born', summary: 'Planned family impact report for babies born while in program.', status: 'planned', keywords: ['babies', 'born'] }
+        ]
+      },
+      {
+        slug: 'operations',
+        title: 'Operations',
+        description: 'Administrative and operational reporting across transfers, chores, raw forms, and internal activity.',
+        reports: [
+          { id: 'resident-transfers', title: 'Resident Transfers', summary: 'Planned report for shelter transfer activity and movement patterns.', status: 'planned', keywords: ['transfers', 'shelter transfer'] },
+          { id: 'chore-assignments', title: 'Chore Assignments', summary: 'Planned operational report for chore assignment coverage and completion status.', status: 'planned', keywords: ['chores', 'assignments'] },
+          { id: 'raw-form-submissions', title: 'Raw Form Submissions', summary: 'Planned audit style report showing ingested form activity and source details.', status: 'planned', keywords: ['raw forms', 'audit', 'jotform'] },
+          { id: 'weekly-resident-summary-audit', title: 'Weekly Resident Summary Audit', summary: 'Planned audit report for weekly resident summary submissions.', status: 'planned', keywords: ['weekly summary', 'audit'] },
+          { id: 'database-stats', title: 'Database Stats', summary: 'Reserved placeholder for system level table and volume statistics if needed later.', status: 'planned', keywords: ['db stats', 'database'] }
+        ]
+      },
+      {
+        slug: 'follow-up',
+        title: 'Follow Up',
+        description: 'Post exit reporting for 6 month and 12 month stability, sobriety, and income snapshots.',
+        reports: [
+          { id: 'six-month-follow-up', title: '6 Month Follow Up', summary: 'Planned report for 6 month follow up outcomes.', status: 'planned', keywords: ['6 month', 'follow up'] },
+          { id: 'one-year-follow-up', title: '12 Month Follow Up', summary: 'Planned report for 12 month follow up outcomes.', status: 'planned', keywords: ['12 month', '1 year', 'follow up'] },
+          { id: 'post-exit-stability', title: 'Post Exit Stability', summary: 'Planned composite report summarizing post exit follow up indicators.', status: 'planned', keywords: ['post exit', 'stability'] }
+        ]
+      }
+    ];
+
+    const storageKeys = { favorites: 'reportsDirectoryFavorites', recent: 'reportsDirectoryRecent' };
+    const searchInput = document.getElementById('reports-search-input');
+    const categoryGrid = document.getElementById('reports-category-grid');
+    const directoryStack = document.getElementById('reports-directory-stack');
+    const favoritesList = document.getElementById('reports-favorites-list');
+    const recentList = document.getElementById('reports-recent-list');
+    const favoritesEmpty = document.getElementById('reports-favorites-empty');
+    const recentEmpty = document.getElementById('reports-recent-empty');
+    const favoritesCount = document.getElementById('reports-favorites-count');
+    const recentCount = document.getElementById('reports-recent-count');
+    const searchEmpty = document.getElementById('reports-search-empty');
+
+    function categorySearchText(category) {
+      return [category.title, category.description].concat(category.reports.map((report) => report.title + ' ' + (report.keywords || []).join(' '))).join(' ').toLowerCase();
+    }
+
+    function reportSearchText(category, report) {
+      return [category.title, report.title, report.summary, (report.keywords || []).join(' '), report.status].join(' ').toLowerCase();
+    }
+
+    function statusLabel(status) {
+      return status === 'live' ? 'Live' : 'Planned';
+    }
+
+    function statusClass(status) {
+      return status === 'live' ? 'is-live' : 'is-planned';
+    }
+
+    function reportMap() {
+      const map = {};
+      categories.forEach((category) => {
+        category.reports.forEach((report) => {
+          map[report.id] = Object.assign({}, report, { categoryTitle: category.title });
+        });
+      });
+      return map;
+    }
+
+    const reportsById = reportMap();
+
+    function renderCategoryCards() {
+      categoryGrid.innerHTML = categories.map((category) => (
+        '<article class="reports-category-card" data-category-card data-search-text="' + categorySearchText(category).replace(/"/g, '&quot;') + '">' +
+          '<div><h3>' + category.title + '</h3><p class="reports-category-description">' + category.description + '</p></div>' +
+          '<span class="reports-category-count">' + category.reports.length + ' reports</span>' +
+          '<ul class="reports-category-examples">' + category.reports.slice(0, 3).map((report) => '<li>' + report.title + '</li>').join('') + '</ul>' +
+          '<div class="reports-category-actions"><a class="btn btn-primary" href="#category-' + category.slug + '">View Reports</a></div>' +
+        '</article>'
+      )).join('');
+    }
+
+    function renderDirectory() {
+      directoryStack.innerHTML = categories.map((category) => (
+        '<section class="reports-category-section reports-section-anchor" id="category-' + category.slug + '" data-category-section data-search-text="' + categorySearchText(category).replace(/"/g, '&quot;') + '">' +
+          '<div class="reports-directory-section-head"><h3>' + category.title + '</h3><span class="reports-directory-section-count">' + category.reports.length + ' reports</span></div>' +
+          '<div class="reports-directory-list">' +
+            category.reports.map((report) => (
+              '<article class="reports-directory-item" data-report-item data-report-id="' + report.id + '" data-search-text="' + reportSearchText(category, report).replace(/"/g, '&quot;') + '">' +
+                '<div class="reports-item-main">' +
+                  '<div class="reports-item-kicker">' + category.title + '</div>' +
+                  '<h4 class="reports-item-title">' + (report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title) + '</h4>' +
+                  '<p class="reports-item-summary">' + report.summary + '</p>' +
+                  (report.status === 'live' ? '<p class="reports-item-meta">Live route is available now.</p>' : '') +
+                '</div>' +
+                '<div class="reports-item-actions">' +
+                  '<span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span>' +
+                  '<button type="button" class="reports-favorite-button" data-favorite-button="' + report.id + '" aria-label="Favorite ' + report.title + '">☆</button>' +
+                '</div>' +
+              '</article>'
+            )).join('') +
+          '</div>' +
+        '</section>'
+      )).join('');
+    }
+
+    function readStorage(key) {
+      try {
+        const parsed = JSON.parse(window.localStorage.getItem(key) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function writeStorage(key, value) {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {}
+    }
+
+    function quickItemMarkup(report) {
+      if (!report) return '';
+      const title = report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title;
+      return (
+        '<article class="reports-quick-item">' +
+          '<div class="reports-item-main">' +
+            '<div class="reports-item-kicker">' + report.categoryTitle + '</div>' +
+            '<h4 class="reports-item-title">' + title + '</h4>' +
+            '<p class="reports-item-summary">' + report.summary + '</p>' +
+          '</div>' +
+          '<div class="reports-item-actions"><span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span></div>' +
+        '</article>'
+      );
+    }
+
+    function renderFavorites() {
+      const favoriteIds = readStorage(storageKeys.favorites);
+      const favoriteReports = favoriteIds.map((id) => reportsById[id]).filter(Boolean);
+      favoritesList.innerHTML = favoriteReports.map(quickItemMarkup).join('');
+      favoritesEmpty.style.display = favoriteReports.length ? 'none' : 'block';
+      favoritesCount.textContent = favoriteReports.length + ' saved';
+      document.querySelectorAll('[data-favorite-button]').forEach((button) => {
+        const isFavorite = favoriteIds.includes(button.getAttribute('data-favorite-button'));
+        button.classList.toggle('is-favorite', isFavorite);
+        button.textContent = isFavorite ? '★' : '☆';
+      });
+    }
+
+    function renderRecent() {
+      const recentIds = readStorage(storageKeys.recent);
+      const recentReports = recentIds.map((id) => reportsById[id]).filter(Boolean);
+      recentList.innerHTML = recentReports.map(quickItemMarkup).join('');
+      recentEmpty.style.display = recentReports.length ? 'none' : 'block';
+      recentCount.textContent = recentReports.length + ' opened';
+    }
+
+    function toggleFavorite(reportId) {
+      const favorites = readStorage(storageKeys.favorites);
+      const next = favorites.includes(reportId)
+        ? favorites.filter((id) => id !== reportId)
+        : [reportId].concat(favorites.filter((id) => id !== reportId)).slice(0, 6);
+      writeStorage(storageKeys.favorites, next);
+      renderFavorites();
+    }
+
+    function markRecent(reportId) {
+      const recent = readStorage(storageKeys.recent);
+      const next = [reportId].concat(recent.filter((id) => id !== reportId)).slice(0, 5);
+      writeStorage(storageKeys.recent, next);
+      renderRecent();
+    }
+
+    function applySearch() {
+      const query = (searchInput.value || '').trim().toLowerCase();
+      let visibleReports = 0;
+
+      document.querySelectorAll('[data-category-card]').forEach((card) => {
+        const visible = !query || (card.getAttribute('data-search-text') || '').includes(query);
+        card.classList.toggle('is-hidden', !visible);
+      });
+
+      document.querySelectorAll('[data-report-item]').forEach((item) => {
+        const visible = !query || (item.getAttribute('data-search-text') || '').includes(query);
+        item.classList.toggle('is-hidden', !visible);
+        if (visible) visibleReports += 1;
+      });
+
+      document.querySelectorAll('[data-category-section]').forEach((section) => {
+        const hasVisibleReports = section.querySelectorAll('[data-report-item]:not(.is-hidden)').length > 0;
+        const sectionMatch = !query || (section.getAttribute('data-search-text') || '').includes(query);
+        section.classList.toggle('is-hidden', !(hasVisibleReports || sectionMatch));
+      });
+
+      searchEmpty.classList.toggle('is-visible', !!query && visibleReports === 0);
+    }
+
+    renderCategoryCards();
+    renderDirectory();
+    renderFavorites();
+    renderRecent();
+    applySearch();
+
+    document.addEventListener('click', function (event) {
+      const favoriteButton = event.target.closest('[data-favorite-button]');
+      if (favoriteButton) {
+        toggleFavorite(favoriteButton.getAttribute('data-favorite-button'));
+        return;
+      }
+
+      const reportLink = event.target.closest('[data-report-link]');
+      if (reportLink) {
+        markRecent(reportLink.getAttribute('data-report-link'));
+        return;
+      }
+
+      const favoritesJump = event.target.closest('#reports-favorites-jump');
+      if (favoritesJump) {
+        document.getElementById('reports-favorites-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      const recentJump = event.target.closest('#reports-recent-jump');
+      if (recentJump) {
+        document.getElementById('reports-recent-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    searchInput.addEventListener('input', applySearch);
+  })();
+</script>
 {% endblock %}
