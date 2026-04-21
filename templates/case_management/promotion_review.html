@@ -13,11 +13,16 @@
     font-weight: 700;
   }
 
-  .cmx-promo-summary,
-  .cmx-metric-grid {
+  .cmx-promo-summary {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
+  }
+
+  .cmx-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .cmx-promo-card,
@@ -26,6 +31,11 @@
     border-radius: 14px;
     padding: 14px 16px;
     background: #fff;
+  }
+
+  .cmx-metric-box {
+    padding: 10px 12px;
+    border-radius: 12px;
   }
 
   .cmx-promo-card-title,
@@ -46,12 +56,28 @@
     line-height: 1.1;
   }
 
+  .cmx-metric-label {
+    font-size: 0.74rem;
+    margin-bottom: 4px;
+  }
+
+  .cmx-metric-value {
+    font-size: 1.05rem;
+    line-height: 1.05;
+  }
+
   .cmx-promo-card-sub,
   .cmx-metric-sub {
     margin-top: 6px;
     font-size: 0.88rem;
     color: #5d6776;
     line-height: 1.45;
+  }
+
+  .cmx-metric-sub {
+    margin-top: 5px;
+    font-size: 0.8rem;
+    line-height: 1.35;
   }
 
   .cmx-grade-row {
@@ -226,6 +252,12 @@
 
   .cmx-manual-list li {
     margin-bottom: 6px;
+  }
+
+  @media (max-width: 1100px) {
+    .cmx-metric-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
   }
 
   @media (max-width: 900px) {
