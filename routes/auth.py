@@ -310,6 +310,9 @@ def staff_login():
     if session.get("role") == "admin":
         return redirect(url_for("admin.admin_dashboard"))
 
+    if session.get("role") == "demographics_viewer":
+        return redirect(url_for("reports.reports_index"))
+
     return redirect(url_for("attendance.staff_attendance"))
 
 
@@ -355,6 +358,12 @@ def staff_select_shelter():
     nxt = (request.form.get("next") or "").strip()
     if nxt and nxt.startswith("/staff"):
         return redirect(nxt)
+
+    if session.get("role") == "admin":
+        return redirect(url_for("admin.admin_dashboard"))
+
+    if session.get("role") == "demographics_viewer":
+        return redirect(url_for("reports.reports_index"))
 
     return redirect(url_for("attendance.staff_attendance"))
 
