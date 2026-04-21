@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import flash, g, redirect, render_template, request, session, url_for
 
@@ -521,7 +521,7 @@ def _budget_month_bounds(budget_month: str | None) -> tuple[str | None, str | No
     else:
         next_month = datetime(start_of_month.year, start_of_month.month + 1, 1)
 
-    month_end = next_month - (next_month - start_of_month)
+    month_end = next_month - timedelta(days=1)
     return start_of_month.strftime("%Y-%m-%d"), month_end.strftime("%Y-%m-%d")
 
 
@@ -743,12 +743,16 @@ def _validate_transaction_inputs(
         errors.append("Expense category does not belong to this budget month.")
 
     month_start, month_end = _budget_month_bounds(budget_row.get("budget_month"))
-    if parsed_date is not None and month_start and month_end:
-        if not (month_start <= transaction_date <= month_end):
-            errors.append(
-                "Transaction date must stay inside this budget month. "
-                f"Allowed range: {month_start} to {month_end}."
-            )
+    if (
+        parsed_date is not None
+        and month_start
+        and month_end
+        and not (month_start <= transaction_date <= month_end)
+    ):
+        errors.append(
+            "Transaction date must stay inside this budget month. "
+            f"Allowed range: {month_start} to {month_end}."
+        )
 
     return errors, round(amount, 2) if amount is not None else None
 
