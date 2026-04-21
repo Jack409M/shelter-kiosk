@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import Blueprint
 
-from core.auth import require_login, require_shelter
+from core.auth import require_login, require_roles, require_shelter
 from routes.attendance_parts.board import (
     staff_attendance_check_in_view,
     staff_attendance_check_out_global_view,
@@ -29,10 +29,19 @@ from routes.attendance_parts.print_views import (
 
 attendance = Blueprint("attendance", __name__)
 
+STAFF_ALLOWED_ROLES = (
+    "admin",
+    "shelter_director",
+    "case_manager",
+    "ra",
+    "staff",
+)
+
 
 @attendance.route("/staff/attendance")
 @require_login
 @require_shelter
+@require_roles(*STAFF_ALLOWED_ROLES)
 def staff_attendance():
     return staff_attendance_view()
 
