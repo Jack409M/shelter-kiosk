@@ -42,7 +42,14 @@ def env_text(name: str, default: str = "") -> str:
 
 MIN_STAFF_PASSWORD_LEN = 8
 
-USER_ROLES = {"admin", "shelter_director", "staff", "case_manager", "ra"}
+USER_ROLES = {
+    "admin",
+    "shelter_director",
+    "staff",
+    "case_manager",
+    "ra",
+    "demographics_viewer",
+}
 
 ROLE_LABELS = {
     "admin": "Admin",
@@ -50,9 +57,17 @@ ROLE_LABELS = {
     "staff": "Staff",
     "ra": "RA DESK",
     "case_manager": "Case Mgr",
+    "demographics_viewer": "Demographics Viewer",
 }
 
-STAFF_ROLES = {"admin", "shelter_director", "staff", "case_manager", "ra"}
+STAFF_ROLES = {
+    "admin",
+    "shelter_director",
+    "staff",
+    "case_manager",
+    "ra",
+    "demographics_viewer",
+}
 
 TRANSFER_ROLES = {"admin", "shelter_director", "case_manager"}
 
