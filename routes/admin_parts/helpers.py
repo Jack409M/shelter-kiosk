@@ -16,7 +16,7 @@ from core.rate_limit import (
 )
 from core.sms_sender import send_sms
 
-ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff"]
+ROLE_ORDER = ["admin", "shelter_director", "case_manager", "ra", "staff", "demographics_viewer"]
 
 DASHBOARD_ATTACK_ACTION_TYPES = (
     "login_failed",
@@ -125,16 +125,16 @@ def require_admin_or_shelter_director_role() -> bool:
 
 def allowed_roles_to_create():
     if require_admin_role():
-        return {"admin", "shelter_director", "staff", "case_manager", "ra"}
+        return {"admin", "shelter_director", "staff", "case_manager", "ra", "demographics_viewer"}
 
     if current_role() == "shelter_director":
-        return {"staff", "case_manager", "ra"}
+        return {"staff", "case_manager", "ra", "demographics_viewer"}
 
     return set()
 
 
 def all_roles():
-    return {"admin", "shelter_director", "staff", "case_manager", "ra"}
+    return {"admin", "shelter_director", "staff", "case_manager", "ra", "demographics_viewer"}
 
 
 def ordered_roles(role_set):
