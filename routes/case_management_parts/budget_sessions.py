@@ -1222,3 +1222,80 @@ def edit_budget_session_view(resident_id: int, budget_id: int):
         **page_context,
         **editor_context,
     )
+
+
+def print_budget_view(resident_id: int, budget_id: int):
+    init_db()
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return _resident_case_redirect(resident_id)
+
+    resident = _resident_context(resident_id)
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    row = db_fetchone(
+        """
+        SELECT *
+        FROM resident_budget_sessions
+        WHERE id = ?
+          AND resident_id = ?
+        LIMIT 1
+        """,
+        (budget_id, resident_id),
+    )
+    if not row:
+        flash("Budget month not found for this resident.", "error")
+        return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
+
+    budget_row = dict(row)
+    budget_row["budget_month_label"] = _format_budget_month(budget_row.get("budget_month"))
+
+    editor_context = _build_budget_editor_context(budget_id, budget_row.get("budget_month"))
+    income_items = editor_context.get("income_items") or []
+    expense_items = (editor_context.get("expense_left_items") or []) + (
+        editor_context.get("expense_right_items") or []
+    )
+
+    income_left = [
+        {
+            "label": item.get("line_label"),
+            "amount": item.get("projected_amount") or 0,
+        }
+        for item in income_items[:3]
+    ]
+    income_right = [
+        {
+            "label": item.get("line_label"),
+            "amount": item.get("projected_amount") or 0,
+        }
+        for item in income_items[3:]
+    ]
+    expenses = [
+        {
+            "label": item.get("line_label"),
+            "budget": item.get("projected_amount") or 0,
+            "actual": item.get("actual_amount") or 0,
+            "diff": item.get("difference_amount") or 0,
+        }
+        for item in expense_items
+    ]
+
+    resident_name = " ".join(
+        part for part in [resident.get("first_name"), resident.get("last_name")] if part
+    ).strip()
+
+    return render_template(
+        "case_management/print_budget.html",
+        resident=resident,
+        resident_name=resident_name,
+        budget_row=budget_row,
+        total_income=editor_context.get("total_income") or 0,
+        total_expenses=editor_context.get("total_expenses") or 0,
+        balance=editor_context.get("balance") or 0,
+        income_left=income_left,
+        income_right=income_right,
+        expenses=expenses,
+        budget_month=budget_row.get("budget_month_label"),
+    )
