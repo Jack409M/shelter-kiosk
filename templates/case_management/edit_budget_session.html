@@ -10,74 +10,173 @@
   </div>
 
   <div style="display:flex; gap:20px; margin-bottom:20px;">
-    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Projected Budget Income</strong><br>${{ '%.2f'|format(total_income) }}</div>
-    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Actual Expenses</strong><br>${{ '%.2f'|format(total_expenses) }}</div>
-    <div style="flex:1; padding:15px; border:1px solid #ddd;"><strong>Remaining Budget</strong><br><span style="color: {{ 'red' if balance < 0 else 'green' }};">${{ '%.2f'|format(balance) }}</span></div>
+    <div style="flex:1; padding:15px; border:1px solid #ddd;">
+      <strong>Projected Budget Income</strong><br>
+      ${{ '%.2f'|format(total_income) }}
+    </div>
+    <div style="flex:1; padding:15px; border:1px solid #ddd;">
+      <strong>Actual Expenses</strong><br>
+      ${{ '%.2f'|format(total_expenses) }}
+    </div>
+    <div style="flex:1; padding:15px; border:1px solid #ddd;">
+      <strong>Remaining Budget</strong><br>
+      <span style="color: {{ 'red' if balance < 0 else 'green' }};">
+        ${{ '%.2f'|format(balance) }}
+      </span>
+    </div>
   </div>
 
   <form method="post">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-    <div style="margin-bottom:20px;">
-      <h3>Income</h3>
-      {% for item in income_items %}
-      <div style="display:flex; gap:10px; margin-bottom:8px;">
-        <div style="flex:2;">{{ item.line_label }}</div>
-        <div style="flex:1;"><input type="text" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}"></div>
-        <div style="flex:1;"><input type="text" name="actual_amount_{{ item.id }}" value="{{ item.actual_amount or '' }}"></div>
+    {% set income_left = income_items[:3] %}
+    {% set income_right = income_items[3:6] %}
+    {% set income_extra = income_items[6:] %}
+
+    <!-- INCOME -->
+    <div style="margin-bottom:30px;">
+      <h3 style="margin-bottom:16px;">Income</h3>
+
+      <div style="display:flex; gap:40px;">
+        <!-- LEFT COLUMN -->
+        <div style="flex:1;">
+          {% for item in income_left %}
+          <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
+            <div style="flex:1;">{{ item.line_label }}</div>
+            <input type="text"
+                   name="projected_amount_{{ item.id }}"
+                   value="{{ item.projected_amount or '' }}"
+                   style="width:280px;">
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div style="flex:1;">
+          {% for item in income_right %}
+          <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
+            <div style="flex:1;">{{ item.line_label }}</div>
+            <input type="text"
+                   name="projected_amount_{{ item.id }}"
+                   value="{{ item.projected_amount or '' }}"
+                   style="width:280px;">
+          </div>
+          {% endfor %}
+        </div>
       </div>
-      {% endfor %}
+
+      <!-- HANDLE EXTRA (like "Other") WITHOUT BREAKING -->
+      {% if income_extra %}
+      <div style="margin-top:10px; max-width:50%;">
+        {% for item in income_extra %}
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
+          <div style="flex:1;">{{ item.line_label }}</div>
+          <input type="text"
+                 name="projected_amount_{{ item.id }}"
+                 value="{{ item.projected_amount or '' }}"
+                 style="width:280px;">
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <button type="submit">
+        {{ 'Save Budget' if can_edit_expense_budget else 'Save Income' }}
+      </button>
     </div>
 
+    <!-- EXPENSES -->
     <div style="display:flex; gap:30px; margin-bottom:30px;">
       <div style="flex:1;">
         <table style="width:100%;">
-          <tr><th align="left">Expense</th><th>Budget</th><th>Total</th><th>Difference</th></tr>
+          <tr>
+            <th align="left">Expense</th>
+            <th>Budget</th>
+            <th>Total</th>
+            <th>Difference</th>
+          </tr>
           {% for item in expense_left_items %}
           <tr>
             <td>{{ item.line_label }}</td>
-            <td>{% if can_edit_expense_budget %}<input type="text" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}" style="width:80px;">{% else %}${{ '%.2f'|format(item.projected_amount or 0) }}{% endif %}</td>
-            <td style="color:#555;">${{ '%.2f'|format(item.actual_amount) }}</td>
-            <td style="color: {{ 'red' if item.difference_amount > 0 else 'green' if item.difference_amount < 0 else '#333' }}; font-weight:bold;">{{ item.difference_text }}</td>
+            <td>
+              {% if can_edit_expense_budget %}
+                <input type="text" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}" style="width:80px;">
+              {% else %}
+                ${{ '%.2f'|format(item.projected_amount or 0) }}
+              {% endif %}
+            </td>
+            <td>${{ '%.2f'|format(item.actual_amount) }}</td>
+            <td style="font-weight:bold; color:
+              {{ 'red' if item.difference_amount > 0 else 'green' if item.difference_amount < 0 else '#333' }}">
+              {{ item.difference_text }}
+            </td>
           </tr>
           {% endfor %}
         </table>
       </div>
+
       <div style="flex:1;">
         <table style="width:100%;">
-          <tr><th align="left">Expense</th><th>Budget</th><th>Total</th><th>Difference</th></tr>
+          <tr>
+            <th align="left">Expense</th>
+            <th>Budget</th>
+            <th>Total</th>
+            <th>Difference</th>
+          </tr>
           {% for item in expense_right_items %}
           <tr>
             <td>{{ item.line_label }}</td>
-            <td>{% if can_edit_expense_budget %}<input type="text" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}" style="width:80px;">{% else %}${{ '%.2f'|format(item.projected_amount or 0) }}{% endif %}</td>
-            <td style="color:#555;">${{ '%.2f'|format(item.actual_amount) }}</td>
-            <td style="color: {{ 'red' if item.difference_amount > 0 else 'green' if item.difference_amount < 0 else '#333' }}; font-weight:bold;">{{ item.difference_text }}</td>
+            <td>
+              {% if can_edit_expense_budget %}
+                <input type="text" name="projected_amount_{{ item.id }}" value="{{ item.projected_amount or '' }}" style="width:80px;">
+              {% else %}
+                ${{ '%.2f'|format(item.projected_amount or 0) }}
+              {% endif %}
+            </td>
+            <td>${{ '%.2f'|format(item.actual_amount) }}</td>
+            <td style="font-weight:bold; color:
+              {{ 'red' if item.difference_amount > 0 else 'green' if item.difference_amount < 0 else '#333' }}">
+              {{ item.difference_text }}
+            </td>
           </tr>
           {% endfor %}
         </table>
       </div>
     </div>
-
-    <button type="submit">{{ 'Save Budget' if can_edit_expense_budget else 'Save Income' }}</button>
   </form>
 
+  <!-- TRANSACTIONS (UNCHANGED) -->
   <div>
     <h3>Transactions</h3>
+
     <form method="post" style="margin-bottom:15px;">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="add_transaction">
+
       <input type="date" name="transaction_date" value="{{ budget_month_start or '' }}">
+
       <select name="line_item_id">
         <option value="">Select Expense</option>
-        {% for item in transaction_expense_items %}<option value="{{ item.id }}">{{ item.line_label }}</option>{% endfor %}
+        {% for item in transaction_expense_items %}
+        <option value="{{ item.id }}">{{ item.line_label }}</option>
+        {% endfor %}
       </select>
+
       <input type="text" name="amount" placeholder="Amount">
       <input type="text" name="merchant_or_note" placeholder="Note">
+
       <button type="submit">Add</button>
     </form>
 
     <table style="width:100%;">
-      <tr><th>Date</th><th>Expense</th><th>Amount</th><th>Note</th><th></th></tr>
+      <tr>
+        <th>Date</th>
+        <th>Expense</th>
+        <th>Amount</th>
+        <th>Note</th>
+        <th></th>
+      </tr>
+
       {% for tx in recent_transactions %}
       <tr>
         <td>{{ tx.transaction_date }}</td>
