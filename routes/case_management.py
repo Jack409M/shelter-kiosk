@@ -14,6 +14,7 @@ from routes.case_management_parts.budget_sessions import (
     budget_sessions_view,
     delete_budget_session_view,
     edit_budget_session_view,
+    print_budget_view,
 )
 from routes.case_management_parts.exit import exit_assessment_form_view, submit_exit_assessment_view
 from routes.case_management_parts.exit_followup import exit_followup_view
@@ -368,6 +369,12 @@ def edit_budget_session(resident_id: int, budget_id: int):
                 budget_id=budget_id,
             )
         )
+
+
+@case_management.get("/<int:resident_id>/budget-sessions/<int:budget_id>/print")
+@_view
+def print_budget(resident_id: int, budget_id: int):
+    return print_budget_view(resident_id, budget_id)
 
 
 @case_management.post("/<int:resident_id>/budget-sessions/<int:budget_id>/delete")
