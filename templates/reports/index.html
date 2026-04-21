@@ -120,40 +120,77 @@
       activityEngagement: "{{ url_for('reports.activity_engagement_report') }}"
     };
 
-    const categories = [
+    const reportCatalog = [
       {
         slug: 'overview',
         title: 'Overview',
-        description: 'Entry point for high level reporting, quick access, and summary views used most often.',
+        description: 'Entry point for the reports library, saved shortcuts, and eventual top level dashboard views.',
         reports: [
-          { id: 'reports-home-directory', title: 'Reports Home Directory', summary: 'Main reports landing page with category browsing, search, favorites, and recent report access.', status: 'live', url: liveUrls.reportsHome, keywords: ['overview', 'landing', 'directory', 'quick access'] },
-          { id: 'program-snapshot-dashboard', title: 'Program Snapshot Dashboard', summary: 'Planned summary dashboard for high level intake, census, exits, and trend indicators.', status: 'planned', keywords: ['overview', 'dashboard', 'snapshot', 'metrics'] },
-          { id: 'key-metrics-favorites', title: 'Key Metrics Favorites', summary: 'Planned quick dashboard for the small set of reports or stats leadership opens most often.', status: 'planned', keywords: ['overview', 'favorites', 'metrics', 'dashboard'] }
+          {
+            id: 'reports-home-directory',
+            title: 'Reports Home Directory',
+            summary: 'Main reports landing page with category browsing, search, favorites, and recent report access.',
+            status: 'live',
+            url: liveUrls.reportsHome,
+            keywords: ['overview', 'landing', 'directory', 'quick access']
+          },
+          {
+            id: 'program-snapshot-dashboard',
+            title: 'Program Snapshot Dashboard',
+            summary: 'Reserved top level dashboard for high level program metrics once that overview report is built.',
+            status: 'planned',
+            keywords: ['overview', 'dashboard', 'snapshot', 'metrics']
+          },
+          {
+            id: 'key-metrics-favorites',
+            title: 'Key Metrics Favorites',
+            summary: 'Reserved quick access dashboard for a small set of commonly used leadership views.',
+            status: 'planned',
+            keywords: ['overview', 'favorites', 'metrics', 'dashboard']
+          }
         ]
       },
       {
         slug: 'demographics',
         title: 'Demographics',
-        description: 'Population profile reporting across resident identity, household makeup, and demographic distributions.',
+        description: 'Resident identity and population profile reporting across demographics, household makeup, and high level distribution views.',
         reports: [
-          { id: '78-column-report', title: '78 Column Report', summary: 'Aggregate program reporting across demographics, family composition, recovery, barriers, income, and exit outcomes.', status: 'live', url: liveUrls.demographics, keywords: ['demographics', '78 column', 'aggregate', 'family', 'recovery', 'income'] },
-          { id: 'resident-demographics-summary', title: 'Resident Demographics Summary', summary: 'Planned summary view of gender, race, ethnicity, veteran status, and disability across the selected scope.', status: 'planned', keywords: ['gender', 'race', 'ethnicity', 'veteran', 'disability'] },
-          { id: 'age-distribution', title: 'Age Distribution', summary: 'Planned age band reporting built from birth year and enrollment scope.', status: 'planned', keywords: ['age', 'birth year', 'age bands'] },
-          { id: 'race-ethnicity-breakdown', title: 'Race And Ethnicity Breakdown', summary: 'Planned focused view of race and ethnicity distributions for board and grant reporting.', status: 'planned', keywords: ['race', 'ethnicity'] },
-          { id: 'veteran-and-disability-summary', title: 'Veteran And Disability Summary', summary: 'Planned report for veteran status and disability type reporting.', status: 'planned', keywords: ['veteran', 'disability'] }
+          {
+            id: '78-column-report',
+            title: '78 Column Report',
+            summary: 'Aggregate program reporting across demographics, family composition, recovery, barriers, income, and exit outcomes.',
+            status: 'live',
+            url: liveUrls.demographics,
+            keywords: ['demographics', '78 column', 'aggregate', 'family', 'recovery', 'income']
+          },
+          {
+            id: 'resident-demographics-summary',
+            title: 'Resident Demographics Summary',
+            summary: 'Repo supported summary of gender, race, ethnicity, veteran status, and disability across the selected scope.',
+            status: 'planned',
+            keywords: ['gender', 'race', 'ethnicity', 'veteran', 'disability']
+          }
         ]
       },
       {
         slug: 'intake-entry',
         title: 'Intake And Entry',
-        description: 'Entry condition reporting focused on how residents arrive, what barriers exist, and what they need first.',
+        description: 'Entry condition reporting focused on how residents arrive, what barriers exist, and what they need at intake.',
         reports: [
-          { id: 'intake-profile', title: 'Intake Profile', summary: 'Planned report summarizing entry condition data including income, sobriety, education, and barriers.', status: 'planned', keywords: ['entry', 'conditions', 'income', 'sobriety', 'education', 'barriers'] },
-          { id: 'prior-living-situation', title: 'Prior Living Situation', summary: 'Planned report showing where residents were staying before entry.', status: 'planned', keywords: ['street', 'shelter', 'jail', 'hospital', 'family'] },
-          { id: 'entry-barriers-summary', title: 'Entry Barriers Summary', summary: 'Planned report focused on barriers to stability present at intake.', status: 'planned', keywords: ['felony', 'probation', 'drug court', 'warrants'] },
-          { id: 'ace-and-grit-snapshot', title: 'ACE And Grit Snapshot', summary: 'Planned intake snapshot for ACE and grit scoring distribution.', status: 'planned', keywords: ['ace', 'grit', 'trauma', 'resilience'] },
-          { id: 'entry-income-components', title: 'Entry Income Components', summary: 'Planned report showing what income sources residents had at entry.', status: 'planned', keywords: ['employment', 'ssi', 'ssdi', 'tanf', 'child support', 'alimony'] },
-          { id: 'entry-needs-summary', title: 'Entry Needs Summary', summary: 'Planned report for official needs selected at intake, including benefits screening triggers.', status: 'planned', keywords: ['needs', 'snap', 'benefits', 'screening'] }
+          {
+            id: 'prior-living-situation-report',
+            title: 'Prior Living Situation Report',
+            summary: 'Repo supported report showing where residents were staying before entry.',
+            status: 'planned',
+            keywords: ['prior living', 'street', 'shelter', 'jail', 'hospital', 'family']
+          },
+          {
+            id: 'intake-profile-report',
+            title: 'Intake Profile Report',
+            summary: 'Repo supported intake profile across entry income, sobriety, education, barriers, and key intake conditions.',
+            status: 'planned',
+            keywords: ['entry', 'conditions', 'income', 'sobriety', 'education', 'barriers']
+          }
         ]
       },
       {
@@ -161,12 +198,27 @@
         title: 'Program Flow',
         description: 'Tracks movement through the program from entry to exit, including occupancy and length of stay.',
         reports: [
-          { id: 'active-census', title: 'Active Census', summary: 'Planned report for active residents by shelter and current occupancy status.', status: 'planned', keywords: ['occupancy', 'active residents', 'shelter census'] },
-          { id: 'intakes-over-time', title: 'Intakes Over Time', summary: 'Planned trend view of program entry volume over time.', status: 'planned', keywords: ['entries', 'trends', 'month', 'week'] },
-          { id: 'exits-over-time', title: 'Exits Over Time', summary: 'Planned trend view of exits and program movement over time.', status: 'planned', keywords: ['exits', 'trends'] },
-          { id: 'length-of-stay', title: 'Length Of Stay', summary: 'Planned report showing average, median, and bucketed length of stay.', status: 'planned', keywords: ['average', 'median', 'los'] },
-          { id: 'program-turnover', title: 'Program Turnover', summary: 'Planned retention and turnover view for enrollment movement.', status: 'planned', keywords: ['turnover', 'retention'] },
-          { id: 'bed-utilization', title: 'Bed Utilization', summary: 'Planned utilization report comparing occupancy against configured capacity.', status: 'planned', keywords: ['bed', 'capacity', 'utilization'] }
+          {
+            id: 'active-census-report',
+            title: 'Active Census Report',
+            summary: 'Repo supported report for active residents by shelter and current occupancy status.',
+            status: 'planned',
+            keywords: ['occupancy', 'active residents', 'census', 'shelter census']
+          },
+          {
+            id: 'program-flow-report',
+            title: 'Program Flow Report',
+            summary: 'Repo supported report showing intakes, exits, and movement through the program over time.',
+            status: 'planned',
+            keywords: ['entries', 'exits', 'flow', 'movement', 'trends']
+          },
+          {
+            id: 'length-of-stay-report',
+            title: 'Length Of Stay Report',
+            summary: 'Repo supported report showing average, median, and bucketed length of stay.',
+            status: 'planned',
+            keywords: ['length of stay', 'average', 'median', 'los']
+          }
         ]
       },
       {
@@ -174,11 +226,35 @@
         title: 'Outcomes',
         description: 'Measures what changed by exit and after exit, including graduation, income, sobriety, and follow up.',
         reports: [
-          { id: 'graduation-income-and-sobriety-outcome-study', title: 'Graduation Income And Sobriety Outcome Study', summary: 'Compare frozen monthly income at graduation against 6 month and 12 month sobriety outcomes for true graduates only.', status: 'live', url: liveUrls.graduationStudy, keywords: ['graduation', 'income', 'sobriety', '6 month', '12 month'] },
-          { id: 'exit-outcomes', title: 'Exit Outcomes', summary: 'Planned report for exit categories, exit reasons, and leave AMA outcomes.', status: 'planned', keywords: ['exit category', 'exit reason', 'ama'] },
-          { id: 'income-change', title: 'Income Change', summary: 'Planned report comparing income at entry, exit, and selected follow up points.', status: 'planned', keywords: ['entry income', 'exit income', 'follow up income'] },
-          { id: 'sobriety-progression', title: 'Sobriety Progression', summary: 'Planned report for sobriety status at entry, graduation, and follow up checkpoints.', status: 'planned', keywords: ['sober', 'sobriety', 'follow up'] },
-          { id: 'follow-up-outcomes', title: 'Follow Up Outcomes', summary: 'Planned follow up outcomes report focused on post exit stability snapshots.', status: 'planned', keywords: ['post exit', 'stability', 'follow up'] }
+          {
+            id: 'graduation-income-and-sobriety-outcome-study',
+            title: 'Graduation Income And Sobriety Outcome Study',
+            summary: 'Compare frozen monthly income at graduation against 6 month and 12 month sobriety outcomes for true graduates only.',
+            status: 'live',
+            url: liveUrls.graduationStudy,
+            keywords: ['graduation', 'income', 'sobriety', '6 month', '12 month']
+          },
+          {
+            id: 'exit-outcomes-report',
+            title: 'Exit Outcomes Report',
+            summary: 'Repo supported report for exit categories, exit reasons, and leave AMA outcomes.',
+            status: 'planned',
+            keywords: ['exit category', 'exit reason', 'ama']
+          },
+          {
+            id: 'income-change-report',
+            title: 'Income Change Report',
+            summary: 'Repo supported report comparing income at entry, exit, and supported follow up points.',
+            status: 'planned',
+            keywords: ['entry income', 'exit income', 'follow up income']
+          },
+          {
+            id: 'sobriety-progress-report',
+            title: 'Sobriety Progress Report',
+            summary: 'Repo supported report for sobriety status at entry, graduation, and follow up checkpoints.',
+            status: 'planned',
+            keywords: ['sober', 'sobriety', 'follow up']
+          }
         ]
       },
       {
@@ -186,33 +262,76 @@
         title: 'Case Management',
         description: 'Tracks case manager notes, contact activity, appointments, goals, and resident engagement over time.',
         reports: [
-          { id: 'case-manager-activity', title: 'Case Manager Activity', summary: 'Planned workload and note volume report by staff and resident.', status: 'planned', keywords: ['notes', 'workload', 'staff'] },
-          { id: 'contact-frequency', title: 'Contact Frequency', summary: 'Planned report showing residents with recent or overdue contact activity.', status: 'planned', keywords: ['recent contact', 'overdue contact'] },
-          { id: 'goals-completion', title: 'Goals Completion', summary: 'Planned goal tracking report for completed and open goals.', status: 'planned', keywords: ['goals', 'completion'] },
-          { id: 'appointments-scheduled', title: 'Appointments Scheduled', summary: 'Planned report for appointment scheduling volume and appointment type mix.', status: 'planned', keywords: ['appointments', 'scheduled'] }
+          {
+            id: 'case-management-activity-report',
+            title: 'Case Management Activity Report',
+            summary: 'Repo supported workload and note volume report by staff and resident.',
+            status: 'planned',
+            keywords: ['notes', 'workload', 'staff']
+          },
+          {
+            id: 'resident-engagement-risk-report',
+            title: 'Resident Engagement Or Risk Report',
+            summary: 'Repo supported report showing residents with recent, missing, or overdue case management contact.',
+            status: 'planned',
+            keywords: ['engagement', 'risk', 'recent contact', 'overdue contact']
+          },
+          {
+            id: 'goals-report',
+            title: 'Goals Report',
+            summary: 'Repo supported goal tracking report for completed and open goals.',
+            status: 'planned',
+            keywords: ['goals', 'completion']
+          },
+          {
+            id: 'appointments-report',
+            title: 'Appointments Report',
+            summary: 'Repo supported report for appointment scheduling volume and appointment type mix.',
+            status: 'planned',
+            keywords: ['appointments', 'scheduled']
+          }
         ]
       },
       {
         slug: 'referrals',
         title: 'Referrals',
-        description: 'Reserved for referral and external service coordination reporting once structured referral tracking is added.',
-        reports: [
-          { id: 'referrals-made', title: 'Referrals Made', summary: 'Planned report for referrals made once structured referral tracking is added.', status: 'planned', keywords: ['referrals made', 'counseling', 'transportation'] },
-          { id: 'referral-categories', title: 'Referral Categories', summary: 'Planned category level report showing what referral needs appear most often.', status: 'planned', keywords: ['categories', 'counseling', 'dental', 'legal'] },
-          { id: 'partner-agencies', title: 'Partner Agencies', summary: 'Planned report for referral destinations and outside partner agency usage.', status: 'planned', keywords: ['partner agencies', 'providers'] },
-          { id: 'service-connection-outcomes', title: 'Service Connection Outcomes', summary: 'Planned referral follow through and service connection report.', status: 'planned', keywords: ['connection', 'outcomes', 'success'] }
-        ]
+        description: 'Reserved for referral reporting once structured referral tracking is added to the system.',
+        reports: []
       },
       {
         slug: 'passes-attendance',
         title: 'Passes And Attendance',
         description: 'Reports resident movement, obligations, transportation, passes, and activity engagement across shelters.',
         reports: [
-          { id: 'activity-engagement-report', title: 'Activity Engagement Report', summary: 'Compare this week, last week, and all time activity across shelters, residents, meetings, and categories.', status: 'live', url: liveUrls.activityEngagement, keywords: ['activity', 'engagement', 'attendance', 'meetings', 'productive hours'] },
-          { id: 'pass-activity', title: 'Pass Activity', summary: 'Planned report for pass requests, approvals, denials, and return timing.', status: 'planned', keywords: ['pass requests', 'approvals', 'denials'] },
-          { id: 'attendance-events', title: 'Attendance Events', summary: 'Planned detailed attendance report for event types, obligation windows, and meetings attended.', status: 'planned', keywords: ['attendance events', 'obligations', 'recovery meetings'] },
-          { id: 'transportation-requests', title: 'Transportation Requests', summary: 'Planned report showing transport demand, destinations, and fulfillment status.', status: 'planned', keywords: ['pickup', 'destination', 'transport'] },
-          { id: 'meeting-attendance-breakdown', title: 'Meeting Attendance Breakdown', summary: 'Planned meeting count and recovery meeting participation report.', status: 'planned', keywords: ['aa', 'na', 'meeting count'] }
+          {
+            id: 'activity-engagement-report',
+            title: 'Activity Engagement Report',
+            summary: 'Compare this week, last week, and all time activity across shelters, residents, meetings, and categories.',
+            status: 'live',
+            url: liveUrls.activityEngagement,
+            keywords: ['activity', 'engagement', 'attendance', 'meetings', 'productive hours']
+          },
+          {
+            id: 'pass-activity-report',
+            title: 'Pass Activity Report',
+            summary: 'Repo supported report for pass requests, approvals, denials, and return timing.',
+            status: 'planned',
+            keywords: ['pass requests', 'approvals', 'denials']
+          },
+          {
+            id: 'transportation-report',
+            title: 'Transportation Report',
+            summary: 'Repo supported report showing transport demand, destinations, reasons, and fulfillment status.',
+            status: 'planned',
+            keywords: ['pickup', 'destination', 'transport']
+          },
+          {
+            id: 'attendance-and-activity-report',
+            title: 'Attendance And Activity Report',
+            summary: 'Repo supported attendance report for event types, obligation windows, and meeting participation.',
+            status: 'planned',
+            keywords: ['attendance events', 'obligations', 'recovery meetings']
+          }
         ]
       },
       {
@@ -220,10 +339,13 @@
         title: 'Employment And Income',
         description: 'Tracks earnings, employment movement, work activity, and income change from entry through exit and follow up.',
         reports: [
-          { id: 'employment-status-summary', title: 'Employment Status Summary', summary: 'Planned report for employment status, employer, and job type distribution.', status: 'planned', keywords: ['employment status', 'employer', 'job type'] },
-          { id: 'weekly-productivity', title: 'Weekly Productivity', summary: 'Planned report for weekly productive hours, work hours, and meeting counts.', status: 'planned', keywords: ['productive hours', 'work hours', 'weekly'] },
-          { id: 'income-snapshot-by-shelter', title: 'Income Snapshot By Shelter', summary: 'Planned point in time income reporting broken down by shelter.', status: 'planned', keywords: ['income', 'shelter'] },
-          { id: 'graduation-income-bands', title: 'Graduation Income Bands', summary: 'Planned banded income report at graduation or exit.', status: 'planned', keywords: ['graduation income', 'bands'] }
+          {
+            id: 'weekly-productivity-report',
+            title: 'Weekly Productivity Report',
+            summary: 'Repo supported report for weekly productive hours, work hours, and meeting counts.',
+            status: 'planned',
+            keywords: ['productive hours', 'work hours', 'weekly']
+          }
         ]
       },
       {
@@ -231,22 +353,27 @@
         title: 'Families And Children',
         description: 'Focuses on children served, family composition, age bands, reunification, and family impact.',
         reports: [
-          { id: 'family-composition', title: 'Family Composition', summary: 'Planned report on family composition and household structure in program.', status: 'planned', keywords: ['family composition', 'household'] },
-          { id: 'children-served', title: 'Children Served', summary: 'Planned child focused report for age groups and counts served.', status: 'planned', keywords: ['children', 'age groups'] },
-          { id: 'reunification-summary', title: 'Reunification Summary', summary: 'Planned report for children reunited while in program.', status: 'planned', keywords: ['reunification', 'kids reunited'] },
-          { id: 'healthy-babies-born', title: 'Healthy Babies Born', summary: 'Planned family impact report for babies born while in program.', status: 'planned', keywords: ['babies', 'born'] }
+          {
+            id: 'family-and-children-report',
+            title: 'Family And Children Report',
+            summary: 'Repo supported report on family composition, children served, age groups, reunification, and babies born in program.',
+            status: 'planned',
+            keywords: ['family composition', 'children', 'reunification', 'babies']
+          }
         ]
       },
       {
         slug: 'operations',
         title: 'Operations',
-        description: 'Administrative and operational reporting across transfers, chores, raw forms, and internal activity.',
+        description: 'Administrative and operational reporting across raw forms and internal system activity.',
         reports: [
-          { id: 'resident-transfers', title: 'Resident Transfers', summary: 'Planned report for shelter transfer activity and movement patterns.', status: 'planned', keywords: ['transfers', 'shelter transfer'] },
-          { id: 'chore-assignments', title: 'Chore Assignments', summary: 'Planned operational report for chore assignment coverage and completion status.', status: 'planned', keywords: ['chores', 'assignments'] },
-          { id: 'raw-form-submissions', title: 'Raw Form Submissions', summary: 'Planned audit style report showing ingested form activity and source details.', status: 'planned', keywords: ['raw forms', 'audit', 'jotform'] },
-          { id: 'weekly-resident-summary-audit', title: 'Weekly Resident Summary Audit', summary: 'Planned audit report for weekly resident summary submissions.', status: 'planned', keywords: ['weekly summary', 'audit'] },
-          { id: 'database-stats', title: 'Database Stats', summary: 'Reserved placeholder for system level table and volume statistics if needed later.', status: 'planned', keywords: ['db stats', 'database'] }
+          {
+            id: 'raw-form-submissions-report',
+            title: 'Raw Form Submissions Report',
+            summary: 'Repo supported audit style report showing ingested form activity and source details.',
+            status: 'planned',
+            keywords: ['raw forms', 'audit', 'jotform']
+          }
         ]
       },
       {
@@ -254,9 +381,13 @@
         title: 'Follow Up',
         description: 'Post exit reporting for 6 month and 12 month stability, sobriety, and income snapshots.',
         reports: [
-          { id: 'six-month-follow-up', title: '6 Month Follow Up', summary: 'Planned report for 6 month follow up outcomes.', status: 'planned', keywords: ['6 month', 'follow up'] },
-          { id: 'one-year-follow-up', title: '12 Month Follow Up', summary: 'Planned report for 12 month follow up outcomes.', status: 'planned', keywords: ['12 month', '1 year', 'follow up'] },
-          { id: 'post-exit-stability', title: 'Post Exit Stability', summary: 'Planned composite report summarizing post exit follow up indicators.', status: 'planned', keywords: ['post exit', 'stability'] }
+          {
+            id: 'follow-up-outcomes-report',
+            title: 'Follow Up Outcomes Report',
+            summary: 'Repo supported follow up outcomes report focused on post exit stability snapshots.',
+            status: 'planned',
+            keywords: ['post exit', 'stability', 'follow up']
+          }
         ]
       }
     ];
@@ -291,7 +422,7 @@
 
     function reportMap() {
       const map = {};
-      categories.forEach((category) => {
+      reportCatalog.forEach((category) => {
         category.reports.forEach((report) => {
           map[report.id] = Object.assign({}, report, { categoryTitle: category.title });
         });
@@ -302,35 +433,37 @@
     const reportsById = reportMap();
 
     function renderCategoryCards() {
-      categoryGrid.innerHTML = categories.map((category) => (
+      categoryGrid.innerHTML = reportCatalog.map((category) => (
         '<article class="reports-category-card" data-category-card data-search-text="' + categorySearchText(category).replace(/"/g, '&quot;') + '">' +
           '<div><h3>' + category.title + '</h3><p class="reports-category-description">' + category.description + '</p></div>' +
           '<span class="reports-category-count">' + category.reports.length + ' reports</span>' +
-          '<ul class="reports-category-examples">' + category.reports.slice(0, 3).map((report) => '<li>' + report.title + '</li>').join('') + '</ul>' +
+          '<ul class="reports-category-examples">' + (category.reports.length ? category.reports.slice(0, 3).map((report) => '<li>' + report.title + '</li>').join('') : '<li>No reports assigned yet</li>') + '</ul>' +
           '<div class="reports-category-actions"><a class="btn btn-primary" href="#category-' + category.slug + '">View Reports</a></div>' +
         '</article>'
       )).join('');
     }
 
     function renderDirectory() {
-      directoryStack.innerHTML = categories.map((category) => (
+      directoryStack.innerHTML = reportCatalog.map((category) => (
         '<section class="reports-category-section reports-section-anchor" id="category-' + category.slug + '" data-category-section data-search-text="' + categorySearchText(category).replace(/"/g, '&quot;') + '">' +
           '<div class="reports-directory-section-head"><h3>' + category.title + '</h3><span class="reports-directory-section-count">' + category.reports.length + ' reports</span></div>' +
           '<div class="reports-directory-list">' +
-            category.reports.map((report) => (
-              '<article class="reports-directory-item" data-report-item data-report-id="' + report.id + '" data-search-text="' + reportSearchText(category, report).replace(/"/g, '&quot;') + '">' +
-                '<div class="reports-item-main">' +
-                  '<div class="reports-item-kicker">' + category.title + '</div>' +
-                  '<h4 class="reports-item-title">' + (report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title) + '</h4>' +
-                  '<p class="reports-item-summary">' + report.summary + '</p>' +
-                  (report.status === 'live' ? '<p class="reports-item-meta">Live route is available now.</p>' : '') +
-                '</div>' +
-                '<div class="reports-item-actions">' +
-                  '<span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span>' +
-                  '<button type="button" class="reports-favorite-button" data-favorite-button="' + report.id + '" aria-label="Favorite ' + report.title + '">☆</button>' +
-                '</div>' +
-              '</article>'
-            )).join('') +
+            (category.reports.length
+              ? category.reports.map((report) => (
+                  '<article class="reports-directory-item" data-report-item data-report-id="' + report.id + '" data-search-text="' + reportSearchText(category, report).replace(/"/g, '&quot;') + '">' +
+                    '<div class="reports-item-main">' +
+                      '<div class="reports-item-kicker">' + category.title + '</div>' +
+                      '<h4 class="reports-item-title">' + (report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title) + '</h4>' +
+                      '<p class="reports-item-summary">' + report.summary + '</p>' +
+                      (report.status === 'live' ? '<p class="reports-item-meta">Live route is available now.</p>' : '') +
+                    '</div>' +
+                    '<div class="reports-item-actions">' +
+                      '<span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span>' +
+                      '<button type="button" class="reports-favorite-button" data-favorite-button="' + report.id + '" aria-label="Favorite ' + report.title + '">☆</button>' +
+                    '</div>' +
+                  '</article>'
+                )).join('')
+              : '<div class="reports-empty-state">No reports are assigned to this category yet.</div>') +
           '</div>' +
         '</section>'
       )).join('');
