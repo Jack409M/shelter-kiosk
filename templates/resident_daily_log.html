@@ -5,87 +5,113 @@
 <div class="resident-portal">
   <div class="resident-home-card" style="max-width: 720px; margin: 0 auto;">
     <h1 class="resident-portal-title">Daily Log</h1>
-    <p>Log your daily activities using the same activity structure used by kiosk checkout.</p>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul class="resident-status-list" style="margin-bottom: 16px;">
-          {% for category, message in messages %}
-            <li class="resident-status-item">
-              <div class="resident-status-row">
-                <span class="status-badge status-{{ category }}">{{ category.replace('_', ' ') }}</span>
-              </div>
-              <div class="resident-status-row resident-status-main">
-                {{ message }}
-              </div>
-            </li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
 
     <form method="post" class="kiosk-form" autocomplete="off">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
+      <!-- Log Date -->
       <div style="margin-bottom: 14px;">
-        <label for="log_date" style="display:block; font-weight:600; margin-bottom:6px;">Log Date</label>
-        <input
-          id="log_date"
-          name="log_date"
-          type="date"
-          value="{{ request.form.get('log_date', '') }}"
-          required
-          style="width:25ch; max-width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
-        >
+        <label>Log Date</label>
+        <input type="date" name="log_date" required>
       </div>
 
+      <!-- Parent Category -->
       <div style="margin-bottom: 14px;">
-        <label for="activity_category" style="display:block; font-weight:600; margin-bottom:6px;">Activity Category</label>
-        <select
-          id="activity_category"
-          name="activity_category"
-          required
-          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
-        >
-          <option value="">Select activity category</option>
-          {% set selected_activity = request.form.get('activity_category', '') %}
+        <label>Activity Category</label>
+        <select id="activity_category" name="activity_category" required>
+          <option value="">Select activity</option>
           {% for item in checkout_categories %}
-            {% set item_label = item.get('activity_label', '') %}
-            {% set item_key = item.get('activity_key', '') %}
-            <option
-              value="{{ item_label }}"
-              data-activity-key="{{ item_key }}"
-              data-is-aa-na-meeting="{{ '1' if item_key == aa_na_parent_activity_key else '0' }}"
-              {% if selected_activity == item_label %}selected{% endif %}
+            <option 
+              value="{{ item.activity_label }}"
+              data-key="{{ item.activity_key }}"
+              data-aa="{{ '1' if item.activity_key == aa_na_parent_activity_key else '0' }}"
             >
-              {{ item_label }}
+              {{ item.activity_label }}
             </option>
           {% endfor %}
         </select>
       </div>
 
+      <!-- CHILD: STANDARD DETAIL -->
+      <div id="child_wrap" style="display:none; margin-bottom:14px;">
+        <label>Activity Detail</label>
+        <select name="child_option_value" id="child_select"></select>
+      </div>
+
+      <!-- CHILD: AA/NA -->
+      <div id="aa_wrap" style="display:none; margin-bottom:14px;">
+        <label>Meeting 1</label>
+        <select name="aa_na_meeting_1" id="aa1"></select>
+
+        <label style="margin-top:10px;">Meeting 2</label>
+        <select name="aa_na_meeting_2" id="aa2"></select>
+      </div>
+
+      <!-- HOURS -->
       <div id="hours_wrap" style="margin-bottom: 14px;">
-        <label for="hours" style="display:block; font-weight:600; margin-bottom:6px;">Hours</label>
-        <input
-          id="hours"
-          name="hours"
-          type="number"
-          min="0"
-          step="0.25"
-          inputmode="decimal"
-          value="{{ request.form.get('hours', '') }}"
-          style="width:100%; box-sizing:border-box; padding:14px; font-size:18px;"
-        >
-        <div style="font-size:14px; color:#666; margin-top:6px;">
-          Enter hours for productive, volunteer, or employment related activity.
-        </div>
+        <label>Hours</label>
+        <input name="hours" type="number" step="0.25">
       </div>
 
       <button class="portal-btn" type="submit" style="width:100%;">
-        Submit Daily Log
+        Submit
       </button>
     </form>
   </div>
 </div>
+
+<script>
+const childOptions = {{ child_option_labels_by_parent | tojson | safe }};
+const aaKey = "{{ aa_na_parent_activity_key }}";
+
+const category = document.getElementById("activity_category");
+const childWrap = document.getElementById("child_wrap");
+const childSelect = document.getElementById("child_select");
+
+const aaWrap = document.getElementById("aa_wrap");
+const aa1 = document.getElementById("aa1");
+const aa2 = document.getElementById("aa2");
+
+const hoursWrap = document.getElementById("hours_wrap");
+
+category.addEventListener("change", () => {
+    const selected = category.options[category.selectedIndex];
+    const key = selected.dataset.key;
+    const isAA = selected.dataset.aa === "1";
+
+    // reset
+    childWrap.style.display = "none";
+    aaWrap.style.display = "none";
+    hoursWrap.style.display = "block";
+
+    childSelect.innerHTML = "";
+    aa1.innerHTML = "";
+    aa2.innerHTML = "";
+
+    if (!key) return;
+
+    const options = childOptions[key] || [];
+
+    if (isAA) {
+        aaWrap.style.display = "block";
+        hoursWrap.style.display = "none";
+
+        options.forEach(opt => {
+            const o1 = new Option(opt, opt);
+            const o2 = new Option(opt, opt);
+            aa1.add(o1);
+            aa2.add(o2);
+        });
+
+    } else if (options.length > 0) {
+        childWrap.style.display = "block";
+
+        options.forEach(opt => {
+            const o = new Option(opt, opt);
+            childSelect.add(o);
+        });
+    }
+});
+</script>
 
 {% endblock %}
