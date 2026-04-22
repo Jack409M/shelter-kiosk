@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="card">
+  <h1>Family And Children Report</h1>
+  <p>Families With Children: {{ report.summary.residents_with_children_display }}</p>
+  <p>Total Children: {{ report.summary.children_in_shelter_display }}</p>
+  <p>Average Children Per Family: {{ report.average_children_per_family }}</p>
+  <p>Reunified: {{ report.summary.children_reunited_display }}</p>
+  <p>Babies Born: {{ report.summary.healthy_babies_born_display }}</p>
+  <p>Survivor Benefit Children: {{ report.survivor_benefit_children }}</p>
+</div>
+{% endblock %}
