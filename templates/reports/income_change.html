@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="reports-header card">
+    <div>
+      <h1>Income Change Report</h1>
+      <p class="reports-subtitle">
+        {{ report.scope_label }} • Compares income at entry, exit, and follow up
+      </p>
+    </div>
+  </div>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <h2>Filters</h2>
+    <form method="get">
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;">
+        <div>
+          <label>Scope</label>
+          <select name="scope">
+            {% for opt in report.scope_options %}
+              <option value="{{ opt.value }}" {% if opt.value == report.scope %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label>Start Date</label>
+          <input type="date" name="start_date" value="{{ report.start_date }}">
+        </div>
+
+        <div>
+          <label>End Date</label>
+          <input type="date" name="end_date" value="{{ report.end_date }}">
+        </div>
+
+        <div style="display:flex; align-items:end;">
+          <button class="btn btn-primary" type="submit">Apply</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <h2>Summary</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Residents</div>
+        <div class="stat-value">{{ report.total_rows }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Comparable</div>
+        <div class="stat-value">{{ report.comparable_count }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Improved</div>
+        <div class="stat-value">{{ report.improved_count }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Improvement Rate</div>
+        <div class="stat-value">{{ report.improved_rate }}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <h2>Income Averages</h2>
+    <table class="audit-table">
+      <tr>
+        <th>Metric</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>Average Entry Income</td>
+        <td>{{ report.fmt_currency(report.avg_entry_income) }}</td>
+      </tr>
+      <tr>
+        <td>Average Exit Income</td>
+        <td>{{ report.fmt_currency(report.avg_exit_income) }}</td>
+      </tr>
+      <tr>
+        <td>Average 6 Month Income</td>
+        <td>{{ report.fmt_currency(report.avg_six_month_income) }}</td>
+      </tr>
+      <tr>
+        <td>Average 12 Month Income</td>
+        <td>{{ report.fmt_currency(report.avg_one_year_income) }}</td>
+      </tr>
+      <tr>
+        <td>Average Change Entry To Exit</td>
+        <td>{{ report.fmt_currency(report.avg_change_entry_to_exit) }}</td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <h2>By Shelter</h2>
+    <table class="audit-table">
+      <thead>
+        <tr>
+          <th>Shelter</th>
+          <th>Residents</th>
+          <th>Avg Entry</th>
+          <th>Avg Exit</th>
+          <th>Avg Change</th>
+          <th>Improved</th>
+          <th>Improvement Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in report.shelter_rows %}
+        <tr>
+          <td>{{ row.shelter_label }}</td>
+          <td>{{ row.resident_count }}</td>
+          <td>{{ row.avg_entry_income }}</td>
+          <td>{{ row.avg_exit_income }}</td>
+          <td>{{ row.avg_change }}</td>
+          <td>{{ row.improved_count }}</td>
+          <td>{{ row.improved_rate }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card section-card">
+    <h2>Resident Detail</h2>
+    <div style="overflow-x:auto;">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>ID</th>
+            <th>Shelter</th>
+            <th>Entry Date</th>
+            <th>Exit Date</th>
+            <th>Entry Income</th>
+            <th>Exit Income</th>
+            <th>6 Month</th>
+            <th>12 Month</th>
+            <th>Change</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.detail_rows %}
+          <tr>
+            <td>{{ row.resident_name }}</td>
+            <td>{{ row.resident_display_id }}</td>
+            <td>{{ row.shelter_label }}</td>
+            <td>{{ row.entry_date }}</td>
+            <td>{{ row.effective_exit_date }}</td>
+            <td>{{ row.entry_income_display }}</td>
+            <td>{{ row.exit_income_display }}</td>
+            <td>{{ row.six_month_income_display }}</td>
+            <td>{{ row.one_year_income_display }}</td>
+            <td>{{ row.change_entry_to_exit_display }}</td>
+            <td>{{ row.change_status }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
