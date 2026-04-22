@@ -21,6 +21,7 @@
     .reports-category-description, .reports-item-summary { margin: 6px 0 0 0; color: rgba(0,0,0,0.72); line-height: 1.45; }
     .reports-category-count { display: inline-flex; align-items: center; width: fit-content; min-height: 26px; padding: 0 10px; border-radius: 999px; background: #eef3f8; color: #23405d; font-size: 12px; font-weight: 700; margin-top: 10px; }
     .reports-category-examples { margin: 10px 0 0 0; padding-left: 18px; color: rgba(0,0,0,0.68); line-height: 1.45; }
+    .reports-category-examples a { color: inherit; text-decoration: underline; }
     .reports-category-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
     .reports-directory-item.is-hidden, .reports-category-card.is-hidden, .reports-category-section.is-hidden { display: none; }
     .reports-item-main { min-width: 0; flex: 1 1 auto; }
@@ -206,6 +207,30 @@
       return map;
     }
 
+    function firstLiveReport(category) {
+      return category.reports.find((report) => report.status === 'live' && report.url);
+    }
+
+    function categoryActionMarkup(category) {
+      const liveReport = firstLiveReport(category);
+      if (liveReport) {
+        return '<a class="btn btn-primary" href="' + liveReport.url + '" data-report-link="' + liveReport.id + '">Open Live Report</a>';
+      }
+      return '<a class="btn btn-primary" href="#category-' + category.slug + '">View Reports</a>';
+    }
+
+    function categoryExamplesMarkup(category) {
+      if (!category.reports.length) {
+        return '<li>No reports assigned yet</li>';
+      }
+      return category.reports.slice(0, 3).map((report) => {
+        if (report.status === 'live' && report.url) {
+          return '<li><a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a></li>';
+        }
+        return '<li>' + report.title + '</li>';
+      }).join('');
+    }
+
     const reportsById = reportMap();
 
     function renderCategoryCards() {
@@ -213,8 +238,8 @@
         '<article class="reports-category-card" data-category-card data-search-text="' + categorySearchText(category).replace(/"/g, '&quot;') + '">' +
           '<div><h3>' + category.title + '</h3><p class="reports-category-description">' + category.description + '</p></div>' +
           '<span class="reports-category-count">' + category.reports.length + ' reports</span>' +
-          '<ul class="reports-category-examples">' + (category.reports.length ? category.reports.slice(0, 3).map((report) => '<li>' + report.title + '</li>').join('') : '<li>No reports assigned yet</li>') + '</ul>' +
-          '<div class="reports-category-actions"><a class="btn btn-primary" href="#category-' + category.slug + '">View Reports</a></div>' +
+          '<ul class="reports-category-examples">' + categoryExamplesMarkup(category) + '</ul>' +
+          '<div class="reports-category-actions">' + categoryActionMarkup(category) + '</div>' +
         '</article>'
       )).join('');
     }
@@ -252,13 +277,100 @@
       }
     }
 
-    function renderFavorites() { favoritesEmpty.style.display = 'block'; }
-    function renderRecent() { recentEmpty.style.display = 'block'; }
+    function writeStorage(key, value) {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {}
+    }
 
-    function applySearch() {}
+    function quickItemMarkup(report) {
+      if (!report) return '';
+      const title = report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title;
+      return (
+        '<article class="reports-quick-item">' +
+          '<div class="reports-item-main">' +
+            '<div class="reports-item-kicker">' + report.categoryTitle + '</div>' +
+            '<h4 class="reports-item-title">' + title + '</h4>' +
+            '<p class="reports-item-summary">' + report.summary + '</p>' +
+          '</div>' +
+          '<div class="reports-item-actions"><span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span></div>' +
+        '</article>'
+      );
+    }
+
+    function renderFavorites() {
+      const favoriteIds = readStorage(storageKeys.favorites);
+      const favoriteReports = favoriteIds.map((id) => reportsById[id]).filter(Boolean);
+      favoritesList.innerHTML = favoriteReports.map(quickItemMarkup).join('');
+      favoritesEmpty.style.display = favoriteReports.length ? 'none' : 'block';
+      favoritesCount.textContent = favoriteReports.length + ' saved';
+    }
+
+    function renderRecent() {
+      const recentIds = readStorage(storageKeys.recent);
+      const recentReports = recentIds.map((id) => reportsById[id]).filter(Boolean);
+      recentList.innerHTML = recentReports.map(quickItemMarkup).join('');
+      recentEmpty.style.display = recentReports.length ? 'none' : 'block';
+      recentCount.textContent = recentReports.length + ' opened';
+    }
+
+    function markRecent(reportId) {
+      const recent = readStorage(storageKeys.recent);
+      const next = [reportId].concat(recent.filter((id) => id !== reportId)).slice(0, 5);
+      writeStorage(storageKeys.recent, next);
+      renderRecent();
+    }
+
+    function applySearch() {
+      const query = (searchInput.value || '').trim().toLowerCase();
+      let visibleReports = 0;
+
+      document.querySelectorAll('[data-category-card]').forEach((card) => {
+        const visible = !query || (card.getAttribute('data-search-text') || '').includes(query);
+        card.classList.toggle('is-hidden', !visible);
+      });
+
+      document.querySelectorAll('[data-report-item]').forEach((item) => {
+        const visible = !query || (item.getAttribute('data-search-text') || '').includes(query);
+        item.classList.toggle('is-hidden', !visible);
+        if (visible) visibleReports += 1;
+      });
+
+      document.querySelectorAll('[data-category-section]').forEach((section) => {
+        const hasVisibleReports = section.querySelectorAll('[data-report-item]:not(.is-hidden)').length > 0;
+        const sectionMatch = !query || (section.getAttribute('data-search-text') || '').includes(query);
+        section.classList.toggle('is-hidden', !(hasVisibleReports || sectionMatch));
+      });
+
+      searchEmpty.classList.toggle('is-visible', !!query && visibleReports === 0);
+    }
 
     renderCategoryCards();
     renderDirectory();
+    renderFavorites();
+    renderRecent();
+    applySearch();
+
+    document.addEventListener('click', function (event) {
+      const reportLink = event.target.closest('[data-report-link]');
+      if (reportLink) {
+        markRecent(reportLink.getAttribute('data-report-link'));
+        return;
+      }
+
+      const favoritesJump = event.target.closest('#reports-favorites-jump');
+      if (favoritesJump) {
+        document.getElementById('reports-favorites-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      const recentJump = event.target.closest('#reports-recent-jump');
+      if (recentJump) {
+        document.getElementById('reports-recent-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+
+    searchInput.addEventListener('input', applySearch);
   })();
 </script>
 {% endblock %}
