@@ -45,6 +45,14 @@ from .snapshot import build_rent_stability_snapshot
 from .utils import _bool_value, _float_value, _placeholder
 
 
+def _normalized_level_text(value: object) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    digits = "".join(ch for ch in text if ch.isdigit())
+    return digits or text
+
+
 def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
     _ensure_tables()
     settings = _load_settings(shelter)
@@ -1005,6 +1013,11 @@ def register_routes(rent_tracking):
         resident = _resident_for_shelter(resident_id, shelter)
         if not resident:
             flash("Resident not found.", "error")
+            return redirect(url_for("rent_tracking.rent_roll"))
+
+        resident_level = _normalized_level_text(resident.get("program_level"))
+        if resident_level == "9":
+            flash("Level 9 residents cannot be assigned to DWC housing.", "error")
             return redirect(url_for("rent_tracking.rent_roll"))
 
         config = _ensure_default_rent_config(resident_id, shelter)
