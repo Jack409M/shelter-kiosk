@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="reports-header card">
+    <div>
+      <h1>Length Of Stay Report</h1>
+      <p class="reports-subtitle">
+        {{ report.scope_label }} • Exited residents only
+      </p>
+    </div>
+  </div>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <h2>Filters</h2>
+    <form method="get">
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;">
+        <div>
+          <label>Scope</label>
+          <select name="scope">
+            {% for opt in report.scope_options %}
+              <option value="{{ opt.value }}" {% if opt.value == report.scope %}selected{% endif %}>{{ opt.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Start Date</label>
+          <input type="date" name="start_date" value="{{ report.start_date }}">
+        </div>
+        <div>
+          <label>End Date</label>
+          <input type="date" name="end_date" value="{{ report.end_date }}">
+        </div>
+        <div style="display:flex; align-items:end;">
+          <button class="btn btn-primary" type="submit">Apply</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <h2>Summary</h2>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Exited Residents</div><div class="stat-value">{{ report.total_exits }}</div></div>
+      <div class="stat-card"><div class="stat-label">Average Length Of Stay At Exit</div><div class="stat-value">{{ report.average_stay }}</div></div>
+      <div class="stat-card"><div class="stat-label">Median Length Of Stay At Exit</div><div class="stat-value">{{ report.median_stay }}</div></div>
+      <div class="stat-card"><div class="stat-label">Longest Stay</div><div class="stat-value">{{ report.longest_stay }}</div></div>
+      <div class="stat-card"><div class="stat-label">Shortest Stay</div><div class="stat-value">{{ report.shortest_stay }}</div></div>
+    </div>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <h2>Length Of Stay Buckets</h2>
+    <table class="audit-table">
+      <thead>
+        <tr><th>Bucket</th><th>Count</th><th>Percent</th></tr>
+      </thead>
+      <tbody>
+        {% for row in report.bucket_rows %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td>{{ row.count }}</td>
+          <td>{{ row.percent }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card section-card" style="margin-bottom:16px;">
+    <h2>By Shelter</h2>
+    <table class="audit-table">
+      <thead>
+        <tr><th>Shelter</th><th>Residents</th><th>Average</th><th>Median</th><th>Longest</th></tr>
+      </thead>
+      <tbody>
+        {% for row in report.shelter_rows %}
+        <tr>
+          <td>{{ row.shelter_label }}</td>
+          <td>{{ row.resident_count }}</td>
+          <td>{{ row.average_stay }}</td>
+          <td>{{ row.median_stay }}</td>
+          <td>{{ row.longest_stay }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card section-card">
+    <h2>Resident Detail</h2>
+    <div style="overflow-x:auto;">
+      <table class="audit-table">
+        <thead>
+          <tr><th>Name</th><th>ID</th><th>Shelter</th><th>Entry Date</th><th>Exit Date</th><th>Days</th><th>Bucket</th></tr>
+        </thead>
+        <tbody>
+          {% for row in report.detail_rows %}
+          <tr>
+            <td>{{ row.resident_name }}</td>
+            <td>{{ row.resident_display_id }}</td>
+            <td>{{ row.shelter_label }}</td>
+            <td>{{ row.entry_date }}</td>
+            <td>{{ row.exit_date }}</td>
+            <td>{{ row.stay_days }}</td>
+            <td>{{ row.bucket_label }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
