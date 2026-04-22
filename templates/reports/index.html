@@ -1,395 +1,247 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="reports-page reports-directory-page">
+<div class="reports-directory">
   <style>
-    .reports-directory-page { gap: 18px; }
-    .reports-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); gap: 14px; align-items: end; }
-    .reports-toolbar-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
-    .reports-search-group { display: grid; gap: 6px; }
-    .reports-search-group label { font-size: 12px; font-weight: 700; color: rgba(0, 0, 0, 0.72); }
-    .reports-search-input { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #b9c2cc; border-radius: 10px; background: #fff; }
-    .reports-chip-button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 14px; border: 1px solid #cfd7e2; border-radius: 10px; background: #fff; color: #17324d; font-weight: 700; text-decoration: none; cursor: pointer; }
-    .reports-chip-button.is-muted { color: rgba(0, 0, 0, 0.72); font-weight: 600; }
-    .reports-quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .reports-quick-list, .reports-category-grid { display: grid; gap: 12px; }
-    .reports-quick-item, .reports-category-card { border: 1px solid #d7dce2; border-radius: 12px; background: rgba(255, 255, 255, 0.92); }
-    .reports-quick-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; }
-    .reports-category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .reports-category-card { padding: 16px; display: grid; gap: 10px; cursor: pointer; transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease; }
-    .reports-category-card:hover { border-color: #9fb3c8; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08); transform: translateY(-1px); }
-    .reports-category-card:focus-visible { outline: 2px solid #17324d; outline-offset: 2px; }
-    .reports-category-card h3, .reports-item-title, .reports-modal-title { margin: 0; }
-    .reports-category-description, .reports-item-summary, .reports-modal-subtitle { margin: 0; color: rgba(0, 0, 0, 0.72); line-height: 1.45; }
-    .reports-category-count { display: inline-flex; align-items: center; width: fit-content; min-height: 26px; padding: 0 10px; border-radius: 999px; background: #eef3f8; color: #23405d; font-size: 12px; font-weight: 700; }
-    .reports-category-sample { font-size: 12px; color: rgba(0, 0, 0, 0.58); line-height: 1.4; min-height: 34px; }
-    .reports-category-card.is-hidden { display: none; }
+    .reports-directory { display: grid; gap: 16px; }
+    .reports-toolbar { display: grid; gap: 12px; }
+    .reports-search { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #b9c2cc; border-radius: 10px; }
+    .reports-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .reports-card, .reports-item { border: 1px solid #d7dce2; border-radius: 12px; background: rgba(255,255,255,.94); }
+    .reports-card { padding: 16px; display: grid; gap: 10px; cursor: pointer; }
+    .reports-card h3, .reports-item h3, .reports-item h4 { margin: 0; }
+    .reports-note, .reports-desc, .reports-summary { color: rgba(0,0,0,.72); }
+    .reports-chip { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; background: #eef3f8; color: #23405d; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+    .reports-chip.live { background: #e8f7ee; color: #1b6b3f; }
+    .reports-chip.planned { background: #f3f4f6; color: #616b76; }
+    .reports-list { display: grid; gap: 10px; }
+    .reports-item { padding: 14px; display: flex; justify-content: space-between; gap: 14px; }
     .reports-item-main { min-width: 0; flex: 1 1 auto; }
-    .reports-item-kicker { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(0, 0, 0, 0.58); }
-    .reports-item-title a { color: inherit; text-decoration: none; }
-    .reports-item-title a:hover { text-decoration: underline; }
-    .reports-item-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 0 0 auto; }
-    .reports-status-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; background: #eef3f8; color: #23405d; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-    .reports-status-pill.is-live { background: #e8f7ee; color: #1b6b3f; }
-    .reports-status-pill.is-planned { background: #f3f4f6; color: #616b76; }
-    .reports-directory-section-count { font-size: 12px; color: rgba(0, 0, 0, 0.58); font-weight: 700; }
-    .reports-empty-state { padding: 18px; border: 1px dashed #c7d1dd; border-radius: 10px; background: rgba(255, 255, 255, 0.72); color: rgba(0, 0, 0, 0.68); }
-    .reports-search-empty { display: none; }
-    .reports-search-empty.is-visible { display: block; }
-    .reports-modal-backdrop { position: fixed; inset: 0; background: rgba(11, 23, 38, 0.46); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 1200; }
-    .reports-modal-backdrop.is-open { display: flex; }
-    .reports-modal { width: min(760px, 100%); max-height: min(80vh, 760px); overflow: auto; border-radius: 16px; border: 1px solid #d7dce2; background: #fff; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18); padding: 18px; display: grid; gap: 16px; }
-    .reports-modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-    .reports-modal-close { min-width: 40px; min-height: 40px; border: 1px solid #d5dce6; border-radius: 10px; background: #fff; font-size: 22px; line-height: 1; cursor: pointer; color: rgba(0, 0, 0, 0.65); }
-    .reports-modal-list { display: grid; gap: 10px; }
-    .reports-modal-item { border: 1px solid #d7dce2; border-radius: 12px; background: rgba(255, 255, 255, 0.96); padding: 14px; display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
-    .reports-modal-item-title { margin: 0; font-size: 1rem; }
-    .reports-modal-item-title a { color: inherit; text-decoration: none; }
-    .reports-modal-item-title a:hover { text-decoration: underline; }
-    .reports-modal-item-summary { margin: 6px 0 0 0; color: rgba(0, 0, 0, 0.72); line-height: 1.45; }
-    .reports-modal-item-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; flex: 0 0 auto; }
-    .reports-modal-item-open { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 12px; border-radius: 10px; background: #17324d; color: #fff; text-decoration: none; font-weight: 700; }
-    .reports-modal-item-open:hover { text-decoration: none; }
-    .reports-modal-item-open.is-disabled { background: #eef2f6; color: #617080; cursor: default; pointer-events: none; }
-    @media (max-width: 1200px) { .reports-category-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    @media (max-width: 900px) { .reports-toolbar, .reports-quick-grid { grid-template-columns: 1fr; } .reports-toolbar-actions { justify-content: flex-start; } .reports-category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 640px) { .reports-category-grid { grid-template-columns: 1fr; } .reports-quick-item, .reports-modal-item { flex-direction: column; } .reports-item-actions, .reports-modal-item-actions { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; } }
+    .reports-item-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+    .reports-link { display: inline-flex; align-items: center; justify-content: center; min-height: 38px; padding: 0 12px; border-radius: 10px; background: #17324d; color: #fff; text-decoration: none; font-weight: 700; }
+    .reports-link.disabled { background: #eef2f6; color: #617080; pointer-events: none; }
+    .reports-modal-backdrop { position: fixed; inset: 0; background: rgba(11,23,38,.46); display: none; align-items: center; justify-content: center; padding: 20px; z-index: 1200; }
+    .reports-modal-backdrop.open { display: flex; }
+    .reports-modal { width: min(760px,100%); max-height: min(80vh,760px); overflow: auto; border-radius: 16px; border: 1px solid #d7dce2; background: #fff; box-shadow: 0 20px 50px rgba(0,0,0,.18); padding: 18px; display: grid; gap: 16px; }
+    .reports-modal-head { display: flex; justify-content: space-between; gap: 16px; }
+    .reports-close { min-width: 40px; min-height: 40px; border: 1px solid #d5dce6; border-radius: 10px; background: #fff; font-size: 22px; cursor: pointer; }
+    .reports-hidden { display: none; }
+    @media (max-width: 900px) { .reports-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 640px) { .reports-grid { grid-template-columns: 1fr; } .reports-item { flex-direction: column; } .reports-item-actions { align-items: stretch; } }
   </style>
 
-  <div class="reports-header card">
+  <div class="card">
     <div class="reports-toolbar">
       <div>
         <h1>Reports</h1>
-        <p class="reports-subtitle">Choose a report category, then select the report you want to open.</p>
+        <p class="reports-note">Choose a report category, then open the report you want.</p>
       </div>
-      <div class="reports-toolbar-actions">
-        <div class="reports-search-group" style="min-width:min(100%, 360px);">
-          <label for="reports-search-input">Search Categories</label>
-          <input id="reports-search-input" class="reports-search-input" type="search" placeholder="Search by category or report name" autocomplete="off">
-        </div>
-        <button type="button" class="reports-chip-button is-muted" id="reports-favorites-jump">Favorites</button>
-        <button type="button" class="reports-chip-button is-muted" id="reports-recent-jump">Recent</button>
+      <div>
+        <label for="reports-search"><strong>Search Categories</strong></label>
+        <input id="reports-search" class="reports-search" type="search" placeholder="Search by category or report name" autocomplete="off">
       </div>
     </div>
   </div>
 
-  <section class="card section-card reports-section-anchor" id="reports-quick-access">
-    <div class="section-head">
-      <div>
-        <h2>Quick Access</h2>
-        <p class="section-note">Recent reports are saved in this browser to speed up repeat use.</p>
-      </div>
-    </div>
-    <div class="reports-quick-grid">
-      <div class="subsection reports-section-anchor" id="reports-favorites-section">
-        <div class="reports-directory-section-head">
-          <h3>Favorites</h3>
-          <span class="reports-directory-section-count" id="reports-favorites-count">0 saved</span>
-        </div>
-        <div class="reports-quick-list" id="reports-favorites-list"></div>
-        <div class="reports-empty-state" id="reports-favorites-empty">Favorite pinning is not active on this version of the page yet.</div>
-      </div>
-      <div class="subsection reports-section-anchor" id="reports-recent-section">
-        <div class="reports-directory-section-head">
-          <h3>Recent</h3>
-          <span class="reports-directory-section-count" id="reports-recent-count">0 opened</span>
-        </div>
-        <div class="reports-quick-list" id="reports-recent-list"></div>
-        <div class="reports-empty-state" id="reports-recent-empty">No recent reports yet. Opening any report from a category popup will place it here automatically.</div>
-      </div>
-    </div>
-  </section>
-
-  <section class="card section-card">
-    <div class="section-head">
-      <div>
-        <h2>Report Categories</h2>
-        <p class="section-note">Click any category card to open a popup with the reports in that category.</p>
-      </div>
-    </div>
-    <div class="reports-category-grid" id="reports-category-grid"></div>
-    <div class="reports-empty-state reports-search-empty" id="reports-search-empty">No report categories matched that search.</div>
-  </section>
+  <div class="card">
+    <h2>Report Categories</h2>
+    <p class="reports-note">Live reports open directly. Planned reports stay visible but disabled.</p>
+    <div id="reports-grid" class="reports-grid"></div>
+    <div id="reports-empty" class="reports-hidden">No report categories matched that search.</div>
+  </div>
 </div>
 
-<div class="reports-modal-backdrop" id="reports-category-modal-backdrop" aria-hidden="true">
-  <div class="reports-modal" role="dialog" aria-modal="true" aria-labelledby="reports-category-modal-title">
+<div id="reports-modal-backdrop" class="reports-modal-backdrop" aria-hidden="true">
+  <div class="reports-modal" role="dialog" aria-modal="true" aria-labelledby="reports-modal-title">
     <div class="reports-modal-head">
       <div>
-        <h2 class="reports-modal-title" id="reports-category-modal-title">Category</h2>
-        <p class="reports-modal-subtitle" id="reports-category-modal-subtitle"></p>
+        <h2 id="reports-modal-title">Category</h2>
+        <p id="reports-modal-subtitle" class="reports-note"></p>
       </div>
-      <button type="button" class="reports-modal-close" id="reports-category-modal-close" aria-label="Close">×</button>
+      <button id="reports-close" class="reports-close" type="button" aria-label="Close">×</button>
     </div>
-    <div class="reports-modal-list" id="reports-category-modal-list"></div>
+    <div id="reports-list" class="reports-list"></div>
   </div>
 </div>
 
 <script>
-  (function () {
-    const liveUrls = {
-      reportsHome: "{{ url_for('reports.reports_index') }}",
-      demographics: "{{ url_for('reports.demographics_dashboard') }}",
-      graduationStudy: "{{ url_for('reports.graduation_income_sobriety_study') }}",
-      activityEngagement: "{{ url_for('reports.activity_engagement_report') }}",
-      activeCensus: "{{ url_for('reports_active_census.active_census_report') }}"
-    };
+(function () {
+  const liveUrls = {
+    reportsHome: "{{ url_for('reports.reports_index') }}",
+    demographics: "{{ url_for('reports.demographics_dashboard') }}",
+    residentDemographicsSummary: "/staff/reports/resident-demographics-summary",
+    graduationStudy: "{{ url_for('reports.graduation_income_sobriety_study') }}",
+    activityEngagement: "{{ url_for('reports.activity_engagement_report') }}",
+    activeCensus: "{{ url_for('reports_active_census.active_census_report') }}",
+    programFlow: "/staff/reports/program-flow",
+    priorLiving: "/staff/reports/prior-living",
+    intakeProfile: "/staff/reports/intake-profile",
+    exitOutcomes: "/staff/reports/exit-outcomes",
+    incomeChange: "/staff/reports/income-change",
+    lengthOfStay: "/staff/reports/length-of-stay",
+    sobrietyProgress: "/staff/reports/sobriety-progress",
+    followUpOutcomes: "/staff/reports/follow-up-outcomes",
+    weeklyProductivity: "/staff/reports/weekly-productivity",
+    familyAndChildren: "/staff/reports/family-and-children"
+  };
 
-    const reportCatalog = [
-      { slug: 'overview', title: 'Overview', description: 'Entry point for the reports library, saved shortcuts, and top level dashboard views.', reports: [
-        { id: 'reports-home-directory', title: 'Reports Home Directory', summary: 'Main reports landing page with category browsing, modal selection, and recent report access.', status: 'live', url: liveUrls.reportsHome, keywords: ['overview', 'landing', 'directory'] },
-        { id: 'program-snapshot-dashboard', title: 'Program Snapshot Dashboard', summary: 'Planned top level dashboard for high level program metrics.', status: 'planned', keywords: ['overview', 'dashboard', 'snapshot'] },
-        { id: 'key-metrics-favorites', title: 'Key Metrics Favorites', summary: 'Planned quick access dashboard for commonly used leadership views.', status: 'planned', keywords: ['overview', 'favorites', 'metrics'] }
-      ]},
-      { slug: 'demographics', title: 'Demographics', description: 'Resident identity and population profile reporting.', reports: [
-        { id: '78-column-report', title: '78 Column Report', summary: 'Aggregate program reporting across demographics, family composition, recovery, barriers, income, and exit outcomes.', status: 'live', url: liveUrls.demographics, keywords: ['demographics', '78 column', 'aggregate'] },
-        { id: 'resident-demographics-summary', title: 'Resident Demographics Summary', summary: 'Summary of gender, race, ethnicity, veteran status, and disability across the selected scope.', status: 'planned', keywords: ['gender', 'race', 'ethnicity', 'veteran', 'disability'] }
-      ]},
-      { slug: 'intake-entry', title: 'Intake And Entry', description: 'Entry condition reporting on how residents arrive and what they need at intake.', reports: [
-        { id: 'prior-living-situation-report', title: 'Prior Living Situation Report', summary: 'Shows where residents were staying before entry.', status: 'planned', keywords: ['prior living', 'street', 'shelter', 'jail', 'hospital'] },
-        { id: 'intake-profile-report', title: 'Intake Profile Report', summary: 'Intake profile across entry income, sobriety, education, barriers, and key intake conditions.', status: 'planned', keywords: ['entry', 'income', 'sobriety', 'education', 'barriers'] }
-      ]},
-      { slug: 'program-flow', title: 'Program Flow', description: 'Tracks movement through the program from entry to exit, including occupancy and length of stay.', reports: [
-        { id: 'active-census-report', title: 'Active Census Report', summary: 'Live report showing current residents, shelter occupancy, and program duration.', status: 'live', url: liveUrls.activeCensus, keywords: ['occupancy', 'active residents', 'census'] },
-        { id: 'program-flow-report', title: 'Program Flow Report', summary: 'Shows intakes, exits, and movement through the program over time.', status: 'planned', keywords: ['entries', 'exits', 'flow', 'movement'] },
-        { id: 'length-of-stay-report', title: 'Length Of Stay Report', summary: 'Shows average, median, and bucketed length of stay.', status: 'planned', keywords: ['length of stay', 'average', 'median'] }
-      ]},
-      { slug: 'outcomes', title: 'Outcomes', description: 'Measures what changed by exit and after exit, including graduation, income, sobriety, and follow up.', reports: [
-        { id: 'graduation-income-and-sobriety-outcome-study', title: 'Graduation Income And Sobriety Outcome Study', summary: 'Compares frozen monthly income at graduation against 6 month and 12 month sobriety outcomes for true graduates only.', status: 'live', url: liveUrls.graduationStudy, keywords: ['graduation', 'income', 'sobriety'] },
-        { id: 'exit-outcomes-report', title: 'Exit Outcomes Report', summary: 'Exit categories, exit reasons, and leave AMA outcomes.', status: 'planned', keywords: ['exit category', 'exit reason', 'ama'] },
-        { id: 'income-change-report', title: 'Income Change Report', summary: 'Compares income at entry, exit, and supported follow up points.', status: 'planned', keywords: ['entry income', 'exit income', 'follow up income'] },
-        { id: 'sobriety-progress-report', title: 'Sobriety Progress Report', summary: 'Tracks sobriety status at entry, graduation, and follow up checkpoints.', status: 'planned', keywords: ['sober', 'sobriety', 'follow up'] }
-      ]},
-      { slug: 'case-management', title: 'Case Management', description: 'Tracks notes, contact activity, appointments, goals, and resident engagement over time.', reports: [
-        { id: 'case-management-activity-report', title: 'Case Management Activity Report', summary: 'Workload and note volume by staff and resident.', status: 'planned', keywords: ['notes', 'workload', 'staff'] },
-        { id: 'resident-engagement-risk-report', title: 'Resident Engagement Or Risk Report', summary: 'Shows residents with recent, missing, or overdue case management contact.', status: 'planned', keywords: ['engagement', 'risk', 'recent contact', 'overdue contact'] },
-        { id: 'goals-report', title: 'Goals Report', summary: 'Goal tracking for completed and open goals.', status: 'planned', keywords: ['goals', 'completion'] },
-        { id: 'appointments-report', title: 'Appointments Report', summary: 'Appointment scheduling volume and appointment type mix.', status: 'planned', keywords: ['appointments', 'scheduled'] }
-      ]},
-      { slug: 'referrals', title: 'Referrals', description: 'Referral reporting once structured referral tracking is added to the system.', reports: [
-        { id: 'referrals-made-report', title: 'Referrals Made Report', summary: 'Tracks referrals made to outside providers and services.', status: 'planned', keywords: ['referrals made', 'providers', 'services'] },
-        { id: 'referral-categories-report', title: 'Referral Categories Report', summary: 'Breakdown of referral types and service areas.', status: 'planned', keywords: ['referral categories', 'counseling', 'transportation', 'legal'] }
-      ]},
-      { slug: 'passes-attendance', title: 'Passes And Attendance', description: 'Resident movement, obligations, transportation, passes, and activity engagement.', reports: [
-        { id: 'activity-engagement-report', title: 'Activity Engagement Report', summary: 'Compares this week, last week, and all time activity across shelters, residents, meetings, and categories.', status: 'live', url: liveUrls.activityEngagement, keywords: ['activity', 'engagement', 'attendance', 'meetings'] },
-        { id: 'pass-activity-report', title: 'Pass Activity Report', summary: 'Pass requests, approvals, denials, and return timing.', status: 'planned', keywords: ['pass requests', 'approvals', 'denials'] },
-        { id: 'transportation-report', title: 'Transportation Report', summary: 'Transport demand, destinations, reasons, and fulfillment status.', status: 'planned', keywords: ['pickup', 'destination', 'transport'] },
-        { id: 'attendance-and-activity-report', title: 'Attendance And Activity Report', summary: 'Attendance report for event types, obligation windows, and meeting participation.', status: 'planned', keywords: ['attendance events', 'obligations', 'recovery meetings'] }
-      ]},
-      { slug: 'employment-income', title: 'Employment And Income', description: 'Tracks earnings, employment movement, work activity, and income change.', reports: [
-        { id: 'weekly-productivity-report', title: 'Weekly Productivity Report', summary: 'Weekly productive hours, work hours, and meeting counts.', status: 'planned', keywords: ['productive hours', 'work hours', 'weekly'] }
-      ]},
-      { slug: 'families-children', title: 'Families And Children', description: 'Children served, family composition, age bands, reunification, and family impact.', reports: [
-        { id: 'family-and-children-report', title: 'Family And Children Report', summary: 'Family composition, children served, age groups, reunification, and babies born in program.', status: 'planned', keywords: ['family composition', 'children', 'reunification', 'babies'] }
-      ]},
-      { slug: 'operations', title: 'Operations', description: 'Administrative and operational reporting across raw forms and internal system activity.', reports: [
-        { id: 'raw-form-submissions-report', title: 'Raw Form Submissions Report', summary: 'Audit style report showing ingested form activity and source details.', status: 'planned', keywords: ['raw forms', 'audit', 'jotform'] }
-      ]},
-      { slug: 'follow-up', title: 'Follow Up', description: 'Post exit reporting for stability, sobriety, and income snapshots.', reports: [
-        { id: 'follow-up-outcomes-report', title: 'Follow Up Outcomes Report', summary: 'Follow up outcomes focused on post exit stability snapshots.', status: 'planned', keywords: ['post exit', 'stability', 'follow up'] }
-      ]}
-    ];
+  const catalog = [
+    { slug: 'overview', title: 'Overview', description: 'Entry point for the reports library and dashboard views.', reports: [
+      { id: 'reports-home-directory', title: 'Reports Home Directory', summary: 'Main reports landing page with category browsing and recent access.', status: 'live', url: liveUrls.reportsHome, keywords: ['overview','landing','directory'] },
+      { id: 'program-snapshot-dashboard', title: 'Program Snapshot Dashboard', summary: 'Planned top level dashboard for high level program metrics.', status: 'planned', keywords: ['overview','dashboard','snapshot'] }
+    ]},
+    { slug: 'demographics', title: 'Demographics', description: 'Resident identity and population profile reporting.', reports: [
+      { id: '78-column-report', title: '78 Column Report', summary: 'Aggregate program reporting across demographics, family composition, recovery, barriers, income, and exit outcomes.', status: 'live', url: liveUrls.demographics, keywords: ['demographics','78 column','aggregate'] },
+      { id: 'resident-demographics-summary', title: 'Resident Demographics Summary', summary: 'Summary of gender, race, ethnicity, veteran status, and disability across the selected scope.', status: 'live', url: liveUrls.residentDemographicsSummary, keywords: ['gender','race','ethnicity','veteran','disability'] }
+    ]},
+    { slug: 'intake-entry', title: 'Intake And Entry', description: 'Entry condition reporting on how residents arrive and what they need at intake.', reports: [
+      { id: 'prior-living-situation-report', title: 'Prior Living Situation Report', summary: 'Shows where residents were staying before entry.', status: 'live', url: liveUrls.priorLiving, keywords: ['prior living','street','shelter'] },
+      { id: 'intake-profile-report', title: 'Intake Profile Report', summary: 'Intake profile across entry income, sobriety, education, barriers, and key intake conditions.', status: 'live', url: liveUrls.intakeProfile, keywords: ['entry','income','sobriety','education','barriers'] }
+    ]},
+    { slug: 'program-flow', title: 'Program Flow', description: 'Movement through the program from entry to exit, including occupancy and length of stay.', reports: [
+      { id: 'active-census-report', title: 'Active Census Report', summary: 'Live report showing current residents, shelter occupancy, and program duration.', status: 'live', url: liveUrls.activeCensus, keywords: ['occupancy','active residents','census'] },
+      { id: 'program-flow-report', title: 'Program Flow Report', summary: 'Shows intakes, exits, and movement through the program over time.', status: 'live', url: liveUrls.programFlow, keywords: ['entries','exits','flow'] },
+      { id: 'length-of-stay-report', title: 'Length Of Stay Report', summary: 'Shows average, median, and bucketed length of stay.', status: 'live', url: liveUrls.lengthOfStay, keywords: ['length of stay','average','median'] }
+    ]},
+    { slug: 'outcomes', title: 'Outcomes', description: 'What changed by exit and after exit, including graduation, income, sobriety, and follow up.', reports: [
+      { id: 'graduation-income-and-sobriety-outcome-study', title: 'Graduation Income And Sobriety Outcome Study', summary: 'Compares frozen monthly income at graduation against 6 month and 12 month sobriety outcomes for true graduates only.', status: 'live', url: liveUrls.graduationStudy, keywords: ['graduation','income','sobriety'] },
+      { id: 'exit-outcomes-report', title: 'Exit Outcomes Report', summary: 'Exit categories, exit reasons, and leave AMA outcomes.', status: 'live', url: liveUrls.exitOutcomes, keywords: ['exit category','exit reason','ama'] },
+      { id: 'income-change-report', title: 'Income Change Report', summary: 'Compares income at entry, exit, and supported follow up points.', status: 'live', url: liveUrls.incomeChange, keywords: ['entry income','exit income','follow up income'] },
+      { id: 'sobriety-progress-report', title: 'Sobriety Progress Report', summary: 'Tracks sobriety status at entry, graduation, and follow up checkpoints.', status: 'live', url: liveUrls.sobrietyProgress, keywords: ['sober','sobriety','follow up'] }
+    ]},
+    { slug: 'case-management', title: 'Case Management', description: 'Notes, contact activity, appointments, goals, and resident engagement over time.', reports: [
+      { id: 'case-management-activity-report', title: 'Case Management Activity Report', summary: 'Workload and note volume by staff and resident.', status: 'planned', keywords: ['notes','workload','staff'] },
+      { id: 'resident-engagement-risk-report', title: 'Resident Engagement Or Risk Report', summary: 'Shows residents with recent, missing, or overdue case management contact.', status: 'planned', keywords: ['engagement','risk'] }
+    ]},
+    { slug: 'passes-attendance', title: 'Passes And Attendance', description: 'Resident movement, obligations, transportation, passes, and activity engagement.', reports: [
+      { id: 'activity-engagement-report', title: 'Activity Engagement Report', summary: 'Compares this week, last week, and all time activity across shelters, residents, meetings, and categories.', status: 'live', url: liveUrls.activityEngagement, keywords: ['activity','engagement','attendance','meetings'] },
+      { id: 'pass-activity-report', title: 'Pass Activity Report', summary: 'Pass requests, approvals, denials, and return timing.', status: 'planned', keywords: ['pass requests','approvals','denials'] }
+    ]},
+    { slug: 'employment-income', title: 'Employment And Income', description: 'Earnings, employment movement, work activity, and income change.', reports: [
+      { id: 'weekly-productivity-report', title: 'Weekly Productivity Report', summary: 'Weekly productive hours, work hours, and meeting counts.', status: 'live', url: liveUrls.weeklyProductivity, keywords: ['productive hours','work hours','weekly'] }
+    ]},
+    { slug: 'families-children', title: 'Families And Children', description: 'Children served, family composition, age bands, reunification, and family impact.', reports: [
+      { id: 'family-and-children-report', title: 'Family And Children Report', summary: 'Family composition, children served, age groups, reunification, and babies born in program.', status: 'live', url: liveUrls.familyAndChildren, keywords: ['family composition','children','reunification','babies'] }
+    ]},
+    { slug: 'follow-up', title: 'Follow Up', description: 'Post exit reporting for stability, sobriety, and income snapshots.', reports: [
+      { id: 'follow-up-outcomes-report', title: 'Follow Up Outcomes Report', summary: 'Follow up outcomes focused on post exit stability snapshots.', status: 'live', url: liveUrls.followUpOutcomes, keywords: ['post exit','stability','follow up'] }
+    ]}
+  ];
 
-    const storageKeys = { recent: 'reportsDirectoryRecent' };
-    const searchInput = document.getElementById('reports-search-input');
-    const categoryGrid = document.getElementById('reports-category-grid');
-    const favoritesList = document.getElementById('reports-favorites-list');
-    const recentList = document.getElementById('reports-recent-list');
-    const favoritesEmpty = document.getElementById('reports-favorites-empty');
-    const recentEmpty = document.getElementById('reports-recent-empty');
-    const favoritesCount = document.getElementById('reports-favorites-count');
-    const recentCount = document.getElementById('reports-recent-count');
-    const searchEmpty = document.getElementById('reports-search-empty');
-    const modalBackdrop = document.getElementById('reports-category-modal-backdrop');
-    const modalTitle = document.getElementById('reports-category-modal-title');
-    const modalSubtitle = document.getElementById('reports-category-modal-subtitle');
-    const modalList = document.getElementById('reports-category-modal-list');
-    const modalClose = document.getElementById('reports-category-modal-close');
+  const searchInput = document.getElementById('reports-search');
+  const grid = document.getElementById('reports-grid');
+  const empty = document.getElementById('reports-empty');
+  const backdrop = document.getElementById('reports-modal-backdrop');
+  const modalTitle = document.getElementById('reports-modal-title');
+  const modalSubtitle = document.getElementById('reports-modal-subtitle');
+  const list = document.getElementById('reports-list');
+  const closeButton = document.getElementById('reports-close');
+  const storageKey = 'reportsDirectoryRecent';
 
-    function categorySearchText(category) {
-      return [category.title, category.description].concat(category.reports.map((report) => report.title + ' ' + (report.keywords || []).join(' '))).join(' ').toLowerCase();
+  function categorySearchText(category) {
+    return [category.title, category.description].concat(category.reports.map((report) => report.title + ' ' + (report.keywords || []).join(' '))).join(' ').toLowerCase();
+  }
+
+  function statusLabel(status) { return status === 'live' ? 'Live' : 'Planned'; }
+  function statusClass(status) { return status === 'live' ? 'live' : 'planned'; }
+
+  function reportMap() {
+    const map = {};
+    catalog.forEach((category) => category.reports.forEach((report) => { map[report.id] = Object.assign({}, report, { categoryTitle: category.title }); }));
+    return map;
+  }
+
+  const reportsById = reportMap();
+
+  function renderCards() {
+    grid.innerHTML = catalog.map((category) => (
+      '<button type="button" class="reports-card" data-category-card data-category-slug="' + category.slug + '" data-search-text="' + categorySearchText(category).replace(/"/g, '&quot;') + '">' +
+      '<div><h3>' + category.title + '</h3><p class="reports-desc">' + category.description + '</p></div>' +
+      '<span class="reports-chip">' + category.reports.length + ' reports</span>' +
+      '<div class="reports-note">' + category.reports.slice(0, 2).map((report) => report.title).join(' • ') + '</div>' +
+      '</button>'
+    )).join('');
+  }
+
+  function readRecent() {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(storageKey) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      return [];
     }
+  }
 
-    function statusLabel(status) {
-      return status === 'live' ? 'Live' : 'Planned';
-    }
+  function writeRecent(value) {
+    try { window.localStorage.setItem(storageKey, JSON.stringify(value)); } catch (error) {}
+  }
 
-    function statusClass(status) {
-      return status === 'live' ? 'is-live' : 'is-planned';
-    }
+  function markRecent(reportId) {
+    const recent = readRecent();
+    writeRecent([reportId].concat(recent.filter((id) => id !== reportId)).slice(0, 5));
+  }
 
-    function reportMap() {
-      const map = {};
-      reportCatalog.forEach((category) => {
-        category.reports.forEach((report) => {
-          map[report.id] = Object.assign({}, report, { categoryTitle: category.title });
-        });
-      });
-      return map;
-    }
-
-    function categorySampleText(category) {
-      if (!category.reports.length) {
-        return 'No reports assigned yet';
-      }
-      return category.reports.slice(0, 2).map((report) => report.title).join(' • ');
-    }
-
-    const reportsById = reportMap();
-
-    function renderCategoryCards() {
-      categoryGrid.innerHTML = reportCatalog.map((category) => (
-        '<button type="button" class="reports-category-card" data-category-card data-category-slug="' + category.slug + '" data-search-text="' + categorySearchText(category).replace(/"/g, '&quot;') + '">' +
-          '<div><h3>' + category.title + '</h3><p class="reports-category-description">' + category.description + '</p></div>' +
-          '<span class="reports-category-count">' + category.reports.length + ' reports</span>' +
-          '<div class="reports-category-sample">' + categorySampleText(category) + '</div>' +
-        '</button>'
-      )).join('');
-    }
-
-    function readStorage(key) {
-      try {
-        const parsed = JSON.parse(window.localStorage.getItem(key) || '[]');
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (error) {
-        return [];
-      }
-    }
-
-    function writeStorage(key, value) {
-      try {
-        window.localStorage.setItem(key, JSON.stringify(value));
-      } catch (error) {}
-    }
-
-    function quickItemMarkup(report) {
-      if (!report) return '';
+  function renderModal(categorySlug) {
+    const category = catalog.find((item) => item.slug === categorySlug);
+    if (!category) return;
+    modalTitle.textContent = category.title;
+    modalSubtitle.textContent = category.description;
+    list.innerHTML = category.reports.map((report) => {
       const title = report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title;
-      return '<article class="reports-quick-item">' +
-        '<div class="reports-item-main">' +
-          '<div class="reports-item-kicker">' + report.categoryTitle + '</div>' +
-          '<h4 class="reports-item-title">' + title + '</h4>' +
-          '<p class="reports-item-summary">' + report.summary + '</p>' +
-        '</div>' +
-        '<div class="reports-item-actions"><span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span></div>' +
+      const open = report.url ? '<a class="reports-link" href="' + report.url + '" data-report-link="' + report.id + '">Open Report</a>' : '<span class="reports-link disabled">Not Built Yet</span>';
+      return '<article class="reports-item">' +
+        '<div class="reports-item-main"><h3>' + title + '</h3><p class="reports-summary">' + report.summary + '</p></div>' +
+        '<div class="reports-item-actions"><span class="reports-chip ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span>' + open + '</div>' +
       '</article>';
-    }
+    }).join('');
+    backdrop.classList.add('open');
+    backdrop.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
 
-    function renderFavorites() {
-      favoritesList.innerHTML = '';
-      favoritesEmpty.style.display = 'block';
-      favoritesCount.textContent = '0 saved';
-    }
+  function closeModal() {
+    backdrop.classList.remove('open');
+    backdrop.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
 
-    function renderRecent() {
-      const recentIds = readStorage(storageKeys.recent);
-      const recentReports = recentIds.map((id) => reportsById[id]).filter(Boolean);
-      recentList.innerHTML = recentReports.map(quickItemMarkup).join('');
-      recentEmpty.style.display = recentReports.length ? 'none' : 'block';
-      recentCount.textContent = recentReports.length + ' opened';
-    }
-
-    function markRecent(reportId) {
-      const recent = readStorage(storageKeys.recent);
-      const next = [reportId].concat(recent.filter((id) => id !== reportId)).slice(0, 5);
-      writeStorage(storageKeys.recent, next);
-      renderRecent();
-    }
-
-    function modalReportMarkup(report) {
-      const title = report.url ? '<a href="' + report.url + '" data-report-link="' + report.id + '">' + report.title + '</a>' : report.title;
-      const openButton = report.url
-        ? '<a class="reports-modal-item-open" href="' + report.url + '" data-report-link="' + report.id + '">Open Report</a>'
-        : '<span class="reports-modal-item-open is-disabled">Not Built Yet</span>';
-      return '<article class="reports-modal-item">' +
-        '<div class="reports-item-main">' +
-          '<h3 class="reports-modal-item-title">' + title + '</h3>' +
-          '<p class="reports-modal-item-summary">' + report.summary + '</p>' +
-        '</div>' +
-        '<div class="reports-modal-item-actions">' +
-          '<span class="reports-status-pill ' + statusClass(report.status) + '">' + statusLabel(report.status) + '</span>' +
-          openButton +
-        '</div>' +
-      '</article>';
-    }
-
-    function openCategoryModal(categorySlug) {
-      const category = reportCatalog.find((item) => item.slug === categorySlug);
-      if (!category) {
-        return;
-      }
-      modalTitle.textContent = category.title;
-      modalSubtitle.textContent = category.description;
-      modalList.innerHTML = category.reports.length
-        ? category.reports.map(modalReportMarkup).join('')
-        : '<div class="reports-empty-state">No reports are assigned to this category yet.</div>';
-      modalBackdrop.classList.add('is-open');
-      modalBackdrop.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeCategoryModal() {
-      modalBackdrop.classList.remove('is-open');
-      modalBackdrop.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-    }
-
-    function applySearch() {
-      const query = (searchInput.value || '').trim().toLowerCase();
-      let visibleCategories = 0;
-      document.querySelectorAll('[data-category-card]').forEach((card) => {
-        const visible = !query || (card.getAttribute('data-search-text') || '').includes(query);
-        card.classList.toggle('is-hidden', !visible);
-        if (visible) {
-          visibleCategories += 1;
-        }
-      });
-      searchEmpty.classList.toggle('is-visible', !!query && visibleCategories === 0);
-    }
-
-    renderCategoryCards();
-    renderFavorites();
-    renderRecent();
-    applySearch();
-
-    document.addEventListener('click', function (event) {
-      const categoryCard = event.target.closest('[data-category-card]');
-      if (categoryCard) {
-        openCategoryModal(categoryCard.getAttribute('data-category-slug'));
-        return;
-      }
-
-      const reportLink = event.target.closest('[data-report-link]');
-      if (reportLink) {
-        markRecent(reportLink.getAttribute('data-report-link'));
-        return;
-      }
-
-      const favoritesJump = event.target.closest('#reports-favorites-jump');
-      if (favoritesJump) {
-        document.getElementById('reports-favorites-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
-
-      const recentJump = event.target.closest('#reports-recent-jump');
-      if (recentJump) {
-        document.getElementById('reports-recent-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
-
-      const closeButton = event.target.closest('#reports-category-modal-close');
-      if (closeButton || event.target === modalBackdrop) {
-        closeCategoryModal();
-      }
+  function applySearch() {
+    const query = (searchInput.value || '').trim().toLowerCase();
+    let visible = 0;
+    document.querySelectorAll('[data-category-card]').forEach((card) => {
+      const matches = !query || (card.getAttribute('data-search-text') || '').includes(query);
+      card.classList.toggle('reports-hidden', !matches);
+      if (matches) visible += 1;
     });
+    empty.classList.toggle('reports-hidden', !(query && visible === 0));
+  }
 
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && modalBackdrop.classList.contains('is-open')) {
-        closeCategoryModal();
-      }
-    });
+  renderCards();
+  applySearch();
 
-    searchInput.addEventListener('input', applySearch);
-  })();
+  document.addEventListener('click', function (event) {
+    const card = event.target.closest('[data-category-card]');
+    if (card) {
+      renderModal(card.getAttribute('data-category-slug'));
+      return;
+    }
+    const reportLink = event.target.closest('[data-report-link]');
+    if (reportLink) {
+      markRecent(reportLink.getAttribute('data-report-link'));
+      return;
+    }
+    if (event.target === backdrop || event.target === closeButton) {
+      closeModal();
+    }
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && backdrop.classList.contains('open')) {
+      closeModal();
+    }
+  });
+
+  searchInput.addEventListener('input', applySearch);
+})();
 </script>
 {% endblock %}
