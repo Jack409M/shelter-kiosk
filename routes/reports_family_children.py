@@ -180,7 +180,7 @@ def _build_family_children_report(
             COALESCE(NULLIF(TRIM(rc.relationship), ''), 'Unknown') AS relationship,
             COALESCE(NULLIF(TRIM(rc.living_status), ''), 'Unknown') AS living_status,
             rc.birth_year,
-            COALESCE(rc.receives_survivor_benefit, 0) AS receives_survivor_benefit
+            COALESCE(rc.receives_survivor_benefit, FALSE) AS receives_survivor_benefit
         FROM resident_children rc
         JOIN residents r ON r.id = rc.resident_id
         JOIN program_enrollments pe ON pe.resident_id = rc.resident_id
