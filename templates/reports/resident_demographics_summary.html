@@ -1,0 +1,285 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css', v='20260315o') }}">
+{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+  <div class="reports-header card">
+    <div>
+      <h1>Resident Demographics Summary</h1>
+      <p class="reports-subtitle">
+        Gender, race, ethnicity, veteran status, disability, and age distribution for the selected report scope.
+      </p>
+    </div>
+  </div>
+
+  <form method="get" class="card filter-card">
+    <div class="filter-grid">
+      <div class="filter-group">
+        <label for="scope">Scope</label>
+        <select id="scope" name="scope">
+          {% for opt in report.scope_options %}
+            <option value="{{ opt.value }}" {% if opt.value == report.scope %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="population">Population</label>
+        <select id="population" name="population">
+          {% for opt in report.population_options %}
+            <option value="{{ opt.value }}" {% if opt.value == report.population %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="date_range">Date Range</label>
+        <select id="date_range" name="date_range">
+          {% for opt in report.date_range_options %}
+            <option value="{{ opt.value }}" {% if opt.value == report.date_range %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label for="start_date">Start Date</label>
+        <input id="start_date" type="date" name="start_date" value="{{ report.start_date }}" {% if report.date_range != 'custom' %}disabled{% endif %}>
+      </div>
+
+      <div class="filter-group">
+        <label for="end_date">End Date</label>
+        <input id="end_date" type="date" name="end_date" value="{{ report.end_date }}" {% if report.date_range != 'custom' %}disabled{% endif %}>
+      </div>
+
+      <div class="filter-actions">
+        <button class="btn btn-primary" type="submit">Apply</button>
+      </div>
+    </div>
+  </form>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <div>
+        <h2>Snapshot</h2>
+        <p class="section-note">High level counts for the selected report scope.</p>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-label">Residents In Scope</div>
+        <div class="stat-value">{{ report.total_residents }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Veterans</div>
+        <div class="stat-value">{{ report.veteran_yes }}</div>
+        <div class="stat-foot">{{ report.veteran_yes_percentage }}%</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Non Veterans</div>
+        <div class="stat-value">{{ report.veteran_no }}</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Residents With Disability</div>
+        <div class="stat-value">{{ report.disability_yes }}</div>
+        <div class="stat-foot">{{ report.disability_yes_percentage }}%</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Residents Without Disability</div>
+        <div class="stat-value">{{ report.disability_no }}</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="two-col-grid">
+    <section class="card section-card">
+      <div class="section-head">
+        <div>
+          <h2>Gender</h2>
+          <p class="section-note">Distinct residents grouped by recorded gender.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Group</th>
+              <th>Residents</th>
+              <th>Percent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.gender_rows %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td>{{ row.display_value }}</td>
+              <td>{{ row.percentage }}%</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3">No gender data found for this scope.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card section-card">
+      <div class="section-head">
+        <div>
+          <h2>Age Groups</h2>
+          <p class="section-note">Age ranges based on birth year.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Age Group</th>
+              <th>Residents</th>
+              <th>Percent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.age_rows %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td>{{ row.display_value }}</td>
+              <td>{{ row.percentage }}%</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3">No age data found for this scope.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="two-col-grid">
+    <section class="card section-card">
+      <div class="section-head">
+        <div>
+          <h2>Race</h2>
+          <p class="section-note">Distinct residents grouped by recorded race.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Race</th>
+              <th>Residents</th>
+              <th>Percent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.race_rows %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td>{{ row.display_value }}</td>
+              <td>{{ row.percentage }}%</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3">No race data found for this scope.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card section-card">
+      <div class="section-head">
+        <div>
+          <h2>Ethnicity</h2>
+          <p class="section-note">Distinct residents grouped by recorded ethnicity.</p>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Ethnicity</th>
+              <th>Residents</th>
+              <th>Percent</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in report.ethnicity_rows %}
+            <tr>
+              <td>{{ row.label }}</td>
+              <td>{{ row.display_value }}</td>
+              <td>{{ row.percentage }}%</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3">No ethnicity data found for this scope.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="card section-card">
+    <div class="section-head">
+      <div>
+        <h2>Shelter Distribution</h2>
+        <p class="section-note">How the selected resident population is distributed across shelters.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Shelter</th>
+            <th>Residents</th>
+            <th>Percent</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.shelter_rows %}
+          <tr>
+            <td>{{ row.label }}</td>
+            <td>{{ row.display_value }}</td>
+            <td>{{ row.percentage }}%</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="3">No shelter data found for this scope.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+  (function () {
+    const dateRange = document.getElementById("date_range");
+    const startDate = document.getElementById("start_date");
+    const endDate = document.getElementById("end_date");
+
+    function syncCustomDateInputs() {
+      const isCustom = dateRange && dateRange.value === "custom";
+      if (startDate) startDate.disabled = !isCustom;
+      if (endDate) endDate.disabled = !isCustom;
+    }
+
+    if (dateRange) {
+      dateRange.addEventListener("change", syncCustomDateInputs);
+      syncCustomDateInputs();
+    }
+  })();
+</script>
+{% endblock %}
