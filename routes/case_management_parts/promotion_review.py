@@ -306,6 +306,91 @@ def _apply_promotion_to_resident(*, resident_id: int, target_level: str, now: st
 
 
 
+def _active_rent_config_for_resident(*, resident_id: int, shelter: str) -> dict[str, Any] | None:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT
+            id,
+            level_snapshot,
+            apartment_number_snapshot,
+            apartment_size_snapshot,
+            monthly_rent,
+            is_exempt
+        FROM resident_rent_configs
+        WHERE resident_id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+          AND COALESCE(effective_end_date, '') = ''
+        ORDER BY effective_start_date DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
+    return dict(row) if row else None
+
+
+
+def _sync_housing_for_promotion(
+    *,
+    resident_id: int,
+    shelter: str,
+    current_level: str | None,
+    target_level: str,
+    now: str,
+) -> str | None:
+    active_config = _active_rent_config_for_resident(
+        resident_id=resident_id,
+        shelter=shelter,
+    )
+    if not active_config:
+        return None
+
+    ph = placeholder()
+    config_id = active_config.get("id")
+    apartment_number = str(active_config.get("apartment_number_snapshot") or "").strip() or None
+
+    if target_level == "9":
+        db_execute(
+            f"""
+            UPDATE resident_rent_configs
+            SET
+                level_snapshot = {ph},
+                effective_end_date = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                target_level,
+                now[:10],
+                now,
+                config_id,
+            ),
+        )
+        if apartment_number:
+            return (
+                f"Apartment {apartment_number} relinquished during promotion from level "
+                f"{current_level or 'unknown'} to level 9."
+            )
+        return "Active DWC housing assignment relinquished during promotion to level 9."
+
+    db_execute(
+        f"""
+        UPDATE resident_rent_configs
+        SET
+            level_snapshot = {ph},
+            updated_at = {ph}
+        WHERE id = {ph}
+        """,
+        (
+            target_level,
+            now,
+            config_id,
+        ),
+    )
+    return None
+
+
+
 def promotion_review_view(resident_id: int):
     init_db()
 
@@ -365,7 +450,9 @@ def promotion_review_view(resident_id: int):
                 return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
             now = utcnow_iso()
-            action_items = f"Applied promotion from level {current_level or 'unknown'} to level {target_level}."
+            action_items_parts = [
+                f"Applied promotion from level {current_level or 'unknown'} to level {target_level}."
+            ]
             apply_values = dict(values)
             apply_values["recommended_next_level"] = target_level
             try:
@@ -375,12 +462,21 @@ def promotion_review_view(resident_id: int):
                         target_level=target_level,
                         now=now,
                     )
+                    housing_action = _sync_housing_for_promotion(
+                        resident_id=resident_id,
+                        shelter=shelter,
+                        current_level=current_level,
+                        target_level=target_level,
+                        now=now,
+                    )
+                    if housing_action:
+                        action_items_parts.append(housing_action)
                     _insert_promotion_review(
                         enrollment_id=enrollment_id,
                         staff_user_id=staff_user_id,
                         values=apply_values,
                         now=now,
-                        action_items=action_items,
+                        action_items=" ".join(action_items_parts),
                     )
             except Exception:
                 flash("Unable to apply promotion. Please try again or contact an administrator.", "error")
