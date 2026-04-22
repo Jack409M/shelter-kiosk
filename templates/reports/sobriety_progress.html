@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card">
+  <h1>Sobriety Progress Report</h1>
+  <p>Average Days Sober At Entry: {{ entry_avg }}</p>
+  <p>Average Sober At Follow Up (binary avg): {{ followup_avg }}</p>
+</div>
+{% endblock %}
