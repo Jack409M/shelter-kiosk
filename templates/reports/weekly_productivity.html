@@ -1,7 +1,27 @@
 {% extends "layout.html" %}
 {% block content %}
+
 <div class="card">
   <h1>Weekly Productivity Report</h1>
-  <p>Total Hours Logged: {{ total_hours }}</p>
+
+  <p><strong>Total Hours:</strong> {{ total_hours }}</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Resident</th>
+        <th>Hours</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.resident_name }}</td>
+        <td>{{ row.total_hours }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
+
 {% endblock %}
