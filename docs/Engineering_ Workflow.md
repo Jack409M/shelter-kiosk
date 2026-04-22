@@ -210,7 +210,7 @@ This document exists to prevent that.
 
 ---
 
-## 15. Final Rule
+## 15. Rule
 
 **Read the real repo.
 Resync as part of the workflow.
@@ -230,4 +230,10 @@ You must follow these rules:
 5. Prefer surgical edits unless explicitly told to rewrite full file.
 6. Treat the GitHub repo as source of truth, not memory.
 
-This is the standard.
+an explicit ban on placeholder code like SNIP, ... unchanged, or rest unchanged
+an explicit ban on full file rewrites unless you specifically request one
+a rule to express changes as tight diffs first for risky files
+a rule that mass import failures should trigger an immediate “assume truncation first” rollback check
+a formal rollback rule to restore the prior good commit for the touched file
+
+checking the actual repo code paths and existing repo files first so the new files match the live structure instead of guessed patterns.
