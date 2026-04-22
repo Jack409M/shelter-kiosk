@@ -14,11 +14,25 @@ from .dates import _current_year_month, _month_label, _today_chicago
 from .utils import _float_value, _placeholder
 
 
+def _normalized_level_text(value: object) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    digits = "".join(ch for ch in text if ch.isdigit())
+    return digits or text
+
+
+
+def _resident_uses_dwc_housing(program_level: object) -> bool:
+    return _normalized_level_text(program_level) != "9"
+
+
+
 def _active_residents_for_shelter(shelter: str):
     ph = _placeholder()
-    return db_fetchall(
+    rows = db_fetchall(
         f"""
-        SELECT id, first_name, last_name, shelter, is_active
+        SELECT id, first_name, last_name, shelter, is_active, program_level
         FROM residents
         WHERE LOWER(COALESCE(shelter, '')) = {ph}
           AND is_active = {('TRUE' if g.get('db_kind') == 'pg' else '1')}
@@ -26,6 +40,10 @@ def _active_residents_for_shelter(shelter: str):
         """,
         (shelter,),
     )
+    active_rows = [dict(row) for row in (rows or [])]
+    return [
+        row for row in active_rows if _resident_uses_dwc_housing(row.get("program_level"))
+    ]
 
 
 def _available_rent_setup_apartment_options(
@@ -280,7 +298,7 @@ def _resident_for_shelter(resident_id: int, shelter: str):
     ph = _placeholder()
     row = db_fetchone(
         f"""
-        SELECT id, first_name, last_name, shelter, is_active
+        SELECT id, first_name, last_name, shelter, is_active, program_level
         FROM residents
         WHERE id = {ph}
           AND LOWER(COALESCE(shelter, '')) = {ph}
@@ -295,7 +313,7 @@ def _resident_any_shelter(resident_id: int):
     ph = _placeholder()
     row = db_fetchone(
         f"""
-        SELECT id, first_name, last_name, shelter, is_active
+        SELECT id, first_name, last_name, shelter, is_active, program_level
         FROM residents
         WHERE id = {ph}
         LIMIT 1
