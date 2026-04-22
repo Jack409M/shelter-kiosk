@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card">
+  <h1>Prior Living Situation Report</h1>
+  <table class="audit-table">
+    <tr><th>Living Situation</th><th>Count</th></tr>
+    {% for row in rows %}
+    <tr>
+      <td>{{ row.label or 'Unknown' }}</td>
+      <td>{{ row.total }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
