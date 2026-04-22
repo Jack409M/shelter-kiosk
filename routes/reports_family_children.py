@@ -97,8 +97,8 @@ def _build_family_children_report(
         FROM resident_children rc
         JOIN program_enrollments pe ON pe.resident_id = rc.resident_id
         {where_sql}
-          AND COALESCE(rc.is_active, 1) = 1
-          AND COALESCE(rc.receives_survivor_benefit, 0) = 1
+          AND COALESCE(rc.is_active, TRUE) IS TRUE
+          AND COALESCE(rc.receives_survivor_benefit, FALSE) IS TRUE
         """,
         where_params,
     )
@@ -110,7 +110,7 @@ def _build_family_children_report(
         FROM resident_children rc
         JOIN program_enrollments pe ON pe.resident_id = rc.resident_id
         {where_sql}
-          AND COALESCE(rc.is_active, 1) = 1
+          AND COALESCE(rc.is_active, TRUE) IS TRUE
         GROUP BY COALESCE(NULLIF(TRIM(rc.relationship), ''), 'Unknown')
         ORDER BY total DESC, label
         """,
@@ -124,7 +124,7 @@ def _build_family_children_report(
         FROM resident_children rc
         JOIN program_enrollments pe ON pe.resident_id = rc.resident_id
         {where_sql}
-          AND COALESCE(rc.is_active, 1) = 1
+          AND COALESCE(rc.is_active, TRUE) IS TRUE
         GROUP BY COALESCE(NULLIF(TRIM(rc.living_status), ''), 'Unknown')
         ORDER BY total DESC, label
         """,
@@ -144,7 +144,7 @@ def _build_family_children_report(
         FROM resident_children rc
         JOIN program_enrollments pe ON pe.resident_id = rc.resident_id
         {where_sql}
-          AND COALESCE(rc.is_active, 1) = 1
+          AND COALESCE(rc.is_active, TRUE) IS TRUE
         GROUP BY
             CASE
                 WHEN LOWER(TRIM(COALESCE(pe.shelter, ''))) IN ('abba', 'abba house') THEN 'Abba House'
@@ -177,7 +177,7 @@ def _build_family_children_report(
         JOIN residents r ON r.id = rc.resident_id
         JOIN program_enrollments pe ON pe.resident_id = rc.resident_id
         {where_sql}
-          AND COALESCE(rc.is_active, 1) = 1
+          AND COALESCE(rc.is_active, TRUE) IS TRUE
         ORDER BY shelter_label, resident_name, child_name, rc.id
         """,
         tuple(where_params),
