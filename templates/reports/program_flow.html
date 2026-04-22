@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card">
+  <h1>Program Flow Report</h1>
+  <div class="stats-grid">
+    <div class="stat-card"><div>Total Entries</div><div>{{ total_entries }}</div></div>
+    <div class="stat-card"><div>Total Exits</div><div>{{ total_exits }}</div></div>
+  </div>
+</div>
+{% endblock %}
