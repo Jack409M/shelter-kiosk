@@ -191,7 +191,7 @@ def _build_resident_demographics_summary(
         JOIN residents r
           ON r.id = pe.resident_id
         {where_sql}
-          AND COALESCE(r.veteran, 0) = 1
+          AND COALESCE(r.veteran, FALSE) IS TRUE
         """,
         where_params,
     )
@@ -203,7 +203,7 @@ def _build_resident_demographics_summary(
         JOIN residents r
           ON r.id = pe.resident_id
         {where_sql}
-          AND COALESCE(r.disability, 0) = 1
+          AND COALESCE(r.disability, FALSE) IS TRUE
         """,
         where_params,
     )
