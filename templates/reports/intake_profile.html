@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card">
+  <h1>Intake Profile Report</h1>
+
+  <h2>Summary</h2>
+  <p>Total: {{ summary.total }}</p>
+  <p>Avg Income At Entry: {{ summary.avg_income_at_entry }}</p>
+  <p>Avg Days Sober At Entry: {{ summary.avg_days_sober_at_entry }}</p>
+
+  <h2>Education</h2>
+  <table>
+    {% for row in education_rows %}
+    <tr><td>{{ row.label }}</td><td>{{ row.total }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Employment</h2>
+  <table>
+    {% for row in employment_rows %}
+    <tr><td>{{ row.label }}</td><td>{{ row.total }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Needs</h2>
+  <table>
+    {% for row in need_rows %}
+    <tr><td>{{ row.label }}</td><td>{{ row.total }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
