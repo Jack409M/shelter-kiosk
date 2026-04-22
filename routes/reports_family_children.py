@@ -5,7 +5,12 @@ from flask import Blueprint, render_template, request
 from core.auth import require_login, require_roles, require_shelter
 from core.db import db_fetchall, db_fetchone
 from core.runtime import init_db
-from core.stats.common import base_enrollment_where, fetch_grouped_rows, normalize_population, normalize_scope
+from core.stats.common import (
+    base_enrollment_where,
+    fetch_grouped_rows,
+    normalize_population,
+    normalize_scope,
+)
 from core.stats.family import get_family_composition
 
 reports_family_children = Blueprint("reports_family_children", __name__)
@@ -157,8 +162,11 @@ def _build_family_children_report(
         where_params,
     )
 
-    roster_rows = [dict(row) for row in (db_fetchall(
-        f"""
+    roster_rows = [
+        dict(row)
+        for row in (
+            db_fetchall(
+                f"""
         SELECT
             COALESCE(NULLIF(TRIM(r.first_name || ' ' || r.last_name), ''), 'Unknown Resident') AS resident_name,
             COALESCE(NULLIF(TRIM(r.resident_code), ''), NULLIF(TRIM(r.resident_identifier), ''), CAST(r.id AS TEXT)) AS resident_display_id,
@@ -180,10 +188,15 @@ def _build_family_children_report(
           AND COALESCE(rc.is_active, TRUE) IS TRUE
         ORDER BY shelter_label, resident_name, child_name, rc.id
         """,
-        tuple(where_params),
-    ) or [])]
+                tuple(where_params),
+            )
+            or []
+        )
+    ]
 
-    average_children_per_family = round((children_total / families_total), 2) if families_total else 0.0
+    average_children_per_family = (
+        round((children_total / families_total), 2) if families_total else 0.0
+    )
 
     return {
         "scope": normalized_scope,

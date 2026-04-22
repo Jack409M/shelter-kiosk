@@ -5,7 +5,12 @@ from flask import Blueprint, render_template, request
 from core.auth import require_login, require_roles, require_shelter
 from core.db import db_fetchall
 from core.runtime import init_db
-from core.stats.common import days_between, display_shelter_label, iso_today, normalize_shelter_value
+from core.stats.common import (
+    days_between,
+    display_shelter_label,
+    iso_today,
+    normalize_shelter_value,
+)
 from core.stats.snapshot import get_capacity_snapshot
 
 reports_active_census = Blueprint("reports_active_census", __name__)
@@ -57,7 +62,9 @@ def _build_active_census_report(scope: str) -> dict:
     total_capacity = sum(int(item.get("capacity") or 0) for item in shelter_rows)
     total_occupied = sum(int(item.get("occupied") or 0) for item in shelter_rows)
     total_open_spaces = max(total_capacity - total_occupied, 0)
-    total_occupancy_rate = round((total_occupied / total_capacity) * 100, 1) if total_capacity else 0.0
+    total_occupancy_rate = (
+        round((total_occupied / total_capacity) * 100, 1) if total_capacity else 0.0
+    )
 
     params: list[str] = [today, today]
     scope_sql = ""
@@ -65,8 +72,9 @@ def _build_active_census_report(scope: str) -> dict:
         scope_sql = " AND LOWER(TRIM(COALESCE(pe.shelter, ''))) IN (?, ?)"
         params.extend([normalized_scope, f"{normalized_scope} house"])
 
-    rows = db_fetchall(
-        f"""
+    rows = (
+        db_fetchall(
+            f"""
         SELECT
             pe.id AS enrollment_id,
             pe.resident_id,
@@ -100,8 +108,10 @@ def _build_active_census_report(scope: str) -> dict:
           LOWER(TRIM(COALESCE(r.first_name, ''))),
           pe.id
         """,
-        tuple(params),
-    ) or []
+            tuple(params),
+        )
+        or []
+    )
 
     resident_rows: list[dict] = []
     days_in_program_values: list[int] = []
@@ -118,8 +128,11 @@ def _build_active_census_report(scope: str) -> dict:
                 "resident_id": row.get("resident_id"),
                 "resident_name": " ".join(
                     part for part in [row.get("first_name"), row.get("last_name")] if part
-                ).strip() or "Unknown Resident",
-                "resident_display_id": row.get("resident_code") or row.get("resident_identifier") or str(row.get("resident_id") or ""),
+                ).strip()
+                or "Unknown Resident",
+                "resident_display_id": row.get("resident_code")
+                or row.get("resident_identifier")
+                or str(row.get("resident_id") or ""),
                 "shelter_key": shelter_key,
                 "shelter_label": display_shelter_label(shelter_key or row.get("shelter")),
                 "entry_date": row.get("entry_date") or "",
@@ -132,10 +145,18 @@ def _build_active_census_report(scope: str) -> dict:
             }
         )
 
-    average_days_in_program = round(sum(days_in_program_values) / len(days_in_program_values), 1) if days_in_program_values else 0.0
+    average_days_in_program = (
+        round(sum(days_in_program_values) / len(days_in_program_values), 1)
+        if days_in_program_values
+        else 0.0
+    )
     longest_stay_days = max(days_in_program_values) if days_in_program_values else 0
 
-    selected_scope_label = "Total Program" if normalized_scope == "total_program" else display_shelter_label(normalized_scope)
+    selected_scope_label = (
+        "Total Program"
+        if normalized_scope == "total_program"
+        else display_shelter_label(normalized_scope)
+    )
 
     return {
         "scope": normalized_scope,
