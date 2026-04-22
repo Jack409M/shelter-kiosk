@@ -41,6 +41,14 @@ def normalize_shelter_name(value: str | None) -> str:
     return (value or "").strip().lower()
 
 
+def _normalized_level_text(value: object) -> str | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    digits = "".join(ch for ch in text if ch.isdigit())
+    return digits or text
+
+
 def require_transfer_role() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
@@ -406,6 +414,14 @@ def validate_resident_transfer_form(
 ) -> str | None:
     if form.to_shelter not in context.shelter_choices:
         return "Select a valid shelter."
+
+    resident_level = _normalized_level_text(context.resident.get("program_level"))
+    if (
+        resident_level == "9"
+        and form.to_shelter in {"abba", "gratitude"}
+        and form.apartment_number
+    ):
+        return "Level 9 residents cannot be assigned to DWC apartments."
 
     if form.to_shelter in {"abba", "gratitude"} and not form.apartment_number:
         return "Apartment number is required for Abba and Gratitude moves."
