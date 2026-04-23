@@ -69,6 +69,7 @@
       {% set can_admin = role == "admin" %}
       {% set is_demographics_viewer = role == "demographics_viewer" %}
       {% set is_staff_basic = role == "staff" %}
+      {% set is_ra = role == "ra" %}
       {% set shelter_key = shelter_raw|lower %}
       {% set is_gratitude = shelter_key == "gratitude" %}
 
@@ -81,7 +82,35 @@
         <div class="nav-mobile">
           {% if session.get("staff_user_id") %}
 
-            {% if is_staff_basic %}
+            {% if is_ra %}
+
+              <details class="nav-mobile-section" open>
+                <summary>Operations</summary>
+                <div class="nav-mobile-links">
+                  {% if chore_board_url %}
+                    <a href="{{ chore_board_url }}">Chores</a>
+                  {% endif %}
+                  <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+                  <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
+                  <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+                  {% if inspection_sheet_url %}
+                    <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
+                  {% endif %}
+                  {% if residents_url %}
+                    <a href="{{ residents_url }}">Residents</a>
+                  {% endif %}
+                </div>
+              </details>
+
+              <details class="nav-mobile-section">
+                <summary>Account</summary>
+                <div class="nav-mobile-links">
+                  <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+                  <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
+                </div>
+              </details>
+
+            {% elif is_staff_basic %}
 
               <details class="nav-mobile-section" open>
                 <summary>Operations</summary>
@@ -294,7 +323,24 @@
         <div class="nav-desktop">
           {% if session.get("staff_user_id") %}
 
-            {% if is_staff_basic %}
+            {% if is_ra %}
+
+              {% if chore_board_url %}
+                <a href="{{ chore_board_url }}">Chores</a>
+              {% endif %}
+              <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+              <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
+              <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+              {% if inspection_sheet_url %}
+                <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
+              {% endif %}
+              {% if residents_url %}
+                <a href="{{ residents_url }}">Residents</a>
+              {% endif %}
+              <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+              <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
+
+            {% elif is_staff_basic %}
 
               <a href="{{ url_for('attendance.staff_attendance') }}">Checkout</a>
               <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
