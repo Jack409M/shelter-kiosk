@@ -54,7 +54,7 @@ def _build_context(shelter: str):
         FROM level9_support_lifecycles l9
         JOIN residents r ON r.id = l9.resident_id
         WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM({ph}))
-          AND r.is_active = 1
+          AND r.is_active = TRUE
           AND l9.status IN ({ph}, {ph})
         ORDER BY r.last_name, r.first_name
         """,
@@ -69,7 +69,7 @@ def _build_context(shelter: str):
         JOIN level9_support_lifecycles l9 ON l9.id = f.level9_lifecycle_id
         JOIN residents r ON r.id = l9.resident_id
         WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM({ph}))
-          AND r.is_active = 1
+          AND r.is_active = TRUE
           AND f.status = {ph}
           AND f.due_date BETWEEN {ph} AND {ph}
         ORDER BY f.due_date ASC
@@ -85,7 +85,7 @@ def _build_context(shelter: str):
         JOIN level9_support_lifecycles l9 ON l9.id = f.level9_lifecycle_id
         JOIN residents r ON r.id = l9.resident_id
         WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM({ph}))
-          AND r.is_active = 1
+          AND r.is_active = TRUE
           AND f.status = {ph}
           AND f.due_date < {ph}
         ORDER BY f.due_date ASC
@@ -100,7 +100,7 @@ def _build_context(shelter: str):
         FROM level9_support_lifecycles l9
         JOIN residents r ON r.id = l9.resident_id
         WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM({ph}))
-          AND r.is_active = 1
+          AND r.is_active = TRUE
           AND l9.status IN ({ph}, {ph})
           AND l9.initial_end_date BETWEEN {ph} AND {ph}
         ORDER BY l9.initial_end_date ASC
