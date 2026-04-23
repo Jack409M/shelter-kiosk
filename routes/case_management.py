@@ -74,6 +74,7 @@ from routes.case_management_parts.transfer import (
 )
 from routes.case_management_parts.ua_log import add_ua_log_view, edit_ua_log_view, ua_log_view
 from routes.case_management_parts.update import add_case_note_view, edit_case_note_view
+from routes.case_management_parts.l9_workspace import l9_workspace_view, complete_l9_followup_view
 
 
 def _view(view_func):
@@ -419,6 +420,18 @@ def exit_followup(resident_id: int):
 @_view
 def notes_history(resident_id: int):
     return notes_history_view(resident_id)
+
+
+@case_management.get("/level9")
+@_view
+def l9_workspace():
+    return l9_workspace_view()
+
+
+@case_management.post("/level9/followups/<int:followup_id>/complete")
+@_view
+def complete_l9_followup(followup_id: int):
+    return complete_l9_followup_view(followup_id)
 
 
 @case_management.get("/<int:resident_id>")
