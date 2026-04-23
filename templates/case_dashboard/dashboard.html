@@ -74,155 +74,95 @@
   <section class="case-section">
     <div class="case-section-header">
       <div>
-        <h2>Overnight and Attendance Issues</h2>
-        <p>Residents who missed last night check in or returned late yesterday.</p>
+        <h2>Level 9 Support Lifecycle</h2>
+        <p>Ongoing post program support tracking and required follow ups.</p>
       </div>
     </div>
 
     <div class="case-dashboard-summary" style="margin-top: 16px;">
-      <div class="case-summary-card urgent" style="cursor: default;">
-        <div class="case-summary-icon">🌙</div>
-        <div class="case-summary-content">
-          <div class="case-summary-title">Failed to Clock In Last Night</div>
-          <div class="case-summary-count">{{ missed_clock_in_rows|length }}</div>
-          <div class="case-summary-note">Still checked out past yesterday</div>
-        </div>
-      </div>
 
-      <div class="case-summary-card warn" style="cursor: default;">
-        <div class="case-summary-icon">⏰</div>
+      <div class="case-summary-card" style="cursor: default;">
+        <div class="case-summary-icon">🧭</div>
         <div class="case-summary-content">
-          <div class="case-summary-title">Clocked In Late Yesterday</div>
-          <div class="case-summary-count">{{ late_check_in_rows|length }}</div>
-          <div class="case-summary-note">Returned after expected back time</div>
+          <div class="case-summary-title">Active Level 9</div>
+          <div class="case-summary-count">{{ level9_active_count }}</div>
         </div>
       </div>
 
       <div class="case-summary-card warn" style="cursor: default;">
         <div class="case-summary-icon">📅</div>
         <div class="case-summary-content">
-          <div class="case-summary-title">Appointments Today</div>
-          <div class="case-summary-count">{{ appointments_today|length }}</div>
-          <div class="case-summary-note">{{ today_local.strftime("%m/%d/%Y") }}</div>
+          <div class="case-summary-title">Due This Month</div>
+          <div class="case-summary-count">{{ level9_due_this_month_count }}</div>
         </div>
       </div>
-    </div>
 
-    <div style="margin-top: 18px;">
-      <h3 style="margin-bottom: 12px;">Failed to Clock In Last Night</h3>
-
-      {% if missed_clock_in_rows %}
-        <ul class="case-list">
-          {% for item in missed_clock_in_rows %}
-            <li class="case-list-item">
-              <div class="case-list-main">
-                <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
-                  {{ item.first_name }} {{ item.last_name }}
-                </a>
-                <div class="case-list-meta">
-                  Expected back:
-                  {{ item.expected_back_local.strftime("%m/%d %I:%M %p") if item.expected_back_local else "—" }}
-                </div>
-              </div>
-              <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">Open Case</a>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <div class="case-empty good">No one missed last night check in.</div>
-      {% endif %}
-    </div>
-
-    <div style="margin-top: 18px;">
-      <h3 style="margin-bottom: 12px;">Clocked In Late Yesterday</h3>
-
-      {% if late_check_in_rows %}
-        <ul class="case-list">
-          {% for item in late_check_in_rows %}
-            <li class="case-list-item">
-              <div class="case-list-main">
-                <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
-                  {{ item.first_name }} {{ item.last_name }}
-                </a>
-                <div class="case-list-meta">
-                  Expected:
-                  {{ item.expected_back_local.strftime("%m/%d %I:%M %p") if item.expected_back_local else "—" }}
-                  |
-                  Actual:
-                  {{ item.check_in_local.strftime("%m/%d %I:%M %p") if item.check_in_local else "—" }}
-                </div>
-              </div>
-              <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">Open Case</a>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <div class="case-empty good">No late check ins yesterday.</div>
-      {% endif %}
-    </div>
-  </section>
-
-  <section class="case-section">
-    <div class="case-section-header">
-      <div>
-        <h2>Chores</h2>
-        <p>Missed chore accountability.</p>
+      <div class="case-summary-card urgent" style="cursor: default;">
+        <div class="case-summary-icon">⚠️</div>
+        <div class="case-summary-content">
+          <div class="case-summary-title">Overdue Follow Ups</div>
+          <div class="case-summary-count">{{ level9_overdue_count }}</div>
+        </div>
       </div>
-    </div>
 
-    <div style="margin-top:16px;">
-
-      <details style="margin-bottom:14px;">
-        <summary style="font-weight:bold; cursor:pointer;">
-          Missed Chores Yesterday: {{ missed_yesterday_rows|length }}
-        </summary>
-
-        {% if missed_yesterday_rows %}
-          <ul class="case-list" style="margin-top:10px;">
-            {% for item in missed_yesterday_rows %}
-              <li class="case-list-item">
-                <div class="case-list-main">
-                  <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
-                    {{ item.first_name }} {{ item.last_name }}
-                  </a>
-                  <div class="case-list-meta">
-                    {{ item.chore_name }}
-                  </div>
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <div class="case-empty good">No missed chores yesterday.</div>
-        {% endif %}
-      </details>
-
-      <details>
-        <summary style="font-weight:bold; cursor:pointer;">
-          Missed Chores This Week: {{ missed_week_rows|length }}
-        </summary>
-
-        {% if missed_week_rows %}
-          <ul class="case-list" style="margin-top:10px;">
-            {% for item in missed_week_rows %}
-              <li class="case-list-item">
-                <div class="case-list-main">
-                  <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
-                    {{ item.first_name }} {{ item.last_name }}
-                  </a>
-                  <div class="case-list-meta">
-                    Missed {{ item.missed_count }} day{{ 's' if item.missed_count > 1 else '' }}
-                  </div>
-                </div>
-              </li>
-            {% endfor %}
-          </ul>
-        {% else %}
-          <div class="case-empty good">No missed chores this week.</div>
-        {% endif %}
-      </details>
+      <div class="case-summary-card warn" style="cursor: default;">
+        <div class="case-summary-icon">⏳</div>
+        <div class="case-summary-content">
+          <div class="case-summary-title">6 Month Reviews Due</div>
+          <div class="case-summary-count">{{ level9_review_due_count }}</div>
+        </div>
+      </div>
 
     </div>
+
+    <div style="margin-top:18px;">
+      <h3>Overdue Follow Ups</h3>
+
+      {% if level9_overdue_rows %}
+        <ul class="case-list">
+          {% for item in level9_overdue_rows %}
+            <li class="case-list-item">
+              <div class="case-list-main">
+                <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
+                  {{ item.first_name }} {{ item.last_name }}
+                </a>
+                <div class="case-list-meta">
+                  Month {{ item.support_month_number }} — Due {{ item.due_date }}
+                </div>
+              </div>
+              <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">Open Case</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="case-empty good">No overdue follow ups.</div>
+      {% endif %}
+    </div>
+
+    <div style="margin-top:18px;">
+      <h3>Upcoming 6 Month Reviews</h3>
+
+      {% if level9_review_due_rows %}
+        <ul class="case-list">
+          {% for item in level9_review_due_rows %}
+            <li class="case-list-item">
+              <div class="case-list-main">
+                <a class="case-list-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">
+                  {{ item.first_name }} {{ item.last_name }}
+                </a>
+                <div class="case-list-meta">
+                  Review Date: {{ item.initial_end_date }}
+                </div>
+              </div>
+              <a class="case-action-link" href="{{ url_for('case_management.resident_case', resident_id=item.id) }}">Open Case</a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="case-empty good">No upcoming reviews.</div>
+      {% endif %}
+    </div>
+
   </section>
 
 </div>
