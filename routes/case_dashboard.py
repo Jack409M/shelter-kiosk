@@ -621,7 +621,7 @@ def dashboard():
 
     level9_active_count_row = db_fetchone(
         _sql(
-            f"""
+            """
             SELECT COUNT(*) AS count
             FROM level9_support_lifecycles l9
             JOIN residents r ON r.id = l9.resident_id
@@ -629,7 +629,7 @@ def dashboard():
               AND r.is_active = TRUE
               AND l9.status IN (%s, %s)
             """,
-            f"""
+            """
             SELECT COUNT(*) AS count
             FROM level9_support_lifecycles l9
             JOIN residents r ON r.id = l9.resident_id
@@ -643,7 +643,7 @@ def dashboard():
 
     level9_due_this_month_count_row = db_fetchone(
         _sql(
-            f"""
+            """
             SELECT COUNT(*) AS count
             FROM level9_monthly_followups f
             JOIN level9_support_lifecycles l9 ON l9.id = f.level9_lifecycle_id
@@ -653,7 +653,7 @@ def dashboard():
               AND f.status = %s
               AND f.due_date BETWEEN %s AND %s
             """,
-            f"""
+            """
             SELECT COUNT(*) AS count
             FROM level9_monthly_followups f
             JOIN level9_support_lifecycles l9 ON l9.id = f.level9_lifecycle_id
@@ -674,7 +674,7 @@ def dashboard():
 
     level9_overdue_rows = db_fetchall(
         _sql(
-            f"""
+            """
             SELECT
                 r.id,
                 r.first_name,
@@ -690,7 +690,7 @@ def dashboard():
               AND f.due_date < %s
             ORDER BY f.due_date ASC, r.last_name, r.first_name
             """,
-            f"""
+            """
             SELECT
                 r.id,
                 r.first_name,
@@ -712,7 +712,7 @@ def dashboard():
 
     level9_review_due_rows = db_fetchall(
         _sql(
-            f"""
+            """
             SELECT
                 r.id,
                 r.first_name,
@@ -729,7 +729,7 @@ def dashboard():
               AND l9.initial_end_date BETWEEN %s AND %s
             ORDER BY l9.initial_end_date ASC, r.last_name, r.first_name
             """,
-            f"""
+            """
             SELECT
                 r.id,
                 r.first_name,
