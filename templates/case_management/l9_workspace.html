@@ -1,57 +1,16 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<div class="case-page" style="background:#fff8d6; padding:16px; border-radius:8px;">
 
-<style>
-  .l9-page {
-    background-color: #fff8d6;
-    padding: 16px;
-    border-radius: 8px;
-  }
-
-  .l9-section {
-    margin-top: 24px;
-    padding: 16px;
-    background: #fffdf0;
-    border: 1px solid #f2d675;
-    border-radius: 6px;
-  }
-
-  .l9-row {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
-  }
-
-  .l9-row:last-child {
-    border-bottom: none;
-  }
-
-  .l9-form-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-top: 8px;
-  }
-
-  .l9-form-grid textarea {
-    grid-column: span 3;
-  }
-
-  .l9-actions {
-    margin-top: 8px;
-  }
-</style>
-
-<div class="case-page l9-page">
-
-  <div class="case-hero">
+  <div class="case-hero" style="background:#fff3b0; border:1px solid #e2c65c; border-radius:8px; padding:16px;">
     <div>
       <h1>Level 9 Support Lifecycle</h1>
       <p>Post program monitoring and support workflow</p>
     </div>
   </div>
 
-  <div class="case-dashboard-summary">
+  <div class="case-dashboard-summary" style="margin-top:16px;">
     <div class="case-summary-card">
       <div class="case-summary-title">Active</div>
       <div class="case-summary-count">{{ active_count }}</div>
@@ -73,151 +32,159 @@
     </div>
   </div>
 
-  <div class="l9-section">
+  <section style="margin-top:24px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px; padding:16px;">
     <h2>Overdue Follow Ups</h2>
 
     {% for f in overdue_rows %}
-      <div class="l9-row">
-        <strong>{{ f.first_name }} {{ f.last_name }}</strong>
-        — Month {{ f.support_month_number }} ({{ f.due_date }})
+      <div style="padding:12px 0; border-top:1px solid #e5e5e5;">
+        <div style="margin-bottom:8px;">
+          <strong>{{ f.first_name }} {{ f.last_name }}</strong>
+          — Month {{ f.support_month_number }} ({{ f.due_date }})
+        </div>
 
         <form method="post" action="{{ url_for('case_management.complete_l9_followup', followup_id=f.id) }}">
-
-          <div class="l9-form-grid">
-
+          <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px;">
             <select name="contact_result">
               <option value="">Contact Result</option>
-              <option>Reached</option>
-              <option>No Answer</option>
-              <option>Wrong Number</option>
+              <option value="Reached">Reached</option>
+              <option value="No Answer">No Answer</option>
+              <option value="Wrong Number">Wrong Number</option>
             </select>
 
             <select name="followup_method">
               <option value="">Method</option>
-              <option>Phone</option>
-              <option>Text</option>
-              <option>In Person</option>
+              <option value="Phone">Phone</option>
+              <option value="Text">Text</option>
+              <option value="In Person">In Person</option>
             </select>
 
             <select name="housing_status">
               <option value="">Housing</option>
-              <option>Stable</option>
-              <option>At Risk</option>
-              <option>Homeless</option>
+              <option value="Stable">Stable</option>
+              <option value="At Risk">At Risk</option>
+              <option value="Homeless">Homeless</option>
             </select>
 
             <select name="employment_status">
               <option value="">Employment</option>
-              <option>Employed</option>
-              <option>Unemployed</option>
+              <option value="Employed">Employed</option>
+              <option value="Unemployed">Unemployed</option>
             </select>
 
             <select name="income_status">
               <option value="">Income</option>
-              <option>Stable</option>
-              <option>Unstable</option>
+              <option value="Stable">Stable</option>
+              <option value="Unstable">Unstable</option>
             </select>
 
             <select name="sobriety_status">
               <option value="">Sobriety</option>
-              <option>Stable</option>
-              <option>At Risk</option>
-              <option>Relapsed</option>
+              <option value="Stable">Stable</option>
+              <option value="At Risk">At Risk</option>
+              <option value="Relapsed">Relapsed</option>
             </select>
-
-            <textarea name="summary_notes" placeholder="Summary notes"></textarea>
-            <textarea name="next_steps" placeholder="Next steps"></textarea>
-
           </div>
 
-          <div class="l9-actions">
+          <div style="margin-top:8px;">
+            <textarea name="summary_notes" placeholder="Summary notes" rows="3" style="width:100%;"></textarea>
+          </div>
+
+          <div style="margin-top:8px;">
+            <textarea name="next_steps" placeholder="Next steps" rows="3" style="width:100%;"></textarea>
+          </div>
+
+          <div style="margin-top:8px;">
             <label><input type="checkbox" name="needs_assistance"> Needs Assistance</label>
-            <label><input type="checkbox" name="risk_flag"> Risk Flag</label>
+            <label style="margin-left:12px;"><input type="checkbox" name="risk_flag"> Risk Flag</label>
+          </div>
+
+          <div style="margin-top:8px;">
             <button type="submit">Complete</button>
           </div>
-
         </form>
       </div>
     {% else %}
       <div>No overdue follow ups</div>
     {% endfor %}
-  </div>
+  </section>
 
-  <div class="l9-section">
+  <section style="margin-top:24px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px; padding:16px;">
     <h2>Due This Month</h2>
 
     {% for f in due_rows %}
-      <div class="l9-row">
-        <strong>{{ f.first_name }} {{ f.last_name }}</strong>
-        — Month {{ f.support_month_number }} ({{ f.due_date }})
+      <div style="padding:12px 0; border-top:1px solid #e5e5e5;">
+        <div style="margin-bottom:8px;">
+          <strong>{{ f.first_name }} {{ f.last_name }}</strong>
+          — Month {{ f.support_month_number }} ({{ f.due_date }})
+        </div>
 
         <form method="post" action="{{ url_for('case_management.complete_l9_followup', followup_id=f.id) }}">
-
-          <div class="l9-form-grid">
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px;">
             <select name="contact_result">
               <option value="">Contact Result</option>
-              <option>Reached</option>
-              <option>No Answer</option>
-              <option>Wrong Number</option>
+              <option value="Reached">Reached</option>
+              <option value="No Answer">No Answer</option>
+              <option value="Wrong Number">Wrong Number</option>
             </select>
 
             <select name="followup_method">
               <option value="">Method</option>
-              <option>Phone</option>
-              <option>Text</option>
-              <option>In Person</option>
+              <option value="Phone">Phone</option>
+              <option value="Text">Text</option>
+              <option value="In Person">In Person</option>
             </select>
-
-            <textarea name="summary_notes" placeholder="Summary notes"></textarea>
           </div>
 
-          <div class="l9-actions">
+          <div style="margin-top:8px;">
+            <textarea name="summary_notes" placeholder="Summary notes" rows="3" style="width:100%;"></textarea>
+          </div>
+
+          <div style="margin-top:8px;">
             <button type="submit">Complete</button>
           </div>
-
         </form>
       </div>
     {% else %}
       <div>No due follow ups</div>
     {% endfor %}
-  </div>
+  </section>
 
-  <div class="l9-section">
+  <section style="margin-top:24px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px; padding:16px;">
     <h2>6 Month Review Decisions</h2>
 
     {% for r in review_rows %}
-      <div class="l9-row">
-        {{ r.first_name }} {{ r.last_name }} — {{ r.initial_end_date }}
-
-        <div class="l9-actions">
-          <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=r.lifecycle_id) }}" style="display:inline;">
-            <input type="hidden" name="review_action" value="extend">
-            <button type="submit">Extend 6 Months</button>
-          </form>
-
-          <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=r.lifecycle_id) }}" style="display:inline; margin-left:8px;">
-            <input type="hidden" name="review_action" value="complete">
-            <button type="submit">Complete Lifecycle</button>
-          </form>
+      <div style="padding:12px 0; border-top:1px solid #e5e5e5;">
+        <div style="margin-bottom:8px;">
+          <strong>{{ r.first_name }} {{ r.last_name }}</strong>
+          — {{ r.initial_end_date }}
         </div>
+
+        <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=r.lifecycle_id) }}" style="display:inline;">
+          <input type="hidden" name="review_action" value="extend">
+          <button type="submit">Extend 6 Months</button>
+        </form>
+
+        <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=r.lifecycle_id) }}" style="display:inline; margin-left:8px;">
+          <input type="hidden" name="review_action" value="complete">
+          <button type="submit">Complete Lifecycle</button>
+        </form>
       </div>
     {% else %}
       <div>No upcoming reviews</div>
     {% endfor %}
-  </div>
+  </section>
 
-  <div class="l9-section">
+  <section style="margin-top:24px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px; padding:16px;">
     <h2>Active Residents</h2>
 
     {% for r in active_rows %}
-      <div class="l9-row">
+      <div style="padding:12px 0; border-top:1px solid #e5e5e5;">
         {{ r.first_name }} {{ r.last_name }}
       </div>
     {% else %}
       <div>No active Level 9 residents</div>
     {% endfor %}
-  </div>
+  </section>
 
 </div>
-
 {% endblock %}
