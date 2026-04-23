@@ -58,6 +58,7 @@ from routes.case_management_parts.intake_duplicates import (
     duplicate_review_use_existing_view,
     duplicate_review_view,
 )
+from routes.case_management_parts.l9_workspace import complete_l9_followup_view, l9_workspace_view
 from routes.case_management_parts.medications import (
     add_medication_view,
     edit_medication_view,
@@ -74,7 +75,6 @@ from routes.case_management_parts.transfer import (
 )
 from routes.case_management_parts.ua_log import add_ua_log_view, edit_ua_log_view, ua_log_view
 from routes.case_management_parts.update import add_case_note_view, edit_case_note_view
-from routes.case_management_parts.l9_workspace import l9_workspace_view, complete_l9_followup_view
 
 
 def _view(view_func):

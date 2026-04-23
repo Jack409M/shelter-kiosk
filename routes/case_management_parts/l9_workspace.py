@@ -5,10 +5,14 @@ from zoneinfo import ZoneInfo
 
 from flask import flash, redirect, render_template, request, session, url_for
 
-from core.db import db_fetchall, db_fetchone
-from core.runtime import init_db
+from core.db import db_fetchall
 from core.l9_support_lifecycle import complete_level9_followup
-from routes.case_management_parts.helpers import case_manager_allowed, normalize_shelter_name, placeholder
+from core.runtime import init_db
+from routes.case_management_parts.helpers import (
+    case_manager_allowed,
+    normalize_shelter_name,
+    placeholder,
+)
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
