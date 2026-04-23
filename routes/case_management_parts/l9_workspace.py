@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from flask import flash, redirect, render_template, request, session, url_for
@@ -37,7 +37,7 @@ def _current_staff_user_id() -> int | None:
 
 
 def _today_local():
-    return CHICAGO_TZ.fromutc(__import__("datetime").datetime.utcnow()).date()
+    return datetime.now(CHICAGO_TZ).date()
 
 
 def _build_context(shelter: str):
