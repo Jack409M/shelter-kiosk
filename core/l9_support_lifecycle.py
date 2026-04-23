@@ -18,7 +18,16 @@ def _add_months(start_date: str, months: int) -> str:
     d = date.fromisoformat(start_date)
     year = d.year + ((d.month - 1 + months) // 12)
     month = ((d.month - 1 + months) % 12) + 1
-    day = min(d.day, 28)
+
+    if month == 2:
+        leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
+        max_day = 29 if leap else 28
+    elif month in {4, 6, 9, 11}:
+        max_day = 30
+    else:
+        max_day = 31
+
+    day = min(d.day, max_day)
     return date(year, month, day).isoformat()
 
 
