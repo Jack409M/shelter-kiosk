@@ -45,6 +45,23 @@ def _normalized_level_text(value: object) -> str | None:
     return digits or text
 
 
+def _load_current_program_level(resident_id: int, shelter: str) -> str | None:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT program_level
+        FROM residents
+        WHERE id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = LOWER({ph})
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
+    if not row:
+        return None
+    return _normalized_level_text(row.get("program_level"))
+
+
 def _load_existing_level9_lifecycle(enrollment_id: int):
     ph = placeholder()
     return db_fetchone(
@@ -88,7 +105,7 @@ def l9_disposition_view(resident_id: int):
         flash("Active enrollment record is invalid.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    current_level = _normalized_level_text(resident.get("program_level"))
+    current_level = _load_current_program_level(resident_id, shelter)
     if current_level != "9":
         flash(
             "Resident must already be promoted to Level 9 before disposition can be completed.",
@@ -129,7 +146,7 @@ def submit_l9_disposition_view(resident_id: int):
         flash("Active enrollment record is invalid.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    current_level = _normalized_level_text(resident.get("program_level"))
+    current_level = _load_current_program_level(resident_id, shelter)
     if current_level != "9":
         flash(
             "Resident must already be promoted to Level 9 before disposition can be completed.",
