@@ -58,6 +58,7 @@ from routes.case_management_parts.intake_duplicates import (
     duplicate_review_use_existing_view,
     duplicate_review_view,
 )
+from routes.case_management_parts.l9_complete import l9_complete_view
 from routes.case_management_parts.l9_disposition import (
     l9_disposition_view,
     submit_l9_disposition_view,
@@ -446,6 +447,12 @@ def l9_disposition(resident_id: int):
 @_view
 def submit_l9_disposition(resident_id: int):
     return submit_l9_disposition_view(resident_id)
+
+
+@case_management.get("/<int:resident_id>/level9-complete")
+@_view
+def l9_complete(resident_id: int):
+    return l9_complete_view(resident_id)
 
 
 @case_management.post("/level9/followups/<int:followup_id>/complete")
