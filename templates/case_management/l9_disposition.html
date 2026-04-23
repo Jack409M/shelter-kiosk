@@ -14,7 +14,6 @@
     <h2>Resident</h2>
     <div><strong>Name:</strong> {{ resident.first_name }} {{ resident.last_name }}</div>
     <div><strong>Resident ID:</strong> {{ resident.id }}</div>
-    <div><strong>Current Level:</strong> {{ resident.program_level }}</div>
     {% if enrollment %}
       <div><strong>Enrollment ID:</strong> {{ enrollment.id }}</div>
       {% if enrollment.entry_date %}
