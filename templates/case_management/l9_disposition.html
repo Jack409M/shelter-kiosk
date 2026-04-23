@@ -64,6 +64,7 @@
           </p>
 
           <form method="post" action="{{ url_for('case_management.submit_l9_disposition', resident_id=resident.id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="disposition_action" value="exit_now">
             <button type="submit">Exit Resident Without Supportive Services</button>
           </form>
@@ -76,6 +77,7 @@
           </p>
 
           <form method="post" action="{{ url_for('case_management.submit_l9_disposition', resident_id=resident.id) }}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="disposition_action" value="enroll_support">
             <button type="submit">Enroll In Level 9 Supportive Services</button>
           </form>
