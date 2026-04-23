@@ -310,6 +310,9 @@ def dashboard():
     now_chicago = datetime.now(CHICAGO_TZ)
     today_local = now_chicago.date()
     yesterday_local = today_local - timedelta(days=1)
+    month_start_local = today_local.replace(day=1)
+    month_end_local = (month_start_local + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    level9_review_cutoff = today_local + timedelta(days=14)
 
     attendance_rows = db_fetchall(
         _sql(
@@ -616,6 +619,160 @@ def dashboard():
         (shelter, week_start.isoformat(), today_local.isoformat()),
     )
 
+    level9_active_count_row = db_fetchone(
+        _sql(
+            f"""
+            SELECT COUNT(*) AS count
+            FROM level9_support_lifecycles l9
+            JOIN residents r ON r.id = l9.resident_id
+            WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM(%s))
+              AND r.is_active = TRUE
+              AND l9.status IN (%s, %s)
+            """,
+            f"""
+            SELECT COUNT(*) AS count
+            FROM level9_support_lifecycles l9
+            JOIN residents r ON r.id = l9.resident_id
+            WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM(?))
+              AND r.is_active = 1
+              AND l9.status IN (?, ?)
+            """,
+        ),
+        (shelter, "active", "extended_active"),
+    )
+
+    level9_due_this_month_count_row = db_fetchone(
+        _sql(
+            f"""
+            SELECT COUNT(*) AS count
+            FROM level9_monthly_followups f
+            JOIN level9_support_lifecycles l9 ON l9.id = f.level9_lifecycle_id
+            JOIN residents r ON r.id = l9.resident_id
+            WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM(%s))
+              AND r.is_active = TRUE
+              AND f.status = %s
+              AND f.due_date BETWEEN %s AND %s
+            """,
+            f"""
+            SELECT COUNT(*) AS count
+            FROM level9_monthly_followups f
+            JOIN level9_support_lifecycles l9 ON l9.id = f.level9_lifecycle_id
+            JOIN residents r ON r.id = l9.resident_id
+            WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM(?))
+              AND r.is_active = 1
+              AND f.status = ?
+              AND f.due_date BETWEEN ? AND ?
+            """,
+        ),
+        (
+            shelter,
+            "pending",
+            month_start_local.isoformat(),
+            month_end_local.isoformat(),
+        ),
+    )
+
+    level9_overdue_rows = db_fetchall(
+        _sql(
+            f"""
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                f.support_month_number,
+                f.due_date
+            FROM level9_monthly_followups f
+            JOIN level9_support_lifecycles l9 ON l9.id = f.level9_lifecycle_id
+            JOIN residents r ON r.id = l9.resident_id
+            WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM(%s))
+              AND r.is_active = TRUE
+              AND f.status = %s
+              AND f.due_date < %s
+            ORDER BY f.due_date ASC, r.last_name, r.first_name
+            """,
+            f"""
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                f.support_month_number,
+                f.due_date
+            FROM level9_monthly_followups f
+            JOIN level9_support_lifecycles l9 ON l9.id = f.level9_lifecycle_id
+            JOIN residents r ON r.id = l9.resident_id
+            WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM(?))
+              AND r.is_active = 1
+              AND f.status = ?
+              AND f.due_date < ?
+            ORDER BY f.due_date ASC, r.last_name, r.first_name
+            """,
+        ),
+        (shelter, "pending", today_local.isoformat()),
+    )
+
+    level9_review_due_rows = db_fetchall(
+        _sql(
+            f"""
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                l9.initial_end_date,
+                l9.extended_end_date,
+                l9.extension_granted,
+                l9.status
+            FROM level9_support_lifecycles l9
+            JOIN residents r ON r.id = l9.resident_id
+            WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM(%s))
+              AND r.is_active = TRUE
+              AND l9.status IN (%s, %s)
+              AND l9.initial_end_date BETWEEN %s AND %s
+            ORDER BY l9.initial_end_date ASC, r.last_name, r.first_name
+            """,
+            f"""
+            SELECT
+                r.id,
+                r.first_name,
+                r.last_name,
+                l9.initial_end_date,
+                l9.extended_end_date,
+                l9.extension_granted,
+                l9.status
+            FROM level9_support_lifecycles l9
+            JOIN residents r ON r.id = l9.resident_id
+            WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM(?))
+              AND r.is_active = 1
+              AND l9.status IN (?, ?)
+              AND l9.initial_end_date BETWEEN ? AND ?
+            ORDER BY l9.initial_end_date ASC, r.last_name, r.first_name
+            """,
+        ),
+        (
+            shelter,
+            "active",
+            "extended_active",
+            today_local.isoformat(),
+            level9_review_cutoff.isoformat(),
+        ),
+    )
+
+    level9_active_count = (
+        level9_active_count_row["count"]
+        if isinstance(level9_active_count_row, dict) and "count" in level9_active_count_row
+        else level9_active_count_row[0]
+        if level9_active_count_row
+        else 0
+    )
+    level9_due_this_month_count = (
+        level9_due_this_month_count_row["count"]
+        if isinstance(level9_due_this_month_count_row, dict) and "count" in level9_due_this_month_count_row
+        else level9_due_this_month_count_row[0]
+        if level9_due_this_month_count_row
+        else 0
+    )
+    level9_overdue_count = len(level9_overdue_rows)
+    level9_review_due_count = len(level9_review_due_rows)
+
     return render_template(
         "case_dashboard/dashboard.html",
         pending_pass_count=pending_pass_count,
@@ -628,7 +785,15 @@ def dashboard():
         appointments_today=appointments_today,
         missed_yesterday_rows=missed_yesterday_rows,
         missed_week_rows=missed_week_rows,
+        level9_active_count=level9_active_count,
+        level9_due_this_month_count=level9_due_this_month_count,
+        level9_overdue_count=level9_overdue_count,
+        level9_review_due_count=level9_review_due_count,
+        level9_overdue_rows=level9_overdue_rows,
+        level9_review_due_rows=level9_review_due_rows,
         today_local=today_local,
+        month_end_local=month_end_local,
+        level9_review_cutoff=level9_review_cutoff,
         role=role,
         shelter=shelter,
     )
