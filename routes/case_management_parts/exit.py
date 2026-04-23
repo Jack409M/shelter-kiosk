@@ -422,4 +422,8 @@ def submit_exit_assessment_view(resident_id: int):
     _close_enrollment_and_resident(enrollment_id, resident_id, validated)
 
     flash("Exit assessment saved.", "success")
+
+    if request.args.get("from_l9") == "1":
+        return redirect(url_for("case_management.l9_complete", resident_id=resident_id))
+
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
