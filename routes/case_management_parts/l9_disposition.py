@@ -10,6 +10,9 @@ from routes.case_management_parts.helpers import (
     normalize_shelter_name,
     placeholder,
 )
+from routes.case_management_parts.l9_disposition_validation import (
+    validate_l9_disposition_form,
+)
 from routes.case_management_parts.resident_case_scope import (
     load_current_enrollment,
     load_resident_in_scope,
@@ -45,7 +48,7 @@ def _normalized_level_text(value: object) -> str | None:
     return digits or text
 
 
-def _load_current_program_level(resident_id: int, shelter: str) -> str | None:
+def _load_current_program_level(*, resident_id: int, shelter: str) -> str | None:
     ph = placeholder()
     row = db_fetchone(
         f"""
@@ -105,7 +108,7 @@ def l9_disposition_view(resident_id: int):
         flash("Active enrollment record is invalid.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    current_level = _load_current_program_level(resident_id, shelter)
+    current_level = _load_current_program_level(resident_id=resident_id, shelter=shelter)
     if current_level != "9":
         flash(
             "Resident must already be promoted to Level 9 before disposition can be completed.",
@@ -146,7 +149,7 @@ def submit_l9_disposition_view(resident_id: int):
         flash("Active enrollment record is invalid.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    current_level = _load_current_program_level(resident_id, shelter)
+    current_level = _load_current_program_level(resident_id=resident_id, shelter=shelter)
     if current_level != "9":
         flash(
             "Resident must already be promoted to Level 9 before disposition can be completed.",
@@ -154,7 +157,13 @@ def submit_l9_disposition_view(resident_id: int):
         )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    action = (request.form.get("disposition_action") or "").strip().lower()
+    validated, errors = validate_l9_disposition_form(request.form)
+    if errors:
+        for error in errors:
+            flash(error, "error")
+        return redirect(url_for("case_management.l9_disposition", resident_id=resident_id))
+
+    action = validated["disposition_action"]
     staff_user_id = _current_staff_user_id()
 
     if action == "exit_now":
