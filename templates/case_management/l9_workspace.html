@@ -51,7 +51,6 @@
     </div>
   </div>
 
-  <!-- SUMMARY -->
   <div class="case-dashboard-summary">
     <div class="case-summary-card">
       <div class="case-summary-title">Active</div>
@@ -74,7 +73,6 @@
     </div>
   </div>
 
-  <!-- OVERDUE -->
   <div class="l9-section">
     <h2>Overdue Follow Ups</h2>
 
@@ -145,7 +143,6 @@
     {% endfor %}
   </div>
 
-  <!-- DUE -->
   <div class="l9-section">
     <h2>Due This Month</h2>
 
@@ -157,9 +154,21 @@
         <form method="post" action="{{ url_for('case_management.complete_l9_followup', followup_id=f.id) }}">
 
           <div class="l9-form-grid">
-            <select name="contact_result"><option value="">Contact</option></select>
-            <select name="followup_method"><option value="">Method</option></select>
-            <textarea name="summary_notes" placeholder="Notes"></textarea>
+            <select name="contact_result">
+              <option value="">Contact Result</option>
+              <option>Reached</option>
+              <option>No Answer</option>
+              <option>Wrong Number</option>
+            </select>
+
+            <select name="followup_method">
+              <option value="">Method</option>
+              <option>Phone</option>
+              <option>Text</option>
+              <option>In Person</option>
+            </select>
+
+            <textarea name="summary_notes" placeholder="Summary notes"></textarea>
           </div>
 
           <div class="l9-actions">
@@ -173,7 +182,6 @@
     {% endfor %}
   </div>
 
-  <!-- REVIEWS -->
   <div class="l9-section">
     <h2>6 Month Review Decisions</h2>
 
@@ -181,10 +189,16 @@
       <div class="l9-row">
         {{ r.first_name }} {{ r.last_name }} — {{ r.initial_end_date }}
 
-        <!-- buttons wired later -->
         <div class="l9-actions">
-          <button disabled>Extend 6 Months</button>
-          <button disabled>Complete Lifecycle</button>
+          <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=r.lifecycle_id) }}" style="display:inline;">
+            <input type="hidden" name="review_action" value="extend">
+            <button type="submit">Extend 6 Months</button>
+          </form>
+
+          <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=r.lifecycle_id) }}" style="display:inline; margin-left:8px;">
+            <input type="hidden" name="review_action" value="complete">
+            <button type="submit">Complete Lifecycle</button>
+          </form>
         </div>
       </div>
     {% else %}
@@ -192,7 +206,6 @@
     {% endfor %}
   </div>
 
-  <!-- ACTIVE -->
   <div class="l9-section">
     <h2>Active Residents</h2>
 
