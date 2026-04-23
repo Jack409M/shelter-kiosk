@@ -364,6 +364,11 @@ def exit_assessment_form_view(resident_id: int):
     init_db()
     _ensure_exit_assessment_columns()
 
+    if request.args.get("from_l9") == "1":
+        session["l9_exit_resident_id"] = resident_id
+    elif session.get("l9_exit_resident_id") == resident_id:
+        session.pop("l9_exit_resident_id", None)
+
     resident, enrollment = _fetch_resident_and_enrollment(resident_id)
 
     if not resident:
@@ -423,7 +428,15 @@ def submit_exit_assessment_view(resident_id: int):
 
     flash("Exit assessment saved.", "success")
 
-    if request.args.get("from_l9") == "1":
+    from_l9 = (
+        request.args.get("from_l9") == "1"
+        or request.form.get("from_l9") == "1"
+        or session.get("l9_exit_resident_id") == resident_id
+    )
+
+    session.pop("l9_exit_resident_id", None)
+
+    if from_l9:
         return redirect(url_for("case_management.l9_complete", resident_id=resident_id))
 
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
