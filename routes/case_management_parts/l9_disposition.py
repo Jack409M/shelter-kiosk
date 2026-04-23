@@ -171,7 +171,13 @@ def submit_l9_disposition_view(resident_id: int):
             "Complete the exit interview to terminate and deactivate this resident.",
             "success",
         )
-        return redirect(url_for("case_management.exit_assessment", resident_id=resident_id))
+        return redirect(
+            url_for(
+                "case_management.exit_assessment",
+                resident_id=resident_id,
+                from_l9=1,
+            )
+        )
 
     if action == "enroll_support":
         existing_lifecycle = _load_existing_level9_lifecycle(enrollment_id)
