@@ -58,7 +58,11 @@ from routes.case_management_parts.intake_duplicates import (
     duplicate_review_use_existing_view,
     duplicate_review_view,
 )
-from routes.case_management_parts.l9_workspace import complete_l9_followup_view, l9_workspace_view
+from routes.case_management_parts.l9_workspace import (
+    complete_l9_followup_view,
+    l9_workspace_view,
+    review_l9_lifecycle_view,
+)
 from routes.case_management_parts.medications import (
     add_medication_view,
     edit_medication_view,
@@ -432,6 +436,12 @@ def l9_workspace():
 @_view
 def complete_l9_followup(followup_id: int):
     return complete_l9_followup_view(followup_id)
+
+
+@case_management.post("/level9/lifecycles/<int:lifecycle_id>/review")
+@_view
+def review_l9_lifecycle(lifecycle_id: int):
+    return review_l9_lifecycle_view(lifecycle_id)
 
 
 @case_management.get("/<int:resident_id>")
