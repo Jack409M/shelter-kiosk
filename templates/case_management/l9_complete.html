@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="background:#fff8d6; padding:24px; border-radius:8px; max-width:800px; margin:auto;">
+
+  <h1 style="margin-bottom:12px;">Level 9 Disposition Complete</h1>
+
+  <h2 style="margin-top:0;">
+    {{ resident.first_name }} {{ resident.last_name }} has been terminated and deactivated.
+  </h2>
+
+  <div style="margin-top:16px; padding:16px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px;">
+    <div><strong>Supportive Services:</strong> Declined</div>
+    <div><strong>Exit Interview:</strong> Completed</div>
+    <div><strong>Enrollment Status:</strong> Exited</div>
+    <div><strong>Resident Status:</strong> Deactivated</div>
+  </div>
+
+  <div style="margin-top:24px;">
+    <a href="{{ url_for('case_management.index') }}" class="btn">Back to Case Management</a>
+  </div>
+
+</div>
+{% endblock %}
