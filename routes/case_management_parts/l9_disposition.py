@@ -167,6 +167,7 @@ def submit_l9_disposition_view(resident_id: int):
     staff_user_id = _current_staff_user_id()
 
     if action == "exit_now":
+        session["l9_exit_resident_id"] = resident_id
         flash(
             "Complete the exit interview to terminate and deactivate this resident.",
             "success",
