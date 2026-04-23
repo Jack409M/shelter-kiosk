@@ -91,6 +91,23 @@ def _normalized_level_text(value: object) -> str | None:
     return digits or text
 
 
+def _load_current_program_level(*, resident_id: int, shelter: str) -> str | None:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT program_level
+        FROM residents
+        WHERE id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = LOWER({ph})
+        LIMIT 1
+        """,
+        (resident_id, shelter),
+    )
+    if not row:
+        return None
+    return _normalized_level_text(row.get("program_level"))
+
+
 def _load_employment_income_settings(shelter: str) -> dict:
     ph = placeholder()
     defaults = load_employment_income_defaults()
@@ -435,13 +452,17 @@ def promotion_review_view(resident_id: int):
                 "on",
             }
             latest_review = _load_latest_promotion_review(enrollment_id)
-            current_level = _normalized_level_text(resident.get("program_level"))
+            current_level = _load_current_program_level(
+                resident_id=resident_id,
+                shelter=shelter,
+            )
 
             if not latest_review:
                 flash("You must save a promotion review before applying promotion.", "error")
                 return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
             target_level = _normalized_level_text(latest_review.get("recommended_next_level"))
+            flash(f"DEBUG target_level={target_level!r}", "error")
 
             if not confirmed:
                 flash("Confirm the promotion before applying it.", "error")
@@ -493,7 +514,12 @@ def promotion_review_view(resident_id: int):
                 return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
             flash("Promotion applied and logged.", "success")
-            if target_level == "9":
+
+            actual_level = _load_current_program_level(
+                resident_id=resident_id,
+                shelter=shelter,
+            )
+            if actual_level == "9":
                 return redirect(url_for("case_management.l9_disposition", resident_id=resident_id))
 
             return redirect(url_for("case_management.promotion_review", resident_id=resident_id, applied=1))
