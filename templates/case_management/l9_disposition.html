@@ -1,0 +1,94 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="case-page" style="background:#fff8d6; padding:16px; border-radius:8px;">
+
+  <div class="case-hero" style="background:#fff3b0; border:1px solid #e2c65c; border-radius:8px; padding:16px;">
+    <div>
+      <h1>Level 9 Disposition</h1>
+      <p>Level 9 is the exit ramp from Gratitude House housing. Choose the resident’s next step.</p>
+    </div>
+  </div>
+
+  <section style="margin-top:24px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px; padding:16px;">
+    <h2>Resident</h2>
+    <div><strong>Name:</strong> {{ resident.first_name }} {{ resident.last_name }}</div>
+    <div><strong>Resident ID:</strong> {{ resident.id }}</div>
+    <div><strong>Current Level:</strong> {{ resident.program_level }}</div>
+    {% if enrollment %}
+      <div><strong>Enrollment ID:</strong> {{ enrollment.id }}</div>
+      {% if enrollment.entry_date %}
+        <div><strong>Enrollment Start:</strong> {{ enrollment.entry_date }}</div>
+      {% endif %}
+    {% endif %}
+  </section>
+
+  <section style="margin-top:24px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px; padding:16px;">
+    <h2>What happens next</h2>
+    <p style="margin:0 0 12px 0;">
+      Promotion to Level 9 has already released the apartment. Now choose whether the resident exits fully,
+      or enrolls in Level 9 supportive services.
+    </p>
+
+    {% if existing_lifecycle %}
+      <div style="padding:12px; border:1px solid #d9c15a; border-radius:8px; background:#fff7cc;">
+        <div><strong>Supportive services already started.</strong></div>
+        <div><strong>Status:</strong> {{ existing_lifecycle.status }}</div>
+        {% if existing_lifecycle.participation_status %}
+          <div><strong>Participation:</strong> {{ existing_lifecycle.participation_status }}</div>
+        {% endif %}
+        {% if existing_lifecycle.start_date %}
+          <div><strong>Start Date:</strong> {{ existing_lifecycle.start_date }}</div>
+        {% endif %}
+        {% if existing_lifecycle.initial_end_date %}
+          <div><strong>Initial End Date:</strong> {{ existing_lifecycle.initial_end_date }}</div>
+        {% endif %}
+        {% if existing_lifecycle.extended_end_date %}
+          <div><strong>Extended End Date:</strong> {{ existing_lifecycle.extended_end_date }}</div>
+        {% endif %}
+        {% if existing_lifecycle.final_end_date %}
+          <div><strong>Final End Date:</strong> {{ existing_lifecycle.final_end_date }}</div>
+        {% endif %}
+      </div>
+
+      <div style="margin-top:16px;">
+        <a href="{{ url_for('case_management.l9_workspace') }}" class="btn">Open Level 9 Workspace</a>
+        <a href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" class="btn" style="margin-left:8px;">Back to Resident</a>
+      </div>
+    {% else %}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px;">
+
+        <div style="background:#ffffff; border:1px solid #d8d8d8; border-radius:8px; padding:16px;">
+          <h3 style="margin-top:0;">Exit Resident Without Supportive Services</h3>
+          <p style="margin-bottom:16px;">
+            Use this when the resident is leaving the program completely and will not receive Level 9 supportive services.
+          </p>
+
+          <form method="post" action="{{ url_for('case_management.submit_l9_disposition', resident_id=resident.id) }}">
+            <input type="hidden" name="disposition_action" value="exit_now">
+            <button type="submit">Exit Resident Without Supportive Services</button>
+          </form>
+        </div>
+
+        <div style="background:#ffffff; border:1px solid #d8d8d8; border-radius:8px; padding:16px;">
+          <h3 style="margin-top:0;">Enroll Resident In Level 9 Supportive Services</h3>
+          <p style="margin-bottom:16px;">
+            Use this when the resident wants off site supportive services and Level 9 case management after moving out.
+          </p>
+
+          <form method="post" action="{{ url_for('case_management.submit_l9_disposition', resident_id=resident.id) }}">
+            <input type="hidden" name="disposition_action" value="enroll_support">
+            <button type="submit">Enroll In Level 9 Supportive Services</button>
+          </form>
+        </div>
+
+      </div>
+
+      <div style="margin-top:16px;">
+        <a href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" class="btn">Cancel</a>
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}
