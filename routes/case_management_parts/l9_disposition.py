@@ -90,7 +90,10 @@ def l9_disposition_view(resident_id: int):
 
     current_level = _normalized_level_text(resident.get("program_level"))
     if current_level != "9":
-        flash("Resident must already be promoted to Level 9 before disposition can be completed.", "error")
+        flash(
+            "Resident must already be promoted to Level 9 before disposition can be completed.",
+            "error",
+        )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     existing_lifecycle = _load_existing_level9_lifecycle(enrollment_id)
@@ -128,14 +131,20 @@ def submit_l9_disposition_view(resident_id: int):
 
     current_level = _normalized_level_text(resident.get("program_level"))
     if current_level != "9":
-        flash("Resident must already be promoted to Level 9 before disposition can be completed.", "error")
+        flash(
+            "Resident must already be promoted to Level 9 before disposition can be completed.",
+            "error",
+        )
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     action = (request.form.get("disposition_action") or "").strip().lower()
     staff_user_id = _current_staff_user_id()
 
     if action == "exit_now":
-        flash("Complete the exit interview to terminate and deactivate this resident.", "success")
+        flash(
+            "Complete the exit interview to terminate and deactivate this resident.",
+            "success",
+        )
         return redirect(url_for("case_management.exit_assessment", resident_id=resident_id))
 
     if action == "enroll_support":
