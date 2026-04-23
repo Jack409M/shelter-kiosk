@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 
 from core.db import db_execute
+
 from .schema_helpers import create_table
 
 
