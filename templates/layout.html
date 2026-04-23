@@ -62,10 +62,12 @@
       {% set rent_roll_url = safe_url_for('rent_tracking.rent_roll') %}
       {% set rent_entry_url = safe_url_for('rent_tracking.payment_entry_sheet') %}
       {% set inspection_sheet_url = safe_url_for('inspection_v2.inspection_sheet') %}
-      {% set can_view_reports = session.get("role") in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
-      {% set can_manage_passes = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
-      {% set can_case_ops = session.get("role") in ["admin", "shelter_director", "case_manager"] %}
-      {% set can_admin = session.get("role") == "admin" %}
+      {% set role = session.get("role") %}
+      {% set can_view_reports = role in ["admin", "shelter_director", "case_manager", "demographics_viewer"] %}
+      {% set can_manage_passes = role in ["admin", "shelter_director", "case_manager"] %}
+      {% set can_case_ops = role in ["admin", "shelter_director", "case_manager"] %}
+      {% set can_admin = role == "admin" %}
+      {% set is_demographics_viewer = role == "demographics_viewer" %}
       {% set shelter_key = shelter_raw|lower %}
       {% set is_gratitude = shelter_key == "gratitude" %}
 
@@ -78,7 +80,17 @@
         <div class="nav-mobile">
           {% if session.get("staff_user_id") %}
 
-            {% if is_gratitude %}
+            {% if is_demographics_viewer %}
+
+              <details class="nav-mobile-section" open>
+                <summary>Account</summary>
+                <div class="nav-mobile-links">
+                  <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+                  <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
+                </div>
+              </details>
+
+            {% elif is_gratitude %}
 
               <details class="nav-mobile-section" open>
                 <summary>Daily Work</summary>
@@ -262,42 +274,138 @@
         <div class="nav-desktop">
           {% if session.get("staff_user_id") %}
 
-            {% set allowed_shelters = session.get("allowed_shelters") or [] %}
-            {% set allowed_shelters_text = "|" ~ (allowed_shelters | join("|") | lower) ~ "|" %}
+            {% if is_demographics_viewer %}
 
-            <div class="nav-dd">
-              <button type="button">
-                {% if shelter_raw %}
-                  {{ shelter_display(shelter_raw) }}
-                {% else %}
-                  Select Shelter
-                {% endif %}
-                ▾
-              </button>
+              <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+              <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
 
-              <div class="menu">
-                <form method="post" action="{{ url_for('auth.staff_select_shelter') }}" style="margin:0;">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="next" value="{{ request.full_path }}">
-                  {% if not allowed_shelters or "|abba|" in allowed_shelters_text %}
-                    <button type="submit" name="shelter" value="Abba" style="width:100%;text-align:left;margin:0;">Abba House</button>
+            {% else %}
+
+              {% set allowed_shelters = session.get("allowed_shelters") or [] %}
+              {% set allowed_shelters_text = "|" ~ (allowed_shelters | join("|") | lower) ~ "|" %}
+
+              <div class="nav-dd">
+                <button type="button">
+                  {% if shelter_raw %}
+                    {{ shelter_display(shelter_raw) }}
+                  {% else %}
+                    Select Shelter
                   {% endif %}
-                  {% if not allowed_shelters or "|haven|" in allowed_shelters_text %}
-                    <button type="submit" name="shelter" value="Haven" style="width:100%;text-align:left;margin:0;">Haven House</button>
-                  {% endif %}
-                  {% if not allowed_shelters or "|gratitude|" in allowed_shelters_text %}
-                    <button type="submit" name="shelter" value="Gratitude" style="width:100%;text-align:left;margin:0;">Gratitude House</button>
-                  {% endif %}
-                </form>
+                  ▾
+                </button>
+
+                <div class="menu">
+                  <form method="post" action="{{ url_for('auth.staff_select_shelter') }}" style="margin:0;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ request.full_path }}">
+                    {% if not allowed_shelters or "|abba|" in allowed_shelters_text %}
+                      <button type="submit" name="shelter" value="Abba" style="width:100%;text-align:left;margin:0;">Abba House</button>
+                    {% endif %}
+                    {% if not allowed_shelters or "|haven|" in allowed_shelters_text %}
+                      <button type="submit" name="shelter" value="Haven" style="width:100%;text-align:left;margin:0;">Haven House</button>
+                    {% endif %}
+                    {% if not allowed_shelters or "|gratitude|" in allowed_shelters_text %}
+                      <button type="submit" name="shelter" value="Gratitude" style="width:100%;text-align:left;margin:0;">Gratitude House</button>
+                    {% endif %}
+                  </form>
+                </div>
               </div>
-            </div>
 
-            {% if is_gratitude %}
+              {% if is_gratitude %}
 
-              {% if can_case_ops %}
+                {% if can_case_ops %}
+                  <div class="nav-dd">
+                    <button type="button">Daily Work ▾</button>
+                    <div class="menu">
+                      {% if residents_url %}
+                        <a href="{{ residents_url }}">Residents</a>
+                      {% endif %}
+                      {% if case_management_url %}
+                        <a href="{{ case_management_url }}">Progress Reports</a>
+                      {% endif %}
+                      {% if case_dashboard_url %}
+                        <a href="{{ case_dashboard_url }}">Case Mgmt Dashboard</a>
+                      {% endif %}
+                      {% if calendar_url %}
+                        <a href="{{ calendar_url }}">Shared Calendar</a>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="nav-dd">
+                    <button type="button">Housing and Accountability ▾</button>
+                    <div class="menu">
+                      {% if can_manage_passes %}
+                        <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
+                      {% endif %}
+                      {% if inspection_sheet_url %}
+                        <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
+                      {% endif %}
+                      {% if rent_roll_url %}
+                        <a href="{{ rent_roll_url }}">Rent Roll</a>
+                      {% endif %}
+                      {% if rent_entry_url %}
+                        <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endif %}
+
+                {% if reports_url and can_view_reports %}
+                  <a href="{{ reports_url }}">Reports</a>
+                {% endif %}
+
                 <div class="nav-dd">
-                  <button type="button">Daily Work ▾</button>
+                  <button type="button">Documents ▾</button>
                   <div class="menu">
+                    <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
+                    <a href="{{ intake_manual_url }}" target="_blank" rel="noopener">New Resident Intake Software Manual</a>
+                    <a href="{{ progress_note_manual_url }}" target="_blank" rel="noopener">First Progress Note Software Manual</a>
+                    <a href="{{ resident_workspace_manual_url }}" target="_blank" rel="noopener">Resident Case Workspace Software Manual</a>
+                  </div>
+                </div>
+
+                {% if can_admin %}
+                  <div class="nav-dd">
+                    <button type="button">Admin ▾</button>
+                    <div class="menu">
+                      <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
+                      {% if operations_settings_url %}
+                        <a href="{{ operations_settings_url }}">Configurations</a>
+                      {% endif %}
+                      <a href="{{ url_for('admin.admin_users') }}">Users</a>
+                      <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
+                      <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
+                    </div>
+                  </div>
+                {% endif %}
+
+              {% else %}
+
+                <div class="nav-dd">
+                  <button type="button">Shelter Operations ▾</button>
+                  <div class="menu">
+                    {% if chore_board_url %}
+                      <a href="{{ chore_board_url }}">Chores</a>
+                    {% endif %}
+                    <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+                    <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
+                    <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+                    {% if inspection_sheet_url %}
+                      <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
+                    {% endif %}
+                    {% if rent_roll_url %}
+                      <a href="{{ rent_roll_url }}">Rent Roll</a>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="nav-dd">
+                  <button type="button">Case Management ▾</button>
+                  <div class="menu">
+                    {% if intake_assessment_url %}
+                      <a href="{{ intake_assessment_url }}">Intake</a>
+                    {% endif %}
                     {% if residents_url %}
                       <a href="{{ residents_url }}">Residents</a>
                     {% endif %}
@@ -313,131 +421,44 @@
                   </div>
                 </div>
 
+                {% if reports_url and can_view_reports %}
+                  <a href="{{ reports_url }}">Reports</a>
+                {% endif %}
+
                 <div class="nav-dd">
-                  <button type="button">Housing and Accountability ▾</button>
+                  <button type="button">Documents ▾</button>
                   <div class="menu">
-                    {% if can_manage_passes %}
-                      <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
-                    {% endif %}
-                    {% if inspection_sheet_url %}
-                      <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
-                    {% endif %}
-                    {% if rent_roll_url %}
-                      <a href="{{ rent_roll_url }}">Rent Roll</a>
-                    {% endif %}
-                    {% if rent_entry_url %}
-                      <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
-                    {% endif %}
+                    <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
+                    <a href="{{ intake_manual_url }}" target="_blank" rel="noopener">New Resident Intake Software Manual</a>
+                    <a href="{{ progress_note_manual_url }}" target="_blank" rel="noopener">First Progress Note Software Manual</a>
+                    <a href="{{ resident_workspace_manual_url }}" target="_blank" rel="noopener">Resident Case Workspace Software Manual</a>
                   </div>
                 </div>
-              {% endif %}
 
-              {% if reports_url and can_view_reports %}
-                <a href="{{ reports_url }}">Reports</a>
-              {% endif %}
-
-              <div class="nav-dd">
-                <button type="button">Documents ▾</button>
-                <div class="menu">
-                  <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
-                  <a href="{{ intake_manual_url }}" target="_blank" rel="noopener">New Resident Intake Software Manual</a>
-                  <a href="{{ progress_note_manual_url }}" target="_blank" rel="noopener">First Progress Note Software Manual</a>
-                  <a href="{{ resident_workspace_manual_url }}" target="_blank" rel="noopener">Resident Case Workspace Software Manual</a>
-                </div>
-              </div>
-
-              {% if can_admin %}
-                <div class="nav-dd">
-                  <button type="button">Admin ▾</button>
-                  <div class="menu">
-                    <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
-                    {% if operations_settings_url %}
-                      <a href="{{ operations_settings_url }}">Configurations</a>
-                    {% endif %}
-                    <a href="{{ url_for('admin.admin_users') }}">Users</a>
-                    <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
-                    <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
+                {% if can_admin %}
+                  <div class="nav-dd">
+                    <button type="button">Admin ▾</button>
+                    <div class="menu">
+                      <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
+                      {% if operations_settings_url %}
+                        <a href="{{ operations_settings_url }}">Configurations</a>
+                      {% endif %}
+                      {% if rent_entry_url %}
+                        <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
+                      {% endif %}
+                      <a href="{{ url_for('admin.admin_users') }}">Users</a>
+                      <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
+                      <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
+                    </div>
                   </div>
-                </div>
+                {% endif %}
+
               {% endif %}
 
-            {% else %}
-
-              <div class="nav-dd">
-                <button type="button">Shelter Operations ▾</button>
-                <div class="menu">
-                  {% if chore_board_url %}
-                    <a href="{{ chore_board_url }}">Chores</a>
-                  {% endif %}
-                  <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-                  <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
-                  <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
-                  {% if inspection_sheet_url %}
-                    <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
-                  {% endif %}
-                  {% if rent_roll_url %}
-                    <a href="{{ rent_roll_url }}">Rent Roll</a>
-                  {% endif %}
-                </div>
-              </div>
-
-              <div class="nav-dd">
-                <button type="button">Case Management ▾</button>
-                <div class="menu">
-                  {% if intake_assessment_url %}
-                    <a href="{{ intake_assessment_url }}">Intake</a>
-                  {% endif %}
-                  {% if residents_url %}
-                    <a href="{{ residents_url }}">Residents</a>
-                  {% endif %}
-                  {% if case_management_url %}
-                    <a href="{{ case_management_url }}">Progress Reports</a>
-                  {% endif %}
-                  {% if case_dashboard_url %}
-                    <a href="{{ case_dashboard_url }}">Case Mgmt Dashboard</a>
-                  {% endif %}
-                  {% if calendar_url %}
-                    <a href="{{ calendar_url }}">Shared Calendar</a>
-                  {% endif %}
-                </div>
-              </div>
-
-              {% if reports_url and can_view_reports %}
-                <a href="{{ reports_url }}">Reports</a>
-              {% endif %}
-
-              <div class="nav-dd">
-                <button type="button">Documents ▾</button>
-                <div class="menu">
-                  <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
-                  <a href="{{ intake_manual_url }}" target="_blank" rel="noopener">New Resident Intake Software Manual</a>
-                  <a href="{{ progress_note_manual_url }}" target="_blank" rel="noopener">First Progress Note Software Manual</a>
-                  <a href="{{ resident_workspace_manual_url }}" target="_blank" rel="noopener">Resident Case Workspace Software Manual</a>
-                </div>
-              </div>
-
-              {% if can_admin %}
-                <div class="nav-dd">
-                  <button type="button">Admin ▾</button>
-                  <div class="menu">
-                    <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
-                    {% if operations_settings_url %}
-                      <a href="{{ operations_settings_url }}">Configurations</a>
-                    {% endif %}
-                    {% if rent_entry_url %}
-                      <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
-                    {% endif %}
-                    <a href="{{ url_for('admin.admin_users') }}">Users</a>
-                    <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
-                    <a href="{{ url_for('staff_sms.staff_sms_consent') }}">SMS Consent</a>
-                  </div>
-                </div>
-              {% endif %}
+              <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+              <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
 
             {% endif %}
-
-            <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
-            <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
 
           {% elif session.get("resident_id") %}
             {% if not is_resident_home %}
