@@ -8,6 +8,7 @@ from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.runtime import init_db
+from core.l9_support_lifecycle import start_level9_lifecycle
 from routes.case_management_parts.budget_scoring import load_budget_score_snapshot
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
@@ -471,6 +472,23 @@ def promotion_review_view(resident_id: int):
                     )
                     if housing_action:
                         action_items_parts.append(housing_action)
+                    if target_level == "9":
+                        start_level9_lifecycle(
+                            resident_id=resident_id,
+                            enrollment_id=enrollment_id,
+                            shelter=shelter,
+                            case_manager_user_id=staff_user_id,
+                            started_by_user_id=staff_user_id,
+                            start_date=now[:10],
+                            apartment_exit_reason="Promotion to Level 9 support lifecycle.",
+                            notes=(
+                                f"Level 9 lifecycle started during promotion "
+                                f"from level {current_level or 'unknown'} to level 9."
+                            ),
+                        )
+                        action_items_parts.append(
+                            "Level 9 support lifecycle started with 6 monthly followups."
+                        )
                     _insert_promotion_review(
                         enrollment_id=enrollment_id,
                         staff_user_id=staff_user_id,
