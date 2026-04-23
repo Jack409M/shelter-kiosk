@@ -68,6 +68,7 @@
       {% set can_case_ops = role in ["admin", "shelter_director", "case_manager"] %}
       {% set can_admin = role == "admin" %}
       {% set is_demographics_viewer = role == "demographics_viewer" %}
+      {% set is_staff_basic = role == "staff" %}
       {% set shelter_key = shelter_raw|lower %}
       {% set is_gratitude = shelter_key == "gratitude" %}
 
@@ -80,7 +81,26 @@
         <div class="nav-mobile">
           {% if session.get("staff_user_id") %}
 
-            {% if is_demographics_viewer %}
+            {% if is_staff_basic %}
+
+              <details class="nav-mobile-section" open>
+                <summary>Operations</summary>
+                <div class="nav-mobile-links">
+                  <a href="{{ url_for('attendance.staff_attendance') }}">Checkout</a>
+                  <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
+                  <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+                </div>
+              </details>
+
+              <details class="nav-mobile-section">
+                <summary>Account</summary>
+                <div class="nav-mobile-links">
+                  <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+                  <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
+                </div>
+              </details>
+
+            {% elif is_demographics_viewer %}
 
               <details class="nav-mobile-section" open>
                 <summary>Account</summary>
@@ -274,7 +294,15 @@
         <div class="nav-desktop">
           {% if session.get("staff_user_id") %}
 
-            {% if is_demographics_viewer %}
+            {% if is_staff_basic %}
+
+              <a href="{{ url_for('attendance.staff_attendance') }}">Checkout</a>
+              <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
+              <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+              <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
+              <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
+
+            {% elif is_demographics_viewer %}
 
               <a href="{{ url_for('auth.staff_profile') }}">My Profile</a>
               <a href="{{ url_for('auth.staff_logout') }}">Logout</a>
