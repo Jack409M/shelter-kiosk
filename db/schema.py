@@ -8,6 +8,7 @@ from flask import current_app, g, has_app_context
 from core.db import db_execute
 
 from . import (
+    l9_schema_support,
     schema_bootstrap,
     schema_budget,
     schema_case,
@@ -228,6 +229,7 @@ def _ensure_program_anchor_tables(kind: str) -> None:
 
 def _ensure_dependent_domain_tables(kind: str) -> None:
     schema_outcomes.ensure_tables(kind)
+    l9_schema_support.ensure_tables(kind)
     schema_goals.ensure_tables(kind)
     schema_case.ensure_tables(kind)
     schema_budget.ensure_tables(kind)
@@ -257,6 +259,7 @@ def _ensure_indexes(kind: str) -> None:
     _ensure_shared_indexes()
     schema_program.ensure_indexes()
     schema_outcomes.ensure_indexes()
+    l9_schema_support.ensure_indexes()
     schema_goals.ensure_indexes()
     schema_case.ensure_indexes()
     schema_budget.ensure_indexes()
