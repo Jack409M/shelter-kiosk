@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="case-page">
+  <div class="case-hero">
+    <div>
+      <h1>Level 9 Support Lifecycle</h1>
+      <p>Dedicated workflow for post program support.</p>
+    </div>
+  </div>
+
+  <div class="case-dashboard-summary">
+    <div class="case-summary-card">
+      <div class="case-summary-title">Active</div>
+      <div class="case-summary-count">{{ active_count }}</div>
+    </div>
+    <div class="case-summary-card warn">
+      <div class="case-summary-title">Due This Month</div>
+      <div class="case-summary-count">{{ due_count }}</div>
+    </div>
+    <div class="case-summary-card urgent">
+      <div class="case-summary-title">Overdue</div>
+      <div class="case-summary-count">{{ overdue_count }}</div>
+    </div>
+    <div class="case-summary-card warn">
+      <div class="case-summary-title">6 Month Reviews</div>
+      <div class="case-summary-count">{{ review_count }}</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Overdue Follow Ups</h2>
+    {% for f in overdue_rows %}
+      <div>
+        {{ f.first_name }} {{ f.last_name }} — Month {{ f.support_month_number }}
+        <form method="post" action="{{ url_for('case_management.complete_l9_followup', followup_id=f.id) }}">
+          <input name="contact_result" placeholder="Contact result">
+          <input name="followup_method" placeholder="Method">
+          <input name="summary_notes" placeholder="Notes">
+          <button type="submit">Complete</button>
+        </form>
+      </div>
+    {% else %}
+      <div>No overdue follow ups</div>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h2>Due This Month</h2>
+    {% for f in due_rows %}
+      <div>
+        {{ f.first_name }} {{ f.last_name }} — Month {{ f.support_month_number }}
+        <form method="post" action="{{ url_for('case_management.complete_l9_followup', followup_id=f.id) }}">
+          <input name="contact_result" placeholder="Contact result">
+          <input name="followup_method" placeholder="Method">
+          <input name="summary_notes" placeholder="Notes">
+          <button type="submit">Complete</button>
+        </form>
+      </div>
+    {% else %}
+      <div>No due follow ups</div>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h2>Upcoming Reviews</h2>
+    {% for r in review_rows %}
+      <div>{{ r.first_name }} {{ r.last_name }} — {{ r.initial_end_date }}</div>
+    {% else %}
+      <div>No upcoming reviews</div>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h2>Active Residents</h2>
+    {% for r in active_rows %}
+      <div>{{ r.first_name }} {{ r.last_name }}</div>
+    {% else %}
+      <div>No active Level 9 residents</div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}
