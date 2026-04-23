@@ -7,7 +7,6 @@ from flask import flash, redirect, render_template, request, session, url_for
 from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
-from core.l9_support_lifecycle import start_level9_lifecycle
 from core.runtime import init_db
 from routes.case_management_parts.budget_scoring import load_budget_score_snapshot
 from routes.case_management_parts.helpers import (
@@ -60,13 +59,11 @@ def _current_shelter() -> str:
     return normalize_shelter_name(session.get("shelter"))
 
 
-
 def _require_case_manager_access():
     if case_manager_allowed():
         return None
     flash("Case manager access required.", "error")
     return redirect(url_for("attendance.staff_attendance"))
-
 
 
 def _current_staff_user_id() -> int | None:
@@ -79,13 +76,11 @@ def _current_staff_user_id() -> int | None:
         return None
 
 
-
 def _none_if_blank(value: object) -> object:
     if isinstance(value, str):
         stripped = value.strip()
         return stripped or None
     return value
-
 
 
 def _normalized_level_text(value: object) -> str | None:
@@ -94,7 +89,6 @@ def _normalized_level_text(value: object) -> str | None:
         return None
     digits = "".join(ch for ch in text if ch.isdigit())
     return digits or text
-
 
 
 def _load_employment_income_settings(shelter: str) -> dict:
@@ -130,15 +124,21 @@ def _load_employment_income_settings(shelter: str) -> dict:
     return resolved
 
 
-
 def _stable_snapshot(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
     return {}
 
 
-
-def _build_hard_blockers(*, blockers: list[str], has_disciplinary_block: bool, disciplinary_flags: list[str], rent_snapshot: dict | None, employment_income_snapshot: dict | None, employment_stability_snapshot: dict | None) -> list[str]:
+def _build_hard_blockers(
+    *,
+    blockers: list[str],
+    has_disciplinary_block: bool,
+    disciplinary_flags: list[str],
+    rent_snapshot: dict | None,
+    employment_income_snapshot: dict | None,
+    employment_stability_snapshot: dict | None,
+) -> list[str]:
     hard_blockers = list(blockers or [])
 
     if has_disciplinary_block and disciplinary_flags:
@@ -163,7 +163,6 @@ def _build_hard_blockers(*, blockers: list[str], has_disciplinary_block: bool, d
             seen.add(text)
             deduped.append(text)
     return deduped
-
 
 
 def _load_latest_promotion_review(enrollment_id: int):
@@ -198,7 +197,6 @@ def _load_latest_promotion_review(enrollment_id: int):
         """,
         (enrollment_id,),
     )
-
 
 
 def _load_promotion_audit_history(enrollment_id: int) -> list[dict[str, Any]]:
@@ -243,8 +241,14 @@ def _load_promotion_audit_history(enrollment_id: int) -> list[dict[str, Any]]:
     return history
 
 
-
-def _insert_promotion_review(*, enrollment_id: int, staff_user_id: int, values: dict[str, Any], now: str, action_items: str | None = None) -> int:
+def _insert_promotion_review(
+    *,
+    enrollment_id: int,
+    staff_user_id: int,
+    values: dict[str, Any],
+    now: str,
+    action_items: str | None = None,
+) -> int:
     ph = placeholder()
     insert_columns_sql = ",\n            ".join(_NOTE_INSERT_COLUMNS)
     values_sql = ",".join([ph] * len(_NOTE_INSERT_COLUMNS))
@@ -285,7 +289,6 @@ def _insert_promotion_review(*, enrollment_id: int, staff_user_id: int, values: 
     return note_id
 
 
-
 def _apply_promotion_to_resident(*, resident_id: int, target_level: str, now: str) -> None:
     ph = placeholder()
     db_execute(
@@ -304,7 +307,6 @@ def _apply_promotion_to_resident(*, resident_id: int, target_level: str, now: st
             resident_id,
         ),
     )
-
 
 
 def _active_rent_config_for_resident(*, resident_id: int, shelter: str) -> dict[str, Any] | None:
@@ -328,7 +330,6 @@ def _active_rent_config_for_resident(*, resident_id: int, shelter: str) -> dict[
         (resident_id, shelter),
     )
     return dict(row) if row else None
-
 
 
 def _sync_housing_for_promotion(
@@ -391,7 +392,6 @@ def _sync_housing_for_promotion(
     return None
 
 
-
 def promotion_review_view(resident_id: int):
     init_db()
 
@@ -428,7 +428,12 @@ def promotion_review_view(resident_id: int):
             return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
         if form_action == "apply_promotion":
-            confirmed = (request.form.get("confirm_apply_promotion") or "").strip().lower() in {"1", "true", "yes", "on"}
+            confirmed = (request.form.get("confirm_apply_promotion") or "").strip().lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
             latest_review = _load_latest_promotion_review(enrollment_id)
             current_level = _normalized_level_text(resident.get("program_level"))
 
@@ -473,21 +478,8 @@ def promotion_review_view(resident_id: int):
                     if housing_action:
                         action_items_parts.append(housing_action)
                     if target_level == "9":
-                        start_level9_lifecycle(
-                            resident_id=resident_id,
-                            enrollment_id=enrollment_id,
-                            shelter=shelter,
-                            case_manager_user_id=staff_user_id,
-                            started_by_user_id=staff_user_id,
-                            start_date=now[:10],
-                            apartment_exit_reason="Promotion to Level 9 support lifecycle.",
-                            notes=(
-                                f"Level 9 lifecycle started during promotion "
-                                f"from level {current_level or 'unknown'} to level 9."
-                            ),
-                        )
                         action_items_parts.append(
-                            "Level 9 support lifecycle started with 6 monthly followups."
+                            "Resident promoted to Level 9. Apartment released. Level 9 disposition required."
                         )
                     _insert_promotion_review(
                         enrollment_id=enrollment_id,
@@ -501,6 +493,9 @@ def promotion_review_view(resident_id: int):
                 return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
             flash("Promotion applied and logged.", "success")
+            if target_level == "9":
+                return redirect(url_for("case_management.l9_disposition", resident_id=resident_id))
+
             return redirect(url_for("case_management.promotion_review", resident_id=resident_id, applied=1))
 
         if (
@@ -512,7 +507,10 @@ def promotion_review_view(resident_id: int):
             and not values["notes"]
             and not values["setbacks_or_incidents"]
         ):
-            flash("Enter a decision, rationale, blocker, exception, recommendation, or review summary.", "error")
+            flash(
+                "Enter a decision, rationale, blocker, exception, recommendation, or review summary.",
+                "error",
+            )
             return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
         now = utcnow_iso()
