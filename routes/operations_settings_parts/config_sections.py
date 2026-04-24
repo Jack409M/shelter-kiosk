@@ -25,12 +25,6 @@ def _kiosk_child_option_sections() -> list[dict]:
 def _configuration_sections() -> list[dict]:
     return [
         {
-            "key": "rent_rules",
-            "title": "Rent Rules",
-            "summary": "Late logic and rent scoring values.",
-            "type": "form",
-        },
-        {
             "key": "inspection_settings",
             "title": "Inspection Settings",
             "summary": "Defaults, scoring behavior, and color bands.",
@@ -79,12 +73,6 @@ def _configuration_sections() -> list[dict]:
 
 def _configuration_leaf_sections() -> list[dict]:
     return [
-        {
-            "key": "rent_rules",
-            "title": "Rent Rules",
-            "summary": "Late logic and rent scoring values.",
-            "type": "form",
-        },
         {
             "key": "inspection_defaults",
             "title": "Inspection Defaults",
