@@ -5,6 +5,7 @@ from flask import Blueprint
 from .rent_tracking_parts.snapshot import build_rent_stability_snapshot
 from .rent_tracking_parts.views import register_routes
 from .rent_tracking_parts.payment_station_views import register_payment_station_routes
+from .rent_tracking_parts.rent_roll import register_rent_roll_routes
 
 rent_tracking = Blueprint(
     "rent_tracking",
@@ -12,6 +13,7 @@ rent_tracking = Blueprint(
     url_prefix="/staff/rent",
 )
 
+register_rent_roll_routes(rent_tracking)
 register_routes(rent_tracking)
 register_payment_station_routes(rent_tracking)
 
