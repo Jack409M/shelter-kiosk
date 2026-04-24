@@ -7,6 +7,12 @@ from flask import flash, redirect, render_template, request, session, url_for
 from core.attendance_hours import build_attendance_hours_snapshot
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
+from core.NP_placement_service import (
+    PLACEMENT_TYPE_NONE,
+    end_active_placement,
+    get_active_placement,
+    replace_active_placement,
+)
 from core.runtime import init_db
 from routes.case_management_parts.budget_scoring import load_budget_score_snapshot
 from routes.case_management_parts.helpers import (
@@ -409,6 +415,42 @@ def _sync_housing_for_promotion(
     return None
 
 
+def _sync_placement_for_promotion(
+    *,
+    resident_id: int,
+    enrollment_id: int,
+    shelter: str,
+    current_level: str | None,
+    target_level: str,
+    now: str,
+) -> str | None:
+    active_placement = get_active_placement(resident_id=resident_id, shelter=shelter)
+
+    if target_level == "9":
+        end_active_placement(
+            resident_id=resident_id,
+            shelter=shelter,
+            end_date=now[:10],
+            note="Placement ended at Level 9 planned exit boundary.",
+            now=now,
+        )
+        return None
+
+    replace_active_placement(
+        resident_id=resident_id,
+        enrollment_id=enrollment_id,
+        shelter=shelter,
+        program_level=target_level,
+        housing_unit_id=(active_placement or {}).get("housing_unit_id"),
+        placement_type=(active_placement or {}).get("placement_type") or PLACEMENT_TYPE_NONE,
+        effective_date=now[:10],
+        change_reason="promotion_level_change",
+        note=f"Promotion from level {current_level or 'unknown'} to level {target_level}.",
+        now=now,
+    )
+    return None
+
+
 def promotion_review_view(resident_id: int):
     init_db()
 
@@ -496,8 +538,18 @@ def promotion_review_view(resident_id: int):
                         target_level=target_level,
                         now=now,
                     )
+                    placement_action = _sync_placement_for_promotion(
+                        resident_id=resident_id,
+                        enrollment_id=enrollment_id,
+                        shelter=shelter,
+                        current_level=current_level,
+                        target_level=target_level,
+                        now=now,
+                    )
                     if housing_action:
                         action_items_parts.append(housing_action)
+                    if placement_action:
+                        action_items_parts.append(placement_action)
                     if target_level == "9":
                         action_items_parts.append(
                             "Resident promoted to Level 9. Apartment released. Level 9 disposition required."
