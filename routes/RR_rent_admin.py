@@ -20,7 +20,7 @@ from routes.rent_tracking_parts.RR_rent_config import (
     seed_default_rr_rent_config,
     unit_type_label,
 )
-from routes.rent_tracking_parts.utils import _float_value, _placeholder
+from routes.rent_tracking_parts.utils import _float_value
 
 RR_rent_admin = Blueprint(
     "RR_rent_admin",
@@ -155,7 +155,6 @@ def _update_rule(
     is_minimum: bool,
 ) -> None:
     now = utcnow_iso()
-    ph = _placeholder()
 
     db_execute(
         (
