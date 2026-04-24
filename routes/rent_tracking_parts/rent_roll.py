@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, session, url_for
+from flask import flash, g, redirect, render_template, session, url_for
 
 from core.auth import require_login, require_shelter
 from core.db import db_fetchone
@@ -26,6 +26,7 @@ from .views import _ensure_sheet_for_month, _post_monthly_charge_ledger_entries
 
 def _monthly_rent_posted_for_shelter(shelter: str, rent_year: int, rent_month: int) -> bool:
     ph = _placeholder()
+    false_value = "FALSE" if g.get("db_kind") == "pg" else "0"
     row = db_fetchone(
         f"""
         SELECT id
@@ -34,7 +35,7 @@ def _monthly_rent_posted_for_shelter(shelter: str, rent_year: int, rent_month: i
           AND related_month_year = {ph}
           AND related_month_month = {ph}
           AND source_code = {ph}
-          AND COALESCE(voided, 0) = 0
+          AND COALESCE(voided, {false_value}) = {false_value}
         LIMIT 1
         """,
         (shelter, rent_year, rent_month, "monthly_rent_charge"),
