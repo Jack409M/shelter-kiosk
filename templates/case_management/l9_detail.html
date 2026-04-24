@@ -24,7 +24,42 @@
   <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
     <h2>Follow Ups</h2>
     {% for f in followups %}
-      <div>Month {{ f.support_month_number }} - {{ f.status }} (Due {{ f.due_date }})</div>
+      <div style="margin-bottom:12px;">
+        <div>
+          <strong>Month {{ f.support_month_number }}</strong> - {{ f.status }} (Due {{ f.due_date }})
+        </div>
+
+        {% if f.status == 'pending' %}
+        <form method="post" action="{{ url_for('case_management.complete_l9_followup', followup_id=f.id) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ request.path }}">
+
+          <div style="margin-top:6px; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px;">
+            <select name="contact_result">
+              <option value="">Contact</option>
+              <option value="Reached">Reached</option>
+              <option value="No Answer">No Answer</option>
+              <option value="Wrong Number">Wrong Number</option>
+            </select>
+
+            <select name="followup_method">
+              <option value="">Method</option>
+              <option value="Phone">Phone</option>
+              <option value="Text">Text</option>
+              <option value="In Person">In Person</option>
+            </select>
+          </div>
+
+          <div style="margin-top:6px;">
+            <textarea name="summary_notes" placeholder="Notes" rows="2" style="width:100%;"></textarea>
+          </div>
+
+          <div style="margin-top:6px;">
+            <button type="submit">Complete Follow Up</button>
+          </div>
+        </form>
+        {% endif %}
+      </div>
     {% endfor %}
   </section>
 
