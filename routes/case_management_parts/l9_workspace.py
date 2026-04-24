@@ -143,15 +143,39 @@ def _build_context(shelter: str):
         ),
     )
 
+    ready_deactivation_rows = db_fetchall(
+        f"""
+        SELECT
+            r.id AS resident_id,
+            r.first_name,
+            r.last_name,
+            l9.id AS lifecycle_id,
+            l9.final_end_date,
+            l9.status,
+            l9.deactivation_ready
+        FROM level9_support_lifecycles l9
+        JOIN residents r ON r.id = l9.resident_id
+        WHERE LOWER(TRIM(l9.shelter)) = LOWER(TRIM({ph}))
+          AND r.is_active = TRUE
+          AND l9.status = {ph}
+          AND l9.deactivation_ready = TRUE
+          AND COALESCE(l9.deactivated_at, '') = ''
+        ORDER BY l9.final_end_date ASC, r.last_name, r.first_name
+        """,
+        (shelter, "complete"),
+    )
+
     return {
         "active_rows": active_rows or [],
         "due_rows": due_rows or [],
         "overdue_rows": overdue_rows or [],
         "review_rows": review_rows or [],
+        "ready_deactivation_rows": ready_deactivation_rows or [],
         "active_count": len(active_rows or []),
         "due_count": len(due_rows or []),
         "overdue_count": len(overdue_rows or []),
         "review_count": len(review_rows or []),
+        "ready_deactivation_count": len(ready_deactivation_rows or []),
     }
 
 
