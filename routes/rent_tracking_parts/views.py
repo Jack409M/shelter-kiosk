@@ -1041,7 +1041,7 @@ def register_routes(rent_tracking):
         apartment_options = _available_rent_setup_apartment_options(shelter, resident_id)
 
         if request.method == "POST":
-            level_snapshot = (request.form.get("level_snapshot") or "").strip() or None
+            level_snapshot = _normalized_level_text(resident.get("program_level"))
             apartment_number_snapshot = _normalize_apartment_number(shelter, request.form.get("apartment_number_snapshot"))
             apartment_size_snapshot = _derive_apartment_size_from_assignment(shelter, apartment_number_snapshot)
             monthly_rent = _float_value(request.form.get("monthly_rent"))
