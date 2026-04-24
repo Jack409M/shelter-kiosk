@@ -711,61 +711,6 @@ def _reconcile_payment_ledger_entry(*, resident_id: int, shelter: str, sheet: di
 
 def register_routes(rent_tracking):
     
-    @rent_tracking.route("/entry", methods=["GET", "POST"])
-    @require_login
-    @require_shelter
-    def payment_entry_sheet():
-        if not _allowed(session):
-            flash("Case manager, shelter director, or admin access required.", "error")
-            return redirect(url_for("attendance.staff_attendance"))
-
-        shelter = _normalize_shelter_name(session.get("shelter"))
-        rent_year = request.args.get("year", type=int)
-        rent_month = request.args.get("month", type=int)
-        if not rent_year or not rent_month:
-            rent_year, rent_month = _current_year_month()
-
-        sheet, settings = _ensure_sheet_for_month(shelter, rent_year, rent_month)
-        entries = _load_sheet_entries(sheet["id"])
-
-        _post_monthly_charge_ledger_entries(
-            shelter=shelter,
-            rent_year=rent_year,
-            rent_month=rent_month,
-            sheet=sheet,
-            entries=entries,
-            settings=settings,
-        )
-
-        if request.method == "POST":
-            flash("Payments are now locked to Resident Account.", "error")
-            return redirect(url_for("rent_tracking.payment_entry_sheet", year=rent_year, month=rent_month))
-
-        repaired_entries = _load_sheet_entries(sheet["id"])
-        with db_transaction():
-            for entry in repaired_entries:
-                if round(_float_value(entry.get("amount_paid")), 2) > 0:
-                    _reconcile_payment_ledger_entry(
-                        resident_id=entry["resident_id"],
-                        shelter=shelter,
-                        sheet=sheet,
-                        entry=entry,
-                        rent_year=rent_year,
-                        rent_month=rent_month,
-                    )
-
-        sorted_entries = sorted(_load_sheet_entries(sheet["id"]), key=_entry_sort_key)
-        grouped_entry_sections = _group_entries_for_payment_page(shelter, sorted_entries)
-
-        return render_template(
-            "case_management/rent_entry.html",
-            shelter=shelter,
-            sheet=sheet,
-            entries=sorted_entries,
-            grouped_entry_sections=grouped_entry_sections,
-            month_label=_month_label(rent_year, rent_month),
-        )
-
     @rent_tracking.route("/resident/<int:resident_id>/account", methods=["GET"])
     @require_login
     @require_shelter
