@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .RR_rent_config import resolve_rr_base_rent
+from .RR_rent_config import load_rr_rent_policy, resolve_rr_base_rent
 from .dates import _days_in_month, _month_start_end, _parse_iso_date
 from .utils import _bool_value, _float_value, _int_value
 
@@ -245,17 +245,13 @@ def _calculate_proration(
 
 
 def _late_start_day(settings: dict, shelter: str) -> int:
-    if shelter == "haven":
-        return _int_value(settings.get("hh_rent_late_day"), 5)
-    return _int_value(settings.get("rent_late_day_of_month"), 6)
+    policy = load_rr_rent_policy(shelter)
+    return _int_value(policy.get("rent_late_day"), 6)
 
 
 def _late_fee_per_day(settings: dict, shelter: str) -> float:
-    if shelter == "haven":
-        return _float_value(settings.get("hh_rent_late_fee_per_day"))
-    if shelter == "gratitude":
-        return _float_value(settings.get("gh_rent_late_fee_per_day"))
-    return 0.0
+    policy = load_rr_rent_policy(shelter)
+    return _float_value(policy.get("rent_late_fee_per_day"))
 
 
 def _calculate_late_fee(
