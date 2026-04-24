@@ -13,10 +13,12 @@
         <div class="cmx-button-row">
           <a class="cmx-btn" href="{{ url_for('rent_tracking.payment_station') }}">Payment Station</a>
 
-          <form method="post" action="{{ url_for('rent_tracking.generate_monthly_rent_charges') }}" style="display:inline;">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="cmx-btn-muted">Generate Monthly Charges</button>
-          </form>
+          {% if not monthly_rent_posted %}
+            <form method="post" action="{{ url_for('rent_tracking.generate_monthly_rent_charges') }}" style="display:inline;">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="cmx-btn-muted">Generate Monthly Charges</button>
+            </form>
+          {% endif %}
 
           <span class="cmx-muted" style="align-self:center;">
             {% if monthly_rent_posted %}
