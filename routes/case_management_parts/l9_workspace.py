@@ -10,6 +10,7 @@ from core.l9_support_lifecycle import (
     complete_level9_followup,
     complete_level9_lifecycle,
     extend_level9_lifecycle,
+    finalize_level9_deactivation,
 )
 from core.runtime import init_db
 from routes.case_management_parts.helpers import (
@@ -225,6 +226,15 @@ def review_l9_lifecycle_view(lifecycle_id: int):
                 "Level 9 lifecycle completed and marked ready for deactivation.",
                 "success",
             )
+        elif action == "deactivate":
+            result = finalize_level9_deactivation(
+                lifecycle_id=lifecycle_id,
+                decided_by_user_id=staff_user_id,
+            )
+            if result:
+                flash("Resident deactivated from Level 9.", "success")
+            else:
+                flash("Unable to find Level 9 lifecycle for deactivation.", "error")
         else:
             flash("Invalid lifecycle review action.", "error")
     except Exception:
