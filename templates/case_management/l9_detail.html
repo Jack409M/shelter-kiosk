@@ -9,6 +9,22 @@
   </div>
 
   <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
+    <div style="margin-bottom:10px;">
+      {% if lifecycle.status == 'active' %}
+        <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#e8f7ec; border:1px solid #9fd3aa; font-weight:bold;">Active Support</span>
+      {% elif lifecycle.status == 'extended' %}
+        <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#fff4cc; border:1px solid #e0b84c; font-weight:bold;">Extended Support</span>
+      {% elif lifecycle.status == 'complete' %}
+        <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#e8eef8; border:1px solid #9bb3d9; font-weight:bold;">Lifecycle Complete</span>
+      {% else %}
+        <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#eeeeee; border:1px solid #cccccc; font-weight:bold;">{{ lifecycle.status }}</span>
+      {% endif %}
+
+      {% if lifecycle.deactivation_ready %}
+        <span style="display:inline-block; margin-left:8px; padding:5px 10px; border-radius:999px; background:#fdeeee; border:1px solid #d36a6a; font-weight:bold;">Ready for Deactivation</span>
+      {% endif %}
+    </div>
+
     <div><strong>Status:</strong> {{ lifecycle.status }}</div>
     <div><strong>Participation:</strong> {{ lifecycle.participation_status }}</div>
     <div><strong>Start:</strong> {{ lifecycle.start_date }}</div>
@@ -23,6 +39,20 @@
 
   <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
     <h2>Lifecycle Decision</h2>
+
+    {% if lifecycle.deactivation_ready %}
+      <div style="margin-bottom:12px; padding:10px; border:1px solid #d36a6a; background:#fdeeee; border-radius:8px; font-weight:bold;">
+        This lifecycle is complete. The resident is ready for final deactivation.
+      </div>
+    {% elif lifecycle.status in ['active', 'extended'] %}
+      <div style="margin-bottom:12px; padding:10px; border:1px solid #e0b84c; background:#fff7cc; border-radius:8px;">
+        Review the support period and choose whether to extend services or complete the Level 9 lifecycle.
+      </div>
+    {% else %}
+      <div style="margin-bottom:12px; padding:10px; border:1px solid #cccccc; background:#f4f4f4; border-radius:8px;">
+        No lifecycle decision is currently available.
+      </div>
+    {% endif %}
 
     {% if lifecycle.status in ['active', 'extended'] %}
       <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=lifecycle.id) }}" style="display:inline;">
@@ -53,10 +83,23 @@
   <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
     <h2>Follow Ups</h2>
     {% for f in followups %}
-      <div style="margin-bottom:12px;">
+      <div style="margin-bottom:12px; padding:10px; border-top:1px solid #e5e5e5;">
         <div>
-          <strong>Month {{ f.support_month_number }}</strong> - {{ f.status }} (Due {{ f.due_date }})
+          <strong>Month {{ f.support_month_number }}</strong>
+          {% if f.status == 'completed' %}
+            <span style="display:inline-block; margin-left:8px; padding:3px 8px; border-radius:999px; background:#e8f7ec; border:1px solid #9fd3aa; font-size:12px; font-weight:bold;">Completed</span>
+          {% else %}
+            <span style="display:inline-block; margin-left:8px; padding:3px 8px; border-radius:999px; background:#fff4cc; border:1px solid #e0b84c; font-size:12px; font-weight:bold;">Pending</span>
+          {% endif %}
+          <span style="margin-left:8px;">Due {{ f.due_date }}</span>
+          {% if f.completed_date %}
+            <span style="margin-left:8px;">Completed {{ f.completed_date }}</span>
+          {% endif %}
         </div>
+
+        {% if f.summary_notes %}
+          <div style="margin-top:6px;"><strong>Notes:</strong> {{ f.summary_notes }}</div>
+        {% endif %}
 
         {% if f.status == 'pending' %}
         <form method="post" action="{{ url_for('case_management.complete_l9_followup', followup_id=f.id) }}">
@@ -95,7 +138,17 @@
   <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
     <h2>Exit Interviews</h2>
     {% for i in exit_interviews %}
-      <div>{{ i.interview_type }} - {{ i.status }} ({{ i.target_date }})</div>
+      <div style="margin-bottom:8px;">
+        <strong>{{ i.interview_type }}</strong>
+        {% if i.status == 'completed' %}
+          <span style="display:inline-block; margin-left:8px; padding:3px 8px; border-radius:999px; background:#e8f7ec; border:1px solid #9fd3aa; font-size:12px; font-weight:bold;">Completed</span>
+        {% elif i.status == 'declined' %}
+          <span style="display:inline-block; margin-left:8px; padding:3px 8px; border-radius:999px; background:#eeeeee; border:1px solid #cccccc; font-size:12px; font-weight:bold;">Declined</span>
+        {% else %}
+          <span style="display:inline-block; margin-left:8px; padding:3px 8px; border-radius:999px; background:#fff4cc; border:1px solid #e0b84c; font-size:12px; font-weight:bold;">Pending</span>
+        {% endif %}
+        <span style="margin-left:8px;">{{ i.target_date }}</span>
+      </div>
     {% endfor %}
   </section>
 
@@ -103,6 +156,8 @@
     <h2>Activity</h2>
     {% for e in events %}
       <div>{{ e.event_type }} - {{ e.event_date }}</div>
+    {% else %}
+      <div>No activity recorded yet.</div>
     {% endfor %}
   </section>
 
