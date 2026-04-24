@@ -18,6 +18,13 @@ def _can_manage_placement() -> bool:
     return session.get("role") in {"admin", "shelter_director", "case_manager"}
 
 
+def _unit_sort_key(unit) -> tuple[int, int | str]:
+    label = str(unit.get("unit_label") or "").strip()
+    if label.isdigit():
+        return (0, int(label))
+    return (1, label.lower())
+
+
 def _load_resident(resident_id: int):
     shelter = _current_shelter()
     return db_fetchone(
@@ -33,17 +40,59 @@ def _load_resident(resident_id: int):
     )
 
 
+def _active_housing_unit_ids_for_shelter(shelter: str, *, exclude_resident_id: int | None = None) -> set[int]:
+    params: tuple[object, ...]
+    exclude_clause = ""
+
+    if exclude_resident_id is not None:
+        exclude_clause = "AND resident_id <> %s"
+        params = (shelter, exclude_resident_id)
+    else:
+        params = (shelter,)
+
+    rows = db_fetchall(
+        f"""
+        SELECT housing_unit_id
+        FROM resident_placements
+        WHERE LOWER(COALESCE(shelter, '')) = %s
+          AND COALESCE(end_date, '') = ''
+          AND housing_unit_id IS NOT NULL
+          {exclude_clause}
+        """,
+        params,
+    )
+
+    occupied: set[int] = set()
+    for row in rows or []:
+        unit_id = row.get("housing_unit_id")
+        if isinstance(unit_id, int):
+            occupied.add(unit_id)
+    return occupied
+
+
 def _load_units_for_shelter(shelter: str):
-    return db_fetchall(
+    rows = db_fetchall(
         """
         SELECT id, unit_label, unit_type, bedroom_count, max_occupancy
         FROM housing_units
         WHERE LOWER(COALESCE(shelter, '')) = %s
           AND is_active = TRUE
-        ORDER BY unit_label
         """,
         (shelter,),
     )
+    return sorted(rows or [], key=_unit_sort_key)
+
+
+def _load_available_units_for_shelter(shelter: str, *, resident_id: int):
+    occupied_unit_ids = _active_housing_unit_ids_for_shelter(
+        shelter,
+        exclude_resident_id=resident_id,
+    )
+    return [
+        unit
+        for unit in _load_units_for_shelter(shelter)
+        if unit.get("id") not in occupied_unit_ids
+    ]
 
 
 def _load_dashboard_rows(shelter: str):
@@ -110,14 +159,14 @@ def change_placement(resident_id: int):
         flash("Resident not found in the current shelter.", "error")
         return redirect(url_for("NP_placement.dashboard"))
 
-    units = _load_units_for_shelter(shelter)
+    units = _load_available_units_for_shelter(shelter, resident_id=resident_id)
     active_placement = get_active_placement(resident_id=resident_id, shelter=shelter)
 
     if request.method == "POST":
         unit_label = (request.form.get("unit_label") or "").strip() or None
         valid_unit_labels = {str(unit.get("unit_label") or "").strip() for unit in units}
         if unit_label and unit_label not in valid_unit_labels:
-            flash("Select a valid active unit for this shelter.", "error")
+            flash("Select a valid available unit for this shelter.", "error")
             return redirect(url_for("NP_placement.change_placement", resident_id=resident_id))
 
         upsert_resident_housing_assignment(
