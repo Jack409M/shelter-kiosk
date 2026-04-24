@@ -14,23 +14,18 @@
     </tr>
   </thead>
   <tbody>
-    {% for r in residents %}
-      {% set placement = (placements | selectattr("resident_id", "equalto", r.id) | list | first) %}
-      {% set unit = None %}
-      {% if placement %}
-        {% set unit = (units | selectattr("id", "equalto", placement.housing_unit_id) | list | first) %}
-      {% endif %}
-      {% set displayed_level = placement.program_level if placement else r.program_level %}
+    {% for r in rows %}
+      {% set displayed_level = r.placement_level if r.placement_level else r.resident_level %}
       <tr>
         <td>{{ r.first_name }} {{ r.last_name }}</td>
         <td>{{ displayed_level }}</td>
-        <td>{{ unit.unit_label if unit else "None" }}</td>
+        <td>{{ r.unit_label if r.unit_label else "None" }}</td>
         <td>
           {% if displayed_level|string == "9" %}
             <span class="status-pill warning">Level 9</span>
-          {% elif unit %}
+          {% elif r.housing_unit_id %}
             <span class="status-pill success">Assigned</span>
-          {% elif placement %}
+          {% elif r.placement_level %}
             <span class="status-pill warning">No Unit</span>
           {% else %}
             <span class="status-pill danger">No Placement</span>
