@@ -9,6 +9,7 @@
       <th>Resident</th>
       <th>Level</th>
       <th>Unit</th>
+      <th>Action</th>
     </tr>
   </thead>
   <tbody>
@@ -22,6 +23,9 @@
         <td>{{ r.first_name }} {{ r.last_name }}</td>
         <td>{{ placement.program_level if placement else r.program_level }}</td>
         <td>{{ unit.unit_label if unit else "None" }}</td>
+        <td>
+          <a href="{{ url_for('NP_placement.change_placement', resident_id=r.id) }}">Change Placement</a>
+        </td>
       </tr>
     {% endfor %}
   </tbody>
