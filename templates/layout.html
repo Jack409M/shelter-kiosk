@@ -53,6 +53,7 @@
       {% set intake_assessment_url = safe_url_for('case_management.intake_index') %}
       {% set case_management_url = safe_url_for('case_management.index') %}
       {% set case_dashboard_url = safe_url_for('case_dashboard.dashboard') %}
+      {% set placement_dashboard_url = safe_url_for('NP_placement.dashboard') %}
       {% set chore_assignment_url = safe_url_for('shelter_operations.chore_assignments') %}
       {% set chore_board_url = safe_url_for('shelter_operations.chore_board') %}
       {% set chore_config_url = safe_url_for('shelter_operations.chore_management') %}
@@ -163,6 +164,9 @@
                 <details class="nav-mobile-section">
                   <summary>Housing and Accountability</summary>
                   <div class="nav-mobile-links">
+                    {% if placement_dashboard_url %}
+                      <a href="{{ placement_dashboard_url }}">Placement Dashboard</a>
+                    {% endif %}
                     {% if can_manage_passes %}
                       <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
                     {% endif %}
@@ -247,6 +251,9 @@
               <details class="nav-mobile-section">
                 <summary>Operations</summary>
                 <div class="nav-mobile-links">
+                  {% if placement_dashboard_url %}
+                    <a href="{{ placement_dashboard_url }}">Placement Dashboard</a>
+                  {% endif %}
                   {% if chore_board_url %}
                     <a href="{{ chore_board_url }}">Chores</a>
                   {% endif %}
@@ -409,6 +416,9 @@
                   <div class="nav-dd">
                     <button type="button">Housing and Accountability ▾</button>
                     <div class="menu">
+                      {% if placement_dashboard_url %}
+                        <a href="{{ placement_dashboard_url }}">Placement Dashboard</a>
+                      {% endif %}
                       {% if can_manage_passes %}
                         <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
                       {% endif %}
@@ -459,6 +469,9 @@
                 <div class="nav-dd">
                   <button type="button">Shelter Operations ▾</button>
                   <div class="menu">
+                    {% if placement_dashboard_url %}
+                      <a href="{{ placement_dashboard_url }}">Placement Dashboard</a>
+                    {% endif %}
                     {% if chore_board_url %}
                       <a href="{{ chore_board_url }}">Chores</a>
                     {% endif %}
