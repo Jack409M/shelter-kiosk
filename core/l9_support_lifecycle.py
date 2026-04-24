@@ -23,6 +23,7 @@ L9_INTERVIEW_DECLINED = "declined"
 L9_EVENT_MONTHLY_FOLLOWUP_COMPLETED = "monthly_followup_completed"
 L9_EVENT_EXTENDED = "lifecycle_extended"
 L9_EVENT_COMPLETED = "lifecycle_completed"
+L9_EVENT_DEACTIVATED = "lifecycle_deactivated"
 L9_EVENT_INTERVIEW_COMPLETED = "exit_interview_completed"
 
 INTERVIEW_EXIT = "exit"
@@ -515,6 +516,99 @@ def complete_level9_lifecycle(*, lifecycle_id: int, decided_by_user_id: int | No
                 "deactivation_ready": True,
             },
             notes="Level 9 lifecycle completed by case manager decision.",
+        )
+
+    return db_fetchone(
+        f"SELECT * FROM level9_support_lifecycles WHERE id = {ph} LIMIT 1",
+        (lifecycle_id,),
+    )
+
+
+def finalize_level9_deactivation(
+    *,
+    lifecycle_id: int,
+    decided_by_user_id: int | None,
+):
+    ph = placeholder()
+    now = utcnow_iso()
+
+    lifecycle = db_fetchone(
+        f"""
+        SELECT
+            id,
+            resident_id,
+            status,
+            deactivation_ready,
+            deactivated_at,
+            closure_reason
+        FROM level9_support_lifecycles
+        WHERE id = {ph}
+        LIMIT 1
+        """,
+        (lifecycle_id,),
+    )
+    if not lifecycle:
+        return None
+
+    current_status = str(lifecycle.get("status") or "").strip().lower()
+    deactivation_ready = bool(lifecycle.get("deactivation_ready"))
+    already_deactivated = bool(str(lifecycle.get("deactivated_at") or "").strip())
+
+    if current_status != L9_STATUS_COMPLETE:
+        return lifecycle
+
+    if not deactivation_ready:
+        return lifecycle
+
+    if already_deactivated:
+        return lifecycle
+
+    resident_id = lifecycle["resident_id"]
+
+    with db_transaction():
+        db_execute(
+            f"""
+            UPDATE residents
+            SET is_active = FALSE
+            WHERE id = {ph}
+            """,
+            (resident_id,),
+        )
+
+        db_execute(
+            f"""
+            UPDATE level9_support_lifecycles
+            SET
+                deactivated_at = {ph},
+                deactivated_by_user_id = {ph},
+                closure_reason = {ph},
+                updated_at = {ph}
+            WHERE id = {ph}
+            """,
+            (
+                now,
+                decided_by_user_id,
+                "Level 9 lifecycle completed",
+                now,
+                lifecycle_id,
+            ),
+        )
+
+        _log_event(
+            lifecycle_id,
+            L9_EVENT_DEACTIVATED,
+            now,
+            decided_by_user_id,
+            old_value={
+                "deactivated_at": lifecycle.get("deactivated_at"),
+                "closure_reason": lifecycle.get("closure_reason"),
+            },
+            new_value={
+                "deactivated_at": now,
+                "closure_reason": "Level 9 lifecycle completed",
+                "resident_is_active": False,
+            },
+            notes="Resident deactivated after Level 9 lifecycle completion.",
         )
 
     return db_fetchone(
