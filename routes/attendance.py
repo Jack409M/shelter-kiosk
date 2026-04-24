@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import Blueprint
+from flask import Blueprint, redirect, url_for
 
 from core.auth import require_login, require_roles, require_shelter
 from routes.attendance_parts.board import (
@@ -171,7 +171,7 @@ def staff_pass_approve_legacy_post(pass_id: int):
 @require_shelter
 @require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_approve_legacy_get(pass_id: int):
-    return staff_pass_approve_view(pass_id)
+    return redirect(url_for("attendance.staff_pass_detail", pass_id=pass_id), code=302)
 
 
 @attendance.route("/staff/passes/<int:pass_id>/deny", methods=["POST"])
@@ -195,7 +195,7 @@ def staff_pass_deny_legacy_post(pass_id: int):
 @require_shelter
 @require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_deny_legacy_get(pass_id: int):
-    return staff_pass_deny_view(pass_id)
+    return redirect(url_for("attendance.staff_pass_detail", pass_id=pass_id), code=302)
 
 
 @attendance.route("/staff/passes/<int:pass_id>/check-in", methods=["POST"])
@@ -219,4 +219,4 @@ def staff_pass_check_in_legacy_post(pass_id: int):
 @require_shelter
 @require_roles(*STAFF_ALLOWED_ROLES)
 def staff_pass_check_in_legacy_get(pass_id: int):
-    return staff_pass_check_in_view(pass_id)
+    return redirect(url_for("attendance.staff_pass_detail", pass_id=pass_id), code=302)
