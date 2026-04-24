@@ -45,7 +45,7 @@ def _today_local():
     return datetime.now(CHICAGO_TZ).date()
 
 
-def _return_after_followup():
+def _return_after_action():
     next_url = (request.form.get("next") or "").strip()
     if next_url.startswith("/staff/case-management/"):
         return next_url
@@ -230,7 +230,7 @@ def complete_l9_followup_view(followup_id: int):
     except Exception:
         flash("Unable to complete follow up.", "error")
 
-    return redirect(_return_after_followup())
+    return redirect(_return_after_action())
 
 
 def review_l9_lifecycle_view(lifecycle_id: int):
@@ -271,4 +271,4 @@ def review_l9_lifecycle_view(lifecycle_id: int):
     except Exception:
         flash("Unable to update Level 9 lifecycle.", "error")
 
-    return redirect(url_for("case_management.l9_workspace"))
+    return redirect(_return_after_action())
