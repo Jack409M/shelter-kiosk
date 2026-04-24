@@ -200,7 +200,7 @@
 
     {% for r in active_rows %}
       <div style="padding:12px 0; border-top:1px solid #e5e5e5;">
-        <a href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
+        <a href="{{ url_for('case_management.l9_detail', lifecycle_id=r.lifecycle_id) }}">
           {{ r.first_name }} {{ r.last_name }}
         </a>
       </div>
