@@ -9,6 +9,7 @@
       <th>Resident</th>
       <th>Level</th>
       <th>Unit</th>
+      <th>Status</th>
       <th>Action</th>
     </tr>
   </thead>
@@ -19,10 +20,22 @@
       {% if placement %}
         {% set unit = (units | selectattr("id", "equalto", placement.housing_unit_id) | list | first) %}
       {% endif %}
+      {% set displayed_level = placement.program_level if placement else r.program_level %}
       <tr>
         <td>{{ r.first_name }} {{ r.last_name }}</td>
-        <td>{{ placement.program_level if placement else r.program_level }}</td>
+        <td>{{ displayed_level }}</td>
         <td>{{ unit.unit_label if unit else "None" }}</td>
+        <td>
+          {% if displayed_level|string == "9" %}
+            <span class="status-pill warning">Level 9</span>
+          {% elif unit %}
+            <span class="status-pill success">Assigned</span>
+          {% elif placement %}
+            <span class="status-pill warning">No Unit</span>
+          {% else %}
+            <span class="status-pill danger">No Placement</span>
+          {% endif %}
+        </td>
         <td>
           <a href="{{ url_for('NP_placement.change_placement', resident_id=r.id) }}">Change Placement</a>
         </td>
