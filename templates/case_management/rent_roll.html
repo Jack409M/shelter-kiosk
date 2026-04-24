@@ -19,7 +19,7 @@
     <div class="cmx-card">
       <div class="cmx-panel-soft" style="margin-bottom:16px;">
         <div class="cmx-summary-text">
-          Use <strong>Open Account</strong> for payments, one time charges, credits, and refunds. Use <strong>Edit Rent</strong> only for recurring monthly rent setup such as level, apartment assignment, exemption, or manual monthly rent override.
+          Use <strong>Setup</strong> for housing assignment, exemption, and Level 8 rent adjustments. Program level is managed through resident progression, not rent setup.
         </div>
       </div>
 
@@ -76,7 +76,7 @@
                     <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_account', resident_id=row['resident_id']) }}">Open Account</a>
                   </td>
                   <td>
-                    <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_config', resident_id=row['resident_id']) }}">Edit Rent</a>
+                    <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_config', resident_id=row['resident_id']) }}">Setup</a>
                   </td>
                 </tr>
               {% endfor %}
