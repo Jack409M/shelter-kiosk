@@ -67,8 +67,6 @@ def register_resident_account_routes(rent_tracking):
         if not resident:
             return redirect(url_for("rent_tracking.rent_roll"))
 
-        _ensure_current_month_charges_for_resident(resident)
-
         ledger_entries = _ledger_entries_for_resident(resident_id)
         ledger_summary = _ledger_summary_for_resident(resident_id)
         balance_breakdown = _ledger_balance_breakdown_for_resident(resident_id)
