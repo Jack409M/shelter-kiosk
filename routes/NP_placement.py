@@ -46,6 +46,38 @@ def _load_units_for_shelter(shelter: str):
     )
 
 
+def _load_dashboard_rows(shelter: str):
+    return db_fetchall(
+        """
+        SELECT
+            r.id,
+            r.first_name,
+            r.last_name,
+            r.program_level AS resident_level,
+            p.program_level AS placement_level,
+            p.housing_unit_id,
+            u.unit_label,
+            CASE
+                WHEN COALESCE(p.program_level, r.program_level, '') = '9' THEN 4
+                WHEN p.id IS NULL THEN 1
+                WHEN p.housing_unit_id IS NULL THEN 2
+                ELSE 3
+            END AS status_order
+        FROM residents r
+        LEFT JOIN resident_placements p
+          ON p.resident_id = r.id
+         AND LOWER(COALESCE(p.shelter, '')) = %s
+         AND COALESCE(p.end_date, '') = ''
+        LEFT JOIN housing_units u
+          ON u.id = p.housing_unit_id
+        WHERE LOWER(COALESCE(r.shelter, '')) = %s
+          AND r.is_active = TRUE
+        ORDER BY status_order, r.last_name, r.first_name
+        """,
+        (shelter, shelter),
+    )
+
+
 @bp.route("/dashboard")
 @require_login
 @require_shelter
@@ -55,36 +87,12 @@ def dashboard():
         return redirect(url_for("attendance.staff_attendance"))
 
     shelter = _current_shelter()
-
-    residents = db_fetchall(
-        """
-        SELECT r.id, r.first_name, r.last_name, r.program_level
-        FROM residents r
-        WHERE LOWER(COALESCE(r.shelter, '')) = %s
-          AND r.is_active = TRUE
-        ORDER BY r.last_name, r.first_name
-        """,
-        (shelter,),
-    )
-
-    placements = db_fetchall(
-        """
-        SELECT p.resident_id, p.housing_unit_id, p.program_level
-        FROM resident_placements p
-        WHERE LOWER(COALESCE(p.shelter, '')) = %s
-          AND COALESCE(p.end_date, '') = ''
-        """,
-        (shelter,),
-    )
-
-    units = _load_units_for_shelter(shelter)
+    rows = _load_dashboard_rows(shelter)
 
     return render_template(
         "NP_placement_dashboard.html",
         shelter=shelter,
-        residents=residents,
-        placements=placements,
-        units=units,
+        rows=rows,
     )
 
 
