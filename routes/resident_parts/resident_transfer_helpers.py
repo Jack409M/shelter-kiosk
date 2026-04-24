@@ -8,6 +8,7 @@ from flask import session
 
 from core.db import DbRow, db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
+from core.NP_placement_service import sync_placement_from_rent_config
 
 
 @dataclass(frozen=True)
@@ -312,6 +313,17 @@ def upsert_resident_housing_assignment(
             effective_start_date=effective_start_date,
             now=now,
             created_by_staff_user_id=_current_staff_user_id(),
+        )
+        sync_placement_from_rent_config(
+            resident_id=resident_id,
+            enrollment_id=None,
+            shelter=normalized_destination_shelter,
+            program_level=level_snapshot,
+            apartment_number=normalized_apartment_number,
+            effective_date=effective_start_date,
+            change_reason="housing_assignment",
+            note="Synced from apartment assignment.",
+            now=now,
         )
     except Exception:
         return
