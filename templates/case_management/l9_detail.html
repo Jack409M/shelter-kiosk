@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="case-page" style="background:#fff8d6; padding:16px; border-radius:8px;">
+
+  <div class="case-hero" style="background:#fff3b0; border:1px solid #e2c65c; border-radius:8px; padding:16px;">
+    <h1>Level 9 Resident Detail</h1>
+    <p>{{ lifecycle.first_name }} {{ lifecycle.last_name }}</p>
+  </div>
+
+  <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
+    <div><strong>Status:</strong> {{ lifecycle.status }}</div>
+    <div><strong>Participation:</strong> {{ lifecycle.participation_status }}</div>
+    <div><strong>Start:</strong> {{ lifecycle.start_date }}</div>
+    <div><strong>Initial End:</strong> {{ lifecycle.initial_end_date }}</div>
+    {% if lifecycle.extended_end_date %}
+      <div><strong>Extended End:</strong> {{ lifecycle.extended_end_date }}</div>
+    {% endif %}
+    {% if lifecycle.final_end_date %}
+      <div><strong>Final End:</strong> {{ lifecycle.final_end_date }}</div>
+    {% endif %}
+  </section>
+
+  <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
+    <h2>Follow Ups</h2>
+    {% for f in followups %}
+      <div>Month {{ f.support_month_number }} - {{ f.status }} (Due {{ f.due_date }})</div>
+    {% endfor %}
+  </section>
+
+  <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
+    <h2>Exit Interviews</h2>
+    {% for i in exit_interviews %}
+      <div>{{ i.interview_type }} - {{ i.status }} ({{ i.target_date }})</div>
+    {% endfor %}
+  </section>
+
+  <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
+    <h2>Activity</h2>
+    {% for e in events %}
+      <div>{{ e.event_type }} - {{ e.event_date }}</div>
+    {% endfor %}
+  </section>
+
+</div>
+{% endblock %}
