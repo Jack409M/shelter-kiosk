@@ -437,3 +437,38 @@ def test_staff_pass_action_without_login_redirects_and_does_not_change_state(app
         )
 
     assert row["status"] == "pending"
+
+
+def test_staff_pass_action_cannot_change_pass_from_another_shelter(app, client):
+    from core.db import db_fetchone
+
+    _login_staff(client)
+    with client.session_transaction() as session:
+        session["shelter"] = "haven"
+        session["allowed_shelters"] = ["haven"]
+
+    resident_id = _insert_resident(
+        app,
+        resident_identifier="test_cross_shelter_pass",
+        resident_code="91000006",
+    )
+    pass_id = _insert_pass(app, resident_id=resident_id, status="pending")
+    csrf_token = _set_csrf_token(client)
+
+    response = client.post(
+        f"/staff/passes/{pass_id}/approve",
+        data={"_csrf_token": csrf_token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code in (301, 302)
+
+    with app.app_context():
+        row = db_fetchone(
+            "SELECT status, approved_by, approved_at FROM resident_passes WHERE id = %s",
+            (pass_id,),
+        )
+
+    assert row["status"] == "pending"
+    assert row["approved_by"] is None
+    assert row["approved_at"] is None
