@@ -59,6 +59,7 @@ from routes.case_management_parts.intake_duplicates import (
     duplicate_review_view,
 )
 from routes.case_management_parts.l9_complete import l9_complete_view
+from routes.case_management_parts.l9_detail import l9_detail_view
 from routes.case_management_parts.l9_disposition import (
     l9_disposition_view,
     submit_l9_disposition_view,
@@ -435,6 +436,12 @@ def notes_history(resident_id: int):
 @_view
 def l9_workspace():
     return l9_workspace_view()
+
+
+@case_management.get("/level9/<int:lifecycle_id>")
+@_view
+def l9_detail(lifecycle_id: int):
+    return l9_detail_view(lifecycle_id)
 
 
 @case_management.get("/<int:resident_id>/level9-disposition")
