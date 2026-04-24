@@ -33,6 +33,27 @@
   </div>
 
   <section style="margin-top:24px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px; padding:16px;">
+    <h2>Ready for Deactivation</h2>
+
+    {% for r in ready_deactivation_rows %}
+      <div style="padding:12px 0; border-top:1px solid #e5e5e5;">
+        <div style="margin-bottom:8px;">
+          <strong>{{ r.first_name }} {{ r.last_name }}</strong>
+          — Completed {{ r.final_end_date }}
+        </div>
+
+        <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=r.lifecycle_id) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="review_action" value="deactivate">
+          <button type="submit" style="background:#c0392b; color:white;">Deactivate Resident</button>
+        </form>
+      </div>
+    {% else %}
+      <div>No residents ready for deactivation</div>
+    {% endfor %}
+  </section>
+
+  <section style="margin-top:24px; background:#fffdf0; border:1px solid #f2d675; border-radius:8px; padding:16px;">
     <h2>Overdue Follow Ups</h2>
 
     {% for f in overdue_rows %}
