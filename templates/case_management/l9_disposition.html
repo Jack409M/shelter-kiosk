@@ -50,9 +50,14 @@
         {% endif %}
       </div>
 
-      <div style="margin-top:16px;">
-        <a href="{{ url_for('case_management.l9_workspace') }}" class="btn">Open Level 9 Workspace</a>
-        <a href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" class="btn" style="margin-left:8px;">Back to Resident</a>
+      <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+        <form method="get" action="{{ url_for('case_management.l9_workspace') }}" style="display:inline; margin:0;">
+          <button type="submit">Open Level 9 Workspace</button>
+        </form>
+
+        <form method="get" action="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" style="display:inline; margin:0;">
+          <button type="submit">Back to Resident</button>
+        </form>
       </div>
     {% else %}
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:12px;">
@@ -86,7 +91,9 @@
       </div>
 
       <div style="margin-top:16px;">
-        <a href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" class="btn">Cancel</a>
+        <form method="get" action="{{ url_for('case_management.resident_case', resident_id=resident.id) }}" style="display:inline; margin:0;">
+          <button type="submit">Cancel</button>
+        </form>
       </div>
     {% endif %}
   </section>
