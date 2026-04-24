@@ -20,8 +20,12 @@
         <span style="display:inline-block; padding:5px 10px; border-radius:999px; background:#eeeeee; border:1px solid #cccccc; font-weight:bold;">{{ lifecycle.status }}</span>
       {% endif %}
 
-      {% if lifecycle.deactivation_ready %}
+      {% if lifecycle.deactivation_ready and not lifecycle.deactivated_at %}
         <span style="display:inline-block; margin-left:8px; padding:5px 10px; border-radius:999px; background:#fdeeee; border:1px solid #d36a6a; font-weight:bold;">Ready for Deactivation</span>
+      {% endif %}
+
+      {% if lifecycle.deactivated_at %}
+        <span style="display:inline-block; margin-left:8px; padding:5px 10px; border-radius:999px; background:#eeeeee; border:1px solid #999999; font-weight:bold;">Deactivated</span>
       {% endif %}
     </div>
 
@@ -35,18 +39,29 @@
     {% if lifecycle.final_end_date %}
       <div><strong>Final End:</strong> {{ lifecycle.final_end_date }}</div>
     {% endif %}
+    {% if lifecycle.deactivated_at %}
+      <div><strong>Deactivated:</strong> {{ lifecycle.deactivated_at }}</div>
+    {% endif %}
   </section>
 
   <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
     <h2>Lifecycle Decision</h2>
 
-    {% if lifecycle.deactivation_ready %}
+    {% if lifecycle.deactivated_at %}
+      <div style="margin-bottom:12px; padding:10px; border:1px solid #cccccc; background:#eeeeee; border-radius:8px;">
+        This Level 9 lifecycle has already been deactivated. No further lifecycle actions are available.
+      </div>
+    {% elif lifecycle.deactivation_ready %}
       <div style="margin-bottom:12px; padding:10px; border:1px solid #d36a6a; background:#fdeeee; border-radius:8px; font-weight:bold;">
         This lifecycle is complete. The resident is ready for final deactivation.
       </div>
-    {% elif lifecycle.status in ['active', 'extended'] %}
+    {% elif lifecycle.status == 'active' %}
       <div style="margin-bottom:12px; padding:10px; border:1px solid #e0b84c; background:#fff7cc; border-radius:8px;">
         Review the support period and choose whether to extend services or complete the Level 9 lifecycle.
+      </div>
+    {% elif lifecycle.status == 'extended' %}
+      <div style="margin-bottom:12px; padding:10px; border:1px solid #e0b84c; background:#fff7cc; border-radius:8px;">
+        This lifecycle has already been extended. The remaining available lifecycle decision is completion.
       </div>
     {% else %}
       <div style="margin-bottom:12px; padding:10px; border:1px solid #cccccc; background:#f4f4f4; border-radius:8px;">
@@ -54,14 +69,16 @@
       </div>
     {% endif %}
 
-    {% if lifecycle.status in ['active', 'extended'] %}
+    {% if lifecycle.status == 'active' and not lifecycle.deactivation_ready and not lifecycle.deactivated_at %}
       <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=lifecycle.id) }}" style="display:inline;">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="next" value="{{ request.path }}">
         <input type="hidden" name="review_action" value="extend">
         <button type="submit">Extend 6 Months</button>
       </form>
+    {% endif %}
 
+    {% if lifecycle.status in ['active', 'extended'] and not lifecycle.deactivation_ready and not lifecycle.deactivated_at %}
       <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=lifecycle.id) }}" style="display:inline; margin-left:8px;">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="next" value="{{ request.path }}">
@@ -70,7 +87,7 @@
       </form>
     {% endif %}
 
-    {% if lifecycle.deactivation_ready %}
+    {% if lifecycle.deactivation_ready and not lifecycle.deactivated_at %}
       <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=lifecycle.id) }}" style="margin-top:8px;">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="next" value="{{ request.path }}">
@@ -101,7 +118,7 @@
           <div style="margin-top:6px;"><strong>Notes:</strong> {{ f.summary_notes }}</div>
         {% endif %}
 
-        {% if f.status == 'pending' %}
+        {% if f.status == 'pending' and not lifecycle.deactivated_at %}
         <form method="post" action="{{ url_for('case_management.complete_l9_followup', followup_id=f.id) }}">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
           <input type="hidden" name="next" value="{{ request.path }}">
