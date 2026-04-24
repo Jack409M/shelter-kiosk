@@ -383,3 +383,28 @@ def test_staff_pass_actions_forbid_non_manager_role(app, client):
     )
 
     assert response.status_code == 403
+
+
+def test_legacy_get_routes_do_not_change_pass_state(app, client):
+    from core.db import db_fetchone
+
+    _login_staff(client)
+
+    resident_id = _insert_resident(
+        app,
+        resident_identifier="test_legacy_get",
+        resident_code="99999999",
+    )
+    pass_id = _insert_pass(app, resident_id=resident_id, status="pending")
+
+    client.get(f"/staff/passes/approve/{pass_id}")
+    client.get(f"/staff/passes/deny/{pass_id}")
+    client.get(f"/staff/passes/check-in/{pass_id}")
+
+    with app.app_context():
+        row = db_fetchone(
+            "SELECT status FROM resident_passes WHERE id = %s",
+            (pass_id,),
+        )
+
+    assert row["status"] == "pending"
