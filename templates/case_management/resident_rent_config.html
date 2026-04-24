@@ -16,7 +16,6 @@
             {{ resident['first_name'] }} {{ resident['last_name'] }}
           </div>
         </div>
-
         <div class="cmx-button-row">
           <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.rent_roll') }}">Back to Rent Roll</a>
           <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_account', resident_id=resident['id']) }}">Open Account</a>
@@ -47,17 +46,10 @@
 
           <div class="cmx-field">
             <label>Program Level</label>
-            <select name="level_snapshot" required>
-              <option value="">Select level</option>
-              <option value="1" {% if current_level == '1' %}selected{% endif %}>Level 1</option>
-              <option value="2" {% if current_level == '2' %}selected{% endif %}>Level 2</option>
-              <option value="3" {% if current_level == '3' %}selected{% endif %}>Level 3</option>
-              <option value="4" {% if current_level == '4' %}selected{% endif %}>Level 4</option>
-              <option value="5" {% if current_level == '5' %}selected{% endif %}>Level 5</option>
-              <option value="6" {% if current_level == '6' %}selected{% endif %}>Level 6</option>
-              <option value="7" {% if current_level == '7' %}selected{% endif %}>Level 7</option>
-              <option value="8" {% if current_level == '8' %}selected{% endif %}>Level 8</option>
-            </select>
+            <input type="text" value="Level {{ current_level or '—' }}" readonly>
+            <div class="cmx-muted" style="margin-top:6px;">
+              Level is controlled by program progression and cannot be changed from rent setup.
+            </div>
           </div>
 
           {% if shelter == 'gratitude' or shelter == 'abba' %}
@@ -91,14 +83,7 @@
 
           <div class="cmx-field" style="margin-top:12px;">
             <label>Level 8 Adjusted Monthly Rent</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              name="monthly_rent"
-              value="{{ current_monthly_rent or 0 }}"
-              {% if not is_level_8 %}readonly{% endif %}
-            >
+            <input type="number" step="0.01" min="0" name="monthly_rent" value="{{ current_monthly_rent or 0 }}" {% if not is_level_8 %}readonly{% endif %}>
             {% if is_level_8 %}
               <div class="cmx-muted" style="margin-top:6px;">
                 Level 8 may be adjusted based on the income and expense ratio determined by the case manager. The system will not allow the effective rent to fall below the configured Level 8 minimum.
@@ -141,32 +126,11 @@
         </div>
 
         <div class="cmx-stack">
+          <div class="cmx-panel-soft"><div class="cmx-summary-text"><strong>Levels 1 through 4</strong><br>Rent is a flat amount from the admin rent table.</div></div>
+          <div class="cmx-panel-soft"><div class="cmx-summary-text"><strong>Levels 5 through 7</strong><br>Rent is calculated from level and unit type.</div></div>
+          <div class="cmx-panel-soft"><div class="cmx-summary-text"><strong>Level 8</strong><br>Rent starts with the configured minimum. Case managers may enter an adjusted amount based on income and expenses.</div></div>
           <div class="cmx-panel-soft">
-            <div class="cmx-summary-text">
-              <strong>Levels 1 through 4</strong><br>
-              Rent is a flat amount from the admin rent table.
-            </div>
-          </div>
-
-          <div class="cmx-panel-soft">
-            <div class="cmx-summary-text">
-              <strong>Levels 5 through 7</strong><br>
-              Rent is calculated from level and unit type.
-            </div>
-          </div>
-
-          <div class="cmx-panel-soft">
-            <div class="cmx-summary-text">
-              <strong>Level 8</strong><br>
-              Rent starts with the configured minimum. Case managers may enter an adjusted amount based on income and expenses.
-            </div>
-          </div>
-
-          <div class="cmx-panel-soft">
-            <div class="cmx-summary-text">
-              <strong>Payments</strong><br>
-              Payments, one time charges, credits, and refunds belong on the resident account ledger.
-            </div>
+            <div class="cmx-summary-text"><strong>Payments</strong><br>Payments, one time charges, credits, and refunds belong on the resident account ledger.</div>
             <div class="cmx-button-row" style="margin-top:10px;">
               <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_account', resident_id=resident['id']) }}">Open Resident Account</a>
             </div>
@@ -176,21 +140,12 @@
     </div>
 
     <div class="cmx-card">
-      <div class="cmx-section-head">
-        <div>
-          <h2 class="cmx-section-title">Rent Setup History</h2>
-          <div class="cmx-section-subtitle">Newest at the top.</div>
-        </div>
-      </div>
-
+      <div class="cmx-section-head"><div><h2 class="cmx-section-title">Rent Setup History</h2><div class="cmx-section-subtitle">Newest at the top.</div></div></div>
       {% if history %}
         <div class="cmx-stack">
           {% for row in history %}
             <div class="cmx-panel-soft">
-              <div class="cmx-panel-head">
-                <h3>{{ row['effective_start_date'] or '—' }}</h3>
-                <span>{{ 'Active' if not row['effective_end_date'] else row['effective_end_date'] }}</span>
-              </div>
+              <div class="cmx-panel-head"><h3>{{ row['effective_start_date'] or '—' }}</h3><span>{{ 'Active' if not row['effective_end_date'] else row['effective_end_date'] }}</span></div>
               <div class="cmx-summary-text">
                 Level: {{ row['level_snapshot'] or '—' }}<br>
                 Apartment Number: {{ row['apartment_number_snapshot'] or '—' }}<br>
