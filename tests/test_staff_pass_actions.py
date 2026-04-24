@@ -408,3 +408,32 @@ def test_legacy_get_routes_do_not_change_pass_state(app, client):
         )
 
     assert row["status"] == "pending"
+
+
+def test_staff_pass_action_without_login_redirects_and_does_not_change_state(app, client):
+    from core.db import db_fetchone
+
+    resident_id = _insert_resident(
+        app,
+        resident_identifier="test_pass_no_login",
+        resident_code="91000005",
+    )
+    pass_id = _insert_pass(app, resident_id=resident_id, status="pending")
+    csrf_token = _set_csrf_token(client)
+
+    response = client.post(
+        f"/staff/passes/{pass_id}/approve",
+        data={"_csrf_token": csrf_token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code in (301, 302)
+    assert "/staff/login" in response.headers["Location"]
+
+    with app.app_context():
+        row = db_fetchone(
+            "SELECT status FROM resident_passes WHERE id = %s",
+            (pass_id,),
+        )
+
+    assert row["status"] == "pending"
