@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .RR_rent_config import resolve_rr_base_rent
 from .dates import _days_in_month, _month_start_end, _parse_iso_date
 from .utils import _bool_value, _float_value, _int_value
 
@@ -162,10 +163,6 @@ def _derive_apartment_size_from_assignment(
 
 
 def _derive_base_monthly_rent(settings: dict, shelter: str, config: dict) -> tuple[float, str]:
-    manual_rent = _float_value(config.get("monthly_rent"))
-    if manual_rent > 0:
-        return manual_rent, "Manual override from resident rent setup"
-
     if _bool_value(config.get("is_exempt")):
         return 0.0, "Resident marked exempt"
 
@@ -175,40 +172,20 @@ def _derive_base_monthly_rent(settings: dict, shelter: str, config: dict) -> tup
         _derive_apartment_size_from_assignment(shelter, apartment_number)
         or str(config.get("apartment_size_snapshot") or "").strip()
     )
+    manual_rent = _float_value(config.get("monthly_rent"))
 
-    if shelter == "haven":
-        return _float_value(
-            settings.get("hh_rent_amount", 150.00)
-        ), "Haven base rent from admin settings"
+    rr_base_rent, rr_note = resolve_rr_base_rent(
+        shelter=shelter,
+        program_level=level,
+        unit_type=apartment_size,
+    )
 
-    if shelter == "gratitude":
-        if level == "5":
-            apartment_size_lower = apartment_size.lower()
-            if "one" in apartment_size_lower:
-                return _float_value(
-                    settings.get("gh_level_5_one_bedroom_rent", 250.00)
-                ), "Gratitude level 5 one bedroom rate"
-            if "two" in apartment_size_lower:
-                return _float_value(
-                    settings.get("gh_level_5_two_bedroom_rent", 300.00)
-                ), "Gratitude level 5 two bedroom rate"
-            if "town" in apartment_size_lower:
-                return _float_value(
-                    settings.get("gh_level_5_townhome_rent", 300.00)
-                ), "Gratitude level 5 townhome rate"
-            return _float_value(
-                settings.get("gh_level_5_one_bedroom_rent", 250.00)
-            ), "Gratitude level 5 defaulted to one bedroom rate"
+    if level == "8" and manual_rent > 0:
+        if rr_base_rent > 0 and manual_rent < rr_base_rent:
+            return rr_base_rent, f"{rr_note}; Level 8 adjustment below minimum ignored"
+        return manual_rent, "Level 8 adjusted rent from resident rent setup"
 
-        if level == "8":
-            if manual_rent > 0:
-                return manual_rent, "Manual level 8 override"
-            return (
-                0.0,
-                "Level 8 sliding scale still needs a resident specific monthly override amount",
-            )
-
-    return manual_rent, "No matching automatic rent rule"
+    return rr_base_rent, rr_note
 
 
 def _calculate_proration(
