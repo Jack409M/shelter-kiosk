@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import render_template, redirect, url_for, flash, session
+from flask import flash, redirect, render_template, session, url_for
 
 from core.runtime import init_db
 from routes.case_management_parts.helpers import (

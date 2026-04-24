@@ -1,5 +1,5 @@
-from core.l9_support_lifecycle import start_level9_lifecycle
 from core.db import db_fetchone
+from core.l9_support_lifecycle import start_level9_lifecycle
 
 
 def test_start_level9_lifecycle_is_idempotent(db_session, test_resident, test_enrollment):
