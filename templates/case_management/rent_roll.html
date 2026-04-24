@@ -29,12 +29,13 @@
             <thead>
               <tr>
                 <th>Resident Name</th>
-                <th>Apartment Number</th>
+                <th>Level</th>
+                <th>Apartment</th>
                 <th>Unit Type</th>
                 <th>Effective Rent</th>
-                <th>Current Balance</th>
+                <th>Balance</th>
                 <th>Status</th>
-                <th>Account</th>
+                <th>Payment</th>
                 <th>Setup</th>
               </tr>
             </thead>
@@ -46,11 +47,12 @@
                 {% endif %}
                 <tr>
                   <td>
-                    {{ row['resident_name'] }}
+                    <strong>{{ row['resident_name'] }}</strong>
                     {% if row['rent_source_note'] %}
                       <div class="cmx-muted" style="margin-top:6px;">{{ row['rent_source_note'] }}</div>
                     {% endif %}
                   </td>
+                  <td>{{ 'Level ' ~ row['level_snapshot'] if row['level_snapshot'] else '—' }}</td>
                   <td>{{ row['apartment_number_snapshot'] or '—' }}</td>
                   <td>{{ row['apartment_size_snapshot'] or '—' }}</td>
                   <td>${{ '%.2f'|format(row['monthly_rent'] or 0) }}</td>
@@ -64,16 +66,18 @@
                     {% endif %}
                   </td>
                   <td>
-                    {% if current_balance < 0 %}
-                      <span style="color:#1f6b33; font-weight:700;">Credit</span>
+                    {% if row['is_exempt'] %}
+                      <span style="display:inline-block; padding:4px 10px; border-radius:999px; background:#eef0f3; font-weight:700;">Exempt</span>
+                    {% elif current_balance < 0 %}
+                      <span style="display:inline-block; padding:4px 10px; border-radius:999px; background:#eef8f0; color:#1f6b33; font-weight:700;">Credit</span>
                     {% elif current_balance > 0 %}
-                      <span style="color:#8d1f1f; font-weight:700;">Due</span>
+                      <span style="display:inline-block; padding:4px 10px; border-radius:999px; background:#fff0f0; color:#8d1f1f; font-weight:700;">Balance Due</span>
                     {% else %}
-                      <span style="font-weight:700;">Paid</span>
+                      <span style="display:inline-block; padding:4px 10px; border-radius:999px; background:#eef8f0; color:#1f6b33; font-weight:700;">Current</span>
                     {% endif %}
                   </td>
                   <td>
-                    <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_account', resident_id=row['resident_id']) }}">Open Account</a>
+                    <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_account', resident_id=row['resident_id']) }}">Collect Payment</a>
                   </td>
                   <td>
                     <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.resident_rent_config', resident_id=row['resident_id']) }}">Setup</a>
