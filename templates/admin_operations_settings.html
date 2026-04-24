@@ -16,42 +16,6 @@
     background: var(--bg-soft);
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
-  }
-
-  .config-menu-card:hover,
-  .config-menu-card:focus {
-    border-color: #6a88a8;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-    transform: translateY(-1px);
-    text-decoration: none;
-    color: inherit;
-  }
-
-  .config-menu-card h3 {
-    margin: 0 0 8px 0;
-    font-size: 18px;
-    line-height: 1.2;
-  }
-
-  .config-menu-card p {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.45;
-    color: var(--text-muted);
-  }
-
-  .config-page-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-
-  @media (max-width: 980px) {
-    .config-menu-grid {
-      grid-template-columns: 1fr;
-    }
   }
 </style>
 {% endblock %}
@@ -59,40 +23,31 @@
 {% block content %}
 <div class="cmx-page">
   <div class="cmx-shell">
+
     <div class="cmx-card">
       <div class="cmx-section-head">
-        <div>
-          <h1 class="cmx-section-title">Configurations</h1>
-          <div class="cmx-section-subtitle">
-            Shelter specific configuration areas for {{ shelter | shelter if shelter else "Current Shelter" }}.
-          </div>
-        </div>
-
-        <div class="config-page-actions">
-          <a class="cmx-btn-muted" href="{{ url_for('admin.admin_dashboard') }}">Back to Admin</a>
-        </div>
+        <h1 class="cmx-section-title">Configurations</h1>
       </div>
     </div>
 
     <div class="cmx-card">
-      <div class="cmx-section-head">
-        <div>
-          <h2 class="cmx-section-title">Choose a Configuration Area</h2>
-          <div class="cmx-section-subtitle">
-            Each section opens on its own page so staff only work in one configuration area at a time.
-          </div>
-        </div>
-      </div>
+      <div class="config-menu-grid">
 
-      <div class="config-menu-grid" style="margin-top: 16px;">
+        <a class="config-menu-card" href="{{ url_for('RR_rent_admin.rent_config_page') }}">
+          <h3>Rent Configuration</h3>
+          <p>Full rent table for all levels and unit types. This replaces manual rent entry.</p>
+        </a>
+
         {% for section in sections %}
           <a class="config-menu-card" href="{{ url_for('operations_settings.settings_section_page', section_key=section.key) }}">
             <h3>{{ section.title }}</h3>
             <p>{{ section.summary }}</p>
           </a>
         {% endfor %}
+
       </div>
     </div>
+
   </div>
 </div>
 {% endblock %}
