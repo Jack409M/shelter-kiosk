@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Change Placement</h1>
+
+<h3>{{ resident.first_name }} {{ resident.last_name }}</h3>
+<p>Level: {{ resident.program_level }}</p>
+<p>Shelter: {{ shelter }}</p>
+
+<form method="POST">
+  <label for="unit_label">Unit</label>
+  <select name="unit_label">
+    <option value="">-- None --</option>
+    {% for unit in units %}
+      <option value="{{ unit.unit_label }}"
+        {% if active_placement and unit.id == active_placement.housing_unit_id %}selected{% endif %}>
+        {{ unit.unit_label }}
+      </option>
+    {% endfor %}
+  </select>
+
+  <br><br>
+  <button type="submit">Save Placement</button>
+</form>
+
+<a href="{{ url_for('NP_placement.dashboard') }}">Back to dashboard</a>
+
+{% endblock %}
