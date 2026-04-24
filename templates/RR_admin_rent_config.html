@@ -1,0 +1,95 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h1 class="cmx-section-title">Rent Configuration</h1>
+          <div class="cmx-section-subtitle">
+            All rent is controlled here. Changes apply system wide for {{ shelter | shelter }}.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" class="cmx-card">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      {% for group in grouped_rules %}
+        <div class="cmx-section-head" style="margin-top:20px;">
+          <div>
+            <h2 class="cmx-section-title">{{ group.title }}</h2>
+            <div class="cmx-section-subtitle">{{ group.summary }}</div>
+          </div>
+        </div>
+
+        <div class="cmx-grid cmx-grid-3">
+          {% for row in group.rows %}
+            <div class="cmx-field">
+              <label>
+                Level {{ row.program_level }} {{ row.unit_type_label }}
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="{{ row.field_name }}"
+                value="{{ '%.2f'|format(row.monthly_rent or 0) }}"
+                required
+              >
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+
+      <hr style="margin:30px 0;">
+
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">Policy Settings</h2>
+        </div>
+      </div>
+
+      <div class="cmx-grid cmx-grid-3">
+        <div class="cmx-field">
+          <label>Rent Due Day</label>
+          <input type="number" name="rent_due_day" value="{{ policy.rent_due_day or 1 }}">
+        </div>
+
+        <div class="cmx-field">
+          <label>Late Day</label>
+          <input type="number" name="rent_late_day" value="{{ policy.rent_late_day or 6 }}">
+        </div>
+
+        <div class="cmx-field">
+          <label>Late Fee Per Day</label>
+          <input type="number" step="0.01" name="rent_late_fee_per_day" value="{{ policy.rent_late_fee_per_day or 1.00 }}">
+        </div>
+      </div>
+
+      <div class="cmx-field" style="margin-top:16px;">
+        <label>Level 8 Guidance</label>
+        <textarea name="level_8_adjustment_guidance" rows="3">{{ policy.level_8_adjustment_guidance }}</textarea>
+      </div>
+
+      <div class="cmx-field" style="margin-top:16px;">
+        <label>Accepted Payment Methods</label>
+        <textarea name="accepted_payment_methods" rows="3">{{ policy.accepted_payment_methods }}</textarea>
+      </div>
+
+      <div class="cmx-field" style="margin-top:16px;">
+        <label>Who Can Collect Rent</label>
+        <textarea name="payment_collector_roles" rows="3">{{ policy.payment_collector_roles }}</textarea>
+      </div>
+
+      <div class="cmx-button-row" style="margin-top:20px;">
+        <button class="cmx-btn">Save Rent Configuration</button>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
