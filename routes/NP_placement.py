@@ -153,11 +153,13 @@ def dashboard():
 
     shelter = _current_shelter()
     rows = _load_dashboard_rows(shelter)
+    haven_dorm_assignment_count = _active_haven_dorm_assignment_count() if shelter == "haven" else None
 
     return render_template(
         "NP_placement_dashboard.html",
         shelter=shelter,
         rows=rows,
+        haven_dorm_assignment_count=haven_dorm_assignment_count,
     )
 
 
