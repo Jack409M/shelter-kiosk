@@ -3,6 +3,12 @@
 {% block content %}
 <h1>Placement Dashboard</h1>
 
+{% if shelter == "haven" and haven_dorm_assignment_count is not none %}
+  <div class="card">
+    <strong>Haven Dorm Assignments:</strong> {{ haven_dorm_assignment_count }} residents currently assigned
+  </div>
+{% endif %}
+
 <table>
   <thead>
     <tr>
