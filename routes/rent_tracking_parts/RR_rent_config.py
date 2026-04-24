@@ -9,7 +9,6 @@ from core.helpers import utcnow_iso
 
 from .utils import _float_value, _placeholder
 
-
 UNIT_TYPE_FLAT = "flat"
 UNIT_TYPE_ONE_BEDROOM = "one_bedroom"
 UNIT_TYPE_TWO_BEDROOM = "two_bedroom"

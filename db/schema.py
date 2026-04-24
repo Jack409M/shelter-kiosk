@@ -8,8 +8,8 @@ from flask import current_app, g, has_app_context
 from core.db import db_execute
 
 from . import (
-    l9_schema_support,
     NP_schema_placement,
+    l9_schema_support,
     schema_bootstrap,
     schema_budget,
     schema_case,

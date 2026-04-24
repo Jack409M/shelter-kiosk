@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import flash, g, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 
 from .access import _allowed, _normalize_shelter_name
@@ -22,26 +22,16 @@ from .data_access import (
     _active_residents_for_shelter,
     _available_rent_setup_apartment_options,
     _ensure_default_rent_config,
-    _history_rows_for_resident,
     _insert_rent_ledger_entry,
     _insert_sheet,
     _latest_prior_balance,
-    _ledger_balance_breakdown_for_resident,
-    _ledger_entries_for_resident,
-    _ledger_summary_for_resident,
-    _load_sheet_entries,
-    _post_resident_charge,
-    _post_resident_credit,
-    _post_resident_payment,
     _program_enrollment_for_month,
-    _resident_any_shelter,
     _resident_for_shelter,
     _sheet_for_month,
 )
-from .dates import _current_year_month, _month_label, _today_chicago
+from .dates import _today_chicago
 from .schema import _ensure_tables
 from .settings import _load_settings
-from .snapshot import build_rent_stability_snapshot
 from .utils import _bool_value, _float_value, _placeholder
 
 

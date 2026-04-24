@@ -7,7 +7,6 @@ from flask import g, session
 from core.db import DbRow, db_execute, db_fetchone
 from core.helpers import utcnow_iso
 
-
 PLACEMENT_TYPE_NONE = "none"
 PLACEMENT_TYPE_BED = "bed"
 PLACEMENT_TYPE_APARTMENT = "apartment"
