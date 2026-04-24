@@ -45,6 +45,13 @@ def _today_local():
     return datetime.now(CHICAGO_TZ).date()
 
 
+def _return_after_followup():
+    next_url = (request.form.get("next") or "").strip()
+    if next_url.startswith("/staff/case-management/"):
+        return next_url
+    return url_for("case_management.l9_workspace")
+
+
 def _build_context(shelter: str):
     ph = placeholder()
     today = _today_local()
@@ -223,7 +230,7 @@ def complete_l9_followup_view(followup_id: int):
     except Exception:
         flash("Unable to complete follow up.", "error")
 
-    return redirect(url_for("case_management.l9_workspace"))
+    return redirect(_return_after_followup())
 
 
 def review_l9_lifecycle_view(lifecycle_id: int):
