@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Placement Dashboard</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>Resident</th>
+      <th>Level</th>
+      <th>Unit</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in residents %}
+      {% set placement = (placements | selectattr("resident_id", "equalto", r.id) | list | first) %}
+      {% set unit = None %}
+      {% if placement %}
+        {% set unit = (units | selectattr("id", "equalto", placement.housing_unit_id) | list | first) %}
+      {% endif %}
+      <tr>
+        <td>{{ r.first_name }} {{ r.last_name }}</td>
+        <td>{{ placement.program_level if placement else r.program_level }}</td>
+        <td>{{ unit.unit_label if unit else "None" }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}
