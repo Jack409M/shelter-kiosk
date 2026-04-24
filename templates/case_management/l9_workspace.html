@@ -200,7 +200,9 @@
 
     {% for r in active_rows %}
       <div style="padding:12px 0; border-top:1px solid #e5e5e5;">
-        {{ r.first_name }} {{ r.last_name }}
+        <a href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">
+          {{ r.first_name }} {{ r.last_name }}
+        </a>
       </div>
     {% else %}
       <div>No active Level 9 residents</div>
