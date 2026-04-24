@@ -22,6 +22,35 @@
   </section>
 
   <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
+    <h2>Lifecycle Decision</h2>
+
+    {% if lifecycle.status in ['active', 'extended'] %}
+      <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=lifecycle.id) }}" style="display:inline;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <input type="hidden" name="review_action" value="extend">
+        <button type="submit">Extend 6 Months</button>
+      </form>
+
+      <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=lifecycle.id) }}" style="display:inline; margin-left:8px;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <input type="hidden" name="review_action" value="complete">
+        <button type="submit">Complete Lifecycle</button>
+      </form>
+    {% endif %}
+
+    {% if lifecycle.deactivation_ready %}
+      <form method="post" action="{{ url_for('case_management.review_l9_lifecycle', lifecycle_id=lifecycle.id) }}" style="margin-top:8px;">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <input type="hidden" name="review_action" value="deactivate">
+        <button type="submit" style="background:#c0392b; color:white;">Deactivate Resident</button>
+      </form>
+    {% endif %}
+  </section>
+
+  <section style="margin-top:16px; padding:16px; border:1px solid #e2c65c; background:#fffdf0;">
     <h2>Follow Ups</h2>
     {% for f in followups %}
       <div style="margin-bottom:12px;">
