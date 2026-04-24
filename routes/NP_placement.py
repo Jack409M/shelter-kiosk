@@ -70,6 +70,19 @@ def _active_housing_unit_ids_for_shelter(shelter: str, *, exclude_resident_id: i
     return occupied
 
 
+def _active_haven_dorm_assignment_count() -> int:
+    row = db_fetchone(
+        """
+        SELECT COUNT(*) AS assigned_count
+        FROM resident_placements
+        WHERE LOWER(COALESCE(shelter, '')) = 'haven'
+          AND COALESCE(end_date, '') = ''
+        """
+    )
+    count = row.get("assigned_count") if row else 0
+    return count if isinstance(count, int) else 0
+
+
 def _load_units_for_shelter(shelter: str):
     rows = db_fetchall(
         """
@@ -164,6 +177,7 @@ def change_placement(resident_id: int):
 
     units = _load_available_units_for_shelter(shelter, resident_id=resident_id)
     active_placement = get_active_placement(resident_id=resident_id, shelter=shelter)
+    haven_dorm_assignment_count = _active_haven_dorm_assignment_count() if shelter == "haven" else None
 
     if request.method == "POST":
         unit_label = (request.form.get("unit_label") or "").strip() or None
@@ -186,4 +200,5 @@ def change_placement(resident_id: int):
         resident=resident,
         units=units,
         active_placement=active_placement,
+        haven_dorm_assignment_count=haven_dorm_assignment_count,
     )
