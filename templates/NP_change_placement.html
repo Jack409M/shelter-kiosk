@@ -7,6 +7,12 @@
 <p>Current shelter: {{ shelter }}</p>
 <p>Current level: {{ resident.program_level }}</p>
 
+{% if shelter == "haven" and haven_dorm_assignment_count is not none %}
+  <div class="card">
+    <strong>Haven Dorm Assignments:</strong> {{ haven_dorm_assignment_count }} residents currently assigned
+  </div>
+{% endif %}
+
 <section class="card">
   <h2>Apartment or Unit</h2>
   <p>Use this section to assign or change the resident's current unit.</p>
