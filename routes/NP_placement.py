@@ -84,6 +84,9 @@ def _load_units_for_shelter(shelter: str):
 
 
 def _load_available_units_for_shelter(shelter: str, *, resident_id: int):
+    if shelter == "haven":
+        return _load_units_for_shelter(shelter)
+
     occupied_unit_ids = _active_housing_unit_ids_for_shelter(
         shelter,
         exclude_resident_id=resident_id,
