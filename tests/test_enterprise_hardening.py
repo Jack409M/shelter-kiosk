@@ -5,7 +5,6 @@ from flask import Flask
 from core.app_hooks import register_app_hooks
 
 
-
 def _build_hardening_app(*, testing: bool, debug: bool) -> Flask:
     app = Flask(__name__)
     app.secret_key = "test-secret"
@@ -21,7 +20,6 @@ def _build_hardening_app(*, testing: bool, debug: bool) -> Flask:
 
     register_app_hooks(app)
     return app
-
 
 
 def test_enterprise_security_headers_are_applied_on_dynamic_response():
@@ -44,7 +42,6 @@ def test_enterprise_security_headers_are_applied_on_dynamic_response():
     assert response.headers["Strict-Transport-Security"] == "max-age=31536000; includeSubDomains"
 
 
-
 def test_enterprise_cache_headers_are_private_for_dynamic_and_cacheable_for_static():
     app = _build_hardening_app(testing=True, debug=False)
     client = app.test_client()
@@ -59,7 +56,6 @@ def test_enterprise_cache_headers_are_private_for_dynamic_and_cacheable_for_stat
     assert static_response.headers["Cache-Control"] == "public, max-age=86400"
 
 
-
 def test_enterprise_https_redirect_is_enforced_for_production_like_http_requests():
     app = _build_hardening_app(testing=False, debug=False)
     client = app.test_client()
@@ -68,7 +64,6 @@ def test_enterprise_https_redirect_is_enforced_for_production_like_http_requests
 
     assert response.status_code == 301
     assert response.headers["Location"].startswith("https://")
-
 
 
 def test_enterprise_https_redirect_is_skipped_when_forwarded_proto_is_https():
