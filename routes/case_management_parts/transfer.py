@@ -6,6 +6,7 @@ from flask import flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
+from core.NP_placement_service import PLACEMENT_TYPE_NONE, replace_active_placement
 from core.runtime import init_db
 from routes.case_management_parts.helpers import (
     case_manager_allowed,
@@ -47,7 +48,7 @@ def _fetch_resident_and_enrollment(resident_id: int):
 
     resident = db_fetchone(
         f"""
-        SELECT id, resident_identifier, first_name, last_name, resident_code, shelter, is_active
+        SELECT id, resident_identifier, first_name, last_name, resident_code, shelter, is_active, program_level
         FROM residents
         WHERE id = {ph}
           AND {shelter_equals_sql("shelter")}
@@ -169,6 +170,26 @@ def _release_old_rent_assignment(resident_id: int, current_shelter: str, transfe
 
 
 
+def _load_new_transfer_enrollment_id(*, resident_id: int, target_shelter: str, transfer_date: str) -> int | None:
+    ph = placeholder()
+    row = db_fetchone(
+        f"""
+        SELECT id
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+          AND LOWER(COALESCE(shelter, '')) = {ph}
+          AND entry_date = {ph}
+          AND program_status = 'active'
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (resident_id, target_shelter, transfer_date),
+    )
+    enrollment_id = _row_value(row, "id")
+    return enrollment_id if isinstance(enrollment_id, int) else None
+
+
+
 def _apply_transfer(
     *,
     resident_id: int,
@@ -177,6 +198,7 @@ def _apply_transfer(
     target_shelter: str,
     transfer_date: str,
     now: str,
+    current_program_level: object = None,
 ) -> None:
     ph = placeholder()
     current_case_manager_id = _row_value(current_enrollment, "case_manager_id")
@@ -241,6 +263,24 @@ def _apply_transfer(
         WHERE id = {ph}
         """,
         (target_shelter, resident_id),
+    )
+
+    new_enrollment_id = _load_new_transfer_enrollment_id(
+        resident_id=resident_id,
+        target_shelter=target_shelter,
+        transfer_date=transfer_date,
+    )
+    replace_active_placement(
+        resident_id=resident_id,
+        enrollment_id=new_enrollment_id,
+        shelter=target_shelter,
+        program_level=current_program_level,
+        housing_unit_id=None,
+        placement_type=PLACEMENT_TYPE_NONE,
+        effective_date=transfer_date,
+        change_reason="shelter_transfer",
+        note=f"Transferred from {current_shelter} to {target_shelter}.",
+        now=now,
     )
 
 
@@ -320,6 +360,7 @@ def submit_transfer_resident_view(resident_id: int):
                 target_shelter=str(validated["target_shelter"]),
                 transfer_date=str(validated["transfer_date"]),
                 now=now,
+                current_program_level=_row_value(resident, "program_level"),
             )
     except Exception:
         flash("Unable to transfer resident.", "error")
