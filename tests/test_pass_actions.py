@@ -58,8 +58,11 @@ def test_approve_pass_updates_all_fields(app, client):
             """
         )
 
-    client.get("/staff/passes/pending")
-    client.get("/staff/passes/approve/999", follow_redirects=False)
+    client.post(
+        "/staff/passes/999/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     with app.app_context():
         row = db_fetchone(
@@ -87,7 +90,11 @@ def test_approve_pass_updates_all_fields(app, client):
 
 
 def test_approve_pass_requires_login(client):
-    response = client.get("/staff/passes/approve/995", follow_redirects=False)
+    response = client.post(
+        "/staff/passes/995/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     assert response.status_code == 302
     assert "/staff/login" in response.headers["Location"]
@@ -134,7 +141,11 @@ def test_approve_pass_with_shelter_mismatch_does_not_approve(app, client):
             """
         )
 
-    client.get("/staff/passes/approve/995", follow_redirects=False)
+    client.post(
+        "/staff/passes/995/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     with app.app_context():
         row = db_fetchone("SELECT status FROM resident_passes WHERE id = 995")
@@ -151,7 +162,11 @@ def test_approve_nonexistent_pass_is_safe(app, client):
     with app.app_context():
         init_db()
 
-    response = client.get("/staff/passes/approve/123456", follow_redirects=False)
+    response = client.post(
+        "/staff/passes/123456/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     assert response.status_code in (200, 302, 404)
 
@@ -210,7 +225,11 @@ def test_deny_pass_sets_denied(app, client):
             """
         )
 
-    client.get("/staff/passes/deny/998", follow_redirects=False)
+    client.post(
+        "/staff/passes/998/deny",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     with app.app_context():
         row = db_fetchone("SELECT status FROM resident_passes WHERE id = 998")
@@ -234,7 +253,11 @@ def test_deny_pass_sets_denied(app, client):
 
 
 def test_deny_pass_requires_login(client):
-    response = client.get("/staff/passes/deny/994", follow_redirects=False)
+    response = client.post(
+        "/staff/passes/994/deny",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     assert response.status_code == 302
     assert "/staff/login" in response.headers["Location"]
@@ -280,7 +303,11 @@ def test_deny_pass_with_shelter_mismatch_does_not_deny(app, client):
             """
         )
 
-    client.get("/staff/passes/deny/994", follow_redirects=False)
+    client.post(
+        "/staff/passes/994/deny",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     with app.app_context():
         row = db_fetchone("SELECT status FROM resident_passes WHERE id = 994")
@@ -296,7 +323,11 @@ def test_deny_nonexistent_pass_is_safe(app, client):
     with app.app_context():
         init_db()
 
-    response = client.get("/staff/passes/deny/123457", follow_redirects=False)
+    response = client.post(
+        "/staff/passes/123457/deny",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     assert response.status_code in (200, 302, 404)
 
@@ -347,7 +378,11 @@ def test_check_in_creates_attendance_event(app, client):
             """
         )
 
-    client.get("/staff/passes/check-in/997", follow_redirects=False)
+    client.post(
+        "/staff/passes/997/check-in",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     with app.app_context():
         row = db_fetchone("SELECT COUNT(*) as count FROM attendance_events WHERE resident_id = 3")
@@ -414,7 +449,11 @@ def test_sms_failure_does_not_break_approval(app, client, monkeypatch):
             """
         )
 
-    client.get("/staff/passes/approve/996", follow_redirects=False)
+    client.post(
+        "/staff/passes/996/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
 
     with app.app_context():
         row = db_fetchone("SELECT status FROM resident_passes WHERE id = 996")
