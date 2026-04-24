@@ -1,53 +1,22 @@
 {% extends "layout.html" %}
 
+{% block extra_head %}
+  <meta http-equiv="refresh" content="0; url={{ url_for('rent_tracking.payment_station') }}">
+{% endblock %}
+
 {% block content %}
 <div class="cmx-page">
   <div class="cmx-shell">
-
     <div class="cmx-card">
-      <h1>Rent Sheet (Read Only)</h1>
-      <div class="cmx-section-subtitle">Payments must now be posted through Resident Account</div>
-    </div>
-
-    <div class="cmx-card">
-      <div style="padding:12px;background:#fff4d8;border:1px solid #e0cd7a;border-radius:8px;">
-        Payments are locked on this screen. Use <strong>Open Account</strong> from Rent Roll to post payments.
+      <h1>Rent Payment Entry Moved</h1>
+      <div class="cmx-section-subtitle">
+        The old rent sheet entry screen has been retired.
+      </div>
+      <div class="cmx-button-row" style="margin-top:16px;">
+        <a class="cmx-btn" href="{{ url_for('rent_tracking.payment_station') }}">Go to Payment Station</a>
+        <a class="cmx-btn-muted" href="{{ url_for('rent_tracking.rent_roll') }}">Back to Rent Roll</a>
       </div>
     </div>
-
-    <div class="cmx-card">
-      <table class="audit-table">
-        <thead>
-          <tr>
-            <th>Resident</th>
-            <th>Total Due</th>
-            <th>Paid So Far</th>
-            <th>Remaining</th>
-            <th>Account</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for entry in entries %}
-          <tr>
-            <td>{{ entry['resident_name_snapshot'] }}</td>
-            <td>${{ '%.2f'|format(entry['total_due'] or 0) }}</td>
-            <td>${{ '%.2f'|format(entry['amount_paid'] or 0) }}</td>
-            <td>
-              {% if entry['remaining_balance'] < 0 %}
-                -${{ '%.2f'|format(entry['remaining_balance'] * -1) }}
-              {% else %}
-                ${{ '%.2f'|format(entry['remaining_balance']) }}
-              {% endif %}
-            </td>
-            <td>
-              <a class="cmx-btn" href="{{ url_for('rent_tracking.resident_rent_account', resident_id=entry['resident_id']) }}">Open Account</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
   </div>
 </div>
 {% endblock %}
