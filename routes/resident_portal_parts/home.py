@@ -22,9 +22,13 @@ from routes.resident_portal_parts.helpers import (
 )
 
 
+def _empty_weekly_activity_summary() -> dict[str, float | int]:
+    return {"work_hours": 0.0, "productive_hours": 0.0, "meeting_count": 0}
+
+
 def _load_weekly_activity_summary(resident_id: int | None, shelter: str) -> dict[str, float | int]:
     if resident_id is None or not shelter:
-        return {"work_hours": 0.0, "productive_hours": 0.0, "meeting_count": 0}
+        return _empty_weekly_activity_summary()
 
     today = datetime.now(CHICAGO_TZ).date()
     week_start = today - timedelta(days=today.weekday())
@@ -32,46 +36,54 @@ def _load_weekly_activity_summary(resident_id: int | None, shelter: str) -> dict
     week_start_utc = datetime.combine(week_start, time.min, tzinfo=CHICAGO_TZ).astimezone(UTC).replace(tzinfo=None)
     week_end_utc = datetime.combine(week_end, time.min, tzinfo=CHICAGO_TZ).astimezone(UTC).replace(tzinfo=None)
 
-    row = db_fetchone(
-        _sql(
-            """
-            SELECT
-                COALESCE(SUM(CASE WHEN COALESCE(c.counts_as_work_hours, FALSE) = TRUE THEN COALESCE(a.logged_hours, 0) ELSE 0 END), 0) AS work_hours,
-                COALESCE(SUM(CASE WHEN COALESCE(c.counts_as_productive_hours, FALSE) = TRUE THEN COALESCE(a.logged_hours, 0) ELSE 0 END), 0) AS productive_logged_hours,
-                COALESCE(SUM(COALESCE(a.meeting_count, 0)), 0) AS meeting_count
-            FROM attendance_events a
-            LEFT JOIN kiosk_activity_categories c
-              ON LOWER(TRIM(c.shelter)) = LOWER(TRIM(a.shelter))
-             AND LOWER(TRIM(c.activity_label)) = LOWER(TRIM(a.destination))
-            WHERE a.resident_id = %s
-              AND LOWER(TRIM(a.shelter)) = LOWER(TRIM(%s))
-              AND a.event_type = 'resident_daily_log'
-              AND a.event_time >= %s
-              AND a.event_time < %s
-            """,
-            """
-            SELECT
-                COALESCE(SUM(CASE WHEN COALESCE(c.counts_as_work_hours, 0) = 1 THEN COALESCE(a.logged_hours, 0) ELSE 0 END), 0) AS work_hours,
-                COALESCE(SUM(CASE WHEN COALESCE(c.counts_as_productive_hours, 0) = 1 THEN COALESCE(a.logged_hours, 0) ELSE 0 END), 0) AS productive_logged_hours,
-                COALESCE(SUM(COALESCE(a.meeting_count, 0)), 0) AS meeting_count
-            FROM attendance_events a
-            LEFT JOIN kiosk_activity_categories c
-              ON LOWER(TRIM(c.shelter)) = LOWER(TRIM(a.shelter))
-             AND LOWER(TRIM(c.activity_label)) = LOWER(TRIM(a.destination))
-            WHERE a.resident_id = ?
-              AND LOWER(TRIM(a.shelter)) = LOWER(TRIM(?))
-              AND a.event_type = 'resident_daily_log'
-              AND a.event_time >= ?
-              AND a.event_time < ?
-            """,
-        ),
-        (
+    try:
+        row = db_fetchone(
+            _sql(
+                """
+                SELECT
+                    COALESCE(SUM(CASE WHEN COALESCE(c.counts_as_work_hours, FALSE) = TRUE THEN COALESCE(a.logged_hours, 0) ELSE 0 END), 0) AS work_hours,
+                    COALESCE(SUM(CASE WHEN COALESCE(c.counts_as_productive_hours, FALSE) = TRUE THEN COALESCE(a.logged_hours, 0) ELSE 0 END), 0) AS productive_logged_hours,
+                    COALESCE(SUM(COALESCE(a.meeting_count, 0)), 0) AS meeting_count
+                FROM attendance_events a
+                LEFT JOIN kiosk_activity_categories c
+                  ON LOWER(TRIM(c.shelter)) = LOWER(TRIM(a.shelter))
+                 AND LOWER(TRIM(c.activity_label)) = LOWER(TRIM(a.destination))
+                WHERE a.resident_id = %s
+                  AND LOWER(TRIM(a.shelter)) = LOWER(TRIM(%s))
+                  AND a.event_type = 'resident_daily_log'
+                  AND a.event_time >= %s
+                  AND a.event_time < %s
+                """,
+                """
+                SELECT
+                    COALESCE(SUM(CASE WHEN COALESCE(c.counts_as_work_hours, 0) = 1 THEN COALESCE(a.logged_hours, 0) ELSE 0 END), 0) AS work_hours,
+                    COALESCE(SUM(CASE WHEN COALESCE(c.counts_as_productive_hours, 0) = 1 THEN COALESCE(a.logged_hours, 0) ELSE 0 END), 0) AS productive_logged_hours,
+                    COALESCE(SUM(COALESCE(a.meeting_count, 0)), 0) AS meeting_count
+                FROM attendance_events a
+                LEFT JOIN kiosk_activity_categories c
+                  ON LOWER(TRIM(c.shelter)) = LOWER(TRIM(a.shelter))
+                 AND LOWER(TRIM(c.activity_label)) = LOWER(TRIM(a.destination))
+                WHERE a.resident_id = ?
+                  AND LOWER(TRIM(a.shelter)) = LOWER(TRIM(?))
+                  AND a.event_type = 'resident_daily_log'
+                  AND a.event_time >= ?
+                  AND a.event_time < ?
+                """,
+            ),
+            (
+                resident_id,
+                shelter,
+                week_start_utc.isoformat(timespec="seconds"),
+                week_end_utc.isoformat(timespec="seconds"),
+            ),
+        )
+    except Exception:
+        current_app.logger.info(
+            "weekly_activity_summary_unavailable resident_id=%s shelter=%s",
             resident_id,
             shelter,
-            week_start_utc.isoformat(timespec="seconds"),
-            week_end_utc.isoformat(timespec="seconds"),
-        ),
-    )
+        )
+        return _empty_weekly_activity_summary()
 
     work_hours = float((row or {}).get("work_hours") or 0)
     productive_logged_hours = float((row or {}).get("productive_logged_hours") or 0)
