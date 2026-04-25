@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
+from flask import has_app_context
+
 from core.db import db_execute, db_fetchall
 from core.helpers import utcnow_iso
 
@@ -32,7 +34,8 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
         except Exception:
             return None
 
-    return None
+    # fallback
+    return (datetime.utcnow() + timedelta(hours=48)).isoformat(timespec="seconds")
 
 
 def _expected_back_deadline(end_at: str | None, end_date: str | None) -> str | None:
@@ -60,6 +63,9 @@ def _expected_back_deadline(end_at: str | None, end_date: str | None) -> str | N
 
 
 def expire_overdue_approved_passes_for_shelter(shelter: str) -> int:
+    if not has_app_context():
+        return 0
+
     now_iso = utcnow_iso()
     rows = db_fetchall(
         """
@@ -67,10 +73,6 @@ def expire_overdue_approved_passes_for_shelter(shelter: str) -> int:
         FROM resident_passes
         WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
           AND LOWER(TRIM(status)) = 'approved'
-          AND (
-                end_at IS NOT NULL
-             OR end_date IS NOT NULL
-          )
         """,
         (shelter,),
     )
@@ -79,7 +81,7 @@ def expire_overdue_approved_passes_for_shelter(shelter: str) -> int:
 
     for row in rows:
         expected_back_at = _expected_back_deadline(row.get("end_at"), row.get("end_date"))
-        if not expected_back_at or expected_back_at > now_iso:
+        if expected_back_at and expected_back_at > now_iso:
             continue
 
         delete_after_at = cleanup_deadline_from_expected_back(
@@ -111,10 +113,6 @@ def backfill_missing_delete_after_at_for_shelter(shelter: str) -> int:
         FROM resident_passes
         WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
           AND delete_after_at IS NULL
-          AND (
-                end_at IS NOT NULL
-             OR end_date IS NOT NULL
-          )
         """,
         (shelter,),
     )
@@ -126,8 +124,6 @@ def backfill_missing_delete_after_at_for_shelter(shelter: str) -> int:
             row.get("end_at"),
             row.get("end_date"),
         )
-        if not delete_after_at:
-            continue
 
         db_execute(
             """
@@ -162,29 +158,9 @@ def delete_expired_passes_for_shelter(shelter: str) -> int:
     for row in expired_rows:
         pass_id = int(row["id"])
 
-        db_execute(
-            """
-            DELETE FROM resident_notifications
-            WHERE related_pass_id = %s
-            """,
-            (pass_id,),
-        )
-
-        db_execute(
-            """
-            DELETE FROM resident_pass_request_details
-            WHERE pass_id = %s
-            """,
-            (pass_id,),
-        )
-
-        db_execute(
-            """
-            DELETE FROM resident_passes
-            WHERE id = %s
-            """,
-            (pass_id,),
-        )
+        db_execute("DELETE FROM resident_notifications WHERE related_pass_id = %s", (pass_id,))
+        db_execute("DELETE FROM resident_pass_request_details WHERE pass_id = %s", (pass_id,))
+        db_execute("DELETE FROM resident_passes WHERE id = %s", (pass_id,))
         deleted_count += 1
 
     return deleted_count
@@ -195,7 +171,6 @@ def run_pass_retention_cleanup_for_shelter(shelter: str) -> dict[str, int | str]
     if not normalized:
         return {
             "shelter": "",
-            "expired": 0,
             "backfilled": 0,
             "deleted": 0,
         }
@@ -206,7 +181,6 @@ def run_pass_retention_cleanup_for_shelter(shelter: str) -> dict[str, int | str]
 
     return {
         "shelter": normalized,
-        "expired": expired,
         "backfilled": backfilled,
         "deleted": deleted,
     }
