@@ -85,12 +85,12 @@
   {% endif %}
 
   <div class="resident-workspace-shell">
-    <div class="resident-workspace-header">
-      <div class="resident-workspace-title">
+    <div class="page-header resident-workspace-header">
+      <h1 class="page-title">
         {{ first_name }} {{ last_name }}
-      </div>
+      </h1>
 
-      <div class="resident-workspace-meta">
+      <div class="page-subtitle resident-workspace-meta">
         <span><strong>Resident Code:</strong> {{ resident_code or "—" }}</span>
         <span><strong>Shelter:</strong> {{ resident_shelter | shelter if resident_shelter else "—" }}</span>
         <span><strong>Status:</strong> {{ program_status or "—" }}</span>
