@@ -39,6 +39,21 @@ AI_REWRITE_PLACEHOLDER_MARKERS = (
     "implementation omitted",
     "not implemented yet",
 )
+LOGGING_FUNCTION_NAMES = {
+    "log_action",
+    "log_exception",
+    "log_error",
+    "log_warning",
+    "print",
+}
+LOGGING_METHOD_NAMES = {
+    "critical",
+    "debug",
+    "error",
+    "exception",
+    "info",
+    "warning",
+}
 ALLOWED_CONTEXTLIB_SUPPRESS_EXCEPTION_PREFIXES = (
     "db/schema",
 )
@@ -82,6 +97,7 @@ BASELINED_BARE_EXCEPTION_PASS_LOCATIONS = {
     ("db/schema_requests.py", 254),
     ("db/schema_requests.py", 379),
 }
+BASELINED_BROAD_EXCEPTION_WITHOUT_LOG_OR_RERAISE_LOCATIONS = BASELINED_BARE_EXCEPTION_PASS_LOCATIONS
 
 
 def _production_python_files() -> list[Path]:
@@ -123,6 +139,42 @@ def _is_contextlib_suppress_exception_call(node: ast.AST) -> bool:
     return any(_is_exception_name(arg) for arg in node.args)
 
 
+def _call_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent_name = _call_name(node.value)
+        if parent_name:
+            return f"{parent_name}.{node.attr}"
+        return node.attr
+    return ""
+
+
+def _call_looks_like_logging(call: ast.Call) -> bool:
+    call_name = _call_name(call.func)
+    if not call_name:
+        return False
+
+    final_name = call_name.rsplit(".", 1)[-1]
+    if final_name in LOGGING_FUNCTION_NAMES:
+        return True
+
+    if final_name in LOGGING_METHOD_NAMES:
+        return True
+
+    lowered_name = call_name.lower()
+    return "logger" in lowered_name or "audit" in lowered_name or "log_" in lowered_name
+
+
+def _exception_handler_logs_or_reraises(node: ast.ExceptHandler) -> bool:
+    for child in ast.walk(ast.Module(body=node.body, type_ignores=[])):
+        if isinstance(child, ast.Raise):
+            return True
+        if isinstance(child, ast.Call) and _call_looks_like_logging(child):
+            return True
+    return False
+
+
 def _contextlib_suppress_exception_allowed(relative_path: str, line_number: int | None = None) -> bool:
     if relative_path in ALLOWED_CONTEXTLIB_SUPPRESS_EXCEPTION_FILES:
         return True
@@ -139,6 +191,10 @@ def _contextlib_suppress_exception_allowed(relative_path: str, line_number: int 
 
 def _bare_exception_pass_allowed(relative_path: str, line_number: int) -> bool:
     return (relative_path, line_number) in BASELINED_BARE_EXCEPTION_PASS_LOCATIONS
+
+
+def _broad_exception_without_log_or_reraise_allowed(relative_path: str, line_number: int) -> bool:
+    return (relative_path, line_number) in BASELINED_BROAD_EXCEPTION_WITHOUT_LOG_OR_RERAISE_LOCATIONS
 
 
 def test_no_datetime_utcnow_in_production_code() -> None:
@@ -208,6 +264,12 @@ def test_no_ai_rewrite_placeholder_or_silent_failure_patterns_in_production_code
                 if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                     if not _bare_exception_pass_allowed(relative_path, node.lineno):
                         failures.append(f"{relative_path}:{node.lineno}: contains bare except Exception: pass outside baseline")
+
+                if not _exception_handler_logs_or_reraises(node):
+                    if not _broad_exception_without_log_or_reraise_allowed(relative_path, node.lineno):
+                        failures.append(
+                            f"{relative_path}:{node.lineno}: broad except Exception must log or re-raise"
+                        )
 
             if isinstance(node, ast.With):
                 for item in node.items:
