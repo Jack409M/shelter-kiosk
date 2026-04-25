@@ -5,7 +5,6 @@ import logging
 import os
 import pkgutil
 import secrets
-import warnings
 from datetime import timedelta
 from typing import Any
 
@@ -89,10 +88,6 @@ def _resolve_session_cookie_name(session_cookie_secure: bool) -> str:
     if session_cookie_secure:
         return "__Host-shelter_session"
     return "shelter_session"
-
-
-def _configure_warnings() -> None:
-    warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def _configure_app(app: Flask, test_config: dict[str, Any] | None = None) -> None:
@@ -261,8 +256,6 @@ def _initialize_runtime_services(app: Flask) -> None:
 
 
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
-    _configure_warnings()
-
     app = Flask(
         __name__,
         template_folder="../templates",
