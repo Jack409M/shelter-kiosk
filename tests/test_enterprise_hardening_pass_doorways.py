@@ -169,6 +169,136 @@ def test_database_rejects_second_active_pass_for_same_resident(app):
         assert rows == [{"id": 9713, "status": "approved"}]
 
 
+def test_other_shelter_pass_id_tampering_cannot_mutate_state(app, client):
+    from core.db import db_execute, db_fetchone
+
+    _login_staff(client, shelter="abba")
+    _set_csrf(client)
+
+    with app.app_context():
+        init_db()
+        _seed_resident(db_execute, resident_id=717, shelter="haven")
+        _seed_pass(db_execute, pass_id=9718, resident_id=717, shelter="haven", status="pending")
+
+    response = client.post(
+        "/staff/passes/9718/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+
+    with app.app_context():
+        row = db_fetchone("SELECT status FROM resident_passes WHERE id = %s", (9718,))
+        audit_count = db_fetchone(
+            """
+            SELECT COUNT(*) AS count
+            FROM audit_log
+            WHERE entity_type = 'pass'
+              AND action_type = 'approve'
+              AND action_details LIKE %s
+            """,
+            ("%pass_id=9718%",),
+        )
+
+        assert row["status"] == "pending"
+        assert audit_count["count"] == 0
+
+
+def test_completed_pass_cannot_be_approved_or_denied_again(app, client):
+    from core.db import db_execute, db_fetchone
+
+    _login_staff(client)
+    _set_csrf(client)
+
+    with app.app_context():
+        init_db()
+        _seed_resident(db_execute, resident_id=718)
+        _seed_pass(db_execute, pass_id=9719, resident_id=718, status="completed")
+
+    approve_response = client.post(
+        "/staff/passes/9719/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
+    deny_response = client.post(
+        "/staff/passes/9719/deny",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
+
+    assert approve_response.status_code == 302
+    assert deny_response.status_code == 302
+
+    with app.app_context():
+        row = db_fetchone("SELECT status FROM resident_passes WHERE id = %s", (9719,))
+        audit_count = db_fetchone(
+            """
+            SELECT COUNT(*) AS count
+            FROM audit_log
+            WHERE entity_type = 'pass'
+              AND action_details LIKE %s
+            """,
+            ("%pass_id=9719%",),
+        )
+
+        assert row["status"] == "completed"
+        assert audit_count["count"] == 0
+
+
+def test_double_approval_has_one_state_change_and_one_audit(app, client):
+    from core.db import db_execute, db_fetchone
+
+    _login_staff(client)
+    _set_csrf(client)
+
+    with app.app_context():
+        init_db()
+        _seed_resident(db_execute, resident_id=719)
+        _seed_pass(db_execute, pass_id=9720, resident_id=719, status="pending")
+        db_execute(
+            """
+            DELETE FROM audit_log
+            WHERE entity_type = 'pass'
+              AND action_type = 'approve'
+              AND action_details LIKE %s
+            """,
+            ("%pass_id=9720%",),
+        )
+
+    client.post(
+        "/staff/passes/9720/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
+    client.post(
+        "/staff/passes/9720/approve",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        row = db_fetchone("SELECT status FROM resident_passes WHERE id = %s", (9720,))
+        audit_count = db_fetchone(
+            """
+            SELECT COUNT(*) AS count
+            FROM audit_log
+            WHERE entity_type = 'pass'
+              AND action_type = 'approve'
+              AND action_details LIKE %s
+            """,
+            ("%pass_id=9720%",),
+        )
+        notification_count = db_fetchone(
+            "SELECT COUNT(*) AS count FROM resident_notifications WHERE related_pass_id = %s",
+            (9720,),
+        )
+
+        assert row["status"] == "approved"
+        assert audit_count["count"] == 1
+        assert notification_count["count"] == 1
+
+
 def test_retention_expiry_only_closes_overdue_approved_passes(app):
     from core.db import db_execute, db_fetchone
     from core.pass_retention import expire_overdue_approved_passes_for_shelter
