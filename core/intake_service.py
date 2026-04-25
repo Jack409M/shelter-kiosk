@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from flask import has_request_context, session
@@ -327,7 +327,7 @@ def update_intake(
         raise LookupError("No intake assessment found for update.")
 
     intake_assessment_id = int(existing_intake["id"])
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(UTC).replace(tzinfo=None).isoformat()
     ph = placeholder()
     intake_payload = _build_intake_assessment_payload(data)
     family_payload = _build_family_snapshot_payload(data)
