@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import contextlib
 
-from .schema_helpers import create_table
+from .schema_helpers import create_table, safe_add_column
 
 
 def ensure_intake_assessments_table(kind: str) -> None:
@@ -123,82 +123,75 @@ def ensure_intake_assessments_table(kind: str) -> None:
     )
 
 
+def _ensure_intake_disability_is_text(kind: str) -> None:
+    if kind != "pg":
+        return
+
+    from core.db import db_execute, db_fetchone
+
+    col = db_fetchone(
+        """
+        SELECT data_type
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'intake_assessments'
+          AND column_name = 'disability'
+        LIMIT 1
+        """
+    )
+
+    data_type = (col or {}).get("data_type") if isinstance(col, dict) else None
+    if data_type and "int" in str(data_type).lower():
+        db_execute(
+            """
+            ALTER TABLE intake_assessments
+            ALTER COLUMN disability TYPE TEXT
+            USING disability::TEXT
+            """
+        )
+
+
 def ensure_intake_assessment_columns(kind: str) -> None:
-    try:
-        from core.db import db_execute, db_fetchone
+    with contextlib.suppress(Exception):
+        _ensure_intake_disability_is_text(kind)
 
-        try:
-            col = db_fetchone(
-                """
-                SELECT data_type
-                FROM information_schema.columns
-                WHERE table_name = 'intake_assessments'
-                  AND column_name = 'disability'
-                """
-            )
+    columns = [
+        "city TEXT",
+        "county TEXT",
+        "last_zipcode_residence TEXT",
+        "length_of_time_in_amarillo TEXT",
+        "marital_status TEXT",
+        "disability TEXT",
+        "notes_basic TEXT",
+        "entry_notes TEXT",
+        "initial_snapshot_notes TEXT",
+        "trauma_notes TEXT",
+        "barrier_notes TEXT",
+        "treatment_grad_date TEXT",
+        "drug_court INTEGER NOT NULL DEFAULT 0",
+        "sexual_survivor INTEGER NOT NULL DEFAULT 0",
+        "warrants_unpaid INTEGER NOT NULL DEFAULT 0",
+        "mh_exam_completed INTEGER NOT NULL DEFAULT 0",
+        "med_exam_completed INTEGER NOT NULL DEFAULT 0",
+        "car_at_entry INTEGER NOT NULL DEFAULT 0",
+        "car_insurance_at_entry INTEGER NOT NULL DEFAULT 0",
+        "pregnant_at_entry INTEGER NOT NULL DEFAULT 0",
+        "dental_need_at_entry INTEGER NOT NULL DEFAULT 0",
+        "vision_need_at_entry INTEGER NOT NULL DEFAULT 0",
+        "employment_status_at_entry TEXT",
+        "mental_health_need_at_entry INTEGER NOT NULL DEFAULT 0",
+        "medical_need_at_entry INTEGER NOT NULL DEFAULT 0",
+        "substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0",
+        "id_documents_status_at_entry TEXT",
+        "has_drivers_license INTEGER NOT NULL DEFAULT 0",
+        "has_social_security_card INTEGER NOT NULL DEFAULT 0",
+        "parenting_class_needed INTEGER NOT NULL DEFAULT 0",
+        "dwc_level_today TEXT",
+    ]
 
-            if col and isinstance(col, dict):
-                data_type = col.get("data_type")
-            elif col:
-                data_type = col[0]
-            else:
-                data_type = None
-
-            if data_type and "int" in str(data_type).lower():
-                with contextlib.suppress(Exception):
-                    db_execute(
-                        """
-                        ALTER TABLE intake_assessments
-                        ALTER COLUMN disability TYPE TEXT
-                        USING disability::TEXT
-                        """
-                    )
-
-        except Exception:
-            from flask import current_app
-            current_app.logger.exception("auto-logged exception")
-
-        statements = [
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS city TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS county TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS last_zipcode_residence TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS length_of_time_in_amarillo TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS marital_status TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS disability TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS notes_basic TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS entry_notes TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS initial_snapshot_notes TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS trauma_notes TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS barrier_notes TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS treatment_grad_date TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS drug_court INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS sexual_survivor INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS warrants_unpaid INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS mh_exam_completed INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS med_exam_completed INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS car_at_entry INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS car_insurance_at_entry INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS pregnant_at_entry INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS dental_need_at_entry INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS vision_need_at_entry INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS employment_status_at_entry TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS mental_health_need_at_entry INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS medical_need_at_entry INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS substance_use_need_at_entry INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS id_documents_status_at_entry TEXT",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS has_drivers_license INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS has_social_security_card INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS parenting_class_needed INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS dwc_level_today TEXT",
-        ]
-
-        for sql in statements:
-            with contextlib.suppress(Exception):
-                db_execute(sql)
-
-    except Exception:
-        from flask import current_app
-        current_app.logger.exception("auto-logged exception")
+    for column_sql in columns:
+        with contextlib.suppress(Exception):
+            safe_add_column(kind, "intake_assessments", column_sql)
 
 
 def ensure_family_snapshots_table(kind: str) -> None:
@@ -298,26 +291,19 @@ def ensure_exit_assessments_table(kind: str) -> None:
 
 
 def ensure_exit_assessment_columns(kind: str) -> None:
-    try:
-        from core.db import db_execute
+    columns = [
+        "exit_category TEXT",
+        "leave_amarillo_city TEXT",
+        "leave_amarillo_unknown INTEGER NOT NULL DEFAULT 0",
+        "grit_at_exit DOUBLE PRECISION" if kind == "pg" else "grit_at_exit REAL",
+        "obtained_public_insurance INTEGER NOT NULL DEFAULT 0",
+        "private_insurance INTEGER NOT NULL DEFAULT 0",
+        "graduation_income_snapshot DOUBLE PRECISION" if kind == "pg" else "graduation_income_snapshot REAL",
+    ]
 
-        statements = [
-            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS exit_category TEXT",
-            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS leave_amarillo_city TEXT",
-            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS leave_amarillo_unknown INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS grit_at_exit DOUBLE PRECISION",
-            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS obtained_public_insurance INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS private_insurance INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE exit_assessments ADD COLUMN IF NOT EXISTS graduation_income_snapshot DOUBLE PRECISION",
-        ]
-
-        for sql in statements:
-            with contextlib.suppress(Exception):
-                db_execute(sql)
-
-    except Exception:
-        from flask import current_app
-        current_app.logger.exception("auto-logged exception")
+    for column_sql in columns:
+        with contextlib.suppress(Exception):
+            safe_add_column(kind, "exit_assessments", column_sql)
 
 
 def ensure_followups_table(kind: str) -> None:
