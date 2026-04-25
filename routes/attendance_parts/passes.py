@@ -17,8 +17,8 @@ from routes.attendance_parts.pass_policy import has_active_pass_block as has_act
 from routes.attendance_parts.pass_queries import (
     fetch_approved_pass_rows,
     fetch_current_pass_rows,
-    fetch_pending_pass_rows,
     fetch_expired_pass_rows,
+    fetch_pending_pass_rows,
 )
 from routes.attendance_parts.pass_view_helpers import (
     build_pass_action_redirect_target,
