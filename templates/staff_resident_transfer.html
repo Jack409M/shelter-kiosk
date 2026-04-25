@@ -96,53 +96,53 @@
     {% endif %}
   </p>
 
-  <form method="post" id="resident-move-form">
+  <form method="post" id="resident-move-form" class="form-stack">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="next" value="{{ next or '' }}">
 
-    <div class="housing-transfer-grid">
-      <div class="housing-transfer-field">
-        <label for="to_shelter">Destination shelter</label>
+    <div class="housing-transfer-grid form-grid">
+      <div class="housing-transfer-field form-field">
+        <label for="to_shelter" class="form-label">Destination shelter</label>
         <select id="to_shelter" name="to_shelter" required>
           <option value="">Select shelter</option>
           {% for s in shelters %}
             <option value="{{ s }}" {% if request.args.get('to_shelter') == s %}selected{% endif %}>{{ s|title }}</option>
           {% endfor %}
         </select>
-        <div class="housing-transfer-help">
+        <div class="housing-transfer-help form-help">
           Choosing the same shelter for Abba or Gratitude updates the apartment assignment within that shelter.
         </div>
       </div>
 
-      <div class="housing-transfer-field" id="apartment-number-wrap">
-        <label for="apartment_number">Apartment number</label>
+      <div class="housing-transfer-field form-field" id="apartment-number-wrap">
+        <label for="apartment_number" class="form-label">Apartment number</label>
         <select id="apartment_number" name="apartment_number">
           <option value="">Select apartment</option>
           {% for apartment_number in apartment_options %}
             <option value="{{ apartment_number }}">{{ apartment_number }}</option>
           {% endfor %}
         </select>
-        <div class="housing-transfer-help" id="apartment-help">
+        <div class="housing-transfer-help form-help" id="apartment-help">
           Required when moving to Abba or Gratitude.
         </div>
       </div>
 
-      <div class="housing-transfer-field full">
-        <label for="note">Note</label>
+      <div class="housing-transfer-field form-field full">
+        <label for="note" class="form-label">Note</label>
         <textarea id="note" name="note" rows="4" placeholder="Optional reason or note"></textarea>
       </div>
 
-      <div class="housing-transfer-field full">
+      <div class="housing-transfer-field form-field full">
         <div class="housing-transfer-panel" id="housing-summary-panel">
           <strong>Housing rule</strong>
-          <div id="housing-summary-text" class="housing-transfer-help" style="margin-top:8px;">
+          <div id="housing-summary-text" class="housing-transfer-help form-help" style="margin-top:8px;">
             Choose a destination shelter to see assignment rules.
           </div>
         </div>
       </div>
     </div>
 
-    <div class="housing-transfer-actions">
+    <div class="housing-transfer-actions form-actions">
       <button type="submit" class="cmx-btn">Save Move</button>
       {% if next %}
         <a class="cmx-btn-muted" href="{{ next }}">Cancel</a>
