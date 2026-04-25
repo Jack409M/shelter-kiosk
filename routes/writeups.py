@@ -5,6 +5,7 @@ from __future__ import annotations
 from flask import Blueprint, flash, g, redirect, render_template, request, session, url_for
 
 # Core / app
+from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
@@ -72,6 +73,7 @@ def writeups_create():
     if request.method == "POST":
         resident_id = request.form.get("resident_id")
         notes = request.form.get("notes")
+        staff_user_id = g.user["id"]
 
         db_execute(
             """
@@ -83,7 +85,19 @@ def writeups_create():
             )
             VALUES (?, ?, ?, ?)
             """,
-            (resident_id, notes, utcnow_iso(), g.user["id"]),
+            (resident_id, notes, utcnow_iso(), staff_user_id),
+        )
+
+        log_action(
+            "writeup",
+            None,
+            session.get("shelter"),
+            staff_user_id,
+            "create",
+            details={
+                "resident_id": resident_id,
+                "source": "writeups_create",
+            },
         )
 
         flash("Write-up created", "success")
@@ -174,6 +188,7 @@ def resident_writeups(resident_id: int):
         now = utcnow_iso()
         resolved_at = now if status in {"Resolved", "Dismissed"} else None
         ph = _placeholder()
+        staff_user_id = session.get("staff_user_id")
 
         db_execute(
             f"""
@@ -221,11 +236,27 @@ def resident_writeups(resident_id: int):
                 probation_end_date,
                 pre_termination_date,
                 blocks_passes,
-                session.get("staff_user_id"),
-                session.get("staff_user_id"),
+                staff_user_id,
+                staff_user_id,
                 now,
                 now,
             ),
+        )
+
+        log_action(
+            "resident_writeup",
+            resident_id,
+            shelter,
+            staff_user_id,
+            "create",
+            details={
+                "blocks_passes": blocks_passes,
+                "category": category,
+                "disciplinary_outcome": disciplinary_outcome,
+                "incident_date": incident_date,
+                "severity": severity,
+                "status": status,
+            },
         )
 
         flash("Write up saved.", "ok")
