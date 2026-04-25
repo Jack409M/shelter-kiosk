@@ -11,6 +11,12 @@ from core.helpers import utcnow_iso
 CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
+def _utc_naive_now_plus(hours: int) -> str:
+    return (datetime.now(UTC).replace(tzinfo=None) + timedelta(hours=hours)).isoformat(
+        timespec="seconds"
+    )
+
+
 def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None) -> str | None:
     raw_end_at = (end_at or "").strip()
     if raw_end_at:
@@ -34,7 +40,7 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
         except Exception:
             return None
 
-    return (datetime.utcnow() + timedelta(hours=48)).isoformat(timespec="seconds")
+    return _utc_naive_now_plus(48)
 
 
 def _expected_back_deadline(end_at: str | None, end_date: str | None) -> str | None:
