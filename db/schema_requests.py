@@ -5,6 +5,7 @@ Operational workflow schema objects.
 from __future__ import annotations
 
 import contextlib
+import logging
 
 from core.db import db_execute, db_fetchall, db_fetchone
 
@@ -15,7 +16,12 @@ def _sqlite_column_exists(table_name: str, column_name: str) -> bool:
     try:
         rows = db_fetchall(f"PRAGMA table_info({table_name})")
     except Exception:
-        return False
+        logging.exception(
+            "sqlite column lookup failed table=%s column=%s",
+            table_name,
+            column_name,
+        )
+        raise
 
     for row in rows or []:
         name = row["name"] if isinstance(row, dict) else row[1]
