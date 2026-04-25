@@ -175,7 +175,7 @@ def run_pass_retention_cleanup_for_shelter(shelter: str) -> dict[str, int | str]
             "deleted": 0,
         }
 
-    expired = expire_overdue_approved_passes_for_shelter(normalized)
+    expire_overdue_approved_passes_for_shelter(normalized)
     backfilled = backfill_missing_delete_after_at_for_shelter(normalized)
     deleted = delete_expired_passes_for_shelter(normalized)
 
