@@ -11,7 +11,7 @@ system_health = Blueprint("system_health", __name__)
 
 @system_health.get("/staff/system-health")
 @require_login
-@require_roles("admin", "director")
+@require_roles("admin", "shelter_director")
 def system_health_dashboard():
     db_status = "unknown"
 
