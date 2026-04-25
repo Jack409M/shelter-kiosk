@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from core.db import db_fetchone
 from routes.case_management_parts.helpers import fetch_current_enrollment_for_resident
 
@@ -126,7 +128,7 @@ def load_resident_for_shelter(resident_id: int, shelter: str, sql_selector, shel
 
 
 def next_appointment_for_enrollment(enrollment_id: int, sql_selector):
-    today_iso = __import__("datetime").datetime.utcnow().date().isoformat()
+    today_iso = datetime.now(UTC).date().isoformat()
 
     row = db_fetchone(
         sql_selector(
