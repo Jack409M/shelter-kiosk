@@ -6,6 +6,7 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
+from core.audit import log_action
 
 shelter_operations = Blueprint(
     "shelter_operations",
@@ -513,6 +514,15 @@ def chore_management():
             (shelter, name, when_time, default_day, description or None, utcnow_iso()),
         )
 
+        log_action(
+            "chore_operation",
+            None,
+            shelter,
+            session.get("staff_user_id"),
+            "create",
+            details={"source": "chore_management"},
+        )
+
         flash("Chore added.", "success")
         return redirect(url_for("shelter_operations.chore_management"))
 
@@ -583,6 +593,15 @@ def edit_chore(chore_id: int):
         (name, when_time, default_day, description or None, chore_id, shelter),
     )
 
+    log_action(
+        "chore_operation",
+        None,
+        shelter,
+        session.get("staff_user_id"),
+        "update",
+        details={"source": "edit_chore"},
+    )
+
     flash("Chore updated.", "success")
     return redirect(url_for("shelter_operations.chore_management"))
 
@@ -635,6 +654,15 @@ def delete_chore(chore_id: int):
         (chore_id, shelter),
     )
 
+    log_action(
+        "chore_operation",
+        None,
+        shelter,
+        session.get("staff_user_id"),
+        "delete",
+        details={"source": "delete_chore"},
+    )
+
     flash("Chore deleted.", "success")
     return redirect(url_for("shelter_operations.chore_management"))
 
@@ -655,6 +683,15 @@ def toggle_chore(chore_id: int):
         WHERE id = %s AND shelter = %s
         """,
         (chore_id, shelter),
+    )
+
+    log_action(
+        "chore_operation",
+        None,
+        shelter,
+        session.get("staff_user_id"),
+        "toggle",
+        details={"source": "toggle_chore"},
     )
 
     flash("Chore updated.", "success")
@@ -1034,6 +1071,15 @@ def edit_assignment(assignment_id: int):
             (resident_id, chore_id, utcnow_iso(), row["id"], shelter),
         )
 
+        log_action(
+            "chore_operation",
+            None,
+            shelter,
+            session.get("staff_user_id"),
+            "update",
+            details={"source": "edit_assignment"},
+        )
+
     flash("Weekly assignment updated.", "success")
     return redirect(url_for("shelter_operations.chore_board", assigned_date=week_start))
 
@@ -1063,6 +1109,15 @@ def toggle_assignment_status(assignment_id: int):
           AND r.shelter = %s
         """,
         (utcnow_iso(), assignment_id, shelter),
+    )
+
+    log_action(
+        "chore_operation",
+        None,
+        shelter,
+        session.get("staff_user_id"),
+        "toggle",
+        details={"source": "toggle_assignment_status"},
     )
 
     flash("Chore status updated.", "success")
@@ -1125,6 +1180,15 @@ def delete_assignment(assignment_id: int):
           AND ca.assigned_date BETWEEN %s AND %s
         """,
         (shelter, target["resident_id"], target["chore_id"], week_start, week_end),
+    )
+
+    log_action(
+        "chore_operation",
+        None,
+        shelter,
+        session.get("staff_user_id"),
+        "delete",
+        details={"source": "delete_assignment"},
     )
 
     flash("Weekly assignment deleted.", "success")
