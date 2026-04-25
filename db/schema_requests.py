@@ -6,9 +6,53 @@ from __future__ import annotations
 
 import contextlib
 
-from core.db import db_execute
+from core.db import db_execute, db_fetchall, db_fetchone
 
 from .schema_helpers import create_table
+
+
+def _sqlite_column_exists(table_name: str, column_name: str) -> bool:
+    try:
+        rows = db_fetchall(f"PRAGMA table_info({table_name})")
+    except Exception:
+        return False
+
+    for row in rows or []:
+        name = row["name"] if isinstance(row, dict) else row[1]
+        if str(name or "").strip().lower() == column_name.strip().lower():
+            return True
+    return False
+
+
+def _pg_column_exists(table_name: str, column_name: str) -> bool:
+    row = db_fetchone(
+        """
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = %s
+          AND column_name = %s
+        LIMIT 1
+        """,
+        (table_name, column_name),
+    )
+    return bool(row)
+
+
+def _column_exists(kind: str, table_name: str, column_name: str) -> bool:
+    if kind == "pg":
+        return _pg_column_exists(table_name, column_name)
+    return _sqlite_column_exists(table_name, column_name)
+
+
+def _ensure_column(kind: str, table_name: str, column_def: str) -> None:
+    column_name = column_def.strip().split()[0]
+    if _column_exists(kind, table_name, column_name):
+        return
+
+    if kind == "pg":
+        db_execute(f"ALTER TABLE {table_name} ADD COLUMN IF NOT EXISTS {column_def}")
+    else:
+        db_execute(f"ALTER TABLE {table_name} ADD COLUMN {column_def}")
 
 
 def ensure_transport_requests_table(kind: str) -> None:
@@ -159,32 +203,20 @@ def ensure_attendance_events_table(kind: str) -> None:
 
 
 def ensure_attendance_event_columns(kind: str) -> None:
-    if kind == "pg":
-        statements = [
-            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS destination TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS obligation_start_time TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS obligation_end_time TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS actual_obligation_end_time TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS meeting_count INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS meeting_1 TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS meeting_2 TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN IF NOT EXISTS is_recovery_meeting INTEGER NOT NULL DEFAULT 0",
-        ]
-    else:
-        statements = [
-            "ALTER TABLE attendance_events ADD COLUMN destination TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN obligation_start_time TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN obligation_end_time TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN actual_obligation_end_time TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN meeting_count INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE attendance_events ADD COLUMN meeting_1 TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN meeting_2 TEXT",
-            "ALTER TABLE attendance_events ADD COLUMN is_recovery_meeting INTEGER NOT NULL DEFAULT 0",
-        ]
+    columns = [
+        "destination TEXT",
+        "obligation_start_time TEXT",
+        "obligation_end_time TEXT",
+        "actual_obligation_end_time TEXT",
+        "meeting_count INTEGER NOT NULL DEFAULT 0",
+        "meeting_1 TEXT",
+        "meeting_2 TEXT",
+        "is_recovery_meeting INTEGER NOT NULL DEFAULT 0",
+    ]
 
-    for statement in statements:
+    for column_def in columns:
         with contextlib.suppress(Exception):
-            db_execute(statement)
+            _ensure_column(kind, "attendance_events", column_def)
 
 
 def ensure_resident_passes_table(kind: str) -> None:
@@ -246,14 +278,8 @@ def ensure_resident_passes_columns(kind: str) -> None:
     ]
 
     for column_def in columns:
-        try:
-            if kind == "pg":
-                db_execute(f"ALTER TABLE resident_passes ADD COLUMN IF NOT EXISTS {column_def}")
-            else:
-                db_execute(f"ALTER TABLE resident_passes ADD COLUMN {column_def}")
-        except Exception:
-            from flask import current_app
-            current_app.logger.exception("auto-logged exception")
+        with contextlib.suppress(Exception):
+            _ensure_column(kind, "resident_passes", column_def)
 
 
 def ensure_resident_pass_request_details_table(kind: str) -> None:
@@ -370,16 +396,8 @@ def ensure_resident_pass_request_details_columns(kind: str) -> None:
     ]
 
     for column_def in columns:
-        try:
-            if kind == "pg":
-                db_execute(
-                    f"ALTER TABLE resident_pass_request_details ADD COLUMN IF NOT EXISTS {column_def}"
-                )
-            else:
-                db_execute(f"ALTER TABLE resident_pass_request_details ADD COLUMN {column_def}")
-        except Exception:
-            from flask import current_app
-            current_app.logger.exception("auto-logged exception")
+        with contextlib.suppress(Exception):
+            _ensure_column(kind, "resident_pass_request_details", column_def)
 
 
 def ensure_tables(kind: str) -> None:
