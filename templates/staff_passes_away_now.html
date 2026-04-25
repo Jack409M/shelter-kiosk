@@ -1,6 +1,22 @@
 {% extends "layout.html" %}
 {% block content %}
 
+<style>
+  .pass-status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .pass-status-away {
+    background: #fff3e0;
+    color: #ef6c00;
+    border: 1px solid #ffcc80;
+  }
+</style>
+
 <h1>Residents Out on Passes</h1>
 
 {% if rows %}
@@ -8,6 +24,7 @@
   <thead>
     <tr>
       <th>Name</th>
+      <th>Status</th>
       <th>Type</th>
       <th>When</th>
       <th>Expected Back</th>
@@ -20,6 +37,7 @@
     {% set pass_type_key = (r.pass_type or "")|lower %}
     <tr>
       <td>{{ r.last_name }}, {{ r.first_name }}</td>
+      <td><span class="pass-status-badge pass-status-away">Away</span></td>
       <td>{{ r.pass_type_label or r.pass_type }}</td>
       <td>
         {% if pass_type_key in ["pass", "overnight"] %}
