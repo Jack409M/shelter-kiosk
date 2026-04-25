@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import pytest
 import sqlite3
+
+import pytest
 
 from core.runtime import init_db
 
