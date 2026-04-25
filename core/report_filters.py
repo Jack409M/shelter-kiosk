@@ -28,11 +28,15 @@ Date Range
     custom
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 # -----------------------------------------------------
 # Date Range Helpers
 # -----------------------------------------------------
+
+
+def _utc_today():
+    return datetime.now(UTC).date()
 
 
 def _start_of_month(date):
@@ -54,7 +58,7 @@ def resolve_date_range(range_key, start=None, end=None):
     Converts a date range key into actual start and end dates.
     """
 
-    today = datetime.utcnow().date()
+    today = _utc_today()
 
     if range_key == "this_month":
         start = _start_of_month(today)
