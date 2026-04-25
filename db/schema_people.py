@@ -102,8 +102,41 @@ def backfill_resident_codes(kind: str) -> None:
         )
 
 
+# RESTORED FUNCTION
+
+def ensure_resident_child_income_supports_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS resident_child_income_supports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            enrollment_id INTEGER,
+            support_type TEXT,
+            amount REAL,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_child_income_supports (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL,
+            enrollment_id INTEGER,
+            support_type TEXT,
+            amount DOUBLE PRECISION,
+            notes TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+    )
+
+
 def ensure_tables(kind: str) -> None:
     ensure_residents_table(kind)
+    ensure_resident_child_income_supports_table(kind)
 
 
 def ensure_columns_and_constraints(kind: str) -> None:
