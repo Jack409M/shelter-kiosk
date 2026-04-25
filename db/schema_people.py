@@ -132,49 +132,123 @@ def backfill_resident_codes(kind: str) -> None:
         )
 
 
+def ensure_resident_children_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS resident_children (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resident_id INTEGER NOT NULL,
+            child_name TEXT,
+            birth_year INTEGER,
+            relationship TEXT,
+            living_status TEXT,
+            receives_survivor_benefit INTEGER NOT NULL DEFAULT 0,
+            survivor_benefit_amount REAL,
+            survivor_benefit_notes TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY (resident_id) REFERENCES residents(id)
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_children (
+            id SERIAL PRIMARY KEY,
+            resident_id INTEGER NOT NULL REFERENCES residents(id),
+            child_name TEXT,
+            birth_year INTEGER,
+            relationship TEXT,
+            living_status TEXT,
+            receives_survivor_benefit BOOLEAN NOT NULL DEFAULT FALSE,
+            survivor_benefit_amount DOUBLE PRECISION,
+            survivor_benefit_notes TEXT,
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
+    )
+
+
 def ensure_resident_child_income_supports_table(kind: str) -> None:
     create_table(
         kind,
         """
         CREATE TABLE IF NOT EXISTS resident_child_income_supports (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            resident_id INTEGER NOT NULL,
+            child_id INTEGER,
+            resident_id INTEGER,
             enrollment_id INTEGER,
             support_type TEXT,
+            monthly_amount REAL,
             amount REAL,
             notes TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY (child_id) REFERENCES resident_children(id)
         )
         """,
         """
         CREATE TABLE IF NOT EXISTS resident_child_income_supports (
             id SERIAL PRIMARY KEY,
-            resident_id INTEGER NOT NULL,
+            child_id INTEGER REFERENCES resident_children(id),
+            resident_id INTEGER,
             enrollment_id INTEGER,
             support_type TEXT,
+            monthly_amount DOUBLE PRECISION,
             amount DOUBLE PRECISION,
             notes TEXT,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TEXT,
+            updated_at TEXT
         )
         """,
     )
 
 
+def ensure_child_income_support_columns(kind: str) -> None:
+    columns = [
+        "child_id INTEGER",
+        "resident_id INTEGER",
+        "enrollment_id INTEGER",
+        "support_type TEXT",
+        "monthly_amount DOUBLE PRECISION" if kind == "pg" else "monthly_amount REAL",
+        "amount DOUBLE PRECISION" if kind == "pg" else "amount REAL",
+        "notes TEXT",
+        "is_active BOOLEAN NOT NULL DEFAULT TRUE",
+        "created_at TEXT",
+        "updated_at TEXT",
+    ]
+
+    for column_sql in columns:
+        with contextlib.suppress(Exception):
+            safe_add_column(kind, "resident_child_income_supports", column_sql)
+
+
 def ensure_tables(kind: str) -> None:
     ensure_residents_table(kind)
+    ensure_resident_children_table(kind)
     ensure_resident_child_income_supports_table(kind)
 
 
 def ensure_columns_and_constraints(kind: str) -> None:
     ensure_resident_profile_columns(kind)
     ensure_resident_code_schema(kind)
+    ensure_child_income_support_columns(kind)
     backfill_resident_codes(kind)
 
 
 def ensure_indexes() -> None:
-    with contextlib.suppress(Exception):
-        db_execute(
-            "CREATE INDEX IF NOT EXISTS residents_shelter_active_name_idx ON residents (shelter, is_active, last_name, first_name)"
-        )
+    index_statements = [
+        "CREATE INDEX IF NOT EXISTS residents_shelter_active_name_idx ON residents (shelter, is_active, last_name, first_name)",
+        "CREATE INDEX IF NOT EXISTS resident_children_resident_idx ON resident_children (resident_id)",
+        "CREATE INDEX IF NOT EXISTS resident_child_income_supports_child_idx ON resident_child_income_supports (child_id)",
+        "CREATE INDEX IF NOT EXISTS resident_child_income_supports_resident_idx ON resident_child_income_supports (resident_id)",
+    ]
+    for statement in index_statements:
+        with contextlib.suppress(Exception):
+            db_execute(statement)
