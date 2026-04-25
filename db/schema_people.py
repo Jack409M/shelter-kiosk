@@ -32,8 +32,12 @@ def ensure_residents_table(kind: str) -> None:
             emergency_contact_name TEXT,
             emergency_contact_relationship TEXT,
             emergency_contact_phone TEXT,
+            gender TEXT,
+            race TEXT,
+            ethnicity TEXT,
             program_level TEXT,
             level_start_date TEXT,
+            step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL
         )
@@ -52,13 +56,39 @@ def ensure_residents_table(kind: str) -> None:
             emergency_contact_name TEXT,
             emergency_contact_relationship TEXT,
             emergency_contact_phone TEXT,
+            gender TEXT,
+            race TEXT,
+            ethnicity TEXT,
             program_level TEXT,
             level_start_date TEXT,
+            step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
         """,
     )
+
+
+def ensure_resident_profile_columns(kind: str) -> None:
+    columns = [
+        "resident_code TEXT",
+        "birth_year INTEGER",
+        "phone TEXT",
+        "email TEXT",
+        "emergency_contact_name TEXT",
+        "emergency_contact_relationship TEXT",
+        "emergency_contact_phone TEXT",
+        "gender TEXT",
+        "race TEXT",
+        "ethnicity TEXT",
+        "program_level TEXT",
+        "level_start_date TEXT",
+        "step_changed_at TEXT",
+    ]
+
+    for column_sql in columns:
+        with contextlib.suppress(Exception):
+            safe_add_column(kind, "residents", column_sql)
 
 
 def ensure_resident_code_schema(kind: str) -> None:
@@ -102,8 +132,6 @@ def backfill_resident_codes(kind: str) -> None:
         )
 
 
-# RESTORED FUNCTION
-
 def ensure_resident_child_income_supports_table(kind: str) -> None:
     create_table(
         kind,
@@ -140,6 +168,7 @@ def ensure_tables(kind: str) -> None:
 
 
 def ensure_columns_and_constraints(kind: str) -> None:
+    ensure_resident_profile_columns(kind)
     ensure_resident_code_schema(kind)
     backfill_resident_codes(kind)
 
