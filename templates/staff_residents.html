@@ -12,7 +12,10 @@
   {% set shelter_label = shelter %}
 {% endif %}
 
-<h1>Residents for {{ shelter_label }}</h1>
+<div class="page-header">
+  <h1 class="page-title">Residents</h1>
+  <div class="page-subtitle">{{ shelter_label }}</div>
+</div>
 
 <div class="residents-layout">
 
