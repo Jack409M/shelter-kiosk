@@ -137,3 +137,59 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   Table Utilities
+========================================================= */
+.table-shell {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-soft);
+}
+
+.table-shell table {
+  border: 0;
+  margin: 0;
+}
+
+.app-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-soft);
+}
+
+.app-table th,
+.app-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+  vertical-align: top;
+}
+
+.app-table thead th {
+  background: var(--top);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.app-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.app-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.app-table-compact th,
+.app-table-compact td {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.table-empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
