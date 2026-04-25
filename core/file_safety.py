@@ -106,34 +106,24 @@ def _validate_json_payload(payload: Any, validator: Validator | None) -> None:
         validator(payload)
 
 
-def safe_write_json(
+def safe_write_bytes(
     file_path: str | os.PathLike[str],
-    data: JSONValue,
+    raw: bytes,
     *,
     backup_count: int = DEFAULT_BACKUP_COUNT,
     min_file_size_bytes: int = DEFAULT_MIN_FILE_SIZE_BYTES,
-    validator: Validator | None = None,
 ) -> None:
     """
-    Atomically write JSON to disk with validation, backup rotation, and post write verification.
+    Atomically write bytes to disk with backup rotation and post write verification.
 
-    The write path is intentionally defensive:
-    1. Serialize data before touching the destination file.
-    2. Validate the serialized payload.
-    3. Write to a temporary file in the same directory.
-    4. Flush and fsync the temporary file.
-    5. Verify size and checksum before promotion.
-    6. Rotate backups.
-    7. Replace the destination with os.replace.
-    8. Verify the final file after promotion.
+    Use this for any durable generated file where truncation would matter. The destination is
+    only replaced after the temporary file has been flushed, fsynced, size checked, and checksum
+    verified.
     """
 
     destination = _as_path(file_path)
     _ensure_parent_dir(destination)
 
-    _validate_json_payload(data, validator)
-
-    raw = json.dumps(data, indent=2, sort_keys=True).encode("utf-8")
     _validate_raw_bytes(raw, path=destination, min_file_size_bytes=min_file_size_bytes)
     expected_checksum = _checksum_bytes(raw)
 
@@ -176,7 +166,7 @@ def safe_write_json(
             )
 
         logger.info(
-            "Protected JSON write completed path=%s size=%s checksum=%s",
+            "Protected file write completed path=%s size=%s checksum=%s",
             destination,
             len(final),
             final_checksum,
@@ -188,6 +178,102 @@ def safe_write_json(
             except OSError:
                 logger.warning("Could not remove abandoned temp file: %s", temp_path, exc_info=True)
         raise
+
+
+def safe_read_bytes(
+    file_path: str | os.PathLike[str],
+    *,
+    backup_count: int = DEFAULT_BACKUP_COUNT,
+    min_file_size_bytes: int = DEFAULT_MIN_FILE_SIZE_BYTES,
+) -> bytes:
+    """Read bytes defensively and fall back to rolling backups when needed."""
+
+    path = _as_path(file_path)
+    candidates = [path]
+    candidates.extend(_backup_path(path, number) for number in range(1, backup_count + 1))
+
+    failures: list[str] = []
+
+    for candidate in candidates:
+        if not candidate.exists():
+            failures.append(f"{candidate}: missing")
+            continue
+
+        try:
+            raw = candidate.read_bytes()
+            _validate_raw_bytes(raw, path=candidate, min_file_size_bytes=min_file_size_bytes)
+            return raw
+        except Exception as exc:
+            failures.append(f"{candidate}: {exc}")
+            logger.warning("Rejected file candidate: %s", candidate, exc_info=True)
+
+    raise FileRecoveryError(f"No valid file version found for {path}. Failures: {'; '.join(failures)}")
+
+
+def safe_write_text(
+    file_path: str | os.PathLike[str],
+    text: str,
+    *,
+    encoding: str = "utf-8",
+    backup_count: int = DEFAULT_BACKUP_COUNT,
+    min_file_size_bytes: int = DEFAULT_MIN_FILE_SIZE_BYTES,
+) -> None:
+    """Atomically write text to disk using the same protected byte write path."""
+
+    safe_write_bytes(
+        file_path,
+        text.encode(encoding),
+        backup_count=backup_count,
+        min_file_size_bytes=min_file_size_bytes,
+    )
+
+
+def safe_read_text(
+    file_path: str | os.PathLike[str],
+    *,
+    encoding: str = "utf-8",
+    backup_count: int = DEFAULT_BACKUP_COUNT,
+    min_file_size_bytes: int = DEFAULT_MIN_FILE_SIZE_BYTES,
+) -> str:
+    """Read text defensively and fall back to rolling backups when needed."""
+
+    return safe_read_bytes(
+        file_path,
+        backup_count=backup_count,
+        min_file_size_bytes=min_file_size_bytes,
+    ).decode(encoding)
+
+
+def safe_write_json(
+    file_path: str | os.PathLike[str],
+    data: JSONValue,
+    *,
+    backup_count: int = DEFAULT_BACKUP_COUNT,
+    min_file_size_bytes: int = DEFAULT_MIN_FILE_SIZE_BYTES,
+    validator: Validator | None = None,
+) -> None:
+    """
+    Atomically write JSON to disk with validation, backup rotation, and post write verification.
+
+    The write path is intentionally defensive:
+    1. Serialize data before touching the destination file.
+    2. Validate the serialized payload.
+    3. Write to a temporary file in the same directory.
+    4. Flush and fsync the temporary file.
+    5. Verify size and checksum before promotion.
+    6. Rotate backups.
+    7. Replace the destination with os.replace.
+    8. Verify the final file after promotion.
+    """
+
+    _validate_json_payload(data, validator)
+    raw = json.dumps(data, indent=2, sort_keys=True).encode("utf-8")
+    safe_write_bytes(
+        file_path,
+        raw,
+        backup_count=backup_count,
+        min_file_size_bytes=min_file_size_bytes,
+    )
 
 
 def safe_read_json(
