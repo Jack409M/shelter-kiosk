@@ -85,6 +85,22 @@
   min-width: 0;
 }
 
+.form-field input,
+.form-field select,
+.form-field textarea {
+  margin-top: 0;
+  width: 100%;
+  border-color: var(--border);
+  background: #ffffff;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: var(--top-border);
+  box-shadow: 0 0 0 3px rgba(79, 143, 190, 0.18);
+}
+
 .form-label {
   display: block;
   margin: 0 0 5px 0;
@@ -106,6 +122,13 @@
   gap: 8px;
   align-items: center;
   margin-top: 12px;
+  padding-top: 4px;
+}
+
+.form-actions button,
+.form-actions .btn,
+.form-actions a {
+  margin-top: 0;
 }
 
 @media (max-width: 760px) {
