@@ -18,23 +18,23 @@ CRITICAL_FILE_MIN_LINES = {
     "routes/resident_detail_parts/timeline.py": 350,
 }
 
-CRITICAL_ENDPOINTS = {
-    "auth.staff_login",
-    "case_management.index",
-    "case_management.new_intake_assessment",
-    "case_management.edit_intake_assessment",
-    "case_management.family_intake",
-    "case_management.child_services",
-    "case_management.edit_child",
-    "resident_requests.resident_signin",
-    "resident_requests.resident_home",
-    "resident_requests.transport_request",
-    "resident_requests.pass_request",
-    "resident_portal.resident_portal_home",
-    "attendance.staff_passes_pending",
-    "attendance.approve_pass_request",
-    "attendance.deny_pass_request",
-    "attendance.check_in_pass_request",
+CRITICAL_ROUTES = {
+    "/staff/login",
+    "/staff/case-management",
+    "/staff/case-management/intake-assessment/new",
+    "/staff/case-management/<int:resident_id>/intake-edit",
+    "/staff/case-management/<int:resident_id>/family-intake",
+    "/staff/case-management/children/<int:child_id>/services",
+    "/staff/case-management/children/<int:child_id>/edit",
+    "/resident",
+    "/resident/home",
+    "/transport",
+    "/pass-request",
+    "/resident/portal",
+    "/staff/passes/pending",
+    "/staff/passes/<int:pass_id>/approve",
+    "/staff/passes/<int:pass_id>/deny",
+    "/staff/passes/<int:pass_id>/check-in",
 }
 
 CRITICAL_TABLE_COLUMNS = {
@@ -273,9 +273,9 @@ def test_enterprise_critical_files_are_not_suspiciously_short() -> None:
     assert failures == []
 
 
-def test_enterprise_critical_blueprint_endpoints_remain_registered(app) -> None:
-    registered = {rule.endpoint for rule in app.url_map.iter_rules()}
-    missing = sorted(CRITICAL_ENDPOINTS - registered)
+def test_enterprise_critical_routes_remain_registered(app) -> None:
+    registered = {rule.rule for rule in app.url_map.iter_rules()}
+    missing = sorted(CRITICAL_ROUTES - registered)
 
     assert missing == []
 
