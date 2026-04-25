@@ -6,7 +6,6 @@ from flask import abort, flash, redirect, url_for
 
 from core.audit import log_action
 from core.db import db_fetchone
-from core.sms_sender import send_sms as send_sms
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
     apply_pass_approval,
@@ -20,7 +19,7 @@ from routes.attendance_parts.pass_action_helpers import (
 )
 from routes.attendance_parts.pass_policy import has_active_pass_block
 
-type PassActionResponse = tuple[bool, str, str, str]
+PassActionResponse = tuple[bool, str, str, str]
 
 
 def _require_pass_access() -> None:
