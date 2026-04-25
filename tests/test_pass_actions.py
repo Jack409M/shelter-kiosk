@@ -3,6 +3,9 @@ from __future__ import annotations
 from core.runtime import init_db
 
 
+TEST_TIMESTAMP = "2026-01-01T00:00:00"
+
+
 def _login_staff(client):
     with client.session_transaction() as session:
         session["staff_user_id"] = 1
@@ -37,9 +40,10 @@ def test_approve_pass_updates_all_fields(app, client):
 
         db_execute(
             """
-            INSERT INTO residents (id, first_name, last_name, shelter)
-            VALUES (1, 'Test', 'User', 'abba')
-            """
+            INSERT INTO residents (id, first_name, last_name, shelter, created_at)
+            VALUES (1, 'Test', 'User', 'abba', ?)
+            """,
+            (TEST_TIMESTAMP,),
         )
 
         db_execute(
@@ -120,9 +124,10 @@ def test_approve_pass_with_shelter_mismatch_does_not_approve(app, client):
 
         db_execute(
             """
-            INSERT INTO residents (id, first_name, last_name, shelter)
-            VALUES (5, 'Wrong', 'Shelter', 'abba')
-            """
+            INSERT INTO residents (id, first_name, last_name, shelter, created_at)
+            VALUES (5, 'Wrong', 'Shelter', 'abba', ?)
+            """,
+            (TEST_TIMESTAMP,),
         )
 
         db_execute(
@@ -205,9 +210,10 @@ def test_deny_pass_sets_denied(app, client):
 
         db_execute(
             """
-            INSERT INTO residents (id, first_name, last_name, shelter)
-            VALUES (2, 'Deny', 'User', 'abba')
-            """
+            INSERT INTO residents (id, first_name, last_name, shelter, created_at)
+            VALUES (2, 'Deny', 'User', 'abba', ?)
+            """,
+            (TEST_TIMESTAMP,),
         )
 
         db_execute(
@@ -284,9 +290,10 @@ def test_deny_pass_with_shelter_mismatch_does_not_deny(app, client):
 
         db_execute(
             """
-            INSERT INTO residents (id, first_name, last_name, shelter)
-            VALUES (6, 'Wrong', 'Shelter', 'abba')
-            """
+            INSERT INTO residents (id, first_name, last_name, shelter, created_at)
+            VALUES (6, 'Wrong', 'Shelter', 'abba', ?)
+            """,
+            (TEST_TIMESTAMP,),
         )
 
         db_execute(
@@ -368,9 +375,10 @@ def test_check_in_creates_attendance_event(app, client):
 
         db_execute(
             """
-            INSERT INTO residents (id, first_name, last_name, shelter)
-            VALUES (3, 'Return', 'User', 'abba')
-            """
+            INSERT INTO residents (id, first_name, last_name, shelter, created_at)
+            VALUES (3, 'Return', 'User', 'abba', ?)
+            """,
+            (TEST_TIMESTAMP,),
         )
 
         db_execute(
@@ -432,9 +440,10 @@ def test_completed_pass_cannot_be_checked_in_twice(app, client):
 
         db_execute(
             """
-            INSERT INTO residents (id, first_name, last_name, shelter)
-            VALUES (7, 'Double', 'Return', 'abba')
-            """
+            INSERT INTO residents (id, first_name, last_name, shelter, created_at)
+            VALUES (7, 'Double', 'Return', 'abba', ?)
+            """,
+            (TEST_TIMESTAMP,),
         )
 
         db_execute(
@@ -501,9 +510,10 @@ def test_sms_failure_does_not_break_approval(app, client, monkeypatch):
 
         db_execute(
             """
-            INSERT INTO residents (id, first_name, last_name, shelter)
-            VALUES (4, 'SMS', 'Fail', 'abba')
-            """
+            INSERT INTO residents (id, first_name, last_name, shelter, created_at)
+            VALUES (4, 'SMS', 'Fail', 'abba', ?)
+            """,
+            (TEST_TIMESTAMP,),
         )
 
         db_execute(
