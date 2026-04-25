@@ -96,8 +96,8 @@ def _load_weekly_activity_summary(resident_id: int | None, shelter: str) -> dict
     }
 
 
-@resident_portal.route("/resident/portal")
-@resident_portal.route("/resident/home")
+@resident_portal.route("/portal")
+@resident_portal.route("/home")
 @require_resident
 def home():
     resident_id = None
