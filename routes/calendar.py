@@ -4,6 +4,7 @@ from datetime import date
 
 from flask import Blueprint, flash, g, jsonify, redirect, render_template, request, session, url_for
 
+from core.audit import log_action
 from core.auth import require_login
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
@@ -212,6 +213,20 @@ def add_event():
         ),
     )
 
+    log_action(
+        "calendar_event",
+        None,
+        shelter,
+        staff_user_id,
+        "create",
+        details={
+            "event_date": event_date,
+            "has_end_time": bool(end_time),
+            "has_start_time": bool(start_time),
+            "title": title,
+        },
+    )
+
     flash("Event added.", "ok")
     return redirect(url_for("calendar.calendar_view", month=event_date[:7]))
 
@@ -291,6 +306,20 @@ def edit_event(event_id: int):
             now,
             event_id,
         ),
+    )
+
+    log_action(
+        "calendar_event",
+        event_id,
+        shelter,
+        session.get("staff_user_id"),
+        "update",
+        details={
+            "event_date": event_date,
+            "has_end_time": bool(end_time),
+            "has_start_time": bool(start_time),
+            "title": title,
+        },
     )
 
     flash("Event updated.", "ok")
