@@ -28,3 +28,33 @@
     font-size: 24px;
   }
 }
+
+/* =========================================================
+   Card Headers
+========================================================= */
+.card-title,
+.card > h2:first-child,
+.card > h3:first-child {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--text);
+  line-height: 1.25;
+}
+
+.card > h2:first-child,
+.card-title-large {
+  font-size: 20px;
+}
+
+.card > h3:first-child,
+.card-title {
+  font-size: 16px;
+}
+
+.card-subtitle {
+  margin-top: -4px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.4;
+}
