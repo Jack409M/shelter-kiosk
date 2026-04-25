@@ -16,6 +16,9 @@ PRODUCTION_PYTHON_ROOTS = (
     PROJECT_ROOT / "routes",
     PROJECT_ROOT / "db",
 )
+INTENTIONAL_EMPTY_FILES = {
+    "routes/operations_settings_parts/kiosk_categories.py",
+}
 TRUNCATION_MARKERS = (
     "SNIP",
     "... unchanged",
@@ -51,7 +54,7 @@ def test_production_python_files_parse_and_have_no_truncation_markers() -> None:
         text = path.read_text(encoding="utf-8")
 
         if not text.strip():
-            if path.name == "__init__.py":
+            if path.name == "__init__.py" or relative_path in INTENTIONAL_EMPTY_FILES:
                 continue
             failures.append(f"{relative_path}: empty file")
             continue
