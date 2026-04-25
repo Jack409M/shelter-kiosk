@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from core.runtime import init_db
 
 
@@ -92,8 +94,9 @@ def test_legacy_get_pass_action_routes_do_not_change_state(app, client):
     with app.app_context():
         init_db()
         _seed_resident(db_execute, resident_id=710)
+        _seed_resident(db_execute, resident_id=716)
         _seed_pass(db_execute, pass_id=9710, resident_id=710, status="pending")
-        _seed_pass(db_execute, pass_id=9711, resident_id=710, status="approved")
+        _seed_pass(db_execute, pass_id=9711, resident_id=716, status="approved")
 
     approve_response = client.get("/staff/passes/approve/9710", follow_redirects=False)
     deny_response = client.get("/staff/passes/deny/9710", follow_redirects=False)
@@ -108,7 +111,7 @@ def test_legacy_get_pass_action_routes_do_not_change_state(app, client):
         approved_row = db_fetchone("SELECT status FROM resident_passes WHERE id = %s", (9711,))
         attendance_count = db_fetchone(
             "SELECT COUNT(*) AS count FROM attendance_events WHERE resident_id = %s",
-            (710,),
+            (716,),
         )
 
         assert pending_row["status"] == "pending"
@@ -142,50 +145,28 @@ def test_non_manager_staff_cannot_use_pass_doorways(app, client):
         assert row["status"] == "pending"
 
 
-def test_staff_cannot_approve_second_active_pass_for_same_resident(app, client):
-    from core.db import db_execute, db_fetchone
-
-    _login_staff(client)
-    _set_csrf(client)
+def test_database_rejects_second_active_pass_for_same_resident(app):
+    from core.db import db_execute, db_fetchall
 
     with app.app_context():
         init_db()
         _seed_resident(db_execute, resident_id=712)
         _seed_pass(db_execute, pass_id=9713, resident_id=712, status="approved")
-        _seed_pass(db_execute, pass_id=9714, resident_id=712, status="pending")
-        db_execute(
+
+        with pytest.raises(Exception):
+            _seed_pass(db_execute, pass_id=9714, resident_id=712, status="pending")
+
+        rows = db_fetchall(
             """
-            DELETE FROM audit_log
-            WHERE entity_type = 'pass'
-              AND action_type = 'approve'
-              AND action_details LIKE %s
+            SELECT id, status
+            FROM resident_passes
+            WHERE resident_id = %s
+            ORDER BY id
             """,
-            ("%pass_id=9714%",),
+            (712,),
         )
 
-    response = client.post(
-        "/staff/passes/9714/approve",
-        data={"_csrf_token": "test"},
-        follow_redirects=False,
-    )
-
-    assert response.status_code == 302
-
-    with app.app_context():
-        pending_row = db_fetchone("SELECT status FROM resident_passes WHERE id = %s", (9714,))
-        audit_count = db_fetchone(
-            """
-            SELECT COUNT(*) AS count
-            FROM audit_log
-            WHERE entity_type = 'pass'
-              AND action_type = 'approve'
-              AND action_details LIKE %s
-            """,
-            ("%pass_id=9714%",),
-        )
-
-        assert pending_row["status"] == "pending"
-        assert audit_count["count"] == 0
+        assert rows == [{"id": 9713, "status": "approved"}]
 
 
 def test_retention_expiry_only_closes_overdue_approved_passes(app):
