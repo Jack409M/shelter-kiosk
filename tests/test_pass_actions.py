@@ -409,6 +409,74 @@ def test_check_in_creates_attendance_event(app, client):
         assert "pass_id=997" in str(audit["action_details"] or "")
 
 
+def test_completed_pass_cannot_be_checked_in_twice(app, client):
+    from core.db import db_execute, db_fetchone
+
+    _login_staff(client)
+    _set_csrf(client)
+
+    with app.app_context():
+        init_db()
+
+        db_execute("DELETE FROM resident_passes WHERE id = 993")
+        db_execute("DELETE FROM residents WHERE id = 7")
+        db_execute("DELETE FROM attendance_events WHERE resident_id = 7")
+        db_execute(
+            """
+            DELETE FROM audit_log
+            WHERE entity_type = 'pass'
+              AND action_type = 'check_in'
+              AND action_details LIKE '%pass_id=993%'
+            """
+        )
+
+        db_execute(
+            """
+            INSERT INTO residents (id, first_name, last_name, shelter)
+            VALUES (7, 'Double', 'Return', 'abba')
+            """
+        )
+
+        db_execute(
+            """
+            INSERT INTO resident_passes (
+                id, resident_id, shelter, status, pass_type, created_at, updated_at
+            )
+            VALUES (993, 7, 'abba', 'approved', 'pass', '2026-01-01', '2026-01-01')
+            """
+        )
+
+    client.post(
+        "/staff/passes/993/check-in",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
+    client.post(
+        "/staff/passes/993/check-in",
+        data={"_csrf_token": "test"},
+        follow_redirects=False,
+    )
+
+    with app.app_context():
+        pass_row = db_fetchone("SELECT status FROM resident_passes WHERE id = 993")
+        attendance_count = db_fetchone(
+            "SELECT COUNT(*) AS count FROM attendance_events WHERE resident_id = 7"
+        )
+        audit_count = db_fetchone(
+            """
+            SELECT COUNT(*) AS count
+            FROM audit_log
+            WHERE entity_type = 'pass'
+              AND action_type = 'check_in'
+              AND action_details LIKE '%pass_id=993%'
+            """
+        )
+
+        assert pass_row["status"] == "completed"
+        assert attendance_count["count"] == 1
+        assert audit_count["count"] == 1
+
+
 # -----------------------------------------
 # SMS FAILURE DOES NOT BREAK APPROVAL
 # -----------------------------------------
