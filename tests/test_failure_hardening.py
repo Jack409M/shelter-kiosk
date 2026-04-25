@@ -26,6 +26,25 @@ TRUNCATION_MARKERS = (
     "truncated)",
     "<truncated>",
 )
+AI_REWRITE_PLACEHOLDER_MARKERS = (
+    "TODO: implement later",
+    "TODO implement later",
+    "placeholder implementation",
+    "temporary placeholder",
+    "rest of file unchanged",
+    "remaining code unchanged",
+    "existing code unchanged",
+    "previous code unchanged",
+    "omitted for brevity",
+    "implementation omitted",
+    "not implemented yet",
+)
+ALLOWED_CONTEXTLIB_SUPPRESS_EXCEPTION_PREFIXES = (
+    "db/schema",
+)
+ALLOWED_CONTEXTLIB_SUPPRESS_EXCEPTION_FILES = {
+    "core/db.py",
+}
 
 
 def _production_python_files() -> list[Path]:
@@ -33,6 +52,40 @@ def _production_python_files() -> list[Path]:
     for root in PRODUCTION_PYTHON_ROOTS:
         files.extend(sorted(root.rglob("*.py")))
     return files
+
+
+def _is_exception_name(node: ast.AST | None) -> bool:
+    if isinstance(node, ast.Name):
+        return node.id == "Exception"
+    if isinstance(node, ast.Attribute):
+        return node.attr == "Exception"
+    return False
+
+
+def _is_contextlib_suppress_exception_call(node: ast.AST) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+
+    func = node.func
+    if not (
+        isinstance(func, ast.Attribute)
+        and func.attr == "suppress"
+        and isinstance(func.value, ast.Name)
+        and func.value.id == "contextlib"
+    ):
+        return False
+
+    return any(_is_exception_name(arg) for arg in node.args)
+
+
+def _contextlib_suppress_exception_allowed(relative_path: str) -> bool:
+    if relative_path in ALLOWED_CONTEXTLIB_SUPPRESS_EXCEPTION_FILES:
+        return True
+
+    return any(
+        relative_path.startswith(prefix)
+        for prefix in ALLOWED_CONTEXTLIB_SUPPRESS_EXCEPTION_PREFIXES
+    )
 
 
 def test_no_datetime_utcnow_in_production_code() -> None:
@@ -67,6 +120,50 @@ def test_production_python_files_parse_and_have_no_truncation_markers() -> None:
             ast.parse(text, filename=relative_path)
         except SyntaxError as exc:
             failures.append(f"{relative_path}: syntax error at line {exc.lineno}: {exc.msg}")
+
+    assert failures == []
+
+
+def test_no_ai_rewrite_placeholder_or_silent_failure_patterns_in_production_code() -> None:
+    failures: list[str] = []
+
+    for path in _production_python_files():
+        relative_path = str(path.relative_to(PROJECT_ROOT))
+        text = path.read_text(encoding="utf-8")
+        lowered_text = text.lower()
+
+        for marker in AI_REWRITE_PLACEHOLDER_MARKERS:
+            if marker.lower() in lowered_text:
+                failures.append(f"{relative_path}: contains AI rewrite placeholder marker {marker!r}")
+
+        try:
+            tree = ast.parse(text, filename=relative_path)
+        except SyntaxError:
+            continue
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
+                if node.value.value is Ellipsis:
+                    failures.append(f"{relative_path}:{node.lineno}: contains ellipsis placeholder statement")
+
+            if isinstance(node, ast.Raise) and _is_exception_name(node.exc.func if isinstance(node.exc, ast.Call) else node.exc):
+                if isinstance(node.exc, ast.Call) and isinstance(node.exc.func, ast.Name):
+                    if node.exc.func.id == "NotImplementedError":
+                        failures.append(f"{relative_path}:{node.lineno}: raises NotImplementedError in production code")
+                elif isinstance(node.exc, ast.Name) and node.exc.id == "NotImplementedError":
+                    failures.append(f"{relative_path}:{node.lineno}: raises NotImplementedError in production code")
+
+            if isinstance(node, ast.ExceptHandler) and _is_exception_name(node.type):
+                if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
+                    failures.append(f"{relative_path}:{node.lineno}: contains bare except Exception: pass")
+
+            if isinstance(node, ast.With):
+                for item in node.items:
+                    if _is_contextlib_suppress_exception_call(item.context_expr):
+                        if not _contextlib_suppress_exception_allowed(relative_path):
+                            failures.append(
+                                f"{relative_path}:{node.lineno}: uses contextlib.suppress(Exception) outside whitelist"
+                            )
 
     assert failures == []
 
