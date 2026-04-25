@@ -20,50 +20,52 @@
 <div class="residents-layout">
 
   <div class="residents-list">
-    <table class="table-compact">
-      <thead>
-        <tr>
-          <th class="col-name">Name</th>
-          <th class="col-code">Resident Code</th>
-          <th class="col-status">Status</th>
-          <th class="col-actions">Profile</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {% if not residents %}
+    <div class="table-shell">
+      <table class="app-table app-table-compact">
+        <thead>
           <tr>
-            <td colspan="4">No residents found.</td>
+            <th class="col-name">Name</th>
+            <th class="col-code">Resident Code</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Profile</th>
           </tr>
-        {% else %}
-          {% for r in residents %}
+        </thead>
+
+        <tbody>
+          {% if not residents %}
             <tr>
-              <td>
-                <a href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
-                  {{ r.last_name }}, {{ r.first_name }}
-                </a>
-              </td>
-
-              <td><strong>{{ r.resident_code }}</strong></td>
-
-              <td>
-                {% if r.is_active %}
-                  <span class="badge badge-active">Active</span>
-                {% else %}
-                  <span class="badge badge-inactive">Inactive</span>
-                {% endif %}
-              </td>
-
-              <td class="resident-actions">
-                <a class="btn" href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
-                  Open Profile
-                </a>
-              </td>
+              <td colspan="4">No residents found.</td>
             </tr>
-          {% endfor %}
-        {% endif %}
-      </tbody>
-    </table>
+          {% else %}
+            {% for r in residents %}
+              <tr>
+                <td>
+                  <a href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
+                    {{ r.last_name }}, {{ r.first_name }}
+                  </a>
+                </td>
+
+                <td><strong>{{ r.resident_code }}</strong></td>
+
+                <td>
+                  {% if r.is_active %}
+                    <span class="badge badge-active">Active</span>
+                  {% else %}
+                    <span class="badge badge-inactive">Inactive</span>
+                  {% endif %}
+                </td>
+
+                <td class="resident-actions">
+                  <a class="btn" href="{{ url_for('resident_detail.resident_profile', resident_id=r.id) }}">
+                    Open Profile
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <div class="residents-side">
