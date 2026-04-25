@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
@@ -46,6 +46,10 @@ def _sql(pg_sql: str, sqlite_sql: str) -> str:
     return pg_sql if g.get("db_kind") == "pg" else sqlite_sql
 
 
+def _utc_today():
+    return datetime.now(UTC).date()
+
+
 def _normalize_shelter_name(value: str | None) -> str:
     return _shared_normalize_shelter_name(value)
 
@@ -67,7 +71,7 @@ def _days_in_program(entry_date_value) -> str:
     if not entry_dt:
         return "—"
 
-    days = (datetime.utcnow().date() - entry_dt.date()).days
+    days = (_utc_today() - entry_dt.date()).days
     if days < 0:
         days = 0
     return str(days)
@@ -78,7 +82,7 @@ def _days_sober_today(sobriety_date_value):
     if not sobriety_dt:
         return None
 
-    days = (datetime.utcnow().date() - sobriety_dt.date()).days
+    days = (_utc_today() - sobriety_dt.date()).days
     if days < 0:
         days = 0
     return days
