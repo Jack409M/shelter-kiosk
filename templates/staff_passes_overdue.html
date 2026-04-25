@@ -40,4 +40,43 @@
 <p>No overdue pass returns.</p>
 {% endif %}
 
+<h2 style="margin-top:40px;">Expired Passes</h2>
+
+{% if expired_rows %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Expected Back</th>
+      <th>Last Updated</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in expired_rows %}
+    <tr>
+      <td>{{ r.last_name }}, {{ r.first_name }}</td>
+      <td>{{ r.pass_type_label or r.pass_type }}</td>
+      <td>
+        {% if r.expected_back_local %}
+          {{ fmt_dt(r.expected_back_local) }}
+        {% endif %}
+      </td>
+      <td>
+        {% if r.updated_at_local %}
+          {{ fmt_dt(r.updated_at_local) }}
+        {% endif %}
+      </td>
+      <td>
+        <a href="{{ url_for('attendance.staff_pass_detail', pass_id=r.id) }}">Open</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No expired passes.</p>
+{% endif %}
+
 {% endblock %}
