@@ -76,8 +76,14 @@ jobs:
       - name: Initialize database
         run: |
           set -euo pipefail
-          python -c "from core.runtime import init_db; from core.app_factory import create_app; app=create_app();\
-with app.app_context(): init_db()"
+          python - <<'PY'
+          from core.app_factory import create_app
+          from core.runtime import init_db
+
+          app = create_app()
+          with app.app_context():
+              init_db()
+          PY
 
       - name: Run full test suite
         run: |
