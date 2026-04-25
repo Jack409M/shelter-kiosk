@@ -1,4 +1,7 @@
 {% extends "layout.html" %}
+{% block extra_head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/page_header.css') }}">
+{% endblock %}
 {% block content %}
 
 {% set shelter_key = shelter|string|lower %}
@@ -12,9 +15,12 @@
   {% set shelter_label = shelter %}
 {% endif %}
 
-<div class="card">
-  <h2>Transportation Board, {{ shelter_label }}</h2>
+<div class="page-header">
+  <h1 class="page-title">Transportation Board</h1>
+  <div class="page-subtitle">{{ shelter_label }}</div>
+</div>
 
+<div class="card">
   <form method="get" action="{{ url_for('transport.staff_transport_board') }}" style="margin-bottom:12px;">
     <label>Select date:</label>
     <input type="date" name="date" class="date-box" value="{{ request.args.get('date', '') }}">
