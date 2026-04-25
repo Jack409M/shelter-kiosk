@@ -69,3 +69,79 @@
 .resident-summary-tile-value-compact {
   font-size: 12px;
 }
+
+/* =========================================
+   Resident Profile Layout (structure only)
+   ========================================= */
+
+.resident-profile-page {
+  display: block;
+}
+
+.resident-notebook-section {
+  margin-top: 8px;
+}
+
+.resident-notebook-section-head {
+  margin-bottom: 16px;
+}
+
+.resident-notebook-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.resident-notebook-section-title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.resident-notebook-section-copy {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.resident-profile-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.resident-profile-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.resident-profile-section-card {
+  padding: 14px 16px;
+}
+
+.resident-profile-card-title {
+  margin: 0 0 10px 0;
+  font-size: 15px;
+}
+
+.profile-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+  font-size: 14px;
+}
+
+@media (max-width: 860px) {
+  .resident-profile-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-meta-grid {
+    grid-template-columns: 1fr;
+  }
+}
