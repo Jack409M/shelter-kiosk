@@ -18,6 +18,7 @@ from routes.attendance_parts.pass_queries import (
     fetch_approved_pass_rows,
     fetch_current_pass_rows,
     fetch_pending_pass_rows,
+    fetch_expired_pass_rows,
 )
 from routes.attendance_parts.pass_view_helpers import (
     build_pass_action_redirect_target,
@@ -76,10 +77,12 @@ def staff_passes_overdue_view():
     now_local = datetime.now(CHICAGO_TZ)
     current_rows = fetch_current_pass_rows(context.shelter)
     overdue_rows = filter_overdue_pass_rows(current_rows, now_local)
+    expired_rows = fetch_expired_pass_rows(context.shelter)
 
     return render_template(
         "staff_passes_overdue.html",
         rows=overdue_rows,
+        expired_rows=expired_rows,
         shelter=context.shelter,
         fmt_dt=fmt_dt,
     )
