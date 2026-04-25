@@ -34,7 +34,6 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
         except Exception:
             return None
 
-    # fallback
     return (datetime.utcnow() + timedelta(hours=48)).isoformat(timespec="seconds")
 
 
@@ -175,8 +174,8 @@ def run_pass_retention_cleanup_for_shelter(shelter: str) -> dict[str, int | str]
             "deleted": 0,
         }
 
-    expire_overdue_approved_passes_for_shelter(normalized)
     backfilled = backfill_missing_delete_after_at_for_shelter(normalized)
+    expire_overdue_approved_passes_for_shelter(normalized)
     deleted = delete_expired_passes_for_shelter(normalized)
 
     return {
