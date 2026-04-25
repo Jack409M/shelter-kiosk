@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from flask import g
@@ -189,7 +189,7 @@ def _child_age_from_birth_year(birth_year: Any) -> float | None:
     except Exception:
         return None
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     age = now.year - year
     if age < 0:
         return None
