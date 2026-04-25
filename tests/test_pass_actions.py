@@ -193,6 +193,7 @@ def test_deny_pass_sets_denied(app, client):
     from core.db import db_execute, db_fetchone
 
     _login_staff(client)
+    _set_csrf(client)
 
     with app.app_context():
         init_db()
@@ -267,6 +268,7 @@ def test_deny_pass_with_shelter_mismatch_does_not_deny(app, client):
     from core.db import db_execute, db_fetchone
 
     _login_staff(client)
+    _set_csrf(client)
 
     with client.session_transaction() as session:
         session["shelter"] = "haven"
@@ -319,6 +321,7 @@ def test_deny_nonexistent_pass_is_safe(app, client):
     from core.db import db_fetchone
 
     _login_staff(client)
+    _set_csrf(client)
 
     with app.app_context():
         init_db()
@@ -354,6 +357,7 @@ def test_check_in_creates_attendance_event(app, client):
     from core.db import db_execute, db_fetchone
 
     _login_staff(client)
+    _set_csrf(client)
 
     with app.app_context():
         init_db()
@@ -412,6 +416,7 @@ def test_sms_failure_does_not_break_approval(app, client, monkeypatch):
     from core.db import db_execute, db_fetchone
 
     _login_staff(client)
+    _set_csrf(client)
 
     def fail_sms(*args, **kwargs):
         raise Exception("sms failure")
