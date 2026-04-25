@@ -8,6 +8,7 @@ import contextlib
 import secrets
 
 from core.db import db_execute, db_fetchall, db_fetchone
+
 from .schema_helpers import create_table, safe_add_column
 
 
