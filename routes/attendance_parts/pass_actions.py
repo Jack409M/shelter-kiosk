@@ -6,6 +6,7 @@ from flask import abort, redirect, url_for
 
 from core.audit import log_action
 from core.db import db_fetchone
+from core.sms_sender import send_sms  # restored module contract for tests and monkeypatching
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
     apply_pass_approval,
@@ -129,6 +130,7 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_nam
         send_approval_sms_if_possible(pass_id, shelter)
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
     log_action("pass", resident_id, shelter, staff_id, "approve", {"pass_id": pass_id})
