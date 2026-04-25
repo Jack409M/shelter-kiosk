@@ -1,0 +1,39 @@
+name: Daily Repository Snapshot
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-repository-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Create or update daily snapshot branch
+        run: |
+          set -euo pipefail
+          snapshot_branch="snapshot/main-$(date -u +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git switch -c "$snapshot_branch"
+          git push --force-with-lease origin "$snapshot_branch"
+
+      - name: Write recovery note
+        run: |
+          set -euo pipefail
+          echo "Created snapshot branch for $(date -u +%Y-%m-%d)."
+          echo "Restore example: git fetch origin && git checkout snapshot/main-$(date -u +%Y-%m-%d) -- path/to/file.py"
