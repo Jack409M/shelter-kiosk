@@ -46,8 +46,7 @@ def _run_git(args: list[str], *, check: bool = True) -> str:
         cwd=PROJECT_ROOT,
         check=False,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     if check and result.returncode != 0:
         raise RuntimeError(
@@ -78,8 +77,7 @@ def _git_file_text(ref: str, path: str) -> str | None:
         cwd=PROJECT_ROOT,
         check=False,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     if result.returncode != 0:
         return None

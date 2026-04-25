@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import importlib
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -428,10 +429,7 @@ def _log_action_details_payload_is_structured(call: ast.Call) -> bool:
     if isinstance(details_node, ast.Call):
         return True
 
-    if isinstance(details_node, ast.Name):
-        return True
-
-    return False
+    return isinstance(details_node, ast.Name)
 
 
 def _unstructured_log_action_allowed(relative_path: str, line_number: int) -> bool:
@@ -508,9 +506,8 @@ def _contextlib_suppress_exception_allowed(relative_path: str, line_number: int 
     if relative_path in ALLOWED_CONTEXTLIB_SUPPRESS_EXCEPTION_FILES:
         return True
 
-    if line_number is not None:
-        if (relative_path, line_number) in BASELINED_CONTEXTLIB_SUPPRESS_EXCEPTION_LOCATIONS:
-            return True
+    if line_number is not None and (relative_path, line_number) in BASELINED_CONTEXTLIB_SUPPRESS_EXCEPTION_LOCATIONS:
+        return True
 
     return any(
         relative_path.startswith(prefix)
@@ -580,9 +577,12 @@ def test_no_ai_rewrite_placeholder_or_silent_failure_patterns_in_production_code
             continue
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
-                if node.value.value is Ellipsis:
-                    failures.append(f"{relative_path}:{node.lineno}: contains ellipsis placeholder statement")
+            if (
+                isinstance(node, ast.Expr)
+                and isinstance(node.value, ast.Constant)
+                and node.value.value is Ellipsis
+            ):
+                failures.append(f"{relative_path}:{node.lineno}: contains ellipsis placeholder statement")
 
             if isinstance(node, ast.Raise):
                 raised_node = node.exc.func if isinstance(node.exc, ast.Call) else node.exc
@@ -590,23 +590,28 @@ def test_no_ai_rewrite_placeholder_or_silent_failure_patterns_in_production_code
                     failures.append(f"{relative_path}:{node.lineno}: raises NotImplementedError in production code")
 
             if isinstance(node, ast.ExceptHandler) and _is_exception_name(node.type):
-                if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
-                    if not _bare_exception_pass_allowed(relative_path, node.lineno):
-                        failures.append(f"{relative_path}:{node.lineno}: contains bare except Exception: pass outside baseline")
+                if (
+                    len(node.body) == 1
+                    and isinstance(node.body[0], ast.Pass)
+                    and not _bare_exception_pass_allowed(relative_path, node.lineno)
+                ):
+                    failures.append(f"{relative_path}:{node.lineno}: contains bare except Exception: pass outside baseline")
 
-                if not _exception_handler_logs_or_reraises(node):
-                    if not _broad_exception_without_log_or_reraise_allowed(relative_path, node.lineno):
-                        failures.append(
-                            f"{relative_path}:{node.lineno}: broad except Exception must log or re-raise"
-                        )
+                if not _exception_handler_logs_or_reraises(
+                    node
+                ) and not _broad_exception_without_log_or_reraise_allowed(relative_path, node.lineno):
+                    failures.append(
+                        f"{relative_path}:{node.lineno}: broad except Exception must log or re-raise"
+                    )
 
             if isinstance(node, ast.With):
                 for item in node.items:
-                    if _is_contextlib_suppress_exception_call(item.context_expr):
-                        if not _contextlib_suppress_exception_allowed(relative_path, node.lineno):
-                            failures.append(
-                                f"{relative_path}:{node.lineno}: uses contextlib.suppress(Exception) outside baseline"
-                            )
+                    if _is_contextlib_suppress_exception_call(
+                        item.context_expr
+                    ) and not _contextlib_suppress_exception_allowed(relative_path, node.lineno):
+                        failures.append(
+                            f"{relative_path}:{node.lineno}: uses contextlib.suppress(Exception) outside baseline"
+                        )
 
     assert failures == []
 
@@ -778,7 +783,7 @@ def test_constraint_failure_rolls_back_prior_successful_writes(app) -> None:
             "CREATE TABLE records (id INTEGER PRIMARY KEY, external_key TEXT NOT NULL UNIQUE, note TEXT NOT NULL)"
         )
 
-        with pytest.raises(Exception), core_db.db_transaction():
+        with pytest.raises(sqlite3.IntegrityError), core_db.db_transaction():
             core_db.db_execute(
                 "INSERT INTO records (external_key, note) VALUES (%s, %s)",
                 ("same-key", "first write should roll back"),
