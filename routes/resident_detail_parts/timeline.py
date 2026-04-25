@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from core.db import db_fetchall
 
@@ -275,7 +275,7 @@ def parse_anchor_date(value: str | None) -> date:
             return datetime.strptime(text, "%Y-%m-%d").date()
         except ValueError:
             pass
-    return datetime.utcnow().date()
+    return datetime.now(UTC).date()
 
 
 def start_of_week(value: date) -> date:
@@ -365,7 +365,7 @@ def build_calendar_context(timeline, selected_view: str, anchor: date):
     for event in events:
         events_by_date.setdefault(event["event_date"], []).append(event)
 
-    today = datetime.utcnow().date()
+    today = datetime.now(UTC).date()
     month_names = [
         (1, "January"),
         (2, "February"),
