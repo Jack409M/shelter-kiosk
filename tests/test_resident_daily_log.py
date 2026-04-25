@@ -4,6 +4,9 @@ from core.db import db_execute, db_fetchone
 from core.runtime import init_db
 
 
+TEST_TIMESTAMP = "2026-01-01T00:00:00"
+
+
 def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
     with client.session_transaction() as session:
         session["_csrf_token"] = token
@@ -16,10 +19,10 @@ def _insert_resident(app):
         db_execute("DELETE FROM residents")
         db_execute(
             """
-            INSERT INTO residents (shelter, resident_identifier, resident_code, first_name, last_name, program_level, is_active)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO residents (shelter, resident_identifier, resident_code, first_name, last_name, program_level, is_active, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
-            ("abba", "R1", "12345678", "Test", "User", "5", True),
+            ("abba", "R1", "12345678", "Test", "User", "5", True, TEST_TIMESTAMP),
         )
         row = db_fetchone("SELECT id FROM residents LIMIT 1")
         return int(row["id"])
