@@ -40,7 +40,8 @@ def ensure_residents_table(kind: str) -> None:
             level_start_date TEXT,
             step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            updated_at TEXT
         )
         """,
         """
@@ -64,7 +65,8 @@ def ensure_residents_table(kind: str) -> None:
             level_start_date TEXT,
             step_changed_at TEXT,
             is_active BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT
         )
         """,
     )
@@ -85,11 +87,15 @@ def ensure_resident_profile_columns(kind: str) -> None:
         "program_level TEXT",
         "level_start_date TEXT",
         "step_changed_at TEXT",
+        "updated_at TEXT",
     ]
 
     for column_sql in columns:
         with contextlib.suppress(Exception):
             safe_add_column(kind, "residents", column_sql)
+
+    with contextlib.suppress(Exception):
+        db_execute("UPDATE residents SET updated_at = created_at WHERE updated_at IS NULL")
 
 
 def ensure_resident_code_schema(kind: str) -> None:
