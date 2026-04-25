@@ -13,6 +13,10 @@ from core.sms_sender import send_sms
 from routes.attendance_parts.helpers import complete_active_passes
 
 
+class PassLifecycleTransitionError(RuntimeError):
+    """Raised when a guarded pass status transition does not land."""
+
+
 def _sql(pg: str, sqlite: str) -> str:
     return pg if g.get("db_kind") == "pg" else sqlite
 
@@ -43,6 +47,68 @@ def _safe_int(value: object) -> int | None:
 
 def _digits_only(value: object) -> str:
     return "".join(ch for ch in str(value or "") if ch.isdigit())
+
+
+def _load_pass_status(pass_id: int, shelter: str, resident_id: int | None = None) -> str:
+    if resident_id is None:
+        row = db_fetchone(
+            _sql(
+                """
+                SELECT status
+                FROM resident_passes
+                WHERE id = %s
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                LIMIT 1
+                """,
+                """
+                SELECT status
+                FROM resident_passes
+                WHERE id = ?
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                LIMIT 1
+                """,
+            ),
+            (pass_id, shelter),
+        )
+    else:
+        row = db_fetchone(
+            _sql(
+                """
+                SELECT status
+                FROM resident_passes
+                WHERE id = %s
+                  AND resident_id = %s
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+                LIMIT 1
+                """,
+                """
+                SELECT status
+                FROM resident_passes
+                WHERE id = ?
+                  AND resident_id = ?
+                  AND LOWER(TRIM(shelter)) = LOWER(TRIM(?))
+                LIMIT 1
+                """,
+            ),
+            (pass_id, resident_id, shelter),
+        )
+
+    return _normalized_status((row or {}).get("status"))
+
+
+def _require_landed_status(
+    *,
+    pass_id: int,
+    shelter: str,
+    expected_status: str,
+    resident_id: int | None = None,
+) -> None:
+    actual_status = _load_pass_status(pass_id, shelter, resident_id)
+    if actual_status != expected_status:
+        raise PassLifecycleTransitionError(
+            "Pass lifecycle transition failed "
+            f"pass_id={pass_id} expected_status={expected_status} actual_status={actual_status or 'missing'}"
+        )
 
 
 def insert_resident_notification(
@@ -340,6 +406,12 @@ def apply_pass_approval(
             ),
             ("approved", staff_id, now_iso, delete_after_at, now_iso, pass_id, shelter),
         )
+        _require_landed_status(
+            pass_id=pass_id,
+            shelter=shelter,
+            resident_id=resident_id,
+            expected_status="approved",
+        )
 
         db_execute(
             _sql(
@@ -409,6 +481,12 @@ def apply_pass_denial(
                 """,
             ),
             ("denied", staff_id, now_iso, now_iso, pass_id, shelter),
+        )
+        _require_landed_status(
+            pass_id=pass_id,
+            shelter=shelter,
+            resident_id=resident_id,
+            expected_status="denied",
         )
 
         db_execute(
@@ -563,6 +641,12 @@ def apply_pass_check_in(
                 """,
             ),
             ("completed", now_iso, delete_after_at, pass_id, resident_id, shelter),
+        )
+        _require_landed_status(
+            pass_id=pass_id,
+            shelter=shelter,
+            resident_id=resident_id,
+            expected_status="completed",
         )
 
         complete_active_passes(resident_id, shelter)
