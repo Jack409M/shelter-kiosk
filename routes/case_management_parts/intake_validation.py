@@ -21,8 +21,11 @@ type DbRow = dict[str, Any]
 
 
 class IntakeFormLike(Protocol):
-    def get(self, key: str, default: Any = None) -> Any: ...
-    def getlist(self, key: str) -> list[Any]: ...
+    def get(self, key: str, default: Any = None) -> Any:
+        pass
+
+    def getlist(self, key: str) -> list[Any]:
+        pass
 
 
 def _form_getlist(form: IntakeFormLike, key: str) -> list[Any]:
