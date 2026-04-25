@@ -101,7 +101,7 @@
     <input type="hidden" name="next" value="{{ next or '' }}">
 
     <div class="housing-transfer-grid form-grid">
-      <div class="housing-transfer-field form-field">
+      <div class="housing-transfer-field form-field field-width-md">
         <label for="to_shelter" class="form-label">Destination shelter</label>
         <select id="to_shelter" name="to_shelter" required>
           <option value="">Select shelter</option>
@@ -114,7 +114,7 @@
         </div>
       </div>
 
-      <div class="housing-transfer-field form-field" id="apartment-number-wrap">
+      <div class="housing-transfer-field form-field field-width-code" id="apartment-number-wrap">
         <label for="apartment_number" class="form-label">Apartment number</label>
         <select id="apartment_number" name="apartment_number">
           <option value="">Select apartment</option>
@@ -127,7 +127,7 @@
         </div>
       </div>
 
-      <div class="housing-transfer-field form-field full">
+      <div class="housing-transfer-field form-field full field-width-address">
         <label for="note" class="form-label">Note</label>
         <textarea id="note" name="note" rows="4" placeholder="Optional reason or note"></textarea>
       </div>
