@@ -131,10 +131,111 @@
   margin-top: 0;
 }
 
+/* =========================================================
+   Field Width Utilities
+========================================================= */
+.field-width-xs {
+  max-width: 10ch;
+}
+
+.field-width-sm {
+  max-width: 14ch;
+}
+
+.field-width-md {
+  max-width: 20ch;
+}
+
+.field-width-lg {
+  max-width: 28ch;
+}
+
+.field-width-xl {
+  max-width: 40ch;
+}
+
+.field-width-name-first {
+  max-width: 18ch;
+}
+
+.field-width-name-last {
+  max-width: 28ch;
+}
+
+.field-width-name-full {
+  max-width: 42ch;
+}
+
+.field-width-phone {
+  max-width: 16ch;
+}
+
+.field-width-zip {
+  max-width: 10ch;
+}
+
+.field-width-year {
+  max-width: 8ch;
+}
+
+.field-width-date {
+  max-width: 16ch;
+}
+
+.field-width-time {
+  max-width: 12ch;
+}
+
+.field-width-code {
+  max-width: 14ch;
+}
+
+.field-width-email {
+  max-width: 42ch;
+}
+
+.field-width-address {
+  max-width: 56ch;
+}
+
+.field-width-xs input,
+.field-width-xs select,
+.field-width-xs textarea,
+.field-width-sm input,
+.field-width-sm select,
+.field-width-sm textarea,
+.field-width-md input,
+.field-width-md select,
+.field-width-md textarea,
+.field-width-lg input,
+.field-width-lg select,
+.field-width-lg textarea,
+.field-width-xl input,
+.field-width-xl select,
+.field-width-xl textarea,
+.field-width-name-first input,
+.field-width-name-last input,
+.field-width-name-full input,
+.field-width-phone input,
+.field-width-zip input,
+.field-width-year input,
+.field-width-date input,
+.field-width-time input,
+.field-width-code input,
+.field-width-email input,
+.field-width-address input {
+  width: 100%;
+  max-width: 100%;
+}
+
 @media (max-width: 760px) {
   .form-grid,
   .form-grid-3 {
     grid-template-columns: 1fr;
+  }
+
+  .form-field {
+    max-width: 100%;
   }
 }
 
