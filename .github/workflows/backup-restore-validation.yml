@@ -1,0 +1,122 @@
+name: Sanitized Backup Restore Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_url:
+        description: "HTTPS URL for a sanitized .sql or .sql.gz backup file"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sanitized-backup-restore-validation
+  cancel-in-progress: true
+
+jobs:
+  validate-backup-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: backup_restore_test
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/backup_restore_test
+      RESTORE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/backup_restore_test
+
+      FLASK_SECRET_KEY: test-secret-key
+      COOKIE_SECURE: "0"
+      CLOUDFLARE_ONLY: "0"
+      ENABLE_DEBUG_ROUTES: "0"
+      ENABLE_DANGEROUS_ADMIN_ROUTES: "0"
+
+      TWILIO_ENABLED: "0"
+      TWILIO_INBOUND_ENABLED: "0"
+      TWILIO_STATUS_ENABLED: "0"
+
+      PYTHONPATH: .
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Wait for Postgres
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      - name: SAFETY CHECK (never restore to production)
+        run: |
+          set -euo pipefail
+          case "$RESTORE_DATABASE_URL" in
+            *localhost*|*127.0.0.1*)
+              echo "Safe: using disposable CI database"
+              ;;
+            *)
+              echo "ERROR: refusing to restore into non-local database"
+              exit 1
+              ;;
+          esac
+
+      - name: Download sanitized backup
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent "${{ inputs.backup_url }}" -o backup.sql_or_gz
+          test -s backup.sql_or_gz
+
+      - name: Restore backup into disposable DB
+        run: |
+          set -euo pipefail
+          if file backup.sql_or_gz | grep -qi gzip; then
+            gunzip -c backup.sql_or_gz | psql "$RESTORE_DATABASE_URL"
+          else
+            psql "$RESTORE_DATABASE_URL" < backup.sql_or_gz
+          fi
+
+      - name: Validate restored data shape
+        run: |
+          set -euo pipefail
+          psql "$RESTORE_DATABASE_URL" -c "SELECT COUNT(*) FROM residents;"
+          psql "$RESTORE_DATABASE_URL" -c "SELECT COUNT(*) FROM program_enrollments;"
+          psql "$RESTORE_DATABASE_URL" -c "SELECT COUNT(*) FROM intake_assessments;"
+          psql "$RESTORE_DATABASE_URL" -c "SELECT COUNT(*) FROM resident_passes;"
+
+      - name: Run full test suite against restored DB
+        run: |
+          set -euo pipefail
+          pytest -q
