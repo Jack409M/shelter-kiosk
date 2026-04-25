@@ -1,0 +1,85 @@
+name: Restore Verification
+
+on:
+  schedule:
+    - cron: "0 10 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: restore-verification
+  cancel-in-progress: true
+
+jobs:
+  verify-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: restore_test
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/restore_test
+      FLASK_SECRET_KEY: test-secret-key
+      COOKIE_SECURE: "0"
+      CLOUDFLARE_ONLY: "0"
+      ENABLE_DEBUG_ROUTES: "0"
+      ENABLE_DANGEROUS_ADMIN_ROUTES: "0"
+      TWILIO_ENABLED: "0"
+      TWILIO_INBOUND_ENABLED: "0"
+      TWILIO_STATUS_ENABLED: "0"
+      PYTHONPATH: .
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Wait for Postgres
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      - name: Initialize database
+        run: |
+          set -euo pipefail
+          python -c "from core.runtime import init_db; from core.app_factory import create_app; app=create_app();\
+with app.app_context(): init_db()"
+
+      - name: Run full test suite
+        run: |
+          set -euo pipefail
+          pytest -q
