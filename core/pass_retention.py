@@ -35,6 +35,75 @@ def cleanup_deadline_from_expected_back(end_at: str | None, end_date: str | None
     return None
 
 
+def _expected_back_deadline(end_at: str | None, end_date: str | None) -> str | None:
+    raw_end_at = (end_at or "").strip()
+    if raw_end_at:
+        try:
+            return datetime.fromisoformat(raw_end_at).isoformat(timespec="seconds")
+        except Exception:
+            return None
+
+    raw_end_date = (end_date or "").strip()
+    if raw_end_date:
+        try:
+            local_dt = datetime.combine(
+                datetime.fromisoformat(raw_end_date).date(),
+                time(hour=23, minute=59, second=59),
+                tzinfo=CHICAGO_TZ,
+            )
+            utc_dt = local_dt.astimezone(UTC).replace(tzinfo=None)
+            return utc_dt.isoformat(timespec="seconds")
+        except Exception:
+            return None
+
+    return None
+
+
+def expire_overdue_approved_passes_for_shelter(shelter: str) -> int:
+    now_iso = utcnow_iso()
+    rows = db_fetchall(
+        """
+        SELECT id, end_at, end_date
+        FROM resident_passes
+        WHERE LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+          AND LOWER(TRIM(status)) = 'approved'
+          AND (
+                end_at IS NOT NULL
+             OR end_date IS NOT NULL
+          )
+        """,
+        (shelter,),
+    )
+
+    expired_count = 0
+
+    for row in rows:
+        expected_back_at = _expected_back_deadline(row.get("end_at"), row.get("end_date"))
+        if not expected_back_at or expected_back_at > now_iso:
+            continue
+
+        delete_after_at = cleanup_deadline_from_expected_back(
+            row.get("end_at"),
+            row.get("end_date"),
+        )
+
+        db_execute(
+            """
+            UPDATE resident_passes
+            SET status = %s,
+                updated_at = %s,
+                delete_after_at = COALESCE(delete_after_at, %s)
+            WHERE id = %s
+              AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+              AND LOWER(TRIM(status)) = 'approved'
+            """,
+            ("expired", now_iso, delete_after_at, row["id"], shelter),
+        )
+        expired_count += 1
+
+    return expired_count
+
+
 def backfill_missing_delete_after_at_for_shelter(shelter: str) -> int:
     rows = db_fetchall(
         """
@@ -126,15 +195,18 @@ def run_pass_retention_cleanup_for_shelter(shelter: str) -> dict[str, int | str]
     if not normalized:
         return {
             "shelter": "",
+            "expired": 0,
             "backfilled": 0,
             "deleted": 0,
         }
 
+    expired = expire_overdue_approved_passes_for_shelter(normalized)
     backfilled = backfill_missing_delete_after_at_for_shelter(normalized)
     deleted = delete_expired_passes_for_shelter(normalized)
 
     return {
         "shelter": normalized,
+        "expired": expired,
         "backfilled": backfilled,
         "deleted": deleted,
     }
