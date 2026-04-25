@@ -197,7 +197,7 @@ def ensure_resident_passes_table(kind: str) -> None:
             shelter TEXT NOT NULL CHECK (LENGTH(TRIM(shelter)) > 0),
             pass_type TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending'
-                CHECK (status IN ('pending','approved','denied','completed')),
+                CHECK (status IN ('pending','approved','denied','completed','expired')),
             start_at TEXT,
             end_at TEXT,
             start_date TEXT,
@@ -221,7 +221,7 @@ def ensure_resident_passes_table(kind: str) -> None:
             shelter TEXT NOT NULL CHECK (LENGTH(TRIM(shelter)) > 0),
             pass_type TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending'
-                CHECK (status IN ('pending','approved','denied','completed')),
+                CHECK (status IN ('pending','approved','denied','completed','expired')),
             start_at TEXT,
             end_at TEXT,
             start_date TEXT,
