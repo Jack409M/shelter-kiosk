@@ -54,6 +54,22 @@ LOGGING_METHOD_NAMES = {
     "info",
     "warning",
 }
+AUDIT_FUNCTION_NAMES = {
+    "log_action",
+    "audit_action",
+    "write_audit_log",
+}
+STATE_CHANGE_SQL_VERBS = {
+    "insert",
+    "update",
+    "delete",
+}
+MUTATING_ROUTE_METHODS = {
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+}
 ALLOWED_CONTEXTLIB_SUPPRESS_EXCEPTION_PREFIXES = (
     "db/schema",
 )
@@ -98,6 +114,7 @@ BASELINED_BARE_EXCEPTION_PASS_LOCATIONS = {
     ("db/schema_requests.py", 379),
 }
 BASELINED_BROAD_EXCEPTION_WITHOUT_LOG_OR_RERAISE_LOCATIONS = BASELINED_BARE_EXCEPTION_PASS_LOCATIONS
+BASELINED_ROUTE_STATE_CHANGE_WITHOUT_AUDIT_LOCATIONS: set[tuple[str, str, int]] = set()
 
 
 def _production_python_files() -> list[Path]:
@@ -105,6 +122,10 @@ def _production_python_files() -> list[Path]:
     for root in PRODUCTION_PYTHON_ROOTS:
         files.extend(sorted(root.rglob("*.py")))
     return files
+
+
+def _route_python_files() -> list[Path]:
+    return sorted((PROJECT_ROOT / "routes").rglob("*.py"))
 
 
 def _is_exception_name(node: ast.AST | None) -> bool:
@@ -173,6 +194,94 @@ def _exception_handler_logs_or_reraises(node: ast.ExceptHandler) -> bool:
         if isinstance(child, ast.Call) and _call_looks_like_logging(child):
             return True
     return False
+
+
+def _literal_string_value(node: ast.AST) -> str:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        return " ".join(
+            value.value for value in node.values if isinstance(value, ast.Constant) and isinstance(value.value, str)
+        )
+    return ""
+
+
+def _call_is_audit_call(call: ast.Call) -> bool:
+    call_name = _call_name(call.func)
+    if not call_name:
+        return False
+
+    final_name = call_name.rsplit(".", 1)[-1]
+    if final_name in AUDIT_FUNCTION_NAMES:
+        return True
+
+    return "audit" in call_name.lower()
+
+
+def _call_is_direct_state_change(call: ast.Call) -> bool:
+    call_name = _call_name(call.func)
+    if call_name.rsplit(".", 1)[-1] != "db_execute":
+        return False
+
+    if not call.args:
+        return False
+
+    sql_text = _literal_string_value(call.args[0]).strip().lower()
+    if not sql_text:
+        return False
+
+    return any(sql_text.startswith(verb) for verb in STATE_CHANGE_SQL_VERBS)
+
+
+def _route_methods_from_decorator(decorator: ast.AST) -> set[str]:
+    call = decorator if isinstance(decorator, ast.Call) else None
+    func = call.func if call else decorator
+    decorator_name = _call_name(func)
+    final_name = decorator_name.rsplit(".", 1)[-1]
+
+    if final_name in {"post", "put", "patch", "delete"}:
+        return {final_name.upper()}
+
+    if final_name != "route" or call is None:
+        return set()
+
+    for keyword in call.keywords:
+        if keyword.arg != "methods":
+            continue
+        if isinstance(keyword.value, ast.List | ast.Tuple | ast.Set):
+            methods: set[str] = set()
+            for item in keyword.value.elts:
+                method = _literal_string_value(item).strip().upper()
+                if method:
+                    methods.add(method)
+            return methods
+
+    return {"GET"}
+
+
+def _function_route_methods(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
+    methods: set[str] = set()
+    for decorator in function_node.decorator_list:
+        methods.update(_route_methods_from_decorator(decorator))
+    return methods
+
+
+def _function_has_direct_state_change(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    return any(
+        isinstance(node, ast.Call) and _call_is_direct_state_change(node)
+        for node in ast.walk(function_node)
+    )
+
+
+def _function_has_audit_call(function_node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    return any(
+        isinstance(node, ast.Call) and _call_is_audit_call(node)
+        for node in ast.walk(function_node)
+    )
+
+
+def _route_state_change_without_audit_allowed(relative_path: str, function_name: str, line_number: int) -> bool:
+    return (relative_path, function_name, line_number) in BASELINED_ROUTE_STATE_CHANGE_WITHOUT_AUDIT_LOCATIONS
 
 
 def _contextlib_suppress_exception_allowed(relative_path: str, line_number: int | None = None) -> bool:
@@ -278,6 +387,42 @@ def test_no_ai_rewrite_placeholder_or_silent_failure_patterns_in_production_code
                             failures.append(
                                 f"{relative_path}:{node.lineno}: uses contextlib.suppress(Exception) outside baseline"
                             )
+
+    assert failures == []
+
+
+def test_direct_mutating_route_handlers_have_audit_logging() -> None:
+    failures: list[str] = []
+
+    for path in _route_python_files():
+        relative_path = str(path.relative_to(PROJECT_ROOT))
+        text = path.read_text(encoding="utf-8")
+
+        try:
+            tree = ast.parse(text, filename=relative_path)
+        except SyntaxError:
+            continue
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                continue
+
+            methods = _function_route_methods(node)
+            if not methods.intersection(MUTATING_ROUTE_METHODS):
+                continue
+
+            if not _function_has_direct_state_change(node):
+                continue
+
+            if _function_has_audit_call(node):
+                continue
+
+            if _route_state_change_without_audit_allowed(relative_path, node.name, node.lineno):
+                continue
+
+            failures.append(
+                f"{relative_path}:{node.lineno}: {node.name} directly changes state without audit logging"
+            )
 
     assert failures == []
 
