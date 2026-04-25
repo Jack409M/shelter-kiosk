@@ -46,6 +46,7 @@ def _hydrate_pass_row(row: dict[str, Any]) -> dict[str, Any]:
     item["end_at_local"] = to_local(item.get("end_at"))
     item["created_at_local"] = to_local(item.get("created_at"))
     item["approved_at_local"] = to_local(item.get("approved_at"))
+    item["updated_at_local"] = to_local(item.get("updated_at"))
     item["pass_type_label"] = pass_type_label(item.get("pass_type"))
 
     end_at_text = _clean_text(item.get("end_at"))
@@ -131,7 +132,8 @@ def fetch_approved_pass_rows(shelter: str) -> list[dict[str, Any]]:
                 rp.destination,
                 rp.reason,
                 rp.created_at,
-                rp.approved_at
+                rp.approved_at,
+                rp.updated_at
             FROM resident_passes rp
             JOIN residents r ON r.id = rp.resident_id
             WHERE rp.status = 'approved'
@@ -153,7 +155,8 @@ def fetch_approved_pass_rows(shelter: str) -> list[dict[str, Any]]:
                 rp.destination,
                 rp.reason,
                 rp.created_at,
-                rp.approved_at
+                rp.approved_at,
+                rp.updated_at
             FROM resident_passes rp
             JOIN residents r ON r.id = rp.resident_id
             WHERE rp.status = 'approved'
@@ -188,6 +191,7 @@ def fetch_current_pass_rows(shelter: str) -> list[dict[str, Any]]:
                 rp.reason,
                 rp.created_at,
                 rp.approved_at,
+                rp.updated_at,
                 r.first_name,
                 r.last_name
             FROM resident_passes rp
@@ -215,6 +219,7 @@ def fetch_current_pass_rows(shelter: str) -> list[dict[str, Any]]:
                 rp.reason,
                 rp.created_at,
                 rp.approved_at,
+                rp.updated_at,
                 r.first_name,
                 r.last_name
             FROM resident_passes rp
@@ -229,6 +234,64 @@ def fetch_current_pass_rows(shelter: str) -> list[dict[str, Any]]:
             """,
         ),
         (shelter, now_iso, now_iso, today_iso, today_iso),
+    )
+
+    return _hydrate_rows(rows)
+
+
+def fetch_expired_pass_rows(shelter: str) -> list[dict[str, Any]]:
+    rows = db_fetchall(
+        _sql(
+            """
+            SELECT
+                rp.id,
+                rp.resident_id,
+                rp.shelter,
+                rp.pass_type,
+                rp.status,
+                rp.start_at,
+                rp.end_at,
+                rp.start_date,
+                rp.end_date,
+                rp.destination,
+                rp.reason,
+                rp.created_at,
+                rp.approved_at,
+                rp.updated_at,
+                r.first_name,
+                r.last_name
+            FROM resident_passes rp
+            JOIN residents r ON r.id = rp.resident_id
+            WHERE rp.status = 'expired'
+              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(%s))
+            ORDER BY rp.updated_at DESC, rp.created_at DESC
+            """,
+            """
+            SELECT
+                rp.id,
+                rp.resident_id,
+                rp.shelter,
+                rp.pass_type,
+                rp.status,
+                rp.start_at,
+                rp.end_at,
+                rp.start_date,
+                rp.end_date,
+                rp.destination,
+                rp.reason,
+                rp.created_at,
+                rp.approved_at,
+                rp.updated_at,
+                r.first_name,
+                r.last_name
+            FROM resident_passes rp
+            JOIN residents r ON r.id = rp.resident_id
+            WHERE rp.status = 'expired'
+              AND LOWER(TRIM(rp.shelter)) = LOWER(TRIM(?))
+            ORDER BY rp.updated_at DESC, rp.created_at DESC
+            """,
+        ),
+        (shelter,),
     )
 
     return _hydrate_rows(rows)
