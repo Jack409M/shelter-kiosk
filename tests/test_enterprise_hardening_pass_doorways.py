@@ -7,6 +7,9 @@ import pytest
 from core.runtime import init_db
 
 
+TEST_TIMESTAMP = "2026-01-01T00:00:00"
+
+
 def _login_staff(client, *, role: str = "case_manager", shelter: str = "abba") -> None:
     with client.session_transaction() as session:
         session["staff_user_id"] = 1
@@ -19,8 +22,8 @@ def _login_staff(client, *, role: str = "case_manager", shelter: str = "abba") -
 def _seed_resident(db_execute, *, resident_id: int, shelter: str = "abba") -> None:
     db_execute("DELETE FROM residents WHERE id = %s", (resident_id,))
     db_execute(
-        "INSERT INTO residents (id, first_name, last_name, shelter) VALUES (%s, %s, %s, %s)",
-        (resident_id, "Hardening", f"User{resident_id}", shelter),
+        "INSERT INTO residents (id, first_name, last_name, shelter, created_at) VALUES (%s, %s, %s, %s, %s)",
+        (resident_id, "Hardening", f"User{resident_id}", shelter, TEST_TIMESTAMP),
     )
 
 
