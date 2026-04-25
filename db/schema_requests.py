@@ -251,7 +251,7 @@ def ensure_resident_passes_columns(kind: str) -> None:
                 db_execute(f"ALTER TABLE resident_passes ADD COLUMN IF NOT EXISTS {column_def}")
             else:
                 db_execute(f"ALTER TABLE resident_passes ADD COLUMN {column_def}")
-        except Exception as e:
+        except Exception:
             from flask import current_app
             current_app.logger.exception("auto-logged exception")
 
@@ -377,7 +377,7 @@ def ensure_resident_pass_request_details_columns(kind: str) -> None:
                 )
             else:
                 db_execute(f"ALTER TABLE resident_pass_request_details ADD COLUMN {column_def}")
-        except Exception as e:
+        except Exception:
             from flask import current_app
             current_app.logger.exception("auto-logged exception")
 

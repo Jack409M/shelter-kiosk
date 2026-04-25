@@ -5,7 +5,6 @@ from pathlib import Path
 
 from core.runtime import init_db
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CRITICAL_FILE_MIN_LINES = {
     "core/app_factory.py": 200,

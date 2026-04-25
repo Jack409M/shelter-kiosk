@@ -3,10 +3,10 @@ from datetime import date, datetime, timedelta
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
+from core.audit import log_action
 from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
-from core.audit import log_action
 
 shelter_operations = Blueprint(
     "shelter_operations",

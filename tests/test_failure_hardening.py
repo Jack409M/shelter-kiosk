@@ -9,7 +9,6 @@ import pytest
 from core import db as core_db
 from core.helpers import utcnow_iso
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PRODUCTION_PYTHON_ROOTS = (
     PROJECT_ROOT / "core",
@@ -846,18 +845,17 @@ def test_nested_failure_rolls_back_outer_transaction(app) -> None:
     with app.app_context():
         core_db.db_execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
 
-        with pytest.raises(RuntimeError, match="nested failure"):
+        with pytest.raises(RuntimeError, match="nested failure"), core_db.db_transaction():
+            core_db.db_execute(
+                "INSERT INTO items (name) VALUES (%s)",
+                ("outer write",),
+            )
             with core_db.db_transaction():
                 core_db.db_execute(
                     "INSERT INTO items (name) VALUES (%s)",
-                    ("outer write",),
+                    ("inner write",),
                 )
-                with core_db.db_transaction():
-                    core_db.db_execute(
-                        "INSERT INTO items (name) VALUES (%s)",
-                        ("inner write",),
-                    )
-                    raise RuntimeError("nested failure")
+                raise RuntimeError("nested failure")
 
         rows = core_db.db_fetchall("SELECT id, name FROM items ORDER BY id")
 

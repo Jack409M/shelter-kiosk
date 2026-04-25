@@ -482,7 +482,7 @@ def ensure_resident_code_schema(kind: str) -> None:
             db_execute("ALTER TABLE residents ADD COLUMN IF NOT EXISTS resident_code TEXT")
         else:
             db_execute("ALTER TABLE residents ADD COLUMN resident_code TEXT")
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 

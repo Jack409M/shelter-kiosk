@@ -154,7 +154,7 @@ def ensure_intake_assessment_columns(kind: str) -> None:
                         """
                     )
 
-        except Exception as e:
+        except Exception:
             from flask import current_app
             current_app.logger.exception("auto-logged exception")
 
@@ -196,7 +196,7 @@ def ensure_intake_assessment_columns(kind: str) -> None:
             with contextlib.suppress(Exception):
                 db_execute(sql)
 
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 
@@ -315,7 +315,7 @@ def ensure_exit_assessment_columns(kind: str) -> None:
             with contextlib.suppress(Exception):
                 db_execute(sql)
 
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 
@@ -422,7 +422,7 @@ def ensure_indexes() -> None:
             ON intake_assessments (enrollment_id)
             """
         )
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 
@@ -441,7 +441,7 @@ def ensure_indexes() -> None:
             ON family_snapshots (enrollment_id)
             """
         )
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 
@@ -454,7 +454,7 @@ def ensure_indexes() -> None:
             ON exit_assessments (enrollment_id)
             """
         )
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 
@@ -467,7 +467,7 @@ def ensure_indexes() -> None:
             ON followups (enrollment_id)
             """
         )
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 
@@ -480,7 +480,7 @@ def ensure_indexes() -> None:
             ON followups (enrollment_id, followup_type)
             """
         )
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 

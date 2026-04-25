@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import abort, flash, redirect, url_for
+from flask import abort, redirect, url_for
 
 from core.audit import log_action
 from core.db import db_fetchone
-from core.sms_sender import send_sms  # restore for tests
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
     apply_pass_approval,
@@ -128,7 +127,7 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_nam
 
     try:
         send_approval_sms_if_possible(pass_id, shelter)
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 

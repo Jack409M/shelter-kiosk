@@ -86,7 +86,7 @@ def ensure_indexes() -> None:
             ON goals (enrollment_id)
             """
         )
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 
@@ -99,7 +99,7 @@ def ensure_indexes() -> None:
             ON appointments (enrollment_id)
             """
         )
-    except Exception as e:
+    except Exception:
         from flask import current_app
         current_app.logger.exception("auto-logged exception")
 
