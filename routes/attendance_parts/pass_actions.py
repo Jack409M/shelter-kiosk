@@ -128,8 +128,9 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_nam
 
     try:
         send_approval_sms_if_possible(pass_id, shelter)
-    except Exception:
-        pass
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception("auto-logged exception")
 
     log_action("pass", resident_id, shelter, staff_id, "approve", {"pass_id": pass_id})
 

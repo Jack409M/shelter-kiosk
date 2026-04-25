@@ -154,8 +154,9 @@ def ensure_intake_assessment_columns(kind: str) -> None:
                         """
                     )
 
-        except Exception:
-            pass
+        except Exception as e:
+            from flask import current_app
+            current_app.logger.exception("auto-logged exception")
 
         statements = [
             "ALTER TABLE intake_assessments ADD COLUMN IF NOT EXISTS city TEXT",
@@ -195,8 +196,9 @@ def ensure_intake_assessment_columns(kind: str) -> None:
             with contextlib.suppress(Exception):
                 db_execute(sql)
 
-    except Exception:
-        pass
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception("auto-logged exception")
 
 
 def ensure_family_snapshots_table(kind: str) -> None:
@@ -313,8 +315,9 @@ def ensure_exit_assessment_columns(kind: str) -> None:
             with contextlib.suppress(Exception):
                 db_execute(sql)
 
-    except Exception:
-        pass
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception("auto-logged exception")
 
 
 def ensure_followups_table(kind: str) -> None:
@@ -419,8 +422,9 @@ def ensure_indexes() -> None:
             ON intake_assessments (enrollment_id)
             """
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception("auto-logged exception")
 
     try:
         from core.db import db_execute
@@ -437,8 +441,9 @@ def ensure_indexes() -> None:
             ON family_snapshots (enrollment_id)
             """
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception("auto-logged exception")
 
     try:
         from core.db import db_execute
@@ -449,8 +454,9 @@ def ensure_indexes() -> None:
             ON exit_assessments (enrollment_id)
             """
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception("auto-logged exception")
 
     try:
         from core.db import db_execute
@@ -461,8 +467,9 @@ def ensure_indexes() -> None:
             ON followups (enrollment_id)
             """
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception("auto-logged exception")
 
     try:
         from core.db import db_execute
@@ -473,8 +480,9 @@ def ensure_indexes() -> None:
             ON followups (enrollment_id, followup_type)
             """
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception("auto-logged exception")
 
 
 def ensure_tables(kind: str) -> None:
