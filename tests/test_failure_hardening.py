@@ -59,6 +59,13 @@ AUDIT_FUNCTION_NAMES = {
     "audit_action",
     "write_audit_log",
 }
+LOG_ACTION_REQUIRED_ARGUMENTS = (
+    "entity_type",
+    "entity_id",
+    "shelter",
+    "staff_user_id",
+    "action_type",
+)
 STATE_CHANGE_SQL_VERBS = {
     "insert",
     "update",
@@ -115,6 +122,7 @@ BASELINED_BARE_EXCEPTION_PASS_LOCATIONS = {
 }
 BASELINED_BROAD_EXCEPTION_WITHOUT_LOG_OR_RERAISE_LOCATIONS = BASELINED_BARE_EXCEPTION_PASS_LOCATIONS
 BASELINED_ROUTE_STATE_CHANGE_WITHOUT_AUDIT_LOCATIONS: set[tuple[str, str, int]] = set()
+BASELINED_UNSTRUCTURED_LOG_ACTION_LOCATIONS: set[tuple[str, int]] = set()
 
 
 def _production_python_files() -> list[Path]:
@@ -216,6 +224,52 @@ def _call_is_audit_call(call: ast.Call) -> bool:
         return True
 
     return "audit" in call_name.lower()
+
+
+def _call_is_log_action(call: ast.Call) -> bool:
+    return _call_name(call.func).rsplit(".", 1)[-1] == "log_action"
+
+
+def _log_action_argument(call: ast.Call, index: int, name: str) -> ast.AST | None:
+    for keyword in call.keywords:
+        if keyword.arg == name:
+            return keyword.value
+
+    if len(call.args) > index:
+        return call.args[index]
+
+    return None
+
+
+def _log_action_required_identity_fields_present(call: ast.Call) -> bool:
+    for index, name in enumerate(LOG_ACTION_REQUIRED_ARGUMENTS):
+        if _log_action_argument(call, index, name) is None:
+            return False
+    return True
+
+
+def _log_action_details_payload_is_structured(call: ast.Call) -> bool:
+    details_node = _log_action_argument(call, 5, "details")
+    if details_node is None:
+        return True
+
+    if isinstance(details_node, ast.Constant):
+        return details_node.value in (None, "")
+
+    if isinstance(details_node, ast.Dict):
+        return True
+
+    if isinstance(details_node, ast.Call):
+        return True
+
+    if isinstance(details_node, ast.Name):
+        return True
+
+    return False
+
+
+def _unstructured_log_action_allowed(relative_path: str, line_number: int) -> bool:
+    return (relative_path, line_number) in BASELINED_UNSTRUCTURED_LOG_ACTION_LOCATIONS
 
 
 def _call_is_direct_state_change(call: ast.Call) -> bool:
@@ -387,6 +441,39 @@ def test_no_ai_rewrite_placeholder_or_silent_failure_patterns_in_production_code
                             failures.append(
                                 f"{relative_path}:{node.lineno}: uses contextlib.suppress(Exception) outside baseline"
                             )
+
+    assert failures == []
+
+
+def test_log_action_calls_use_structured_audit_payloads() -> None:
+    failures: list[str] = []
+
+    for path in _production_python_files():
+        relative_path = str(path.relative_to(PROJECT_ROOT))
+        text = path.read_text(encoding="utf-8")
+
+        try:
+            tree = ast.parse(text, filename=relative_path)
+        except SyntaxError:
+            continue
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not _call_is_log_action(node):
+                continue
+
+            if _unstructured_log_action_allowed(relative_path, node.lineno):
+                continue
+
+            if not _log_action_required_identity_fields_present(node):
+                failures.append(
+                    f"{relative_path}:{node.lineno}: log_action must supply entity_type, entity_id, shelter, staff_user_id, and action_type"
+                )
+                continue
+
+            if not _log_action_details_payload_is_structured(node):
+                failures.append(
+                    f"{relative_path}:{node.lineno}: log_action details must be a dict, mapping variable, call result, None, or empty string"
+                )
 
     assert failures == []
 
