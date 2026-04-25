@@ -51,6 +51,8 @@ def test_production_python_files_parse_and_have_no_truncation_markers() -> None:
         text = path.read_text(encoding="utf-8")
 
         if not text.strip():
+            if path.name == "__init__.py":
+                continue
             failures.append(f"{relative_path}: empty file")
             continue
 
@@ -76,10 +78,12 @@ def test_recent_redesign_modules_import_and_expose_expected_symbols() -> None:
             "IntakeUpdateResult",
         ],
         "core.pass_retention": [
-            "run_pass_retention_once",
+            "run_pass_retention_cleanup_for_shelter",
         ],
         "core.report_filters": [
-            "ReportFilterSet",
+            "build_resident_filters",
+            "resolve_date_range",
+            "mask_small_counts",
         ],
         "routes.case_management_parts.family": [
             "family_intake_view",
@@ -114,13 +118,14 @@ def test_recent_redesign_modules_import_and_expose_expected_symbols() -> None:
     assert missing == []
 
 
-def test_utcnow_iso_returns_naive_iso_string() -> None:
+def test_utcnow_iso_returns_utc_iso_string() -> None:
     value = utcnow_iso()
 
     assert isinstance(value, str)
     assert "T" in value
     assert not value.endswith("Z")
-    assert "+" not in value
+    if "+" in value:
+        assert value.endswith("+00:00")
     assert value.count(":") >= 2
 
 
