@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from flask import current_app, flash, g, redirect, render_template, request, session, url_for
 
@@ -220,7 +220,7 @@ def _upsert_child_income_support(
     child_id: int, support_type: str, monthly_amount, notes: str | None
 ) -> None:
     ph = placeholder()
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(UTC).replace(tzinfo=None).isoformat()
 
     existing = db_fetchone(
         f"""
@@ -392,7 +392,7 @@ def family_intake_view(resident_id: int):
                 "This child already exists for this resident.",
             )
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).replace(tzinfo=None).isoformat()
 
         try:
             with db_transaction():
@@ -577,7 +577,7 @@ def edit_child_view(child_id: int):
                         validated["receives_survivor_benefit"],
                         validated["survivor_benefit_amount"],
                         validated["survivor_benefit_notes"],
-                        datetime.utcnow().isoformat(),
+                        datetime.now(UTC).replace(tzinfo=None).isoformat(),
                         child_id,
                     ),
                 )
@@ -631,7 +631,7 @@ def delete_child_view(child_id: int):
     ph = placeholder()
 
     try:
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).replace(tzinfo=None).isoformat()
 
         with db_transaction():
             db_execute(
@@ -723,7 +723,7 @@ def edit_child_service_view(service_id: int):
                     validated["unit"],
                     validated["notes"],
                     validated["service_date"],
-                    datetime.utcnow().isoformat(),
+                    datetime.now(UTC).replace(tzinfo=None).isoformat(),
                     service_id,
                 ),
             )
@@ -767,7 +767,7 @@ def delete_child_service_view(service_id: int):
     ph = placeholder()
 
     try:
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).replace(tzinfo=None).isoformat()
         db_execute(
             f"""
             UPDATE child_services
@@ -833,7 +833,7 @@ def child_services_view(child_id: int):
                 flash(error, "error")
             return _post_child_service_redirect(child_id, resident_id)
 
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(UTC).replace(tzinfo=None).isoformat()
 
         try:
             db_execute(
