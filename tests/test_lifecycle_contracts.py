@@ -15,6 +15,12 @@ def _set_staff_session(client, *, shelter: str = "abba", role: str = "case_manag
         sess["allowed_shelters"] = ["abba", "haven", "gratitude"]
 
 
+def _set_csrf_token(client, token: str = "test-csrf-token") -> str:
+    with client.session_transaction() as sess:
+        sess["_csrf_token"] = token
+    return token
+
+
 def _copy_client_session_to_request(client) -> None:
     from flask import session
 
@@ -626,7 +632,11 @@ def test_lifecycle_pass_contract_pending_to_approved_to_completed(app, client, m
         pass_id = _insert_pass(resident_id=resident_id, shelter="abba", status="pending")
 
     _set_staff_session(client, shelter="abba")
-    approve_response = client.post(f"/staff/passes/{pass_id}/approve")
+    csrf_token = _set_csrf_token(client)
+    approve_response = client.post(
+        f"/staff/passes/{pass_id}/approve",
+        data={"_csrf_token": csrf_token},
+    )
     assert approve_response.status_code == 302
 
     with app.app_context():
@@ -652,7 +662,10 @@ def test_lifecycle_pass_contract_pending_to_approved_to_completed(app, client, m
         still_approved = db_fetchone("SELECT status FROM resident_passes WHERE id = %s", (pass_id,))
         assert still_approved["status"] == "approved"
 
-    check_in_response = client.post(f"/staff/passes/{pass_id}/check-in")
+    check_in_response = client.post(
+        f"/staff/passes/{pass_id}/check-in",
+        data={"_csrf_token": csrf_token},
+    )
     assert check_in_response.status_code == 302
 
     with app.app_context():
