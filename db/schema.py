@@ -6,6 +6,7 @@ from typing import Final
 from flask import current_app, g, has_app_context
 
 from core.db import db_execute
+from routes.rent_tracking_parts import schema as rent_tracking_schema
 
 from . import (
     NP_schema_placement,
@@ -239,6 +240,7 @@ def _ensure_dependent_domain_tables(kind: str) -> None:
     schema_requests.ensure_tables(kind)
     schema_comms.ensure_tables(kind)
     NP_schema_placement.ensure_tables(kind)
+    rent_tracking_schema._ensure_tables()
 
 
 def _ensure_schema_upgrades(kind: str) -> None:
