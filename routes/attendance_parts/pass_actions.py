@@ -5,6 +5,7 @@ from typing import Any
 from flask import abort, flash, redirect, url_for
 
 from core.audit import log_action
+from core.db import db_fetchone
 from core.sms_sender import send_sms as send_sms
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
@@ -73,6 +74,27 @@ def _check_in_result(pass_row: Any) -> tuple[bool, int | None, str]:
     return True, resident_id, ""
 
 
+def _load_other_active_approved_pass(
+    *,
+    resident_id: int,
+    shelter: str,
+    current_pass_id: int,
+) -> dict[str, Any] | None:
+    return db_fetchone(
+        """
+        SELECT id, pass_type, start_at, end_at, start_date, end_date
+        FROM resident_passes
+        WHERE resident_id = %s
+          AND id <> %s
+          AND LOWER(TRIM(shelter)) = LOWER(TRIM(%s))
+          AND LOWER(TRIM(status)) = 'approved'
+        ORDER BY approved_at DESC, id DESC
+        LIMIT 1
+        """,
+        (resident_id, current_pass_id, shelter),
+    )
+
+
 # -----------------------------------------
 # APPROVE
 # -----------------------------------------
@@ -96,6 +118,20 @@ def approve_pass_request(
             False,
             "attendance.staff_pass_detail",
             f"Pass cannot be approved because resident is under {label}. {detail}".strip(),
+            "error",
+        )
+
+    active_pass = _load_other_active_approved_pass(
+        resident_id=resident_id,
+        shelter=shelter,
+        current_pass_id=pass_id,
+    )
+    if active_pass:
+        return (
+            False,
+            "attendance.staff_passes_pending",
+            "Pass cannot be approved because this resident already has an active approved pass. "
+            "Check the current pass in before approving another pass.",
             "error",
         )
 
