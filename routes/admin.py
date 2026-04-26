@@ -24,6 +24,7 @@ from routes.admin_parts.pass_retention import (
 from routes.admin_parts.sh_dashboard import system_health_dashboard_view, system_health_events_api
 from routes.admin_parts.sh_data_quality import (
     fix_missing_intake_baseline_view,
+    fix_shelter_mismatch_view,
     system_health_data_quality_view,
 )
 from routes.admin_parts.system import (
@@ -83,6 +84,13 @@ def admin_system_health_data_quality():
 @require_shelter
 def admin_fix_missing_intake_baseline(enrollment_id: int):
     return fix_missing_intake_baseline_view(enrollment_id)
+
+
+@admin.post("/staff/admin/system-health/data-quality/fix/shelter-mismatch/<int:enrollment_id>/<string:target>")
+@require_login
+@require_shelter
+def admin_fix_shelter_mismatch(enrollment_id: int, target: str):
+    return fix_shelter_mismatch_view(enrollment_id, target)
 
 
 @admin.post("/staff/admin/security-settings/update")
