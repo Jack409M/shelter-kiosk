@@ -6,7 +6,7 @@ from typing import Any
 
 from flask import current_app, g, has_app_context
 
-from core.db import db_execute, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone
 
 
 def _now_iso() -> str:
@@ -143,4 +143,52 @@ def latest_sh_event_by_status(event_status: str) -> dict[str, Any] | None:
         LIMIT 1
         """,
         (str(event_status or "").strip(),),
+    )
+
+
+def recent_sh_events_by_status(event_status: str, *, limit: int = 50) -> list[dict[str, Any]]:
+    _ensure_sh_events_table()
+
+    safe_limit = max(1, min(int(limit or 50), 100))
+
+    return db_fetchall(
+        """
+        SELECT
+            id,
+            event_type,
+            event_status,
+            event_source,
+            entity_type,
+            entity_id,
+            shelter,
+            staff_user_id,
+            message,
+            metadata,
+            created_at
+        FROM sh_events
+        WHERE event_status = ?
+        ORDER BY created_at DESC, id DESC
+        LIMIT ?
+        """,
+        (str(event_status or "").strip(), safe_limit),
+    )
+
+
+def cleanup_old_sh_events() -> None:
+    _ensure_sh_events_table()
+
+    if _kind() == "pg":
+        db_execute(
+            """
+            DELETE FROM sh_events
+            WHERE created_at < NOW() - INTERVAL '90 days'
+            """
+        )
+        return
+
+    db_execute(
+        """
+        DELETE FROM sh_events
+        WHERE created_at < datetime('now', '-90 days')
+        """
     )
