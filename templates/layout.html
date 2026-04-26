@@ -250,23 +250,34 @@
               </details>
 
               <details class="nav-mobile-section">
-                <summary>Operations</summary>
+                <summary>Housing and Accountability</summary>
                 <div class="nav-mobile-links">
                   {% if placement_dashboard_url %}
                     <a href="{{ placement_dashboard_url }}">Placement Dashboard</a>
                   {% endif %}
-                  {% if chore_board_url %}
-                    <a href="{{ chore_board_url }}">Chores</a>
+                  {% if can_manage_passes %}
+                    <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
                   {% endif %}
-                  <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-                  <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
-                  <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
                   {% if inspection_sheet_url %}
                     <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
                   {% endif %}
                   {% if rent_roll_url %}
                     <a href="{{ rent_roll_url }}">Rent Roll</a>
                   {% endif %}
+                  {% if rent_entry_url and can_admin %}
+                    <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
+                  {% endif %}
+                </div>
+              </details>
+
+              <details class="nav-mobile-section">
+                <summary>Operations</summary>
+                <div class="nav-mobile-links">
+                  {% if chore_board_url %}
+                    <a href="{{ chore_board_url }}">Chores</a>
+                  {% endif %}
+                  <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+                  <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
                 </div>
               </details>
 
@@ -286,9 +297,6 @@
                     <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
                     {% if operations_settings_url %}
                       <a href="{{ operations_settings_url }}">Configurations</a>
-                    {% endif %}
-                    {% if rent_entry_url %}
-                      <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
                     {% endif %}
                     <a href="{{ url_for('admin.admin_users') }}">Users</a>
                     <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
@@ -468,23 +476,34 @@
               {% else %}
 
                 <div class="nav-dd">
-                  <button type="button">Shelter Operations ▾</button>
+                  <button type="button">Housing and Accountability ▾</button>
                   <div class="menu">
                     {% if placement_dashboard_url %}
                       <a href="{{ placement_dashboard_url }}">Placement Dashboard</a>
                     {% endif %}
-                    {% if chore_board_url %}
-                      <a href="{{ chore_board_url }}">Chores</a>
+                    {% if can_manage_passes %}
+                      <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
                     {% endif %}
-                    <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-                    <a href="{{ url_for('attendance.staff_passes_approved') }}">Passes Approved</a>
-                    <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
                     {% if inspection_sheet_url %}
                       <a href="{{ inspection_sheet_url }}">Inspection Sheets</a>
                     {% endif %}
                     {% if rent_roll_url %}
                       <a href="{{ rent_roll_url }}">Rent Roll</a>
                     {% endif %}
+                    {% if rent_entry_url and can_admin %}
+                      <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="nav-dd">
+                  <button type="button">Shelter Operations ▾</button>
+                  <div class="menu">
+                    {% if chore_board_url %}
+                      <a href="{{ chore_board_url }}">Chores</a>
+                    {% endif %}
+                    <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+                    <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
                   </div>
                 </div>
 
@@ -530,9 +549,6 @@
                       <a href="{{ url_for('admin.admin_dashboard') }}">Admin Dashboard</a>
                       {% if operations_settings_url %}
                         <a href="{{ operations_settings_url }}">Configurations</a>
-                      {% endif %}
-                      {% if rent_entry_url %}
-                        <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
                       {% endif %}
                       <a href="{{ url_for('admin.admin_users') }}">Users</a>
                       <a href="{{ url_for('admin.staff_audit_log') }}">Audit Log</a>
