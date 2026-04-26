@@ -144,7 +144,7 @@
             {% elif is_gratitude %}
 
               <details class="nav-mobile-section" open>
-                <summary>Daily Work</summary>
+                <summary>Case Management</summary>
                 <div class="nav-mobile-links">
                   {% if residents_url and can_case_ops %}
                     <a href="{{ residents_url }}">Residents</a>
@@ -180,6 +180,17 @@
                     {% if rent_entry_url %}
                       <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
                     {% endif %}
+                  </div>
+                </details>
+
+                <details class="nav-mobile-section">
+                  <summary>Shelter Operations</summary>
+                  <div class="nav-mobile-links">
+                    {% if chore_board_url %}
+                      <a href="{{ chore_board_url }}">Chores</a>
+                    {% endif %}
+                    <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+                    <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
                   </div>
                 </details>
               {% endif %}
@@ -229,7 +240,7 @@
             {% else %}
 
               <details class="nav-mobile-section" open>
-                <summary>Daily Work</summary>
+                <summary>Case Management</summary>
                 <div class="nav-mobile-links">
                   {% if intake_assessment_url %}
                     <a href="{{ intake_assessment_url }}">Intake</a>
@@ -271,7 +282,7 @@
               </details>
 
               <details class="nav-mobile-section">
-                <summary>Operations</summary>
+                <summary>Shelter Operations</summary>
                 <div class="nav-mobile-links">
                   {% if chore_board_url %}
                     <a href="{{ chore_board_url }}">Chores</a>
@@ -290,6 +301,16 @@
                 </details>
               {% endif %}
 
+              <details class="nav-mobile-section">
+                <summary>Documents</summary>
+                <div class="nav-mobile-links">
+                  <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
+                  <a href="{{ intake_manual_url }}" target="_blank" rel="noopener">New Resident Intake Software Manual</a>
+                  <a href="{{ progress_note_manual_url }}" target="_blank" rel="noopener">First Progress Note Software Manual</a>
+                  <a href="{{ resident_workspace_manual_url }}" target="_blank" rel="noopener">Resident Case Workspace Software Manual</a>
+                </div>
+              </details>
+
               {% if can_admin %}
                 <details class="nav-mobile-section">
                   <summary>Admin</summary>
@@ -304,16 +325,6 @@
                   </div>
                 </details>
               {% endif %}
-
-              <details class="nav-mobile-section">
-                <summary>Documents</summary>
-                <div class="nav-mobile-links">
-                  <a href="{{ kiosk_manual_url }}" target="_blank" rel="noopener">Kiosk Operations Manual</a>
-                  <a href="{{ intake_manual_url }}" target="_blank" rel="noopener">New Resident Intake Software Manual</a>
-                  <a href="{{ progress_note_manual_url }}" target="_blank" rel="noopener">First Progress Note Software Manual</a>
-                  <a href="{{ resident_workspace_manual_url }}" target="_blank" rel="noopener">Resident Case Workspace Software Manual</a>
-                </div>
-              </details>
 
               <details class="nav-mobile-section">
                 <summary>Account</summary>
@@ -442,6 +453,17 @@
                       {% endif %}
                     </div>
                   </div>
+
+                  <div class="nav-dd">
+                    <button type="button">Shelter Operations ▾</button>
+                    <div class="menu">
+                      {% if chore_board_url %}
+                        <a href="{{ chore_board_url }}">Chores</a>
+                      {% endif %}
+                      <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
+                      <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
+                    </div>
+                  </div>
                 {% endif %}
 
                 {% if reports_url and can_view_reports %}
@@ -476,6 +498,27 @@
               {% else %}
 
                 <div class="nav-dd">
+                  <button type="button">Case Management ▾</button>
+                  <div class="menu">
+                    {% if intake_assessment_url %}
+                      <a href="{{ intake_assessment_url }}">Intake</a>
+                    {% endif %}
+                    {% if residents_url %}
+                      <a href="{{ residents_url }}">Residents</a>
+                    {% endif %}
+                    {% if case_management_url %}
+                      <a href="{{ case_management_url }}">Progress Reports</a>
+                    {% endif %}
+                    {% if case_dashboard_url %}
+                      <a href="{{ case_dashboard_url }}">Case Mgmt Dashboard</a>
+                    {% endif %}
+                    {% if calendar_url %}
+                      <a href="{{ calendar_url }}">Shared Calendar</a>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="nav-dd">
                   <button type="button">Housing and Accountability ▾</button>
                   <div class="menu">
                     {% if placement_dashboard_url %}
@@ -504,27 +547,6 @@
                     {% endif %}
                     <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
                     <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
-                  </div>
-                </div>
-
-                <div class="nav-dd">
-                  <button type="button">Case Management ▾</button>
-                  <div class="menu">
-                    {% if intake_assessment_url %}
-                      <a href="{{ intake_assessment_url }}">Intake</a>
-                    {% endif %}
-                    {% if residents_url %}
-                      <a href="{{ residents_url }}">Residents</a>
-                    {% endif %}
-                    {% if case_management_url %}
-                      <a href="{{ case_management_url }}">Progress Reports</a>
-                    {% endif %}
-                    {% if case_dashboard_url %}
-                      <a href="{{ case_dashboard_url }}">Case Mgmt Dashboard</a>
-                    {% endif %}
-                    {% if calendar_url %}
-                      <a href="{{ calendar_url }}">Shared Calendar</a>
-                    {% endif %}
                   </div>
                 </div>
 
