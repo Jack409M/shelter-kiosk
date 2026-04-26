@@ -4,6 +4,8 @@
 <h2>Edit Resident Profile</h2>
 
 <form method="POST">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
   <div>
     <label>Phone</label>
     <input name="phone" value="{{ resident.phone or '' }}">
