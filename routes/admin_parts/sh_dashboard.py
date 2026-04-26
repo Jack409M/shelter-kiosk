@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from flask import flash, redirect, render_template, url_for
 
 from core.db import db_fetchone
+from core.sh_events import latest_sh_event_by_status
 from routes.admin_parts.helpers import require_admin_role
 
 
@@ -93,20 +94,24 @@ def _app_version_status() -> dict:
 
 
 def _job_status_cards() -> list[dict]:
-    return [
-        _status(
-            "Last Successful Job",
-            "warn",
-            "Job logging has not been added yet.",
-            "Waiting for background job monitor",
-        ),
-        _status(
-            "Last Error",
-            "warn",
-            "Application error logging has not been connected to System Health yet.",
-            "Waiting for operational event log",
-        ),
-    ]
+    latest_success = latest_sh_event_by_status("success")
+    latest_error = latest_sh_event_by_status("error")
+
+    success_card = _status(
+        "Last Successful Event",
+        "ok" if latest_success else "warn",
+        latest_success.get("message", "") if latest_success else "No successful System Health events recorded yet.",
+        latest_success.get("created_at", "") if latest_success else "Waiting for first event",
+    )
+
+    error_card = _status(
+        "Last Error",
+        "error" if latest_error else "ok",
+        latest_error.get("message", "") if latest_error else "No System Health errors recorded.",
+        latest_error.get("created_at", "") if latest_error else "No errors found",
+    )
+
+    return [success_card, error_card]
 
 
 def system_health_dashboard_view():

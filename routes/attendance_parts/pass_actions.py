@@ -7,6 +7,7 @@ from flask import abort, redirect, url_for
 from core.audit import log_action
 from core.db import db_fetchone
 from core.sms_sender import send_sms as _send_sms
+from core.sh_events import safe_log_sh_event
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
     apply_pass_approval,
@@ -136,6 +137,21 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_nam
         current_app.logger.exception("auto-logged exception")
 
     log_action("pass", resident_id, shelter, staff_id, "approve", {"pass_id": pass_id})
+
+    safe_log_sh_event(
+        event_type="pass_approved",
+        event_status="success",
+        event_source="pass_system",
+        entity_type="resident_pass",
+        entity_id=pass_id,
+        shelter=shelter,
+        staff_user_id=staff_id,
+        message="Pass request approved.",
+        metadata={
+            "resident_id": resident_id,
+            "pass_type": pass_type_key,
+        },
+    )
 
     return True, "attendance.staff_passes_pending", "Pass request approved.", "ok"
 
