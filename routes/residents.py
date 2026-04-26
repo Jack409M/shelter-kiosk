@@ -18,6 +18,7 @@ from core.auth import require_login, require_shelter
 from core.db import DbRow, db_execute, db_fetchall, db_fetchone
 from core.helpers import utcnow_iso
 from core.runtime import get_all_shelters, init_db
+from routes.resident_parts.resident_profile import edit_resident_profile_view
 from routes.resident_parts.resident_transfer_helpers import (
     apply_cross_shelter_transfer,
     apply_same_shelter_housing_move,
@@ -389,6 +390,18 @@ def staff_residents_post():
 
     flash("Resident created.", "ok")
     return redirect(url_for("residents.staff_residents"))
+
+
+@residents.route("/staff/residents/<int:resident_id>/edit", methods=["GET", "POST"])
+@require_login
+@require_shelter
+def edit_resident_profile(resident_id: int):
+    if not _require_resident_create_role():
+        flash("Admin, shelter director, or case manager only.", "error")
+        return redirect(url_for("residents.staff_residents"))
+
+    init_db()
+    return edit_resident_profile_view(resident_id)
 
 
 @residents.route("/staff/residents/<int:resident_id>/transfer", methods=["GET", "POST"])
