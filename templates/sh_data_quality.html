@@ -35,22 +35,38 @@
       &nbsp;| Count: <strong>{{ issue.count }}</strong>
     </p>
 
+    {% if issue.fix_note %}
+      <p><strong>Fix:</strong> {{ issue.fix_note }}</p>
+    {% endif %}
+
     {% if issue.rows %}
       <div class="table-shell">
         <table class="app-table">
           <thead>
             <tr>
               {% for key in issue.rows[0].keys() %}
-                <th>{{ key }}</th>
+                {% if key not in ['action_url', 'action_label'] %}
+                  <th>{{ key }}</th>
+                {% endif %}
               {% endfor %}
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
             {% for row in issue.rows %}
               <tr>
-                {% for value in row.values() %}
-                  <td>{{ value }}</td>
+                {% for key, value in row.items() %}
+                  {% if key not in ['action_url', 'action_label'] %}
+                    <td>{{ value }}</td>
+                  {% endif %}
                 {% endfor %}
+                <td>
+                  {% if row.action_url and row.action_label %}
+                    <a href="{{ row.action_url }}">{{ row.action_label }}</a>
+                  {% else %}
+                    Review
+                  {% endif %}
+                </td>
               </tr>
             {% endfor %}
           </tbody>
