@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Resident Snapshot</h1>
+
+<div class="card">
+  <p><strong>ID:</strong> {{ resident.id }}</p>
+  <p><strong>Name:</strong> {{ resident.first_name }} {{ resident.last_name }}</p>
+  <p><strong>Birth Year:</strong> {{ resident.birth_year }}</p>
+  <p><strong>Phone:</strong> {{ resident.phone }}</p>
+  <p><strong>Email:</strong> {{ resident.email }}</p>
+  <p><strong>Shelter:</strong> {{ resident.shelter }}</p>
+  <p><strong>Enrollment Status:</strong> {{ resident.program_status }}</p>
+  <p><strong>Enrollment Shelter:</strong> {{ resident.enrollment_shelter }}</p>
+  <p><strong>Entry Date:</strong> {{ resident.entry_date }}</p>
+  <p><strong>Intake Exists:</strong> {{ resident.intake_exists }}</p>
+  <p><strong>Children:</strong> {{ resident.child_count }}</p>
+  <p><strong>Notes:</strong> {{ resident.note_count }}</p>
+  <p><strong>Passes:</strong> {{ resident.pass_count }}</p>
+</div>
+
+<a href="/staff/admin/system-health/data-quality/merge-review">Back to merge review</a>
+
+{% endblock %}
