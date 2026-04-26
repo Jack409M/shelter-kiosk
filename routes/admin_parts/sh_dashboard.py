@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 from datetime import UTC, datetime
 
-from flask import flash, redirect, render_template, url_for
+from flask import flash, jsonify, redirect, render_template, request, url_for
 
 from core.db import db_fetchone
-from core.sh_events import latest_sh_event_by_status
+from core.sh_events import latest_sh_event_by_status, recent_sh_events_by_status
 from routes.admin_parts.helpers import require_admin_role
 
 
@@ -112,6 +112,15 @@ def _job_status_cards() -> list[dict]:
     )
 
     return [success_card, error_card]
+
+
+def system_health_events_api():
+    if not require_admin_role():
+        return jsonify([]), 403
+
+    status = request.args.get("status", "success")
+    rows = recent_sh_events_by_status(status)
+    return jsonify(rows)
 
 
 def system_health_dashboard_view():
