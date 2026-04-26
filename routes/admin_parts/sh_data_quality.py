@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from flask import flash, redirect, render_template, url_for
+from flask import flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from routes.admin_parts.helpers import require_admin_role
@@ -15,6 +15,16 @@ COALESCE(LOWER(TRIM(CAST(is_active AS TEXT))), '') IN ('1', 'true', 't', 'yes')
 
 _ACTIVE_ENROLLMENT_SQL = """
 LOWER(TRIM(COALESCE(program_status, ''))) = 'active'
+"""
+
+_UNCONFIRMED_DUPLICATE_NAME_SQL = """
+NOT EXISTS (
+    SELECT 1
+    FROM duplicate_name_reviews dnr
+    WHERE dnr.first_name_key = LOWER(TRIM(first_name))
+      AND dnr.last_name_key = LOWER(TRIM(last_name))
+      AND dnr.status = 'verified_separate_people'
+)
 """
 
 
@@ -105,6 +115,31 @@ def _with_shelter_mismatch_fix(rows: list[dict]) -> list[dict]:
                     ),
                     "label": "Set enrollment to resident shelter",
                 },
+            ]
+
+        updated_rows.append(updated_row)
+
+    return updated_rows
+
+
+def _with_duplicate_confirmation_action(rows: list[dict]) -> list[dict]:
+    updated_rows = []
+
+    for row in rows:
+        updated_row = dict(row)
+        first_name_key = (updated_row.get("first_name") or "").strip().lower()
+        last_name_key = (updated_row.get("last_name") or "").strip().lower()
+
+        if first_name_key and last_name_key:
+            updated_row["action_post_actions"] = [
+                {
+                    "url": "/staff/admin/system-health/data-quality/fix/duplicate-names/confirm-separate",
+                    "label": "Confirm separate people",
+                    "hidden_fields": {
+                        "first_name_key": first_name_key,
+                        "last_name_key": last_name_key,
+                    },
+                }
             ]
 
         updated_rows.append(updated_row)
@@ -322,6 +357,7 @@ def _missing_intake_issue() -> dict:
 
 
 def _duplicate_names_issue() -> dict:
+    where = f"{_ACTIVE_RESIDENT_SQL} AND {_UNCONFIRMED_DUPLICATE_NAME_SQL}"
     count = _count(
         f"""
         SELECT COUNT(*) AS count
@@ -330,7 +366,7 @@ def _duplicate_names_issue() -> dict:
                 LOWER(TRIM(first_name)) AS first_name_key,
                 LOWER(TRIM(last_name)) AS last_name_key
             FROM residents
-            WHERE {_ACTIVE_RESIDENT_SQL}
+            WHERE {where}
             GROUP BY LOWER(TRIM(first_name)), LOWER(TRIM(last_name))
             HAVING COUNT(*) > 1
         ) duplicate_names
@@ -344,7 +380,7 @@ def _duplicate_names_issue() -> dict:
             LOWER(TRIM(last_name)) AS last_name,
             COUNT(*) AS duplicate_count
         FROM residents
-        WHERE {_ACTIVE_RESIDENT_SQL}
+        WHERE {where}
         GROUP BY LOWER(TRIM(first_name)), LOWER(TRIM(last_name))
         HAVING COUNT(*) > 1
         ORDER BY duplicate_count DESC, last_name, first_name
@@ -356,6 +392,7 @@ def _duplicate_names_issue() -> dict:
         action_url="/staff/case-management/{resident_id}",
         action_label="Review first match",
     )
+    rows = _with_duplicate_confirmation_action(rows)
 
     return _issue(
         key="duplicate_active_names",
@@ -364,7 +401,7 @@ def _duplicate_names_issue() -> dict:
         severity="warn",
         count=count,
         rows=rows,
-        fix_note="Open the first matching resident case and compare with the resident list before making changes.",
+        fix_note="Confirm separate people only after comparing the matching resident records.",
     )
 
 
@@ -593,6 +630,88 @@ def fix_shelter_mismatch_view(enrollment_id: int, target: str):
             )
             flash("Enrollment shelter updated to match resident shelter.", "success")
 
+    return redirect(url_for("admin.admin_system_health_data_quality"))
+
+
+def confirm_duplicate_names_separate_view():
+    if not require_admin_role():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    first_name_key = (request.form.get("first_name_key") or "").strip().lower()
+    last_name_key = (request.form.get("last_name_key") or "").strip().lower()
+
+    if not first_name_key or not last_name_key:
+        flash("Invalid duplicate confirmation request.", "error")
+        return redirect(url_for("admin.admin_system_health_data_quality"))
+
+    ph = placeholder()
+    existing = db_fetchone(
+        f"""
+        SELECT id
+        FROM duplicate_name_reviews
+        WHERE first_name_key = {ph}
+          AND last_name_key = {ph}
+          AND status = 'verified_separate_people'
+        LIMIT 1
+        """,
+        (first_name_key, last_name_key),
+    )
+
+    if existing:
+        flash("Duplicate group already confirmed as separate people.", "info")
+        return redirect(url_for("admin.admin_system_health_data_quality"))
+
+    active_matches = _count(
+        f"""
+        SELECT COUNT(*) AS count
+        FROM residents
+        WHERE {_ACTIVE_RESIDENT_SQL}
+          AND LOWER(TRIM(first_name)) = {ph}
+          AND LOWER(TRIM(last_name)) = {ph}
+        """,
+        (first_name_key, last_name_key),
+    )
+
+    if active_matches < 2:
+        flash("Duplicate group no longer has multiple active matching residents.", "warning")
+        return redirect(url_for("admin.admin_system_health_data_quality"))
+
+    raw_staff_user_id = session.get("staff_user_id")
+    try:
+        staff_user_id = int(raw_staff_user_id) if raw_staff_user_id not in (None, "") else None
+    except (TypeError, ValueError):
+        staff_user_id = None
+
+    now = datetime.now(UTC).replace(tzinfo=None).isoformat()
+
+    with db_transaction():
+        db_execute(
+            f"""
+            INSERT INTO duplicate_name_reviews
+            (
+                first_name_key,
+                last_name_key,
+                status,
+                reviewed_by_user_id,
+                reviewed_at,
+                created_at,
+                updated_at
+            )
+            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+            """,
+            (
+                first_name_key,
+                last_name_key,
+                "verified_separate_people",
+                staff_user_id,
+                now,
+                now,
+                now,
+            ),
+        )
+
+    flash("Duplicate name group confirmed as separate people.", "success")
     return redirect(url_for("admin.admin_system_health_data_quality"))
 
 
