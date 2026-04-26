@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">System Health</h1>
+  <p class="page-subtitle">
+    Live system status and operational visibility for administrators.
+    Last checked: {{ checked_at }}
+  </p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Overall Status</h2>
+  <p class="card-subtitle">
+    {% if summary_state == "ok" %}
+      All monitored systems are operating normally.
+    {% elif summary_state == "warn" %}
+      Some systems require attention.
+    {% else %}
+      One or more critical issues detected.
+    {% endif %}
+  </p>
+</div>
+
+<div class="card">
+  <h2 class="card-title-large">System Checks</h2>
+
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Component</th>
+          <th>Detail</th>
+          <th>Meta</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in cards %}
+          <tr>
+            <td>
+              {% if card.state == "ok" %}
+                <strong>OK</strong>
+              {% elif card.state == "warn" %}
+                <strong>Warning</strong>
+              {% else %}
+                <strong>Error</strong>
+              {% endif %}
+            </td>
+            <td>{{ card.label }}</td>
+            <td>{{ card.detail }}</td>
+            <td>{{ card.meta }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
