@@ -115,6 +115,57 @@ def mark_duplicate_names_same_view():
     return redirect(url_for("admin.duplicate_merge_review_queue"))
 
 
+def _resident_summary_rows(first_name_key: str, last_name_key: str) -> list[dict]:
+    ph = placeholder()
+    return db_fetchall(
+        f"""
+        SELECT
+            r.id,
+            r.resident_identifier,
+            r.first_name,
+            r.last_name,
+            r.birth_year,
+            r.phone,
+            r.email,
+            r.shelter,
+            r.is_active,
+            pe.id AS enrollment_id,
+            pe.shelter AS enrollment_shelter,
+            pe.entry_date,
+            pe.program_status,
+            CASE WHEN ia.id IS NULL THEN 0 ELSE 1 END AS intake_exists,
+            COALESCE(children.child_count, 0) AS child_count,
+            COALESCE(notes.note_count, 0) AS note_count,
+            COALESCE(passes.pass_count, 0) AS pass_count
+        FROM residents r
+        LEFT JOIN program_enrollments pe
+          ON pe.resident_id = r.id
+         AND LOWER(TRIM(COALESCE(pe.program_status, ''))) = 'active'
+        LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
+        LEFT JOIN (
+            SELECT resident_id, COUNT(*) AS child_count
+            FROM resident_children
+            GROUP BY resident_id
+        ) children ON children.resident_id = r.id
+        LEFT JOIN (
+            SELECT resident_id, COUNT(*) AS note_count
+            FROM case_notes
+            GROUP BY resident_id
+        ) notes ON notes.resident_id = r.id
+        LEFT JOIN (
+            SELECT resident_id, COUNT(*) AS pass_count
+            FROM resident_passes
+            GROUP BY resident_id
+        ) passes ON passes.resident_id = r.id
+        WHERE {_ACTIVE_RESIDENT_SQL.replace('is_active', 'r.is_active')}
+          AND LOWER(TRIM(r.first_name)) = {ph}
+          AND LOWER(TRIM(r.last_name)) = {ph}
+        ORDER BY r.id
+        """,
+        (first_name_key, last_name_key),
+    ) or []
+
+
 def duplicate_merge_review_queue_view():
     if not require_admin_role():
         flash("Admin only.", "error")
@@ -134,59 +185,12 @@ def duplicate_merge_review_queue_view():
         """
     ) or []
 
-    ph = placeholder()
     queue = []
 
     for group in groups:
         first_name_key = group["first_name_key"]
         last_name_key = group["last_name_key"]
-        residents = db_fetchall(
-            f"""
-            SELECT
-                r.id,
-                r.resident_identifier,
-                r.first_name,
-                r.last_name,
-                r.birth_year,
-                r.phone,
-                r.email,
-                r.shelter,
-                r.is_active,
-                pe.id AS enrollment_id,
-                pe.shelter AS enrollment_shelter,
-                pe.entry_date,
-                pe.program_status,
-                CASE WHEN ia.id IS NULL THEN 0 ELSE 1 END AS intake_exists,
-                COALESCE(children.child_count, 0) AS child_count,
-                COALESCE(notes.note_count, 0) AS note_count,
-                COALESCE(passes.pass_count, 0) AS pass_count
-            FROM residents r
-            LEFT JOIN program_enrollments pe
-              ON pe.resident_id = r.id
-             AND LOWER(TRIM(COALESCE(pe.program_status, ''))) = 'active'
-            LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
-            LEFT JOIN (
-                SELECT resident_id, COUNT(*) AS child_count
-                FROM resident_children
-                GROUP BY resident_id
-            ) children ON children.resident_id = r.id
-            LEFT JOIN (
-                SELECT resident_id, COUNT(*) AS note_count
-                FROM case_notes
-                GROUP BY resident_id
-            ) notes ON notes.resident_id = r.id
-            LEFT JOIN (
-                SELECT resident_id, COUNT(*) AS pass_count
-                FROM resident_passes
-                GROUP BY resident_id
-            ) passes ON passes.resident_id = r.id
-            WHERE {_ACTIVE_RESIDENT_SQL.replace('is_active', 'r.is_active')}
-              AND LOWER(TRIM(r.first_name)) = {ph}
-              AND LOWER(TRIM(r.last_name)) = {ph}
-            ORDER BY r.id
-            """,
-            (first_name_key, last_name_key),
-        ) or []
+        residents = _resident_summary_rows(first_name_key, last_name_key)
 
         queue.append(
             {
@@ -202,4 +206,59 @@ def duplicate_merge_review_queue_view():
         "duplicate_merge_review_queue.html",
         title="Duplicate Merge Review Queue",
         queue=queue,
+    )
+
+
+def duplicate_merge_resident_snapshot_view(resident_id: int):
+    if not require_admin_role():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    ph = placeholder()
+    resident = db_fetchone(
+        f"""
+        SELECT
+            r.*,
+            pe.id AS enrollment_id,
+            pe.shelter AS enrollment_shelter,
+            pe.entry_date,
+            pe.program_status,
+            CASE WHEN ia.id IS NULL THEN 0 ELSE 1 END AS intake_exists,
+            COALESCE(children.child_count, 0) AS child_count,
+            COALESCE(notes.note_count, 0) AS note_count,
+            COALESCE(passes.pass_count, 0) AS pass_count
+        FROM residents r
+        LEFT JOIN program_enrollments pe
+          ON pe.resident_id = r.id
+         AND LOWER(TRIM(COALESCE(pe.program_status, ''))) = 'active'
+        LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
+        LEFT JOIN (
+            SELECT resident_id, COUNT(*) AS child_count
+            FROM resident_children
+            GROUP BY resident_id
+        ) children ON children.resident_id = r.id
+        LEFT JOIN (
+            SELECT resident_id, COUNT(*) AS note_count
+            FROM case_notes
+            GROUP BY resident_id
+        ) notes ON notes.resident_id = r.id
+        LEFT JOIN (
+            SELECT resident_id, COUNT(*) AS pass_count
+            FROM resident_passes
+            GROUP BY resident_id
+        ) passes ON passes.resident_id = r.id
+        WHERE r.id = {ph}
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("admin.duplicate_merge_review_queue"))
+
+    return render_template(
+        "duplicate_merge_resident_snapshot.html",
+        title="Resident Merge Snapshot",
+        resident=resident,
     )
