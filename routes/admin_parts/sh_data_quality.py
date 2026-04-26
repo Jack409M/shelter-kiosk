@@ -4,8 +4,9 @@ from datetime import UTC, datetime
 
 from flask import flash, redirect, render_template, url_for
 
-from core.db import db_fetchall, db_fetchone
+from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from routes.admin_parts.helpers import require_admin_role
+from routes.case_management_parts.helpers import placeholder
 
 
 _ACTIVE_RESIDENT_SQL = """
@@ -56,6 +57,18 @@ def _with_profile_action(rows: list[dict]) -> list[dict]:
         updated_rows.append(updated_row)
 
     return updated_rows
+
+
+def _with_missing_intake_fix(rows: list[dict]) -> list[dict]:
+    updated = []
+    for row in rows:
+        r = dict(row)
+        enrollment_id = r.get("enrollment_id")
+        if enrollment_id:
+            r["action_post_url"] = f"/staff/admin/system-health/data-quality/fix/missing-intake/{enrollment_id}"
+            r["action_post_label"] = "Create intake baseline"
+        updated.append(r)
+    return updated
 
 
 def _issue(
@@ -227,7 +240,7 @@ def _missing_intake_issue() -> dict:
     )
     rows = _rows(
         f"""
-        SELECT r.id, r.first_name, r.last_name, pe.shelter, pe.entry_date
+        SELECT r.id, r.first_name, r.last_name, pe.id AS enrollment_id, pe.shelter, pe.entry_date
         FROM program_enrollments pe
         JOIN residents r ON r.id = pe.resident_id
         LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
@@ -242,6 +255,7 @@ def _missing_intake_issue() -> dict:
         action_url="/staff/case-management/{resident_id}/intake-edit",
         action_label="Open intake edit",
     )
+    rows = _with_missing_intake_fix(rows)
     return _issue(
         key="missing_intake_baseline",
         label="Incomplete intake baseline",
@@ -249,7 +263,7 @@ def _missing_intake_issue() -> dict:
         severity="error",
         count=count,
         rows=rows,
-        fix_note="Open intake edit for review. If no intake row exists, this may need a repair workflow later.",
+        fix_note="Create intake baseline, then complete intake edit.",
     )
 
 
@@ -307,6 +321,73 @@ def _load_data_quality_issues() -> list[dict]:
         _missing_intake_issue(),
         _duplicate_names_issue(),
     ]
+
+
+def fix_missing_intake_baseline_view(enrollment_id: int):
+    if not require_admin_role():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    ph = placeholder()
+
+    enrollment = db_fetchone(
+        f"SELECT id, resident_id FROM program_enrollments WHERE id = {ph}",
+        (enrollment_id,),
+    )
+
+    if not enrollment:
+        flash("Enrollment not found.", "error")
+        return redirect(url_for("admin.admin_system_health_data_quality"))
+
+    resident_id = enrollment["resident_id"]
+
+    existing = db_fetchone(
+        f"SELECT id FROM intake_assessments WHERE enrollment_id = {ph} LIMIT 1",
+        (enrollment_id,),
+    )
+
+    if existing:
+        return redirect(url_for("case_management.intake_edit", resident_id=resident_id))
+
+    now = datetime.now(UTC).replace(tzinfo=None).isoformat()
+
+    columns = [
+        "enrollment_id","city","county","last_zipcode_residence","length_of_time_in_amarillo",
+        "income_at_entry","education_at_entry","treatment_grad_date","sobriety_date","days_sober_at_entry",
+        "drug_of_choice","ace_score","grit_score","veteran","disability","marital_status",
+        "notes_basic","entry_notes","initial_snapshot_notes","trauma_notes","barrier_notes",
+        "place_staying_before_entry","entry_felony_conviction","entry_parole_probation","drug_court",
+        "sexual_survivor","dv_survivor","human_trafficking_survivor","warrants_unpaid",
+        "mh_exam_completed","med_exam_completed","car_at_entry","car_insurance_at_entry",
+        "pregnant_at_entry","dental_need_at_entry","vision_need_at_entry","employment_status_at_entry",
+        "mental_health_need_at_entry","medical_need_at_entry","substance_use_need_at_entry",
+        "id_documents_status_at_entry","has_drivers_license","has_social_security_card",
+        "parenting_class_needed","dwc_level_today","created_at","updated_at"
+    ]
+
+    values = [
+        enrollment_id,None,None,None,None,
+        None,None,None,None,None,
+        None,None,None,0,"unknown",None,
+        None,None,None,None,None,
+        None,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,None,
+        0,0,0,
+        None,0,0,
+        0,None,now,now
+    ]
+
+    ph_list = ",".join([placeholder()] * len(columns))
+
+    with db_transaction():
+        db_execute(
+            f"INSERT INTO intake_assessments ({','.join(columns)}) VALUES ({ph_list})",
+            tuple(values),
+        )
+
+    return redirect(url_for("case_management.intake_edit", resident_id=resident_id))
 
 
 def system_health_data_quality_view():
