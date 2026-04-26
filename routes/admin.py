@@ -29,6 +29,7 @@ from routes.admin_parts.sh_data_quality import (
     system_health_data_quality_view,
 )
 from routes.admin_parts.duplicate_merge_review import (
+    duplicate_merge_resident_snapshot_view,
     duplicate_merge_review_queue_view,
     mark_duplicate_names_same_view,
 )
@@ -89,6 +90,13 @@ def admin_system_health_data_quality():
 @require_shelter
 def duplicate_merge_review_queue():
     return duplicate_merge_review_queue_view()
+
+
+@admin.route("/staff/admin/system-health/data-quality/merge-review/resident/<int:resident_id>", methods=["GET"])
+@require_login
+@require_shelter
+def duplicate_merge_resident_snapshot(resident_id: int):
+    return duplicate_merge_resident_snapshot_view(resident_id)
 
 
 @admin.post("/staff/admin/system-health/data-quality/fix/missing-intake/<int:enrollment_id>")
