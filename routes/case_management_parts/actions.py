@@ -97,15 +97,57 @@ def _initial_rad_values_for_new_enrollment(shelter: str) -> tuple[int | None, st
     return None, None
 
 
+def _active_enrollment_for_resident(resident_id: int):
+    ph = placeholder()
+    return db_fetchone(
+        f"""
+        SELECT id, shelter
+        FROM program_enrollments
+        WHERE resident_id = {ph}
+          AND LOWER(TRIM(COALESCE(program_status, ''))) = 'active'
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+
+def _update_resident_shelter(
+    *,
+    resident_id: int,
+    old_shelter: str,
+    new_shelter: str,
+    action: str,
+) -> None:
+    ph = placeholder()
+    db_execute(
+        f"""
+        UPDATE residents
+        SET shelter = {ph},
+            updated_at = {ph}
+        WHERE id = {ph}
+        """,
+        (new_shelter, utcnow_iso(), resident_id),
+    )
+
+    log_action(
+        "resident",
+        resident_id,
+        new_shelter,
+        _staff_user_id(),
+        action,
+        {
+            "from_shelter": old_shelter,
+            "to_shelter": new_shelter,
+        },
+    )
+
+
 def set_resident_shelter_pre_enrollment_view(resident_id: int):
     ph = placeholder()
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
-
-    if resident_has_active_enrollment(resident_id):
-        flash("Cannot change resident shelter after enrollment has started.", "error")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
     new_shelter = normalize_shelter_name(request.form.get("shelter"))
@@ -131,30 +173,35 @@ def set_resident_shelter_pre_enrollment_view(resident_id: int):
 
     old_shelter = normalize_shelter_name(resident.get("shelter"))
 
+    active_enrollment = _active_enrollment_for_resident(resident_id)
+    if active_enrollment:
+        enrollment_shelter = normalize_shelter_name(active_enrollment.get("shelter"))
+        if new_shelter != enrollment_shelter:
+            flash("Resident already has an active enrollment. Shelter can only be synced to that enrollment shelter.", "error")
+            return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+        if old_shelter == enrollment_shelter:
+            flash("Resident shelter already matches the active enrollment.", "ok")
+            return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+        _update_resident_shelter(
+            resident_id=resident_id,
+            old_shelter=old_shelter,
+            new_shelter=enrollment_shelter,
+            action="sync_shelter_to_active_enrollment",
+        )
+        flash("Resident shelter synced to the active enrollment shelter.", "ok")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
     if old_shelter == new_shelter:
         flash("Resident shelter is already set to that shelter.", "ok")
         return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
-    db_execute(
-        f"""
-        UPDATE residents
-        SET shelter = {ph},
-            updated_at = {ph}
-        WHERE id = {ph}
-        """,
-        (new_shelter, utcnow_iso(), resident_id),
-    )
-
-    log_action(
-        "resident",
-        resident_id,
-        new_shelter,
-        _staff_user_id(),
-        "pre_enrollment_shelter_correction",
-        {
-            "from_shelter": old_shelter,
-            "to_shelter": new_shelter,
-        },
+    _update_resident_shelter(
+        resident_id=resident_id,
+        old_shelter=old_shelter,
+        new_shelter=new_shelter,
+        action="pre_enrollment_shelter_correction",
     )
 
     flash("Resident shelter updated. You can now start enrollment.", "ok")
