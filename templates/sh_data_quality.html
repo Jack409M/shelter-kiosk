@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">Data Quality</h1>
+  <p class="page-subtitle">
+    Operational data integrity checks across residents, enrollments, and intake.
+    Last checked: {{ checked_at }}
+  </p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Summary</h2>
+  <p>
+    Total issues: <strong>{{ total_issues }}</strong> &nbsp;|
+    Errors: <strong>{{ error_count }}</strong> &nbsp;|
+    Warnings: <strong>{{ warning_count }}</strong>
+  </p>
+</div>
+
+{% for issue in issues %}
+  <div class="card" style="margin-bottom:16px;">
+    <h2 class="card-title-large">{{ issue.label }}</h2>
+    <p>{{ issue.description }}</p>
+
+    <p>
+      Severity:
+      {% if issue.severity == 'error' %}
+        <strong style="color:#b91c1c;">Error</strong>
+      {% else %}
+        <strong style="color:#92400e;">Warning</strong>
+      {% endif %}
+      &nbsp;| Count: <strong>{{ issue.count }}</strong>
+    </p>
+
+    {% if issue.rows %}
+      <div class="table-shell">
+        <table class="app-table">
+          <thead>
+            <tr>
+              {% for key in issue.rows[0].keys() %}
+                <th>{{ key }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in issue.rows %}
+              <tr>
+                {% for value in row.values() %}
+                  <td>{{ value }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p>No records found.</p>
+    {% endif %}
+  </div>
+{% endfor %}
+
+{% endblock %}
