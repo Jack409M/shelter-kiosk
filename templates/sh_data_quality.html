@@ -67,6 +67,7 @@
 
                   {% if row.action_post_url and row.action_post_label %}
                     <form method="post" action="{{ row.action_post_url }}" style="display:inline; margin-left:8px;">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button type="submit">{{ row.action_post_label }}</button>
                     </form>
                   {% endif %}
