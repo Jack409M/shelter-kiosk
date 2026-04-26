@@ -11,6 +11,7 @@ from routes.rent_tracking_parts import schema as rent_tracking_schema
 from . import (
     NP_schema_placement,
     l9_schema_support,
+    schema_admin,
     schema_bootstrap,
     schema_budget,
     schema_case,
@@ -240,6 +241,7 @@ def _ensure_dependent_domain_tables(kind: str) -> None:
     schema_requests.ensure_tables(kind)
     schema_comms.ensure_tables(kind)
     NP_schema_placement.ensure_tables(kind)
+    schema_admin.ensure_tables(kind)
     rent_tracking_schema._ensure_tables()
 
 
@@ -272,6 +274,7 @@ def _ensure_indexes(kind: str) -> None:
     schema_requests.ensure_indexes()
     schema_comms.ensure_indexes(kind)
     NP_schema_placement.ensure_indexes()
+    schema_admin.ensure_indexes()
 
 
 def _ensure_bootstrap_tasks(kind: str) -> None:
