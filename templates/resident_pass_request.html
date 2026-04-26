@@ -14,15 +14,6 @@
 
 {% set values = form_data or {} %}
 
-<h1>Pass Request</h1>
-
-<div style="margin: 0 0 16px 0;">
-  <a href="{{ url_for('resident_portal.home') }}"
-     style="display:inline-block; padding:10px 14px; background:#444; color:#fff; text-decoration:none; border-radius:8px;">
-    Back to Home
-  </a>
-</div>
-
 <style>
   .rule-card {
     margin-bottom: 16px;
@@ -31,7 +22,98 @@
     padding: 16px;
     background: #fff;
   }
+
+  .rule-card h2 {
+    margin: 0 0 10px 0;
+    font-size: 22px;
+  }
+
+  .rule-card ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+
+  .hours-card {
+    margin-bottom: 16px;
+    border: 1px solid #d7dbe3;
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
+  }
+
+  .hours-status-box {
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 12px;
+    margin-bottom: 10px;
+    border: 1px solid transparent;
+  }
+
+  .hours-status-box.pass {
+    background: #e8f6ec;
+    border-color: #7fbe8f;
+    color: #1f5f2f;
+  }
+
+  .hours-status-box.fail {
+    background: #fdecec;
+    border-color: #d38a8a;
+    color: #8a1f1f;
+  }
+
+  .hours-status-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .hours-status-text {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .hours-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .hours-pill {
+    border: 1px solid #d7dbe3;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fafbfc;
+  }
+
+  .hours-pill-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    color: #555;
+  }
+
+  .hours-pill-value {
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .hours-note {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  @media (max-width: 900px) {
+    .hours-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
+
+<h1>Pass Request</h1>
 
 <div class="rule-card">
   <h2>{{ rule_box.title }}</h2>
@@ -42,15 +124,210 @@
   </ul>
 </div>
 
+{% if hour_summary %}
+  <div class="hours-card">
+    <strong>Previous week attendance hours</strong>
+    <div class="hours-note">{{ hour_summary.week_label }}</div>
+
+    <div class="hours-status-box {{ hour_summary.status_class }}">
+      <div class="hours-status-title">{{ hour_summary.status_label }}</div>
+      <div class="hours-status-text">
+        Productive: {{ hour_summary.productive_hours }} / {{ hour_summary.productive_required_hours }}
+        • Work: {{ hour_summary.work_hours }} / {{ hour_summary.work_required_hours }}
+        {% if not hour_summary.passes_requirement %}
+          <br>
+          Short by {{ hour_summary.productive_short_hours }} productive hours and {{ hour_summary.work_short_hours }} work hours.
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="hours-grid">
+      <div class="hours-pill">
+        <span class="hours-pill-label">Productive Hours</span>
+        <div class="hours-pill-value">{{ hour_summary.productive_hours }}</div>
+      </div>
+
+      <div class="hours-pill">
+        <span class="hours-pill-label">Work Hours</span>
+        <div class="hours-pill-value">{{ hour_summary.work_hours }}</div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
 <form method="post" class="card">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
   <label>Shelter</label>
   <input value="{{ shelter_label }}" readonly class="w-shelter">
 
-  <!-- rest unchanged -->
+  <div class="grid tight-row">
+    <div>
+      <label for="request_date">Request date</label>
+      <input id="request_date" type="date" name="request_date" class="w-date" value="{{ values.get('request_date', '') }}">
+    </div>
+
+    <div>
+      <label for="resident_phone">Cell phone</label>
+      <input id="resident_phone" name="resident_phone" value="{{ values.get('resident_phone', resident_phone or '') }}">
+    </div>
+  </div>
+
+  <div class="grid tight-row">
+    <div>
+      <label for="resident_level">Level</label>
+      <input id="resident_level" value="{{ resident_level or 'Not Set' }}" readonly>
+    </div>
+
+    <div>
+      <label for="pass_type">Pass Type</label>
+      <select id="pass_type" name="pass_type" required onchange="togglePassType()">
+        {% for value, label in pass_type_options %}
+          <option value="{{ value }}" {% if values.get('pass_type', 'pass') == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <label for="destination">Destination</label>
+  <input id="destination" name="destination" required value="{{ values.get('destination', '') }}">
+
+  <div id="standard_fields">
+    <div class="grid tight-row">
+      <div>
+        <label for="start_at">Leave date and time</label>
+        <input id="start_at" type="datetime-local" name="start_at" class="w-dt" value="{{ values.get('start_at', '') }}" style="width:25ch; max-width:100%;">
+      </div>
+
+      <div>
+        <label for="end_at">Return date and time</label>
+        <input id="end_at" type="datetime-local" name="end_at" class="w-dt" value="{{ values.get('end_at', '') }}" style="width:25ch; max-width:100%;">
+      </div>
+    </div>
+
+    <label for="requirements_acknowledged">Will you meet all program requirements for this pass</label>
+    <select id="requirements_acknowledged" name="requirements_acknowledged" onchange="toggleRequirementsExplanation()">
+      <option value="">Select</option>
+      <option value="yes" {% if values.get('requirements_acknowledged') == 'yes' %}selected{% endif %}>Yes</option>
+      <option value="no" {% if values.get('requirements_acknowledged') == 'no' %}selected{% endif %}>No</option>
+    </select>
+
+    <div id="requirements_explanation_block" style="display:none;">
+      <label for="requirements_not_met_explanation">If no, explain</label>
+      <textarea id="requirements_not_met_explanation" name="requirements_not_met_explanation" rows="3">{{ values.get('requirements_not_met_explanation', '') }}</textarea>
+    </div>
+  </div>
+
+  <div id="special_fields" style="display:none;">
+    <div class="grid tight-row">
+      <div>
+        <label for="start_date">Start date</label>
+        <input id="start_date" type="date" name="start_date" class="w-date" value="{{ values.get('start_date', '') }}">
+      </div>
+
+      <div>
+        <label for="end_date">End date</label>
+        <input id="end_date" type="date" name="end_date" class="w-date" value="{{ values.get('end_date', '') }}">
+      </div>
+    </div>
+
+    <label for="special_reason">Special Pass reason</label>
+    <select id="special_reason" name="special_reason">
+      <option value="">Select</option>
+      <option value="Funeral" {% if values.get('special_reason') == 'Funeral' %}selected{% endif %}>Funeral</option>
+      <option value="Medical Emergency" {% if values.get('special_reason') == 'Medical Emergency' %}selected{% endif %}>Medical Emergency</option>
+      <option value="Family Emergency" {% if values.get('special_reason') == 'Family Emergency' %}selected{% endif %}>Family Emergency</option>
+      <option value="Other Serious Situation" {% if values.get('special_reason') == 'Other Serious Situation' %}selected{% endif %}>Other Serious Situation</option>
+    </select>
+  </div>
+
+  <label for="reason">Reason</label>
+  <textarea id="reason" name="reason" rows="2">{{ values.get('reason', '') }}</textarea>
+
+  <label for="who_with">Who will you be with</label>
+  <textarea id="who_with" name="who_with" rows="2">{{ values.get('who_with', '') }}</textarea>
+
+  <label for="destination_address">Address where you will be</label>
+  <textarea id="destination_address" name="destination_address" rows="2">{{ values.get('destination_address', '') }}</textarea>
+
+  <div class="grid tight-row">
+    <div>
+      <label for="destination_phone">Phone number there</label>
+      <input id="destination_phone" name="destination_phone" value="{{ values.get('destination_phone', '') }}">
+    </div>
+
+    <div>
+      <label for="budgeted_amount">Budgeted amount optional</label>
+      <input id="budgeted_amount" name="budgeted_amount" value="{{ values.get('budgeted_amount', '') }}">
+    </div>
+  </div>
+
+  <label for="companion_names">Names of people you will be with</label>
+  <textarea id="companion_names" name="companion_names" rows="2">{{ values.get('companion_names', '') }}</textarea>
+
+  <label for="companion_phone_numbers">Phone numbers of people you will be with</label>
+  <textarea id="companion_phone_numbers" name="companion_phone_numbers" rows="2">{{ values.get('companion_phone_numbers', '') }}</textarea>
+
+  <label for="resident_notes">Notes optional</label>
+  <textarea id="resident_notes" name="resident_notes" rows="3">{{ values.get('resident_notes', '') }}</textarea>
 
   <button type="submit">Submit Request</button>
 </form>
+
+<script>
+function todayChicagoDateValue() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(now);
+
+  const year = parts.find(p => p.type === "year")?.value || "";
+  const month = parts.find(p => p.type === "month")?.value || "";
+  const day = parts.find(p => p.type === "day")?.value || "";
+
+  return `${year}-${month}-${day}`;
+}
+
+function defaultRequestDate() {
+  const field = document.getElementById("request_date");
+  if (field && !field.value) {
+    field.value = todayChicagoDateValue();
+  }
+}
+
+function togglePassType() {
+  const type = document.getElementById("pass_type").value;
+  const standard = document.getElementById("standard_fields");
+  const special = document.getElementById("special_fields");
+
+  if (type === "special") {
+    standard.style.display = "none";
+    special.style.display = "block";
+  } else {
+    standard.style.display = "block";
+    special.style.display = "none";
+  }
+
+  toggleRequirementsExplanation();
+}
+
+function toggleRequirementsExplanation() {
+  const type = document.getElementById("pass_type").value;
+  const value = document.getElementById("requirements_acknowledged").value;
+  const block = document.getElementById("requirements_explanation_block");
+
+  if (type !== "special" && value === "no") {
+    block.style.display = "block";
+  } else {
+    block.style.display = "none";
+  }
+}
+
+defaultRequestDate();
+togglePassType();
+</script>
 
 {% endblock %}
