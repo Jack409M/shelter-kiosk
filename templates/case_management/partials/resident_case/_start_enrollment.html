@@ -20,4 +20,28 @@
       <button type="submit" class="cmx-btn">Start Enrollment</button>
     </div>
   </form>
+
+  <div style="margin-top:20px; border-top:1px solid #eee; padding-top:14px;">
+    <div class="cmx-summary-text" style="margin-bottom:10px;">
+      If this resident was created under the wrong shelter, correct it here before starting enrollment.
+    </div>
+
+    <form method="post" action="{{ url_for('case_management.set_resident_shelter_pre_enrollment', resident_id=resident_id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+      <div class="cmx-field">
+        <label><strong>Correct Shelter</strong></label>
+        <select name="shelter" required>
+          <option value="">Select shelter</option>
+          <option value="abba">Abba</option>
+          <option value="gratitude">Gratitude</option>
+          <option value="haven">Haven</option>
+        </select>
+      </div>
+
+      <div class="cmx-button-row" style="margin-top:12px;">
+        <button type="submit" class="cmx-btn">Update Shelter</button>
+      </div>
+    </form>
+  </div>
 </div>
