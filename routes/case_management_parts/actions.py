@@ -4,6 +4,7 @@ from datetime import datetime
 
 from flask import flash, redirect, request, session, url_for
 
+from core.audit import log_action
 from core.db import db_execute, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from routes.case_management_parts.helpers import (
@@ -19,6 +20,17 @@ from routes.case_management_parts.helpers import (
 
 def _clean_text(value: str | None) -> str:
     return (value or "").strip()
+
+
+def _staff_user_id() -> int | None:
+    raw_staff_user_id = session.get("staff_user_id")
+    if raw_staff_user_id in (None, ""):
+        return None
+
+    try:
+        return int(raw_staff_user_id)
+    except (TypeError, ValueError):
+        return None
 
 
 def _parse_appointment_datetime(value: str | None) -> tuple[datetime | None, str | None]:
@@ -83,6 +95,70 @@ def _initial_rad_values_for_new_enrollment(shelter: str) -> tuple[int | None, st
     if shelter_key == "haven":
         return 0, None
     return None, None
+
+
+def set_resident_shelter_pre_enrollment_view(resident_id: int):
+    ph = placeholder()
+
+    if not case_manager_allowed():
+        flash("Case manager access required.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    if resident_has_active_enrollment(resident_id):
+        flash("Cannot change resident shelter after enrollment has started.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    new_shelter = normalize_shelter_name(request.form.get("shelter"))
+    allowed_shelters = {"abba", "gratitude", "haven"}
+
+    if new_shelter not in allowed_shelters:
+        flash("Select a valid shelter.", "error")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    resident = db_fetchone(
+        f"""
+        SELECT id, shelter
+        FROM residents
+        WHERE id = {ph}
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+
+    if not resident:
+        flash("Resident not found.", "error")
+        return redirect(url_for("case_management.index"))
+
+    old_shelter = normalize_shelter_name(resident.get("shelter"))
+
+    if old_shelter == new_shelter:
+        flash("Resident shelter is already set to that shelter.", "ok")
+        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+
+    db_execute(
+        f"""
+        UPDATE residents
+        SET shelter = {ph},
+            updated_at = {ph}
+        WHERE id = {ph}
+        """,
+        (new_shelter, utcnow_iso(), resident_id),
+    )
+
+    log_action(
+        "resident",
+        resident_id,
+        new_shelter,
+        _staff_user_id(),
+        "pre_enrollment_shelter_correction",
+        {
+            "from_shelter": old_shelter,
+            "to_shelter": new_shelter,
+        },
+    )
+
+    flash("Resident shelter updated. You can now start enrollment.", "ok")
+    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
 def create_enrollment_view(resident_id: int):
