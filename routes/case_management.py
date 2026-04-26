@@ -7,6 +7,7 @@ from routes.case_management_parts.actions import (
     add_appointment_view,
     add_goal_view,
     create_enrollment_view,
+    set_resident_shelter_pre_enrollment_view,
 )
 from routes.case_management_parts.assessment import assessment_form_view, submit_assessment_view
 from routes.case_management_parts.budget_sessions import (
@@ -151,6 +152,12 @@ def submit_intake_assessment():
 @_view
 def intake_edit(resident_id: int):
     return intake_edit_view(resident_id)
+
+
+@case_management.post("/<int:resident_id>/set-shelter")
+@_view
+def set_resident_shelter_pre_enrollment(resident_id: int):
+    return set_resident_shelter_pre_enrollment_view(resident_id)
 
 
 @case_management.route("/<int:resident_id>/family-intake", methods=["GET", "POST"])
