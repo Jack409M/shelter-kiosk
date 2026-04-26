@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h1>Duplicate Merge Review Queue</h1>
+
+{% for group in queue %}
+  <div class="card" style="margin-bottom:16px;">
+    <h2>{{ group.first_name_key }} {{ group.last_name_key }}</h2>
+    <p>Marked for merge review</p>
+
+    <div class="table-shell">
+      <table class="app-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Birth Year</th>
+            <th>Phone</th>
+            <th>Shelter</th>
+            <th>Enrollment</th>
+            <th>Intake</th>
+            <th>Children</th>
+            <th>Notes</th>
+            <th>Passes</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in group.residents %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.first_name }} {{ r.last_name }}</td>
+            <td>{{ r.birth_year }}</td>
+            <td>{{ r.phone }}</td>
+            <td>{{ r.shelter }}</td>
+            <td>{{ r.program_status }}</td>
+            <td>{{ r.intake_exists }}</td>
+            <td>{{ r.child_count }}</td>
+            <td>{{ r.note_count }}</td>
+            <td>{{ r.pass_count }}</td>
+            <td>
+              <a href="/staff/case-management/{{ r.id }}">Open</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:10px;">
+      <button disabled>Merge records (coming soon)</button>
+    </div>
+  </div>
+{% endfor %}
+
+{% endblock %}
