@@ -182,17 +182,6 @@
                     {% endif %}
                   </div>
                 </details>
-
-                <details class="nav-mobile-section">
-                  <summary>Shelter Operations</summary>
-                  <div class="nav-mobile-links">
-                    {% if chore_board_url %}
-                      <a href="{{ chore_board_url }}">Chores</a>
-                    {% endif %}
-                    <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-                    <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
-                  </div>
-                </details>
               {% endif %}
 
               {% if reports_url and can_view_reports %}
@@ -451,17 +440,6 @@
                       {% if rent_entry_url %}
                         <a href="{{ rent_entry_url }}">Rent Payment Entry</a>
                       {% endif %}
-                    </div>
-                  </div>
-
-                  <div class="nav-dd">
-                    <button type="button">Shelter Operations ▾</button>
-                    <div class="menu">
-                      {% if chore_board_url %}
-                        <a href="{{ chore_board_url }}">Chores</a>
-                      {% endif %}
-                      <a href="{{ url_for('attendance.staff_attendance') }}">Checkout Log</a>
-                      <a href="{{ url_for('transport.staff_transport_board') }}">Transport Board</a>
                     </div>
                   </div>
                 {% endif %}
