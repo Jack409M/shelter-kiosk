@@ -30,6 +30,26 @@ def _rows(sql: str, params: tuple = ()) -> list[dict]:
     return db_fetchall(sql, params) or []
 
 
+def _resident_case_url(resident_id: object) -> str:
+    return url_for("case_management.resident_case", resident_id=resident_id)
+
+
+def _resident_intake_edit_url(resident_id: object) -> str:
+    return url_for("case_management.intake_edit", resident_id=resident_id)
+
+
+def _with_action(rows: list[dict], *, action_url: str, action_label: str) -> list[dict]:
+    updated_rows = []
+    for row in rows:
+        updated_row = dict(row)
+        resident_id = updated_row.get("id")
+        if resident_id:
+            updated_row["action_url"] = action_url.format(resident_id=resident_id)
+            updated_row["action_label"] = action_label
+        updated_rows.append(updated_row)
+    return updated_rows
+
+
 def _issue(
     *,
     key: str,
@@ -38,6 +58,7 @@ def _issue(
     severity: str,
     count: int,
     rows: list[dict],
+    fix_note: str,
 ) -> dict:
     return {
         "key": key,
@@ -46,6 +67,7 @@ def _issue(
         "severity": severity,
         "count": count,
         "rows": rows,
+        "fix_note": fix_note,
     }
 
 
@@ -61,6 +83,11 @@ def _missing_phone_issue() -> dict:
         LIMIT 25
         """
     )
+    rows = _with_action(
+        rows,
+        action_url="/staff/case-management/{resident_id}/intake-edit",
+        action_label="Edit intake/profile",
+    )
     return _issue(
         key="missing_phone",
         label="Missing phone",
@@ -68,6 +95,7 @@ def _missing_phone_issue() -> dict:
         severity="warn",
         count=count,
         rows=rows,
+        fix_note="Open intake/profile edit. Phone is updated through the resident intake edit workflow.",
     )
 
 
@@ -83,13 +111,19 @@ def _missing_birth_year_issue() -> dict:
         LIMIT 25
         """
     )
+    rows = _with_action(
+        rows,
+        action_url="/staff/case-management/{resident_id}/intake-edit",
+        action_label="Edit intake/profile",
+    )
     return _issue(
         key="missing_birth_year",
         label="Missing birth year",
-        description="Active residents with no birth year on the resident profile.",
+        description="Active residents with no birth year on the resident profile. Full date of birth is not collected.",
         severity="warn",
         count=count,
         rows=rows,
+        fix_note="Open intake/profile edit. Birth year is collected, but full date of birth is not collected.",
     )
 
 
@@ -122,6 +156,11 @@ def _active_without_enrollment_issue() -> dict:
         LIMIT 25
         """
     )
+    rows = _with_action(
+        rows,
+        action_url="/staff/case-management/{resident_id}",
+        action_label="Open resident case",
+    )
     return _issue(
         key="active_without_enrollment",
         label="Active resident without active enrollment",
@@ -129,6 +168,7 @@ def _active_without_enrollment_issue() -> dict:
         severity="error",
         count=count,
         rows=rows,
+        fix_note="Open the resident case page. Intake edit is not the right destination until an enrollment exists.",
     )
 
 
@@ -158,6 +198,11 @@ def _enrollment_shelter_mismatch_issue() -> dict:
         LIMIT 25
         """
     )
+    rows = _with_action(
+        rows,
+        action_url="/staff/case-management/{resident_id}",
+        action_label="Open resident case",
+    )
     return _issue(
         key="enrollment_shelter_mismatch",
         label="Enrollment shelter mismatch",
@@ -165,6 +210,7 @@ def _enrollment_shelter_mismatch_issue() -> dict:
         severity="error",
         count=count,
         rows=rows,
+        fix_note="Open the resident case page and review whether this is a transfer, housing move, or bad shelter value.",
     )
 
 
@@ -191,6 +237,11 @@ def _missing_intake_issue() -> dict:
         LIMIT 25
         """
     )
+    rows = _with_action(
+        rows,
+        action_url="/staff/case-management/{resident_id}/intake-edit",
+        action_label="Open intake edit",
+    )
     return _issue(
         key="missing_intake_baseline",
         label="Incomplete intake baseline",
@@ -198,6 +249,7 @@ def _missing_intake_issue() -> dict:
         severity="error",
         count=count,
         rows=rows,
+        fix_note="Open intake edit for review. If no intake row exists, the current edit screen may show a no intake found message and this will need a repair workflow later.",
     )
 
 
@@ -218,6 +270,7 @@ def _duplicate_names_issue() -> dict:
     rows = _rows(
         f"""
         SELECT
+            MIN(id) AS id,
             LOWER(TRIM(first_name)) AS first_name,
             LOWER(TRIM(last_name)) AS last_name,
             COUNT(*) AS duplicate_count
@@ -229,6 +282,11 @@ def _duplicate_names_issue() -> dict:
         LIMIT 25
         """
     )
+    rows = _with_action(
+        rows,
+        action_url="/staff/case-management/{resident_id}",
+        action_label="Review first match",
+    )
     return _issue(
         key="duplicate_active_names",
         label="Duplicate active resident names",
@@ -236,6 +294,7 @@ def _duplicate_names_issue() -> dict:
         severity="warn",
         count=count,
         rows=rows,
+        fix_note="Open the first matching resident case and compare with the resident list before making changes.",
     )
 
 
