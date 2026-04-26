@@ -76,6 +76,11 @@
                     {% for action in row.action_post_actions %}
                       <form method="post" action="{{ action.url }}" style="display:inline; margin-left:8px;">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        {% if action.hidden_fields %}
+                          {% for k, v in action.hidden_fields.items() %}
+                            <input type="hidden" name="{{ k }}" value="{{ v }}">
+                          {% endfor %}
+                        {% endif %}
                         <button type="submit">{{ action.label }}</button>
                       </form>
                     {% endfor %}
