@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Edit Resident Profile</h2>
+
+<form method="POST">
+  <div>
+    <label>Phone</label>
+    <input name="phone" value="{{ resident.phone or '' }}">
+  </div>
+
+  <div>
+    <label>Birth Year</label>
+    <input name="birth_year" type="number" value="{{ resident.birth_year or '' }}">
+  </div>
+
+  <button type="submit">Save</button>
+</form>
+{% endblock %}
