@@ -45,7 +45,7 @@
           <thead>
             <tr>
               {% for key in issue.rows[0].keys() %}
-                {% if key not in ['action_url', 'action_label', 'action_post_url', 'action_post_label'] %}
+                {% if key not in ['action_url', 'action_label', 'action_post_url', 'action_post_label', 'action_post_actions'] %}
                   <th>{{ key }}</th>
                 {% endif %}
               {% endfor %}
@@ -56,7 +56,7 @@
             {% for row in issue.rows %}
               <tr>
                 {% for key, value in row.items() %}
-                  {% if key not in ['action_url', 'action_label', 'action_post_url', 'action_post_label'] %}
+                  {% if key not in ['action_url', 'action_label', 'action_post_url', 'action_post_label', 'action_post_actions'] %}
                     <td>{{ value }}</td>
                   {% endif %}
                 {% endfor %}
@@ -71,6 +71,16 @@
                       <button type="submit">{{ row.action_post_label }}</button>
                     </form>
                   {% endif %}
+
+                  {% if row.action_post_actions %}
+                    {% for action in row.action_post_actions %}
+                      <form method="post" action="{{ action.url }}" style="display:inline; margin-left:8px;">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit">{{ action.label }}</button>
+                      </form>
+                    {% endfor %}
+                  {% endif %}
+
                 </td>
               </tr>
             {% endfor %}
