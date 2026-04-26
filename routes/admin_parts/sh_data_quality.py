@@ -30,23 +30,6 @@ def _rows(sql: str, params: tuple = ()) -> list[dict]:
     return db_fetchall(sql, params) or []
 
 
-def _resident_has_active_enrollment(resident_id: object) -> bool:
-    if not resident_id:
-        return False
-
-    row = db_fetchone(
-        f"""
-        SELECT 1 AS ok
-        FROM program_enrollments
-        WHERE resident_id = ?
-          AND {_ACTIVE_ENROLLMENT_SQL}
-        LIMIT 1
-        """,
-        (resident_id,),
-    )
-    return bool(row)
-
-
 def _with_action(rows: list[dict], *, action_url: str, action_label: str) -> list[dict]:
     updated_rows = []
     for row in rows:
@@ -66,12 +49,9 @@ def _with_profile_action(rows: list[dict]) -> list[dict]:
         updated_row = dict(row)
         resident_id = updated_row.get("id")
 
-        if resident_id and _resident_has_active_enrollment(resident_id):
-            updated_row["action_url"] = f"/staff/case-management/{resident_id}/intake-edit"
-            updated_row["action_label"] = "Edit intake/profile"
-        elif resident_id:
-            updated_row["action_url"] = f"/staff/case-management/{resident_id}"
-            updated_row["action_label"] = "Start or review enrollment"
+        if resident_id:
+            updated_row["action_url"] = f"/staff/residents/{resident_id}/edit"
+            updated_row["action_label"] = "Edit profile"
 
         updated_rows.append(updated_row)
 
@@ -119,7 +99,7 @@ def _missing_phone_issue() -> dict:
         severity="warn",
         count=count,
         rows=rows,
-        fix_note="If the resident has an active enrollment, edit intake/profile. If not, start or review enrollment first.",
+        fix_note="Open the resident profile editor. Phone can be corrected without requiring enrollment.",
     )
 
 
@@ -143,7 +123,7 @@ def _missing_birth_year_issue() -> dict:
         severity="warn",
         count=count,
         rows=rows,
-        fix_note="If the resident has an active enrollment, edit intake/profile. If not, start or review enrollment first. Birth year is collected, but full date of birth is not collected.",
+        fix_note="Open the resident profile editor. Birth year is collected, but full date of birth is not collected.",
     )
 
 
@@ -188,7 +168,7 @@ def _active_without_enrollment_issue() -> dict:
         severity="error",
         count=count,
         rows=rows,
-        fix_note="Open the resident case page. Intake edit is not the right destination until an enrollment exists.",
+        fix_note="Open the resident case page to start or review enrollment.",
     )
 
 
@@ -269,7 +249,7 @@ def _missing_intake_issue() -> dict:
         severity="error",
         count=count,
         rows=rows,
-        fix_note="Open intake edit for review. If no intake row exists, the current edit screen may show a no intake found message and this will need a repair workflow later.",
+        fix_note="Open intake edit for review. If no intake row exists, this may need a repair workflow later.",
     )
 
 
