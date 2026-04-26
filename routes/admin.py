@@ -28,6 +28,10 @@ from routes.admin_parts.sh_data_quality import (
     fix_shelter_mismatch_view,
     system_health_data_quality_view,
 )
+from routes.admin_parts.duplicate_merge_review import (
+    duplicate_merge_review_queue_view,
+    mark_duplicate_names_same_view,
+)
 from routes.admin_parts.system import (
     admin_demo_data_view,
     clear_demo_data_view,
@@ -80,6 +84,13 @@ def admin_system_health_data_quality():
     return system_health_data_quality_view()
 
 
+@admin.route("/staff/admin/system-health/data-quality/merge-review", methods=["GET"])
+@require_login
+@require_shelter
+def duplicate_merge_review_queue():
+    return duplicate_merge_review_queue_view()
+
+
 @admin.post("/staff/admin/system-health/data-quality/fix/missing-intake/<int:enrollment_id>")
 @require_login
 @require_shelter
@@ -99,6 +110,13 @@ def admin_fix_shelter_mismatch(enrollment_id: int, target: str):
 @require_shelter
 def admin_confirm_duplicate_names_separate():
     return confirm_duplicate_names_separate_view()
+
+
+@admin.post("/staff/admin/system-health/data-quality/fix/duplicate-names/mark-same")
+@require_login
+@require_shelter
+def admin_mark_duplicate_names_same():
+    return mark_duplicate_names_same_view()
 
 
 @admin.post("/staff/admin/security-settings/update")
