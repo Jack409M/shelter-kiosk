@@ -30,12 +30,21 @@ def _rows(sql: str, params: tuple = ()) -> list[dict]:
     return db_fetchall(sql, params) or []
 
 
-def _resident_case_url(resident_id: object) -> str:
-    return url_for("case_management.resident_case", resident_id=resident_id)
+def _resident_has_active_enrollment(resident_id: object) -> bool:
+    if not resident_id:
+        return False
 
-
-def _resident_intake_edit_url(resident_id: object) -> str:
-    return url_for("case_management.intake_edit", resident_id=resident_id)
+    row = db_fetchone(
+        f"""
+        SELECT 1 AS ok
+        FROM program_enrollments
+        WHERE resident_id = ?
+          AND {_ACTIVE_ENROLLMENT_SQL}
+        LIMIT 1
+        """,
+        (resident_id,),
+    )
+    return bool(row)
 
 
 def _with_action(rows: list[dict], *, action_url: str, action_label: str) -> list[dict]:
@@ -47,6 +56,25 @@ def _with_action(rows: list[dict], *, action_url: str, action_label: str) -> lis
             updated_row["action_url"] = action_url.format(resident_id=resident_id)
             updated_row["action_label"] = action_label
         updated_rows.append(updated_row)
+    return updated_rows
+
+
+def _with_profile_action(rows: list[dict]) -> list[dict]:
+    updated_rows = []
+
+    for row in rows:
+        updated_row = dict(row)
+        resident_id = updated_row.get("id")
+
+        if resident_id and _resident_has_active_enrollment(resident_id):
+            updated_row["action_url"] = f"/staff/case-management/{resident_id}/intake-edit"
+            updated_row["action_label"] = "Edit intake/profile"
+        elif resident_id:
+            updated_row["action_url"] = f"/staff/case-management/{resident_id}"
+            updated_row["action_label"] = "Start or review enrollment"
+
+        updated_rows.append(updated_row)
+
     return updated_rows
 
 
@@ -83,11 +111,7 @@ def _missing_phone_issue() -> dict:
         LIMIT 25
         """
     )
-    rows = _with_action(
-        rows,
-        action_url="/staff/case-management/{resident_id}/intake-edit",
-        action_label="Edit intake/profile",
-    )
+    rows = _with_profile_action(rows)
     return _issue(
         key="missing_phone",
         label="Missing phone",
@@ -95,7 +119,7 @@ def _missing_phone_issue() -> dict:
         severity="warn",
         count=count,
         rows=rows,
-        fix_note="Open intake/profile edit. Phone is updated through the resident intake edit workflow.",
+        fix_note="If the resident has an active enrollment, edit intake/profile. If not, start or review enrollment first.",
     )
 
 
@@ -111,11 +135,7 @@ def _missing_birth_year_issue() -> dict:
         LIMIT 25
         """
     )
-    rows = _with_action(
-        rows,
-        action_url="/staff/case-management/{resident_id}/intake-edit",
-        action_label="Edit intake/profile",
-    )
+    rows = _with_profile_action(rows)
     return _issue(
         key="missing_birth_year",
         label="Missing birth year",
@@ -123,7 +143,7 @@ def _missing_birth_year_issue() -> dict:
         severity="warn",
         count=count,
         rows=rows,
-        fix_note="Open intake/profile edit. Birth year is collected, but full date of birth is not collected.",
+        fix_note="If the resident has an active enrollment, edit intake/profile. If not, start or review enrollment first. Birth year is collected, but full date of birth is not collected.",
     )
 
 
