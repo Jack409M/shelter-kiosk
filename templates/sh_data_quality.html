@@ -45,7 +45,7 @@
           <thead>
             <tr>
               {% for key in issue.rows[0].keys() %}
-                {% if key not in ['action_url', 'action_label'] %}
+                {% if key not in ['action_url', 'action_label', 'action_post_url', 'action_post_label'] %}
                   <th>{{ key }}</th>
                 {% endif %}
               {% endfor %}
@@ -56,15 +56,19 @@
             {% for row in issue.rows %}
               <tr>
                 {% for key, value in row.items() %}
-                  {% if key not in ['action_url', 'action_label'] %}
+                  {% if key not in ['action_url', 'action_label', 'action_post_url', 'action_post_label'] %}
                     <td>{{ value }}</td>
                   {% endif %}
                 {% endfor %}
                 <td>
                   {% if row.action_url and row.action_label %}
                     <a href="{{ row.action_url }}">{{ row.action_label }}</a>
-                  {% else %}
-                    Review
+                  {% endif %}
+
+                  {% if row.action_post_url and row.action_post_label %}
+                    <form method="post" action="{{ row.action_post_url }}" style="display:inline; margin-left:8px;">
+                      <button type="submit">{{ row.action_post_label }}</button>
+                    </form>
                   {% endif %}
                 </td>
               </tr>
