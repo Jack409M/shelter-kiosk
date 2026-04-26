@@ -11,19 +11,19 @@
   <h2>Application Status</h2>
 
   <div class="form-grid">
-    <div class="form-field">
+    <div class="form-field field-width-sm">
       <div class="form-label">Database</div>
       <div>{{ db_status|title }}</div>
     </div>
 
-    <div class="form-field">
+    <div class="form-field field-width-md">
       <div class="form-label">App Version</div>
       <div>{{ app_version }}</div>
     </div>
 
-    <div class="form-field field-width-date">
+    <div class="form-field field-width-lg">
       <div class="form-label">Current Server Time</div>
-      <div>{{ current_time }}</div>
+      <div>{{ current_time|app_dt }}</div>
     </div>
   </div>
 </div>
