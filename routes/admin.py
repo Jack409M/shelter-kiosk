@@ -21,7 +21,7 @@ from routes.admin_parts.field_audit import (
 from routes.admin_parts.pass_retention import (
     run_pass_cleanup,
 )
-from routes.admin_parts.sh_dashboard import system_health_dashboard_view
+from routes.admin_parts.sh_dashboard import system_health_dashboard_view, system_health_events_api
 from routes.admin_parts.system import (
     admin_demo_data_view,
     clear_demo_data_view,
@@ -58,6 +58,13 @@ def admin_dashboard_live():
 @require_shelter
 def admin_system_health():
     return system_health_dashboard_view()
+
+
+@admin.route("/staff/admin/system-health/events", methods=["GET"])
+@require_login
+@require_shelter
+def admin_system_health_events():
+    return system_health_events_api()
 
 
 @admin.post("/staff/admin/security-settings/update")
