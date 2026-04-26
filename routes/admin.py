@@ -23,6 +23,7 @@ from routes.admin_parts.pass_retention import (
 )
 from routes.admin_parts.sh_dashboard import system_health_dashboard_view, system_health_events_api
 from routes.admin_parts.sh_data_quality import (
+    confirm_duplicate_names_separate_view,
     fix_missing_intake_baseline_view,
     fix_shelter_mismatch_view,
     system_health_data_quality_view,
@@ -91,6 +92,13 @@ def admin_fix_missing_intake_baseline(enrollment_id: int):
 @require_shelter
 def admin_fix_shelter_mismatch(enrollment_id: int, target: str):
     return fix_shelter_mismatch_view(enrollment_id, target)
+
+
+@admin.post("/staff/admin/system-health/data-quality/fix/duplicate-names/confirm-separate")
+@require_login
+@require_shelter
+def admin_confirm_duplicate_names_separate():
+    return confirm_duplicate_names_separate_view()
 
 
 @admin.post("/staff/admin/security-settings/update")
