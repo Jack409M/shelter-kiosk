@@ -50,7 +50,14 @@
               {% endif %}
             </td>
             <td>{{ card.label }}</td>
-            <td>{{ card.detail }}</td>
+            <td>
+              {{ card.detail }}
+              {% if card.label == "Last Successful Event" %}
+                <div><button onclick="openShModal('success')">View recent events</button></div>
+              {% elif card.label == "Last Error" %}
+                <div><button onclick="openShModal('error')">View recent errors</button></div>
+              {% endif %}
+            </td>
             <td>{{ card.meta }}</td>
           </tr>
         {% endfor %}
@@ -58,4 +65,49 @@
     </table>
   </div>
 </div>
+
+<div id="sh-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:1000;">
+  <div style="background:#fff; margin:5% auto; padding:20px; max-width:800px; border-radius:12px;">
+    <h2 id="sh-modal-title">System Events</h2>
+    <div id="sh-modal-body" style="max-height:400px; overflow:auto;">Loading...</div>
+    <div style="margin-top:16px;"><button onclick="closeShModal()">Close</button></div>
+  </div>
+</div>
+
+<script>
+async function openShModal(type) {
+  const modal = document.getElementById('sh-modal');
+  const body = document.getElementById('sh-modal-body');
+  const title = document.getElementById('sh-modal-title');
+
+  modal.style.display = 'block';
+  body.innerHTML = 'Loading...';
+
+  title.innerText = type === 'error' ? 'Recent Errors' : 'Recent Events';
+
+  try {
+    const res = await fetch(`/staff/admin/system-health/events?status=${type}`);
+    const data = await res.json();
+
+    if (!data.length) {
+      body.innerHTML = '<p>No events found.</p>';
+      return;
+    }
+
+    body.innerHTML = data.map(e => `
+      <div style="border-bottom:1px solid #eee; padding:8px 0;">
+        <strong>${e.message}</strong><br>
+        <small>${e.created_at}</small>
+      </div>
+    `).join('');
+  } catch (err) {
+    body.innerHTML = '<p>Failed to load events.</p>';
+  }
+}
+
+function closeShModal() {
+  document.getElementById('sh-modal').style.display = 'none';
+}
+</script>
+
 {% endblock %}
