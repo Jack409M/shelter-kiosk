@@ -68,7 +68,6 @@
 
   <div class="placement-actions-grid">
 
-    <!-- Unit Assignment -->
     <section class="placement-card">
       <h2>Apartment or Unit</h2>
       <p>Assign or change the resident's unit.</p>
@@ -91,7 +90,6 @@
       </form>
     </section>
 
-    <!-- Shelter Change -->
     <section class="placement-card">
       <h2>Shelter Change</h2>
       <p>Use transfer workflow to preserve history and rules.</p>
@@ -102,7 +100,6 @@
       </a>
     </section>
 
-    <!-- Level Change -->
     <section class="placement-card">
       <h2>Level Change</h2>
       <p>Use promotion workflow to protect rules and blockers.</p>
@@ -111,17 +108,6 @@
          href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">
         Review or Change Level
       </a>
-    </section>
-
-    <!-- Deactivate (future placement control) -->
-    <section class="placement-card">
-      <h2>Deactivate Resident</h2>
-      <p>Remove from active placement board.</p>
-
-      <form method="POST" action="{{ url_for('case_management.deactivate_resident', resident_id=resident.id) }}">
-        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <button type="submit">Make Inactive</button>
-      </form>
     </section>
 
   </div>
