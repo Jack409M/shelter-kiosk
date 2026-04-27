@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from flask import flash, redirect, request, session, url_for
 
+from core.audit import log_action
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from routes.admin_parts.helpers import require_admin_role
 from routes.case_management_parts.helpers import placeholder
@@ -242,6 +243,23 @@ def duplicate_merge_execute_view():
             """,
             (now, first_name_key, last_name_key),
         )
+
+    log_action(
+        entity_type="resident",
+        entity_id=primary_resident_id,
+        shelter=None,
+        staff_user_id=_staff_user_id(),
+        action_type="duplicate_merge_executed",
+        details={
+            "primary_id": primary_resident_id,
+            "merged_ids": ",".join(str(duplicate_id) for duplicate_id in duplicate_ids),
+            "duplicate_group": f"{first_name_key} {last_name_key}",
+            "tables": (
+                "resident_children,resident_child_income_supports,resident_passes,"
+                "resident_notifications,residents,duplicate_name_reviews"
+            ),
+        },
+    )
 
     flash(f"Merged {len(duplicate_ids)} duplicate record(s) into PRIMARY resident {primary_resident_id}.", "success")
     return redirect(url_for("admin.duplicate_merge_review_queue"))
