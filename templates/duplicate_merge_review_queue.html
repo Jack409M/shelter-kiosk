@@ -67,6 +67,15 @@
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="first_name_key" value="{{ group.first_name_key }}">
         <input type="hidden" name="last_name_key" value="{{ group.last_name_key }}">
+        <p><strong>This will permanently merge duplicate records into the selected PRIMARY resident.</strong></p>
+        <label for="merge_confirmation_{{ group.primary_resident_id }}">Type MERGE to confirm</label>
+        <input
+          id="merge_confirmation_{{ group.primary_resident_id }}"
+          name="merge_confirmation"
+          type="text"
+          autocomplete="off"
+          required
+        >
         <button type="submit">Merge duplicate records into primary</button>
       </form>
       {% else %}
