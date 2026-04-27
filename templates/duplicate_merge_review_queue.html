@@ -63,11 +63,11 @@
 
     <div style="margin-top:10px;">
       {% if group.primary_resident_id %}
-      <form method="post" action="/staff/admin/system-health/data-quality/merge-review/dry-run">
+      <form method="post" action="/staff/admin/system-health/data-quality/merge-review/execute">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="first_name_key" value="{{ group.first_name_key }}">
         <input type="hidden" name="last_name_key" value="{{ group.last_name_key }}">
-        <button type="submit">Merge into PRIMARY (dry run)</button>
+        <button type="submit">Merge duplicate records into primary</button>
       </form>
       {% else %}
       <button disabled>Select primary first</button>
