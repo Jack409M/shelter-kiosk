@@ -24,6 +24,14 @@
   </p>
 </div>
 
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Administrative Review</h2>
+  <p class="card-subtitle">
+    Review role permissions and live route exposure from the current running application.
+  </p>
+  <a href="{{ url_for('admin.admin_role_permissions') }}">Open Role Permission Matrix</a>
+</div>
+
 {% if alerts %}
 <div class="card" style="margin-bottom:16px;">
   <h2 class="card-title-large">Active Alerts</h2>
