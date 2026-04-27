@@ -34,7 +34,10 @@ from routes.admin_parts.duplicate_merge_review import (
     mark_duplicate_names_same_view,
 )
 from routes.admin_parts.duplicate_name_group_review import duplicate_name_group_review_view
-from routes.admin_parts.duplicate_primary_selection import select_duplicate_primary_view
+from routes.admin_parts.duplicate_primary_selection import (
+    select_duplicate_primary_view,
+    duplicate_merge_dry_run_view,
+)
 from routes.admin_parts.system import (
     admin_demo_data_view,
     clear_demo_data_view,
@@ -113,6 +116,13 @@ def duplicate_merge_resident_snapshot(resident_id: int):
 @require_shelter
 def admin_select_duplicate_primary():
     return select_duplicate_primary_view()
+
+
+@admin.post("/staff/admin/system-health/data-quality/merge-review/dry-run")
+@require_login
+@require_shelter
+def admin_duplicate_merge_dry_run():
+    return duplicate_merge_dry_run_view()
 
 
 @admin.post("/staff/admin/system-health/data-quality/fix/missing-intake/<int:enrollment_id>")
