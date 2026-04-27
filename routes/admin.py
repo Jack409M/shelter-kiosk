@@ -31,6 +31,7 @@ from routes.admin_parts.field_audit import (
 from routes.admin_parts.pass_retention import (
     run_pass_cleanup,
 )
+from routes.admin_parts.role_permissions import role_permission_matrix_view
 from routes.admin_parts.sh_dashboard import (
     resolve_system_health_alert_view,
     system_health_dashboard_view,
@@ -71,6 +72,13 @@ def admin_dashboard():
 @require_shelter
 def admin_dashboard_live():
     return admin_dashboard_live_view()
+
+
+@admin.route("/staff/admin/role-permissions", methods=["GET"])
+@require_login
+@require_shelter
+def admin_role_permissions():
+    return role_permission_matrix_view()
 
 
 @admin.route("/staff/admin/system-health", methods=["GET"])
