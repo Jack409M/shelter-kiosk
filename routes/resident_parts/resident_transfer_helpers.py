@@ -276,7 +276,7 @@ def upsert_resident_housing_assignment(
     )
 
     if normalized_destination_shelter == "haven":
-        normalized_apartment_number = None
+        normalized_apartment_number = "Dorm Bed"
         apartment_size = "Bed"
 
     now = utcnow_iso()
@@ -289,6 +289,17 @@ def upsert_resident_housing_assignment(
         current_size = (active_config.get("apartment_size_snapshot") or "").strip() or None
 
         if current_apartment == normalized_apartment_number and current_size == apartment_size:
+            sync_placement_from_rent_config(
+                resident_id=resident_id,
+                enrollment_id=None,
+                shelter=normalized_destination_shelter,
+                program_level=active_config.get("level_snapshot"),
+                apartment_number=normalized_apartment_number,
+                effective_date=effective_start_date,
+                change_reason="housing_assignment",
+                note="Synced from apartment assignment.",
+                now=now,
+            )
             return
 
         _close_active_rent_config(active_config_id, effective_start_date, now)
@@ -406,7 +417,7 @@ def extract_resident_transfer_form_data(
     same_shelter_move = to_shelter == context.from_shelter
 
     if to_shelter == "haven":
-        apartment_number = None
+        apartment_number = "Dorm Bed"
         apartment_size = "Bed"
 
     return ResidentTransferFormData(
@@ -638,7 +649,7 @@ def build_cross_shelter_transfer_flash(
     if to_shelter == "haven":
         return (
             f"Resident transferred from {from_shelter} to {to_shelter}. "
-            "Apartment assignment cleared for dorm style housing."
+            "Dorm bed assignment saved."
         )
 
     return f"Resident transferred from {from_shelter} to {to_shelter}."
