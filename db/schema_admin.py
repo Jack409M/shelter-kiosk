@@ -80,9 +80,56 @@ def ensure_resident_merge_history_table(kind: str) -> None:
     )
 
 
+def ensure_system_alerts_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS system_alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            alert_key TEXT NOT NULL,
+            alert_type TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            status TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            source_module TEXT NOT NULL DEFAULT '',
+            entity_type TEXT NOT NULL DEFAULT '',
+            entity_id INTEGER,
+            metadata TEXT NOT NULL DEFAULT '',
+            resolved_by_user_id INTEGER,
+            resolved_at TEXT,
+            resolution_note TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS system_alerts (
+            id SERIAL PRIMARY KEY,
+            alert_key TEXT NOT NULL,
+            alert_type TEXT NOT NULL,
+            severity TEXT NOT NULL,
+            status TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            source_module TEXT NOT NULL DEFAULT '',
+            entity_type TEXT NOT NULL DEFAULT '',
+            entity_id INTEGER,
+            metadata TEXT NOT NULL DEFAULT '',
+            resolved_by_user_id INTEGER,
+            resolved_at TEXT,
+            resolution_note TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """,
+    )
+
+
 def ensure_tables(kind: str) -> None:
     ensure_duplicate_name_reviews_table(kind)
     ensure_resident_merge_history_table(kind)
+    ensure_system_alerts_table(kind)
 
 
 def ensure_indexes() -> None:
@@ -128,3 +175,13 @@ def ensure_indexes() -> None:
         )
     except Exception:
         current_app.logger.exception("Failed to create resident merge history name index.")
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS system_alerts_status_idx
+            ON system_alerts (status, severity, created_at)
+            """
+        )
+    except Exception:
+        current_app.logger.exception("Failed to create system alerts index.")
