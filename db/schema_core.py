@@ -81,6 +81,32 @@ def ensure_security_settings_table(kind: str) -> None:
     )
 
 
+def ensure_security_config_history_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS security_config_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            setting_key TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT,
+            changed_by_user_id INTEGER,
+            changed_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS security_config_history (
+            id SERIAL PRIMARY KEY,
+            setting_key TEXT NOT NULL,
+            old_value TEXT,
+            new_value TEXT,
+            changed_by_user_id INTEGER,
+            changed_at TEXT NOT NULL
+        )
+        """,
+    )
+
+
 def ensure_security_incidents_table(kind: str) -> None:
     create_table(
         kind,
@@ -203,6 +229,7 @@ def ensure_organizations_table(kind: str) -> None:
 def ensure_tables(kind: str) -> None:
     ensure_staff_users_table(kind)
     ensure_security_settings_table(kind)
+    ensure_security_config_history_table(kind)
     ensure_security_incidents_table(kind)
     ensure_audit_log_table(kind)
     ensure_organizations_table(kind)
