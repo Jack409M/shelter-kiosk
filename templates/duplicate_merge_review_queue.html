@@ -40,6 +40,8 @@
             <td>{{ r.pass_count }}</td>
             <td>
               <a href="/staff/admin/system-health/data-quality/merge-review/resident/{{ r.id }}">View snapshot</a>
+              <br>
+              <button type="button">Make Primary</button>
             </td>
           </tr>
           {% endfor %}
