@@ -49,8 +49,39 @@ def ensure_duplicate_name_reviews_table(kind: str) -> None:
     safe_add_column(kind, "duplicate_name_reviews", "primary_selected_at TEXT")
 
 
+def ensure_resident_merge_history_table(kind: str) -> None:
+    create_table(
+        kind,
+        """
+        CREATE TABLE IF NOT EXISTS resident_merge_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            primary_resident_id INTEGER NOT NULL,
+            merged_resident_ids TEXT NOT NULL,
+            first_name_key TEXT NOT NULL,
+            last_name_key TEXT NOT NULL,
+            merged_by_user_id INTEGER,
+            affected_tables TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS resident_merge_history (
+            id SERIAL PRIMARY KEY,
+            primary_resident_id INTEGER NOT NULL,
+            merged_resident_ids TEXT NOT NULL,
+            first_name_key TEXT NOT NULL,
+            last_name_key TEXT NOT NULL,
+            merged_by_user_id INTEGER,
+            affected_tables TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """,
+    )
+
+
 def ensure_tables(kind: str) -> None:
     ensure_duplicate_name_reviews_table(kind)
+    ensure_resident_merge_history_table(kind)
 
 
 def ensure_indexes() -> None:
@@ -74,3 +105,23 @@ def ensure_indexes() -> None:
         )
     except Exception:
         current_app.logger.exception("Failed to create duplicate name verified review unique index.")
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_merge_history_primary_idx
+            ON resident_merge_history (primary_resident_id, created_at)
+            """
+        )
+    except Exception:
+        current_app.logger.exception("Failed to create resident merge history primary index.")
+
+    try:
+        db_execute(
+            """
+            CREATE INDEX IF NOT EXISTS resident_merge_history_name_idx
+            ON resident_merge_history (first_name_key, last_name_key, created_at)
+            """
+        )
+    except Exception:
+        current_app.logger.exception("Failed to create resident merge history name index.")
