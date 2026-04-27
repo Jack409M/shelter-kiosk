@@ -172,4 +172,3 @@ def resident_pass_request_view():
         return redirect(url_for("resident_portal.home"))
 
     return _inner()
-    

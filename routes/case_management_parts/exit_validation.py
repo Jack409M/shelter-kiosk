@@ -50,9 +50,7 @@ EXIT_REASON_MAP = {
 }
 
 ALLOWED_EXIT_CATEGORIES = set(EXIT_REASON_MAP.keys())
-ALLOWED_EXIT_REASONS = {
-    reason for reasons in EXIT_REASON_MAP.values() for reason in reasons
-}
+ALLOWED_EXIT_REASONS = {reason for reasons in EXIT_REASON_MAP.values() for reason in reasons}
 
 
 def validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, Any], list[str]]:
@@ -104,8 +102,7 @@ def validate_exit_form(form: Any, entry_date: str | None) -> tuple[dict[str, Any
         errors.append("Exit Reason must match the selected Exit Category.")
 
     is_deceased_exit = (
-        data["exit_category"] == "Administrative Exit"
-        and data["exit_reason"] == "Deceased"
+        data["exit_category"] == "Administrative Exit" and data["exit_reason"] == "Deceased"
     )
 
     income = parse_money(data["income_at_exit"])

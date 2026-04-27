@@ -33,8 +33,14 @@ def _load_weekly_activity_summary(resident_id: int | None, shelter: str) -> dict
     today = datetime.now(CHICAGO_TZ).date()
     week_start = today - timedelta(days=today.weekday())
     week_end = week_start + timedelta(days=7)
-    week_start_utc = datetime.combine(week_start, time.min, tzinfo=CHICAGO_TZ).astimezone(UTC).replace(tzinfo=None)
-    week_end_utc = datetime.combine(week_end, time.min, tzinfo=CHICAGO_TZ).astimezone(UTC).replace(tzinfo=None)
+    week_start_utc = (
+        datetime.combine(week_start, time.min, tzinfo=CHICAGO_TZ)
+        .astimezone(UTC)
+        .replace(tzinfo=None)
+    )
+    week_end_utc = (
+        datetime.combine(week_end, time.min, tzinfo=CHICAGO_TZ).astimezone(UTC).replace(tzinfo=None)
+    )
 
     try:
         row = db_fetchone(

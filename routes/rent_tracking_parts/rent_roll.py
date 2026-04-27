@@ -70,10 +70,9 @@ def register_rent_roll_routes(rent_tracking):
                 shelter,
                 config.get("apartment_number_snapshot"),
             )
-            apartment_size_snapshot = (
-                _derive_apartment_size_from_assignment(shelter, apartment_number_snapshot)
-                or config.get("apartment_size_snapshot")
-            )
+            apartment_size_snapshot = _derive_apartment_size_from_assignment(
+                shelter, apartment_number_snapshot
+            ) or config.get("apartment_size_snapshot")
             config["apartment_number_snapshot"] = apartment_number_snapshot
             config["apartment_size_snapshot"] = apartment_size_snapshot
 
@@ -134,7 +133,10 @@ def register_rent_roll_routes(rent_tracking):
 
         rent_month_label = _month_label(rent_year, rent_month)
         if already_posted:
-            flash(f"Rent was already posted for {rent_month_label}. Missing entries were checked.", "ok")
+            flash(
+                f"Rent was already posted for {rent_month_label}. Missing entries were checked.",
+                "ok",
+            )
         else:
             flash(f"Rent posted for {rent_month_label}.", "ok")
 

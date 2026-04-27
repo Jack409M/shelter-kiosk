@@ -33,16 +33,19 @@ def _duplicate_keys_from_request() -> tuple[str, str] | None:
 
 def _active_match_count(first_name_key: str, last_name_key: str) -> int:
     ph = placeholder()
-    row = db_fetchone(
-        f"""
+    row = (
+        db_fetchone(
+            f"""
         SELECT COUNT(*) AS count
         FROM residents
         WHERE {_ACTIVE_RESIDENT_SQL}
           AND LOWER(TRIM(first_name)) = {ph}
           AND LOWER(TRIM(last_name)) = {ph}
         """,
-        (first_name_key, last_name_key),
-    ) or {}
+            (first_name_key, last_name_key),
+        )
+        or {}
+    )
 
     try:
         return int(row.get("count") or 0)
@@ -117,8 +120,9 @@ def mark_duplicate_names_same_view():
 
 def _resident_summary_rows(first_name_key: str, last_name_key: str) -> list[dict]:
     ph = placeholder()
-    return db_fetchall(
-        f"""
+    return (
+        db_fetchall(
+            f"""
         SELECT
             r.id,
             r.resident_identifier,
@@ -142,13 +146,15 @@ def _resident_summary_rows(first_name_key: str, last_name_key: str) -> list[dict
           ON pe.resident_id = r.id
          AND LOWER(TRIM(COALESCE(pe.program_status, ''))) = 'active'
         LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
-        WHERE {_ACTIVE_RESIDENT_SQL.replace('is_active', 'r.is_active')}
+        WHERE {_ACTIVE_RESIDENT_SQL.replace("is_active", "r.is_active")}
           AND LOWER(TRIM(r.first_name)) = {ph}
           AND LOWER(TRIM(r.last_name)) = {ph}
         ORDER BY r.id
         """,
-        (first_name_key, last_name_key),
-    ) or []
+            (first_name_key, last_name_key),
+        )
+        or []
+    )
 
 
 def duplicate_merge_review_queue_view():
@@ -156,8 +162,9 @@ def duplicate_merge_review_queue_view():
         flash("Admin only.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
-    groups = db_fetchall(
-        """
+    groups = (
+        db_fetchall(
+            """
         SELECT
             first_name_key,
             last_name_key,
@@ -169,7 +176,9 @@ def duplicate_merge_review_queue_view():
         GROUP BY first_name_key, last_name_key
         ORDER BY MIN(reviewed_at) DESC, last_name_key, first_name_key
         """
-    ) or []
+        )
+        or []
+    )
 
     queue = []
 

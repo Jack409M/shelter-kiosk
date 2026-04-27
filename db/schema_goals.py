@@ -88,6 +88,7 @@ def ensure_indexes() -> None:
         )
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
     try:
@@ -101,6 +102,7 @@ def ensure_indexes() -> None:
         )
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
 

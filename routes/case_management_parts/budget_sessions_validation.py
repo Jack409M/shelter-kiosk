@@ -23,7 +23,9 @@ _MONEY_FIELDS = (
 )
 
 
-def _parse_optional_money(form: Mapping[str, Any], field_name: str, label: str, errors: list[str]) -> float | None:
+def _parse_optional_money(
+    form: Mapping[str, Any], field_name: str, label: str, errors: list[str]
+) -> float | None:
     raw_value = clean(form.get(field_name))
     if not raw_value:
         return None
@@ -36,7 +38,9 @@ def _parse_optional_money(form: Mapping[str, Any], field_name: str, label: str, 
     return round(parsed_value, 2)
 
 
-def _resolve_budget_month(session_date_iso: str | None, budget_month_text: str | None, errors: list[str]) -> str | None:
+def _resolve_budget_month(
+    session_date_iso: str | None, budget_month_text: str | None, errors: list[str]
+) -> str | None:
     if budget_month_text:
         if not _BUDGET_MONTH_RE.match(budget_month_text):
             errors.append("Budget month must use YYYY-MM format.")
@@ -49,7 +53,9 @@ def _resolve_budget_month(session_date_iso: str | None, budget_month_text: str |
     return None
 
 
-def _resolve_remaining(income_value: float | None, expense_value: float | None, submitted_value: float | None) -> float | None:
+def _resolve_remaining(
+    income_value: float | None, expense_value: float | None, submitted_value: float | None
+) -> float | None:
     if submitted_value is not None:
         return round(submitted_value, 2)
 

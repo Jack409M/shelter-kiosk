@@ -244,11 +244,7 @@ def register_request_security(
         if request.endpoint is None:
             return "Too many requests. Please wait a few minutes and try again.", 429
 
-        if (
-            current_app.config.get("TESTING")
-            and path == "/resident"
-            and not request.form
-        ):
+        if current_app.config.get("TESTING") and path == "/resident" and not request.form:
             _audit(
                 "public_abuse_rate_limited",
                 _base_details(ip=ip, reason="empty_resident_post_testing"),

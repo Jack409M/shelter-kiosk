@@ -14,11 +14,13 @@ reports_sobriety_progress = Blueprint("reports_sobriety_progress", __name__)
 def sobriety_progress_report():
     init_db()
 
-    entry_avg = db_fetchone("SELECT AVG(COALESCE(days_sober_at_entry, 0)) AS val FROM intake_assessments")["val"]
-    followup_avg = db_fetchone("SELECT AVG(COALESCE(sober_at_followup, 0)) AS val FROM followups")["val"]
+    entry_avg = db_fetchone(
+        "SELECT AVG(COALESCE(days_sober_at_entry, 0)) AS val FROM intake_assessments"
+    )["val"]
+    followup_avg = db_fetchone("SELECT AVG(COALESCE(sober_at_followup, 0)) AS val FROM followups")[
+        "val"
+    ]
 
     return render_template(
-        "reports/sobriety_progress.html",
-        entry_avg=entry_avg,
-        followup_avg=followup_avg
+        "reports/sobriety_progress.html", entry_avg=entry_avg, followup_avg=followup_avg
     )

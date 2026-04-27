@@ -223,9 +223,7 @@ def init_db() -> None:
         raise RuntimeError("DATABASE_URL is required before database initialization.")
 
     current_app.config["DATABASE_URL"] = effective_database_url
-    current_app.config["DATABASE_MODE_LABEL"] = database_mode_label_from_url(
-        effective_database_url
-    )
+    current_app.config["DATABASE_MODE_LABEL"] = database_mode_label_from_url(effective_database_url)
 
     state = _runtime_state()
     if state.initialized_database_url == effective_database_url:

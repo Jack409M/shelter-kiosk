@@ -299,9 +299,7 @@ def test_schedule_updates_request_logs_and_redirects(client, monkeypatch):
         "pending",
     )
 
-    assert log_calls == [
-        ("transport", 5, "abba", 42, "approve", "Transport request approved")
-    ]
+    assert log_calls == [("transport", 5, "abba", 42, "approve", "Transport request approved")]
 
 
 def test_cleanup_transport_requests_uses_pg_placeholder(monkeypatch):
@@ -372,4 +370,3 @@ def test_cleanup_transport_requests_uses_sqlite_placeholder(monkeypatch):
     assert second_params[0] == "abba"
     assert second_params[1] == "scheduled"
     assert second_params[2]
-    

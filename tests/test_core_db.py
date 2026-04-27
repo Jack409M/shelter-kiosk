@@ -130,9 +130,7 @@ def test_sqlite_path_from_non_sqlite_url_raises(app) -> None:
 
 def test_sqlite_path_from_empty_path_raises(app) -> None:
     app.config["DATABASE_URL"] = "sqlite://"
-    with app.app_context(), pytest.raises(
-        RuntimeError, match="must include a database path"
-    ):
+    with app.app_context(), pytest.raises(RuntimeError, match="must include a database path"):
         core_db._sqlite_path_from_url(core_db._database_url())
 
 
@@ -147,15 +145,10 @@ def test_sqlite_should_skip_statement_false() -> None:
 
 
 def test_rewrite_legacy_sqlite_transport_insert_rewrites_exact_match() -> None:
-    sql = (
-        "INSERT INTO transport_requests "
-        "(resident_identifier, shelter, status) VALUES (?, ?, ?)"
-    )
+    sql = "INSERT INTO transport_requests (resident_identifier, shelter, status) VALUES (?, ?, ?)"
     params = ("RID123", "Haven", "pending")
 
-    rewritten_sql, rewritten_params = core_db._rewrite_legacy_sqlite_transport_insert(
-        sql, params
-    )
+    rewritten_sql, rewritten_params = core_db._rewrite_legacy_sqlite_transport_insert(sql, params)
 
     assert "first_name" in rewritten_sql
     assert "last_name" in rewritten_sql
@@ -183,9 +176,7 @@ def test_rewrite_legacy_sqlite_transport_insert_noop_for_non_match() -> None:
     )
     params = ("RID123", "Haven", "pending", "Jane")
 
-    rewritten_sql, rewritten_params = core_db._rewrite_legacy_sqlite_transport_insert(
-        sql, params
-    )
+    rewritten_sql, rewritten_params = core_db._rewrite_legacy_sqlite_transport_insert(sql, params)
 
     assert rewritten_sql == sql
     assert rewritten_params == params
@@ -287,9 +278,7 @@ def test_db_fetchone_and_fetchall_and_execute_sqlite(app) -> None:
         core_db.db_execute("INSERT INTO items (name) VALUES (%s)", ("alpha",))
         core_db.db_execute("INSERT INTO items (name) VALUES (%s)", ("beta",))
 
-        row = core_db.db_fetchone(
-            "SELECT id, name FROM items WHERE name = %s", ("alpha",)
-        )
+        row = core_db.db_fetchone("SELECT id, name FROM items WHERE name = %s", ("alpha",))
         rows = core_db.db_fetchall("SELECT id, name FROM items ORDER BY id")
 
         assert row is not None
@@ -410,9 +399,7 @@ def test_db_cursor_pg_dict_rows_uses_real_dict_cursor(app, monkeypatch) -> None:
         assert conn.cursor_instance.closed is True
 
 
-def test_db_cursor_pg_dict_rows_without_real_dict_cursor_raises(
-    app, monkeypatch
-) -> None:
+def test_db_cursor_pg_dict_rows_without_real_dict_cursor_raises(app, monkeypatch) -> None:
     conn = FakePgConnection()
 
     with app.app_context():
@@ -420,7 +407,10 @@ def test_db_cursor_pg_dict_rows_without_real_dict_cursor_raises(
         monkeypatch.setattr(core_db, "get_db", lambda: conn)
         monkeypatch.setattr(core_db, "RealDictCursor", None)
 
-        with pytest.raises(RuntimeError, match="RealDictCursor is unavailable"), core_db._db_cursor(dict_rows=True):
+        with (
+            pytest.raises(RuntimeError, match="RealDictCursor is unavailable"),
+            core_db._db_cursor(dict_rows=True),
+        ):
             pass
 
 

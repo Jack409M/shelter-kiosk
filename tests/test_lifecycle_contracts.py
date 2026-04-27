@@ -481,7 +481,9 @@ def test_lifecycle_promotion_contract_changes_level_without_closing_enrollment(a
         resident_id = _insert_resident(shelter="abba", level="5")
         enrollment_id = _insert_active_enrollment(resident_id=resident_id, shelter="abba")
         _insert_rent_config(resident_id=resident_id, shelter="abba", level="5")
-        _insert_placement(resident_id=resident_id, enrollment_id=enrollment_id, shelter="abba", level="5")
+        _insert_placement(
+            resident_id=resident_id, enrollment_id=enrollment_id, shelter="abba", level="5"
+        )
 
         db_execute(
             """
@@ -527,7 +529,9 @@ def test_lifecycle_promotion_contract_changes_level_without_closing_enrollment(a
 
     with app.app_context():
         resident = _fetch_resident(resident_id)
-        enrollment = db_fetchone("SELECT * FROM program_enrollments WHERE id = %s", (enrollment_id,))
+        enrollment = db_fetchone(
+            "SELECT * FROM program_enrollments WHERE id = %s", (enrollment_id,)
+        )
         active_rent = db_fetchone(
             """
             SELECT *
@@ -600,7 +604,9 @@ def test_lifecycle_exit_contract_closes_enrollment_without_deleting_resident(app
 
     with app.app_context():
         resident = _fetch_resident(resident_id)
-        enrollment = db_fetchone("SELECT * FROM program_enrollments WHERE id = %s", (enrollment_id,))
+        enrollment = db_fetchone(
+            "SELECT * FROM program_enrollments WHERE id = %s", (enrollment_id,)
+        )
         exit_assessment = db_fetchone(
             "SELECT * FROM exit_assessments WHERE enrollment_id = %s",
             (enrollment_id,),
@@ -624,7 +630,9 @@ def test_lifecycle_exit_contract_closes_enrollment_without_deleting_resident(app
 
 
 def test_lifecycle_pass_contract_pending_to_approved_to_completed(app, client, monkeypatch):
-    monkeypatch.setattr("routes.attendance_parts.pass_action_helpers.send_sms", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        "routes.attendance_parts.pass_action_helpers.send_sms", lambda *args, **kwargs: None
+    )
 
     with app.app_context():
         resident_id = _insert_resident(shelter="abba", level="5")

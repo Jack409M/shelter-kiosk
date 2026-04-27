@@ -50,8 +50,7 @@ def _ensure_budget_session_active_column() -> None:
 
     columns = db_fetchall("PRAGMA table_info(resident_budget_sessions)")
     if any(
-        str(column.get("name") or "").strip().lower() == "is_active"
-        for column in columns or []
+        str(column.get("name") or "").strip().lower() == "is_active" for column in columns or []
     ):
         return
 
@@ -126,9 +125,7 @@ def _determine_active_budget_session_id(rows: list[dict]) -> int | None:
     current_month = _current_budget_month_text()
 
     exact_current = [
-        row
-        for row in rows
-        if str(row.get("budget_month") or "").strip() == current_month
+        row for row in rows if str(row.get("budget_month") or "").strip() == current_month
     ]
     if exact_current:
         exact_current.sort(
@@ -156,11 +153,7 @@ def _determine_active_budget_session_id(rows: list[dict]) -> int | None:
         )
         return int(past_or_current[0]["id"])
 
-    future_rows = [
-        row
-        for row in rows
-        if str(row.get("budget_month") or "").strip()
-    ]
+    future_rows = [row for row in rows if str(row.get("budget_month") or "").strip()]
     if future_rows:
         future_rows.sort(
             key=lambda row: (
@@ -178,9 +171,7 @@ def _determine_active_budget_session_id(rows: list[dict]) -> int | None:
     return int(fallback_rows[0]["id"])
 
 
-def _set_active_budget_session_for_resident(
-    resident_id: int, budget_id: int | None
-) -> None:
+def _set_active_budget_session_for_resident(resident_id: int, budget_id: int | None) -> None:
     db_execute(
         _sql(
             "UPDATE resident_budget_sessions SET is_active = FALSE WHERE resident_id = %s",
@@ -419,9 +410,7 @@ def _copy_forward_previous_budget(
             continue
 
         projected = previous.get("projected_amount")
-        projected_amount = (
-            round(float(projected), 2) if projected not in (None, "") else None
-        )
+        projected_amount = round(float(projected), 2) if projected not in (None, "") else None
 
         db_execute(
             """
@@ -433,9 +422,7 @@ def _copy_forward_previous_budget(
         )
 
 
-def _prefill_income_from_source(
-    budget_id: int, enrollment_id: int | None, now: str
-) -> None:
+def _prefill_income_from_source(budget_id: int, enrollment_id: int | None, now: str) -> None:
     income = load_intake_income_support(enrollment_id) or {}
 
     mapping = {
@@ -446,9 +433,7 @@ def _prefill_income_from_source(
         + float(income.get("survivor_benefit_total") or 0),
         "tanf": float(income.get("tanf_income") or 0),
         "child_support": float(
-            income.get("child_support_total")
-            or income.get("child_support_income")
-            or 0
+            income.get("child_support_total") or income.get("child_support_income") or 0
         ),
         "alimony": float(income.get("alimony_income") or 0),
         "other_income": float(income.get("other_income") or 0),
@@ -584,9 +569,7 @@ def _load_line_items(budget_id: int) -> list[dict]:
             item["actual_editable"] = True
 
         difference_amount = round(total_amount - projected_amount, 2)
-        item["projected_amount"] = (
-            round(projected_amount, 2) if projected_amount else None
-        )
+        item["projected_amount"] = round(projected_amount, 2) if projected_amount else None
         item["difference_amount"] = difference_amount
         item["difference_text"] = _format_difference_text(difference_amount)
         item["difference_class"] = _difference_class(difference_amount)
@@ -662,14 +645,10 @@ def _load_recent_budget_transactions(budget_id: int, limit: int = 24) -> list[di
 def _build_budget_editor_context(budget_id: int, budget_month: str | None) -> dict:
     items = _load_line_items(budget_id)
     income_items = [
-        item
-        for item in items
-        if str(item.get("line_group") or "").strip().lower() == "income"
+        item for item in items if str(item.get("line_group") or "").strip().lower() == "income"
     ]
     expense_items = [
-        item
-        for item in items
-        if str(item.get("line_group") or "").strip().lower() == "expense"
+        item for item in items if str(item.get("line_group") or "").strip().lower() == "expense"
     ]
     expense_left_items, expense_right_items = _split_expense_items(expense_items)
 
@@ -965,7 +944,9 @@ def delete_budget_session_view(resident_id: int, budget_id: int):
         return redirect(url_for("case_management.budget_sessions", resident_id=resident_id))
 
     with db_transaction():
-        db_execute("DELETE FROM resident_budget_line_items WHERE budget_session_id = ?", (budget_id,))
+        db_execute(
+            "DELETE FROM resident_budget_line_items WHERE budget_session_id = ?", (budget_id,)
+        )
         db_execute(
             "DELETE FROM resident_budget_sessions WHERE id = ? AND resident_id = ?",
             (budget_id, resident_id),

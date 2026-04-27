@@ -66,9 +66,7 @@ def _load_migration_package() -> ModuleType:
     try:
         return importlib.import_module("db.migrations")
     except Exception as exc:
-        raise RuntimeError(
-            "Failed to load migration package 'db.migrations'"
-        ) from exc
+        raise RuntimeError("Failed to load migration package 'db.migrations'") from exc
 
 
 def _iter_migration_module_names() -> list[str]:
@@ -76,14 +74,10 @@ def _iter_migration_module_names() -> list[str]:
 
     package_path = getattr(package, "__path__", None)
     if not package_path:
-        raise RuntimeError(
-            "Migration package has no __path__; cannot load migrations"
-        )
+        raise RuntimeError("Migration package has no __path__; cannot load migrations")
 
     module_names: list[str] = []
-    for module_info in pkgutil.iter_modules(
-        package_path, prefix="db.migrations."
-    ):
+    for module_info in pkgutil.iter_modules(package_path, prefix="db.migrations."):
         full_name = str(module_info.name)
         short_name = full_name.rsplit(".", 1)[-1]
 
@@ -106,9 +100,7 @@ def _coerce_migration_definition(module: ModuleType) -> MigrationDefinition:
         )
 
     if not isinstance(name, str) or not name.strip():
-        raise RuntimeError(
-            f"Migration module {module.__name__} must define a non empty NAME."
-        )
+        raise RuntimeError(f"Migration module {module.__name__} must define a non empty NAME.")
 
     if not callable(apply_func):
         raise RuntimeError(
@@ -138,9 +130,7 @@ def _load_migration_definitions() -> list[MigrationDefinition]:
     seen_versions: set[int] = set()
     for definition in definitions:
         if definition.version in seen_versions:
-            raise RuntimeError(
-                f"Duplicate migration version detected: {definition.version}"
-            )
+            raise RuntimeError(f"Duplicate migration version detected: {definition.version}")
         seen_versions.add(definition.version)
 
     return definitions
@@ -174,8 +164,7 @@ def _record_applied_migration(kind: str, definition: MigrationDefinition) -> Non
         VALUES (%s, %s, %s)
         """
         if kind == "pg"
-        else
-        """
+        else """
         INSERT INTO schema_migrations (version, name, applied_at)
         VALUES (?, ?, ?)
         """
@@ -226,9 +215,7 @@ def apply_pending_migrations() -> list[int]:
         if existing is not None:
             existing_name = str(existing.get("name") or "").strip()
             if existing_name and existing_name != definition.name:
-                raise RuntimeError(
-                    f"Applied migration mismatch version={definition.version}"
-                )
+                raise RuntimeError(f"Applied migration mismatch version={definition.version}")
             continue
 
         _apply_one_migration(kind, definition)

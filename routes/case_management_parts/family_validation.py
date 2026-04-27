@@ -67,9 +67,7 @@ def validate_child_form(form: Mapping[str, Any]) -> tuple[dict[str, Any], list[s
 
     data["birth_year"] = _validate_birth_year(data["birth_year"], errors)
 
-    data["receives_survivor_benefit"] = _yes_no_to_bool(
-        data.get("receives_survivor_benefit")
-    )
+    data["receives_survivor_benefit"] = _yes_no_to_bool(data.get("receives_survivor_benefit"))
 
     data["survivor_benefit_amount"] = _validate_money(
         data.get("survivor_benefit_amount"),

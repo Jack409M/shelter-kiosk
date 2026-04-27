@@ -177,7 +177,10 @@ def set_resident_shelter_pre_enrollment_view(resident_id: int):
     if active_enrollment:
         enrollment_shelter = normalize_shelter_name(active_enrollment.get("shelter"))
         if new_shelter != enrollment_shelter:
-            flash("Resident already has an active enrollment. Shelter can only be synced to that enrollment shelter.", "error")
+            flash(
+                "Resident already has an active enrollment. Shelter can only be synced to that enrollment shelter.",
+                "error",
+            )
             return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
         if old_shelter == enrollment_shelter:

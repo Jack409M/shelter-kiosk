@@ -110,15 +110,23 @@ def test_income_support_post_failure_logs_and_renders_page(client, monkeypatch, 
     }
 
     monkeypatch.setattr(income_support_module, "init_db", lambda: None)
-    monkeypatch.setattr(income_support_module, "_load_resident_in_scope", lambda resident_id, shelter: resident)
-    monkeypatch.setattr(income_support_module, "_load_current_enrollment", lambda resident_id, shelter: {"id": 7})
-    monkeypatch.setattr(income_support_module, "validate_income_support_form", lambda form: (values, []))
+    monkeypatch.setattr(
+        income_support_module, "_load_resident_in_scope", lambda resident_id, shelter: resident
+    )
+    monkeypatch.setattr(
+        income_support_module, "_load_current_enrollment", lambda resident_id, shelter: {"id": 7}
+    )
+    monkeypatch.setattr(
+        income_support_module, "validate_income_support_form", lambda form: (values, [])
+    )
     monkeypatch.setattr(
         income_support_module,
         "upsert_intake_income_support",
         lambda enrollment_id, values: (_ for _ in ()).throw(RuntimeError("db fail")),
     )
-    monkeypatch.setattr(income_support_module, "load_intake_income_support", lambda enrollment_id: {})
+    monkeypatch.setattr(
+        income_support_module, "load_intake_income_support", lambda enrollment_id: {}
+    )
     monkeypatch.setattr(income_support_module, "render_template", lambda *args, **kwargs: "income")
 
     with caplog.at_level(logging.ERROR):
@@ -155,14 +163,20 @@ def test_income_support_get_resync_failure_logs_and_renders_page(client, monkeyp
     }
 
     monkeypatch.setattr(income_support_module, "init_db", lambda: None)
-    monkeypatch.setattr(income_support_module, "_load_resident_in_scope", lambda resident_id, shelter: resident)
-    monkeypatch.setattr(income_support_module, "_load_current_enrollment", lambda resident_id, shelter: {"id": 7})
+    monkeypatch.setattr(
+        income_support_module, "_load_resident_in_scope", lambda resident_id, shelter: resident
+    )
+    monkeypatch.setattr(
+        income_support_module, "_load_current_enrollment", lambda resident_id, shelter: {"id": 7}
+    )
     monkeypatch.setattr(
         income_support_module,
         "recalculate_intake_income_support",
         lambda enrollment_id: (_ for _ in ()).throw(RuntimeError("recalc fail")),
     )
-    monkeypatch.setattr(income_support_module, "load_intake_income_support", lambda enrollment_id: {})
+    monkeypatch.setattr(
+        income_support_module, "load_intake_income_support", lambda enrollment_id: {}
+    )
     monkeypatch.setattr(income_support_module, "render_template", lambda *args, **kwargs: "income")
 
     with caplog.at_level(logging.ERROR):
@@ -227,7 +241,12 @@ def test_budget_session_edit_failure_logs_and_redirects(client, monkeypatch, cap
     monkeypatch.setattr(
         budget_sessions_module,
         "db_fetchone",
-        lambda *args, **kwargs: {"id": 9, "resident_id": 1, "session_date": "2026-04-16", "notes": "x"},
+        lambda *args, **kwargs: {
+            "id": 9,
+            "resident_id": 1,
+            "session_date": "2026-04-16",
+            "notes": "x",
+        },
     )
     monkeypatch.setattr(
         budget_sessions_module,

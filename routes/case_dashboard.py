@@ -765,7 +765,8 @@ def dashboard():
     )
     level9_due_this_month_count = (
         level9_due_this_month_count_row["count"]
-        if isinstance(level9_due_this_month_count_row, dict) and "count" in level9_due_this_month_count_row
+        if isinstance(level9_due_this_month_count_row, dict)
+        and "count" in level9_due_this_month_count_row
         else level9_due_this_month_count_row[0]
         if level9_due_this_month_count_row
         else 0

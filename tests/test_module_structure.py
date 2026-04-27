@@ -38,9 +38,9 @@ def _is_form_handling_module(route_file: Path) -> bool:
         marker in text
         for marker in (
             "request.form",
-            "request.method == \"POST\"",
+            'request.method == "POST"',
             "request.method == 'POST'",
-            "methods=[\"GET\", \"POST\"]",
+            'methods=["GET", "POST"]',
             "methods=['GET', 'POST']",
             ".post(",
         )
@@ -49,7 +49,8 @@ def _is_form_handling_module(route_file: Path) -> bool:
 
 def test_every_form_module_has_validation_and_test():
     route_files = [
-        f for f in ROUTES_DIR.glob("*.py")
+        f
+        for f in ROUTES_DIR.glob("*.py")
         if f.name not in SKIP_EXACT
         and not f.name.endswith(SKIP_SUFFIXES)
         and _is_form_handling_module(f)
@@ -74,6 +75,4 @@ def test_every_form_module_has_validation_and_test():
         f"Missing validation files for form modules: {missing_validation}"
     )
 
-    assert not missing_tests, (
-        f"Missing validation tests for form modules: {missing_tests}"
-    )
+    assert not missing_tests, f"Missing validation tests for form modules: {missing_tests}"

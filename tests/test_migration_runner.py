@@ -39,9 +39,7 @@ def test_migration_runner_detects_applied_name_mismatch(app, monkeypatch):
 
         try:
             migration_runner.apply_pending_migrations()
-            raise AssertionError(
-                "Expected applied migration name mismatch to raise RuntimeError"
-            )
+            raise AssertionError("Expected applied migration name mismatch to raise RuntimeError")
         except RuntimeError as exc:
             # ✅ Updated to match real message
             assert "Applied migration mismatch" in str(exc)

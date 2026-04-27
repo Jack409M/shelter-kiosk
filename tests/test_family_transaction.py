@@ -27,7 +27,12 @@ def test_family_add_child_atomic_rollback(client, monkeypatch):
     monkeypatch.setattr(
         family_module,
         "_resident_in_scope",
-        lambda resident_id: {"id": resident_id, "first_name": "Jane", "last_name": "Doe", "shelter": "abba"},
+        lambda resident_id: {
+            "id": resident_id,
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "shelter": "abba",
+        },
     )
     monkeypatch.setattr(
         family_module,

@@ -140,9 +140,7 @@ CRITICAL_FUNCTION_CONTRACTS = {
         "_apply_transfer",
         "_release_old_rent_assignment",
     ),
-    "routes/resident_parts/pass_request.py": (
-        "resident_pass_request_view",
-    ),
+    "routes/resident_parts/pass_request.py": ("resident_pass_request_view",),
     "routes/resident_parts/pass_request_helpers.py": (
         "load_pass_request_context",
         "validate_pass_request_form",
@@ -347,9 +345,7 @@ def _check_large_or_suspicious_change_set(
     stats: dict[str, tuple[int, int]],
     failures: list[str],
 ) -> None:
-    protected_changed = sorted(
-        path for _, path, _ in changes if _is_protected_path(path)
-    )
+    protected_changed = sorted(path for _, path, _ in changes if _is_protected_path(path))
     deleted_lines = sum(deleted for path, (_, deleted) in stats.items() if _is_protected_path(path))
 
     if len(protected_changed) > MAX_PROTECTED_FILES_CHANGED and not _env_truthy("ALLOW_LARGE_DIFF"):

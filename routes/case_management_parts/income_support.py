@@ -29,6 +29,7 @@ from routes.case_management_parts.intake_income_support import (
 
 # --- compatibility layer for tests and legacy monkeypatch targets ---
 
+
 def upsert_intake_income_support(enrollment_id, values):
     return _upsert_intake_income_support_impl(enrollment_id, values)
 

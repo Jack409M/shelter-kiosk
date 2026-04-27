@@ -148,7 +148,9 @@ def test_db_ban_ip_uses_state_store(monkeypatch):
 
     monkeypatch.setattr(rl, "_use_db_backend", lambda: True)
     monkeypatch.setattr(rl, "_now", lambda: 100.0)
-    monkeypatch.setattr(rl, "upsert_state", lambda kind, key, until: calls.append((kind, key, until)))
+    monkeypatch.setattr(
+        rl, "upsert_state", lambda kind, key, until: calls.append((kind, key, until))
+    )
     monkeypatch.setattr(rl, "_prune_db_if_needed", lambda now: prune_calls.append(now))
 
     rl.ban_ip("9.9.9.9", seconds=45)

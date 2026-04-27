@@ -9,7 +9,6 @@ from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from routes.admin_parts.helpers import require_admin_role
 from routes.case_management_parts.helpers import placeholder
 
-
 _ACTIVE_RESIDENT_SQL = """
 COALESCE(LOWER(TRIM(CAST(is_active AS TEXT))), '') IN ('1', 'true', 't', 'yes')
 """
@@ -237,12 +236,12 @@ def _active_without_enrollment_issue() -> dict:
         f"""
         SELECT COUNT(*) AS count
         FROM residents r
-        WHERE {_ACTIVE_RESIDENT_SQL.replace('is_active', 'r.is_active')}
+        WHERE {_ACTIVE_RESIDENT_SQL.replace("is_active", "r.is_active")}
           AND NOT EXISTS (
               SELECT 1
               FROM program_enrollments pe
               WHERE pe.resident_id = r.id
-                AND {_ACTIVE_ENROLLMENT_SQL.replace('program_status', 'pe.program_status')}
+                AND {_ACTIVE_ENROLLMENT_SQL.replace("program_status", "pe.program_status")}
           )
         """
     )
@@ -250,12 +249,12 @@ def _active_without_enrollment_issue() -> dict:
         f"""
         SELECT r.id, r.first_name, r.last_name, r.shelter
         FROM residents r
-        WHERE {_ACTIVE_RESIDENT_SQL.replace('is_active', 'r.is_active')}
+        WHERE {_ACTIVE_RESIDENT_SQL.replace("is_active", "r.is_active")}
           AND NOT EXISTS (
               SELECT 1
               FROM program_enrollments pe
               WHERE pe.resident_id = r.id
-                AND {_ACTIVE_ENROLLMENT_SQL.replace('program_status', 'pe.program_status')}
+                AND {_ACTIVE_ENROLLMENT_SQL.replace("program_status", "pe.program_status")}
           )
         ORDER BY r.shelter, r.last_name, r.first_name
         LIMIT 25
@@ -284,7 +283,7 @@ def _enrollment_shelter_mismatch_issue() -> dict:
         SELECT COUNT(*) AS count
         FROM program_enrollments pe
         JOIN residents r ON r.id = pe.resident_id
-        WHERE {_ACTIVE_ENROLLMENT_SQL.replace('program_status', 'pe.program_status')}
+        WHERE {_ACTIVE_ENROLLMENT_SQL.replace("program_status", "pe.program_status")}
           AND LOWER(TRIM(COALESCE(pe.shelter, ''))) <> LOWER(TRIM(COALESCE(r.shelter, '')))
         """
     )
@@ -299,7 +298,7 @@ def _enrollment_shelter_mismatch_issue() -> dict:
             pe.shelter AS enrollment_shelter
         FROM program_enrollments pe
         JOIN residents r ON r.id = pe.resident_id
-        WHERE {_ACTIVE_ENROLLMENT_SQL.replace('program_status', 'pe.program_status')}
+        WHERE {_ACTIVE_ENROLLMENT_SQL.replace("program_status", "pe.program_status")}
           AND LOWER(TRIM(COALESCE(pe.shelter, ''))) <> LOWER(TRIM(COALESCE(r.shelter, '')))
         ORDER BY r.last_name, r.first_name
         LIMIT 25
@@ -330,7 +329,7 @@ def _missing_intake_issue() -> dict:
         FROM program_enrollments pe
         JOIN residents r ON r.id = pe.resident_id
         LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
-        WHERE {_ACTIVE_ENROLLMENT_SQL.replace('program_status', 'pe.program_status')}
+        WHERE {_ACTIVE_ENROLLMENT_SQL.replace("program_status", "pe.program_status")}
           AND ia.id IS NULL
         """
     )
@@ -346,7 +345,7 @@ def _missing_intake_issue() -> dict:
         FROM program_enrollments pe
         JOIN residents r ON r.id = pe.resident_id
         LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
-        WHERE {_ACTIVE_ENROLLMENT_SQL.replace('program_status', 'pe.program_status')}
+        WHERE {_ACTIVE_ENROLLMENT_SQL.replace("program_status", "pe.program_status")}
           AND ia.id IS NULL
         ORDER BY pe.entry_date DESC, r.last_name, r.first_name
         LIMIT 25

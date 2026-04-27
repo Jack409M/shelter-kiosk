@@ -69,8 +69,9 @@ def _build_exit_outcomes_report(scope: str, start_date: str, end_date: str) -> d
     if filters:
         where_sql = "WHERE " + " AND ".join(filters)
 
-    rows = db_fetchall(
-        f"""
+    rows = (
+        db_fetchall(
+            f"""
         SELECT
             pe.id AS enrollment_id,
             pe.resident_id,
@@ -107,8 +108,10 @@ def _build_exit_outcomes_report(scope: str, start_date: str, end_date: str) -> d
           LOWER(TRIM(COALESCE(r.last_name, ''))),
           LOWER(TRIM(COALESCE(r.first_name, '')))
         """,
-        tuple(params),
-    ) or []
+            tuple(params),
+        )
+        or []
+    )
 
     category_counts: dict[str, int] = {}
     reason_counts: dict[str, int] = {}
@@ -157,8 +160,11 @@ def _build_exit_outcomes_report(scope: str, start_date: str, end_date: str) -> d
             {
                 "resident_name": " ".join(
                     part for part in [row.get("first_name"), row.get("last_name")] if part
-                ).strip() or "Unknown Resident",
-                "resident_display_id": row.get("resident_code") or row.get("resident_identifier") or str(row.get("resident_id") or ""),
+                ).strip()
+                or "Unknown Resident",
+                "resident_display_id": row.get("resident_code")
+                or row.get("resident_identifier")
+                or str(row.get("resident_id") or ""),
                 "shelter_label": shelter_label,
                 "entry_date": row.get("entry_date") or "",
                 "effective_exit_date": effective_exit_date,
@@ -179,7 +185,9 @@ def _build_exit_outcomes_report(scope: str, start_date: str, end_date: str) -> d
             "count": count,
             "percent": _fmt_percent(count, total_exits),
         }
-        for label, count in sorted(category_counts.items(), key=lambda item: (-item[1], item[0].lower()))
+        for label, count in sorted(
+            category_counts.items(), key=lambda item: (-item[1], item[0].lower())
+        )
     ]
     reason_rows = [
         {
@@ -187,20 +195,28 @@ def _build_exit_outcomes_report(scope: str, start_date: str, end_date: str) -> d
             "count": count,
             "percent": _fmt_percent(count, total_exits),
         }
-        for label, count in sorted(reason_counts.items(), key=lambda item: (-item[1], item[0].lower()))
+        for label, count in sorted(
+            reason_counts.items(), key=lambda item: (-item[1], item[0].lower())
+        )
     ]
     shelter_rows = sorted(
         [
             {
                 **value,
-                "graduate_rate": _fmt_percent(int(value["graduate_count"]), int(value["exit_count"])),
+                "graduate_rate": _fmt_percent(
+                    int(value["graduate_count"]), int(value["exit_count"])
+                ),
             }
             for value in shelter_counts.values()
         ],
         key=lambda item: item["shelter_label"].lower(),
     )
 
-    selected_scope_label = "Total Program" if normalized_scope == "total_program" else display_shelter_label(normalized_scope)
+    selected_scope_label = (
+        "Total Program"
+        if normalized_scope == "total_program"
+        else display_shelter_label(normalized_scope)
+    )
 
     return {
         "scope": normalized_scope,

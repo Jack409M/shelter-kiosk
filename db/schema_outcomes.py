@@ -298,7 +298,9 @@ def ensure_exit_assessment_columns(kind: str) -> None:
         "grit_at_exit DOUBLE PRECISION" if kind == "pg" else "grit_at_exit REAL",
         "obtained_public_insurance INTEGER NOT NULL DEFAULT 0",
         "private_insurance INTEGER NOT NULL DEFAULT 0",
-        "graduation_income_snapshot DOUBLE PRECISION" if kind == "pg" else "graduation_income_snapshot REAL",
+        "graduation_income_snapshot DOUBLE PRECISION"
+        if kind == "pg"
+        else "graduation_income_snapshot REAL",
     ]
 
     for column_sql in columns:
@@ -356,9 +358,7 @@ def _dedupe_single_row_per_enrollment(table_name: str) -> None:
 
     for duplicate_row in duplicate_rows or []:
         enrollment_id = (
-            duplicate_row["enrollment_id"]
-            if isinstance(duplicate_row, dict)
-            else duplicate_row[0]
+            duplicate_row["enrollment_id"] if isinstance(duplicate_row, dict) else duplicate_row[0]
         )
 
         rows = db_fetchall(
@@ -410,6 +410,7 @@ def ensure_indexes() -> None:
         )
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
     try:
@@ -429,6 +430,7 @@ def ensure_indexes() -> None:
         )
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
     try:
@@ -442,6 +444,7 @@ def ensure_indexes() -> None:
         )
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
     try:
@@ -455,6 +458,7 @@ def ensure_indexes() -> None:
         )
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
     try:
@@ -468,6 +472,7 @@ def ensure_indexes() -> None:
         )
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
 

@@ -47,7 +47,9 @@ def register_blueprints(app: Flask) -> None:
 
     discovered_blueprints: list[Blueprint] = []
 
-    for _, module_name, _ in sorted(pkgutil.iter_modules(routes.__path__), key=lambda item: item[1]):
+    for _, module_name, _ in sorted(
+        pkgutil.iter_modules(routes.__path__), key=lambda item: item[1]
+    ):
         module = importlib.import_module(f"routes.{module_name}")
 
         for attr_name in sorted(dir(module)):

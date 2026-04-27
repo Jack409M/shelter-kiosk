@@ -66,9 +66,7 @@ def _local_day(dt_str: str | None) -> str | None:
 
 
 def _cleanup_transport_requests(shelter: str) -> None:
-    cutoff_iso = (
-        datetime.now(UTC) - timedelta(hours=48)
-    ).replace(microsecond=0).isoformat()
+    cutoff_iso = (datetime.now(UTC) - timedelta(hours=48)).replace(microsecond=0).isoformat()
 
     db_execute(
         """

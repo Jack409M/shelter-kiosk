@@ -73,7 +73,9 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
 
         enrollment = _program_enrollment_for_month(resident_id, shelter, rent_year, rent_month)
         resolved_enrollment_id = enrollment["id"] if enrollment else None
-        entry_enrollment_id = (existing.get("enrollment_id") if existing else None) or resolved_enrollment_id
+        entry_enrollment_id = (
+            existing.get("enrollment_id") if existing else None
+        ) or resolved_enrollment_id
 
         carry_forward_enabled = _bool_value(settings.get("rent_carry_forward_enabled", True))
         prior_balance = _latest_prior_balance(
@@ -210,7 +212,9 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     proration["prorated_charge"],
                     late_fee_charge,
                     manual_adjustment,
-                    approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
+                    approved_late_arrangement
+                    if g.get("db_kind") == "pg"
+                    else (1 if approved_late_arrangement else 0),
                     "\n".join([note for note in calculation_notes if note]),
                     session.get("staff_user_id"),
                     now,
@@ -318,7 +322,9 @@ def _ensure_sheet_for_month(shelter: str, rent_year: int, rent_month: int):
                     proration["prorated_charge"],
                     late_fee_charge,
                     manual_adjustment,
-                    approved_late_arrangement if g.get("db_kind") == "pg" else (1 if approved_late_arrangement else 0),
+                    approved_late_arrangement
+                    if g.get("db_kind") == "pg"
+                    else (1 if approved_late_arrangement else 0),
                     "\n".join([note for note in calculation_notes if note]),
                     session.get("staff_user_id"),
                     now,
@@ -356,7 +362,9 @@ def _group_entries_for_payment_page(shelter: str, entries: list[dict]) -> list[d
         ]
 
     apartment_order = _apartment_options_for_shelter(shelter_key)
-    grouped_map: dict[str, list[dict]] = {apartment_number: [] for apartment_number in apartment_order}
+    grouped_map: dict[str, list[dict]] = {
+        apartment_number: [] for apartment_number in apartment_order
+    }
     unassigned_entries: list[dict] = []
 
     for entry in entries:
@@ -600,7 +608,11 @@ def _post_monthly_charge_ledger_entries(
                     notes=None,
                 )
 
-        if late_fee_info["is_postable"] and late_fee_info["amount"] > 0 and late_fee_info["posting_date"]:
+        if (
+            late_fee_info["is_postable"]
+            and late_fee_info["amount"] > 0
+            and late_fee_info["posting_date"]
+        ):
             existing_late_fee = db_fetchone(
                 (
                     """
@@ -667,7 +679,9 @@ def _ledger_payment_total_for_sheet_entry(resident_id: int, sheet_entry_id: int)
     return round(_float_value(row.get("total_paid") if row else 0), 2)
 
 
-def _reconcile_payment_ledger_entry(*, resident_id: int, shelter: str, sheet: dict, entry: dict, rent_year: int, rent_month: int) -> None:
+def _reconcile_payment_ledger_entry(
+    *, resident_id: int, shelter: str, sheet: dict, entry: dict, rent_year: int, rent_month: int
+) -> None:
     sheet_entry_id = entry["id"]
     entry_enrollment_id = entry.get("enrollment_id")
     amount_paid_total = round(_float_value(entry.get("amount_paid")), 2)
@@ -677,7 +691,9 @@ def _reconcile_payment_ledger_entry(*, resident_id: int, shelter: str, sheet: di
     if missing_payment <= 0:
         return
 
-    payment_entry_date = (entry.get("paid_date") or "").strip() or _today_chicago().date().isoformat()
+    payment_entry_date = (
+        entry.get("paid_date") or ""
+    ).strip() or _today_chicago().date().isoformat()
     stamp = utcnow_iso()
 
     _insert_rent_ledger_entry(
@@ -723,8 +739,12 @@ def register_routes(rent_tracking):
             return redirect(url_for("rent_tracking.rent_roll"))
 
         config = _ensure_default_rent_config(resident_id, shelter)
-        config["apartment_number_snapshot"] = _normalize_apartment_number(shelter, config.get("apartment_number_snapshot"))
-        config["apartment_size_snapshot"] = _derive_apartment_size_from_assignment(shelter, config.get("apartment_number_snapshot")) or config.get("apartment_size_snapshot")
+        config["apartment_number_snapshot"] = _normalize_apartment_number(
+            shelter, config.get("apartment_number_snapshot")
+        )
+        config["apartment_size_snapshot"] = _derive_apartment_size_from_assignment(
+            shelter, config.get("apartment_number_snapshot")
+        ) or config.get("apartment_size_snapshot")
 
         auto_monthly_rent, auto_rent_note = _derive_base_monthly_rent(settings, shelter, config)
 
@@ -744,13 +764,19 @@ def register_routes(rent_tracking):
 
         if request.method == "POST":
             level_snapshot = _normalized_level_text(resident.get("program_level"))
-            apartment_number_snapshot = _normalize_apartment_number(shelter, request.form.get("apartment_number_snapshot"))
-            apartment_size_snapshot = _derive_apartment_size_from_assignment(shelter, apartment_number_snapshot)
+            apartment_number_snapshot = _normalize_apartment_number(
+                shelter, request.form.get("apartment_number_snapshot")
+            )
+            apartment_size_snapshot = _derive_apartment_size_from_assignment(
+                shelter, apartment_number_snapshot
+            )
             monthly_rent = _float_value(request.form.get("monthly_rent"))
             is_exempt = (request.form.get("is_exempt") or "no").strip().lower() == "yes"
             from .dates import _today_chicago as _today_local
 
-            effective_start_date = (request.form.get("effective_start_date") or _today_local().date().isoformat()).strip()
+            effective_start_date = (
+                request.form.get("effective_start_date") or _today_local().date().isoformat()
+            ).strip()
             now = utcnow_iso()
 
             db_execute(

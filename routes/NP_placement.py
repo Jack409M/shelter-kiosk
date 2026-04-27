@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from core.auth import require_login, require_shelter
 from core.audit import log_action
+from core.auth import require_login, require_shelter
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from core.helpers import utcnow_iso
 from core.NP_placement_service import get_active_placement
@@ -53,7 +53,9 @@ def _load_resident(resident_id: int):
     )
 
 
-def _active_housing_unit_ids_for_shelter(shelter: str, *, exclude_resident_id: int | None = None) -> set[int]:
+def _active_housing_unit_ids_for_shelter(
+    shelter: str, *, exclude_resident_id: int | None = None
+) -> set[int]:
     params: tuple[object, ...]
     exclude_clause = ""
 
@@ -118,9 +120,7 @@ def _load_available_units_for_shelter(shelter: str, *, resident_id: int):
         exclude_resident_id=resident_id,
     )
     return [
-        unit
-        for unit in _load_units_for_shelter(shelter)
-        if unit.get("id") not in occupied_unit_ids
+        unit for unit in _load_units_for_shelter(shelter) if unit.get("id") not in occupied_unit_ids
     ]
 
 
@@ -166,7 +166,9 @@ def dashboard():
 
     shelter = _current_shelter()
     rows = _load_dashboard_rows(shelter)
-    haven_dorm_assignment_count = _active_haven_dorm_assignment_count() if shelter == "haven" else None
+    haven_dorm_assignment_count = (
+        _active_haven_dorm_assignment_count() if shelter == "haven" else None
+    )
 
     return render_template(
         "NP_placement_dashboard.html",
@@ -255,7 +257,9 @@ def change_placement(resident_id: int):
 
     units = _load_available_units_for_shelter(shelter, resident_id=resident_id)
     active_placement = get_active_placement(resident_id=resident_id, shelter=shelter)
-    haven_dorm_assignment_count = _active_haven_dorm_assignment_count() if shelter == "haven" else None
+    haven_dorm_assignment_count = (
+        _active_haven_dorm_assignment_count() if shelter == "haven" else None
+    )
 
     if request.method == "POST":
         unit_label = (request.form.get("unit_label") or "").strip() or None

@@ -38,10 +38,7 @@ def _is_duplicate_column_error(exc: Exception) -> bool:
 
 def _is_transaction_aborted_error(exc: Exception) -> bool:
     text = str(exc).strip().lower()
-    return (
-        "current transaction is aborted" in text
-        or "infailedsqltransaction" in text
-    )
+    return "current transaction is aborted" in text or "infailedsqltransaction" in text
 
 
 def _column_name_from_sql(column_sql: str) -> str:
@@ -58,10 +55,7 @@ def _column_name_from_sql(column_sql: str) -> str:
 
 def _sqlite_column_exists(table_name: str, column_name: str) -> bool:
     rows = db_fetchall(f"PRAGMA table_info({table_name})")
-    return any(
-        str(row.get("name") or "").strip().lower() == column_name.lower()
-        for row in rows
-    )
+    return any(str(row.get("name") or "").strip().lower() == column_name.lower() for row in rows)
 
 
 def _pg_column_exists(table_name: str, column_name: str) -> bool:

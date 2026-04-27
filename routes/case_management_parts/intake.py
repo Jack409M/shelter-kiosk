@@ -333,9 +333,7 @@ def _handle_review(
             "warning",
         )
 
-        return redirect(
-            url_for("case_management.intake_duplicate_review", draft_id=stop.draft_id)
-        )
+        return redirect(url_for("case_management.intake_duplicate_review", draft_id=stop.draft_id))
 
     flash("No duplicate found. You can now continue the full intake and assessment.", "success")
     return redirect(
@@ -378,7 +376,9 @@ def _handle_update(
             resident_id,
             enrollment_id,
         )
-        flash("Unable to save intake changes. Please try again or contact an administrator.", "error")
+        flash(
+            "Unable to save intake changes. Please try again or contact an administrator.", "error"
+        )
         return _render_intake_form_from_request(
             current_shelter=current_shelter,
             review_passed=review_passed,
@@ -577,8 +577,6 @@ def submit_intake_assessment_view():
             is_edit_mode=is_edit_mode,
         )
 
-
-    
     return _handle_create(
         current_shelter=current_shelter,
         draft_id=draft_id,

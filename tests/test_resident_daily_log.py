@@ -3,7 +3,6 @@ from __future__ import annotations
 from core.db import db_execute, db_fetchone
 from core.runtime import init_db
 
-
 TEST_TIMESTAMP = "2026-01-01T00:00:00"
 
 
@@ -36,11 +35,11 @@ def test_resident_daily_log_hours_submission(app, client, monkeypatch):
     monkeypatch.setattr(
         rp,
         "load_kiosk_activity_categories_for_shelter",
-        lambda shelter: [
-            {"activity_label": "Work", "activity_key": "work", "active": True}
-        ],
+        lambda shelter: [{"activity_label": "Work", "activity_key": "work", "active": True}],
     )
-    monkeypatch.setattr(rp, "load_active_kiosk_activity_child_options_for_shelter", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        rp, "load_active_kiosk_activity_child_options_for_shelter", lambda *args, **kwargs: []
+    )
 
     with client.session_transaction() as session:
         session["resident_id"] = resident_id

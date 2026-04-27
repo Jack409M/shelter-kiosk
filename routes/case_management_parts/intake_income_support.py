@@ -592,6 +592,7 @@ def benefits_screening_needed(data: dict[str, Any]) -> bool:
                 return True
         except Exception:
             from flask import current_app
+
             current_app.logger.exception("auto-logged exception")
 
     return False

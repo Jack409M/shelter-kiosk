@@ -121,18 +121,12 @@ def _load_exit_form_data(enrollment_id: int) -> dict[str, Any]:
         "grit_at_exit": _row_value(row, "grit_at_exit", 11) or "",
         "received_car": "yes" if int(_row_value(row, "received_car", 12) or 0) else "no",
         "car_insurance": "yes" if int(_row_value(row, "car_insurance", 13) or 0) else "no",
-        "dental_needs_met": "yes"
-        if int(_row_value(row, "dental_needs_met", 14) or 0)
-        else "no",
-        "vision_needs_met": "yes"
-        if int(_row_value(row, "vision_needs_met", 15) or 0)
-        else "no",
+        "dental_needs_met": "yes" if int(_row_value(row, "dental_needs_met", 14) or 0) else "no",
+        "vision_needs_met": "yes" if int(_row_value(row, "vision_needs_met", 15) or 0) else "no",
         "obtained_public_insurance": "yes"
         if int(_row_value(row, "obtained_public_insurance", 16) or 0)
         else "no",
-        "private_insurance": "yes"
-        if int(_row_value(row, "private_insurance", 17) or 0)
-        else "no",
+        "private_insurance": "yes" if int(_row_value(row, "private_insurance", 17) or 0) else "no",
     }
 
 

@@ -14,11 +14,13 @@ reports_followup_outcomes = Blueprint("reports_followup_outcomes", __name__)
 def followup_outcomes_report():
     init_db()
 
-    six_month = db_fetchone("SELECT COUNT(*) AS total FROM followups WHERE followup_type = '6_month'")["total"]
-    one_year = db_fetchone("SELECT COUNT(*) AS total FROM followups WHERE followup_type = '1_year'")["total"]
+    six_month = db_fetchone(
+        "SELECT COUNT(*) AS total FROM followups WHERE followup_type = '6_month'"
+    )["total"]
+    one_year = db_fetchone(
+        "SELECT COUNT(*) AS total FROM followups WHERE followup_type = '1_year'"
+    )["total"]
 
     return render_template(
-        "reports/follow_up_outcomes.html",
-        six_month=six_month,
-        one_year=one_year
+        "reports/follow_up_outcomes.html", six_month=six_month, one_year=one_year
     )

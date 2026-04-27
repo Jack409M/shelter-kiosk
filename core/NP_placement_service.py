@@ -63,7 +63,7 @@ def get_housing_unit_by_label(*, shelter: str, unit_label: str | None) -> DbRow 
         FROM housing_units
         WHERE LOWER(COALESCE(shelter, '')) = {ph}
           AND unit_label = {ph}
-          AND is_active = {('TRUE' if g.get('db_kind') == 'pg' else '1')}
+          AND is_active = {("TRUE" if g.get("db_kind") == "pg" else "1")}
         LIMIT 1
         """,
         (normalized_shelter, normalized_label),

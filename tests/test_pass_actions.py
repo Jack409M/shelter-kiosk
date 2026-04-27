@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from core.runtime import init_db
 
-
 TEST_TIMESTAMP = "2026-01-01T00:00:00"
 
 

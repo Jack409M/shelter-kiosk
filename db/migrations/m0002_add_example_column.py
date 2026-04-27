@@ -1,6 +1,7 @@
 VERSION = 2
 NAME = "add_example_column_to_staff_users"
 
+
 def apply(kind: str):
     from core.db import db_execute
 

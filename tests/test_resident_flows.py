@@ -303,7 +303,7 @@ def test_resident_chores_redirects_when_session_is_corrupted(client, monkeypatch
     response = client.get("/resident/chores", follow_redirects=False)
 
     assert response.status_code == 302
-    assert "/resident?next=/resident/chores" in response.headers["Location"] 
+    assert "/resident?next=/resident/chores" in response.headers["Location"]
 
     with client.session_transaction() as session_state:
         assert "resident_id" not in session_state

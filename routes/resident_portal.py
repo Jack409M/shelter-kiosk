@@ -25,6 +25,7 @@ run_pass_retention_cleanup_for_shelter = run_pass_retention_cleanup_for_shelter
 def _proxy(name):
     def _inner(*args, **kwargs):
         return globals()[name](*args, **kwargs)
+
     return _inner
 
 

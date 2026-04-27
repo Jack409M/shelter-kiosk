@@ -329,17 +329,11 @@ def build_approval_sms(pass_row: dict[str, Any]) -> str:
     if pass_type_key in {"pass", "overnight"}:
         start_text = fmt_pretty_date(pass_row.get("start_at"))
         end_text = fmt_pretty_date(pass_row.get("end_at"))
-        return (
-            f"{pass_type_text} approved for {first_name}. "
-            f"Start {start_text}. End {end_text}."
-        )
+        return f"{pass_type_text} approved for {first_name}. Start {start_text}. End {end_text}."
 
     start_date = _clean_text(pass_row.get("start_date"))
     end_date = _clean_text(pass_row.get("end_date"))
-    return (
-        f"{pass_type_text} approved for {first_name}. "
-        f"Dates: {start_date} to {end_date}."
-    )
+    return f"{pass_type_text} approved for {first_name}. Dates: {start_date} to {end_date}."
 
 
 def send_approval_sms_if_possible(pass_id: int, shelter: str) -> None:

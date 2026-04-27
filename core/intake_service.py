@@ -534,9 +534,7 @@ def update_intake(
             selected_need_keys=data.get("entry_need_keys", []),
         )
 
-    enrollment_shelter = (
-        enrollment_row.get("shelter") if isinstance(enrollment_row, dict) else None
-    )
+    enrollment_shelter = enrollment_row.get("shelter") if isinstance(enrollment_row, dict) else None
     log_action(
         "intake",
         enrollment_id,

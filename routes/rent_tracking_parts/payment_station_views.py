@@ -45,7 +45,9 @@ def register_payment_station_routes(rent_tracking):
         shelter = _normalize_shelter_name(session.get("shelter"))
         residents = sorted(_active_residents_for_shelter(shelter), key=_resident_sort_key)
 
-        selected_resident_id_raw = request.form.get("resident_id") or request.args.get("resident_id")
+        selected_resident_id_raw = request.form.get("resident_id") or request.args.get(
+            "resident_id"
+        )
         selected_resident_id = None
         selected_resident = None
         ledger_summary = None
@@ -73,15 +75,21 @@ def register_payment_station_routes(rent_tracking):
             payment_method = (request.form.get("payment_method") or "").strip()
             instrument_number = (request.form.get("instrument_number") or "").strip()
             notes = (request.form.get("notes") or "").strip() or None
-            payment_date = (request.form.get("payment_date") or "").strip() or _today_chicago().date().isoformat()
+            payment_date = (
+                request.form.get("payment_date") or ""
+            ).strip() or _today_chicago().date().isoformat()
 
             if amount <= 0:
                 flash("Payment amount must be greater than zero.", "error")
-                return redirect(url_for("rent_tracking.payment_station", resident_id=selected_resident_id))
+                return redirect(
+                    url_for("rent_tracking.payment_station", resident_id=selected_resident_id)
+                )
 
             if payment_method not in PAYMENT_METHOD_OPTIONS:
                 flash("Choose Check or Money Order as the payment method.", "error")
-                return redirect(url_for("rent_tracking.payment_station", resident_id=selected_resident_id))
+                return redirect(
+                    url_for("rent_tracking.payment_station", resident_id=selected_resident_id)
+                )
 
             _post_resident_payment(
                 resident_id=selected_resident_id,

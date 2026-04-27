@@ -106,7 +106,7 @@ def fetch_enrollment_for_resident(
         f"""
         SELECT {columns}
         FROM program_enrollments
-        WHERE {' AND '.join(where_parts)}
+        WHERE {" AND ".join(where_parts)}
         LIMIT 1
         """,
         tuple(params),
@@ -131,9 +131,7 @@ def assert_enrollment_belongs_to_resident(
     if enrollment:
         return enrollment
 
-    message = (
-        f"Enrollment {enrollment_id} does not belong to resident {resident_id}"
-    )
+    message = f"Enrollment {enrollment_id} does not belong to resident {resident_id}"
     if shelter is not None:
         message += f" in shelter {shelter!r}"
     if require_active:

@@ -20,7 +20,4 @@ def prior_living_report():
         GROUP BY place_staying_before_entry
     """)
 
-    return render_template(
-        "reports/prior_living.html",
-        rows=rows
-    )
+    return render_template("reports/prior_living.html", rows=rows)

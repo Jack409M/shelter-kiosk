@@ -142,7 +142,11 @@ def _checkout_template_context(
     volunteer_child_options = child_options_by_parent.get(VOLUNTEER_PARENT_ACTIVITY_KEY, [])
 
     child_option_labels_by_parent = {
-        parent_key: [str(item.get("option_label") or "").strip() for item in rows if str(item.get("option_label") or "").strip()]
+        parent_key: [
+            str(item.get("option_label") or "").strip()
+            for item in rows
+            if str(item.get("option_label") or "").strip()
+        ]
         for parent_key, rows in child_options_by_parent.items()
     }
 

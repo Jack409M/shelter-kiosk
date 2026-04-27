@@ -15,10 +15,8 @@ def _redirect_case_index():
     return redirect(url_for("case_management.index"))
 
 
-
 def _redirect_resident_case(resident_id: int):
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
-
 
 
 def exit_followup_view(resident_id: int):

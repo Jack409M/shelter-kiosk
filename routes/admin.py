@@ -15,6 +15,16 @@ from routes.admin_parts.dashboard import (
     admin_unlock_username_view,
     admin_update_security_settings_view,
 )
+from routes.admin_parts.duplicate_merge_review import (
+    duplicate_merge_resident_snapshot_view,
+    duplicate_merge_review_queue_view,
+    mark_duplicate_names_same_view,
+)
+from routes.admin_parts.duplicate_name_group_review import duplicate_name_group_review_view
+from routes.admin_parts.duplicate_primary_selection import (
+    duplicate_merge_execute_view,
+    select_duplicate_primary_view,
+)
 from routes.admin_parts.field_audit import (
     admin_field_audit_view,
 )
@@ -27,16 +37,6 @@ from routes.admin_parts.sh_data_quality import (
     fix_missing_intake_baseline_view,
     fix_shelter_mismatch_view,
     system_health_data_quality_view,
-)
-from routes.admin_parts.duplicate_merge_review import (
-    duplicate_merge_resident_snapshot_view,
-    duplicate_merge_review_queue_view,
-    mark_duplicate_names_same_view,
-)
-from routes.admin_parts.duplicate_name_group_review import duplicate_name_group_review_view
-from routes.admin_parts.duplicate_primary_selection import (
-    duplicate_merge_execute_view,
-    select_duplicate_primary_view,
 )
 from routes.admin_parts.system import (
     admin_demo_data_view,
@@ -104,7 +104,10 @@ def duplicate_merge_review_queue():
     return duplicate_merge_review_queue_view()
 
 
-@admin.route("/staff/admin/system-health/data-quality/merge-review/resident/<int:resident_id>", methods=["GET"])
+@admin.route(
+    "/staff/admin/system-health/data-quality/merge-review/resident/<int:resident_id>",
+    methods=["GET"],
+)
 @require_login
 @require_shelter
 def duplicate_merge_resident_snapshot(resident_id: int):
@@ -132,7 +135,9 @@ def admin_fix_missing_intake_baseline(enrollment_id: int):
     return fix_missing_intake_baseline_view(enrollment_id)
 
 
-@admin.post("/staff/admin/system-health/data-quality/fix/shelter-mismatch/<int:enrollment_id>/<string:target>")
+@admin.post(
+    "/staff/admin/system-health/data-quality/fix/shelter-mismatch/<int:enrollment_id>/<string:target>"
+)
 @require_login
 @require_shelter
 def admin_fix_shelter_mismatch(enrollment_id: int, target: str):

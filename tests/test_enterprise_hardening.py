@@ -49,7 +49,10 @@ def test_enterprise_cache_headers_are_private_for_dynamic_and_cacheable_for_stat
     dynamic_response = client.get("/")
     static_response = client.get("/static/example.css")
 
-    assert dynamic_response.headers["Cache-Control"] == "no-store, no-cache, must-revalidate, private, max-age=0"
+    assert (
+        dynamic_response.headers["Cache-Control"]
+        == "no-store, no-cache, must-revalidate, private, max-age=0"
+    )
     assert dynamic_response.headers["Pragma"] == "no-cache"
     assert dynamic_response.headers["Expires"] == "0"
 

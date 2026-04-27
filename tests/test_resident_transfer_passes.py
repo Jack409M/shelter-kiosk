@@ -159,8 +159,14 @@ def test_transfer_updates_resident_and_related_records(app, client, monkeypatch)
     with app.app_context():
         init_db()
 
-        db_execute("DELETE FROM resident_pass_request_details WHERE pass_id IN (SELECT id FROM resident_passes WHERE resident_id IN (SELECT id FROM residents WHERE resident_identifier = %s))", ("t_real",))
-        db_execute("DELETE FROM resident_passes WHERE resident_id IN (SELECT id FROM residents WHERE resident_identifier = %s)", ("t_real",))
+        db_execute(
+            "DELETE FROM resident_pass_request_details WHERE pass_id IN (SELECT id FROM resident_passes WHERE resident_id IN (SELECT id FROM residents WHERE resident_identifier = %s))",
+            ("t_real",),
+        )
+        db_execute(
+            "DELETE FROM resident_passes WHERE resident_id IN (SELECT id FROM residents WHERE resident_identifier = %s)",
+            ("t_real",),
+        )
         db_execute("DELETE FROM transport_requests WHERE resident_identifier = %s", ("t_real",))
         db_execute("DELETE FROM residents WHERE resident_identifier = %s", ("t_real",))
 

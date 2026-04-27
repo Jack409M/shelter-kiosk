@@ -1,7 +1,9 @@
-from flask import render_template, request, redirect, url_for, flash
-from core.db import db_fetchone, db_execute
-from routes.case_management_parts.helpers import placeholder
+from flask import flash, redirect, render_template, request, url_for
+
+from core.db import db_execute, db_fetchone
 from core.helpers import utcnow_iso
+from routes.case_management_parts.helpers import placeholder
+
 
 def edit_resident_profile_view(resident_id: int):
     ph = placeholder()

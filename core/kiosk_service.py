@@ -95,11 +95,7 @@ def _utc_iso_from_local_time(hour_text: str, minute_text: str, ampm_text: str) -
         microsecond=0,
     )
 
-    return (
-        local_dt.astimezone(UTC)
-        .replace(tzinfo=None)
-        .isoformat(timespec="seconds")
-    )
+    return local_dt.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def active_resident_id_for_code(shelter: str, resident_code: str) -> int | None:
@@ -211,11 +207,7 @@ def pass_expected_back_value(pass_row: dict[str, Any]) -> str | None:
         tzinfo=CHICAGO_TZ,
     )
 
-    return (
-        local_end.astimezone(UTC)
-        .replace(tzinfo=None)
-        .isoformat(timespec="seconds")
-    )
+    return local_end.astimezone(UTC).replace(tzinfo=None).isoformat(timespec="seconds")
 
 
 def update_resident_rad_progress(
@@ -289,9 +281,7 @@ def handle_checkin(
     open_checkout = latest_open_checkout_row(resident_id, normalized_shelter)
     actual_end_required = checkout_requires_actual_end_time(open_checkout)
     prior_activity_label = (
-        _clean_text((open_checkout or {}).get("destination"))
-        if open_checkout
-        else ""
+        _clean_text((open_checkout or {}).get("destination")) if open_checkout else ""
     )
 
     if actual_end_required and not (actual_end_hour and actual_end_minute and actual_end_ampm):
@@ -326,9 +316,7 @@ def handle_checkin(
             )
 
         actual_obligation_end_dt = _parse_utc_datetime(actual_obligation_end_value)
-        planned_start_dt = _parse_utc_datetime(
-            (open_checkout or {}).get("obligation_start_time")
-        )
+        planned_start_dt = _parse_utc_datetime((open_checkout or {}).get("obligation_start_time"))
 
         if (
             planned_start_dt is not None
@@ -479,9 +467,7 @@ def handle_checkout(
         errors.append("Please select a valid Activity Category.")
 
     selected_activity_key = (
-        _clean_text(selected_category.get("activity_key"))
-        if selected_category
-        else ""
+        _clean_text(selected_category.get("activity_key")) if selected_category else ""
     )
 
     child_option_labels = {
@@ -522,7 +508,9 @@ def handle_checkout(
     obligation_end_value: str | None = None
     active_pass: dict[str, Any] | None = None
 
-    requires_approved_pass = bool(selected_category.get("requires_approved_pass")) if selected_category else False
+    requires_approved_pass = (
+        bool(selected_category.get("requires_approved_pass")) if selected_category else False
+    )
 
     if resident_id is not None and requires_approved_pass:
         active_pass = active_pass_row(resident_id, normalized_shelter)

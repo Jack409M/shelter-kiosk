@@ -358,7 +358,9 @@ def _load_recent_transport_items(resident_identifier: str, shelter: str) -> list
 
 def _ensure_budget_session_active_column() -> None:
     if g.get("db_kind") == "pg":
-        db_execute("ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE")
+        db_execute(
+            "ALTER TABLE resident_budget_sessions ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT FALSE"
+        )
         return
 
     columns = db_fetchall("PRAGMA table_info(resident_budget_sessions)")
@@ -439,7 +441,9 @@ def _ensure_budget_line_items_exist(budget_id: int | None) -> None:
         )
 
 
-def _load_budget_line_items_with_status(budget_id: int | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _load_budget_line_items_with_status(
+    budget_id: int | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     if budget_id is None:
         return [], []
 
@@ -504,7 +508,9 @@ def _load_budget_line_items_with_status(budget_id: int | None) -> tuple[list[dic
     return income_items, expense_items
 
 
-def _load_recent_budget_transactions(budget_id: int | None, limit: int = 10) -> list[dict[str, Any]]:
+def _load_recent_budget_transactions(
+    budget_id: int | None, limit: int = 10
+) -> list[dict[str, Any]]:
     if budget_id is None:
         return []
 

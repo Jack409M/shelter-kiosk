@@ -183,7 +183,9 @@ def submit_l9_disposition_view(resident_id: int):
     if action == "enroll_support":
         existing_lifecycle = _load_existing_level9_lifecycle(enrollment_id)
         if existing_lifecycle:
-            flash("Level 9 supportive services have already been started for this resident.", "error")
+            flash(
+                "Level 9 supportive services have already been started for this resident.", "error"
+            )
             return redirect(url_for("case_management.l9_workspace"))
 
         try:

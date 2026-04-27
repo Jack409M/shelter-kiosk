@@ -172,9 +172,13 @@ def save_inspection_settings(shelter: str, row: dict, form) -> None:
             inspection_item_labels,
             inspection_scoring_enabled if is_pg else (1 if inspection_scoring_enabled else 0),
             inspection_lookback_months,
-            inspection_include_current_open_month if is_pg else (1 if inspection_include_current_open_month else 0),
+            inspection_include_current_open_month
+            if is_pg
+            else (1 if inspection_include_current_open_month else 0),
             inspection_score_passed,
-            inspection_needs_attention_enabled if is_pg else (1 if inspection_needs_attention_enabled else 0),
+            inspection_needs_attention_enabled
+            if is_pg
+            else (1 if inspection_needs_attention_enabled else 0),
             inspection_score_needs_attention,
             inspection_score_failed,
             inspection_passing_threshold,

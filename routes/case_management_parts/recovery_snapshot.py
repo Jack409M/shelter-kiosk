@@ -100,7 +100,9 @@ def load_recovery_snapshot(
         "sobriety_date": sobriety_date,
         "days_sober_today": days_since(sobriety_date),
         "treatment_graduation_date": treatment_graduation_date,
-        "employment_status_display": employment_status_display(resident.get("employment_status_current")),
+        "employment_status_display": employment_status_display(
+            resident.get("employment_status_current")
+        ),
         "employment_type_display": employment_type_display(resident.get("employment_type_current")),
         "monthly_income_display": money_display(resident.get("monthly_income")),
         "employment_gap_days": employment_gap_days(

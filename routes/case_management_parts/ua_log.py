@@ -240,7 +240,9 @@ def edit_ua_log_view(resident_id: int, ua_id: int):
             ua_id,
             resident_id,
         )
-        flash("Unable to update UA log entry. Please try again or contact an administrator.", "error")
+        flash(
+            "Unable to update UA log entry. Please try again or contact an administrator.", "error"
+        )
         return redirect(
             url_for("case_management.edit_ua_log", resident_id=resident_id, ua_id=ua_id)
         )

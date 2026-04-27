@@ -132,8 +132,7 @@ LOCKED_PARENT_CHILD_OPTION_SEEDS = {
 }
 
 NORMALIZED_LOCKED_PARENT_LABEL_TO_KEY = {
-    label.strip().lower(): key
-    for key, label in LOCKED_PARENT_ACTIVITY_DEFINITIONS.items()
+    label.strip().lower(): key for key, label in LOCKED_PARENT_ACTIVITY_DEFINITIONS.items()
 }
 
 

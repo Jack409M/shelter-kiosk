@@ -33,7 +33,9 @@ def _duplicate_group_keys() -> tuple[str, str] | None:
     return first_name_key, last_name_key
 
 
-def _primary_and_duplicate_ids(first_name_key: str, last_name_key: str) -> tuple[int | None, list[int]]:
+def _primary_and_duplicate_ids(
+    first_name_key: str, last_name_key: str
+) -> tuple[int | None, list[int]]:
     ph = placeholder()
 
     review = db_fetchone(
@@ -53,8 +55,9 @@ def _primary_and_duplicate_ids(first_name_key: str, last_name_key: str) -> tuple
     if not primary_resident_id:
         return None, []
 
-    duplicate_rows = db_fetchall(
-        f"""
+    duplicate_rows = (
+        db_fetchall(
+            f"""
         SELECT id
         FROM residents
         WHERE {_ACTIVE_RESIDENT_SQL}
@@ -63,8 +66,10 @@ def _primary_and_duplicate_ids(first_name_key: str, last_name_key: str) -> tuple
           AND id <> {ph}
         ORDER BY id
         """,
-        (first_name_key, last_name_key, primary_resident_id),
-    ) or []
+            (first_name_key, last_name_key, primary_resident_id),
+        )
+        or []
+    )
 
     duplicate_ids = [int(row.get("id")) for row in duplicate_rows if row.get("id")]
     return int(primary_resident_id), duplicate_ids
@@ -366,5 +371,8 @@ def duplicate_merge_execute_view():
         },
     )
 
-    flash(f"Merged {len(duplicate_ids)} duplicate record(s) into PRIMARY resident {primary_resident_id}.", "success")
+    flash(
+        f"Merged {len(duplicate_ids)} duplicate record(s) into PRIMARY resident {primary_resident_id}.",
+        "success",
+    )
     return redirect(url_for("admin.duplicate_merge_review_queue"))

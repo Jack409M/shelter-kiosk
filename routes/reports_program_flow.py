@@ -15,10 +15,10 @@ def program_flow_report():
     init_db()
 
     total_entries = db_fetchone("SELECT COUNT(*) AS total FROM program_enrollments")["total"]
-    total_exits = db_fetchone("SELECT COUNT(*) AS total FROM program_enrollments WHERE exit_date IS NOT NULL AND exit_date <> ''")["total"]
+    total_exits = db_fetchone(
+        "SELECT COUNT(*) AS total FROM program_enrollments WHERE exit_date IS NOT NULL AND exit_date <> ''"
+    )["total"]
 
     return render_template(
-        "reports/program_flow.html",
-        total_entries=total_entries,
-        total_exits=total_exits
+        "reports/program_flow.html", total_entries=total_entries, total_exits=total_exits
     )

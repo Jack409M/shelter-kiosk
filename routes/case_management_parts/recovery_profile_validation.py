@@ -158,9 +158,7 @@ def _validate_employment_date_order(data: dict[str, Any], errors: list[str]) -> 
     previous_job_end = parse_iso_date(data.get("previous_job_end_date"))
 
     if current_job_start and continuous_start and continuous_start > current_job_start:
-        errors.append(
-            "Continuous Employment Start Date cannot be after Current Job Start Date."
-        )
+        errors.append("Continuous Employment Start Date cannot be after Current Job Start Date.")
 
     if previous_job_end and current_job_start and previous_job_end > current_job_start:
         errors.append("Previous Job End Date cannot be after Current Job Start Date.")

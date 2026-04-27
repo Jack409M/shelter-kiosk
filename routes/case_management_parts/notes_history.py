@@ -18,10 +18,8 @@ def _require_case_manager_access():
     return redirect(url_for("attendance.staff_attendance"))
 
 
-
 def _current_shelter() -> str:
     return normalize_shelter_name(session.get("shelter"))
-
 
 
 def notes_history_view(resident_id: int):
@@ -51,7 +49,9 @@ def notes_history_view(resident_id: int):
 
     first_name = resident.get("first_name") or ""
     last_name = resident.get("last_name") or ""
-    initials = ((first_name[:1] if first_name else "") + (last_name[:1] if last_name else "")) or "R"
+    initials = (
+        (first_name[:1] if first_name else "") + (last_name[:1] if last_name else "")
+    ) or "R"
 
     return render_template(
         "case_management/notes_history.html",

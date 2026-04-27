@@ -22,22 +22,102 @@ EDITABLE_UNIT_TYPES = {
 }
 
 DEFAULT_RENT_RULES: tuple[dict, ...] = (
-    {"program_level": "1", "unit_type": UNIT_TYPE_FLAT, "monthly_rent": 150.00, "is_minimum": False},
-    {"program_level": "2", "unit_type": UNIT_TYPE_FLAT, "monthly_rent": 150.00, "is_minimum": False},
-    {"program_level": "3", "unit_type": UNIT_TYPE_FLAT, "monthly_rent": 200.00, "is_minimum": False},
-    {"program_level": "4", "unit_type": UNIT_TYPE_FLAT, "monthly_rent": 250.00, "is_minimum": False},
-    {"program_level": "5", "unit_type": UNIT_TYPE_ONE_BEDROOM, "monthly_rent": 350.00, "is_minimum": False},
-    {"program_level": "5", "unit_type": UNIT_TYPE_TWO_BEDROOM, "monthly_rent": 400.00, "is_minimum": False},
-    {"program_level": "5", "unit_type": UNIT_TYPE_TOWNHOME, "monthly_rent": 400.00, "is_minimum": False},
-    {"program_level": "6", "unit_type": UNIT_TYPE_ONE_BEDROOM, "monthly_rent": 400.00, "is_minimum": False},
-    {"program_level": "6", "unit_type": UNIT_TYPE_TWO_BEDROOM, "monthly_rent": 450.00, "is_minimum": False},
-    {"program_level": "6", "unit_type": UNIT_TYPE_TOWNHOME, "monthly_rent": 450.00, "is_minimum": False},
-    {"program_level": "7", "unit_type": UNIT_TYPE_ONE_BEDROOM, "monthly_rent": 450.00, "is_minimum": False},
-    {"program_level": "7", "unit_type": UNIT_TYPE_TWO_BEDROOM, "monthly_rent": 500.00, "is_minimum": False},
-    {"program_level": "7", "unit_type": UNIT_TYPE_TOWNHOME, "monthly_rent": 500.00, "is_minimum": False},
-    {"program_level": "8", "unit_type": UNIT_TYPE_ONE_BEDROOM, "monthly_rent": 600.00, "is_minimum": True},
-    {"program_level": "8", "unit_type": UNIT_TYPE_TWO_BEDROOM, "monthly_rent": 650.00, "is_minimum": True},
-    {"program_level": "8", "unit_type": UNIT_TYPE_TOWNHOME, "monthly_rent": 650.00, "is_minimum": True},
+    {
+        "program_level": "1",
+        "unit_type": UNIT_TYPE_FLAT,
+        "monthly_rent": 150.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "2",
+        "unit_type": UNIT_TYPE_FLAT,
+        "monthly_rent": 150.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "3",
+        "unit_type": UNIT_TYPE_FLAT,
+        "monthly_rent": 200.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "4",
+        "unit_type": UNIT_TYPE_FLAT,
+        "monthly_rent": 250.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "5",
+        "unit_type": UNIT_TYPE_ONE_BEDROOM,
+        "monthly_rent": 350.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "5",
+        "unit_type": UNIT_TYPE_TWO_BEDROOM,
+        "monthly_rent": 400.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "5",
+        "unit_type": UNIT_TYPE_TOWNHOME,
+        "monthly_rent": 400.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "6",
+        "unit_type": UNIT_TYPE_ONE_BEDROOM,
+        "monthly_rent": 400.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "6",
+        "unit_type": UNIT_TYPE_TWO_BEDROOM,
+        "monthly_rent": 450.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "6",
+        "unit_type": UNIT_TYPE_TOWNHOME,
+        "monthly_rent": 450.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "7",
+        "unit_type": UNIT_TYPE_ONE_BEDROOM,
+        "monthly_rent": 450.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "7",
+        "unit_type": UNIT_TYPE_TWO_BEDROOM,
+        "monthly_rent": 500.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "7",
+        "unit_type": UNIT_TYPE_TOWNHOME,
+        "monthly_rent": 500.00,
+        "is_minimum": False,
+    },
+    {
+        "program_level": "8",
+        "unit_type": UNIT_TYPE_ONE_BEDROOM,
+        "monthly_rent": 600.00,
+        "is_minimum": True,
+    },
+    {
+        "program_level": "8",
+        "unit_type": UNIT_TYPE_TWO_BEDROOM,
+        "monthly_rent": 650.00,
+        "is_minimum": True,
+    },
+    {
+        "program_level": "8",
+        "unit_type": UNIT_TYPE_TOWNHOME,
+        "monthly_rent": 650.00,
+        "is_minimum": True,
+    },
 )
 
 LEVEL_8_ADJUSTMENT_GUIDANCE = (

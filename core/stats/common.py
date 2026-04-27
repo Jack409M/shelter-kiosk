@@ -62,6 +62,7 @@ def parse_iso_date(value: Any) -> date | None:
             return datetime.strptime(text[:19], fmt).date()
         except Exception:
             from flask import current_app
+
             current_app.logger.exception("auto-logged exception")
 
     return None

@@ -16,8 +16,9 @@ reports_weekly_productivity = Blueprint("reports_weekly_productivity", __name__)
 def weekly_productivity_report():
     init_db()
 
-    rows = db_fetchall(
-        """
+    rows = (
+        db_fetchall(
+            """
         SELECT
             r.id AS resident_id,
             COALESCE(NULLIF(TRIM(r.first_name || ' ' || r.last_name), ''), 'Unknown') AS resident_name,
@@ -28,7 +29,9 @@ def weekly_productivity_report():
         GROUP BY r.id, resident_name
         ORDER BY total_hours DESC, resident_name ASC
         """
-    ) or []
+        )
+        or []
+    )
 
     normalized_rows = [dict(row) for row in rows]
     total_hours = round(sum(float(row.get("total_hours") or 0) for row in normalized_rows), 2)

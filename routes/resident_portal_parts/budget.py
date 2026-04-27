@@ -81,8 +81,15 @@ def _validate_transaction_inputs(
         errors.append("Budget category does not belong to this budget month.")
 
     month_start, month_end = _budget_month_bounds(budget)
-    if parsed_date is not None and month_start and month_end and not (month_start <= transaction_date <= month_end):
-        errors.append(f"Transaction date must stay inside this budget month. Allowed range: {month_start} to {month_end}.")
+    if (
+        parsed_date is not None
+        and month_start
+        and month_end
+        and not (month_start <= transaction_date <= month_end)
+    ):
+        errors.append(
+            f"Transaction date must stay inside this budget month. Allowed range: {month_start} to {month_end}."
+        )
 
     return errors, (round(amount, 2) if amount is not None else None), selected_item
 
@@ -146,12 +153,16 @@ def resident_budget():
                 tx_id = _safe_int(request.form.get("transaction_id"))
                 if not tx_id:
                     flash("Transaction not found.", "error")
-                    return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
+                    return redirect(
+                        url_for("resident_portal.resident_budget") + "#transaction-entry"
+                    )
 
                 transaction_row = _load_owned_transaction(tx_id, budget_id, resident_id)
                 if not transaction_row:
                     flash("Transaction not found for this budget.", "error")
-                    return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
+                    return redirect(
+                        url_for("resident_portal.resident_budget") + "#transaction-entry"
+                    )
 
                 with db_transaction():
                     db_execute(
@@ -168,12 +179,16 @@ def resident_budget():
                 tx_id = _safe_int(request.form.get("transaction_id"))
                 if not tx_id:
                     flash("Transaction not found.", "error")
-                    return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
+                    return redirect(
+                        url_for("resident_portal.resident_budget") + "#transaction-entry"
+                    )
 
                 transaction_row = _load_owned_transaction(tx_id, budget_id, resident_id)
                 if not transaction_row:
                     flash("Transaction not found for this budget.", "error")
-                    return redirect(url_for("resident_portal.resident_budget") + "#transaction-entry")
+                    return redirect(
+                        url_for("resident_portal.resident_budget") + "#transaction-entry"
+                    )
 
                 transaction_date = _clean_text(request.form.get("transaction_date"))
                 line_item_id = _safe_int(request.form.get("line_item_id"))
@@ -191,7 +206,13 @@ def resident_budget():
                 if errors:
                     for error in errors:
                         flash(error, "error")
-                    return redirect(url_for("resident_portal.resident_budget", line_item_id=line_item_id or transaction_row["line_item_id"]) + "#transaction-entry")
+                    return redirect(
+                        url_for(
+                            "resident_portal.resident_budget",
+                            line_item_id=line_item_id or transaction_row["line_item_id"],
+                        )
+                        + "#transaction-entry"
+                    )
 
                 with db_transaction():
                     db_execute(
@@ -234,7 +255,10 @@ def resident_budget():
                         ),
                     )
                 flash("Transaction updated.", "success")
-                return redirect(url_for("resident_portal.resident_budget", line_item_id=line_item_id) + "#transaction-entry")
+                return redirect(
+                    url_for("resident_portal.resident_budget", line_item_id=line_item_id)
+                    + "#transaction-entry"
+                )
 
             transaction_date = _clean_text(request.form.get("transaction_date"))
             line_item_id = _safe_int(request.form.get("line_item_id"))
@@ -252,7 +276,10 @@ def resident_budget():
             if errors:
                 for error in errors:
                     flash(error, "error")
-                return redirect(url_for("resident_portal.resident_budget", line_item_id=line_item_id) + "#transaction-entry")
+                return redirect(
+                    url_for("resident_portal.resident_budget", line_item_id=line_item_id)
+                    + "#transaction-entry"
+                )
 
             with db_transaction():
                 db_execute(
@@ -308,7 +335,10 @@ def resident_budget():
                     ),
                 )
             flash("Purchase added.", "success")
-            return redirect(url_for("resident_portal.resident_budget", line_item_id=line_item_id) + "#transaction-entry")
+            return redirect(
+                url_for("resident_portal.resident_budget", line_item_id=line_item_id)
+                + "#transaction-entry"
+            )
 
         _income_items, expense_items = _load_budget_line_items_with_status(budget_id)
         recent_transactions = _load_recent_budget_transactions(budget_id)
@@ -321,7 +351,14 @@ def resident_budget():
         if selected_line_item_id is None and expense_items:
             selected_line_item_id = expense_items[0]["id"]
 
-        selected_line_item = next((item for item in expense_items if int(item.get("id") or 0) == int(selected_line_item_id or 0)), None)
+        selected_line_item = next(
+            (
+                item
+                for item in expense_items
+                if int(item.get("id") or 0) == int(selected_line_item_id or 0)
+            ),
+            None,
+        )
 
         return render_template(
             "resident/budget.html",

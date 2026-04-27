@@ -501,22 +501,30 @@ def promotion_review_view(resident_id: int):
 
             if not latest_review:
                 flash("You must save a promotion review before applying promotion.", "error")
-                return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
+                return redirect(
+                    url_for("case_management.promotion_review", resident_id=resident_id)
+                )
 
             target_level = _normalized_level_text(latest_review.get("recommended_next_level"))
             flash(f"DEBUG target_level={target_level!r}", "error")
 
             if not confirmed:
                 flash("Confirm the promotion before applying it.", "error")
-                return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
+                return redirect(
+                    url_for("case_management.promotion_review", resident_id=resident_id)
+                )
 
             if not target_level:
                 flash("Latest review does not include a recommended next level.", "error")
-                return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
+                return redirect(
+                    url_for("case_management.promotion_review", resident_id=resident_id)
+                )
 
             if current_level and target_level == current_level:
                 flash("Recommended next level matches the resident's current level.", "error")
-                return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
+                return redirect(
+                    url_for("case_management.promotion_review", resident_id=resident_id)
+                )
 
             now = utcnow_iso()
             action_items_parts = [
@@ -562,8 +570,13 @@ def promotion_review_view(resident_id: int):
                         action_items=" ".join(action_items_parts),
                     )
             except Exception:
-                flash("Unable to apply promotion. Please try again or contact an administrator.", "error")
-                return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
+                flash(
+                    "Unable to apply promotion. Please try again or contact an administrator.",
+                    "error",
+                )
+                return redirect(
+                    url_for("case_management.promotion_review", resident_id=resident_id)
+                )
 
             flash("Promotion applied and logged.", "success")
 
@@ -574,7 +587,9 @@ def promotion_review_view(resident_id: int):
             if actual_level == "9":
                 return redirect(url_for("case_management.l9_disposition", resident_id=resident_id))
 
-            return redirect(url_for("case_management.promotion_review", resident_id=resident_id, applied=1))
+            return redirect(
+                url_for("case_management.promotion_review", resident_id=resident_id, applied=1)
+            )
 
         if (
             values["ready_for_next_level"] is None
@@ -601,11 +616,16 @@ def promotion_review_view(resident_id: int):
                     now=now,
                 )
         except Exception:
-            flash("Unable to save the promotion review. Please try again or contact an administrator.", "error")
+            flash(
+                "Unable to save the promotion review. Please try again or contact an administrator.",
+                "error",
+            )
             return redirect(url_for("case_management.promotion_review", resident_id=resident_id))
 
         flash("Promotion review saved.", "success")
-        return redirect(url_for("case_management.promotion_review", resident_id=resident_id, saved=1))
+        return redirect(
+            url_for("case_management.promotion_review", resident_id=resident_id, saved=1)
+        )
 
     enrollment_context = load_enrollment_context(enrollment_id)
     recovery_snapshot = _stable_snapshot(load_recovery_snapshot(resident_id, enrollment_id))
@@ -616,7 +636,9 @@ def promotion_review_view(resident_id: int):
             enrollment_entry_date=enrollment.get("entry_date"),
         )
     )
-    inspection_snapshot = _stable_snapshot(build_inspection_stability_snapshot(resident_id, shelter=shelter))
+    inspection_snapshot = _stable_snapshot(
+        build_inspection_stability_snapshot(resident_id, shelter=shelter)
+    )
     rent_snapshot = _stable_snapshot(build_rent_stability_snapshot(resident_id))
     disciplinary_flags = load_active_writeup_restrictions(resident_id)
     latest_review = _load_latest_promotion_review(enrollment_id)

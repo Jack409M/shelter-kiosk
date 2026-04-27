@@ -10,6 +10,7 @@ from __future__ import annotations
 from flask import current_app
 
 from core.db import db_execute
+
 from .schema_helpers import create_table, safe_add_column
 
 
@@ -104,7 +105,9 @@ def ensure_indexes() -> None:
             """
         )
     except Exception:
-        current_app.logger.exception("Failed to create duplicate name verified review unique index.")
+        current_app.logger.exception(
+            "Failed to create duplicate name verified review unique index."
+        )
 
     try:
         db_execute(

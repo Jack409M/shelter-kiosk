@@ -97,7 +97,9 @@ def register_resident_account_routes(rent_tracking):
 
         shelter = _normalize_shelter_name(resident.get("shelter"))
         amount = round(_float_value(request.form.get("amount")), 2)
-        payment_date = (request.form.get("payment_date") or "").strip() or _today_chicago().date().isoformat()
+        payment_date = (
+            request.form.get("payment_date") or ""
+        ).strip() or _today_chicago().date().isoformat()
         payment_method = (request.form.get("payment_method") or "").strip()
         instrument_number = (request.form.get("instrument_number") or "").strip()
         notes = (request.form.get("notes") or "").strip() or None
@@ -142,7 +144,9 @@ def register_resident_account_routes(rent_tracking):
 
         shelter = _normalize_shelter_name(resident.get("shelter"))
         amount = round(_float_value(request.form.get("amount")), 2)
-        charge_date = (request.form.get("charge_date") or "").strip() or _today_chicago().date().isoformat()
+        charge_date = (
+            request.form.get("charge_date") or ""
+        ).strip() or _today_chicago().date().isoformat()
         charge_category = (request.form.get("charge_category") or "").strip()
         charge_reference = (request.form.get("charge_reference") or "").strip() or None
         description = (request.form.get("description") or "").strip()
@@ -190,7 +194,9 @@ def register_resident_account_routes(rent_tracking):
         ledger_summary = _ledger_summary_for_resident(resident_id)
         shelter = _normalize_shelter_name(resident.get("shelter"))
         amount = round(_float_value(request.form.get("amount")), 2)
-        credit_date = (request.form.get("credit_date") or "").strip() or _today_chicago().date().isoformat()
+        credit_date = (
+            request.form.get("credit_date") or ""
+        ).strip() or _today_chicago().date().isoformat()
         credit_category = (request.form.get("credit_category") or "").strip()
         description = (request.form.get("description") or "").strip()
         notes = (request.form.get("notes") or "").strip() or None

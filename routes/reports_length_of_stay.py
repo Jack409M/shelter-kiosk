@@ -73,8 +73,9 @@ def _build_length_of_stay_report(scope: str, start_date: str, end_date: str) -> 
 
     where_sql = "WHERE " + " AND ".join(filters)
 
-    rows = db_fetchall(
-        f"""
+    rows = (
+        db_fetchall(
+            f"""
         SELECT
             pe.id AS enrollment_id,
             pe.resident_id,
@@ -93,8 +94,10 @@ def _build_length_of_stay_report(scope: str, start_date: str, end_date: str) -> 
                  LOWER(TRIM(COALESCE(r.last_name, ''))),
                  LOWER(TRIM(COALESCE(r.first_name, '')))
         """,
-        tuple(params),
-    ) or []
+            tuple(params),
+        )
+        or []
+    )
 
     detail_rows: list[dict] = []
     shelter_rollup: dict[str, dict] = {}
@@ -128,8 +131,11 @@ def _build_length_of_stay_report(scope: str, start_date: str, end_date: str) -> 
             {
                 "resident_name": " ".join(
                     part for part in [row.get("first_name"), row.get("last_name")] if part
-                ).strip() or "Unknown Resident",
-                "resident_display_id": row.get("resident_code") or row.get("resident_identifier") or str(row.get("resident_id") or ""),
+                ).strip()
+                or "Unknown Resident",
+                "resident_display_id": row.get("resident_code")
+                or row.get("resident_identifier")
+                or str(row.get("resident_id") or ""),
                 "shelter_label": shelter_label,
                 "entry_date": row.get("entry_date") or "",
                 "exit_date": row.get("exit_date") or "",
@@ -148,7 +154,9 @@ def _build_length_of_stay_report(scope: str, start_date: str, end_date: str) -> 
         {
             "label": label,
             "count": bucket_counts.get(label, 0),
-            "percent": f"{((bucket_counts.get(label, 0) / total_exits) * 100):.1f}%" if total_exits else "0.0%",
+            "percent": f"{((bucket_counts.get(label, 0) / total_exits) * 100):.1f}%"
+            if total_exits
+            else "0.0%",
         }
         for label, _minimum, _maximum in _BUCKETS
     ]
@@ -160,7 +168,9 @@ def _build_length_of_stay_report(scope: str, start_date: str, end_date: str) -> 
             {
                 "shelter_label": shelter_data["shelter_label"],
                 "resident_count": shelter_data["resident_count"],
-                "average_stay": round(sum(shelter_values) / len(shelter_values), 1) if shelter_values else 0.0,
+                "average_stay": round(sum(shelter_values) / len(shelter_values), 1)
+                if shelter_values
+                else 0.0,
                 "median_stay": round(float(median(shelter_values)), 1) if shelter_values else 0.0,
                 "longest_stay": max(shelter_values) if shelter_values else 0,
             }
@@ -168,7 +178,11 @@ def _build_length_of_stay_report(scope: str, start_date: str, end_date: str) -> 
 
     shelter_rows.sort(key=lambda item: item["shelter_label"].lower())
 
-    selected_scope_label = "Total Program" if normalized_scope == "total_program" else display_shelter_label(normalized_scope)
+    selected_scope_label = (
+        "Total Program"
+        if normalized_scope == "total_program"
+        else display_shelter_label(normalized_scope)
+    )
 
     return {
         "scope": normalized_scope,

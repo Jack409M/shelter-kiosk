@@ -22,10 +22,8 @@ def _normalized_level_text(value: object) -> str | None:
     return digits or text
 
 
-
 def _resident_uses_dwc_housing(program_level: object) -> bool:
     return _normalized_level_text(program_level) != "9"
-
 
 
 def _active_residents_for_shelter(shelter: str):
@@ -35,15 +33,13 @@ def _active_residents_for_shelter(shelter: str):
         SELECT id, first_name, last_name, shelter, is_active, program_level
         FROM residents
         WHERE LOWER(COALESCE(shelter, '')) = {ph}
-          AND is_active = {('TRUE' if g.get('db_kind') == 'pg' else '1')}
+          AND is_active = {("TRUE" if g.get("db_kind") == "pg" else "1")}
         ORDER BY last_name ASC, first_name ASC
         """,
         (shelter,),
     )
     active_rows = [dict(row) for row in (rows or [])]
-    return [
-        row for row in active_rows if _resident_uses_dwc_housing(row.get("program_level"))
-    ]
+    return [row for row in active_rows if _resident_uses_dwc_housing(row.get("program_level"))]
 
 
 def _available_rent_setup_apartment_options(
@@ -334,7 +330,7 @@ def _ledger_balance_before_entry(resident_id: int) -> float:
         SELECT balance_after
         FROM resident_rent_ledger_entries
         WHERE resident_id = {ph}
-          AND COALESCE(voided, {('FALSE' if g.get('db_kind') == 'pg' else '0')}) = {('FALSE' if g.get('db_kind') == 'pg' else '0')}
+          AND COALESCE(voided, {("FALSE" if g.get("db_kind") == "pg" else "0")}) = {("FALSE" if g.get("db_kind") == "pg" else "0")}
         ORDER BY entry_date DESC, created_at DESC, id DESC
         LIMIT 1
         """,
@@ -620,7 +616,7 @@ def _ledger_entries_for_resident(resident_id: int):
         FROM resident_rent_ledger_entries l
         JOIN residents r ON r.id = l.resident_id
         WHERE l.resident_id = {ph}
-          AND COALESCE(l.voided, {('FALSE' if g.get('db_kind') == 'pg' else '0')}) = {('FALSE' if g.get('db_kind') == 'pg' else '0')}
+          AND COALESCE(l.voided, {("FALSE" if g.get("db_kind") == "pg" else "0")}) = {("FALSE" if g.get("db_kind") == "pg" else "0")}
         ORDER BY l.entry_date ASC, l.created_at ASC, l.id ASC
         """,
         (resident_id,),
@@ -706,4 +702,3 @@ def _ledger_balance_breakdown_for_resident(resident_id: int) -> dict:
         "current_credit": summary["current_credit"],
         "current_balance": summary["current_balance"],
     }
-    

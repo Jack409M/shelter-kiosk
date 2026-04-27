@@ -57,9 +57,7 @@ def _db_kind() -> str:
 def _normalize_sql(sql: str, *, db_kind: str) -> str:
     if db_kind == "sqlite":
         return (
-            sql.replace("%s", "?")
-            .replace("NOW()", "CURRENT_TIMESTAMP")
-            .replace("BTRIM(", "TRIM(")
+            sql.replace("%s", "?").replace("NOW()", "CURRENT_TIMESTAMP").replace("BTRIM(", "TRIM(")
         )
     return sql.replace("?", "%s")
 

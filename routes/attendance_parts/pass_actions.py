@@ -6,8 +6,8 @@ from flask import abort, redirect, url_for
 
 from core.audit import log_action
 from core.db import db_fetchone
-from core.sms_sender import send_sms as _send_sms
 from core.sh_events import safe_log_sh_event
+from core.sms_sender import send_sms as _send_sms
 from routes.attendance_parts.helpers import can_manage_passes
 from routes.attendance_parts.pass_action_helpers import (
     apply_pass_approval,
@@ -100,7 +100,10 @@ def _load_other_active_approved_pass(
 
 # APPROVE
 
-def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_name: str) -> PassActionResponse:
+
+def approve_pass_request(
+    *, pass_id: int, shelter: str, staff_id: Any, staff_name: str
+) -> PassActionResponse:
     pass_row = load_pass_for_review(pass_id, shelter)
 
     ok, resident_id, pass_type_key, error_message = _pending_review_result(pass_row)
@@ -117,7 +120,12 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_nam
         current_pass_id=pass_id,
     )
     if active_pass:
-        return False, "attendance.staff_passes_pending", "Resident already has active pass.", "error"
+        return (
+            False,
+            "attendance.staff_passes_pending",
+            "Resident already has active pass.",
+            "error",
+        )
 
     apply_pass_approval(
         pass_id=pass_id,
@@ -158,14 +166,24 @@ def approve_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_nam
 
 # DENY
 
-def deny_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_name: str) -> PassActionResponse:
+
+def deny_pass_request(
+    *, pass_id: int, shelter: str, staff_id: Any, staff_name: str
+) -> PassActionResponse:
     pass_row = load_pass_for_review(pass_id, shelter)
 
     ok, resident_id, pass_type_key, error_message = _pending_review_result(pass_row)
     if not ok or resident_id is None:
         return False, "attendance.staff_passes_pending", error_message, "error"
 
-    apply_pass_denial(pass_id=pass_id, shelter=shelter, resident_id=resident_id, pass_type_key=pass_type_key, staff_id=staff_id, staff_name=staff_name)
+    apply_pass_denial(
+        pass_id=pass_id,
+        shelter=shelter,
+        resident_id=resident_id,
+        pass_type_key=pass_type_key,
+        staff_id=staff_id,
+        staff_name=staff_name,
+    )
 
     log_action("pass", resident_id, shelter, staff_id, "deny", {"pass_id": pass_id})
 
@@ -174,6 +192,7 @@ def deny_pass_request(*, pass_id: int, shelter: str, staff_id: Any, staff_name: 
 
 # CHECK IN
 
+
 def check_in_pass_return(*, pass_id: int, shelter: str, staff_id: Any) -> PassActionResponse:
     pass_row = load_pass_for_check_in(pass_id, shelter)
 
@@ -181,7 +200,9 @@ def check_in_pass_return(*, pass_id: int, shelter: str, staff_id: Any) -> PassAc
     if not ok or resident_id is None:
         return False, "attendance.staff_passes_away_now", error_message, "error"
 
-    apply_pass_check_in(pass_id=pass_id, shelter=shelter, resident_id=resident_id, staff_id=staff_id)
+    apply_pass_check_in(
+        pass_id=pass_id, shelter=shelter, resident_id=resident_id, staff_id=staff_id
+    )
 
     log_action("pass", resident_id, shelter, staff_id, "check_in", {"pass_id": pass_id})
 

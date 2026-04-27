@@ -453,7 +453,9 @@ def _empty_activity_metrics() -> dict[str, float | int]:
     }
 
 
-def _merge_activity_metrics(target: dict, hours: float, meetings: int, bucket_key: str, meta: dict) -> None:
+def _merge_activity_metrics(
+    target: dict, hours: float, meetings: int, bucket_key: str, meta: dict
+) -> None:
     target["all_time_hours"] += hours
     target["all_time_meetings"] += meetings
 
@@ -613,7 +615,9 @@ def _fetch_activity_report_rows() -> list[dict]:
         item["event_time_local"] = _utc_iso_to_local(item.get("event_time"))
         item["obligation_start_local"] = _utc_iso_to_local(item.get("obligation_start_time"))
         item["obligation_end_local"] = _utc_iso_to_local(item.get("obligation_end_time"))
-        item["actual_obligation_end_local"] = _utc_iso_to_local(item.get("actual_obligation_end_time"))
+        item["actual_obligation_end_local"] = _utc_iso_to_local(
+            item.get("actual_obligation_end_time")
+        )
         item["source_label"] = _activity_source_label(str(item.get("event_type") or ""))
         item["detail_label"] = _activity_detail_label(item)
         normalized_rows.append(item)
@@ -699,9 +703,10 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
         _merge_activity_metrics(shelter_bucket, hours, meetings, bucket_key, category_meta)
 
         resident_id = int(row.get("resident_id") or 0)
-        resident_name = " ".join(
-            part for part in [row.get("first_name"), row.get("last_name")] if part
-        ).strip() or f"Resident {resident_id}"
+        resident_name = (
+            " ".join(part for part in [row.get("first_name"), row.get("last_name")] if part).strip()
+            or f"Resident {resident_id}"
+        )
         resident_bucket = resident_rows.setdefault(
             (shelter_key, resident_id),
             {
@@ -774,8 +779,12 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
     for bucket in detail_rows.values():
         _finalize_activity_metrics(bucket)
 
-    shelter_summary_rows = _sorted_activity_rows(list(shelter_rows.values()), sort_by, "shelter_label")
-    resident_detail_rows = _sorted_activity_rows(list(resident_rows.values()), sort_by, "resident_name")
+    shelter_summary_rows = _sorted_activity_rows(
+        list(shelter_rows.values()), sort_by, "shelter_label"
+    )
+    resident_detail_rows = _sorted_activity_rows(
+        list(resident_rows.values()), sort_by, "resident_name"
+    )
     category_detail_rows = sorted(
         list(category_rows.values()),
         key=lambda item: (
@@ -823,8 +832,7 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
         else _activity_report_shelter_label(selected_shelter),
         "sort_by": sort_by,
         "sort_options": [
-            {"value": key, "label": label}
-            for key, label in _ACTIVITY_SORT_OPTIONS.items()
+            {"value": key, "label": label} for key, label in _ACTIVITY_SORT_OPTIONS.items()
         ],
         "shelter_options": [
             {"value": "all", "label": "All Shelters"},
@@ -845,7 +853,9 @@ def _build_activity_engagement_report(selected_shelter: str, sort_by: str) -> di
     }
 
 
-def _fetch_graduation_income_study_rows(scope: str, start_date: str | None, end_date: str | None) -> list[dict]:
+def _fetch_graduation_income_study_rows(
+    scope: str, start_date: str | None, end_date: str | None
+) -> list[dict]:
     scope_filter_sql = ""
     params: list = []
 
@@ -899,7 +909,9 @@ def _fetch_graduation_income_study_rows(scope: str, start_date: str | None, end_
     return [dict(row) for row in rows]
 
 
-def _build_graduation_income_study(scope: str, start_date: str | None, end_date: str | None) -> dict:
+def _build_graduation_income_study(
+    scope: str, start_date: str | None, end_date: str | None
+) -> dict:
     raw_rows = _fetch_graduation_income_study_rows(scope, start_date, end_date)
 
     graduates: dict[int, dict] = {}
@@ -918,10 +930,14 @@ def _build_graduation_income_study(scope: str, start_date: str | None, end_date:
                 "resident_name": " ".join(
                     part for part in [row.get("first_name"), row.get("last_name")] if part
                 ).strip(),
-                "resident_display_id": row.get("resident_identifier") or row.get("resident_code") or str(row.get("resident_id") or ""),
+                "resident_display_id": row.get("resident_identifier")
+                or row.get("resident_code")
+                or str(row.get("resident_id") or ""),
                 "shelter": row.get("shelter"),
                 "date_graduated": row.get("date_graduated") or row.get("date_exit_dwc"),
-                "graduation_income_snapshot": float(snapshot_income) if snapshot_income not in (None, "") else None,
+                "graduation_income_snapshot": float(snapshot_income)
+                if snapshot_income not in (None, "")
+                else None,
                 "followups": {},
             }
             graduates[enrollment_id] = graduate
@@ -939,7 +955,9 @@ def _build_graduation_income_study(scope: str, start_date: str | None, end_date:
 
         graduate["followups"][followup_type] = {
             "followup_date": current_date,
-            "income_at_followup": float(row["income_at_followup"]) if row.get("income_at_followup") not in (None, "") else None,
+            "income_at_followup": float(row["income_at_followup"])
+            if row.get("income_at_followup") not in (None, "")
+            else None,
             "sober_at_followup": bool(int(row.get("sober_at_followup") or 0)),
         }
 
@@ -1022,8 +1040,12 @@ def _build_graduation_income_study(scope: str, start_date: str | None, end_date:
         band_rows.append(
             {
                 **band,
-                "six_month_sober_rate": _fmt_percent(band["six_month_sober"], band["six_month_with_followup"]),
-                "one_year_sober_rate": _fmt_percent(band["one_year_sober"], band["one_year_with_followup"]),
+                "six_month_sober_rate": _fmt_percent(
+                    band["six_month_sober"], band["six_month_with_followup"]
+                ),
+                "one_year_sober_rate": _fmt_percent(
+                    band["one_year_sober"], band["one_year_with_followup"]
+                ),
             }
         )
 
@@ -1260,7 +1282,9 @@ def demographics_dashboard():
             stats[key] = value.get("data", {})
 
     staff_user_id = _current_staff_user_id()
-    saved_favorite_metric_keys = _get_saved_favorite_metric_keys(staff_user_id) if staff_user_id else []
+    saved_favorite_metric_keys = (
+        _get_saved_favorite_metric_keys(staff_user_id) if staff_user_id else []
+    )
     display_top_metric_keys = _get_display_top_metric_keys(staff_user_id)
     metrics_values = _build_metrics_values(stats)
     top_stats = _build_top_stats(

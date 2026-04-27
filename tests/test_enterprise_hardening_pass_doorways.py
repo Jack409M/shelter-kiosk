@@ -6,7 +6,6 @@ import pytest
 
 from core.runtime import init_db
 
-
 TEST_TIMESTAMP = "2026-01-01T00:00:00"
 
 
@@ -27,7 +26,9 @@ def _seed_resident(db_execute, *, resident_id: int, shelter: str = "abba") -> No
     )
 
 
-def _seed_pass(db_execute, *, pass_id: int, resident_id: int, shelter: str = "abba", status: str = "pending"):
+def _seed_pass(
+    db_execute, *, pass_id: int, resident_id: int, shelter: str = "abba", status: str = "pending"
+):
     db_execute("DELETE FROM resident_passes WHERE id = %s", (pass_id,))
     db_execute(
         "INSERT INTO resident_passes (id, resident_id, shelter, status, pass_type, created_at, updated_at) VALUES (%s,%s,%s,%s,'pass','2026-01-01','2026-01-01')",

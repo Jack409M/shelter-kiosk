@@ -34,13 +34,29 @@ def _score_month(projected: float, actual: float) -> float:
 
 def _band(score: float):
     if score >= 90:
-        return "Green", "background:#eef8f0; border:1px solid #9bc8a6;", "color:#1f6b33; font-weight:800;"
+        return (
+            "Green",
+            "background:#eef8f0; border:1px solid #9bc8a6;",
+            "color:#1f6b33; font-weight:800;",
+        )
     elif score >= 80:
-        return "Yellow", "background:#fff8e1; border:1px solid #e0c36c;", "color:#8a6a00; font-weight:800;"
+        return (
+            "Yellow",
+            "background:#fff8e1; border:1px solid #e0c36c;",
+            "color:#8a6a00; font-weight:800;",
+        )
     elif score >= 70:
-        return "Orange", "background:#fff1e8; border:1px solid #e8b184;", "color:#a65313; font-weight:800;"
+        return (
+            "Orange",
+            "background:#fff1e8; border:1px solid #e8b184;",
+            "color:#a65313; font-weight:800;",
+        )
     else:
-        return "Red", "background:#fff0f0; border:1px solid #e2a0a0;", "color:#9a1f1f; font-weight:800;"
+        return (
+            "Red",
+            "background:#fff0f0; border:1px solid #e2a0a0;",
+            "color:#9a1f1f; font-weight:800;",
+        )
 
 
 def load_budget_score_snapshot(resident_id: int) -> dict:

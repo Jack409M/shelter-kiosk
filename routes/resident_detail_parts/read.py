@@ -19,6 +19,7 @@ def row_value(row, key: str, index: int | None = None, default=None):
         return default if value is None else value
     except Exception:
         from flask import current_app
+
         current_app.logger.exception("auto-logged exception")
 
     if index is not None:
@@ -27,6 +28,7 @@ def row_value(row, key: str, index: int | None = None, default=None):
             return default if value is None else value
         except Exception:
             from flask import current_app
+
             current_app.logger.exception("auto-logged exception")
 
     return default

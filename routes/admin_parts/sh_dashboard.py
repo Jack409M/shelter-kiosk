@@ -74,8 +74,12 @@ def _check_scheduler_status() -> dict:
     if scheduler_enabled in {"true", "1", "yes", "on"}:
         return _status("Scheduler", "ok", "Scheduler flag is enabled.", "SCHEDULER_ENABLED=true")
     if scheduler_enabled in {"false", "0", "no", "off"}:
-        return _status("Scheduler", "warn", "Scheduler flag is disabled.", "SCHEDULER_ENABLED=false")
-    return _status("Scheduler", "warn", "Scheduler status is not configured yet.", "No scheduler flag found")
+        return _status(
+            "Scheduler", "warn", "Scheduler flag is disabled.", "SCHEDULER_ENABLED=false"
+        )
+    return _status(
+        "Scheduler", "warn", "Scheduler status is not configured yet.", "No scheduler flag found"
+    )
 
 
 def _app_version_status() -> dict:
@@ -89,7 +93,11 @@ def _app_version_status() -> dict:
 
     display_version = version[:12] if version and version != "unknown" else "unknown"
     state = "ok" if display_version != "unknown" else "warn"
-    detail = "Current deployed version detected." if state == "ok" else "No deployed version value was found."
+    detail = (
+        "Current deployed version detected."
+        if state == "ok"
+        else "No deployed version value was found."
+    )
 
     return _status("App Version", state, detail, display_version)
 
@@ -101,7 +109,9 @@ def _job_status_cards() -> list[dict]:
     success_card = _status(
         "Last Successful Event",
         "ok" if latest_success else "warn",
-        latest_success.get("message", "") if latest_success else "No successful System Health events recorded yet.",
+        latest_success.get("message", "")
+        if latest_success
+        else "No successful System Health events recorded yet.",
         latest_success.get("created_at", "") if latest_success else "Waiting for first event",
     )
 

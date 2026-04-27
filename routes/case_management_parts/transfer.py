@@ -22,10 +22,8 @@ def _redirect_resident_case(resident_id: int):
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
-
 def _redirect_case_index():
     return redirect(url_for("case_management.index"))
-
 
 
 def _row_value(row, key: str, default=None):
@@ -37,7 +35,6 @@ def _row_value(row, key: str, default=None):
         return row[key]
     except Exception:
         return default
-
 
 
 def _fetch_resident_and_enrollment(resident_id: int):
@@ -78,13 +75,11 @@ def _fetch_resident_and_enrollment(resident_id: int):
     return resident, enrollment
 
 
-
 def _display_shelter_label(value: str) -> str:
     parts = [part for part in value.replace("_", " ").split() if part]
     if not parts:
         return ""
     return " ".join(part.capitalize() for part in parts)
-
 
 
 def _load_transfer_shelter_options(current_shelter: str) -> list[dict[str, str]]:
@@ -120,7 +115,6 @@ def _load_transfer_shelter_options(current_shelter: str) -> list[dict[str, str]]
     return options
 
 
-
 def _validate_transfer_form(enrollment, form) -> tuple[dict[str, str | None], list[str]]:
     current_shelter = normalize_shelter_name(_row_value(enrollment, "shelter", ""))
     entry_date_text = str(_row_value(enrollment, "entry_date", "") or "").strip()
@@ -153,8 +147,9 @@ def _validate_transfer_form(enrollment, form) -> tuple[dict[str, str | None], li
     }, errors
 
 
-
-def _release_old_rent_assignment(resident_id: int, current_shelter: str, transfer_date: str, now: str) -> None:
+def _release_old_rent_assignment(
+    resident_id: int, current_shelter: str, transfer_date: str, now: str
+) -> None:
     ph = placeholder()
     db_execute(
         f"""
@@ -169,8 +164,9 @@ def _release_old_rent_assignment(resident_id: int, current_shelter: str, transfe
     )
 
 
-
-def _load_new_transfer_enrollment_id(*, resident_id: int, target_shelter: str, transfer_date: str) -> int | None:
+def _load_new_transfer_enrollment_id(
+    *, resident_id: int, target_shelter: str, transfer_date: str
+) -> int | None:
     ph = placeholder()
     row = db_fetchone(
         f"""
@@ -187,7 +183,6 @@ def _load_new_transfer_enrollment_id(*, resident_id: int, target_shelter: str, t
     )
     enrollment_id = _row_value(row, "id")
     return enrollment_id if isinstance(enrollment_id, int) else None
-
 
 
 def _apply_transfer(
@@ -284,7 +279,6 @@ def _apply_transfer(
     )
 
 
-
 def transfer_resident_form_view(resident_id: int):
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
@@ -311,7 +305,6 @@ def transfer_resident_form_view(resident_id: int):
         shelter_options=shelter_options,
         form_data={},
     )
-
 
 
 def submit_transfer_resident_view(resident_id: int):

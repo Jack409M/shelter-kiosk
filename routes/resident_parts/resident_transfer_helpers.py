@@ -439,11 +439,7 @@ def validate_resident_transfer_form(
         return "Select a valid shelter."
 
     resident_level = _normalized_level_text(context.resident.get("program_level"))
-    if (
-        resident_level == "9"
-        and form.to_shelter in {"abba", "gratitude"}
-        and form.apartment_number
-    ):
+    if resident_level == "9" and form.to_shelter in {"abba", "gratitude"} and form.apartment_number:
         return "Level 9 residents cannot be assigned to DWC apartments."
 
     if form.to_shelter in {"abba", "gratitude"} and not form.apartment_number:
@@ -648,8 +644,7 @@ def build_cross_shelter_transfer_flash(
 
     if to_shelter == "haven":
         return (
-            f"Resident transferred from {from_shelter} to {to_shelter}. "
-            "Dorm bed assignment saved."
+            f"Resident transferred from {from_shelter} to {to_shelter}. Dorm bed assignment saved."
         )
 
     return f"Resident transferred from {from_shelter} to {to_shelter}."

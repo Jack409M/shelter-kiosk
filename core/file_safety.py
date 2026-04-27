@@ -207,7 +207,9 @@ def safe_read_bytes(
             failures.append(f"{candidate}: {exc}")
             logger.warning("Rejected file candidate: %s", candidate, exc_info=True)
 
-    raise FileRecoveryError(f"No valid file version found for {path}. Failures: {'; '.join(failures)}")
+    raise FileRecoveryError(
+        f"No valid file version found for {path}. Failures: {'; '.join(failures)}"
+    )
 
 
 def safe_write_text(
@@ -308,7 +310,9 @@ def safe_read_json(
             failures.append(f"{candidate}: {exc}")
             logger.warning("Rejected JSON file candidate: %s", candidate, exc_info=True)
 
-    raise FileRecoveryError(f"No valid JSON version found for {path}. Failures: {'; '.join(failures)}")
+    raise FileRecoveryError(
+        f"No valid JSON version found for {path}. Failures: {'; '.join(failures)}"
+    )
 
 
 def _read_json_candidate(
