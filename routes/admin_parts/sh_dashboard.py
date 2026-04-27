@@ -28,6 +28,28 @@ def _status(label: str, state: str, detail: str = "", meta: str = "") -> dict:
     }
 
 
+def _pass_cleanup_card() -> dict:
+    last = current_app.extensions.get("pass_retention_scheduler_last_result") or {}
+
+    if not last:
+        return _status(
+            "Last Pass Cleanup",
+            "warn",
+            "No pass cleanup run recorded yet.",
+            "Waiting for first scheduled run",
+        )
+
+    errors = int(last.get("total_errors", 0) or 0)
+    state = "error" if errors else "ok"
+
+    return _status(
+        "Last Pass Cleanup",
+        state,
+        f"Backfilled {last.get('total_backfilled', 0)} | Deleted {last.get('total_deleted', 0)} | Errors {errors}",
+        f"Finished: {last.get('finished_at', '')}",
+    )
+
+
 def _check_database_status() -> dict:
     try:
         row = db_fetchone("SELECT 1 AS ok")
@@ -211,6 +233,7 @@ def system_health_dashboard_view():
         _app_version_status(),
         _check_scheduler_status(),
         _check_sms_status(),
+        _pass_cleanup_card(),
         *_job_status_cards(),
     ]
 
