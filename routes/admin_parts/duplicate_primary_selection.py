@@ -8,6 +8,10 @@ from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
 from routes.admin_parts.helpers import require_admin_role
 from routes.case_management_parts.helpers import placeholder
 
+_ACTIVE_RESIDENT_SQL = """
+COALESCE(LOWER(TRIM(CAST(is_active AS TEXT))), '') IN ('1', 'true', 't', 'yes')
+"""
+
 
 def _staff_user_id() -> int | None:
     raw_staff_user_id = session.get("staff_user_id")
@@ -25,6 +29,43 @@ def _duplicate_group_keys() -> tuple[str, str] | None:
         return None
 
     return first_name_key, last_name_key
+
+
+def _primary_and_duplicate_ids(first_name_key: str, last_name_key: str) -> tuple[int | None, list[int]]:
+    ph = placeholder()
+
+    review = db_fetchone(
+        f"""
+        SELECT primary_resident_id
+        FROM duplicate_name_reviews
+        WHERE first_name_key = {ph}
+          AND last_name_key = {ph}
+          AND status = 'needs_merge_review'
+        LIMIT 1
+        """,
+        (first_name_key, last_name_key),
+    )
+
+    primary_resident_id = (review or {}).get("primary_resident_id")
+
+    if not primary_resident_id:
+        return None, []
+
+    duplicate_rows = db_fetchall(
+        f"""
+        SELECT id
+        FROM residents
+        WHERE {_ACTIVE_RESIDENT_SQL}
+          AND LOWER(TRIM(first_name)) = {ph}
+          AND LOWER(TRIM(last_name)) = {ph}
+          AND id <> {ph}
+        ORDER BY id
+        """,
+        (first_name_key, last_name_key, primary_resident_id),
+    ) or []
+
+    duplicate_ids = [int(row.get("id")) for row in duplicate_rows if row.get("id")]
+    return int(primary_resident_id), duplicate_ids
 
 
 def select_duplicate_primary_view():
@@ -121,39 +162,11 @@ def duplicate_merge_dry_run_view():
         return redirect(url_for("admin.duplicate_merge_review_queue"))
 
     first_name_key, last_name_key = keys
-    ph = placeholder()
-
-    review = db_fetchone(
-        f"""
-        SELECT primary_resident_id
-        FROM duplicate_name_reviews
-        WHERE first_name_key = {ph}
-          AND last_name_key = {ph}
-          AND status = 'needs_merge_review'
-        LIMIT 1
-        """,
-        (first_name_key, last_name_key),
-    )
-
-    primary_resident_id = (review or {}).get("primary_resident_id")
+    primary_resident_id, duplicate_ids = _primary_and_duplicate_ids(first_name_key, last_name_key)
 
     if not primary_resident_id:
         flash("Select a primary resident before running a merge dry run.", "warning")
         return redirect(url_for("admin.duplicate_merge_review_queue"))
-
-    duplicate_rows = db_fetchall(
-        f"""
-        SELECT id
-        FROM residents
-        WHERE LOWER(TRIM(first_name)) = {ph}
-          AND LOWER(TRIM(last_name)) = {ph}
-          AND id <> {ph}
-        ORDER BY id
-        """,
-        (first_name_key, last_name_key, primary_resident_id),
-    ) or []
-
-    duplicate_ids = [str(row.get("id")) for row in duplicate_rows if row.get("id")]
 
     if not duplicate_ids:
         flash("Dry run complete: no duplicate records would be merged.", "info")
@@ -162,7 +175,94 @@ def duplicate_merge_dry_run_view():
     flash(
         "Dry run only: would keep resident "
         f"{primary_resident_id} as PRIMARY and merge duplicate resident ID(s): "
-        f"{', '.join(duplicate_ids)}.",
+        f"{', '.join(str(duplicate_id) for duplicate_id in duplicate_ids)}.",
         "info",
     )
+    return redirect(url_for("admin.duplicate_merge_review_queue"))
+
+
+def duplicate_merge_execute_view():
+    if not require_admin_role():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    keys = _duplicate_group_keys()
+
+    if not keys:
+        flash("Invalid merge request.", "error")
+        return redirect(url_for("admin.duplicate_merge_review_queue"))
+
+    first_name_key, last_name_key = keys
+    primary_resident_id, duplicate_ids = _primary_and_duplicate_ids(first_name_key, last_name_key)
+
+    if not primary_resident_id:
+        flash("Select a primary resident before merging.", "warning")
+        return redirect(url_for("admin.duplicate_merge_review_queue"))
+
+    if not duplicate_ids:
+        flash("No duplicate records to merge.", "info")
+        return redirect(url_for("admin.duplicate_merge_review_queue"))
+
+    ph = placeholder()
+    now = datetime.now(UTC).replace(tzinfo=None).isoformat()
+
+    with db_transaction():
+        for duplicate_id in duplicate_ids:
+            db_execute(
+                f"""
+                UPDATE resident_children
+                SET resident_id = {ph}, updated_at = {ph}
+                WHERE resident_id = {ph}
+                """,
+                (primary_resident_id, now, duplicate_id),
+            )
+
+            db_execute(
+                f"""
+                UPDATE resident_child_income_supports
+                SET resident_id = {ph}, updated_at = {ph}
+                WHERE resident_id = {ph}
+                """,
+                (primary_resident_id, now, duplicate_id),
+            )
+
+            db_execute(
+                f"""
+                UPDATE resident_passes
+                SET resident_id = {ph}, updated_at = {ph}
+                WHERE resident_id = {ph}
+                """,
+                (primary_resident_id, now, duplicate_id),
+            )
+
+            db_execute(
+                f"""
+                UPDATE resident_notifications
+                SET resident_id = {ph}
+                WHERE resident_id = {ph}
+                """,
+                (primary_resident_id, duplicate_id),
+            )
+
+            db_execute(
+                f"""
+                UPDATE residents
+                SET is_active = {ph}, updated_at = {ph}
+                WHERE id = {ph}
+                """,
+                (False, now, duplicate_id),
+            )
+
+        db_execute(
+            f"""
+            UPDATE duplicate_name_reviews
+            SET status = 'merged', updated_at = {ph}
+            WHERE first_name_key = {ph}
+              AND last_name_key = {ph}
+              AND status = 'needs_merge_review'
+            """,
+            (now, first_name_key, last_name_key),
+        )
+
+    flash(f"Merged {len(duplicate_ids)} duplicate record(s) into PRIMARY resident {primary_resident_id}.", "success")
     return redirect(url_for("admin.duplicate_merge_review_queue"))
