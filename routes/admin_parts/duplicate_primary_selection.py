@@ -229,6 +229,16 @@ def duplicate_merge_execute_view():
             db_execute(
                 f"""
                 UPDATE resident_passes
+                SET status = 'expired', updated_at = {ph}
+                WHERE resident_id = {ph}
+                  AND status IN ('pending', 'approved')
+                """,
+                (now, duplicate_id),
+            )
+
+            db_execute(
+                f"""
+                UPDATE resident_passes
                 SET resident_id = {ph}, updated_at = {ph}
                 WHERE resident_id = {ph}
                 """,
