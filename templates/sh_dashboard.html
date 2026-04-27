@@ -24,6 +24,41 @@
   </p>
 </div>
 
+{% if alerts %}
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Active Alerts</h2>
+
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Severity</th>
+          <th>Title</th>
+          <th>Message</th>
+          <th>Created</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alert in alerts %}
+        <tr>
+          <td><strong>{{ alert.severity|upper }}</strong></td>
+          <td>{{ alert.title }}</td>
+          <td>{{ alert.message }}</td>
+          <td>{{ alert.created_at }}</td>
+          <td>
+            <form method="POST" action="/staff/admin/system-health/alerts/{{ alert.id }}/resolve">
+              <button type="submit">Resolve</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
 <div class="card">
   <h2 class="card-title-large">System Checks</h2>
 
