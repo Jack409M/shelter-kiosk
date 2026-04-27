@@ -124,6 +124,15 @@ def _check_database_status() -> dict:
     return _status("Database", "error", "Database returned an unexpected response.")
 
 
+def _check_backup_status() -> dict:
+    return _status(
+        "Backup System",
+        "ok",
+        "Daily Railway backups and daily local computer backups are in place. Restore testing is required before any production recovery.",
+        "Policy documented at /staff/admin/backup-documentation",
+    )
+
+
 def _check_sms_status() -> dict:
     sms_system_enabled = os.environ.get("SMS_SYSTEM_ENABLED", "true").strip().lower() == "true"
     twilio_enabled = os.environ.get("TWILIO_ENABLED", "false").strip().lower() == "true"
@@ -289,6 +298,7 @@ def system_health_dashboard_view():
         _app_version_status(),
         _check_scheduler_status(),
         _check_sms_status(),
+        _check_backup_status(),
         _pass_cleanup_card(),
         *_job_status_cards(),
     ]
