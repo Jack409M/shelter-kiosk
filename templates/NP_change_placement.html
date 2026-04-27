@@ -110,6 +110,16 @@
       </a>
     </section>
 
+    <section class="placement-card">
+      <h2>Deactivate Resident</h2>
+      <p>Remove from active placement and program.</p>
+
+      <form method="POST" action="{{ url_for('NP_placement.deactivate_resident', resident_id=resident.id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Make Inactive</button>
+      </form>
+    </section>
+
   </div>
 
 </div>
