@@ -156,6 +156,11 @@ def duplicate_merge_execute_view():
         flash("Admin only.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
+    confirmation = (request.form.get("merge_confirmation") or "").strip()
+    if confirmation != "MERGE":
+        flash("Type MERGE exactly to confirm this action.", "error")
+        return redirect(url_for("admin.duplicate_merge_review_queue"))
+
     keys = _duplicate_group_keys()
 
     if not keys:
