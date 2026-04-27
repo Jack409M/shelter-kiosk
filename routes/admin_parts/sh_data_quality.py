@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from urllib.parse import quote
 
 from flask import flash, redirect, render_template, request, session, url_for
 
@@ -23,7 +24,7 @@ NOT EXISTS (
     FROM duplicate_name_reviews dnr
     WHERE dnr.first_name_key = LOWER(TRIM(first_name))
       AND dnr.last_name_key = LOWER(TRIM(last_name))
-      AND dnr.status = 'verified_separate_people'
+      AND dnr.status IN ('verified_separate_people', 'needs_merge_review')
 )
 """
 
@@ -122,7 +123,7 @@ def _with_shelter_mismatch_fix(rows: list[dict]) -> list[dict]:
     return updated_rows
 
 
-def _with_duplicate_confirmation_action(rows: list[dict]) -> list[dict]:
+def _with_duplicate_review_actions(rows: list[dict]) -> list[dict]:
     updated_rows = []
 
     for row in rows:
@@ -131,15 +132,28 @@ def _with_duplicate_confirmation_action(rows: list[dict]) -> list[dict]:
         last_name_key = (updated_row.get("last_name") or "").strip().lower()
 
         if first_name_key and last_name_key:
+            updated_row["action_url"] = (
+                "/staff/admin/system-health/data-quality/duplicate-names/review"
+                f"?first_name_key={quote(first_name_key)}&last_name_key={quote(last_name_key)}"
+            )
+            updated_row["action_label"] = "Review side by side"
             updated_row["action_post_actions"] = [
                 {
-                    "url": "/staff/admin/system-health/data-quality/fix/duplicate-names/confirm-separate",
-                    "label": "Confirm separate people",
+                    "url": "/staff/admin/system-health/data-quality/fix/duplicate-names/mark-same",
+                    "label": "Same person",
                     "hidden_fields": {
                         "first_name_key": first_name_key,
                         "last_name_key": last_name_key,
                     },
-                }
+                },
+                {
+                    "url": "/staff/admin/system-health/data-quality/fix/duplicate-names/confirm-separate",
+                    "label": "Not same person",
+                    "hidden_fields": {
+                        "first_name_key": first_name_key,
+                        "last_name_key": last_name_key,
+                    },
+                },
             ]
 
         updated_rows.append(updated_row)
@@ -387,12 +401,7 @@ def _duplicate_names_issue() -> dict:
         LIMIT 25
         """
     )
-    rows = _with_action(
-        rows,
-        action_url="/staff/case-management/{resident_id}",
-        action_label="Review first match",
-    )
-    rows = _with_duplicate_confirmation_action(rows)
+    rows = _with_duplicate_review_actions(rows)
 
     return _issue(
         key="duplicate_active_names",
@@ -401,7 +410,7 @@ def _duplicate_names_issue() -> dict:
         severity="warn",
         count=count,
         rows=rows,
-        fix_note="Confirm separate people only after comparing the matching resident records.",
+        fix_note="Review matching records side by side, then mark them as same person or not same person.",
     )
 
 
@@ -711,7 +720,7 @@ def confirm_duplicate_names_separate_view():
             ),
         )
 
-    flash("Duplicate name group confirmed as separate people.", "success")
+    flash("Duplicate name group confirmed as not the same person.", "success")
     return redirect(url_for("admin.admin_system_health_data_quality"))
 
 
