@@ -18,8 +18,7 @@ from core.system_alerts import (
 from routes.admin_parts.helpers import require_admin_role
 
 CHICAGO_TZ = ZoneInfo("America/Chicago")
-PASS_CLEANUP_WARN_THRESHOLD = timedelta(hours=12)
-PASS_CLEANUP_CRITICAL_THRESHOLD = timedelta(hours=24)
+PASS_CLEANUP_STALE_THRESHOLD = timedelta(hours=24)
 
 
 def _status(label: str, state: str, detail: str = "", meta: str = "") -> dict:
@@ -31,24 +30,60 @@ def _status(label: str, state: str, detail: str = "", meta: str = "") -> dict:
     }
 
 
+def _last_pass_cleanup_finished_at() -> datetime | None:
+    last = current_app.extensions.get("pass_retention_scheduler_last_result") or {}
+    finished_at = str(last.get("finished_at") or "").strip()
+
+    if not finished_at:
+        return None
+
+    try:
+        last_dt = datetime.fromisoformat(finished_at)
+    except Exception:
+        current_app.logger.warning("pass_cleanup_invalid_finished_at=%s", finished_at)
+        return None
+
+    if last_dt.tzinfo is None:
+        last_dt = last_dt.replace(tzinfo=CHICAGO_TZ)
+
+    return last_dt.astimezone(CHICAGO_TZ)
+
+
+def _pass_cleanup_is_stale() -> bool:
+    last_dt = _last_pass_cleanup_finished_at()
+    if last_dt is None:
+        return False
+
+    return datetime.now(CHICAGO_TZ) - last_dt >= PASS_CLEANUP_STALE_THRESHOLD
+
+
 def _pass_cleanup_card() -> dict:
     last = current_app.extensions.get("pass_retention_scheduler_last_result") or {}
 
     if not last:
         return _status(
             "Last Pass Cleanup",
-            "warn",
+            "ok",
             "No pass cleanup run recorded yet.",
             "Waiting for first scheduled run",
         )
 
     errors = int(last.get("total_errors", 0) or 0)
-    state = "error" if errors else "ok"
+    stale = _pass_cleanup_is_stale()
+    state = "error" if errors or stale else "ok"
+
+    if stale:
+        detail = "Pass cleanup has not completed in over 24 hours."
+    else:
+        detail = (
+            f"Backfilled {last.get('total_backfilled', 0)} | "
+            f"Deleted {last.get('total_deleted', 0)} | Errors {errors}"
+        )
 
     return _status(
         "Last Pass Cleanup",
         state,
-        f"Backfilled {last.get('total_backfilled', 0)} | Deleted {last.get('total_deleted', 0)} | Errors {errors}",
+        detail,
         f"Finished: {last.get('finished_at', '')}",
     )
 
@@ -57,43 +92,18 @@ def _pass_cleanup_watchdog() -> None:
     last = current_app.extensions.get("pass_retention_scheduler_last_result") or {}
     finished_at = str(last.get("finished_at") or "").strip()
 
-    if not finished_at:
+    if not finished_at or not _pass_cleanup_is_stale():
         return
 
-    try:
-        last_dt = datetime.fromisoformat(finished_at)
-    except Exception:
-        current_app.logger.warning("pass_cleanup_watchdog_invalid_finished_at=%s", finished_at)
-        return
-
-    if last_dt.tzinfo is None:
-        last_dt = last_dt.replace(tzinfo=CHICAGO_TZ)
-
-    now = datetime.now(CHICAGO_TZ)
-    elapsed = now - last_dt.astimezone(CHICAGO_TZ)
-
-    if elapsed >= PASS_CLEANUP_CRITICAL_THRESHOLD:
-        create_system_alert(
-            alert_type="scheduled_job",
-            severity="critical",
-            title="Pass cleanup has not run in over 24 hours",
-            message="Pass cleanup job appears to be stalled.",
-            source_module="pass_retention_watchdog",
-            alert_key="pass_cleanup:stale:critical",
-            metadata=f"last_run={finished_at}",
-        )
-        return
-
-    if elapsed >= PASS_CLEANUP_WARN_THRESHOLD:
-        create_system_alert(
-            alert_type="scheduled_job",
-            severity="warn",
-            title="Pass cleanup has not run in over 12 hours",
-            message="Pass cleanup may be delayed.",
-            source_module="pass_retention_watchdog",
-            alert_key="pass_cleanup:stale:warn",
-            metadata=f"last_run={finished_at}",
-        )
+    create_system_alert(
+        alert_type="scheduled_job",
+        severity="critical",
+        title="Pass cleanup has not run in over 24 hours",
+        message="Pass cleanup job appears to be stalled.",
+        source_module="pass_retention_watchdog",
+        alert_key="pass_cleanup:stale:critical",
+        metadata=f"last_run={finished_at}",
+    )
 
 
 def _check_database_status() -> dict:
