@@ -125,6 +125,13 @@ def duplicate_name_group_review():
     return duplicate_name_group_review_view()
 
 
+@admin.route("/staff/admin/system-health/data-quality/merge-review", methods=["GET"])
+@require_login
+@require_shelter
+def duplicate_merge_review_queue():
+    return duplicate_merge_review_queue_view()
+
+
 @admin.route(
     "/staff/admin/system-health/data-quality/merge-review/resident/<int:resident_id>",
     methods=["GET"],
