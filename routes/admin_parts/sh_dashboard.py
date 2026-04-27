@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 
@@ -14,6 +15,8 @@ from core.system_alerts import (
     sync_system_health_alerts,
 )
 from routes.admin_parts.helpers import require_admin_role
+
+CHICAGO_TZ = ZoneInfo("America/Chicago")
 
 
 def _status(label: str, state: str, detail: str = "", meta: str = "") -> dict:
@@ -201,7 +204,7 @@ def system_health_dashboard_view():
         flash("Admin only.", "error")
         return redirect(url_for("attendance.staff_attendance"))
 
-    checked_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+    checked_at = datetime.now(CHICAGO_TZ).replace(microsecond=0).isoformat()
 
     cards = [
         _check_database_status(),
