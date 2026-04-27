@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from flask import flash, redirect, render_template, url_for
+from flask import current_app, flash, redirect, render_template, url_for
 
 from core.auth import PASS_STATUS_ROLES, REQUEST_MANAGER_ROLES
 from routes.admin_parts.helpers import ROLE_ORDER, require_admin_role
@@ -13,6 +13,79 @@ ROLE_LABELS = {
     "staff": "Staff",
     "demographics_viewer": "Demographics Viewer",
 }
+
+PUBLIC_ENDPOINT_PREFIXES = (
+    "static",
+    "auth.staff_login",
+)
+
+RESIDENT_ENDPOINT_PREFIXES = (
+    "resident_portal",
+    "resident_auth",
+    "resident.",
+)
+
+ADMIN_ONLY_ENDPOINT_PREFIXES = (
+    "admin.admin_system_health",
+    "admin.admin_system_health_events",
+    "admin.admin_system_health_data_quality",
+    "admin.admin_resolve_system_alert",
+    "admin.duplicate_name_group_review",
+    "admin.duplicate_merge_review_queue",
+    "admin.duplicate_merge_resident_snapshot",
+    "admin.admin_select_duplicate_primary",
+    "admin.admin_duplicate_merge_execute",
+    "admin.admin_fix_missing_intake_baseline",
+    "admin.admin_fix_shelter_mismatch",
+    "admin.admin_confirm_duplicate_names_separate",
+    "admin.admin_mark_duplicate_names_same",
+    "admin.staff_audit_log",
+    "admin.staff_audit_log_csv",
+    "admin.admin_field_audit",
+    "admin.admin_demo_data",
+    "admin.admin_seed_demo_data",
+    "admin.admin_clear_demo_data",
+    "admin.admin_run_pass_cleanup",
+    "admin.admin_role_permissions",
+)
+
+ADMIN_OR_DIRECTOR_ENDPOINT_PREFIXES = (
+    "admin.admin_dashboard",
+    "admin.admin_dashboard_live",
+    "admin.admin_users",
+    "admin.admin_add_user",
+    "admin.admin_edit_user",
+    "admin.admin_set_user_active",
+    "admin.admin_set_user_role",
+    "admin.admin_reset_user_password",
+)
+
+SECURITY_ADMIN_ENDPOINT_PREFIXES = (
+    "admin.admin_update_security_settings",
+    "admin.admin_ban_ip",
+    "admin.admin_unban_ip",
+    "admin.admin_unlock_username",
+)
+
+CASE_MANAGER_ENDPOINT_PREFIXES = (
+    "case_management",
+    "resident_detail",
+    "residents",
+)
+
+PASS_REVIEW_ENDPOINT_PREFIXES = (
+    "attendance.staff_passes",
+    "attendance.staff_pass_detail",
+    "attendance.staff_pass_approve",
+    "attendance.staff_pass_deny",
+    "attendance.staff_pass_check_in",
+)
+
+STAFF_VISIBLE_ENDPOINT_PREFIXES = (
+    "attendance",
+    "staff_portal",
+    "reports",
+)
 
 PERMISSION_DEFINITIONS = [
     {
@@ -137,6 +210,10 @@ PERMISSION_DEFINITIONS = [
 ]
 
 
+def _role_label(role: str) -> str:
+    return ROLE_LABELS.get(role, role.replace("_", " ").title())
+
+
 def _matrix_rows() -> list[dict]:
     rows: list[dict] = []
 
@@ -151,7 +228,67 @@ def _matrix_rows() -> list[dict]:
                 "role_access": [
                     {
                         "role": role,
-                        "label": ROLE_LABELS.get(role, role.replace("_", " ").title()),
+                        "label": _role_label(role),
+                        "allowed": role in allowed_roles,
+                    }
+                    for role in ROLE_ORDER
+                ],
+            }
+        )
+
+    return rows
+
+
+def _endpoint_startswith(endpoint: str, prefixes: tuple[str, ...]) -> bool:
+    return any(endpoint == prefix or endpoint.startswith(prefix) for prefix in prefixes)
+
+
+def _infer_route_roles(endpoint: str, rule: str) -> tuple[str, set[str], str]:
+    if _endpoint_startswith(endpoint, PUBLIC_ENDPOINT_PREFIXES):
+        return "Public", set(), "public/static or login endpoint"
+
+    if _endpoint_startswith(endpoint, RESIDENT_ENDPOINT_PREFIXES) or rule.startswith("/resident"):
+        return "Resident facing", set(), "resident route namespace"
+
+    if _endpoint_startswith(endpoint, ADMIN_ONLY_ENDPOINT_PREFIXES):
+        return "Admin only", {"admin"}, "known admin-only endpoint"
+
+    if _endpoint_startswith(endpoint, SECURITY_ADMIN_ENDPOINT_PREFIXES):
+        return "Admin only", {"admin"}, "security admin action endpoint"
+
+    if _endpoint_startswith(endpoint, ADMIN_OR_DIRECTOR_ENDPOINT_PREFIXES):
+        return "Admin or shelter director", {"admin", "shelter_director"}, "known admin/director endpoint"
+
+    if _endpoint_startswith(endpoint, PASS_REVIEW_ENDPOINT_PREFIXES):
+        return "Pass review staff", {"admin", "shelter_director", "case_manager"}, "pass review route namespace"
+
+    if _endpoint_startswith(endpoint, CASE_MANAGER_ENDPOINT_PREFIXES):
+        return "Case management staff", {"admin", "shelter_director", "case_manager"}, "case management route namespace"
+
+    if _endpoint_startswith(endpoint, STAFF_VISIBLE_ENDPOINT_PREFIXES) or rule.startswith("/staff"):
+        return "Logged-in staff", set(ROLE_ORDER), "staff route namespace"
+
+    return "Unknown or unclassified", set(), "no known route policy match"
+
+
+def _route_audit_rows() -> list[dict]:
+    rows: list[dict] = []
+
+    for rule in sorted(current_app.url_map.iter_rules(), key=lambda item: item.rule):
+        methods = sorted(method for method in rule.methods or [] if method not in {"HEAD", "OPTIONS"})
+        classification, allowed_roles, source = _infer_route_roles(rule.endpoint, rule.rule)
+
+        rows.append(
+            {
+                "rule": rule.rule,
+                "endpoint": rule.endpoint,
+                "methods": ", ".join(methods),
+                "classification": classification,
+                "source": source,
+                "role_access": [
+                    {
+                        "role": role,
+                        "label": _role_label(role),
                         "allowed": role in allowed_roles,
                     }
                     for role in ROLE_ORDER
@@ -170,14 +307,22 @@ def role_permission_matrix_view():
     roles = [
         {
             "key": role,
-            "label": ROLE_LABELS.get(role, role.replace("_", " ").title()),
+            "label": _role_label(role),
         }
         for role in ROLE_ORDER
     ]
+
+    route_rows = _route_audit_rows()
+    unclassified_count = sum(
+        1 for row in route_rows if row["classification"] == "Unknown or unclassified"
+    )
 
     return render_template(
         "role_permissions.html",
         title="Role Permission Matrix",
         roles=roles,
         rows=_matrix_rows(),
+        route_rows=route_rows,
+        route_count=len(route_rows),
+        unclassified_count=unclassified_count,
     )
