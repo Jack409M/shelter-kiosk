@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="card">
+  <h2 class="card-title-large">Role Permission Matrix</h2>
+  <p class="card-subtitle">This page reflects current role behavior based on route protection and helper functions. It is a read only view of how access is enforced in the system.</p>
+
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Permission</th>
+          {% for role in roles %}
+            <th>{{ role.label }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>
+            <strong>{{ row.label }}</strong>
+            <div style="font-size:12px; color:#666; margin-top:4px;">
+              {{ row.description }}
+              <div style="margin-top:4px; font-size:11px; color:#999;">
+                Source: {{ row.source }}
+              </div>
+            </div>
+          </td>
+          {% for access in row.role_access %}
+            <td style="text-align:center;">
+              {% if access.allowed %}
+                ✔
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
