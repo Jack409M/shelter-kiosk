@@ -31,7 +31,11 @@ from routes.admin_parts.field_audit import (
 from routes.admin_parts.pass_retention import (
     run_pass_cleanup,
 )
-from routes.admin_parts.sh_dashboard import system_health_dashboard_view, system_health_events_api
+from routes.admin_parts.sh_dashboard import (
+    resolve_system_health_alert_view,
+    system_health_dashboard_view,
+    system_health_events_api,
+)
 from routes.admin_parts.sh_data_quality import (
     confirm_duplicate_names_separate_view,
     fix_missing_intake_baseline_view,
@@ -74,6 +78,13 @@ def admin_dashboard_live():
 @require_shelter
 def admin_system_health():
     return system_health_dashboard_view()
+
+
+@admin.post("/staff/admin/system-health/alerts/<int:alert_id>/resolve")
+@require_login
+@require_shelter
+def admin_resolve_system_alert(alert_id: int):
+    return resolve_system_health_alert_view(alert_id)
 
 
 @admin.route("/staff/admin/system-health/events", methods=["GET"])
