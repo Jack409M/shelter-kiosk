@@ -3,7 +3,7 @@
 {% block content %}
 <div class="card">
   <h2 class="card-title-large">Role Permission Matrix</h2>
-  <p class="card-subtitle">This page reflects current role behavior based on route protection and helper functions. It is a read only view of how access is enforced in the system.</p>
+  <p class="card-subtitle">This page reflects current role behavior based on route protection and helper functions.</p>
 
   <div class="table-shell">
     <table class="app-table">
@@ -29,11 +29,52 @@
           </td>
           {% for access in row.role_access %}
             <td style="text-align:center;">
-              {% if access.allowed %}
-                ✔
-              {% else %}
-                —
-              {% endif %}
+              {% if access.allowed %}✔{% else %}—{% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card" style="margin-top:24px;">
+  <h2 class="card-title-large">Live Route Access Audit</h2>
+  <p class="card-subtitle">
+    {{ route_count }} routes analyzed.
+    {% if unclassified_count > 0 %}
+      {{ unclassified_count }} routes are not classified and should be reviewed.
+    {% endif %}
+  </p>
+
+  <div class="table-shell">
+    <table class="app-table">
+      <thead>
+        <tr>
+          <th>Route</th>
+          <th>Methods</th>
+          <th>Access</th>
+          {% for role in roles %}
+            <th>{{ role.label }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in route_rows %}
+        <tr>
+          <td>
+            <strong>{{ row.rule }}</strong>
+            <div style="font-size:11px; color:#999;">{{ row.endpoint }}</div>
+          </td>
+          <td>{{ row.methods }}</td>
+          <td>
+            <strong>{{ row.classification }}</strong>
+            <div style="font-size:11px; color:#999;">{{ row.source }}</div>
+          </td>
+          {% for access in row.role_access %}
+            <td style="text-align:center;">
+              {% if access.allowed %}✔{% else %}—{% endif %}
             </td>
           {% endfor %}
         </tr>
