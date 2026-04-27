@@ -1,55 +1,131 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h1>Change Placement</h1>
 
-<h3>{{ resident.first_name }} {{ resident.last_name }}</h3>
-<p>Current shelter: {{ shelter }}</p>
-<p>Current level: {{ resident.program_level }}</p>
+<style>
+  .placement-page {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
 
-{% if shelter == "haven" and haven_dorm_assignment_count is not none %}
-  <div class="card">
-    <strong>Haven Dorm Assignments:</strong> {{ haven_dorm_assignment_count }} residents currently assigned
+  .placement-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .placement-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .placement-card {
+    border: 1px solid #d0d5dd;
+    border-radius: 12px;
+    padding: 16px;
+    background: white;
+  }
+
+  .placement-card h2 {
+    margin-top: 0;
+  }
+
+  .placement-card .button,
+  .placement-card button {
+    width: 100%;
+    margin-top: 12px;
+  }
+</style>
+
+<div class="placement-page">
+
+  <div class="placement-header">
+    <div>
+      <h1>Change Placement</h1>
+      <h3>{{ resident.first_name }} {{ resident.last_name }}</h3>
+      <p>
+        Shelter: {{ shelter }} |
+        Level: {{ resident.program_level }}
+      </p>
+    </div>
+
+    <div>
+      <a class="button" href="{{ url_for('NP_placement.dashboard') }}">
+        Back to Placement Board
+      </a>
+    </div>
   </div>
-{% endif %}
 
-<section class="card">
-  <h2>Apartment or Unit</h2>
-  <p>Use this section to assign or change the resident's current unit.</p>
+  {% if shelter == "haven" and haven_dorm_assignment_count is not none %}
+    <div class="card" style="margin-bottom: 12px;">
+      <strong>Haven Dorm Assignments:</strong>
+      {{ haven_dorm_assignment_count }} residents currently assigned
+    </div>
+  {% endif %}
 
-  <form method="POST">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <div class="placement-actions-grid">
 
-    <label for="unit_label">Unit</label>
-    <select name="unit_label" id="unit_label">
-      <option value="">-- None --</option>
-      {% for unit in units %}
-        <option value="{{ unit.unit_label }}"
-          {% if active_placement and unit.id == active_placement.housing_unit_id %}selected{% endif %}>
-          {{ unit.unit_label }}{% if unit.unit_type %} ({{ unit.unit_type }}){% endif %}
-        </option>
-      {% endfor %}
-    </select>
+    <!-- Unit Assignment -->
+    <section class="placement-card">
+      <h2>Apartment or Unit</h2>
+      <p>Assign or change the resident's unit.</p>
 
-    <br><br>
-    <button type="submit">Save Unit Assignment</button>
-  </form>
-</section>
+      <form method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-<section class="card">
-  <h2>Shelter Change</h2>
-  <p>Use the existing transfer workflow so enrollment history, rent release, and placement history stay correct.</p>
-  <a class="button" href="{{ url_for('case_management.transfer_resident_form', resident_id=resident.id) }}">Change Shelter</a>
-</section>
+        <label for="unit_label">Unit</label>
+        <select name="unit_label" id="unit_label">
+          <option value="">-- None --</option>
+          {% for unit in units %}
+            <option value="{{ unit.unit_label }}"
+              {% if active_placement and unit.id == active_placement.housing_unit_id %}selected{% endif %}>
+              {{ unit.unit_label }}{% if unit.unit_type %} ({{ unit.unit_type }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
 
-<section class="card">
-  <h2>Level Change</h2>
-  <p>Use the existing promotion workflow so blockers, review history, rent rules, and the Level 9 boundary stay protected.</p>
-  <a class="button" href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">Review or Change Level</a>
-</section>
+        <button type="submit">Save Unit Assignment</button>
+      </form>
+    </section>
 
-<p>
-  <a href="{{ url_for('NP_placement.dashboard') }}">Back to placement dashboard</a>
-</p>
+    <!-- Shelter Change -->
+    <section class="placement-card">
+      <h2>Shelter Change</h2>
+      <p>Use transfer workflow to preserve history and rules.</p>
+
+      <a class="button"
+         href="{{ url_for('case_management.transfer_resident_form', resident_id=resident.id) }}">
+        Change Shelter
+      </a>
+    </section>
+
+    <!-- Level Change -->
+    <section class="placement-card">
+      <h2>Level Change</h2>
+      <p>Use promotion workflow to protect rules and blockers.</p>
+
+      <a class="button"
+         href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">
+        Review or Change Level
+      </a>
+    </section>
+
+    <!-- Deactivate (future placement control) -->
+    <section class="placement-card">
+      <h2>Deactivate Resident</h2>
+      <p>Remove from active placement board.</p>
+
+      <form method="POST" action="{{ url_for('case_management.deactivate_resident', resident_id=resident.id) }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Make Inactive</button>
+      </form>
+    </section>
+
+  </div>
+
+</div>
 
 {% endblock %}
