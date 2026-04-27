@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from datetime import UTC, datetime
 
-from flask import flash, jsonify, redirect, render_template, request, url_for
+from flask import current_app, flash, jsonify, redirect, render_template, request, url_for
 
 from core.db import db_fetchone
 from core.sh_events import latest_sh_event_by_status, recent_sh_events_by_status
@@ -31,6 +31,7 @@ def _check_database_status() -> dict:
                 "SELECT 1 completed",
             )
     except Exception as err:
+        current_app.logger.exception("system_health_database_check_failed")
         return _status("Database", "error", "Database check failed.", str(err))
 
     return _status("Database", "error", "Database returned an unexpected response.")
