@@ -162,7 +162,8 @@ def duplicate_merge_review_queue_view():
             first_name_key,
             last_name_key,
             MIN(reviewed_at) AS reviewed_at,
-            COUNT(*) AS review_count
+            COUNT(*) AS review_count,
+            MAX(primary_resident_id) AS primary_resident_id
         FROM duplicate_name_reviews
         WHERE status = 'needs_merge_review'
         GROUP BY first_name_key, last_name_key
@@ -183,6 +184,7 @@ def duplicate_merge_review_queue_view():
                 "last_name_key": last_name_key,
                 "reviewed_at": group.get("reviewed_at"),
                 "review_count": group.get("review_count"),
+                "primary_resident_id": group.get("primary_resident_id"),
                 "residents": residents,
             }
         )

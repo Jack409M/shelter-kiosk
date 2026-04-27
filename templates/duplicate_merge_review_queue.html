@@ -13,6 +13,7 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Primary</th>
             <th>Name</th>
             <th>Birth Year</th>
             <th>Phone</th>
@@ -29,6 +30,11 @@
           {% for r in group.residents %}
           <tr>
             <td>{{ r.id }}</td>
+            <td>
+              {% if group.primary_resident_id == r.id %}
+                <strong>PRIMARY</strong>
+              {% endif %}
+            </td>
             <td>{{ r.first_name }} {{ r.last_name }}</td>
             <td>{{ r.birth_year }}</td>
             <td>{{ r.phone }}</td>
