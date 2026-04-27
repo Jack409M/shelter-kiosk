@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from flask import flash, redirect, request, session, url_for
+from flask import flash, g, redirect, request, session, url_for
 
 from core.audit import log_action
 from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
+from db.schema_admin import ensure_resident_merge_history_table
 from routes.admin_parts.helpers import require_admin_role
 from routes.case_management_parts.helpers import placeholder
 
@@ -177,6 +178,10 @@ def duplicate_merge_execute_view():
     if not duplicate_ids:
         flash("No duplicate records to merge.", "info")
         return redirect(url_for("admin.duplicate_merge_review_queue"))
+
+    db_kind = str(g.get("db_kind") or "").strip().lower()
+    if db_kind in {"pg", "sqlite"}:
+        ensure_resident_merge_history_table(db_kind)
 
     ph = placeholder()
     now = datetime.now(UTC).replace(tzinfo=None).isoformat()
