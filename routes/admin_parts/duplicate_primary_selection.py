@@ -249,6 +249,29 @@ def duplicate_merge_execute_view():
             (now, first_name_key, last_name_key),
         )
 
+        db_execute(
+            f"""
+            INSERT INTO resident_merge_history (
+                primary_resident_id,
+                merged_resident_ids,
+                first_name_key,
+                last_name_key,
+                merged_by_user_id,
+                affected_tables,
+                created_at
+            ) VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+            """,
+            (
+                primary_resident_id,
+                ",".join(str(duplicate_id) for duplicate_id in duplicate_ids),
+                first_name_key,
+                last_name_key,
+                _staff_user_id(),
+                "resident_children,resident_child_income_supports,resident_passes,resident_notifications,residents,duplicate_name_reviews",
+                now,
+            ),
+        )
+
     log_action(
         entity_type="resident",
         entity_id=primary_resident_id,
