@@ -150,37 +150,6 @@ def select_duplicate_primary_view():
     return redirect(url_for("admin.duplicate_merge_review_queue"))
 
 
-def duplicate_merge_dry_run_view():
-    if not require_admin_role():
-        flash("Admin only.", "error")
-        return redirect(url_for("attendance.staff_attendance"))
-
-    keys = _duplicate_group_keys()
-
-    if not keys:
-        flash("Invalid merge dry run request.", "error")
-        return redirect(url_for("admin.duplicate_merge_review_queue"))
-
-    first_name_key, last_name_key = keys
-    primary_resident_id, duplicate_ids = _primary_and_duplicate_ids(first_name_key, last_name_key)
-
-    if not primary_resident_id:
-        flash("Select a primary resident before running a merge dry run.", "warning")
-        return redirect(url_for("admin.duplicate_merge_review_queue"))
-
-    if not duplicate_ids:
-        flash("Dry run complete: no duplicate records would be merged.", "info")
-        return redirect(url_for("admin.duplicate_merge_review_queue"))
-
-    flash(
-        "Dry run only: would keep resident "
-        f"{primary_resident_id} as PRIMARY and merge duplicate resident ID(s): "
-        f"{', '.join(str(duplicate_id) for duplicate_id in duplicate_ids)}.",
-        "info",
-    )
-    return redirect(url_for("admin.duplicate_merge_review_queue"))
-
-
 def duplicate_merge_execute_view():
     if not require_admin_role():
         flash("Admin only.", "error")
