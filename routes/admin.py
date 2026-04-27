@@ -33,6 +33,7 @@ from routes.admin_parts.duplicate_merge_review import (
     duplicate_merge_review_queue_view,
     mark_duplicate_names_same_view,
 )
+from routes.admin_parts.duplicate_name_group_review import duplicate_name_group_review_view
 from routes.admin_parts.system import (
     admin_demo_data_view,
     clear_demo_data_view,
@@ -83,6 +84,13 @@ def admin_system_health_events():
 @require_shelter
 def admin_system_health_data_quality():
     return system_health_data_quality_view()
+
+
+@admin.route("/staff/admin/system-health/data-quality/duplicate-names/review", methods=["GET"])
+@require_login
+@require_shelter
+def duplicate_name_group_review():
+    return duplicate_name_group_review_view()
 
 
 @admin.route("/staff/admin/system-health/data-quality/merge-review", methods=["GET"])
