@@ -3,7 +3,9 @@
 {% block content %}
 <div class="card">
   <h2 class="card-title-large">Role Permission Matrix</h2>
-  <p class="card-subtitle">This page reflects current role behavior based on route protection and helper functions.</p>
+  <p class="card-subtitle">
+    This page reflects current role behavior based on route protection and helper functions.
+  </p>
 
   <div class="table-shell">
     <table class="app-table">
@@ -40,9 +42,52 @@
 </div>
 
 <div class="card" style="margin-top:24px;">
-  <h2 class="card-title-large">Live Route Access Audit</h2>
+  <h2 class="card-title-large">Route Risk Findings</h2>
   <p class="card-subtitle">
-    {{ route_count }} routes analyzed.
+    {{ risk_finding_count }} high or critical route findings detected.
+  </p>
+
+  {% if risk_findings %}
+    {% for row in risk_findings %}
+      <div style="margin-bottom:12px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+        <strong>{{ row.rule }}</strong>
+        <div style="font-size:11px; color:#999; margin-top:2px;">
+          {{ row.endpoint }} | {{ row.methods }} | {{ row.classification }}
+        </div>
+        <div style="font-size:12px; margin-top:6px;">
+          Risk: <strong>{{ row.risk.level|upper }}</strong> | Score: {{ row.risk.score }}
+        </div>
+        {% if row.risk.findings %}
+          <ul style="margin-top:6px; margin-bottom:0;">
+            {% for finding in row.risk.findings %}
+              <li>{{ finding }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="card-subtitle">No high or critical route findings were detected.</p>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-top:24px;">
+  <h2 class="card-title-large">Live Route Access Audit</h2>
+
+  <form method="GET" style="margin-bottom:12px;">
+    <label for="role-filter"><strong>Filter by role:</strong></label>
+    <select id="role-filter" name="role" onchange="this.form.submit()">
+      <option value="">All Roles</option>
+      {% for role in roles %}
+        <option value="{{ role.key }}" {% if role.key == selected_role %}selected{% endif %}>
+          {{ role.label }}
+        </option>
+      {% endfor %}
+    </select>
+  </form>
+
+  <p class="card-subtitle">
+    Showing {{ filtered_route_count }} of {{ route_count }} routes for {{ selected_role_label }}.
     {% if unclassified_count > 0 %}
       {{ unclassified_count }} routes are not classified and should be reviewed.
     {% endif %}
@@ -55,6 +100,7 @@
           <th>Route</th>
           <th>Methods</th>
           <th>Access</th>
+          <th>Risk</th>
           {% for role in roles %}
             <th>{{ role.label }}</th>
           {% endfor %}
@@ -71,6 +117,10 @@
           <td>
             <strong>{{ row.classification }}</strong>
             <div style="font-size:11px; color:#999;">{{ row.source }}</div>
+          </td>
+          <td>
+            <strong>{{ row.risk.level|upper }}</strong>
+            <div style="font-size:11px; color:#999;">Score: {{ row.risk.score }}</div>
           </td>
           {% for access in row.role_access %}
             <td style="text-align:center;">
