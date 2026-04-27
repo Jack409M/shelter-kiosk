@@ -134,29 +134,14 @@ def _resident_summary_rows(first_name_key: str, last_name_key: str) -> list[dict
             pe.entry_date,
             pe.program_status,
             CASE WHEN ia.id IS NULL THEN 0 ELSE 1 END AS intake_exists,
-            COALESCE(children.child_count, 0) AS child_count,
-            COALESCE(notes.note_count, 0) AS note_count,
-            COALESCE(passes.pass_count, 0) AS pass_count
+            0 AS child_count,
+            0 AS note_count,
+            0 AS pass_count
         FROM residents r
         LEFT JOIN program_enrollments pe
           ON pe.resident_id = r.id
          AND LOWER(TRIM(COALESCE(pe.program_status, ''))) = 'active'
         LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
-        LEFT JOIN (
-            SELECT resident_id, COUNT(*) AS child_count
-            FROM resident_children
-            GROUP BY resident_id
-        ) children ON children.resident_id = r.id
-        LEFT JOIN (
-            SELECT resident_id, COUNT(*) AS note_count
-            FROM case_notes
-            GROUP BY resident_id
-        ) notes ON notes.resident_id = r.id
-        LEFT JOIN (
-            SELECT resident_id, COUNT(*) AS pass_count
-            FROM resident_passes
-            GROUP BY resident_id
-        ) passes ON passes.resident_id = r.id
         WHERE {_ACTIVE_RESIDENT_SQL.replace('is_active', 'r.is_active')}
           AND LOWER(TRIM(r.first_name)) = {ph}
           AND LOWER(TRIM(r.last_name)) = {ph}
@@ -224,29 +209,14 @@ def duplicate_merge_resident_snapshot_view(resident_id: int):
             pe.entry_date,
             pe.program_status,
             CASE WHEN ia.id IS NULL THEN 0 ELSE 1 END AS intake_exists,
-            COALESCE(children.child_count, 0) AS child_count,
-            COALESCE(notes.note_count, 0) AS note_count,
-            COALESCE(passes.pass_count, 0) AS pass_count
+            0 AS child_count,
+            0 AS note_count,
+            0 AS pass_count
         FROM residents r
         LEFT JOIN program_enrollments pe
           ON pe.resident_id = r.id
          AND LOWER(TRIM(COALESCE(pe.program_status, ''))) = 'active'
         LEFT JOIN intake_assessments ia ON ia.enrollment_id = pe.id
-        LEFT JOIN (
-            SELECT resident_id, COUNT(*) AS child_count
-            FROM resident_children
-            GROUP BY resident_id
-        ) children ON children.resident_id = r.id
-        LEFT JOIN (
-            SELECT resident_id, COUNT(*) AS note_count
-            FROM case_notes
-            GROUP BY resident_id
-        ) notes ON notes.resident_id = r.id
-        LEFT JOIN (
-            SELECT resident_id, COUNT(*) AS pass_count
-            FROM resident_passes
-            GROUP BY resident_id
-        ) passes ON passes.resident_id = r.id
         WHERE r.id = {ph}
         LIMIT 1
         """,
