@@ -3,7 +3,9 @@ from __future__ import annotations
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from core.auth import require_login, require_shelter
-from core.db import db_fetchall, db_fetchone
+from core.audit import log_action
+from core.db import db_execute, db_fetchall, db_fetchone, db_transaction
+from core.helpers import utcnow_iso
 from core.NP_placement_service import get_active_placement
 from routes.resident_parts.resident_transfer_helpers import upsert_resident_housing_assignment
 
@@ -12,6 +14,17 @@ bp = Blueprint("NP_placement", __name__, url_prefix="/staff/placement")
 
 def _current_shelter() -> str:
     return (session.get("shelter") or "").strip().lower()
+
+
+def _staff_user_id() -> int | None:
+    raw_staff_user_id = session.get("staff_user_id")
+    if raw_staff_user_id in (None, ""):
+        return None
+
+    try:
+        return int(raw_staff_user_id)
+    except (TypeError, ValueError):
+        return None
 
 
 def _can_manage_placement() -> bool:
@@ -161,6 +174,69 @@ def dashboard():
         rows=rows,
         haven_dorm_assignment_count=haven_dorm_assignment_count,
     )
+
+
+@bp.post("/resident/<int:resident_id>/deactivate")
+@require_login
+@require_shelter
+def deactivate_resident(resident_id: int):
+    if not _can_manage_placement():
+        flash("Case manager, shelter director, or admin access required.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    shelter = _current_shelter()
+    resident = _load_resident(resident_id)
+    if not resident:
+        flash("Resident not found in the current shelter.", "error")
+        return redirect(url_for("NP_placement.dashboard"))
+
+    now = utcnow_iso()
+    staff_user_id = _staff_user_id()
+
+    with db_transaction():
+        db_execute(
+            """
+            UPDATE resident_placements
+            SET end_date = %s,
+                change_reason = %s,
+                updated_at = %s
+            WHERE resident_id = %s
+              AND LOWER(COALESCE(shelter, '')) = %s
+              AND COALESCE(end_date, '') = ''
+            """,
+            (
+                now,
+                "Resident deactivated from placement board.",
+                now,
+                resident_id,
+                shelter,
+            ),
+        )
+
+        db_execute(
+            """
+            UPDATE residents
+            SET is_active = FALSE,
+                updated_at = %s
+            WHERE id = %s
+            """,
+            (now, resident_id),
+        )
+
+    log_action(
+        "resident",
+        resident_id,
+        resident.get("shelter"),
+        staff_user_id,
+        "resident_deactivated_from_placement_board",
+        {
+            "source": "placement_change_page",
+            "shelter": shelter,
+        },
+    )
+
+    flash("Resident deactivated and removed from active placement.", "success")
+    return redirect(url_for("NP_placement.dashboard"))
 
 
 @bp.route("/resident/<int:resident_id>/change", methods=["GET", "POST"])
