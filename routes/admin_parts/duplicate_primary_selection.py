@@ -70,6 +70,74 @@ def _primary_and_duplicate_ids(first_name_key: str, last_name_key: str) -> tuple
     return int(primary_resident_id), duplicate_ids
 
 
+def _dedupe_child_rows(primary_resident_id: int, duplicate_id: int) -> None:
+    ph = placeholder()
+
+    db_execute(
+        f"""
+        UPDATE resident_child_income_supports
+        SET child_id = (
+            SELECT p.id
+            FROM resident_children dc
+            JOIN resident_children p
+              ON p.resident_id = {ph}
+             AND LOWER(TRIM(COALESCE(p.child_name, ''))) = LOWER(TRIM(COALESCE(dc.child_name, '')))
+             AND COALESCE(p.birth_year, -1) = COALESCE(dc.birth_year, -1)
+            WHERE dc.id = resident_child_income_supports.child_id
+              AND dc.resident_id = {ph}
+            LIMIT 1
+        )
+        WHERE resident_id = {ph}
+          AND child_id IS NOT NULL
+          AND EXISTS (
+              SELECT 1
+              FROM resident_children dc
+              JOIN resident_children p
+                ON p.resident_id = {ph}
+               AND LOWER(TRIM(COALESCE(p.child_name, ''))) = LOWER(TRIM(COALESCE(dc.child_name, '')))
+               AND COALESCE(p.birth_year, -1) = COALESCE(dc.birth_year, -1)
+              WHERE dc.id = resident_child_income_supports.child_id
+                AND dc.resident_id = {ph}
+          )
+        """,
+        (primary_resident_id, duplicate_id, duplicate_id, primary_resident_id, duplicate_id),
+    )
+
+    db_execute(
+        f"""
+        DELETE FROM resident_children
+        WHERE resident_id = {ph}
+          AND EXISTS (
+              SELECT 1
+              FROM resident_children p
+              WHERE p.resident_id = {ph}
+                AND LOWER(TRIM(COALESCE(p.child_name, ''))) = LOWER(TRIM(COALESCE(resident_children.child_name, '')))
+                AND COALESCE(p.birth_year, -1) = COALESCE(resident_children.birth_year, -1)
+          )
+        """,
+        (duplicate_id, primary_resident_id),
+    )
+
+
+def _dedupe_child_support_rows(primary_resident_id: int, duplicate_id: int) -> None:
+    ph = placeholder()
+
+    db_execute(
+        f"""
+        DELETE FROM resident_child_income_supports
+        WHERE resident_id = {ph}
+          AND EXISTS (
+              SELECT 1
+              FROM resident_child_income_supports p
+              WHERE p.resident_id = {ph}
+                AND COALESCE(p.child_id, -1) = COALESCE(resident_child_income_supports.child_id, -1)
+                AND LOWER(TRIM(COALESCE(p.support_type, ''))) = LOWER(TRIM(COALESCE(resident_child_income_supports.support_type, '')))
+          )
+        """,
+        (duplicate_id, primary_resident_id),
+    )
+
+
 def select_duplicate_primary_view():
     if not require_admin_role():
         flash("Admin only.", "error")
@@ -188,6 +256,8 @@ def duplicate_merge_execute_view():
 
     with db_transaction():
         for duplicate_id in duplicate_ids:
+            _dedupe_child_rows(primary_resident_id, duplicate_id)
+
             db_execute(
                 f"""
                 UPDATE resident_children
@@ -196,6 +266,8 @@ def duplicate_merge_execute_view():
                 """,
                 (primary_resident_id, now, duplicate_id),
             )
+
+            _dedupe_child_support_rows(primary_resident_id, duplicate_id)
 
             db_execute(
                 f"""
