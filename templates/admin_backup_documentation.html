@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">Backup and Restore Documentation</h1>
+  <p class="page-subtitle">
+    Verified backup practices, restore safety rules, and recovery process for the Shelter Kiosk system.
+  </p>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Backup Summary</h2>
+  <ul>
+    {% for key, value in backup_summary.items() %}
+      <li>{{ value }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Restore Safety Boundaries</h2>
+  <ul>
+    {% for item in restore_boundaries %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">Daily Backup Verification Checklist</h2>
+  <ul>
+    {% for item in daily_checklist %}
+      <li>{{ item }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
+  <h2 class="card-title-large">Recovery Procedure</h2>
+  <ol>
+    {% for step in recovery_steps %}
+      <li>{{ step }}</li>
+    {% endfor %}
+  </ol>
+</div>
+
+{% endblock %}
