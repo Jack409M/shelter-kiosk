@@ -76,15 +76,57 @@ def _check_sms_status() -> dict:
 
 
 def _check_scheduler_status() -> dict:
-    scheduler_enabled = os.environ.get("SCHEDULER_ENABLED", "").strip().lower()
-    if scheduler_enabled in {"true", "1", "yes", "on"}:
-        return _status("Scheduler", "ok", "Scheduler flag is enabled.", "SCHEDULER_ENABLED=true")
-    if scheduler_enabled in {"false", "0", "no", "off"}:
+    scheduler_status = str(
+        current_app.extensions.get("pass_retention_scheduler_status") or ""
+    ).strip()
+    scheduler_schedule = str(
+        current_app.extensions.get("pass_retention_scheduler_schedule") or ""
+    ).strip()
+    last_seen_at = str(
+        current_app.extensions.get("pass_retention_scheduler_last_seen_at") or ""
+    ).strip()
+    last_finished_at = str(
+        current_app.extensions.get("pass_retention_scheduler_last_finished_at") or ""
+    ).strip()
+
+    if scheduler_status == "running":
+        meta_parts = [part for part in (scheduler_schedule, f"last_seen={last_seen_at}" if last_seen_at else "") if part]
         return _status(
-            "Scheduler", "warn", "Scheduler flag is disabled.", "SCHEDULER_ENABLED=false"
+            "Scheduler",
+            "ok",
+            "Pass retention scheduler is running.",
+            " | ".join(meta_parts),
         )
+
+    if scheduler_status == "disabled":
+        return _status(
+            "Scheduler",
+            "warn",
+            "Scheduler is disabled by configuration.",
+            "SCHEDULER_ENABLED=false",
+        )
+
+    if scheduler_status == "testing_skipped":
+        return _status(
+            "Scheduler",
+            "ok",
+            "Scheduler is skipped during tests.",
+            "TESTING=true",
+        )
+
+    if last_finished_at:
+        return _status(
+            "Scheduler",
+            "warn",
+            "Pass retention scheduler has run before, but current status is unknown.",
+            f"last_finished={last_finished_at}",
+        )
+
     return _status(
-        "Scheduler", "warn", "Scheduler status is not configured yet.", "No scheduler flag found"
+        "Scheduler",
+        "error",
+        "Pass retention scheduler is not reporting as running.",
+        "No active scheduler state found",
     )
 
 
