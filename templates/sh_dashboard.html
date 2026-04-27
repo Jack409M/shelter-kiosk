@@ -27,9 +27,14 @@
 <div class="card" style="margin-bottom:16px;">
   <h2 class="card-title-large">Administrative Review</h2>
   <p class="card-subtitle">
-    Review role permissions and live route exposure from the current running application.
+    Review role permissions, security configuration changes, and live route exposure from the current running application.
   </p>
-  <a href="{{ url_for('admin.admin_role_permissions') }}">Open Role Permission Matrix</a>
+  <p>
+    <a href="{{ url_for('admin.admin_role_permissions') }}">Open Role Permission Matrix</a>
+  </p>
+  <p>
+    <a href="{{ url_for('admin.admin_security_config_history') }}">Open Security Configuration History</a>
+  </p>
 </div>
 
 {% if alerts %}
