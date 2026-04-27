@@ -62,7 +62,16 @@
     </div>
 
     <div style="margin-top:10px;">
-      <button disabled>Merge records (coming soon)</button>
+      {% if group.primary_resident_id %}
+      <form method="post" action="/staff/admin/system-health/data-quality/merge-review/dry-run">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="first_name_key" value="{{ group.first_name_key }}">
+        <input type="hidden" name="last_name_key" value="{{ group.last_name_key }}">
+        <button type="submit">Merge into PRIMARY (dry run)</button>
+      </form>
+      {% else %}
+      <button disabled>Select primary first</button>
+      {% endif %}
     </div>
   </div>
 {% endfor %}
