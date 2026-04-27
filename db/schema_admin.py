@@ -10,7 +10,7 @@ from __future__ import annotations
 from flask import current_app
 
 from core.db import db_execute
-from .schema_helpers import create_table
+from .schema_helpers import create_table, safe_add_column
 
 
 def ensure_duplicate_name_reviews_table(kind: str) -> None:
@@ -43,6 +43,10 @@ def ensure_duplicate_name_reviews_table(kind: str) -> None:
         )
         """,
     )
+
+    safe_add_column(kind, "duplicate_name_reviews", "primary_resident_id INTEGER")
+    safe_add_column(kind, "duplicate_name_reviews", "primary_selected_by_user_id INTEGER")
+    safe_add_column(kind, "duplicate_name_reviews", "primary_selected_at TEXT")
 
 
 def ensure_tables(kind: str) -> None:
