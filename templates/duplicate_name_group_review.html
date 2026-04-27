@@ -1,0 +1,106 @@
+{% extends "layout.html" %}
+
+{% block page_header %}
+<div class="page-header">
+  <h1 class="page-title">Duplicate Name Review</h1>
+  <p class="page-subtitle">
+    Compare matching active residents side by side, then decide whether they are the same person or not the same person.
+  </p>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:16px;">
+  <h2 class="card-title-large">{{ first_name_key }} {{ last_name_key }}</h2>
+  <p>
+    Matching active residents: <strong>{{ residents|length }}</strong>
+  </p>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+    <form method="post" action="{{ url_for('admin.admin_mark_duplicate_names_same') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="first_name_key" value="{{ first_name_key }}">
+      <input type="hidden" name="last_name_key" value="{{ last_name_key }}">
+      <button type="submit">Same person</button>
+    </form>
+
+    <form method="post" action="{{ url_for('admin.admin_confirm_duplicate_names_separate') }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="first_name_key" value="{{ first_name_key }}">
+      <input type="hidden" name="last_name_key" value="{{ last_name_key }}">
+      <button type="submit">Not same person</button>
+    </form>
+
+    <a href="{{ url_for('admin.admin_system_health_data_quality') }}">Back to Data Quality</a>
+  </div>
+</div>
+
+<div class="table-shell">
+  <table class="app-table">
+    <thead>
+      <tr>
+        <th>Field</th>
+        {% for r in residents %}
+          <th>{{ r.first_name }} {{ r.last_name }}<br>ID {{ r.id }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>Resident Identifier</th>
+        {% for r in residents %}<td>{{ r.resident_identifier }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Birth Year</th>
+        {% for r in residents %}<td>{{ r.birth_year }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Phone</th>
+        {% for r in residents %}<td>{{ r.phone }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Email</th>
+        {% for r in residents %}<td>{{ r.email }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Shelter</th>
+        {% for r in residents %}<td>{{ r.shelter }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Enrollment Shelter</th>
+        {% for r in residents %}<td>{{ r.enrollment_shelter }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Program Status</th>
+        {% for r in residents %}<td>{{ r.program_status }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Entry Date</th>
+        {% for r in residents %}<td>{{ r.entry_date }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Intake Exists</th>
+        {% for r in residents %}<td>{{ r.intake_exists }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Children</th>
+        {% for r in residents %}<td>{{ r.child_count }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Notes</th>
+        {% for r in residents %}<td>{{ r.note_count }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Passes</th>
+        {% for r in residents %}<td>{{ r.pass_count }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <th>Open Record</th>
+        {% for r in residents %}
+          <td><a href="{{ url_for('case_management.resident_case', resident_id=r.id) }}">Open case</a></td>
+        {% endfor %}
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
