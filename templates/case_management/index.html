@@ -166,6 +166,20 @@
     color: #667085;
   }
 
+  .integrity-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .integrity-ok { background: #e8f7ee; color: #0f7b3e; }
+  .integrity-warning { background: #fff4e5; color: #b54708; }
+  .integrity-broken { background: #fdecea; color: #b42318; }
+
   .row-link {
     color: #1f5eff;
     text-decoration: none;
@@ -265,6 +279,7 @@
                 <th>Name</th>
                 <th>Resident Code</th>
                 <th>Status</th>
+                <th>Integrity</th>
                 <th>Open</th>
               </tr>
             </thead>
@@ -283,6 +298,15 @@
                     {% else %}
                       <span class="status-pill inactive">Inactive</span>
                     {% endif %}
+                  </td>
+                  <td>
+                    {% set integrity = resident.file_integrity %}
+                    <span class="integrity-pill integrity-{{ integrity.status|lower }}">
+                      {{ integrity.status }}
+                      {% if integrity.missing %}
+                        ({{ integrity.missing | join(', ') }})
+                      {% endif %}
+                    </span>
                   </td>
                   <td>
                     <a class="row-link" href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}">
