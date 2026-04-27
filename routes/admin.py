@@ -7,6 +7,7 @@ from routes.admin_parts.audit import (
     staff_audit_log_csv_view,
     staff_audit_log_view,
 )
+from routes.admin_parts.backup_docs import admin_backup_documentation_view
 from routes.admin_parts.dashboard import (
     admin_ban_ip_view,
     admin_dashboard_live_view,
@@ -89,6 +90,13 @@ def admin_system_health():
     return system_health_dashboard_view()
 
 
+@admin.route("/staff/admin/backup-documentation", methods=["GET"])
+@require_login
+@require_shelter
+def admin_backup_documentation():
+    return admin_backup_documentation_view()
+
+
 @admin.post("/staff/admin/system-health/alerts/<int:alert_id>/resolve")
 @require_login
 @require_shelter
@@ -115,13 +123,6 @@ def admin_system_health_data_quality():
 @require_shelter
 def duplicate_name_group_review():
     return duplicate_name_group_review_view()
-
-
-@admin.route("/staff/admin/system-health/data-quality/merge-review", methods=["GET"])
-@require_login
-@require_shelter
-def duplicate_merge_review_queue():
-    return duplicate_merge_review_queue_view()
 
 
 @admin.route(
