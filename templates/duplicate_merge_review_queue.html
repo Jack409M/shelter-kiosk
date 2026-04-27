@@ -41,7 +41,13 @@
             <td>
               <a href="/staff/admin/system-health/data-quality/merge-review/resident/{{ r.id }}">View snapshot</a>
               <br>
-              <button type="button">Make Primary</button>
+              <form method="post" action="/staff/admin/system-health/data-quality/merge-review/select-primary">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="first_name_key" value="{{ group.first_name_key }}">
+                <input type="hidden" name="last_name_key" value="{{ group.last_name_key }}">
+                <input type="hidden" name="primary_resident_id" value="{{ r.id }}">
+                <button type="submit">Make Primary</button>
+              </form>
             </td>
           </tr>
           {% endfor %}
