@@ -7,6 +7,12 @@ from flask import current_app, flash, jsonify, redirect, render_template, reques
 
 from core.db import db_fetchone
 from core.sh_events import latest_sh_event_by_status, recent_sh_events_by_status
+from core.system_alerts import (
+    count_open_system_alerts_by_severity,
+    load_open_system_alerts,
+    resolve_system_alert,
+    sync_system_health_alerts,
+)
 from routes.admin_parts.helpers import require_admin_role
 
 
@@ -134,6 +140,20 @@ def system_health_events_api():
     return jsonify(rows)
 
 
+def resolve_system_health_alert_view(alert_id: int):
+    if not require_admin_role():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    note = request.form.get("resolution_note", "")
+    if resolve_system_alert(alert_id, resolution_note=note):
+        flash("System alert resolved.", "success")
+    else:
+        flash("System alert was not found.", "error")
+
+    return redirect(url_for("admin.admin_system_health"))
+
+
 def system_health_dashboard_view():
     if not require_admin_role():
         flash("Admin only.", "error")
@@ -149,16 +169,22 @@ def system_health_dashboard_view():
         *_job_status_cards(),
     ]
 
+    sync_system_health_alerts(cards)
+    alerts = load_open_system_alerts()
+    alert_counts = count_open_system_alerts_by_severity()
+
     summary_state = "ok"
-    if any(card["state"] == "error" for card in cards):
+    if any(card["state"] == "error" for card in cards) or alert_counts.get("critical"):
         summary_state = "error"
-    elif any(card["state"] == "warn" for card in cards):
+    elif any(card["state"] == "warn" for card in cards) or alert_counts.get("error") or alert_counts.get("warn"):
         summary_state = "warn"
 
     return render_template(
         "sh_dashboard.html",
         title="System Health",
         cards=cards,
+        alerts=alerts,
+        alert_counts=alert_counts,
         summary_state=summary_state,
         checked_at=checked_at,
     )
