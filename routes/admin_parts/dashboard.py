@@ -15,7 +15,7 @@ from flask import (
 
 from core import rate_limit as rate_limit_store
 from core.audit import log_action
-from core.db import db_execute
+from core.db import db_execute, db_fetchall, db_fetchone
 from core.helpers import fmt_dt, utcnow_iso
 from core.rate_limit import ban_ip
 from routes.admin_parts.helpers import (
@@ -74,6 +74,28 @@ def _manual_unlock_username(username: str) -> bool:
     removed = key in rate_limit_store._LOCKED_KEYS
     rate_limit_store._LOCKED_KEYS.pop(key, None)
     return removed
+
+
+def _security_setting_bool(raw_value) -> bool:
+    if isinstance(raw_value, bool):
+        return raw_value
+
+    if isinstance(raw_value, int):
+        return raw_value == 1
+
+    normalized = str(raw_value or "").strip().lower()
+    return normalized in {"1", "true", "t", "yes", "y", "on"}
+
+
+def _security_setting_value_for_db(bool_value: bool, kind: str):
+    if kind == "pg":
+        return bool_value
+
+    return 1 if bool_value else 0
+
+
+def _security_setting_value_for_history(bool_value: bool) -> str:
+    return "1" if bool_value else "0"
 
 
 def admin_dashboard_view():
@@ -139,6 +161,25 @@ def admin_update_security_settings_view():
     kind = g.get("db_kind")
     now = utcnow_iso()
 
+    current_settings = db_fetchone(
+        f"""
+        SELECT {field}
+        FROM security_settings
+        ORDER BY id ASC
+        LIMIT 1
+        """
+    )
+
+    if not current_settings:
+        flash("Security settings record was not found.", "error")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    old_bool_value = _security_setting_bool(current_settings.get(field))
+
+    if old_bool_value == bool_value:
+        flash("Security setting was already set to that value.", "ok")
+        return redirect(url_for("admin.admin_dashboard"))
+
     meta = SECURITY_FIELD_META[field]
     expires_field = meta["expires_field"]
     default_value = bool(meta["default"])
@@ -156,8 +197,28 @@ def admin_update_security_settings_view():
         WHERE id = (SELECT id FROM security_settings ORDER BY id ASC LIMIT 1)
         """,
         (
-            bool_value if kind == "pg" else (1 if bool_value else 0),
+            _security_setting_value_for_db(bool_value, kind),
             expires_at,
+            now,
+        ),
+    )
+
+    db_execute(
+        """
+        INSERT INTO security_config_history (
+            setting_key,
+            old_value,
+            new_value,
+            changed_by_user_id,
+            changed_at
+        )
+        VALUES (%s, %s, %s, %s, %s)
+        """,
+        (
+            field,
+            _security_setting_value_for_history(old_bool_value),
+            _security_setting_value_for_history(bool_value),
+            session.get("staff_user_id"),
             now,
         ),
     )
@@ -177,6 +238,37 @@ def admin_update_security_settings_view():
         flash("Security setting updated.", "ok")
 
     return redirect(url_for("admin.admin_dashboard"))
+
+
+def admin_security_config_history_view():
+    if not _require_admin():
+        flash("Admin only.", "error")
+        return redirect(url_for("attendance.staff_attendance"))
+
+    history_rows = db_fetchall(
+        """
+        SELECT
+            history.id,
+            history.setting_key,
+            history.old_value,
+            history.new_value,
+            history.changed_by_user_id,
+            history.changed_at,
+            staff_users.username AS changed_by_username
+        FROM security_config_history history
+        LEFT JOIN staff_users
+            ON staff_users.id = history.changed_by_user_id
+        ORDER BY history.changed_at DESC, history.id DESC
+        LIMIT 200
+        """
+    )
+
+    return render_template(
+        "admin/security_config_history.html",
+        history_rows=history_rows,
+        fmt_dt=fmt_dt,
+        current_role=_current_role(),
+    )
 
 
 def admin_ban_ip_view():
