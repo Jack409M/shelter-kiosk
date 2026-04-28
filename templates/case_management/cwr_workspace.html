@@ -1,8 +1,8 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css', v='20260428_cwr_modules1') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260428_cwr_modules1') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css', v='20260428_cwr_modules2') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260428_cwr_modules2') }}">
 {% endblock %}
 
 {% block content %}
@@ -170,10 +170,10 @@
           <section {{ panel('medications') }}>{{ module_panel('Medications', 'Use the medications module for the medication list, add, and edit flow.', url_for('case_management.medications', resident_id=resident_id), 'Open Medication Module') }}</section>
           <section {{ panel('family') }}>{{ module_panel('Family Changes', 'Family changes are managed through the family intake module.', url_for('case_management.family_intake', resident_id=resident_id), 'Open Family Intake') }}</section>
           <section {{ panel('child-services') }}>{% if children %}{{ module_panel('Child Services', 'Use the child services module for service history, add, edit, and delete flow.', url_for('case_management.child_services', child_id=children[0]['id']), 'Open Child Services') }}{% else %}{{ module_panel('Child Services', 'No active child records are on file. Add or update children through Family Intake.', url_for('case_management.family_intake', resident_id=resident_id), 'Open Family Intake') }}{% endif %}</section>
-          <section {{ panel('step') }}>{{ module_panel('Step Level', 'Step level is part of the full recovery profile editor until that editor is moved intact.', url_for('case_management.resident_case', resident_id=resident_id), 'Open Profile Editor') }}</section>
-          <section {{ panel('sponsor') }}>{{ module_panel('Sponsor', 'Sponsor information is part of the full recovery profile editor until that editor is moved intact.', url_for('case_management.resident_case', resident_id=resident_id), 'Open Profile Editor') }}</section>
+          <section {{ panel('step') }}>{{ module_panel('Step Level', 'Step level is managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='step'), 'Open Recovery Profile') }}</section>
+          <section {{ panel('sponsor') }}>{{ module_panel('Sponsor', 'Sponsor information is managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='sponsor'), 'Open Recovery Profile') }}</section>
           <section {{ panel('writeups') }}>{{ module_panel('Write Ups', 'Write ups are managed in the resident write up workspace.', url_for('writeups.resident_writeups', resident_id=resident_id), 'Open Write Ups') }}</section>
-          <section {{ panel('sobriety') }}>{{ module_panel('Sobriety Or Treatment', 'These fields are part of the full recovery profile editor until that editor is moved intact.', url_for('case_management.resident_case', resident_id=resident_id), 'Open Profile Editor') }}</section>
+          <section {{ panel('sobriety') }}>{{ module_panel('Sobriety Or Treatment', 'Sobriety and treatment fields are managed in the Recovery Profile module.', url_for('case_management.recovery_profile', resident_id=resident_id, return_to='cwr', active_panel='sobriety'), 'Open Recovery Profile') }}</section>
         </div>
       </div>
     </section>
@@ -192,6 +192,6 @@
   window.CWR_NOTE_EDIT_BY_DATE = {{ cwr_note_edit_by_date | tojson }};
   window.CWR_NOTE_VALUES_BY_DATE = {{ cwr_note_values_by_date | tojson }};
 </script>
-<script src="{{ url_for('static', filename='js/resident_case_workspace.js', v='20260428_cwr_modules1') }}"></script>
-<script src="{{ url_for('static', filename='js/cwr_workspace.js', v='20260428_cwr_modules1') }}"></script>
+<script src="{{ url_for('static', filename='js/resident_case_workspace.js', v='20260428_cwr_modules2') }}"></script>
+<script src="{{ url_for('static', filename='js/cwr_workspace.js', v='20260428_cwr_modules2') }}"></script>
 {% endblock %}
