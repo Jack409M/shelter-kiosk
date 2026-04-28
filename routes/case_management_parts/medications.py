@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_execute, db_fetchall, db_fetchone
@@ -15,12 +17,81 @@ from routes.case_management_parts.helpers import (
 from routes.case_management_parts.medications_validation import validate_medication_form
 
 
+MEDICATIONS_ACTIVE_PANEL = "medications"
+
+
+def _resident_case_url(resident_id: int):
+    return url_for("case_management.resident_case", resident_id=resident_id)
+
+
 def _resident_case_redirect(resident_id: int):
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+    return redirect(_resident_case_url(resident_id))
+
+
+def _referrer_is_cwr() -> bool:
+    referrer = request.referrer or ""
+    if not referrer:
+        return False
+
+    referrer_path = urlparse(referrer).path.rstrip("/")
+    return f"/staff/case-management/" in referrer_path and referrer_path.endswith("/cwr")
+
+
+def _form_came_from_cwr() -> bool:
+    return_to = (
+        request.form.get("return_to")
+        or request.form.get("redirect_to")
+        or request.args.get("return_to")
+        or request.args.get("redirect_to")
+        or ""
+    ).strip().lower()
+
+    return return_to == "cwr" or _referrer_is_cwr()
+
+
+def _active_panel() -> str:
+    return (
+        request.form.get("active_panel")
+        or request.args.get("active_panel")
+        or MEDICATIONS_ACTIVE_PANEL
+    ).strip() or MEDICATIONS_ACTIVE_PANEL
+
+
+def _return_query_args() -> dict:
+    if not _form_came_from_cwr():
+        return {}
+
+    return {
+        "return_to": "cwr",
+        "active_panel": _active_panel(),
+    }
+
+
+def _medications_url(resident_id: int):
+    query_args = _return_query_args()
+    return url_for("case_management.medications", resident_id=resident_id, **query_args)
 
 
 def _medications_redirect(resident_id: int):
-    return redirect(url_for("case_management.medications", resident_id=resident_id))
+    return redirect(_medications_url(resident_id))
+
+
+def _cwr_url(resident_id: int):
+    return url_for(
+        "case_management.cwr_workspace",
+        resident_id=resident_id,
+        active_panel=_active_panel(),
+    )
+
+
+def _done_url(resident_id: int):
+    if _form_came_from_cwr():
+        return _cwr_url(resident_id)
+    return _resident_case_url(resident_id)
+
+
+def _done_redirect(resident_id: int):
+    return redirect(_done_url(resident_id))
 
 
 def _quick_add_requested() -> bool:
@@ -28,8 +99,12 @@ def _quick_add_requested() -> bool:
 
 
 def _post_submit_redirect(resident_id: int):
+    if _form_came_from_cwr():
+        return _done_redirect(resident_id)
+
     if _quick_add_requested():
         return _resident_case_redirect(resident_id)
+
     return _medications_redirect(resident_id)
 
 
@@ -100,6 +175,11 @@ def medication_form_view(resident_id: int):
         "case_management/medications.html",
         resident=resident,
         medications=medications,
+        return_to="cwr" if _form_came_from_cwr() else "",
+        active_panel=_active_panel(),
+        back_url=_done_url(resident_id),
+        done_url=_done_url(resident_id),
+        medications_url=_medications_url(resident_id),
     )
 
 
@@ -174,7 +254,7 @@ def add_medication_view(resident_id: int):
         return _post_submit_redirect(resident_id)
 
     flash("Medication added.", "success")
-    return _resident_case_redirect(resident_id)
+    return _post_submit_redirect(resident_id)
 
 
 def edit_medication_view(resident_id: int, medication_id: int):
@@ -215,25 +295,23 @@ def edit_medication_view(resident_id: int, medication_id: int):
 
     if not medication:
         flash("Medication not found.", "error")
-        return redirect(url_for("case_management.medications", resident_id=resident_id))
+        return _medications_redirect(resident_id)
 
     if request.method == "GET":
         return render_template(
             "case_management/edit_medication.html",
             resident=resident,
             medication=medication,
+            return_to="cwr" if _form_came_from_cwr() else "",
+            active_panel=_active_panel(),
+            back_url=_medications_url(resident_id),
+            done_url=_done_url(resident_id),
         )
 
     data, error = validate_medication_form(request.form)
     if error:
         flash(error, "error")
-        return redirect(
-            url_for(
-                "case_management.edit_medication",
-                resident_id=resident_id,
-                medication_id=medication_id,
-            )
-        )
+        return _post_submit_redirect(resident_id)
 
     now = utcnow_iso()
 
@@ -279,13 +357,7 @@ def edit_medication_view(resident_id: int, medication_id: int):
             resident_id,
         )
         flash("Unable to update medication. Please try again or contact an administrator.", "error")
-        return redirect(
-            url_for(
-                "case_management.edit_medication",
-                resident_id=resident_id,
-                medication_id=medication_id,
-            )
-        )
+        return _post_submit_redirect(resident_id)
 
     flash("Medication updated.", "success")
-    return _resident_case_redirect(resident_id)
+    return _post_submit_redirect(resident_id)
