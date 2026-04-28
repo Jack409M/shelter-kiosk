@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block content %}
+{% set resident_id = resident['id'] %}
+{% set first_name = resident['first_name'] %}
+{% set last_name = resident['last_name'] %}
+{% set resident_code = resident['resident_code'] %}
+{% set resident_active = resident['is_active'] %}
+{% set shelter = resident['shelter'] %}
+{% set initials = (first_name[0] ~ last_name[0]) if first_name and last_name else '—' %}
+
+<div class="cmx-page">
+  <div class="cmx-shell">
+
+    {% include "case_management/partials/resident_case/_workspace_header.html" %}
+
+    <div class="cmx-card">
+      <div class="cmx-section-head">
+        <div>
+          <h2 class="cmx-section-title">Recovery Profile</h2>
+          <div class="cmx-section-subtitle">Manage recovery profile fields.</div>
+        </div>
+        <a class="cmx-btn-secondary" href="{{ url_for('case_management.cwr_workspace', resident_id=resident_id) }}">Back to Workspace</a>
+      </div>
+    </div>
+
+    {% include "case_management/partials/resident_case/_profile_editor.html" %}
+
+  </div>
+</div>
+
+{% endblock %}
