@@ -13,7 +13,7 @@
 
       <a
         class="btn"
-        href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+        href="{{ back_url }}"
         style="border-radius:14px; padding:11px 16px;"
       >
         Back to Case Management
@@ -30,8 +30,10 @@
         </div>
       </div>
 
-      <form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident['id']) }}">
+      <form method="post" action="{{ medications_url }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="return_to" value="{{ return_to }}">
+        <input type="hidden" name="active_panel" value="{{ active_panel }}">
 
         <div>
           <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Medication Name</strong></label>
@@ -87,7 +89,7 @@
           <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save Medication</button>
           <a
             class="btn"
-            href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+            href="{{ done_url }}"
             style="border-radius:14px; padding:11px 16px;"
           >
             Done with Medications
@@ -130,7 +132,7 @@
                   <td style="padding:10px; border-bottom:1px solid #eef2f7; white-space:nowrap;">
                     <a
                       class="btn btn-sm"
-                      href="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=med['id']) }}"
+                      href="{{ url_for('case_management.edit_medication', resident_id=resident['id'], medication_id=med['id'], return_to=return_to, active_panel=active_panel) }}"
                       style="border-radius:12px;"
                     >
                       Edit
@@ -159,7 +161,7 @@
       <div style="margin-top:16px;">
         <a
           class="btn"
-          href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+          href="{{ done_url }}"
           style="border-radius:14px; padding:11px 16px;"
         >
           Done with Medications
