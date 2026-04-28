@@ -99,6 +99,16 @@
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
+.cwr-note-save-status {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.cwr-note-form.has-unsaved-changes .cwr-note-save-status {
+  color: #b45309;
+}
+
 .cwr-form-head {
   display: flex;
   justify-content: space-between;
@@ -142,6 +152,7 @@
 .cwr-note-form textarea {
   min-height: 74px;
   resize: vertical;
+  line-height: 1.45;
 }
 
 .cwr-note-grid {
@@ -262,23 +273,10 @@
   display: none !important;
 }
 
-.cwr-panel-placeholder.is-hidden,
-.cwr-panel-placeholder[hidden] {
-  display: none !important;
-}
-
 .cwr-two-col {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-}
-
-.cwr-service-row {
-  display: grid !important;
-  grid-template-columns: auto minmax(120px, 1fr) 72px 100px minmax(160px, 1.3fr);
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
 }
 
 .cwr-save-btn,
@@ -295,6 +293,61 @@
   text-decoration: none;
 }
 
+/* Focus editor */
+.cwr-focus-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.cwr-focus-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.cwr-focus-dialog {
+  position: relative;
+  max-width: 900px;
+  margin: 60px auto;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+.cwr-focus-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.cwr-focus-textarea {
+  width: 100%;
+  min-height: 300px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.cwr-focus-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.cwr-focus-close,
+.cwr-focus-secondary {
+  background: #111827;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
 @media (max-width: 900px) {
   .cwr-control-row {
     flex-direction: column;
@@ -305,25 +358,6 @@
   .cwr-meeting-top,
   .cwr-note-grid,
   .cwr-two-col {
-    grid-template-columns: 1fr !important;
-  }
-
-  .cwr-question-layout {
-    grid-template-columns: 1fr !important;
-  }
-
-  .cwr-question {
-    grid-template-columns: 1fr !important;
-    gap: 4px !important;
-  }
-
-  .cwr-question > strong {
-    justify-self: start;
-    max-width: none;
-    text-align: left;
-  }
-
-  .cwr-service-row {
     grid-template-columns: 1fr !important;
   }
 }
