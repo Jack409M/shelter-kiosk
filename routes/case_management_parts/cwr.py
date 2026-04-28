@@ -22,6 +22,8 @@ from routes.case_management_parts.resident_case_scope import (
 )
 
 
+CWR_NOTES_ACTIVE_PANEL = "notes"
+
 _NOTE_VALUE_FIELDS = (
     "meeting_date",
     "notes",
@@ -61,6 +63,8 @@ def _build_cwr_note_maps(resident_id: int, notes: list[dict]) -> tuple[dict, dic
             "case_management.edit_case_note",
             resident_id=resident_id,
             update_id=note_id,
+            redirect_to="cwr",
+            active_panel=CWR_NOTES_ACTIVE_PANEL,
         )
         note_values_by_date[meeting_date] = {
             field_name: _clean_note_value(note.get(field_name))
