@@ -17,6 +17,7 @@ from routes.case_management_parts.budget_sessions import (
     edit_budget_session_view,
     print_budget_view,
 )
+from routes.case_management_parts.cwr import cwr_workspace_view
 from routes.case_management_parts.exit import exit_assessment_form_view, submit_exit_assessment_view
 from routes.case_management_parts.exit_followup import exit_followup_view
 from routes.case_management_parts.family import (
