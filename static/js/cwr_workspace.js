@@ -18,6 +18,14 @@ document.querySelectorAll('.cwr-mode-btn').forEach((btn) => {
   });
 });
 
+const cwrPanels = document.querySelectorAll('.cwr-panel');
+const cwrPlaceholder = document.querySelector('.cwr-panel-placeholder');
+
+cwrPanels.forEach((panel) => {
+  panel.hidden = true;
+  panel.classList.remove('is-open');
+});
+
 document.querySelectorAll('.cwr-question').forEach((question) => {
   question.addEventListener('click', () => {
     const panelName = question.dataset.panel;
@@ -28,16 +36,18 @@ document.querySelectorAll('.cwr-question').forEach((question) => {
     });
     question.classList.add('is-active');
 
-    document.querySelectorAll('.cwr-panel').forEach((item) => {
+    cwrPanels.forEach((item) => {
+      item.hidden = true;
       item.classList.remove('is-open');
     });
 
-    const placeholder = document.querySelector('.cwr-panel-placeholder');
-    if (placeholder) {
-      placeholder.classList.add('is-hidden');
+    if (cwrPlaceholder) {
+      cwrPlaceholder.hidden = true;
+      cwrPlaceholder.classList.add('is-hidden');
     }
 
     if (panel) {
+      panel.hidden = false;
       panel.classList.add('is-open');
     }
   });
