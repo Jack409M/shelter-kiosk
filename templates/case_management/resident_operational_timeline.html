@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto;padding:20px;">
+  <h1>Operational Timeline</h1>
+  <p>{{ resident.last_name }}, {{ resident.first_name }}</p>
+
+  {% if entries %}
+    <div style="margin-top:20px;">
+      {% for e in entries %}
+        <div style="border-bottom:1px solid #eee;padding:10px 0;">
+          <div style="font-size:13px;color:#666;">{{ e.time_display }}</div>
+          <div style="font-weight:700;">{{ e.action_display }} — {{ e.entity_display }}</div>
+          {% if e.details_display %}
+            <div style="font-size:13px;color:#444;">{{ e.details_display }}</div>
+          {% endif %}
+          <div style="font-size:12px;color:#888;">by {{ e.staff_display }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No operational activity yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
