@@ -10,11 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const residentId = window.RESIDENT_CASE_RESIDENT_ID || 'unknown';
   const noteFormDefaultAction = noteForm ? noteForm.getAttribute('action') : '';
   const noteSaveButton = noteForm ? noteForm.querySelector('button[type="submit"]') : null;
+  const pageParams = new URLSearchParams(window.location.search);
+  const requestedPanel = pageParams.get('active_panel') || '';
 
   let noteFormDirty = false;
   let suppressBeforeUnload = false;
   let activeDraftDate = meetingDateField ? meetingDateField.value : '';
   let statusElement = null;
+  let activePanelName = '';
 
   function setStatus(message) {
     if (statusElement) {
@@ -24,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function markNoteFormDirty() {
     noteFormDirty = true;
+    suppressBeforeUnload = false;
     if (noteForm) {
       noteForm.classList.add('has-unsaved-changes');
     }
@@ -216,6 +220,52 @@ document.addEventListener('DOMContentLoaded', () => {
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }
 
+  function ensureHiddenField(form, name, value) {
+    let field = form.querySelector('input[type="hidden"][name="' + name + '"]');
+    if (!field) {
+      field = document.createElement('input');
+      field.type = 'hidden';
+      field.name = name;
+      form.appendChild(field);
+    }
+    field.value = value;
+  }
+
+  function updateActivePanelFields() {
+    document.querySelectorAll('.cwr-page form').forEach((form) => {
+      ensureHiddenField(form, 'redirect_to', 'cwr');
+      ensureHiddenField(form, 'active_panel', activePanelName || '');
+    });
+  }
+
+  function normalizeDuplicateProfileControls(form) {
+    const visibleNames = new Set();
+
+    form.querySelectorAll('input[name], textarea[name], select[name]').forEach((field) => {
+      if (field.type !== 'hidden') {
+        visibleNames.add(field.name);
+      }
+    });
+
+    if (!visibleNames.size) {
+      return;
+    }
+
+    form.querySelectorAll('input[type="hidden"][name]').forEach((field) => {
+      if (visibleNames.has(field.name)) {
+        field.disabled = true;
+      }
+    });
+  }
+
+  function setupCwrFormPosts() {
+    document.querySelectorAll('.cwr-page form').forEach((form) => {
+      ensureHiddenField(form, 'redirect_to', 'cwr');
+      ensureHiddenField(form, 'active_panel', activePanelName || '');
+      normalizeDuplicateProfileControls(form);
+    });
+  }
+
   function setupNoteWritingExperience() {
     if (!noteForm) {
       return;
@@ -267,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearDraftForDate(meetingDateField.value);
       }
       clearNoteFormDirty();
+      updateActivePanelFields();
     });
 
     noteForm.querySelectorAll('textarea').forEach((textarea) => {
@@ -354,67 +405,82 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function activateMode(mode) {
+    modeButtons.forEach((item) => {
+      item.classList.toggle('is-active', item.dataset.mode === mode);
+    });
+
+    document.querySelectorAll('.cwr-mode').forEach((section) => {
+      section.classList.remove('is-active');
+    });
+
+    const activeSection = document.getElementById('cwr-' + mode);
+    if (activeSection) {
+      activeSection.classList.add('is-active');
+    }
+  }
+
   modeButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
       if (!confirmUnsavedNotes()) {
         return;
       }
 
-      const mode = btn.dataset.mode;
-
-      modeButtons.forEach((item) => {
-        item.classList.remove('is-active');
-      });
-      btn.classList.add('is-active');
-
-      document.querySelectorAll('.cwr-mode').forEach((section) => {
-        section.classList.remove('is-active');
-      });
-
-      const activeSection = document.getElementById('cwr-' + mode);
-      if (activeSection) {
-        activeSection.classList.add('is-active');
-      }
+      activateMode(btn.dataset.mode);
     });
   });
 
   closeAllQuestionPanels();
 
+  function openQuestionPanel(question, event, requireConfirmation = true) {
+    if (event) {
+      event.preventDefault();
+    }
+
+    const panelName = question.dataset.panel;
+    const panel = document.getElementById('cwr-panel-' + panelName);
+
+    if (!panel) {
+      return;
+    }
+
+    if (requireConfirmation && activePanelName && activePanelName !== panelName && !confirmUnsavedNotes()) {
+      return;
+    }
+
+    activePanelName = panelName;
+    updateActivePanelFields();
+
+    document.querySelectorAll('.cwr-question').forEach((item) => {
+      item.classList.remove('is-active');
+      item.setAttribute('aria-expanded', 'false');
+    });
+    question.classList.add('is-active');
+    question.setAttribute('aria-expanded', 'true');
+
+    closeAllQuestionPanels();
+
+    if (questionPlaceholder) {
+      questionPlaceholder.hidden = true;
+      questionPlaceholder.setAttribute('hidden', 'hidden');
+      questionPlaceholder.classList.add('is-hidden');
+    }
+
+    panel.hidden = false;
+    panel.removeAttribute('hidden');
+    panel.classList.add('is-open');
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   document.querySelectorAll('.cwr-question').forEach((question) => {
-    const openPanel = (event) => {
-      if (event) {
-        event.preventDefault();
-      }
+    question.setAttribute('role', 'button');
+    question.setAttribute('aria-expanded', 'false');
 
-      const panelName = question.dataset.panel;
-      const panel = document.getElementById('cwr-panel-' + panelName);
-
-      document.querySelectorAll('.cwr-question').forEach((item) => {
-        item.classList.remove('is-active');
-      });
-      question.classList.add('is-active');
-
-      closeAllQuestionPanels();
-
-      if (questionPlaceholder) {
-        questionPlaceholder.hidden = true;
-        questionPlaceholder.setAttribute('hidden', 'hidden');
-        questionPlaceholder.classList.add('is-hidden');
-      }
-
-      if (panel) {
-        panel.hidden = false;
-        panel.removeAttribute('hidden');
-        panel.classList.add('is-open');
-        panel.style.display = 'block';
-        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    };
-
-    question.addEventListener('click', openPanel);
+    question.addEventListener('click', (event) => openQuestionPanel(question, event));
     question.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
-        openPanel(event);
+        openQuestionPanel(question, event);
       }
     });
   });
@@ -426,11 +492,23 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', (event) => {
       if (!confirmUnsavedNotes()) {
         event.preventDefault();
+        return;
       }
+      updateActivePanelFields();
+      normalizeDuplicateProfileControls(form);
     });
   });
 
+  setupCwrFormPosts();
   setupNoteWritingExperience();
+
+  if (requestedPanel) {
+    const question = document.querySelector('.cwr-question[data-panel="' + requestedPanel + '"]');
+    if (question) {
+      activateMode('meeting');
+      openQuestionPanel(question, null, false);
+    }
+  }
 
   window.addEventListener('beforeunload', (event) => {
     if (suppressBeforeUnload || !noteFormDirty) {
