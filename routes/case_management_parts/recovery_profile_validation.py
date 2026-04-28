@@ -13,7 +13,7 @@ from routes.case_management_parts.helpers import (
 )
 
 ALLOWED_EMPLOYMENT_STATUS_VALUES = {"", "employed", "unemployed"}
-ALLOWED_EMPLOYMENT_TYPE_VALUES = {"", "full_time", "part_time"}
+ALLOWED_EMPLOYMENT_TYPE_VALUES = {"", "full_time", "part_time", "temporary", "seasonal"}
 
 
 def _yes_no_to_bool(value: str | None) -> bool | None:
@@ -113,43 +113,24 @@ def _validate_supervisor_phone(data: dict[str, Any], errors: list[str]) -> None:
 
 
 def _validate_employment_fields(data: dict[str, Any], errors: list[str]) -> None:
+    """
+    Recovery profile saves include employment fields only to preserve existing values.
+    Employment and income validation belongs to the Income Support module.
+    Do not block profile updates because an older employment snapshot is incomplete.
+    """
     status_value = (clean(data.get("employment_status_current")) or "").lower()
     employment_type_value = (clean(data.get("employment_type_current")) or "").lower()
 
     if status_value not in ALLOWED_EMPLOYMENT_STATUS_VALUES:
         errors.append("Employment Status must be employed or unemployed.")
+        status_value = ""
 
     if employment_type_value not in ALLOWED_EMPLOYMENT_TYPE_VALUES:
-        errors.append("Employment Type must be full_time or part_time.")
+        errors.append("Employment Type must be full_time, part_time, temporary, or seasonal.")
+        employment_type_value = ""
 
     data["employment_status_current"] = status_value or None
     data["employment_type_current"] = employment_type_value or None
-
-    if status_value == "employed":
-        if not clean(data.get("employer_name")):
-            errors.append("Employer is required when Employment Status is Employed.")
-
-        if not employment_type_value:
-            errors.append("Employment Type is required when Employment Status is Employed.")
-
-        data["unemployment_reason"] = None
-        return
-
-    if status_value == "unemployed":
-        if not clean(data.get("unemployment_reason")):
-            errors.append("Unemployment Reason is required when Employment Status is Unemployed.")
-
-        data["employer_name"] = None
-        data["employment_type_current"] = None
-        data["supervisor_name"] = None
-        data["supervisor_phone"] = None
-        return
-
-    data["employer_name"] = None
-    data["employment_type_current"] = None
-    data["supervisor_name"] = None
-    data["supervisor_phone"] = None
-    data["unemployment_reason"] = None
 
 
 def _validate_employment_date_order(data: dict[str, Any], errors: list[str]) -> None:
