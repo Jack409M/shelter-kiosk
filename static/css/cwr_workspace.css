@@ -76,14 +76,16 @@
   gap:12px;
   width:100%;
   text-align:left;
-  background:transparent;
-  border:0;
-  border-bottom:1px solid #d9e1ea;
+  background:transparent !important;
+  border:0 !important;
+  border-bottom:1px solid #d9e1ea !important;
+  border-radius:0 !important;
   padding:9px 2px;
   color:#10233f;
   font:inherit;
   font-weight:650;
   cursor:pointer;
+  box-shadow:none !important;
 }
 
 .cwr-question span {
@@ -98,19 +100,17 @@
   color:#005ea8;
 }
 
+.cwr-panel,
 .cwr-panel[hidden] {
   display:none !important;
 }
 
-.cwr-panel {
+.cwr-panel.is-open {
+  display:block !important;
   background:#fff;
   border:1px solid #d9e1ea;
   border-radius:10px;
   padding:14px;
-}
-
-.cwr-panel.is-open {
-  display:block;
 }
 
 .cwr-panel-placeholder {
