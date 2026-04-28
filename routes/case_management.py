@@ -77,6 +77,7 @@ from routes.case_management_parts.medications import (
     medication_form_view,
 )
 from routes.case_management_parts.notes_history import notes_history_view
+from routes.case_management_parts.profile import recovery_profile_view
 from routes.case_management_parts.progress_report import progress_report_print_view
 from routes.case_management_parts.promotion_review import promotion_review_view
 from routes.case_management_parts.recovery_profile import update_recovery_profile_view
@@ -286,6 +287,12 @@ def add_appointment(resident_id: int):
     return add_appointment_view(resident_id)
 
 
+@case_management.get("/<int:resident_id>/recovery-profile")
+@_view
+def recovery_profile(resident_id: int):
+    return recovery_profile_view(resident_id)
+
+
 @case_management.post("/<int:resident_id>/recovery-profile")
 @_view
 def update_recovery_profile(resident_id: int):
@@ -433,10 +440,12 @@ def progress_report_print(resident_id: int, update_id: int):
 def promotion_review(resident_id: int):
     return promotion_review_view(resident_id)
 
+
 @case_management.get("/<int:resident_id>/cwr")
 @_view
 def cwr_workspace(resident_id: int):
     return cwr_workspace_view(resident_id)
+
 
 @case_management.get("/<int:resident_id>/exit-followup")
 @_view
