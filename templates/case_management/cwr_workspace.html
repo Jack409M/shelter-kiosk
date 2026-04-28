@@ -164,8 +164,8 @@
             </form>
           </section>
 
-          <section {{ panel('employment') }}>{{ module_panel('Employment', 'Employment is managed by the full Employment and Income Support module.', url_for('case_management.income_support', resident_id=resident_id), 'Open Employment And Income') }}</section>
-          <section {{ panel('income') }}>{{ module_panel('Monthly Income', 'Monthly income is calculated through the full Employment and Income Support module.', url_for('case_management.income_support', resident_id=resident_id), 'Open Employment And Income') }}</section>
+          <section {{ panel('employment') }}>{{ module_panel('Employment', 'Employment is managed by the full Employment and Income Support module.', url_for('case_management.income_support', resident_id=resident_id, return_to='cwr', active_panel='employment'), 'Open Employment And Income') }}</section>
+          <section {{ panel('income') }}>{{ module_panel('Monthly Income', 'Monthly income is calculated through the full Employment and Income Support module.', url_for('case_management.income_support', resident_id=resident_id, return_to='cwr', active_panel='income'), 'Open Employment And Income') }}</section>
           <section {{ panel('ua') }}>{{ module_panel('UA', 'Use the UA module for add, history, and edit flow.', url_for('case_management.ua_log', resident_id=resident_id), 'Open UA Module') }}</section>
           <section {{ panel('medications') }}>{{ module_panel('Medications', 'Use the medications module for the medication list, add, and edit flow.', url_for('case_management.medications', resident_id=resident_id), 'Open Medication Module') }}</section>
           <section {{ panel('family') }}>{{ module_panel('Family Changes', 'Family changes are managed through the family intake module.', url_for('case_management.family_intake', resident_id=resident_id), 'Open Family Intake') }}</section>
