@@ -92,6 +92,34 @@ def _redirect_resident_case(resident_id: int) -> RedirectResponse:
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
+def _redirect_after_case_note_save(
+    resident_id: int,
+    *,
+    case_note_saved: bool = False,
+) -> RedirectResponse:
+    if request.form.get("redirect_to") == "cwr":
+        active_panel = request.form.get("active_panel") or None
+        return redirect(
+            url_for(
+                "case_management.cwr_workspace",
+                resident_id=resident_id,
+                case_note_saved=1 if case_note_saved else None,
+                active_panel=active_panel,
+            )
+        )
+
+    if case_note_saved:
+        return redirect(
+            url_for(
+                "case_management.resident_case",
+                resident_id=resident_id,
+                case_note_saved=1,
+            )
+        )
+
+    return _redirect_resident_case(resident_id)
+
+
 def _redirect_staff_login() -> RedirectResponse:
     return redirect(url_for("auth.staff_login"))
 
@@ -450,13 +478,7 @@ def add_case_note_view(resident_id: int) -> RouteResponse:
         )
 
     flash("Case manager update saved.", "success")
-    return redirect(
-        url_for(
-            "case_management.resident_case",
-            resident_id=resident_id,
-            case_note_saved=1,
-        )
-    )
+    return _redirect_after_case_note_save(resident_id, case_note_saved=True)
 
 
 def edit_case_note_view(resident_id: int, update_id: int) -> RouteResponse:
@@ -560,4 +582,4 @@ def edit_case_note_view(resident_id: int, update_id: int) -> RouteResponse:
         )
 
     flash("Case note updated.", "success")
-    return _redirect_resident_case(resident_id)
+    return _redirect_after_case_note_save(resident_id, case_note_saved=True)
