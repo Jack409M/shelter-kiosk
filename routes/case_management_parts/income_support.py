@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import urlparse
+
 from flask import current_app, flash, redirect, render_template, request, session, url_for
 
 from core.db import db_fetchone, db_transaction
@@ -29,6 +31,8 @@ from routes.case_management_parts.intake_income_support import (
 
 # --- compatibility layer for tests and legacy monkeypatch targets ---
 
+INCOME_SUPPORT_ACTIVE_PANEL = "income"
+
 
 def upsert_intake_income_support(enrollment_id, values):
     return _upsert_intake_income_support_impl(enrollment_id, values)
@@ -36,6 +40,72 @@ def upsert_intake_income_support(enrollment_id, values):
 
 def recalculate_intake_income_support(enrollment_id):
     return _recalculate_intake_income_support_impl(enrollment_id)
+
+
+def _referrer_is_cwr() -> bool:
+    referrer = request.referrer or ""
+    if not referrer:
+        return False
+
+    referrer_path = urlparse(referrer).path.rstrip("/")
+    return f"/staff/case-management/" in referrer_path and referrer_path.endswith("/cwr")
+
+
+def _form_came_from_cwr() -> bool:
+    return_to = (
+        request.form.get("return_to")
+        or request.form.get("redirect_to")
+        or request.args.get("return_to")
+        or request.args.get("redirect_to")
+        or ""
+    ).strip().lower()
+
+    return return_to == "cwr" or _referrer_is_cwr()
+
+
+def _active_panel() -> str:
+    return (
+        request.form.get("active_panel")
+        or request.args.get("active_panel")
+        or INCOME_SUPPORT_ACTIVE_PANEL
+    ).strip() or INCOME_SUPPORT_ACTIVE_PANEL
+
+
+def _return_query_args() -> dict:
+    if not _form_came_from_cwr():
+        return {}
+
+    return {
+        "return_to": "cwr",
+        "active_panel": _active_panel(),
+    }
+
+
+def _income_support_url(resident_id: int):
+    query_args = _return_query_args()
+    return url_for("case_management.income_support", resident_id=resident_id, **query_args)
+
+
+def _resident_case_url(resident_id: int):
+    return url_for("case_management.resident_case", resident_id=resident_id)
+
+
+def _cwr_url(resident_id: int):
+    return url_for(
+        "case_management.cwr_workspace",
+        resident_id=resident_id,
+        active_panel=_active_panel(),
+    )
+
+
+def _done_url(resident_id: int):
+    if _form_came_from_cwr():
+        return _cwr_url(resident_id)
+    return _resident_case_url(resident_id)
+
+
+def _done_redirect(resident_id: int):
+    return redirect(_done_url(resident_id))
 
 
 def _load_current_enrollment(resident_id: int, shelter: str):
@@ -195,6 +265,11 @@ def _render_income_support_page(
         intake_income_support=intake_income_support,
         total_cash_support=total_cash_support,
         weighted_stable_income=weighted_stable_income,
+        return_to="cwr" if _form_came_from_cwr() else "",
+        active_panel=_active_panel(),
+        back_url=_done_url(resident.get("id")),
+        done_url=_done_url(resident.get("id")),
+        income_support_url=_income_support_url(resident.get("id")),
     )
 
 
@@ -203,7 +278,7 @@ def income_support_view(resident_id: int):
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _done_redirect(resident_id)
 
     shelter = normalize_shelter_name(session.get("shelter"))
     resident = _load_resident_in_scope(resident_id, shelter)
@@ -217,7 +292,7 @@ def income_support_view(resident_id: int):
 
     if not enrollment_id:
         flash("Resident does not have an active enrollment record yet.", "error")
-        return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+        return _done_redirect(resident_id)
 
     if request.method == "POST":
         values, errors = validate_income_support_form(request.form)
@@ -255,7 +330,7 @@ def income_support_view(resident_id: int):
             )
 
         flash("Employment and income support updated.", "success")
-        return redirect(url_for("case_management.income_support", resident_id=resident_id))
+        return _done_redirect(resident_id)
 
     try:
         _resync_income_support_atomic(
