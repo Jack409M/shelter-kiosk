@@ -82,6 +82,7 @@
         <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Workspace</a>
         <a class="cmx-workspace-tab" href="{{ url_for('case_management.promotion_review', resident_id=resident_id) }}">Promotion Review</a>
         <a class="cmx-workspace-tab" href="{{ url_for('case_management.exit_followup', resident_id=resident_id) }}">Exit and Follow Up</a>
+        <a class="cmx-workspace-tab" href="{{ url_for('case_management.resident_operational_timeline', resident_id=resident_id) }}">Timeline</a>
       </div>
 
       {% if is_deceased_case %}
