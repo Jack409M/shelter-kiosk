@@ -15,12 +15,75 @@ from routes.case_management_parts.helpers import (
 from routes.case_management_parts.ua_log_validation import validate_ua_log_form
 
 
+UA_ACTIVE_PANEL = "ua"
+
+
+def _resident_case_url(resident_id: int):
+    return url_for("case_management.resident_case", resident_id=resident_id)
+
+
 def _resident_case_redirect(resident_id: int):
-    return redirect(url_for("case_management.resident_case", resident_id=resident_id))
+    return redirect(_resident_case_url(resident_id))
+
+
+def _ua_log_url(resident_id: int):
+    query_args = _return_query_args()
+    return url_for("case_management.ua_log", resident_id=resident_id, **query_args)
 
 
 def _ua_log_redirect(resident_id: int):
-    return redirect(url_for("case_management.ua_log", resident_id=resident_id))
+    return redirect(_ua_log_url(resident_id))
+
+
+def _form_came_from_cwr() -> bool:
+    referrer = request.referrer or ""
+    return_to = (
+        request.form.get("return_to")
+        or request.form.get("redirect_to")
+        or request.args.get("return_to")
+        or request.args.get("redirect_to")
+        or ""
+    ).strip().lower()
+
+    return return_to == "cwr" or (
+        f"/staff/case-management/" in referrer and referrer.rstrip("/").endswith("/cwr")
+    )
+
+
+def _active_panel() -> str:
+    return (
+        request.form.get("active_panel")
+        or request.args.get("active_panel")
+        or UA_ACTIVE_PANEL
+    ).strip() or UA_ACTIVE_PANEL
+
+
+def _return_query_args() -> dict:
+    if not _form_came_from_cwr():
+        return {}
+
+    return {
+        "return_to": "cwr",
+        "active_panel": _active_panel(),
+    }
+
+
+def _cwr_url(resident_id: int):
+    return url_for(
+        "case_management.cwr_workspace",
+        resident_id=resident_id,
+        active_panel=_active_panel(),
+    )
+
+
+def _done_url(resident_id: int):
+    if _form_came_from_cwr():
+        return _cwr_url(resident_id)
+    return _resident_case_url(resident_id)
+
+
+def _done_redirect(resident_id: int):
+    return redirect(_done_url(resident_id))
 
 
 def _quick_add_requested() -> bool:
@@ -28,8 +91,12 @@ def _quick_add_requested() -> bool:
 
 
 def _post_submit_redirect(resident_id: int):
+    if _form_came_from_cwr():
+        return _done_redirect(resident_id)
+
     if _quick_add_requested():
         return _resident_case_redirect(resident_id)
+
     return _ua_log_redirect(resident_id)
 
 
@@ -93,6 +160,11 @@ def ua_log_view(resident_id: int):
         "case_management/ua_log.html",
         resident=resident,
         ua_rows=ua_rows,
+        return_to="cwr" if _form_came_from_cwr() else "",
+        active_panel=_active_panel(),
+        back_url=_done_url(resident_id),
+        done_url=_done_url(resident_id),
+        ua_log_url=_ua_log_url(resident_id),
     )
 
 
@@ -156,7 +228,7 @@ def add_ua_log_view(resident_id: int):
         return _post_submit_redirect(resident_id)
 
     flash("UA log entry added.", "success")
-    return _resident_case_redirect(resident_id)
+    return _post_submit_redirect(resident_id)
 
 
 def edit_ua_log_view(resident_id: int, ua_id: int):
@@ -192,22 +264,24 @@ def edit_ua_log_view(resident_id: int, ua_id: int):
 
     if not ua_row:
         flash("UA log entry not found.", "error")
-        return redirect(url_for("case_management.ua_log", resident_id=resident_id))
+        return _ua_log_redirect(resident_id)
 
     if request.method == "GET":
         return render_template(
             "case_management/edit_ua_log.html",
             resident=resident,
             ua_row=ua_row,
+            return_to="cwr" if _form_came_from_cwr() else "",
+            active_panel=_active_panel(),
+            back_url=_ua_log_url(resident_id),
+            done_url=_done_url(resident_id),
         )
 
     values, errors = validate_ua_log_form(request.form)
     if errors:
         for error in errors:
             flash(error, "error")
-        return redirect(
-            url_for("case_management.edit_ua_log", resident_id=resident_id, ua_id=ua_id)
-        )
+        return _post_submit_redirect(resident_id)
 
     now = utcnow_iso()
 
@@ -243,9 +317,7 @@ def edit_ua_log_view(resident_id: int, ua_id: int):
         flash(
             "Unable to update UA log entry. Please try again or contact an administrator.", "error"
         )
-        return redirect(
-            url_for("case_management.edit_ua_log", resident_id=resident_id, ua_id=ua_id)
-        )
+        return _post_submit_redirect(resident_id)
 
     flash("UA log entry updated.", "success")
-    return _resident_case_redirect(resident_id)
+    return _post_submit_redirect(resident_id)
