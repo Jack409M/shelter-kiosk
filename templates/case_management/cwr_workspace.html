@@ -13,31 +13,11 @@
 {% set shelter = resident["shelter"] %}
 {% set resident_active = resident["is_active"] %}
 {% set initials = ((first_name[:1] if first_name else "") ~ (last_name[:1] if last_name else ""))|upper %}
-
-{% if enrollment %}
-  {% set enrollment_entry_date = enrollment["entry_date"] %}
-{% else %}
-  {% set enrollment_entry_date = "" %}
-{% endif %}
-
-{% if exit_assessment %}
-  {% set exit_date_exit_dwc = exit_assessment["date_exit_dwc"] %}
-  {% set exit_category = exit_assessment["exit_category"] %}
-  {% set exit_reason = exit_assessment["exit_reason"] %}
-  {% set exit_leave_ama = exit_assessment["leave_ama"] %}
-  {% set exit_leave_ama_destination = exit_assessment["leave_ama_destination"] %}
-{% else %}
-  {% set exit_date_exit_dwc = none %}
-  {% set exit_category = none %}
-  {% set exit_reason = none %}
-  {% set exit_leave_ama = none %}
-  {% set exit_leave_ama_destination = none %}
-{% endif %}
+{% set enrollment_entry_date = enrollment["entry_date"] if enrollment else "" %}
 
 {% set rs = recovery_snapshot or {} %}
 {% set rs_level = rs.get("program_level") %}
 {% set rs_level_start_date = rs.get("level_start_date") %}
-{% set rs_days_on_level = rs.get("days_on_level") %}
 {% set rs_sponsor = rs.get("sponsor_name") %}
 {% set rs_sponsor_active_display = rs.get("sponsor_active_display") %}
 {% set rs_employment_status = rs.get("employment_status_current") %}
@@ -51,8 +31,6 @@
 {% set rs_step_work_active_display = rs.get("step_work_active_display") %}
 {% set rs_medications = rs.get("medications", []) %}
 {% set rs_ua_rows = rs.get("ua_rows", []) %}
-{% set rs_latest_inspection = rs.get("latest_inspection") %}
-{% set rs_days_sober_today = rs.get("days_sober_today") %}
 {% set rs_sobriety_date = rs.get("sobriety_date") %}
 {% set rs_drug_of_choice = rs.get("drug_of_choice") %}
 {% set rs_treatment_graduation_date = rs.get("treatment_graduation_date") %}
@@ -60,13 +38,61 @@
 {% set meeting_defaults = meeting_defaults if meeting_defaults is defined else {} %}
 {% set workspace_header = workspace_header if workspace_header is defined else {} %}
 {% set header_days_sober = workspace_header.get("days_sober") %}
-{% set header_days_on_level = workspace_header.get("days_on_level") %}
 {% set header_open_needs_count = workspace_header.get("open_needs_count", 0) %}
 {% set header_program_status = workspace_header.get("program_status") %}
 {% set last_note = notes[-1] if notes else none %}
 {% set last_meeting_date = last_note["meeting_date"] if last_note else "—" %}
 {% set next_appt = meeting_defaults.get("next_appointment", "—") %}
 {% set case_note_saved = request.args.get("case_note_saved") == "1" %}
+{% set today_value = meeting_defaults.meeting_date if meeting_defaults.meeting_date else '' %}
+{% set eis = employment_income_snapshot if employment_income_snapshot is defined else {} %}
+{% set ess = employment_stability_snapshot if employment_stability_snapshot is defined else {} %}
+{% set resolved_employment_status = employment_status_snapshot if employment_status_snapshot is defined else (rs_employment_status or "") %}
+
+{% macro profile_hidden() %}
+  <input type="hidden" name="program_level" value="{{ rs_level or '1' }}">
+  <input type="hidden" name="level_start_date" value="{{ rs_level_start_date or enrollment_entry_date or '' }}">
+  <input type="hidden" name="step_current" value="{{ rs_step if rs_step is not none else '' }}">
+  <input type="hidden" name="sponsor_name" value="{{ rs_sponsor or '' }}">
+  <input type="hidden" name="sponsor_active" value="{{ 'yes' if rs_sponsor_active_display == 'Yes' else ('no' if rs_sponsor_active_display == 'No' else '') }}">
+  <input type="hidden" name="step_work_active" value="{{ 'yes' if rs_step_work_active_display == 'Yes' else ('no' if rs_step_work_active_display == 'No' else '') }}">
+  <input type="hidden" name="sobriety_date" value="{{ rs_sobriety_date or '' }}">
+  <input type="hidden" name="treatment_graduation_date" value="{{ rs_treatment_graduation_date or '' }}">
+  <input type="hidden" name="drug_of_choice" value="{{ rs_drug_of_choice or '' }}">
+  <input type="hidden" name="employment_notes" value="{{ rs_employment_notes or '' }}">
+  <input type="hidden" name="employment_status_current" value="{{ resolved_employment_status or '' }}">
+  <input type="hidden" name="employer_name" value="{{ rs_employer or '' }}">
+  <input type="hidden" name="employment_type_current" value="{{ rs.get('employment_type_current') or '' }}">
+  <input type="hidden" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}">
+  <input type="hidden" name="current_job_start_date" value="{{ rs.get('current_job_start_date') or '' }}">
+  <input type="hidden" name="continuous_employment_start_date" value="{{ rs.get('continuous_employment_start_date') or '' }}">
+  <input type="hidden" name="previous_job_end_date" value="{{ rs.get('previous_job_end_date') or '' }}">
+  <input type="hidden" name="upward_job_change" value="{{ 'yes' if rs.get('upward_job_change') else ('no' if rs.get('upward_job_change') is not none else '') }}">
+  <input type="hidden" name="supervisor_name" value="{{ rs_supervisor_name or '' }}">
+  <input type="hidden" name="supervisor_phone" value="{{ rs_supervisor_phone or '' }}">
+  <input type="hidden" name="unemployment_reason" value="{{ rs_unemployment_reason or '' }}">
+  <input type="hidden" name="job_change_notes" value="{{ rs.get('job_change_notes') or '' }}">
+  <input type="hidden" name="rad_complete" value="{{ 'yes' if enrollment and enrollment.get('rad_complete') else ('no' if enrollment and enrollment.get('rad_complete') is not none else '') }}">
+  <input type="hidden" name="rad_completed_date" value="{{ enrollment.get('rad_completed_date') if enrollment else '' }}">
+{% endmacro %}
+
+{% macro note_hidden(summary) %}
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="meeting_date" value="{{ today_value }}">
+  <input type="hidden" name="notes" value="{{ summary }}">
+  <input type="hidden" name="progress_notes" value="">
+  <input type="hidden" name="setbacks_or_incidents" value="">
+  <input type="hidden" name="action_items" value="">
+  <input type="hidden" name="overall_summary" value="{{ summary }}">
+  <input type="hidden" name="updated_grit" value="">
+  <input type="hidden" name="parenting_class_completed" value="">
+  <input type="hidden" name="warrants_or_fines_paid" value="">
+  <input type="hidden" name="ready_for_next_level" value="">
+  <input type="hidden" name="recommended_next_level" value="">
+  <input type="hidden" name="blocker_reason" value="">
+  <input type="hidden" name="override_or_exception" value="">
+  <input type="hidden" name="staff_review_note" value="">
+{% endmacro %}
 
 <div class="cmx-page cwr-page">
   <div class="cmx-shell">
@@ -77,84 +103,127 @@
         <div class="cwr-preview-label">Preview Workspace</div>
         <div class="cwr-preview-subtitle">Casemanager Workspace Renovation</div>
       </div>
-
       <div class="cwr-mode-toggle" aria-label="Workspace mode">
-        <button type="button" class="cwr-mode-btn is-active" data-mode="review">Review Resident</button>
-        <button type="button" class="cwr-mode-btn" data-mode="meeting">Meeting Mode</button>
+        <button type="button" class="cwr-mode-btn is-active" data-mode="review">Review</button>
+        <button type="button" class="cwr-mode-btn" data-mode="meeting">Meeting</button>
+        <button type="button" class="cwr-mode-btn" data-mode="budget">Budget Meeting</button>
       </div>
-
-      <a class="cwr-back-link" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
-        Back to Original Workspace
-      </a>
+      <a class="cwr-back-link" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Back to Original Workspace</a>
     </div>
 
     <div id="cwr-review" class="cwr-mode is-active">
       <div class="cwr-review-grid">
-        <div class="cwr-card">
-          <div class="cwr-card-label">Program Status</div>
-          <div class="cwr-card-value">{{ header_program_status or "—" }}</div>
-          <div class="cwr-card-sub">Level {{ rs_level or "—" }} · Step {{ rs_step if rs_step is not none and rs_step != "" else "—" }}</div>
-        </div>
-
-        <div class="cwr-card">
-          <div class="cwr-card-label">Resident Stability</div>
-          <div class="cwr-card-value">{{ header_days_sober if header_days_sober is not none else "—" }}</div>
-          <div class="cwr-card-sub">Days sober</div>
-        </div>
-
-        <div class="cwr-card">
-          <div class="cwr-card-label">Open Needs</div>
-          <div class="cwr-card-value">{{ header_open_needs_count }}</div>
-          <div class="cwr-card-sub">Needs requiring follow up</div>
-        </div>
+        <div class="cwr-card"><div class="cwr-card-label">Program Status</div><div class="cwr-card-value">{{ header_program_status or '—' }}</div><div class="cwr-card-sub">Level {{ rs_level or '—' }} · Step {{ rs_step if rs_step is not none and rs_step != '' else '—' }}</div></div>
+        <div class="cwr-card"><div class="cwr-card-label">Resident Stability</div><div class="cwr-card-value">{{ header_days_sober if header_days_sober is not none else '—' }}</div><div class="cwr-card-sub">Days sober</div></div>
+        <div class="cwr-card"><div class="cwr-card-label">Open Needs</div><div class="cwr-card-value">{{ header_open_needs_count }}</div><div class="cwr-card-sub">Needs requiring follow up</div></div>
       </div>
     </div>
 
     <div id="cwr-meeting" class="cwr-mode">
-      <div class="cwr-caseflow-grid">
-        <button type="button" class="cwr-card cwr-action" onclick="openModal('meeting')">
-          <span class="cwr-card-label">Meeting</span>
-          <span class="cwr-card-value">Contact Note</span>
-          <span class="cwr-card-sub">Record today’s meeting, services, needs, and next steps.</span>
-        </button>
-
-        <button type="button" class="cwr-card cwr-action" onclick="openModal('profile')">
-          <span class="cwr-card-label">Profile</span>
-          <span class="cwr-card-value">Program Facts</span>
-          <span class="cwr-card-sub">Update level, step, sponsor, sobriety, and recovery profile.</span>
-        </button>
-
-        <button type="button" class="cwr-card cwr-action" onclick="openModal('actions')">
-          <span class="cwr-card-label">Actions</span>
-          <span class="cwr-card-value">Quick Tasks</span>
-          <span class="cwr-card-sub">Appointments, UA, write ups, child services, and medications.</span>
-        </button>
+      <div class="cwr-workspace-intro">
+        <h2>Meeting Caseflow</h2>
+        <p>Click the sentence that matches what changed today. Only that focused section opens.</p>
       </div>
-    </div>
 
-    <div id="cwr-modal" class="cwr-modal hidden" aria-hidden="true">
-      <div class="cwr-modal-panel cwr-modal-lg" role="dialog" aria-modal="true">
-        <div class="cwr-modal-head">
-          <div>
-            <div class="cwr-modal-kicker">Casemanager Workspace Renovation</div>
-            <h2 id="cwr-modal-title">Workspace</h2>
+      <div class="cwr-prompt-list">
+        <section class="cwr-prompt">
+          <button type="button" class="cwr-prompt-button" data-panel="services">Do you need services today?</button>
+          <div class="cwr-panel" id="cwr-panel-services">
+            <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+              {{ note_hidden('Services were provided today through CWR meeting mode.') }}
+              <div class="cwr-service-grid">
+                {% for service_name, unit_hint, note_hint in [("Counseling", "sessions", "Counseling notes"), ("Dental", "visits", "Dental notes"), ("Vision", "visits", "Vision notes"), ("Transportation", "rides", "Transportation notes"), ("Daycare", "days", "Daycare notes"), ("Legal Assistance", "visits", "Legal notes"), ("Other", "units", "Other notes")] %}
+                  <label class="cwr-service-row">
+                    <input type="checkbox" name="service_type" value="{{ service_name }}">
+                    <span>{{ service_name }}</span>
+                    <input type="number" name="quantity_{{ service_name }}" min="0" placeholder="Qty">
+                    <input type="text" name="unit_{{ service_name }}" placeholder="{{ unit_hint }}">
+                    <input type="text" name="service_notes_{{ service_name }}" placeholder="{{ note_hint }}">
+                  </label>
+                {% endfor %}
+              </div>
+              <button class="cwr-save-btn" type="submit">Save Services</button>
+            </form>
           </div>
-          <button type="button" class="cwr-modal-close" onclick="closeModal()">Close</button>
-        </div>
-        <div class="cwr-modal-content" id="cwr-modal-content"></div>
+        </section>
+
+        <section class="cwr-prompt">
+          <button type="button" class="cwr-prompt-button" data-panel="needs">Do we need to review any open needs? <span>{{ header_open_needs_count }} open</span></button>
+          <div class="cwr-panel" id="cwr-panel-needs">
+            <form method="post" action="{{ url_for('case_management.add_case_note', resident_id=resident_id) }}">
+              {{ note_hidden('Open needs were reviewed today through CWR meeting mode.') }}
+              {% if open_needs %}
+                {% for need in open_needs %}
+                  <div class="cwr-need-card">
+                    <strong>{{ need['need_label'] }}</strong>
+                    <div class="cwr-two-col">
+                      <select name="need_status_{{ need['need_key'] }}"><option value="">Leave Open</option><option value="addressed">Addressed</option><option value="not_applicable">Not Applicable</option></select>
+                      <input type="text" value="{{ need['source_value'] or '' }}" readonly>
+                    </div>
+                    <textarea name="need_note_{{ need['need_key'] }}" rows="2" placeholder="What happened today"></textarea>
+                  </div>
+                {% endfor %}
+                <button class="cwr-save-btn" type="submit">Save Need Review</button>
+              {% else %}
+                <div class="cwr-empty">No open needs are currently recorded.</div>
+              {% endif %}
+            </form>
+          </div>
+        </section>
+
+        <section class="cwr-prompt">
+          <button type="button" class="cwr-prompt-button" data-panel="employment">Any change in employment? <span>{{ rs_employer or 'No employer on file' }}</span></button>
+          <div class="cwr-panel" id="cwr-panel-employment">
+            <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{{ profile_hidden() }}
+              <div class="cwr-two-col"><select name="employment_status_current"><option value="">Unknown</option><option value="employed" {% if resolved_employment_status == 'employed' %}selected{% endif %}>Employed</option><option value="unemployed" {% if resolved_employment_status == 'unemployed' %}selected{% endif %}>Unemployed</option></select><input type="text" name="employer_name" value="{{ rs_employer or '' }}" placeholder="Employer"></div>
+              <div class="cwr-two-col"><select name="employment_type_current"><option value="">Employment type</option><option value="full_time" {% if rs.get('employment_type_current') == 'full_time' %}selected{% endif %}>Full time</option><option value="part_time" {% if rs.get('employment_type_current') == 'part_time' %}selected{% endif %}>Part time</option></select><input type="date" name="current_job_start_date" value="{{ rs.get('current_job_start_date') or '' }}"></div>
+              <textarea name="employment_notes" rows="2" placeholder="Employment notes">{{ rs_employment_notes or '' }}</textarea>
+              <button class="cwr-save-btn" type="submit">Save Employment</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="cwr-prompt">
+          <button type="button" class="cwr-prompt-button" data-panel="income">Any change in monthly net income? <span>{{ '$%.2f'|format(rs_income) if rs_income is not none else 'No income on file' }}</span></button>
+          <div class="cwr-panel" id="cwr-panel-income">
+            <form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{{ profile_hidden() }}
+              <input type="text" name="monthly_income" value="{{ rs_income if rs_income is not none else '' }}" placeholder="Monthly net income">
+              <button class="cwr-save-btn" type="submit">Save Income</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="cwr-prompt">
+          <button type="button" class="cwr-prompt-button" data-panel="ua">Do we need to run a UA?</button>
+          <div class="cwr-panel" id="cwr-panel-ua">
+            <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident_id) }}">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="redirect_to" value="resident_case">
+              <div class="cwr-two-col"><input type="date" name="ua_date" required><select name="result"><option>Negative</option><option>Positive</option><option>Refused</option><option>Pending</option></select></div>
+              <input type="text" name="substances_detected" placeholder="Substances detected, if any"><textarea name="notes" rows="2" placeholder="UA notes"></textarea>
+              <button class="cwr-save-btn" type="submit">Save UA</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="cwr-prompt"><button type="button" class="cwr-prompt-button" data-panel="medications">Change in medications? <span>{{ rs_medications|length }} on file</span></button><div class="cwr-panel" id="cwr-panel-medications"><form method="post" action="{{ url_for('case_management.add_medication', resident_id=resident_id) }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="redirect_to" value="resident_case"><input type="text" name="medication_name" placeholder="Medication" required><div class="cwr-two-col"><input type="text" name="dosage" placeholder="Dose"><input type="text" name="frequency" placeholder="Frequency"></div><textarea name="notes" rows="2" placeholder="Medication notes"></textarea><input type="hidden" name="purpose" value=""><input type="hidden" name="prescribed_by" value=""><input type="hidden" name="started_on" value=""><input type="hidden" name="ended_on" value=""><input type="hidden" name="is_active" value="yes"><button class="cwr-save-btn" type="submit">Save Medication</button></form></div></section>
+
+        <section class="cwr-prompt"><a class="cwr-prompt-link" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Changes in family?</a></section>
+
+        <section class="cwr-prompt"><button type="button" class="cwr-prompt-button" data-panel="child-services">Services for children? <span>{{ children|length }} child records</span></button><div class="cwr-panel" id="cwr-panel-child-services">{% if children %}<form id="quick-child-service-form" method="post" action="{{ url_for('case_management.child_services', child_id=children[0]['id']) }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="redirect_to" value="resident_case"><select id="quick_child_id">{% for child in children %}<option value="{{ child['id'] }}">{{ child['child_name'] or 'Unnamed child' }}</option>{% endfor %}</select><select id="quick_child_service_type" name="service_type"><option>Daycare Referral</option><option>School Enrollment Help</option><option>Counseling Intake</option><option>Transportation</option><option>Clothing</option><option>Medical</option><option>Other</option></select><input type="text" name="outcome" placeholder="Outcome"><textarea name="notes" rows="2" placeholder="Notes"></textarea><button class="cwr-save-btn" type="submit">Save Child Service</button></form>{% else %}<div class="cwr-empty">No active child records are on file.</div><a class="cwr-save-link" href="{{ url_for('case_management.family_intake', resident_id=resident_id) }}">Open Family</a>{% endif %}</div></section>
+
+        <section class="cwr-prompt"><button type="button" class="cwr-prompt-button" data-panel="step">Step level? <span>Current step {{ rs_step if rs_step is not none and rs_step != '' else '—' }}</span></button><div class="cwr-panel" id="cwr-panel-step"><form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{{ profile_hidden() }}<input type="number" name="step_current" min="1" max="12" value="{{ rs_step if rs_step is not none else '' }}" placeholder="Current step"><button class="cwr-save-btn" type="submit">Save Step</button></form></div></section>
+
+        <section class="cwr-prompt"><button type="button" class="cwr-prompt-button" data-panel="sponsor">Sponsor? <span>{{ rs_sponsor or 'No sponsor on file' }}</span></button><div class="cwr-panel" id="cwr-panel-sponsor"><form method="post" action="{{ url_for('case_management.update_recovery_profile', resident_id=resident_id) }}"><input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">{{ profile_hidden() }}<input type="text" name="sponsor_name" value="{{ rs_sponsor or '' }}" placeholder="Sponsor name"><select name="sponsor_active"><option value="">Unknown</option><option value="yes" {% if rs_sponsor_active_display == 'Yes' %}selected{% endif %}>Active</option><option value="no" {% if rs_sponsor_active_display == 'No' %}selected{% endif %}>Not Active</option></select><button class="cwr-save-btn" type="submit">Save Sponsor</button></form></div></section>
+
+        <section class="cwr-prompt"><a class="cwr-prompt-link" href="{{ url_for('writeups.resident_writeups', resident_id=resident_id) }}">Write ups? <span>{{ 'Active restriction on file' if has_disciplinary_block else 'No current restriction' }}</span></a></section>
       </div>
     </div>
 
-    <div id="cwr-modal-templates" style="display:none;">
-      <div data-modal="meeting" data-title="Meeting Contact Note">
-        {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
-      </div>
-      <div data-modal="profile" data-title="Program Profile">
-        {% include "case_management/partials/resident_case/_profile_editor.html" %}
-      </div>
-      <div data-modal="actions" data-title="Support Actions">
-        {% include "case_management/partials/resident_case/_quick_actions.html" %}
-      </div>
+    <div id="cwr-budget" class="cwr-mode">
+      <div class="cwr-workspace-intro"><h2>Budget Meeting</h2><p>Use this mode for budget specific reviews without mixing it into a regular resident contact.</p></div>
+      <div class="cwr-review-grid"><a class="cwr-card cwr-action" href="{{ url_for('case_management.budget_sessions', resident_id=resident_id) }}"><span class="cwr-card-label">Budget</span><span class="cwr-card-value">Open Budget</span><span class="cwr-card-sub">Review or create a budget session.</span></a><div class="cwr-card"><div class="cwr-card-label">Income</div><div class="cwr-card-value">{{ '$%.2f'|format(rs_income) if rs_income is not none else '—' }}</div><div class="cwr-card-sub">Current monthly net income.</div></div><div class="cwr-card"><div class="cwr-card-label">Employment</div><div class="cwr-card-value">{{ rs_employer or '—' }}</div><div class="cwr-card-sub">Current employer on file.</div></div></div>
     </div>
   </div>
 </div>
