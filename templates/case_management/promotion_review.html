@@ -61,6 +61,63 @@
     font-size: 0.86rem;
   }
 
+  .cmx-level-target-field {
+    padding: 6px 7px;
+    border: 1px solid #9eb9d7;
+    border-radius: 10px;
+    background: #f4f8fd;
+  }
+
+  .cmx-level-target-field label {
+    color: #1f3654 !important;
+    font-size: 0.82rem !important;
+  }
+
+  .cmx-level-target-field label::after {
+    content: " required";
+    color: #8a5a00;
+    font-weight: 800;
+  }
+
+  .cmx-level-target-input {
+    border-color: #6f9ccb !important;
+    background: #ffffff !important;
+    font-weight: 800 !important;
+    font-size: 0.95rem !important;
+  }
+
+  .cmx-level-entry-hint {
+    margin-top: 3px;
+    color: #5d6776;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  .cmx-confirm-click {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid #9eb9d7;
+    border-radius: 9px;
+    background: #f4f8fd;
+    color: #1f3654 !important;
+    font-size: 0.84rem !important;
+    font-weight: 800 !important;
+    cursor: pointer;
+  }
+
+  .cmx-confirm-click input[type="checkbox"] {
+    width: 18px !important;
+    height: 18px;
+    min-width: 18px;
+    margin: 0;
+    accent-color: #1fa34a;
+    cursor: pointer;
+  }
+
   .cmx-level-action-card textarea {
     min-height: 44px !important;
   }
@@ -427,15 +484,17 @@
                 <input id="meeting_date" name="meeting_date" type="date" value="{{ latest_meeting_date }}" required>
               </div>
 
-              <div class="cmx-field">
-                <label for="recommended_next_level">New Level</label>
+              <div class="cmx-field cmx-level-target-field">
+                <label for="recommended_next_level">Enter New Level</label>
                 <input
+                  class="cmx-level-target-input"
                   id="recommended_next_level"
                   name="recommended_next_level"
                   type="text"
                   value="{{ selected_level }}"
-                  placeholder="Example: 5"
+                  placeholder="Type level number"
                 >
+                <div class="cmx-level-entry-hint">Example: 4, 5, 6</div>
               </div>
 
               <div class="cmx-field">
@@ -491,9 +550,9 @@
             <input type="hidden" name="meeting_date" value="{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '' }}">
 
             <div class="cmx-field">
-              <label>
+              <label class="cmx-confirm-click">
                 <input type="checkbox" name="confirm_apply_promotion">
-                Confirm update
+                <span>Confirm update</span>
               </label>
             </div>
 
