@@ -46,6 +46,8 @@ RedirectResponse = Any
 TemplateResponse = Any
 RouteResponse = RedirectResponse | TemplateResponse
 
+CWR_NOTES_ACTIVE_PANEL = "notes"
+
 _NOTE_INSERT_COLUMNS = (
     "enrollment_id",
     "staff_user_id",
@@ -98,7 +100,7 @@ def _redirect_after_case_note_save(
     case_note_saved: bool = False,
 ) -> RedirectResponse:
     if request.form.get("redirect_to") == "cwr":
-        active_panel = request.form.get("active_panel") or None
+        active_panel = request.form.get("active_panel") or CWR_NOTES_ACTIVE_PANEL
         return redirect(
             url_for(
                 "case_management.cwr_workspace",
