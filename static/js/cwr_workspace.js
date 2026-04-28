@@ -4,15 +4,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const questionPlaceholder = document.querySelector('.cwr-panel-placeholder');
   const noteForm = document.querySelector('.cwr-note-form');
   const noteFields = noteForm ? noteForm.querySelectorAll('input, textarea, select') : [];
+  const meetingDateField = noteForm ? noteForm.querySelector('input[name="meeting_date"]') : null;
+  const noteEditByDate = window.CWR_NOTE_EDIT_BY_DATE || {};
+  const residentId = window.RESIDENT_CASE_RESIDENT_ID || 'unknown';
+  const noteFormDefaultAction = noteForm ? noteForm.getAttribute('action') : '';
 
   let noteFormDirty = false;
   let suppressBeforeUnload = false;
+  let activeDraftDate = meetingDateField ? meetingDateField.value : '';
+  let statusElement = null;
 
   function markNoteFormDirty() {
     noteFormDirty = true;
     if (noteForm) {
       noteForm.classList.add('has-unsaved-changes');
     }
+    setStatus('Unsaved meeting note changes');
   }
 
   function clearNoteFormDirty() {
@@ -20,6 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     suppressBeforeUnload = true;
     if (noteForm) {
       noteForm.classList.remove('has-unsaved-changes');
+    }
+    setStatus('No unsaved changes');
+  }
+
+  function setStatus(message) {
+    if (statusElement) {
+      statusElement.textContent = message;
     }
   }
 
@@ -31,9 +45,131 @@ document.addEventListener('DOMContentLoaded', () => {
     return window.confirm('You have unsaved meeting notes. Continue without saving those notes?');
   }
 
+  function draftKeyForDate(dateValue) {
+    return 'cwr_meeting_draft_' + residentId + '_' + (dateValue || 'undated');
+  }
+
+  function draftFields() {
+    if (!noteForm) {
+      return [];
+    }
+
+    return Array.from(noteForm.querySelectorAll('input[name], textarea[name], select[name]')).filter((field) => {
+      return field.name && field.name !== '_csrf_token';
+    });
+  }
+
+  function saveDraftForDate(dateValue) {
+    if (!noteForm || !dateValue) {
+      return;
+    }
+
+    const payload = {};
+    draftFields().forEach((field) => {
+      if (field.type === 'checkbox') {
+        if (!payload[field.name]) {
+          payload[field.name] = [];
+        }
+        if (field.checked) {
+          payload[field.name].push(field.value);
+        }
+        return;
+      }
+      payload[field.name] = field.value;
+    });
+
+    try {
+      window.localStorage.setItem(draftKeyForDate(dateValue), JSON.stringify(payload));
+    } catch (error) {
+      console.warn('Unable to save CWR meeting draft', error);
+    }
+  }
+
+  function clearMeetingTextFields() {
+    if (!noteForm) {
+      return;
+    }
+
+    noteForm.querySelectorAll('textarea').forEach((field) => {
+      field.value = '';
+      autoResizeTextarea(field);
+    });
+  }
+
+  function loadDraftForDate(dateValue) {
+    if (!noteForm || !dateValue) {
+      return;
+    }
+
+    clearMeetingTextFields();
+
+    let raw = null;
+    try {
+      raw = window.localStorage.getItem(draftKeyForDate(dateValue));
+    } catch (error) {
+      console.warn('Unable to load CWR meeting draft', error);
+    }
+
+    if (!raw) {
+      noteFormDirty = false;
+      noteForm.classList.remove('has-unsaved-changes');
+      setStatus('No unsaved changes');
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(raw);
+      draftFields().forEach((field) => {
+        if (!(field.name in payload)) {
+          return;
+        }
+        if (field.type === 'checkbox') {
+          const values = payload[field.name] || [];
+          field.checked = Array.isArray(values) && values.includes(field.value);
+          return;
+        }
+        field.value = payload[field.name] || '';
+        if (field.tagName === 'TEXTAREA') {
+          autoResizeTextarea(field);
+        }
+      });
+      noteFormDirty = true;
+      noteForm.classList.add('has-unsaved-changes');
+      setStatus('Draft restored for selected date');
+    } catch (error) {
+      console.warn('Unable to parse CWR meeting draft', error);
+    }
+  }
+
+  function updateNoteSaveModeForDate(dateValue) {
+    if (!noteForm) {
+      return;
+    }
+
+    const editUrl = noteEditByDate[dateValue];
+    if (editUrl) {
+      noteForm.setAttribute('action', editUrl);
+      noteForm.classList.add('is-amending-note');
+      setStatus('Saved note exists for this date. Save will amend that note.');
+      return;
+    }
+
+    noteForm.setAttribute('action', noteFormDefaultAction);
+    noteForm.classList.remove('is-amending-note');
+    if (!noteFormDirty) {
+      setStatus('No unsaved changes');
+    }
+  }
+
   function autoResizeTextarea(textarea) {
+    const computed = window.getComputedStyle(textarea);
+    const lineHeight = parseFloat(computed.lineHeight) || 20;
+    const maxHeight = lineHeight * 20;
+
     textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+    textarea.style.height = nextHeight + 'px';
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }
 
   function setupNoteWritingExperience() {
@@ -41,28 +177,58 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const status = document.createElement('div');
-    status.className = 'cwr-note-save-status';
-    status.setAttribute('aria-live', 'polite');
-    status.textContent = 'No unsaved changes';
+    statusElement = document.createElement('div');
+    statusElement.className = 'cwr-note-save-status';
+    statusElement.setAttribute('aria-live', 'polite');
+    statusElement.textContent = 'No unsaved changes';
 
     const formHead = noteForm.querySelector('.cwr-form-head');
     if (formHead) {
-      formHead.appendChild(status);
+      formHead.appendChild(statusElement);
     }
 
     noteFields.forEach((field) => {
       field.addEventListener('input', () => {
         markNoteFormDirty();
-        status.textContent = 'Unsaved meeting note changes';
+        if (meetingDateField) {
+          saveDraftForDate(meetingDateField.value);
+        }
       });
       field.addEventListener('change', () => {
         markNoteFormDirty();
-        status.textContent = 'Unsaved meeting note changes';
+        if (meetingDateField) {
+          saveDraftForDate(meetingDateField.value);
+        }
       });
     });
 
-    noteForm.addEventListener('submit', clearNoteFormDirty);
+    if (meetingDateField) {
+      meetingDateField.addEventListener('focus', () => {
+        activeDraftDate = meetingDateField.value;
+      });
+
+      meetingDateField.addEventListener('change', () => {
+        if (activeDraftDate) {
+          saveDraftForDate(activeDraftDate);
+        }
+        activeDraftDate = meetingDateField.value;
+        loadDraftForDate(activeDraftDate);
+        updateNoteSaveModeForDate(activeDraftDate);
+      });
+
+      updateNoteSaveModeForDate(meetingDateField.value);
+    }
+
+    noteForm.addEventListener('submit', () => {
+      if (meetingDateField) {
+        try {
+          window.localStorage.removeItem(draftKeyForDate(meetingDateField.value));
+        } catch (error) {
+          console.warn('Unable to clear CWR meeting draft', error);
+        }
+      }
+      clearNoteFormDirty();
+    });
 
     noteForm.querySelectorAll('textarea').forEach((textarea) => {
       autoResizeTextarea(textarea);
@@ -180,10 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
       }
 
-      if (!confirmUnsavedNotes()) {
-        return;
-      }
-
       const panelName = question.dataset.panel;
       const panel = document.getElementById('cwr-panel-' + panelName);
 
@@ -202,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (panel) {
         panel.hidden = false;
         panel.classList.add('is-open');
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     };
 
@@ -209,6 +372,17 @@ document.addEventListener('DOMContentLoaded', () => {
     question.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
         openPanel(event);
+      }
+    });
+  });
+
+  document.querySelectorAll('form').forEach((form) => {
+    if (form === noteForm) {
+      return;
+    }
+    form.addEventListener('submit', (event) => {
+      if (!confirmUnsavedNotes()) {
+        event.preventDefault();
       }
     });
   });
