@@ -72,9 +72,20 @@
   <div class="cmx-shell">
     {% include "case_management/partials/resident_case/_workspace_header.html" %}
 
-    <div class="cwr-mode-toggle">
-      <button type="button" class="cwr-mode-btn is-active" data-mode="review">Review Resident</button>
-      <button type="button" class="cwr-mode-btn" data-mode="meeting">Meeting Mode</button>
+    <div class="cwr-control-row">
+      <div>
+        <div class="cwr-preview-label">Preview Workspace</div>
+        <div class="cwr-preview-subtitle">Casemanager Workspace Renovation</div>
+      </div>
+
+      <div class="cwr-mode-toggle" aria-label="Workspace mode">
+        <button type="button" class="cwr-mode-btn is-active" data-mode="review">Review Resident</button>
+        <button type="button" class="cwr-mode-btn" data-mode="meeting">Meeting Mode</button>
+      </div>
+
+      <a class="cwr-back-link" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">
+        Back to Original Workspace
+      </a>
     </div>
 
     <div id="cwr-review" class="cwr-mode is-active">
@@ -122,7 +133,7 @@
     </div>
 
     <div id="cwr-modal" class="cwr-modal hidden" aria-hidden="true">
-      <div class="cwr-modal-panel" role="dialog" aria-modal="true">
+      <div class="cwr-modal-panel cwr-modal-lg" role="dialog" aria-modal="true">
         <div class="cwr-modal-head">
           <div>
             <div class="cwr-modal-kicker">Casemanager Workspace Renovation</div>
