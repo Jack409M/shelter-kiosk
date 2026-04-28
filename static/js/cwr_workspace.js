@@ -18,16 +18,34 @@ document.querySelectorAll('.cwr-mode-btn').forEach((btn) => {
   });
 });
 
+function convertQuestionsToReportLines() {
+  document.querySelectorAll('button.cwr-question').forEach((button) => {
+    const line = document.createElement('div');
+    line.className = button.className;
+    line.dataset.panel = button.dataset.panel;
+    line.setAttribute('role', 'button');
+    line.setAttribute('tabindex', '0');
+    line.innerHTML = button.innerHTML;
+    button.replaceWith(line);
+  });
+}
+
+function closeAllQuestionPanels(panels) {
+  panels.forEach((item) => {
+    item.hidden = true;
+    item.classList.remove('is-open');
+  });
+}
+
+convertQuestionsToReportLines();
+
 const cwrPanels = document.querySelectorAll('.cwr-panel');
 const cwrPlaceholder = document.querySelector('.cwr-panel-placeholder');
 
-cwrPanels.forEach((panel) => {
-  panel.hidden = true;
-  panel.classList.remove('is-open');
-});
+closeAllQuestionPanels(cwrPanels);
 
 document.querySelectorAll('.cwr-question').forEach((question) => {
-  question.addEventListener('click', () => {
+  const openPanel = () => {
     const panelName = question.dataset.panel;
     const panel = document.getElementById('cwr-panel-' + panelName);
 
@@ -36,10 +54,7 @@ document.querySelectorAll('.cwr-question').forEach((question) => {
     });
     question.classList.add('is-active');
 
-    cwrPanels.forEach((item) => {
-      item.hidden = true;
-      item.classList.remove('is-open');
-    });
+    closeAllQuestionPanels(cwrPanels);
 
     if (cwrPlaceholder) {
       cwrPlaceholder.hidden = true;
@@ -49,6 +64,14 @@ document.querySelectorAll('.cwr-question').forEach((question) => {
     if (panel) {
       panel.hidden = false;
       panel.classList.add('is-open');
+    }
+  };
+
+  question.addEventListener('click', openPanel);
+  question.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openPanel();
     }
   });
 });
