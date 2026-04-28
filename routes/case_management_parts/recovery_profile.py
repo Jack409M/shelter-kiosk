@@ -27,7 +27,7 @@ def _redirect_resident_case(resident_id: int):
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
-def _redirect_after_profile_save(resident_id: int):
+def _redirect_profile_destination(resident_id: int):
     if request.form.get("redirect_to") == "cwr":
         active_panel = request.form.get("active_panel") or None
         return redirect(
@@ -194,7 +194,7 @@ def update_recovery_profile_view(resident_id: int):
 
     if not case_manager_allowed():
         flash("Case manager access required.", "error")
-        return _redirect_resident_case(resident_id)
+        return _redirect_profile_destination(resident_id)
 
     ensure_resident_child_income_supports_table(g.get("db_kind"))
     ensure_program_enrollment_columns(g.get("db_kind"))
@@ -207,12 +207,12 @@ def update_recovery_profile_view(resident_id: int):
     enrollment = _load_current_enrollment_in_scope(resident_id)
     if not enrollment:
         flash("Resident does not have an active enrollment record yet.", "error")
-        return _redirect_resident_case(resident_id)
+        return _redirect_profile_destination(resident_id)
 
     enrollment_id = enrollment.get("id")
     if not isinstance(enrollment_id, int):
         flash("Active enrollment record is invalid.", "error")
-        return _redirect_resident_case(resident_id)
+        return _redirect_profile_destination(resident_id)
 
     values, errors = validate_recovery_profile_form(request.form)
     _log_recovery_profile_submission(resident_id)
@@ -220,7 +220,7 @@ def update_recovery_profile_view(resident_id: int):
     if errors:
         for error in errors:
             flash(error, "error")
-        return _redirect_resident_case(resident_id)
+        return _redirect_profile_destination(resident_id)
 
     now = utcnow_iso()
 
@@ -235,7 +235,7 @@ def update_recovery_profile_view(resident_id: int):
             enrollment_id,
         )
         flash("Unable to save profile changes.", "error")
-        return _redirect_resident_case(resident_id)
+        return _redirect_profile_destination(resident_id)
 
     flash("Recovery profile updated.", "success")
-    return _redirect_after_profile_save(resident_id)
+    return _redirect_profile_destination(resident_id)
