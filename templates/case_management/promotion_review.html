@@ -13,6 +13,34 @@
     font-weight: 700;
   }
 
+  .cmx-level-action-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 16px;
+  }
+
+  .cmx-level-action-card {
+    height: 100%;
+    border: 1px solid #cfd9e5;
+    background: #fff;
+  }
+
+  .cmx-level-action-card.is-primary {
+    border-top: 4px solid #223a5e;
+  }
+
+  .cmx-level-direction {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #d9e1ea;
+    background: #f9fbfd;
+    color: #223a5e;
+    font-weight: 700;
+  }
+
   .cmx-promo-summary {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -264,6 +292,7 @@
   }
 
   @media (max-width: 900px) {
+    .cmx-level-action-grid,
     .cmx-promo-summary,
     .cmx-metric-grid {
       grid-template-columns: 1fr;
@@ -282,29 +311,126 @@
 {% set blockers = pr.get("blockers", []) %}
 {% set manual_requirements = pr.get("manual_requirements", []) %}
 {% set current_level = recovery_snapshot.program_level or "—" %}
+{% set selected_level = latest_review.recommended_next_level if latest_review and latest_review.recommended_next_level else "" %}
 {% set ready_now = pr.get("ready") %}
 {% set recommendation = pr.get("recommendation") or "needs_review" %}
-{% set recommendation_label = pr.get("recommendation_label") or "Program review is available below." %}
+{% set recommendation_label = pr.get("recommendation_label") or "Level evaluation is available below." %}
 {% set can_apply = latest_review and latest_review.recommended_next_level %}
 {% set latest_meeting_date = latest_review.meeting_date if latest_review and latest_review.meeting_date else '' %}
+{% set current_level_number = current_level|int if current_level != "—" else none %}
+{% set selected_level_number = selected_level|int if selected_level else none %}
 
 <div class="cmx-page">
   <div class="cmx-shell">
 
     {% if saved %}
-      <div class="cmx-promo-banner">Promotion review saved successfully.</div>
+      <div class="cmx-promo-banner">Level evaluation saved successfully.</div>
     {% endif %}
     {% if applied %}
-      <div class="cmx-promo-banner">Promotion applied successfully.</div>
+      <div class="cmx-promo-banner">Level change applied successfully.</div>
     {% endif %}
 
     <div class="cmx-workspace-nav cmx-card">
       <a class="cmx-workspace-tab" href="{{ url_for('case_management.resident_case', resident_id=resident.id) }}">Workspace</a>
-      <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">Promotion Review</a>
+      <a class="cmx-workspace-tab is-active" href="{{ url_for('case_management.promotion_review', resident_id=resident.id) }}">Level Evaluation</a>
       <a class="cmx-workspace-tab" href="{{ url_for('case_management.exit_followup', resident_id=resident.id) }}">Exit and Follow Up</a>
     </div>
 
     <main class="cmx-workspace-main">
+
+      <div class="cmx-level-action-grid">
+        <section class="cmx-card cmx-level-action-card is-primary">
+          <h2 class="cmx-section-title">Evaluation Decision</h2>
+
+          <form method="post">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+            <div class="cmx-field">
+              <label>Current Level</label>
+              <div class="cmx-promo-readonly">{{ current_level }}</div>
+            </div>
+
+            <div class="cmx-field">
+              <label for="meeting_date">Review Date</label>
+              <input id="meeting_date" name="meeting_date" type="date" value="{{ latest_meeting_date }}" required>
+            </div>
+
+            <div class="cmx-field">
+              <label for="recommended_next_level">New Level</label>
+              <input
+                id="recommended_next_level"
+                name="recommended_next_level"
+                type="text"
+                value="{{ selected_level }}"
+                placeholder="Example: 5"
+              >
+              <div class="cmx-helper">This is advisory until a case manager applies the level change.</div>
+            </div>
+
+            <div class="cmx-field">
+              <label for="decision">Decision</label>
+              <select id="decision" name="decision" required>
+                <option value="">Select decision</option>
+                <option value="ready">Approve Level Change</option>
+                <option value="not_ready">Do Not Change Level</option>
+                <option value="exception">Approve With Exception</option>
+              </select>
+            </div>
+
+            <div class="cmx-field">
+              <label for="decision_notes">Decision Notes</label>
+              <textarea id="decision_notes" name="decision_notes" placeholder="Explain the case manager decision and any important context." required></textarea>
+            </div>
+
+            <div class="cmx-button-row">
+              <button class="cmx-btn" type="submit">Save Evaluation</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="cmx-card cmx-level-action-card">
+          <h2 class="cmx-section-title">Apply Level Change</h2>
+
+          <div class="cmx-stack" style="margin-top:12px; margin-bottom:16px;">
+            <div class="cmx-row-block"><span>Current Level</span><span>{{ current_level }}</span></div>
+            <div class="cmx-row-block"><span>New Level</span><span>{{ selected_level if selected_level else '—' }}</span></div>
+            <div class="cmx-row-block"><span>Latest Review Date</span><span>{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '—' }}</span></div>
+          </div>
+
+          {% if selected_level_number is not none and current_level_number is not none %}
+            {% if selected_level_number > current_level_number %}
+              <div class="cmx-level-direction">Direction: Level Increase</div>
+            {% elif selected_level_number < current_level_number %}
+              <div class="cmx-level-direction">Direction: Level Decrease</div>
+            {% else %}
+              <div class="cmx-level-direction">Direction: No Change</div>
+            {% endif %}
+          {% else %}
+            <div class="cmx-level-direction">Direction: Not Available</div>
+          {% endif %}
+
+          {% if not can_apply %}
+            <div class="cmx-empty" style="margin-top:12px; margin-bottom:10px;">Save a level evaluation with a new level before applying a level change.</div>
+          {% endif %}
+
+          <form method="post" style="margin-top:16px;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="form_action" value="apply_promotion">
+            <input type="hidden" name="meeting_date" value="{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '' }}">
+
+            <div class="cmx-field">
+              <label>
+                <input type="checkbox" name="confirm_apply_promotion">
+                Confirm level change action. This will update the resident program level.
+              </label>
+            </div>
+
+            <div class="cmx-button-row">
+              <button class="cmx-btn" type="submit" {% if not can_apply %}disabled{% endif %}>Apply Level Change</button>
+            </div>
+          </form>
+        </section>
+      </div>
 
       <section class="cmx-card cmx-advisory-section">
         <h2 class="cmx-section-title">Program Concerns Requiring Review</h2>
@@ -325,13 +451,13 @@
       <section class="cmx-card">
         <div class="cmx-section-head">
           <div>
-            <h2 class="cmx-section-title">Promotion Summary</h2>
-            <div class="cmx-section-subtitle">System review for the current promotion stage. Final determination belongs to the case manager.</div>
+            <h2 class="cmx-section-title">Evaluation Summary</h2>
+            <div class="cmx-section-subtitle">System review for the current level evaluation. Final determination belongs to the case manager.</div>
           </div>
         </div>
 
         <div class="cmx-recommendation {{ recommendation }}">
-          <strong>System Recommendation:</strong> {{ recommendation_label }}
+          <strong>System Evaluation:</strong> {{ recommendation_label }}
         </div>
 
         <div class="cmx-promo-summary">
@@ -390,7 +516,7 @@
             </div>
           {% endfor %}
         {% else %}
-          <div class="cmx-empty">No promotion review checks were returned for this resident.</div>
+          <div class="cmx-empty">No level evaluation checks were returned for this resident.</div>
         {% endif %}
 
         {% if manual_requirements %}
@@ -489,82 +615,7 @@
       </section>
 
       <section class="cmx-card">
-        <h2 class="cmx-section-title">Case Manager Decision</h2>
-
-        <form method="post">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-
-          <div class="cmx-field">
-            <label for="meeting_date">Review Date</label>
-            <input id="meeting_date" name="meeting_date" type="date" value="{{ latest_meeting_date }}" required>
-          </div>
-
-          <div class="cmx-field">
-            <label for="recommended_next_level">Recommended Next Level</label>
-            <input
-              id="recommended_next_level"
-              name="recommended_next_level"
-              type="text"
-              value="{{ latest_review.recommended_next_level if latest_review and latest_review.recommended_next_level else '' }}"
-              placeholder="Example: 5"
-            >
-            <div class="cmx-helper">This stays advisory until a case manager chooses to apply promotion.</div>
-          </div>
-
-          <div class="cmx-field">
-            <label for="decision">Decision</label>
-            <select id="decision" name="decision" required>
-              <option value="">Select decision</option>
-              <option value="ready">Approve Promotion</option>
-              <option value="not_ready">Not Ready</option>
-              <option value="exception">Approve With Exception</option>
-            </select>
-          </div>
-
-          <div class="cmx-field">
-            <label for="decision_notes">Decision Notes</label>
-            <textarea id="decision_notes" name="decision_notes" placeholder="Explain the case manager decision and any important context." required></textarea>
-          </div>
-
-          <div class="cmx-button-row">
-            <button class="cmx-btn" type="submit">Save Review</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="cmx-card">
-        <h2 class="cmx-section-title">Apply Promotion</h2>
-
-        <div class="cmx-stack" style="margin-top:12px; margin-bottom:16px;">
-          <div class="cmx-row-block"><span>Current Level</span><span>{{ current_level }}</span></div>
-          <div class="cmx-row-block"><span>Recommended Next Level</span><span>{{ latest_review.recommended_next_level if latest_review and latest_review.recommended_next_level else '—' }}</span></div>
-          <div class="cmx-row-block"><span>Latest Review Date</span><span>{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '—' }}</span></div>
-        </div>
-
-        {% if not can_apply %}
-          <div class="cmx-empty" style="margin-bottom:10px;">Save a promotion review with a recommended next level before applying.</div>
-        {% endif %}
-
-        <form method="post">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="form_action" value="apply_promotion">
-          <input type="hidden" name="meeting_date" value="{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '' }}">
-
-          <div class="cmx-field">
-            <label>
-              <input type="checkbox" name="confirm_apply_promotion">
-              Confirm promotion action. This will update the resident level.
-            </label>
-          </div>
-
-          <div class="cmx-button-row">
-            <button class="cmx-btn" type="submit" {% if not can_apply %}disabled{% endif %}>Apply Promotion</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="cmx-card">
-        <h2 class="cmx-section-title">Promotion History</h2>
+        <h2 class="cmx-section-title">Level Evaluation History</h2>
 
         {% if promotion_history %}
           <div class="cmx-stack">
@@ -577,7 +628,7 @@
             {% endfor %}
           </div>
         {% else %}
-          <div class="cmx-empty">No promotion history yet.</div>
+          <div class="cmx-empty">No level evaluation history yet.</div>
         {% endif %}
       </section>
 
