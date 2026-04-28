@@ -12,6 +12,9 @@
 {% set shelter = resident["shelter"] %}
 {% set resident_active = resident["is_active"] %}
 {% set initials = ((first_name[:1] if first_name else "") ~ (last_name[:1] if last_name else ""))|upper %}
+{% set return_to = request.args.get("return_to", "") %}
+{% set active_panel = request.args.get("active_panel", "") %}
+{% set back_url = url_for('case_management.cwr_workspace', resident_id=resident_id, active_panel=active_panel) if return_to == 'cwr' else url_for('case_management.cwr_workspace', resident_id=resident_id) %}
 
 {% if enrollment %}
   {% set enrollment_entry_date = enrollment["entry_date"] %}
@@ -63,7 +66,7 @@
           <h2 class="cmx-section-title">Recovery Profile</h2>
           <div class="cmx-section-subtitle">Manage recovery profile fields.</div>
         </div>
-        <a class="cmx-btn-secondary" href="{{ url_for('case_management.cwr_workspace', resident_id=resident_id) }}">Back to Workspace</a>
+        <a class="cmx-btn-secondary" href="{{ back_url }}">Back to Workspace</a>
       </div>
     </div>
 
@@ -71,5 +74,28 @@
 
   </div>
 </div>
+
+{% if return_to == "cwr" %}
+<script>
+  (function () {
+    var form = document.getElementById("profile-editor-form");
+    if (!form) return;
+
+    function addHidden(name, value) {
+      var input = form.querySelector('input[name="' + name + '"]');
+      if (!input) {
+        input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        form.appendChild(input);
+      }
+      input.value = value || "";
+    }
+
+    addHidden("redirect_to", "cwr");
+    addHidden("active_panel", "{{ active_panel }}");
+  })();
+</script>
+{% endif %}
 
 {% endblock %}
