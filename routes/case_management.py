@@ -433,6 +433,10 @@ def progress_report_print(resident_id: int, update_id: int):
 def promotion_review(resident_id: int):
     return promotion_review_view(resident_id)
 
+@case_management.get("/<int:resident_id>/cwr")
+@_view
+def cwr_workspace(resident_id: int):
+    return cwr_workspace_view(resident_id)
 
 @case_management.get("/<int:resident_id>/exit-followup")
 @_view
