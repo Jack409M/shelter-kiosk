@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const noteFields = noteForm ? noteForm.querySelectorAll('input, textarea, select') : [];
   const meetingDateField = noteForm ? noteForm.querySelector('input[name="meeting_date"]') : null;
   const noteEditByDate = window.CWR_NOTE_EDIT_BY_DATE || {};
+  const noteValuesByDate = window.CWR_NOTE_VALUES_BY_DATE || {};
   const residentId = window.RESIDENT_CASE_RESIDENT_ID || 'unknown';
   const noteFormDefaultAction = noteForm ? noteForm.getAttribute('action') : '';
 
@@ -96,6 +97,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function applyPayloadToForm(payload, dirtyState) {
+    if (!payload || !noteForm) {
+      return;
+    }
+
+    draftFields().forEach((field) => {
+      if (!(field.name in payload)) {
+        return;
+      }
+      if (field.type === 'checkbox') {
+        const values = payload[field.name] || [];
+        field.checked = Array.isArray(values) && values.includes(field.value);
+        return;
+      }
+      field.value = payload[field.name] || '';
+      if (field.tagName === 'TEXTAREA') {
+        autoResizeTextarea(field);
+      }
+    });
+
+    noteFormDirty = dirtyState;
+    noteForm.classList.toggle('has-unsaved-changes', dirtyState);
+  }
+
   function loadDraftForDate(dateValue) {
     if (!noteForm || !dateValue) {
       return;
@@ -110,35 +135,25 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('Unable to load CWR meeting draft', error);
     }
 
-    if (!raw) {
-      noteFormDirty = false;
-      noteForm.classList.remove('has-unsaved-changes');
-      setStatus('No unsaved changes');
+    if (raw) {
+      try {
+        applyPayloadToForm(JSON.parse(raw), true);
+        setStatus('Draft restored for selected date');
+        return;
+      } catch (error) {
+        console.warn('Unable to parse CWR meeting draft', error);
+      }
+    }
+
+    if (noteValuesByDate[dateValue]) {
+      applyPayloadToForm(noteValuesByDate[dateValue], false);
+      setStatus('Existing saved note loaded. Save will amend this note.');
       return;
     }
 
-    try {
-      const payload = JSON.parse(raw);
-      draftFields().forEach((field) => {
-        if (!(field.name in payload)) {
-          return;
-        }
-        if (field.type === 'checkbox') {
-          const values = payload[field.name] || [];
-          field.checked = Array.isArray(values) && values.includes(field.value);
-          return;
-        }
-        field.value = payload[field.name] || '';
-        if (field.tagName === 'TEXTAREA') {
-          autoResizeTextarea(field);
-        }
-      });
-      noteFormDirty = true;
-      noteForm.classList.add('has-unsaved-changes');
-      setStatus('Draft restored for selected date');
-    } catch (error) {
-      console.warn('Unable to parse CWR meeting draft', error);
-    }
+    noteFormDirty = false;
+    noteForm.classList.remove('has-unsaved-changes');
+    setStatus('No unsaved changes');
   }
 
   function updateNoteSaveModeForDate(dateValue) {
@@ -164,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function autoResizeTextarea(textarea) {
     const computed = window.getComputedStyle(textarea);
     const lineHeight = parseFloat(computed.lineHeight) || 20;
-    const maxHeight = lineHeight * 20;
+    const maxHeight = lineHeight * 5;
 
     textarea.style.height = 'auto';
     const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
@@ -216,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         updateNoteSaveModeForDate(activeDraftDate);
       });
 
+      loadDraftForDate(meetingDateField.value);
       updateNoteSaveModeForDate(meetingDateField.value);
     }
 
