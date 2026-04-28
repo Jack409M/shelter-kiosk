@@ -46,18 +46,12 @@
     </div>
   </div>
 
-  <div class="cmx-card cmx-actions">
-    <button type="submit" class="cmx-btn cmx-btn-full" form="meeting-workspace-form">Save Meeting</button>
-    <button type="submit" class="cmx-btn-muted cmx-btn-full" form="profile-editor-form">Save Profile</button>
-
-    <div class="cmx-appt">
-      <strong>Primary Actions</strong><br>
-      Save today’s contact note from the workspace and save active resident facts from the profile editor.
-    </div>
-
-    <div class="cmx-appt">
-      <strong>Lifecycle Pages</strong><br>
-      Promotion Review and Exit and Follow Up will be separated into their own dedicated spaces.
-    </div>
-  </div>
+  <form class="cmx-card cwr-header-appointment" method="post" action="{{ url_for('case_management.add_appointment', resident_id=resident_id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <h3>Schedule Next Appointment</h3>
+    <div class="cwr-current-line">Current: {{ next_appt if next_appt and next_appt != '—' else 'No upcoming appointment scheduled' }}</div>
+    <label>Date And Time<input type="datetime-local" name="appointment_datetime" required></label>
+    <label>Appointment Type<input type="text" name="appointment_type" placeholder="Case management, court, legal, dental, or other"></label>
+    <button class="cwr-save-btn" type="submit">Save Appointment</button>
+  </form>
 </header>
