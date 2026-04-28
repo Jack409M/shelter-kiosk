@@ -27,7 +27,7 @@
   }
 
   .cmx-evidence-grid {
-    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
+    grid-template-columns: 1fr;
   }
 
   .cmx-lower-grid {
@@ -196,32 +196,6 @@
     margin-top: 8px !important;
   }
 
-  .cmx-evaluation-strip {
-    margin-bottom: 8px;
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-size: 0.84rem;
-    font-weight: 700;
-  }
-
-  .cmx-evaluation-strip.ready {
-    background: #e8f7ec;
-    border: 1px solid #9bc8a6;
-    color: #1f6b33;
-  }
-
-  .cmx-evaluation-strip.needs_review {
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
-    color: #8a5a00;
-  }
-
-  .cmx-evaluation-strip.high_concern {
-    background: #fdecea;
-    border: 1px solid #e2a0a0;
-    color: #9a1f1f;
-  }
-
   .cmx-check-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -276,22 +250,6 @@
     background: #ffd6d6;
     border: 1px solid #e2a0a0;
     color: #9a1f1f;
-  }
-
-  .cmx-concern-list {
-    display: grid;
-    gap: 5px;
-  }
-
-  .cmx-concern-item {
-    padding: 7px 8px;
-    border: 1px solid #e2a0a0;
-    border-radius: 8px;
-    background: #fff7f7;
-    color: #5f1b1b;
-    font-size: 0.8rem;
-    font-weight: 700;
-    line-height: 1.25;
   }
 
   .cmx-clear-box {
@@ -396,41 +354,6 @@
     white-space: pre-wrap;
   }
 
-  .cmx-promo-summary {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .cmx-summary-mini {
-    border: 1px solid #d9e1ea;
-    border-radius: 9px;
-    padding: 8px 9px;
-    background: #fff;
-  }
-
-  .cmx-summary-mini-label {
-    color: #5d6776;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .cmx-summary-mini-value {
-    margin-top: 3px;
-    color: #223a5e;
-    font-size: 0.98rem;
-    font-weight: 900;
-  }
-
-  .cmx-summary-mini-sub {
-    margin-top: 3px;
-    color: #64748b;
-    font-size: 0.72rem;
-    line-height: 1.25;
-  }
-
   .cmx-field {
     margin-bottom: 14px;
   }
@@ -493,7 +416,6 @@
   }
 
   @media (max-width: 1200px) {
-    .cmx-evidence-grid,
     .cmx-lower-grid {
       grid-template-columns: 1fr;
     }
@@ -505,7 +427,6 @@
 
   @media (max-width: 900px) {
     .cmx-level-action-grid,
-    .cmx-promo-summary,
     .cmx-compact-field-grid,
     .cmx-check-grid,
     .cmx-scorecard-grid {
@@ -522,9 +443,6 @@
 {% set manual_requirements = pr.get("manual_requirements", []) %}
 {% set current_level = recovery_snapshot.program_level or "—" %}
 {% set selected_level = latest_review.recommended_next_level if latest_review and latest_review.recommended_next_level else "" %}
-{% set ready_now = pr.get("ready") %}
-{% set recommendation = pr.get("recommendation") or "needs_review" %}
-{% set recommendation_label = pr.get("recommendation_label") or "Level evaluation is available below." %}
 {% set can_apply = latest_review and latest_review.recommended_next_level %}
 {% set latest_meeting_date = latest_review.meeting_date if latest_review and latest_review.meeting_date else '' %}
 {% set current_level_number = current_level|int if current_level != "—" else none %}
@@ -680,42 +598,6 @@
             </div>
           {% endif %}
         </section>
-
-        <aside class="cmx-card cmx-enterprise-card">
-          <div class="cmx-section-head">
-            <div>
-              <h2 class="cmx-section-title">Concerns</h2>
-              <div class="cmx-section-subtitle">Items requiring case manager attention.</div>
-            </div>
-          </div>
-
-          <div class="cmx-evaluation-strip {{ recommendation }}">
-            <strong>System Evaluation:</strong> {{ recommendation_label }}
-          </div>
-
-          {% if hard_blockers %}
-            <div class="cmx-concern-list">
-              {% for item in hard_blockers %}
-                <div class="cmx-concern-item">{{ item }}</div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="cmx-clear-box">No additional program concerns were flagged.</div>
-          {% endif %}
-
-          <div class="cmx-promo-summary" style="margin-top:8px;">
-            <div class="cmx-summary-mini">
-              <div class="cmx-summary-mini-label">Current Level</div>
-              <div class="cmx-summary-mini-value">{{ current_level }}</div>
-              <div class="cmx-summary-mini-sub">Resident program level.</div>
-            </div>
-            <div class="cmx-summary-mini">
-              <div class="cmx-summary-mini-label">Engine Review</div>
-              <div class="cmx-summary-mini-value">{% if ready_now %}Aligned{% else %}Needs Review{% endif %}</div>
-              <div class="cmx-summary-mini-sub">{{ checks|length }} checks reviewed.</div>
-            </div>
-          </div>
-        </aside>
       </div>
 
       <div class="cmx-lower-grid">
