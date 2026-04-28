@@ -15,30 +15,105 @@
 
   .cmx-level-action-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 16px;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    gap: 10px;
     align-items: start;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
 
   .cmx-level-action-card {
-    height: 100%;
     border: 1px solid #cfd9e5;
     background: #fff;
+    padding: 10px 12px !important;
+    border-radius: 12px;
   }
 
   .cmx-level-action-card.is-primary {
-    border-top: 4px solid #223a5e;
+    border-top: 3px solid #223a5e;
+  }
+
+  .cmx-level-action-card .cmx-section-title {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+
+  .cmx-compact-field-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .cmx-level-action-card .cmx-field {
+    margin-bottom: 7px;
+    gap: 3px;
+  }
+
+  .cmx-level-action-card .cmx-field label {
+    font-size: 0.78rem;
+    margin-bottom: 3px;
+  }
+
+  .cmx-level-action-card .cmx-field input,
+  .cmx-level-action-card .cmx-field select,
+  .cmx-level-action-card .cmx-field textarea {
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 0.86rem;
+  }
+
+  .cmx-level-action-card textarea {
+    min-height: 44px !important;
+  }
+
+  .cmx-level-action-card .cmx-helper {
+    display: none;
+  }
+
+  .cmx-level-action-card .cmx-btn {
+    padding: 7px 10px;
+    font-size: 0.84rem;
+  }
+
+  .cmx-level-action-card .cmx-button-row {
+    margin-top: 6px;
+  }
+
+  .cmx-level-action-card .cmx-stack {
+    gap: 5px;
+    margin-top: 6px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .cmx-level-action-card .cmx-row-block {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    border-radius: 8px;
   }
 
   .cmx-level-direction {
-    margin-top: 10px;
-    padding: 10px 12px;
-    border-radius: 10px;
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-radius: 8px;
     border: 1px solid #d9e1ea;
     background: #f9fbfd;
     color: #223a5e;
+    font-size: 0.82rem;
     font-weight: 700;
+  }
+
+  .cmx-level-action-card .cmx-empty {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+    margin-top: 8px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .cmx-level-action-card form[method="post"] {
+    margin: 0;
+  }
+
+  .cmx-level-action-card form[style] {
+    margin-top: 8px !important;
   }
 
   .cmx-promo-summary {
@@ -294,7 +369,8 @@
   @media (max-width: 900px) {
     .cmx-level-action-grid,
     .cmx-promo-summary,
-    .cmx-metric-grid {
+    .cmx-metric-grid,
+    .cmx-compact-field-grid {
       grid-template-columns: 1fr;
     }
 
@@ -345,41 +421,37 @@
           <form method="post">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
 
-            <div class="cmx-field">
-              <label>Current Level</label>
-              <div class="cmx-promo-readonly">{{ current_level }}</div>
-            </div>
+            <div class="cmx-compact-field-grid">
+              <div class="cmx-field">
+                <label for="meeting_date">Review Date</label>
+                <input id="meeting_date" name="meeting_date" type="date" value="{{ latest_meeting_date }}" required>
+              </div>
 
-            <div class="cmx-field">
-              <label for="meeting_date">Review Date</label>
-              <input id="meeting_date" name="meeting_date" type="date" value="{{ latest_meeting_date }}" required>
-            </div>
+              <div class="cmx-field">
+                <label for="recommended_next_level">New Level</label>
+                <input
+                  id="recommended_next_level"
+                  name="recommended_next_level"
+                  type="text"
+                  value="{{ selected_level }}"
+                  placeholder="Example: 5"
+                >
+              </div>
 
-            <div class="cmx-field">
-              <label for="recommended_next_level">New Level</label>
-              <input
-                id="recommended_next_level"
-                name="recommended_next_level"
-                type="text"
-                value="{{ selected_level }}"
-                placeholder="Example: 5"
-              >
-              <div class="cmx-helper">This is advisory until a case manager applies the level change.</div>
-            </div>
-
-            <div class="cmx-field">
-              <label for="decision">Decision</label>
-              <select id="decision" name="decision" required>
-                <option value="">Select decision</option>
-                <option value="ready">Approve Level Change</option>
-                <option value="not_ready">Do Not Change Level</option>
-                <option value="exception">Approve With Exception</option>
-              </select>
+              <div class="cmx-field">
+                <label for="decision">Decision</label>
+                <select id="decision" name="decision" required>
+                  <option value="">Select</option>
+                  <option value="ready">Approve Change</option>
+                  <option value="not_ready">No Change</option>
+                  <option value="exception">Exception</option>
+                </select>
+              </div>
             </div>
 
             <div class="cmx-field">
               <label for="decision_notes">Decision Notes</label>
-              <textarea id="decision_notes" name="decision_notes" placeholder="Explain the case manager decision and any important context." required></textarea>
+              <textarea id="decision_notes" name="decision_notes" placeholder="Brief reason for the level decision." required></textarea>
             </div>
 
             <div class="cmx-button-row">
@@ -391,10 +463,10 @@
         <section class="cmx-card cmx-level-action-card">
           <h2 class="cmx-section-title">Apply Level Change</h2>
 
-          <div class="cmx-stack" style="margin-top:12px; margin-bottom:16px;">
-            <div class="cmx-row-block"><span>Current Level</span><span>{{ current_level }}</span></div>
-            <div class="cmx-row-block"><span>New Level</span><span>{{ selected_level if selected_level else '—' }}</span></div>
-            <div class="cmx-row-block"><span>Latest Review Date</span><span>{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '—' }}</span></div>
+          <div class="cmx-stack">
+            <div class="cmx-row-block"><span>Current</span><span>{{ current_level }}</span></div>
+            <div class="cmx-row-block"><span>New</span><span>{{ selected_level if selected_level else '—' }}</span></div>
+            <div class="cmx-row-block"><span>Review</span><span>{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '—' }}</span></div>
           </div>
 
           {% if selected_level_number is not none and current_level_number is not none %}
@@ -410,10 +482,10 @@
           {% endif %}
 
           {% if not can_apply %}
-            <div class="cmx-empty" style="margin-top:12px; margin-bottom:10px;">Save a level evaluation with a new level before applying a level change.</div>
+            <div class="cmx-empty">Save a level evaluation with a new level before applying.</div>
           {% endif %}
 
-          <form method="post" style="margin-top:16px;">
+          <form method="post">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="form_action" value="apply_promotion">
             <input type="hidden" name="meeting_date" value="{{ latest_review.meeting_date if latest_review and latest_review.meeting_date else '' }}">
@@ -421,7 +493,7 @@
             <div class="cmx-field">
               <label>
                 <input type="checkbox" name="confirm_apply_promotion">
-                Confirm level change action. This will update the resident program level.
+                Confirm update
               </label>
             </div>
 
