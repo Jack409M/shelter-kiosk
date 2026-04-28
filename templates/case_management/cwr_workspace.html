@@ -1,8 +1,8 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css', v='20260428_cwr_layout4') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260428_cwr_layout4') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css', v='20260428_cwr_layout5') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260428_cwr_layout5') }}">
 {% endblock %}
 
 {% block content %}
@@ -128,7 +128,7 @@
     <section id="cwr-meeting" class="cwr-mode">
       <div class="cwr-workspace-intro">
         <h2>Meeting</h2>
-        <p>Enter the meeting note, schedule the next appointment, then click only the question that applies today.</p>
+        <p>Enter the meeting note, then click only the question that applies today.</p>
       </div>
 
       <div class="cwr-meeting-body">
@@ -160,16 +160,6 @@
             <label>Meeting Overview<textarea name="overall_summary" rows="3" placeholder="Short meeting overview for quick reference">{{ meeting_defaults.overall_summary if meeting_defaults.overall_summary else '' }}</textarea></label>
             <label>Barriers And Concerns<textarea name="setbacks_or_incidents" rows="3" placeholder="Record setbacks, incidents, or concerns from today">{{ meeting_defaults.setbacks_or_incidents if meeting_defaults.setbacks_or_incidents else '' }}</textarea></label>
           </div>
-        </form>
-
-        <form class="cwr-appointment-box" method="post" action="{{ url_for('case_management.add_appointment', resident_id=resident_id) }}">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <h3>Schedule Next Appointment</h3>
-          <div class="cwr-current-line">Current: {{ next_appt if next_appt and next_appt != '—' else 'No upcoming appointment scheduled' }}</div>
-          <label>Date And Time<input type="datetime-local" name="appointment_datetime" required></label>
-          <label>Appointment Type<input type="text" name="appointment_type" placeholder="Case management, court, legal, dental, or other"></label>
-          <label>Notes<textarea name="notes" rows="3" placeholder="Optional"></textarea></label>
-          <button class="cwr-save-btn" type="submit">Save Appointment</button>
         </form>
 
         <div class="cwr-question-layout">
@@ -352,6 +342,6 @@
   window.CWR_NOTE_EDIT_BY_DATE = {{ cwr_note_edit_by_date | tojson }};
   window.CWR_NOTE_VALUES_BY_DATE = {{ cwr_note_values_by_date | tojson }};
 </script>
-<script src="{{ url_for('static', filename='js/resident_case_workspace.js', v='20260428_cwr_layout4') }}"></script>
-<script src="{{ url_for('static', filename='js/cwr_workspace.js', v='20260428_cwr_layout4') }}"></script>
+<script src="{{ url_for('static', filename='js/resident_case_workspace.js', v='20260428_cwr_layout5') }}"></script>
+<script src="{{ url_for('static', filename='js/cwr_workspace.js', v='20260428_cwr_layout5') }}"></script>
 {% endblock %}
