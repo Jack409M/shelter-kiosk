@@ -27,14 +27,54 @@ def _redirect_resident_case(resident_id: int):
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
+def _form_came_from_cwr() -> bool:
+    referrer = request.referrer or ""
+    return request.form.get("redirect_to") == "cwr" or f"/staff/case-management/" in referrer and referrer.rstrip("/").endswith("/cwr")
+
+
+def _infer_active_panel() -> str | None:
+    active_panel = request.form.get("active_panel")
+    if active_panel:
+        return active_panel
+
+    employment_fields = {
+        "employment_status_current",
+        "employer_name",
+        "employment_type_current",
+        "current_job_start_date",
+        "previous_job_end_date",
+        "upward_job_change",
+        "supervisor_name",
+        "supervisor_phone",
+        "unemployment_reason",
+        "employment_notes",
+        "job_change_notes",
+    }
+    if any(field_name in request.form for field_name in employment_fields):
+        return "employment"
+
+    if "monthly_income" in request.form:
+        return "income"
+
+    if "step_current" in request.form:
+        return "step"
+
+    if "sponsor_name" in request.form or "sponsor_active" in request.form:
+        return "sponsor"
+
+    if "sobriety_date" in request.form or "treatment_graduation_date" in request.form or "drug_of_choice" in request.form:
+        return "sobriety"
+
+    return None
+
+
 def _redirect_profile_destination(resident_id: int):
-    if request.form.get("redirect_to") == "cwr":
-        active_panel = request.form.get("active_panel") or None
+    if _form_came_from_cwr():
         return redirect(
             url_for(
                 "case_management.cwr_workspace",
                 resident_id=resident_id,
-                active_panel=active_panel,
+                active_panel=_infer_active_panel(),
             )
         )
 
