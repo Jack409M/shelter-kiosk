@@ -175,18 +175,18 @@
 
       <div class="cwr-question-layout">
         <aside class="cwr-question-list" aria-label="Meeting questions">
-          <button type="button" class="cwr-question" data-panel="services"><span>Do you need services today?</span><strong>Review</strong></button>
-          <button type="button" class="cwr-question" data-panel="needs"><span>Do we need to review any open needs?</span><strong>{{ header_open_needs_count }} open</strong></button>
-          <button type="button" class="cwr-question" data-panel="employment"><span>Any change in employment?</span><strong>{{ rs_employer or 'No employer' }}</strong></button>
-          <button type="button" class="cwr-question" data-panel="income"><span>Any change in monthly net income?</span><strong>{{ '$%.2f'|format(rs_income) if rs_income is not none else 'No income' }}</strong></button>
-          <button type="button" class="cwr-question" data-panel="ua"><span>Do we need to run a UA?</span><strong>Open UA</strong></button>
-          <button type="button" class="cwr-question" data-panel="medications"><span>Any change in medications?</span><strong>{{ rs_medications|length }} on file</strong></button>
-          <button type="button" class="cwr-question" data-panel="family"><span>Any changes in family?</span><strong>Family intake</strong></button>
-          <button type="button" class="cwr-question" data-panel="child-services"><span>Services for children?</span><strong>{{ children|length }} child records</strong></button>
-          <button type="button" class="cwr-question" data-panel="step"><span>Step level?</span><strong>{{ rs_step if rs_step is not none and rs_step != '' else 'No step' }}</strong></button>
-          <button type="button" class="cwr-question" data-panel="sponsor"><span>Sponsor?</span><strong>{{ rs_sponsor or 'No sponsor' }}</strong></button>
-          <button type="button" class="cwr-question" data-panel="writeups"><span>Write ups?</span><strong>{{ 'Active restriction' if has_disciplinary_block else 'Clear' }}</strong></button>
-          <button type="button" class="cwr-question" data-panel="sobriety"><span>Any sobriety or treatment update?</span><strong>{{ header_days_sober if header_days_sober is not none else 'Review' }}</strong></button>
+          <a href="#" class="cwr-question" data-panel="services"><span>Do you need services today?</span><strong>Review</strong></a>
+          <a href="#" class="cwr-question" data-panel="needs"><span>Do we need to review any open needs?</span><strong>{{ header_open_needs_count }} open</strong></a>
+          <a href="#" class="cwr-question" data-panel="employment"><span>Any change in employment?</span><strong>{{ rs_employer or 'No employer' }}</strong></a>
+          <a href="#" class="cwr-question" data-panel="income"><span>Any change in monthly net income?</span><strong>{{ '$%.2f'|format(rs_income) if rs_income is not none else 'No income' }}</strong></a>
+          <a href="#" class="cwr-question" data-panel="ua"><span>Do we need to run a UA?</span><strong>Open UA</strong></a>
+          <a href="#" class="cwr-question" data-panel="medications"><span>Any change in medications?</span><strong>{{ rs_medications|length }} on file</strong></a>
+          <a href="#" class="cwr-question" data-panel="family"><span>Any changes in family?</span><strong>Family intake</strong></a>
+          <a href="#" class="cwr-question" data-panel="child-services"><span>Services for children?</span><strong>{{ children|length }} child records</strong></a>
+          <a href="#" class="cwr-question" data-panel="step"><span>Step level?</span><strong>{{ rs_step if rs_step is not none and rs_step != '' else 'No step' }}</strong></a>
+          <a href="#" class="cwr-question" data-panel="sponsor"><span>Sponsor?</span><strong>{{ rs_sponsor or 'No sponsor' }}</strong></a>
+          <a href="#" class="cwr-question" data-panel="writeups"><span>Write ups?</span><strong>{{ 'Active restriction' if has_disciplinary_block else 'Clear' }}</strong></a>
+          <a href="#" class="cwr-question" data-panel="sobriety"><span>Any sobriety or treatment update?</span><strong>{{ header_days_sober if header_days_sober is not none else 'Review' }}</strong></a>
         </aside>
 
         <div class="cwr-question-panels">
