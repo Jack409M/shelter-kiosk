@@ -27,6 +27,20 @@ def _redirect_resident_case(resident_id: int):
     return redirect(url_for("case_management.resident_case", resident_id=resident_id))
 
 
+def _redirect_after_profile_save(resident_id: int):
+    if request.form.get("redirect_to") == "cwr":
+        active_panel = request.form.get("active_panel") or None
+        return redirect(
+            url_for(
+                "case_management.cwr_workspace",
+                resident_id=resident_id,
+                active_panel=active_panel,
+            )
+        )
+
+    return _redirect_resident_case(resident_id)
+
+
 def _redirect_case_index():
     return redirect(url_for("case_management.index"))
 
@@ -224,4 +238,4 @@ def update_recovery_profile_view(resident_id: int):
         return _redirect_resident_case(resident_id)
 
     flash("Recovery profile updated.", "success")
-    return _redirect_resident_case(resident_id)
+    return _redirect_after_profile_save(resident_id)
