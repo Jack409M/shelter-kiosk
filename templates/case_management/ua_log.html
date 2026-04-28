@@ -11,8 +11,12 @@
         </div>
       </div>
 
-      <a class="btn" href="{{ back_url }}" style="border-radius:14px; padding:11px 16px;">
-        Back
+      <a
+        class="btn"
+        href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+        style="border-radius:14px; padding:11px 16px;"
+      >
+        Back to Case Management
       </a>
     </div>
   </div>
@@ -21,45 +25,115 @@
     <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
       <div style="margin-bottom:14px;">
         <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Add UA Entry</h2>
+        <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
+          Record the test date, result, substances detected, and any follow up notes.
+        </div>
       </div>
 
-      <form method="post" action="{{ ua_log_url }}">
+      <form method="post" action="{{ url_for('case_management.add_ua_log', resident_id=resident['id']) }}">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="return_to" value="{{ return_to }}">
-        <input type="hidden" name="active_panel" value="{{ active_panel }}">
 
-        <input type="date" name="ua_date" required>
-        <input type="text" name="result">
-        <input type="text" name="substances_detected">
-        <textarea name="notes"></textarea>
+        <div>
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>UA Date</strong></label>
+          <input type="date" name="ua_date" required style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Result</strong></label>
+          <input type="text" name="result" placeholder="Negative, Positive, Refused, etc." style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Substances Detected</strong></label>
+          <input type="text" name="substances_detected" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px;">
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="display:block; font-weight:800; color:#0f172a; margin-bottom:8px;"><strong>Notes</strong></label>
+          <textarea name="notes" rows="5" style="width:100%; border:1px solid #cfd9e5; border-radius:14px; padding:11px 12px; resize:vertical;"></textarea>
+        </div>
 
         <div style="margin-top:18px; display:flex; gap:10px; flex-wrap:wrap;">
-          <button type="submit" class="btn">Save UA Entry</button>
-          <a class="btn" href="{{ done_url }}">Done</a>
+          <button type="submit" class="btn" style="border-radius:14px; padding:11px 16px;">Save UA Entry</button>
+          <a
+            class="btn"
+            href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+            style="border-radius:14px; padding:11px 16px;"
+          >
+            Done with UA Log
+          </a>
         </div>
       </form>
     </div>
 
     <div class="card" style="border-radius:22px; padding:22px; border:1px solid #dbe5f0; box-shadow:0 16px 40px rgba(15, 23, 42, 0.06);">
+      <div style="margin-bottom:14px;">
+        <h2 style="margin:0; font-size:1.25rem; font-weight:800; color:#0f172a;">Recorded UA Entries</h2>
+        <div style="margin-top:4px; color:#475569; font-size:0.93rem;">
+          Review prior UA results and open entries for editing.
+        </div>
+      </div>
+
       {% if ua_rows %}
-        <table>
-          {% for row in ua_rows %}
-            <tr>
-              <td>{{ row["ua_date"] }}</td>
-              <td>{{ row["result"] }}</td>
-              <td>
-                <a class="btn btn-sm"
-                   href="{{ url_for('case_management.edit_ua_log', resident_id=resident['id'], ua_id=row['id'], return_to=return_to, active_panel=active_panel) }}">
-                  Edit
-                </a>
-              </td>
-            </tr>
-          {% endfor %}
-        </table>
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Date</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Result</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Substances</th>
+                <th style="text-align:left; padding:10px; border-bottom:1px solid #dbe5f0;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in ua_rows %}
+                <tr>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ row["ua_date"] or "—" }}</td>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ row["result"] or "—" }}</td>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7;">{{ row["substances_detected"] or "—" }}</td>
+                  <td style="padding:10px; border-bottom:1px solid #eef2f7; white-space:nowrap;">
+                    <a
+                      class="btn btn-sm"
+                      href="{{ url_for('case_management.edit_ua_log', resident_id=resident['id'], ua_id=row['id']) }}"
+                      style="border-radius:12px;"
+                    >
+                      Edit
+                    </a>
+                  </td>
+                </tr>
+                {% if row["notes"] %}
+                  <tr>
+                    <td colspan="4" style="padding:10px 10px 14px 10px; color:#475569; font-size:0.95rem; border-bottom:1px solid #eef2f7;">
+                      <strong>Notes:</strong> {{ row["notes"] }}
+                    </td>
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p style="margin:0; color:#475569;">No UA entries recorded.</p>
       {% endif %}
 
-      <a class="btn" href="{{ done_url }}">Done</a>
+      <div style="margin-top:16px;">
+        <a
+          class="btn"
+          href="{{ url_for('case_management.resident_case', resident_id=resident['id']) }}"
+          style="border-radius:14px; padding:11px 16px;"
+        >
+          Done with UA Log
+        </a>
+      </div>
     </div>
   </div>
 </div>
+
+<style>
+  @media (max-width: 980px) {
+    .ua-workspace {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
 {% endblock %}
