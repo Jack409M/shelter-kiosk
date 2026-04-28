@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="cwr-page">
+
+  {% include "case_management/partials/resident_case/_workspace_header.html" %}
+
+  <div class="cwr-mode-toggle">
+    <button class="cwr-mode-btn is-active" data-mode="review">Review</button>
+    <button class="cwr-mode-btn" data-mode="meeting">Meeting</button>
+  </div>
+
+  <div id="cwr-review" class="cwr-mode is-active">
+    <div class="cwr-review-grid">
+      <div class="cwr-card">Program Status</div>
+      <div class="cwr-card">Scorecards</div>
+      <div class="cwr-card">Recent Activity</div>
+    </div>
+  </div>
+
+  <div id="cwr-meeting" class="cwr-mode">
+    <div class="cwr-caseflow-grid">
+      <div class="cwr-card cwr-action" onclick="openModal('meeting')">Meeting Note</div>
+      <div class="cwr-card cwr-action" onclick="openModal('profile')">Profile</div>
+      <div class="cwr-card cwr-action" onclick="openModal('actions')">Actions</div>
+    </div>
+  </div>
+
+  <div id="cwr-modal" class="cwr-modal hidden">
+    <div class="cwr-modal-content" id="cwr-modal-content"></div>
+  </div>
+
+  <div id="cwr-modal-templates" style="display:none;">
+    <div data-modal="meeting">
+      {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
+    </div>
+    <div data-modal="profile">
+      {% include "case_management/partials/resident_case/_profile_editor.html" %}
+    </div>
+    <div data-modal="actions">
+      {% include "case_management/partials/resident_case/_quick_actions.html" %}
+    </div>
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/cwr_workspace.js') }}"></script>
+{% endblock %}
