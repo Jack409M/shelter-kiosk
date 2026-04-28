@@ -2,7 +2,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260428_questions') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css', v='20260428_cwr_enterprise2') }}">
 {% endblock %}
 
 {% block content %}
@@ -350,6 +350,6 @@
   window.RESIDENT_CASE_CHILD_SERVICE_BASE_ACTION = "{{ url_for('case_management.child_services', child_id=0) }}";
   window.RESIDENT_CASE_NOTE_SAVED = {{ 'true' if request.args.get('case_note_saved') == '1' else 'false' }};
 </script>
-<script src="{{ url_for('static', filename='js/resident_case_workspace.js') }}"></script>
-<script src="{{ url_for('static', filename='js/cwr_workspace.js') }}"></script>
+<script src="{{ url_for('static', filename='js/resident_case_workspace.js', v='20260428_cwr_enterprise2') }}"></script>
+<script src="{{ url_for('static', filename='js/cwr_workspace.js', v='20260428_cwr_enterprise2') }}"></script>
 {% endblock %}
