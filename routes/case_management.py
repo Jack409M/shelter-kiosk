@@ -80,6 +80,9 @@ from routes.case_management_parts.progress_report import progress_report_print_v
 from routes.case_management_parts.promotion_review import promotion_review_view
 from routes.case_management_parts.recovery_profile import update_recovery_profile_view
 from routes.case_management_parts.resident_case import resident_case_view
+from routes.case_management_parts.resident_operational_timeline import (
+    resident_operational_timeline_view,
+)
 from routes.case_management_parts.transfer import (
     submit_transfer_resident_view,
     transfer_resident_form_view,
@@ -434,6 +437,12 @@ def promotion_review(resident_id: int):
 @_view
 def exit_followup(resident_id: int):
     return exit_followup_view(resident_id)
+
+
+@case_management.get("/<int:resident_id>/operational-timeline")
+@_view
+def resident_operational_timeline(resident_id: int):
+    return resident_operational_timeline_view(resident_id)
 
 
 @case_management.get("/<int:resident_id>/notes-history")
