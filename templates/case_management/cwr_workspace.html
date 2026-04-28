@@ -1,52 +1,158 @@
 {% extends "layout.html" %}
 
 {% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resident_case_workspace.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cwr_workspace.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="cwr-page">
+{% set resident_id = resident["id"] %}
+{% set first_name = resident["first_name"] %}
+{% set last_name = resident["last_name"] %}
+{% set resident_code = resident["resident_code"] %}
+{% set shelter = resident["shelter"] %}
+{% set resident_active = resident["is_active"] %}
+{% set initials = ((first_name[:1] if first_name else "") ~ (last_name[:1] if last_name else ""))|upper %}
 
-  {% include "case_management/partials/resident_case/_workspace_header.html" %}
+{% if enrollment %}
+  {% set enrollment_entry_date = enrollment["entry_date"] %}
+{% else %}
+  {% set enrollment_entry_date = "" %}
+{% endif %}
 
-  <div class="cwr-mode-toggle">
-    <button class="cwr-mode-btn is-active" data-mode="review">Review</button>
-    <button class="cwr-mode-btn" data-mode="meeting">Meeting</button>
-  </div>
+{% if exit_assessment %}
+  {% set exit_date_exit_dwc = exit_assessment["date_exit_dwc"] %}
+  {% set exit_category = exit_assessment["exit_category"] %}
+  {% set exit_reason = exit_assessment["exit_reason"] %}
+  {% set exit_leave_ama = exit_assessment["leave_ama"] %}
+  {% set exit_leave_ama_destination = exit_assessment["leave_ama_destination"] %}
+{% else %}
+  {% set exit_date_exit_dwc = none %}
+  {% set exit_category = none %}
+  {% set exit_reason = none %}
+  {% set exit_leave_ama = none %}
+  {% set exit_leave_ama_destination = none %}
+{% endif %}
 
-  <div id="cwr-review" class="cwr-mode is-active">
-    <div class="cwr-review-grid">
-      <div class="cwr-card">Program Status</div>
-      <div class="cwr-card">Scorecards</div>
-      <div class="cwr-card">Recent Activity</div>
+{% set rs = recovery_snapshot or {} %}
+{% set rs_level = rs.get("program_level") %}
+{% set rs_level_start_date = rs.get("level_start_date") %}
+{% set rs_days_on_level = rs.get("days_on_level") %}
+{% set rs_sponsor = rs.get("sponsor_name") %}
+{% set rs_sponsor_active_display = rs.get("sponsor_active_display") %}
+{% set rs_employment_status = rs.get("employment_status_current") %}
+{% set rs_employer = rs.get("employer_name") %}
+{% set rs_supervisor_name = rs.get("supervisor_name") %}
+{% set rs_supervisor_phone = rs.get("supervisor_phone") %}
+{% set rs_unemployment_reason = rs.get("unemployment_reason") %}
+{% set rs_employment_notes = rs.get("employment_notes") %}
+{% set rs_income = rs.get("monthly_income") %}
+{% set rs_step = rs.get("step_current") %}
+{% set rs_step_work_active_display = rs.get("step_work_active_display") %}
+{% set rs_medications = rs.get("medications", []) %}
+{% set rs_ua_rows = rs.get("ua_rows", []) %}
+{% set rs_latest_inspection = rs.get("latest_inspection") %}
+{% set rs_days_sober_today = rs.get("days_sober_today") %}
+{% set rs_sobriety_date = rs.get("sobriety_date") %}
+{% set rs_drug_of_choice = rs.get("drug_of_choice") %}
+{% set rs_treatment_graduation_date = rs.get("treatment_graduation_date") %}
+
+{% set meeting_defaults = meeting_defaults if meeting_defaults is defined else {} %}
+{% set workspace_header = workspace_header if workspace_header is defined else {} %}
+{% set header_days_sober = workspace_header.get("days_sober") %}
+{% set header_days_on_level = workspace_header.get("days_on_level") %}
+{% set header_open_needs_count = workspace_header.get("open_needs_count", 0) %}
+{% set header_program_status = workspace_header.get("program_status") %}
+{% set last_note = notes[-1] if notes else none %}
+{% set last_meeting_date = last_note["meeting_date"] if last_note else "—" %}
+{% set next_appt = meeting_defaults.get("next_appointment", "—") %}
+{% set case_note_saved = request.args.get("case_note_saved") == "1" %}
+
+<div class="cmx-page cwr-page">
+  <div class="cmx-shell">
+    {% include "case_management/partials/resident_case/_workspace_header.html" %}
+
+    <div class="cwr-mode-toggle">
+      <button type="button" class="cwr-mode-btn is-active" data-mode="review">Review Resident</button>
+      <button type="button" class="cwr-mode-btn" data-mode="meeting">Meeting Mode</button>
+    </div>
+
+    <div id="cwr-review" class="cwr-mode is-active">
+      <div class="cwr-review-grid">
+        <div class="cwr-card">
+          <div class="cwr-card-label">Program Status</div>
+          <div class="cwr-card-value">{{ header_program_status or "—" }}</div>
+          <div class="cwr-card-sub">Level {{ rs_level or "—" }} · Step {{ rs_step if rs_step is not none and rs_step != "" else "—" }}</div>
+        </div>
+
+        <div class="cwr-card">
+          <div class="cwr-card-label">Resident Stability</div>
+          <div class="cwr-card-value">{{ header_days_sober if header_days_sober is not none else "—" }}</div>
+          <div class="cwr-card-sub">Days sober</div>
+        </div>
+
+        <div class="cwr-card">
+          <div class="cwr-card-label">Open Needs</div>
+          <div class="cwr-card-value">{{ header_open_needs_count }}</div>
+          <div class="cwr-card-sub">Needs requiring follow up</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="cwr-meeting" class="cwr-mode">
+      <div class="cwr-caseflow-grid">
+        <button type="button" class="cwr-card cwr-action" onclick="openModal('meeting')">
+          <span class="cwr-card-label">Meeting</span>
+          <span class="cwr-card-value">Contact Note</span>
+          <span class="cwr-card-sub">Record today’s meeting, services, needs, and next steps.</span>
+        </button>
+
+        <button type="button" class="cwr-card cwr-action" onclick="openModal('profile')">
+          <span class="cwr-card-label">Profile</span>
+          <span class="cwr-card-value">Program Facts</span>
+          <span class="cwr-card-sub">Update level, step, sponsor, sobriety, and recovery profile.</span>
+        </button>
+
+        <button type="button" class="cwr-card cwr-action" onclick="openModal('actions')">
+          <span class="cwr-card-label">Actions</span>
+          <span class="cwr-card-value">Quick Tasks</span>
+          <span class="cwr-card-sub">Appointments, UA, write ups, child services, and medications.</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="cwr-modal" class="cwr-modal hidden" aria-hidden="true">
+      <div class="cwr-modal-panel" role="dialog" aria-modal="true">
+        <div class="cwr-modal-head">
+          <div>
+            <div class="cwr-modal-kicker">Casemanager Workspace Renovation</div>
+            <h2 id="cwr-modal-title">Workspace</h2>
+          </div>
+          <button type="button" class="cwr-modal-close" onclick="closeModal()">Close</button>
+        </div>
+        <div class="cwr-modal-content" id="cwr-modal-content"></div>
+      </div>
+    </div>
+
+    <div id="cwr-modal-templates" style="display:none;">
+      <div data-modal="meeting" data-title="Meeting Contact Note">
+        {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
+      </div>
+      <div data-modal="profile" data-title="Program Profile">
+        {% include "case_management/partials/resident_case/_profile_editor.html" %}
+      </div>
+      <div data-modal="actions" data-title="Support Actions">
+        {% include "case_management/partials/resident_case/_quick_actions.html" %}
+      </div>
     </div>
   </div>
-
-  <div id="cwr-meeting" class="cwr-mode">
-    <div class="cwr-caseflow-grid">
-      <div class="cwr-card cwr-action" onclick="openModal('meeting')">Meeting Note</div>
-      <div class="cwr-card cwr-action" onclick="openModal('profile')">Profile</div>
-      <div class="cwr-card cwr-action" onclick="openModal('actions')">Actions</div>
-    </div>
-  </div>
-
-  <div id="cwr-modal" class="cwr-modal hidden">
-    <div class="cwr-modal-content" id="cwr-modal-content"></div>
-  </div>
-
-  <div id="cwr-modal-templates" style="display:none;">
-    <div data-modal="meeting">
-      {% include "case_management/partials/resident_case/_meeting_workspace.html" %}
-    </div>
-    <div data-modal="profile">
-      {% include "case_management/partials/resident_case/_profile_editor.html" %}
-    </div>
-    <div data-modal="actions">
-      {% include "case_management/partials/resident_case/_quick_actions.html" %}
-    </div>
-  </div>
-
 </div>
 
+<script>
+  window.RESIDENT_CASE_RESIDENT_ID = "{{ resident_id }}";
+  window.RESIDENT_CASE_CHILD_SERVICE_BASE_ACTION = "{{ url_for('case_management.child_services', child_id=0) }}";
+  window.RESIDENT_CASE_NOTE_SAVED = {{ 'true' if case_note_saved else 'false' }};
+</script>
+<script src="{{ url_for('static', filename='js/resident_case_workspace.js') }}"></script>
 <script src="{{ url_for('static', filename='js/cwr_workspace.js') }}"></script>
 {% endblock %}
