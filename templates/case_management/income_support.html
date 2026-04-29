@@ -23,7 +23,7 @@
           </div>
         </div>
         <div style="display:flex; gap:10px; align-items:center;">
-          <a class="cmx-btn cmx-btn-ghost" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Back to Resident Case</a>
+          <a class="cmx-btn cmx-btn-ghost" href="{{ back_url }}">Back to Resident Case</a>
         </div>
       </div>
 
@@ -91,8 +91,10 @@
       </div>
     </div>
 
-    <form method="post" action="{{ url_for('case_management.income_support', resident_id=resident_id) }}">
+    <form method="post" action="{{ income_support_url }}">
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="return_to" value="{{ return_to }}">
+      <input type="hidden" name="active_panel" value="{{ active_panel }}">
 
       <div class="cmx-card" style="margin-bottom:18px;">
         <div class="cmx-panel-head">
@@ -329,7 +331,7 @@
 
       <div style="margin-top:18px; display:flex; gap:10px;">
         <button type="submit" class="cmx-btn">Save Employment and Income</button>
-        <a class="cmx-btn cmx-btn-ghost" href="{{ url_for('case_management.resident_case', resident_id=resident_id) }}">Done</a>
+        <a class="cmx-btn cmx-btn-ghost" href="{{ done_url }}">Done</a>
       </div>
     </form>
   </div>
