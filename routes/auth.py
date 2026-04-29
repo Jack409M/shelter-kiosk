@@ -408,6 +408,10 @@ def staff_select_shelter():
     if nxt and nxt.startswith("/staff"):
         return redirect(nxt)
 
+    post_shelter_redirect = str(session.pop("post_shelter_redirect", "") or "").strip()
+    if post_shelter_redirect.startswith("/staff") or post_shelter_redirect.startswith("/reports"):
+        return redirect(post_shelter_redirect)
+
     if session.get("role") == "demographics_viewer":
         return redirect(url_for("reports.reports_index"))
 
